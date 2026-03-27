@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vegeta Load Test Control</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Vegeta Load Test Control</h1>
+            <p class="subtitle">Configure and execute HTTP load tests with ease</p>
+            <div id="vegetaStatus" class="status-badge"></div>
+        </header>
+
+        <main>
+            <!-- Curl Import Section -->
+            <section class="form-section curl-import-section">
+                <h2>📋 Import from cURL</h2>
+                <p class="curl-hint">Paste a curl command below to auto-fill the form fields</p>
+                <div class="form-group full-width">
+                    <textarea
+                        id="curlInput"
+                        rows="5"
+                        placeholder="curl http://example.com/v1/chat/completions \
+  -H &quot;Authorization: Bearer sk-xxx&quot; \
+  -d '{&quot;model&quot;:&quot;xxx&quot;, &quot;messages&quot;:[...]}'"
+                    ></textarea>
+                </div>
+                <button type="button" id="parseCurlBtn" class="btn btn-accent">
+                    <span class="btn-icon">📥</span>
+                    Parse & Fill
+                </button>
+                <span id="curlFeedback" class="curl-feedback"></span>
+            </section>
+
+            <form id="loadTestForm">
+                <!-- API Configuration Section -->
+                <section class="form-section">
+                    <h2>🔌 API Configuration</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="apiUrl">API URL *</label>
+                            <input 
+                                type="text" 
+                                id="apiUrl" 
+                                name="apiUrl" 
+                                placeholder="http://10.100.121.67:30888/v1/chat/completions"
+                                value="http://10.100.121.67:30888/v1/chat/completions"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key *</label>
+                            <input 
+                                type="text" 
+                                id="apiKey" 
+                                name="apiKey" 
+                                placeholder="sk-xxxxxxxxxxxxx"
+                                value="sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="model">Model Name *</label>
+                            <input 
+                                type="text" 
+                                id="model" 
+                                name="model" 
+                                placeholder="gen-studio-Qwen2.5-0.5B"
+                                value="gen-studio-Qwen2.5-0.5B"
+                                required
+                            >
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Request Parameters Section -->
+                <section class="form-section">
+                    <h2>📝 Request Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="prompt">User Prompt *</label>
+                            <textarea 
+                                id="prompt" 
+                                name="prompt" 
+                                rows="4" 
+                                placeholder="Enter your question or prompt here..."
+                                required>天为何是蓝色的</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="maxTokens">Max Tokens</label>
+                            <input 
+                                type="number" 
+                                id="maxTokens" 
+                                name="maxTokens" 
+                                value="1000"
+                                min="1"
+                                max="32000"
+                            >
+                            <small>Maximum number of tokens to generate</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="temperature">Temperature</label>
+                            <input
+                                type="number"
+                                id="temperature"
+                                name="temperature"
+                                value="0.7"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                            >
+                            <small>Randomness of output (0.0 - 2.0)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="stream" class="toggle-label">
+                                <input
+                                    type="checkbox"
+                                    id="stream"
+                                    name="stream"
+                                >
+                                <span class="toggle-slider"></span>
+                                Enable Streaming
+                            </label>
+                            <small>Use SSE streaming for responses</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Load Test Parameters Section -->
+                <section class="form-section">
+                    <h2>⚡ Load Test Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="rate">QPS (Requests/sec) *</label>
+                            <input 
+                                type="number" 
+                                id="rate" 
+                                name="rate" 
+                                value="2"
+                                min="1"
+                                max="10000"
+                                required
+                            >
+                            <small>Number of requests per second</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="duration">Duration (seconds) *</label>
+                            <input 
+                                type="number" 
+                                id="duration" 
+                                name="duration" 
+                                value="120"
+                                min="1"
+                                max="3600"
+                                required
+                            >
+                            <small>How long to run the test</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <button type="submit" id="startBtn" class="btn btn-primary">
+                        <span class="btn-icon">🚀</span>
+                        Start Load Test
+                    </button>
+                    <button type="button" id="resetBtn" class="btn btn-secondary">
+                        <span class="btn-icon">🔄</span>
+                        Reset
+                    </button>
+                </div>
+            </form>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section" style="display: none;">
+                <h2>📊 Test Results</h2>
+                
+                <!-- Status Message -->
+                <div id="statusMessage" class="status-message"></div>
+
+                <!-- Key Metrics -->
+                <div id="keyMetrics" class="metrics-grid"></div>
+
+                <!-- Raw Report -->
+                <div class="raw-report">
+                    <h3>📄 Detailed Report</h3>
+                    <pre id="rawReport"></pre>
+                </div>
+
+                <!-- Test Configuration -->
+                <div class="test-config">
+                    <h3>⚙️ Test Configuration</h3>
+                    <pre id="testConfig"></pre>
+                </div>
+            </section>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>Running load test... Please wait</p>
+                <p class="loading-details" id="loadingDetails"></p>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by <a href="https://github.com/tsenart/vegeta" target="_blank">Vegeta</a> | Built with ❤️</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

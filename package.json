@@ -1,0 +1,28 @@
+{
+  "name": "vegeta-load-test-control",
+  "version": "1.0.1",
+  "description": "Web-based control interface for Vegeta load testing tool",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "vegeta",
+    "load-testing",
+    "performance",
+    "api-testing",
+    "stress-testing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
+

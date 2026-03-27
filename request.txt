@@ -1,0 +1,4 @@
+POST http://10.100.121.67:30888/v1/chat/completions
+Content-Type: application/json
+Authorization: Bearer sk-be60bd9b-1995-42fd-b640-50b3a56ebf1b
+@request.json
