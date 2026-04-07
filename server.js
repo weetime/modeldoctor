@@ -29,24 +29,26 @@ app.get("/api/health", (req, res) => {
  */
 app.post("/api/load-test", async (req, res) => {
   const {
+    apiType,
     apiUrl,
     apiKey,
     model,
-    prompt,
-    maxTokens,
-    temperature,
-    stream,
+    customHeaders,
+    queryParams,
     rate,
     duration,
   } = req.body;
 
   // Validate required parameters.
-  if (!apiUrl || !apiKey || !model || !prompt) {
+  if (!apiUrl || !apiKey || !model) {
     return res.status(400).json({
       success: false,
-      error: "Missing required parameters",
+      error: "Missing required parameters (apiUrl, apiKey, model)",
     });
   }
+
+  const validApiTypes = ["chat", "embeddings", "rerank"];
+  const resolvedApiType = validApiTypes.includes(apiType) ? apiType : "chat";
 
   // Validate and sanitize rate and duration to prevent command injection.
   const sanitizedRate = parseInt(rate, 10);
@@ -77,34 +79,100 @@ app.post("/api/load-test", async (req, res) => {
 
   try {
     console.log("🚀 Starting load test with configuration:", {
+      apiType: resolvedApiType,
       apiUrl,
       model,
       rate,
       duration: `${duration}s`,
     });
 
-    // Create request body JSON file.
-    const requestBody = {
-      model,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: parseInt(maxTokens) || 1000,
-      temperature: parseFloat(temperature) || 0.7,
-      stream: !!stream,
-    };
+    // Build request body based on API type.
+    let requestBody;
+
+    if (resolvedApiType === "embeddings") {
+      const { embeddingInput } = req.body;
+      if (!embeddingInput) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameter: embeddingInput",
+        });
+      }
+      requestBody = {
+        model,
+        input: embeddingInput,
+      };
+    } else if (resolvedApiType === "rerank") {
+      const { rerankQuery, rerankTexts } = req.body;
+      if (!rerankQuery || !rerankTexts) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameters: rerankQuery, rerankTexts",
+        });
+      }
+      // Split texts by newline and filter empty lines.
+      const texts = rerankTexts
+        .split("\n")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      requestBody = {
+        model,
+        query: rerankQuery,
+        texts,
+      };
+    } else {
+      // Chat completion.
+      const { prompt, maxTokens, temperature, stream } = req.body;
+      if (!prompt) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameter: prompt",
+        });
+      }
+      requestBody = {
+        model,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: parseInt(maxTokens) || 1000,
+        temperature: parseFloat(temperature) || 0.7,
+        stream: !!stream,
+      };
+    }
 
     const requestJsonPath = path.join(__dirname, "request.json");
     fs.writeFileSync(requestJsonPath, JSON.stringify(requestBody, null, 2));
     console.log("✅ Created request.json");
 
+    // Build final URL with query parameters.
+    let finalUrl = apiUrl;
+    if (queryParams && queryParams.trim()) {
+      const params = queryParams
+        .split("\n")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0 && p.includes("="));
+      if (params.length > 0) {
+        const separator = finalUrl.includes("?") ? "&" : "?";
+        finalUrl = finalUrl + separator + params.join("&");
+      }
+    }
+
+    // Build custom headers string.
+    let extraHeaders = "";
+    if (customHeaders && customHeaders.trim()) {
+      const headerLines = customHeaders
+        .split("\n")
+        .map((h) => h.trim())
+        .filter((h) => h.length > 0 && h.includes(":"));
+      extraHeaders = headerLines.map((h) => `\n${h}`).join("");
+    }
+
     // Create Vegeta request format file.
-    const requestTxt = `POST ${apiUrl}
+    const requestTxt = `POST ${finalUrl}
 Content-Type: application/json
-Authorization: Bearer ${apiKey}
+Authorization: Bearer ${apiKey}${extraHeaders}
 @request.json`;
 
     const requestTxtPath = path.join(__dirname, "request.txt");
@@ -150,11 +218,11 @@ Authorization: Bearer ${apiKey}
           report: stdout,
           parsed: report,
           config: {
-            apiUrl,
+            apiType: resolvedApiType,
+            apiUrl: finalUrl,
             model,
             rate: sanitizedRate,
             duration: sanitizedDuration,
-            prompt: prompt.substring(0, 50) + (prompt.length > 50 ? "..." : ""),
           },
         });
       },

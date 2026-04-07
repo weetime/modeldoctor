@@ -13,9 +13,54 @@ const vegetaStatus = document.getElementById('vegetaStatus');
 const parseCurlBtn = document.getElementById('parseCurlBtn');
 const curlInput = document.getElementById('curlInput');
 const curlFeedback = document.getElementById('curlFeedback');
+const apiTypeSelect = document.getElementById('apiType');
+
+// API type parameter sections.
+const paramSections = {
+    chat: document.getElementById('chatParams'),
+    embeddings: document.getElementById('embeddingsParams'),
+    rerank: document.getElementById('rerankParams'),
+};
+
+// URL path suffixes per API type.
+const apiTypePaths = {
+    chat: '/v1/chat/completions',
+    embeddings: '/v1/embeddings',
+    rerank: '/rerank',
+};
 
 // Check if Vegeta is installed on page load.
 checkVegetaInstallation();
+
+/**
+ * Handles API type switching: shows/hides parameter sections and updates URL.
+ */
+apiTypeSelect.addEventListener('change', () => {
+    const selectedType = apiTypeSelect.value;
+
+    // Show/hide parameter sections.
+    for (const [type, section] of Object.entries(paramSections)) {
+        section.style.display = type === selectedType ? '' : 'none';
+    }
+
+    // Auto-update URL path suffix.
+    const currentUrl = document.getElementById('apiUrl').value;
+    try {
+        const url = new URL(currentUrl);
+        // Remove known path suffixes then append new one.
+        let pathname = url.pathname;
+        for (const suffix of Object.values(apiTypePaths)) {
+            if (pathname.endsWith(suffix)) {
+                pathname = pathname.slice(0, -suffix.length);
+                break;
+            }
+        }
+        url.pathname = pathname + apiTypePaths[selectedType];
+        document.getElementById('apiUrl').value = url.toString();
+    } catch (e) {
+        // If URL is not valid, just leave it.
+    }
+});
 
 /**
  * Parses a curl command string and extracts URL, headers, and body.
@@ -23,7 +68,7 @@ checkVegetaInstallation();
  * @returns {object} Parsed curl data.
  */
 function parseCurlCommand(curlStr) {
-    const result = { url: '', headers: {}, body: null };
+    const result = { url: '', headers: {}, body: null, queryParams: '' };
 
     // Normalize: join continuation lines and collapse whitespace.
     let cmd = curlStr.replace(/\\\s*\n/g, ' ').trim();
@@ -32,7 +77,6 @@ function parseCurlCommand(curlStr) {
     cmd = cmd.replace(/^curl\s+/, '');
 
     // Extract URL (first non-flag argument or after explicit flags).
-    // Try quoted URL first, then unquoted.
     const urlPatterns = [
         /(?:^|\s)['"]?(https?:\/\/[^\s'"]+)['"]?/,
         /(?:^|\s)([^\s-][^\s]*)/
@@ -45,6 +89,25 @@ function parseCurlCommand(curlStr) {
         }
     }
 
+    // Extract query params from URL.
+    if (result.url) {
+        try {
+            const url = new URL(result.url);
+            if (url.search) {
+                const params = [];
+                url.searchParams.forEach((value, key) => {
+                    params.push(`${key}=${value}`);
+                });
+                result.queryParams = params.join('\n');
+                // Store clean URL without query params.
+                url.search = '';
+                result.url = url.toString();
+            }
+        } catch (e) {
+            // Leave URL as-is.
+        }
+    }
+
     // Extract headers (-H or --header).
     const headerRegex = /(?:-H|--header)\s+['"]([^'"]+)['"]/g;
     let headerMatch;
@@ -53,7 +116,7 @@ function parseCurlCommand(curlStr) {
         if (colonIndex > 0) {
             const key = headerMatch[1].substring(0, colonIndex).trim();
             const value = headerMatch[1].substring(colonIndex + 1).trim();
-            result.headers[key.toLowerCase()] = value;
+            result.headers[key.toLowerCase()] = { originalKey: key, value };
         }
     }
 
@@ -64,7 +127,6 @@ function parseCurlCommand(curlStr) {
         try {
             result.body = JSON.parse(bodyMatch[1]);
         } catch (e) {
-            // Try removing escaped quotes.
             try {
                 result.body = JSON.parse(bodyMatch[1].replace(/\\'/g, "'"));
             } catch (e2) {
@@ -90,6 +152,30 @@ function parseCurlCommand(curlStr) {
 }
 
 /**
+ * Detects API type from URL path and request body.
+ * @param {string} url - The request URL.
+ * @param {object|null} body - Parsed request body.
+ * @returns {string} Detected API type: 'chat', 'embeddings', or 'rerank'.
+ */
+function detectApiType(url, body) {
+    // Detect from URL path.
+    if (url.includes('/v1/embeddings') || url.includes('/embeddings')) {
+        return 'embeddings';
+    }
+    if (url.includes('/rerank')) {
+        return 'rerank';
+    }
+
+    // Detect from body keys.
+    if (body) {
+        if (body.input && !body.messages) return 'embeddings';
+        if (body.query && body.texts) return 'rerank';
+    }
+
+    return 'chat';
+}
+
+/**
  * Parse curl button handler.
  */
 parseCurlBtn.addEventListener('click', () => {
@@ -103,44 +189,90 @@ parseCurlBtn.addEventListener('click', () => {
     const parsed = parseCurlCommand(curlStr);
     let filled = [];
 
+    // Detect and set API type.
+    if (parsed.url || parsed.body) {
+        const detectedType = detectApiType(parsed.url || '', parsed.body);
+        apiTypeSelect.value = detectedType;
+        apiTypeSelect.dispatchEvent(new Event('change'));
+        filled.push(`Type (${detectedType})`);
+    }
+
     if (parsed.url) {
         document.getElementById('apiUrl').value = parsed.url;
         filled.push('URL');
     }
 
     // Extract API key from Authorization header.
-    const authHeader = parsed.headers['authorization'] || '';
-    if (authHeader) {
-        const apiKey = authHeader.replace(/^Bearer\s+/i, '');
+    const authEntry = parsed.headers['authorization'];
+    if (authEntry) {
+        const apiKey = authEntry.value.replace(/^Bearer\s+/i, '');
         document.getElementById('apiKey').value = apiKey;
         filled.push('API Key');
     }
 
-    // Fill body fields.
+    // Fill query params.
+    if (parsed.queryParams) {
+        document.getElementById('queryParams').value = parsed.queryParams;
+        filled.push('Query Params');
+    }
+
+    // Collect custom headers (exclude content-type and authorization).
+    const skipHeaders = ['content-type', 'authorization'];
+    const customHeaderLines = [];
+    for (const [lowerKey, entry] of Object.entries(parsed.headers)) {
+        if (!skipHeaders.includes(lowerKey)) {
+            customHeaderLines.push(`${entry.originalKey}: ${entry.value}`);
+        }
+    }
+    if (customHeaderLines.length > 0) {
+        document.getElementById('customHeaders').value = customHeaderLines.join('\n');
+        filled.push('Custom Headers');
+    }
+
+    // Fill body fields based on detected type.
     if (parsed.body) {
         if (parsed.body.model) {
             document.getElementById('model').value = parsed.body.model;
             filled.push('Model');
         }
-        if (parsed.body.messages && parsed.body.messages.length > 0) {
-            // Find the last user message.
-            const userMsg = [...parsed.body.messages].reverse().find(m => m.role === 'user');
-            if (userMsg && userMsg.content) {
-                document.getElementById('prompt').value = userMsg.content;
-                filled.push('Prompt');
+
+        const apiType = apiTypeSelect.value;
+
+        if (apiType === 'chat') {
+            if (parsed.body.messages && parsed.body.messages.length > 0) {
+                const userMsg = [...parsed.body.messages].reverse().find(m => m.role === 'user');
+                if (userMsg && userMsg.content) {
+                    document.getElementById('prompt').value = userMsg.content;
+                    filled.push('Prompt');
+                }
             }
-        }
-        if (parsed.body.max_tokens !== undefined) {
-            document.getElementById('maxTokens').value = parsed.body.max_tokens;
-            filled.push('Max Tokens');
-        }
-        if (parsed.body.temperature !== undefined) {
-            document.getElementById('temperature').value = parsed.body.temperature;
-            filled.push('Temperature');
-        }
-        if (parsed.body.stream !== undefined) {
-            document.getElementById('stream').checked = !!parsed.body.stream;
-            filled.push('Stream');
+            if (parsed.body.max_tokens !== undefined) {
+                document.getElementById('maxTokens').value = parsed.body.max_tokens;
+                filled.push('Max Tokens');
+            }
+            if (parsed.body.temperature !== undefined) {
+                document.getElementById('temperature').value = parsed.body.temperature;
+                filled.push('Temperature');
+            }
+            if (parsed.body.stream !== undefined) {
+                document.getElementById('stream').checked = !!parsed.body.stream;
+                filled.push('Stream');
+            }
+        } else if (apiType === 'embeddings') {
+            if (parsed.body.input) {
+                const inputText = Array.isArray(parsed.body.input) ? parsed.body.input.join('\n') : parsed.body.input;
+                document.getElementById('embeddingInput').value = inputText;
+                filled.push('Input');
+            }
+        } else if (apiType === 'rerank') {
+            if (parsed.body.query) {
+                document.getElementById('rerankQuery').value = parsed.body.query;
+                filled.push('Query');
+            }
+            if (parsed.body.texts) {
+                document.getElementById('rerankTexts').value = parsed.body.texts.join('\n');
+                filled.push('Texts');
+            }
         }
     }
 
@@ -160,7 +292,7 @@ async function checkVegetaInstallation() {
     try {
         const response = await fetch('/api/check-vegeta');
         const data = await response.json();
-        
+
         if (data.installed) {
             vegetaStatus.textContent = `✅ Vegeta installed at ${data.path}`;
             vegetaStatus.className = 'status-badge installed';
@@ -176,24 +308,46 @@ async function checkVegetaInstallation() {
 }
 
 /**
+ * Builds the request config from form based on API type.
+ * @returns {object} Request configuration.
+ */
+function buildConfig() {
+    const formData = new FormData(form);
+    const apiType = apiTypeSelect.value;
+
+    const config = {
+        apiType,
+        apiUrl: formData.get('apiUrl'),
+        apiKey: formData.get('apiKey'),
+        model: formData.get('model'),
+        customHeaders: formData.get('customHeaders') || '',
+        queryParams: formData.get('queryParams') || '',
+        rate: parseInt(formData.get('rate')),
+        duration: parseInt(formData.get('duration')),
+    };
+
+    if (apiType === 'chat') {
+        config.prompt = formData.get('prompt');
+        config.maxTokens = parseInt(formData.get('maxTokens'));
+        config.temperature = parseFloat(formData.get('temperature'));
+        config.stream = document.getElementById('stream').checked;
+    } else if (apiType === 'embeddings') {
+        config.embeddingInput = formData.get('embeddingInput');
+    } else if (apiType === 'rerank') {
+        config.rerankQuery = formData.get('rerankQuery');
+        config.rerankTexts = formData.get('rerankTexts');
+    }
+
+    return config;
+}
+
+/**
  * Form submit handler - starts the load test.
  */
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // Get form data.
-    const formData = new FormData(form);
-    const config = {
-        apiUrl: formData.get('apiUrl'),
-        apiKey: formData.get('apiKey'),
-        model: formData.get('model'),
-        prompt: formData.get('prompt'),
-        maxTokens: parseInt(formData.get('maxTokens')),
-        temperature: parseFloat(formData.get('temperature')),
-        stream: document.getElementById('stream').checked,
-        rate: parseInt(formData.get('rate')),
-        duration: parseInt(formData.get('duration'))
-    };
+
+    const config = buildConfig();
 
     // Validate form.
     if (!validateForm(config)) {
@@ -202,12 +356,11 @@ form.addEventListener('submit', async (e) => {
 
     // Show loading indicator.
     showLoading(config);
-    
+
     // Hide previous results.
     resultsSection.style.display = 'none';
-    
+
     try {
-        // Send request to server.
         const response = await fetch('/api/load-test', {
             method: 'POST',
             headers: {
@@ -218,15 +371,12 @@ form.addEventListener('submit', async (e) => {
 
         const result = await response.json();
 
-        // Hide loading.
         hideLoading();
 
         if (result.success) {
-            // Show success results.
             displayResults(result);
             saveToHistory(config);
         } else {
-            // Show error.
             displayError(result.error);
         }
 
@@ -243,6 +393,9 @@ resetBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to reset all fields?')) {
         form.reset();
         resultsSection.style.display = 'none';
+        // Reset to chat type view.
+        apiTypeSelect.value = 'chat';
+        apiTypeSelect.dispatchEvent(new Event('change'));
     }
 });
 
@@ -252,13 +405,11 @@ resetBtn.addEventListener('click', () => {
  * @returns {boolean} True if valid, false otherwise.
  */
 function validateForm(config) {
-    // Check required fields.
-    if (!config.apiUrl || !config.apiKey || !config.model || !config.prompt) {
+    if (!config.apiUrl || !config.apiKey || !config.model) {
         alert('Please fill in all required fields (marked with *)');
         return false;
     }
 
-    // Validate URL format.
     try {
         new URL(config.apiUrl);
     } catch (e) {
@@ -266,7 +417,20 @@ function validateForm(config) {
         return false;
     }
 
-    // Validate numeric ranges.
+    // Type-specific validation.
+    if (config.apiType === 'chat' && !config.prompt) {
+        alert('Please enter a user prompt');
+        return false;
+    }
+    if (config.apiType === 'embeddings' && !config.embeddingInput) {
+        alert('Please enter input text for embeddings');
+        return false;
+    }
+    if (config.apiType === 'rerank' && (!config.rerankQuery || !config.rerankTexts)) {
+        alert('Please enter both query and texts for rerank');
+        return false;
+    }
+
     if (config.rate < 1 || config.rate > 10000) {
         alert('QPS must be between 1 and 10000');
         return false;
@@ -287,17 +451,18 @@ function validateForm(config) {
 function showLoading(config) {
     loadingIndicator.style.display = 'block';
     startBtn.disabled = true;
-    
+
     const totalRequests = config.rate * config.duration;
     const estimatedTime = config.duration;
-    
-    // Use textContent for security, then manually add line breaks.
+    const typeLabels = { chat: 'Chat Completion', embeddings: 'Embeddings', rerank: 'Rerank' };
+
     const lines = [
+        `API Type: ${typeLabels[config.apiType]}`,
         `Testing at ${config.rate} req/s for ${config.duration} seconds`,
         `Expected total: ~${totalRequests} requests`,
         `Estimated time: ${formatDuration(estimatedTime)}`
     ];
-    
+
     loadingDetails.innerHTML = lines.map(line => escapeHtml(line)).join('<br>');
 }
 
@@ -315,21 +480,16 @@ function hideLoading() {
  */
 function displayResults(result) {
     resultsSection.style.display = 'block';
-    
-    // Show success message.
+
     statusMessage.className = 'status-message success';
     statusMessage.textContent = '✅ Load test completed successfully!';
-    
-    // Display key metrics.
+
     displayKeyMetrics(result.parsed);
-    
-    // Display raw report.
+
     rawReport.textContent = result.report;
-    
-    // Display test configuration.
+
     testConfig.textContent = JSON.stringify(result.config, null, 2);
-    
-    // Scroll to results.
+
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -409,14 +569,14 @@ function displayKeyMetrics(parsed) {
  */
 function displayError(error) {
     resultsSection.style.display = 'block';
-    
+
     statusMessage.className = 'status-message error';
     statusMessage.textContent = `❌ Error: ${error}`;
-    
+
     keyMetrics.innerHTML = '';
     rawReport.textContent = 'No report available due to error.';
     testConfig.textContent = '';
-    
+
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -427,19 +587,17 @@ function displayError(error) {
 function saveToHistory(config) {
     try {
         const history = JSON.parse(localStorage.getItem('testHistory') || '[]');
-        
-        // Add timestamp.
+
         const record = {
             ...config,
             timestamp: new Date().toISOString()
         };
-        
-        // Keep only last 10 records.
+
         history.unshift(record);
         if (history.length > 10) {
             history.pop();
         }
-        
+
         localStorage.setItem('testHistory', JSON.stringify(history));
     } catch (error) {
         console.error('Failed to save to history:', error);
@@ -465,7 +623,5 @@ function formatDuration(seconds) {
     }
 }
 
-// Initialize form with default values.
 console.log('🚀 Vegeta Load Test Control initialized');
 console.log('📝 Ready to configure and run load tests');
-

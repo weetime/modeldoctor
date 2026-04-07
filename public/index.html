@@ -40,12 +40,21 @@
                 <section class="form-section">
                     <h2>🔌 API Configuration</h2>
                     <div class="form-grid">
+                        <div class="form-group">
+                            <label for="apiType">API Type *</label>
+                            <select id="apiType" name="apiType">
+                                <option value="chat" selected>Chat Completion</option>
+                                <option value="embeddings">Embeddings</option>
+                                <option value="rerank">Rerank</option>
+                            </select>
+                        </div>
+
                         <div class="form-group full-width">
                             <label for="apiUrl">API URL *</label>
-                            <input 
-                                type="text" 
-                                id="apiUrl" 
-                                name="apiUrl" 
+                            <input
+                                type="text"
+                                id="apiUrl"
+                                name="apiUrl"
                                 placeholder="http://10.100.121.67:30888/v1/chat/completions"
                                 value="http://10.100.121.67:30888/v1/chat/completions"
                                 required
@@ -54,10 +63,10 @@
 
                         <div class="form-group">
                             <label for="apiKey">API Key *</label>
-                            <input 
-                                type="text" 
-                                id="apiKey" 
-                                name="apiKey" 
+                            <input
+                                type="text"
+                                id="apiKey"
+                                name="apiKey"
                                 placeholder="sk-xxxxxxxxxxxxx"
                                 value="sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff"
                                 required
@@ -66,38 +75,60 @@
 
                         <div class="form-group">
                             <label for="model">Model Name *</label>
-                            <input 
-                                type="text" 
-                                id="model" 
-                                name="model" 
+                            <input
+                                type="text"
+                                id="model"
+                                name="model"
                                 placeholder="gen-studio-Qwen2.5-0.5B"
                                 value="gen-studio-Qwen2.5-0.5B"
                                 required
                             >
                         </div>
+
+                        <div class="form-group full-width">
+                            <label for="customHeaders">Custom Headers</label>
+                            <textarea
+                                id="customHeaders"
+                                name="customHeaders"
+                                rows="3"
+                                placeholder="One per line, e.g.:&#10;my-header: value&#10;X-Custom: foo"
+                            ></textarea>
+                            <small>Additional HTTP headers (one per line, format: Header-Name: value)</small>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="queryParams">Query Parameters</label>
+                            <textarea
+                                id="queryParams"
+                                name="queryParams"
+                                rows="3"
+                                placeholder="One per line, e.g.:&#10;weetime=ok&#10;debug=true"
+                            ></textarea>
+                            <small>URL query parameters (one per line, format: key=value)</small>
+                        </div>
                     </div>
                 </section>
 
-                <!-- Request Parameters Section -->
-                <section class="form-section">
-                    <h2>📝 Request Parameters</h2>
+                <!-- Request Parameters Section: Chat Completion -->
+                <section class="form-section" id="chatParams">
+                    <h2>📝 Chat Completion Parameters</h2>
                     <div class="form-grid">
                         <div class="form-group full-width">
                             <label for="prompt">User Prompt *</label>
-                            <textarea 
-                                id="prompt" 
-                                name="prompt" 
-                                rows="4" 
+                            <textarea
+                                id="prompt"
+                                name="prompt"
+                                rows="4"
                                 placeholder="Enter your question or prompt here..."
-                                required>天为何是蓝色的</textarea>
+                                >天为何是蓝色的</textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="maxTokens">Max Tokens</label>
-                            <input 
-                                type="number" 
-                                id="maxTokens" 
-                                name="maxTokens" 
+                            <input
+                                type="number"
+                                id="maxTokens"
+                                name="maxTokens"
                                 value="1000"
                                 min="1"
                                 max="32000"
@@ -130,6 +161,51 @@
                                 Enable Streaming
                             </label>
                             <small>Use SSE streaming for responses</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Request Parameters Section: Embeddings -->
+                <section class="form-section" id="embeddingsParams" style="display: none;">
+                    <h2>📝 Embeddings Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="embeddingInput">Input Text *</label>
+                            <textarea
+                                id="embeddingInput"
+                                name="embeddingInput"
+                                rows="4"
+                                placeholder="Enter text to generate embeddings for..."
+                                >What is Deep Learning?</textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Request Parameters Section: Rerank -->
+                <section class="form-section" id="rerankParams" style="display: none;">
+                    <h2>📝 Rerank Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="rerankQuery">Query *</label>
+                            <input
+                                type="text"
+                                id="rerankQuery"
+                                name="rerankQuery"
+                                placeholder="Enter the query to rank against..."
+                                value="What is Deep Learning?"
+                            >
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="rerankTexts">Texts (one per line) *</label>
+                            <textarea
+                                id="rerankTexts"
+                                name="rerankTexts"
+                                rows="5"
+                                placeholder="Enter texts to rerank, one per line..."
+                                >Deep learning is a subset of machine learning
+Paris is the capital of France
+Neural networks use backpropagation</textarea>
+                            <small>Each line will be treated as a separate text to rank</small>
                         </div>
                     </div>
                 </section>

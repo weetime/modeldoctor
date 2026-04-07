@@ -1,12 +1,12 @@
 {
-  "model": "gen-studio_Qwen2.5-0.5B-Instruct-YTQr",
+  "model": "gen-studio_bge-m3-KCEM",
   "messages": [
     {
       "role": "user",
-      "content": "What is the meaning of life?"
+      "content": "天为何是蓝色的"
     }
   ],
   "max_tokens": 1000,
   "temperature": 0.7,
-  "stream": true
+  "stream": false
 }
