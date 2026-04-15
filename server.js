@@ -47,7 +47,7 @@ app.post("/api/load-test", async (req, res) => {
     });
   }
 
-  const validApiTypes = ["chat", "embeddings", "rerank"];
+  const validApiTypes = ["chat", "embeddings", "rerank", "images"];
   const resolvedApiType = validApiTypes.includes(apiType) ? apiType : "chat";
 
   // Validate and sanitize rate and duration to prevent command injection.
@@ -119,6 +119,20 @@ app.post("/api/load-test", async (req, res) => {
         query: rerankQuery,
         texts,
       };
+    } else if (resolvedApiType === "images") {
+      const { imagePrompt, imageSize, imageN } = req.body;
+      if (!imagePrompt) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required parameter: imagePrompt",
+        });
+      }
+      requestBody = {
+        model,
+        prompt: imagePrompt,
+      };
+      if (imageSize) requestBody.size = imageSize;
+      if (imageN) requestBody.n = parseInt(imageN) || 1;
     } else {
       // Chat completion.
       const { prompt, maxTokens, temperature, stream } = req.body;

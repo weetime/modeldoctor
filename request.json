@@ -1,9 +1,6 @@
 {
-  "model": "gen-studio_bge-reranker-v2-m3-mGUO",
-  "query": "What is Deep Learning?",
-  "texts": [
-    "Deep learning is a subset of machine learning",
-    "Paris is the capital of France",
-    "Neural networks use backpropagation"
-  ]
+  "model": "gen-studio_Qwen-Image-SQIU",
+  "prompt": "a cute cat",
+  "size": "256x256",
+  "n": 1
 }

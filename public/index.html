@@ -46,6 +46,7 @@
                                 <option value="chat" selected>Chat Completion</option>
                                 <option value="embeddings">Embeddings</option>
                                 <option value="rerank">Rerank</option>
+                                <option value="images">Image Generation</option>
                             </select>
                         </div>
 
@@ -206,6 +207,44 @@
 Paris is the capital of France
 Neural networks use backpropagation</textarea>
                             <small>Each line will be treated as a separate text to rank</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Request Parameters Section: Image Generation -->
+                <section class="form-section" id="imagesParams" style="display: none;">
+                    <h2>📝 Image Generation Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="imagePrompt">Prompt *</label>
+                            <textarea
+                                id="imagePrompt"
+                                name="imagePrompt"
+                                rows="4"
+                                placeholder="Describe the image you want to generate..."
+                                >a cute cat</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="imageSize">Image Size</label>
+                            <select id="imageSize" name="imageSize">
+                                <option value="">Default</option>
+                                <option value="256x256">256x256</option>
+                                <option value="512x512">512x512</option>
+                                <option value="1024x1024" selected>1024x1024</option>
+                            </select>
+                            <small>Resolution of generated image</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="imageN">Number of Images</label>
+                            <input
+                                type="number"
+                                id="imageN"
+                                name="imageN"
+                                value="1"
+                                min="1"
+                                max="4"
+                            >
+                            <small>Number of images to generate (1-4)</small>
                         </div>
                     </div>
                 </section>

@@ -20,6 +20,7 @@ const paramSections = {
     chat: document.getElementById('chatParams'),
     embeddings: document.getElementById('embeddingsParams'),
     rerank: document.getElementById('rerankParams'),
+    images: document.getElementById('imagesParams'),
 };
 
 // URL path suffixes per API type.
@@ -27,6 +28,7 @@ const apiTypePaths = {
     chat: '/v1/chat/completions',
     embeddings: '/v1/embeddings',
     rerank: '/rerank',
+    images: '/v1/images/generations',
 };
 
 // Check if Vegeta is installed on page load.
@@ -159,6 +161,9 @@ function parseCurlCommand(curlStr) {
  */
 function detectApiType(url, body) {
     // Detect from URL path.
+    if (url.includes('/v1/images/generations') || url.includes('/images/generations')) {
+        return 'images';
+    }
     if (url.includes('/v1/embeddings') || url.includes('/embeddings')) {
         return 'embeddings';
     }
@@ -168,6 +173,7 @@ function detectApiType(url, body) {
 
     // Detect from body keys.
     if (body) {
+        if (body.prompt && !body.messages) return 'images';
         if (body.input && !body.messages) return 'embeddings';
         if (body.query && body.texts) return 'rerank';
     }
@@ -273,6 +279,19 @@ parseCurlBtn.addEventListener('click', () => {
                 document.getElementById('rerankTexts').value = parsed.body.texts.join('\n');
                 filled.push('Texts');
             }
+        } else if (apiType === 'images') {
+            if (parsed.body.prompt) {
+                document.getElementById('imagePrompt').value = parsed.body.prompt;
+                filled.push('Prompt');
+            }
+            if (parsed.body.size) {
+                document.getElementById('imageSize').value = parsed.body.size;
+                filled.push('Size');
+            }
+            if (parsed.body.n) {
+                document.getElementById('imageN').value = parsed.body.n;
+                filled.push('N');
+            }
         }
     }
 
@@ -336,6 +355,10 @@ function buildConfig() {
     } else if (apiType === 'rerank') {
         config.rerankQuery = formData.get('rerankQuery');
         config.rerankTexts = formData.get('rerankTexts');
+    } else if (apiType === 'images') {
+        config.imagePrompt = formData.get('imagePrompt');
+        config.imageSize = formData.get('imageSize');
+        config.imageN = parseInt(formData.get('imageN')) || 1;
     }
 
     return config;
@@ -430,6 +453,10 @@ function validateForm(config) {
         alert('Please enter both query and texts for rerank');
         return false;
     }
+    if (config.apiType === 'images' && !config.imagePrompt) {
+        alert('Please enter a prompt for image generation');
+        return false;
+    }
 
     if (config.rate < 1 || config.rate > 10000) {
         alert('QPS must be between 1 and 10000');
@@ -454,7 +481,7 @@ function showLoading(config) {
 
     const totalRequests = config.rate * config.duration;
     const estimatedTime = config.duration;
-    const typeLabels = { chat: 'Chat Completion', embeddings: 'Embeddings', rerank: 'Rerank' };
+    const typeLabels = { chat: 'Chat Completion', embeddings: 'Embeddings', rerank: 'Rerank', images: 'Image Generation' };
 
     const lines = [
         `API Type: ${typeLabels[config.apiType]}`,
