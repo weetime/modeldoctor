@@ -6,7 +6,7 @@ const path = require("node:path");
 const healthRouter = require("./src/routes/health");
 const loadTestRouter = require("./src/routes/load-test");
 const e2eRouter = require("./src/routes/e2e-test");
-// debug-proxy router is added in Phase 4 Task 27.
+const debugProxyRouter = require("./src/routes/debug-proxy");
 
 const PORT = process.env.PORT || 3001;
 const DIST_DIR = path.join(__dirname, "dist");
@@ -19,6 +19,7 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use("/api", healthRouter);
 app.use("/api", loadTestRouter);
 app.use("/api", e2eRouter);
+app.use("/api", debugProxyRouter);
 
 app.use(express.static(DIST_DIR));
 app.get("*", (req, res, next) => {

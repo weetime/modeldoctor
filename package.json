@@ -14,7 +14,8 @@
     "format": "biome format --write web/src",
     "type-check": "tsc -p web/tsconfig.json --noEmit",
     "test": "vitest run --config web/vitest.config.ts",
-    "test:watch": "vitest --config web/vitest.config.ts"
+    "test:watch": "vitest --config web/vitest.config.ts",
+    "test:backend": "vitest run --config vitest.backend.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3",
@@ -63,6 +64,7 @@
     "concurrently": "^8",
     "jsdom": "^24",
     "postcss": "^8",
+    "supertest": "^7",
     "tailwindcss": "^3.4",
     "tailwindcss-animate": "^1",
     "typescript": "^5.4",
