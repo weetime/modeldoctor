@@ -185,137 +185,58 @@ export function EndpointPicker({
 	};
 
 	return (
-		<section className="rounded-lg border border-border bg-card p-4">
-			<div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-				<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-					{t("endpoint.label")}
-				</h2>
-				<div className="flex flex-wrap items-center gap-2">
-					<Select
-						value={selectedConnectionId ?? MANUAL}
-						onValueChange={onSelectValue}
-					>
-						<SelectTrigger className="h-8 min-w-[180px] text-xs">
-							<SelectValue placeholder={t("endpoint.loadFromSaved")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem>
-							{connectionList.map((c) => (
-								<SelectItem key={c.id} value={c.id}>
-									{c.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					{isDirty ? (
-						<span
-							className="h-2 w-2 rounded-full bg-warning"
-							title={t("endpoint.modified")}
-							aria-label={t("endpoint.modified")}
-						/>
-					) : null}
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={onSaveClick}
-						disabled={!canSave}
-					>
-						{selectedConn ? t("endpoint.save") : t("endpoint.saveAs")}
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={() => {
-							setCurlOpen((v) => !v);
-							setCurlFeedback(null);
-						}}
-					>
-						<ClipboardPaste className="h-3.5 w-3.5" />
-						<span className="ml-1">{t("endpoint.pasteCurl")}</span>
-					</Button>
-				</div>
-			</div>
-
-			<div className="space-y-3">
-				<div>
-					<Label>{t("endpoint.apiUrl")}</Label>
-					<Input
-						value={endpoint.apiUrl}
-						onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
-						placeholder="http://host:port/v1/chat/completions"
-						className="font-mono text-xs"
+		<div className="space-y-3">
+			<div className="flex flex-nowrap items-center justify-end gap-2 overflow-x-auto">
+				<Select
+					value={selectedConnectionId ?? MANUAL}
+					onValueChange={onSelectValue}
+				>
+					<SelectTrigger className="h-9 min-w-[200px] text-xs">
+						<SelectValue placeholder={t("endpoint.loadFromSaved")} />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem>
+						{connectionList.map((c) => (
+							<SelectItem key={c.id} value={c.id}>
+								{c.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				{isDirty ? (
+					<span
+						className="h-2 w-2 shrink-0 rounded-full bg-warning"
+						title={t("endpoint.modified")}
+						aria-label={t("endpoint.modified")}
 					/>
-				</div>
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-					<div>
-						<Label>{t("endpoint.apiKey")}</Label>
-						<div className="relative">
-							<Input
-								type={revealKey ? "text" : "password"}
-								value={endpoint.apiKey}
-								onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
-								placeholder="sk-…"
-								className="font-mono text-xs"
-							/>
-							<button
-								type="button"
-								onClick={() => setRevealKey((v) => !v)}
-								className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-								aria-label={revealKey ? "hide" : "show"}
-							>
-								{revealKey ? (
-									<EyeOff className="h-4 w-4" />
-								) : (
-									<Eye className="h-4 w-4" />
-								)}
-							</button>
-						</div>
-					</div>
-					<div>
-						<Label>{t("endpoint.model")}</Label>
-						<Input
-							value={endpoint.model}
-							onChange={(e) => patchEndpoint({ model: e.target.value })}
-							placeholder="model-name"
-							className="font-mono text-xs"
-						/>
-					</div>
-				</div>
-				<details>
-					<summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-						{t("endpoint.advanced")}
-					</summary>
-					<div className="mt-2 space-y-3">
-						<div>
-							<Label>{t("endpoint.customHeaders")}</Label>
-							<Textarea
-								rows={2}
-								value={endpoint.customHeaders}
-								onChange={(e) =>
-									patchEndpoint({ customHeaders: e.target.value })
-								}
-								placeholder="Header-Name: value"
-								className="font-mono text-xs"
-							/>
-						</div>
-						<div>
-							<Label>{t("endpoint.queryParams")}</Label>
-							<Textarea
-								rows={2}
-								value={endpoint.queryParams}
-								onChange={(e) => patchEndpoint({ queryParams: e.target.value })}
-								placeholder="key=value"
-								className="font-mono text-xs"
-							/>
-						</div>
-					</div>
-				</details>
+				) : null}
+				<Button
+					type="button"
+					size="sm"
+					variant="outline"
+					onClick={onSaveClick}
+					disabled={!canSave}
+					className="shrink-0"
+				>
+					{selectedConn ? t("endpoint.save") : t("endpoint.saveAs")}
+				</Button>
+				<Button
+					type="button"
+					size="sm"
+					variant="outline"
+					onClick={() => {
+						setCurlOpen((v) => !v);
+						setCurlFeedback(null);
+					}}
+					className="shrink-0"
+				>
+					<ClipboardPaste className="h-3.5 w-3.5" />
+					<span className="ml-1">{t("endpoint.pasteCurl")}</span>
+				</Button>
 			</div>
 
 			{curlOpen ? (
-				<div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+				<div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
 					<Textarea
 						rows={5}
 						value={curlText}
@@ -351,7 +272,7 @@ export function EndpointPicker({
 			) : null}
 
 			{saveOpen ? (
-				<div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
+				<div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
 					<Input
 						value={saveName}
 						onChange={(e) => setSaveName(e.target.value)}
@@ -377,7 +298,90 @@ export function EndpointPicker({
 					) : null}
 				</div>
 			) : null}
-		</section>
+
+			<section className="rounded-lg border border-border bg-card p-4">
+				<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					{t("endpoint.label")}
+				</h2>
+				<div className="space-y-3">
+					<div>
+						<Label>{t("endpoint.apiUrl")}</Label>
+						<Input
+							value={endpoint.apiUrl}
+							onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
+							placeholder="http://host:port/v1/chat/completions"
+							className="font-mono text-xs"
+						/>
+					</div>
+					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+						<div>
+							<Label>{t("endpoint.apiKey")}</Label>
+							<div className="relative">
+								<Input
+									type={revealKey ? "text" : "password"}
+									value={endpoint.apiKey}
+									onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
+									placeholder="sk-…"
+									className="font-mono text-xs"
+								/>
+								<button
+									type="button"
+									onClick={() => setRevealKey((v) => !v)}
+									className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+									aria-label={revealKey ? "hide" : "show"}
+								>
+									{revealKey ? (
+										<EyeOff className="h-4 w-4" />
+									) : (
+										<Eye className="h-4 w-4" />
+									)}
+								</button>
+							</div>
+						</div>
+						<div>
+							<Label>{t("endpoint.model")}</Label>
+							<Input
+								value={endpoint.model}
+								onChange={(e) => patchEndpoint({ model: e.target.value })}
+								placeholder="model-name"
+								className="font-mono text-xs"
+							/>
+						</div>
+					</div>
+					<details>
+						<summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+							{t("endpoint.advanced")}
+						</summary>
+						<div className="mt-2 space-y-3">
+							<div>
+								<Label>{t("endpoint.customHeaders")}</Label>
+								<Textarea
+									rows={2}
+									value={endpoint.customHeaders}
+									onChange={(e) =>
+										patchEndpoint({ customHeaders: e.target.value })
+									}
+									placeholder="Header-Name: value"
+									className="font-mono text-xs"
+								/>
+							</div>
+							<div>
+								<Label>{t("endpoint.queryParams")}</Label>
+								<Textarea
+									rows={2}
+									value={endpoint.queryParams}
+									onChange={(e) =>
+										patchEndpoint({ queryParams: e.target.value })
+									}
+									placeholder="key=value"
+									className="font-mono text-xs"
+								/>
+							</div>
+						</div>
+					</details>
+				</div>
+			</section>
+		</div>
 	);
 }
 
