@@ -1,94 +1,69 @@
-# InferBench
+# ModelDoctor
 
-> Model-serving test suite: Vegeta-driven **load testing** + functional **end-to-end smoke tests** for OpenAI-compatible inference APIs (vLLM, vLLM-omni, gateway proxies, etc.).
+Troubleshooting toolkit for model-serving APIs.
 
-Two modes in one web UI, sharing a single API config:
+**Current state:** Spec 1 — frontend skeleton with three working tabs (Load Test, E2E Smoke, Request Debug). Five additional tabs (Soak / Stability, Streaming TTFT, Regression, Health Monitor, History) are visible in the sidebar as placeholders and arrive in later specs. Connection credentials are persisted to browser `localStorage` in plaintext; Spec 2 will move them to an encrypted backend store. Do **not** deploy Spec 1 on an untrusted network.
 
-| Mode | What it answers | How |
-|------|----------------|-----|
-| 🚀 Load Test | "How fast / how stable under load?" | Vegeta attack, QPS × duration, parses report into P50/P95/P99 + throughput |
-| 🧪 E2E Smoke | "Does the deployed pipeline actually work?" | One-shot requests through text / image+text / text→audio paths, asserts content |
+## Prerequisites
 
-## Quick Start
+- Node.js ≥ 18
+- pnpm 9 (`npm install -g pnpm@9`)
+- Vegeta for Load Test (`brew install vegeta` on macOS, or releases at <https://github.com/tsenart/vegeta/releases>)
+
+## Install
 
 ```bash
-# Prerequisites: Node.js ≥ 18, Vegeta (for load test mode only)
-brew install vegeta          # macOS
-# or download from https://github.com/tsenart/vegeta/releases
-
-npm install
-npm start                    # http://localhost:3001
+pnpm install
 ```
 
-## Supported API Types
+## Develop
 
-Load Test mode builds request bodies for:
-- `chat` — OpenAI `/v1/chat/completions`
-- `embeddings` — `/v1/embeddings`
-- `rerank` — `/rerank`
-- `images` — `/v1/images/generations`
-- `chat-vision` — image (URL or data URL) + text, returns text
-- `chat-audio` — text in, audio out (`modalities: ["audio"]`, exercises omni pipelines)
-
-E2E Smoke mode ships three probes out of the box:
-1. **Text** — deterministic prompt + marker assertion
-2. **Image + Text** — 8×8 red PNG embedded inline, asserts the reply mentions "red"
-3. **Text → Audio** — asserts the response contains a choice with a valid WAV header
-
-No external assets: the image is generated in-process; the audio is validated by RIFF/WAVE magic bytes.
-
-## Project Layout
-
-```
-inferbench/
-├── server.js                          # Thin entry: mounts routes
-├── src/
-│   ├── routes/
-│   │   ├── health.js                  # /api/health, /api/check-vegeta
-│   │   ├── load-test.js               # /api/load-test  (vegeta attack)
-│   │   └── e2e-test.js                # /api/e2e-test   (functional probes)
-│   ├── builders/                      # Shared: build OpenAI-compat request bodies
-│   │   ├── chat.js / embeddings.js / rerank.js / images.js
-│   │   ├── multimodal.js              # chat-vision, chat-audio
-│   │   └── index.js                   # dispatcher + VALID_API_TYPES
-│   ├── probes/                        # E2E assertions
-│   │   ├── text.js / image.js / audio.js
-│   ├── parsers/
-│   │   └── vegeta-report.js
-│   └── utils/
-│       ├── tiny-png.js                # stdlib 8×8 PNG generator
-│       └── wav.js                     # RIFF/WAVE header validator
-├── public/
-│   ├── index.html                     # Tabs: Load Test / E2E Smoke
-│   ├── style.css
-│   ├── app.js                         # ES-module entry, no build step
-│   └── pages/
-│       ├── shared-config.js           # API config form + cURL import
-│       ├── load-test.js               # form submit + results rendering
-│       └── e2e-test.js                # 3 cards, audio player, image preview
-├── tmp/                               # runtime artifacts (vegeta request.json/txt)
-├── ai-docs/
-└── package.json
+```bash
+pnpm dev
 ```
 
-## Adding a Probe or API Type
+Vite serves the frontend on <http://localhost:5173>. Express serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to Express. Edit files in `web/src/`; HMR updates the browser.
 
-**New API type (load test payload):** add a file under `src/builders/`, dispatch in `src/builders/index.js`, add the option to the dropdown in `public/index.html`, and read the new fields in `public/pages/shared-config.js`.
+## Production build
 
-**New E2E probe:** add a file under `src/probes/` exporting an async function, register it in the `PROBES` map in `src/routes/e2e-test.js`, and add a card in `public/index.html` + render logic in `public/pages/e2e-test.js`.
+```bash
+pnpm build
+pnpm start
+```
 
-## API Endpoints
+The Vite bundle is emitted to `dist/`. Express serves it on port 3001 together with the API. One port, one process.
 
-- `GET  /api/health`
-- `GET  /api/check-vegeta`
-- `POST /api/load-test` — `{ apiType, apiUrl, apiKey, model, rate, duration, ...typeParams }`
-- `POST /api/e2e-test` — `{ apiUrl, apiKey, model, customHeaders?, probes: ["text","image","audio"] }`
+## Repo layout
 
-## Notes
+```
+BlastBench/
+├── server.js               # Express entry (API + static serve for dist/)
+├── src/                    # Backend routes, builders, probes, parsers
+├── web/                    # Frontend (Vite root)
+│   ├── index.html
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── layouts/, components/, features/, stores/, lib/, locales/, router/, types/
+│   │   └── styles/globals.css
+│   ├── vite.config.ts, tsconfig.json, tailwind.config.ts, biome.json
+├── dist/                   # Vite build output (gitignored)
+├── docs/superpowers/       # Specs and implementation plans
+└── tmp/                    # Runtime artifacts (Vegeta request.txt)
+```
 
-- For pods without public internet (common in closed K8s clusters), use `data:image/...;base64,...` URLs in Chat · Vision. `makeSolidPng()` in `src/utils/tiny-png.js` shows the minimal stdlib way to generate one.
-- The audio probe looks for `message.audio.data` on any `choice` in the response (vLLM-omni may return audio in `choices[1]` rather than `choices[0]` depending on `modalities` setting).
-- `tmp/` is gitignored except for `.gitkeep`.
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `pnpm dev` | Run Vite + Express together |
+| `pnpm build` | Build the frontend to `dist/` |
+| `pnpm start` | Run Express on `dist/` (production) |
+| `pnpm lint` | Biome lint over `web/src/` |
+| `pnpm format` | Biome format over `web/src/` |
+| `pnpm type-check` | TypeScript no-emit check |
+| `pnpm test` | Vitest run |
+| `pnpm test:watch` | Vitest watch mode |
 
 ## License
 
