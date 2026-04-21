@@ -1,35 +1,35 @@
 {
-  "title": "Request Debug",
-  "subtitle": "Send a single request and inspect the full round-trip.",
-  "sections": {
-    "paste": "Paste curl",
-    "request": "Request",
-    "response": "Response"
-  },
-  "fields": {
-    "method": "Method",
-    "url": "URL",
-    "headers": "Headers",
-    "body": "Body",
-    "query": "Query"
-  },
-  "actions": { "send": "Send", "clear": "Clear", "format": "Format as JSON" },
-  "response": {
-    "status": "Status",
-    "size": "Size",
-    "ttfb": "TTFB",
-    "total": "Total",
-    "tabs": {
-      "body": "Body",
-      "headers": "Headers",
-      "timing": "Timing",
-      "raw": "Raw"
-    },
-    "download": "Download"
-  },
-  "empty": {
-    "title": "No request yet",
-    "body": "Paste a curl command, or select a connection to begin."
-  },
-  "errors": { "invalidJson": "Invalid JSON — leaving body untouched." }
+	"title": "Request Debug",
+	"subtitle": "Send a single request and inspect the full round-trip.",
+	"sections": {
+		"paste": "Paste curl",
+		"request": "Request",
+		"response": "Response"
+	},
+	"fields": {
+		"method": "Method",
+		"url": "URL",
+		"headers": "Headers",
+		"body": "Body",
+		"query": "Query"
+	},
+	"actions": { "send": "Send", "clear": "Clear", "format": "Format as JSON" },
+	"response": {
+		"status": "Status",
+		"size": "Size",
+		"ttfb": "TTFB",
+		"total": "Total",
+		"tabs": {
+			"body": "Body",
+			"headers": "Headers",
+			"timing": "Timing",
+			"raw": "Raw"
+		},
+		"download": "Download"
+	},
+	"empty": {
+		"title": "No request yet",
+		"body": "Paste a curl command, or select a connection to begin."
+	},
+	"errors": { "invalidJson": "Invalid JSON — leaving body untouched." }
 }
