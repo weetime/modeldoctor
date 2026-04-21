@@ -1,8 +1,7 @@
 import { PageHeader } from "@/components/common/page-header";
-import { EndpointSelector } from "@/components/connection/EndpointSelector";
+import { EndpointPicker } from "@/components/connection/EndpointPicker";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { useTranslation } from "react-i18next";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
@@ -16,24 +15,22 @@ interface E2EApiResponse {
 
 export function E2ESmokePage() {
 	const { t } = useTranslation("e2e");
+	const { t: tc } = useTranslation("common");
 	const slice = useE2EStore();
-	const conns = useConnectionsStore();
-	const conn = slice.selectedConnectionId
-		? conns.get(slice.selectedConnectionId)
-		: null;
+	const endpoint = slice.manualEndpoint;
 
 	const runProbes = async (probes: ProbeName[]) => {
-		if (!conn) {
-			alert("Please select a connection.");
+		if (!endpoint.apiUrl || !endpoint.apiKey || !endpoint.model) {
+			alert(tc("errors.required"));
 			return;
 		}
 		for (const p of probes) slice.setRunning(p, true);
 		try {
 			const data = await api.post<E2EApiResponse>("/api/e2e-test", {
-				apiUrl: conn.apiUrl,
-				apiKey: conn.apiKey,
-				model: conn.model,
-				customHeaders: conn.customHeaders,
+				apiUrl: endpoint.apiUrl,
+				apiKey: endpoint.apiKey,
+				model: endpoint.model,
+				customHeaders: endpoint.customHeaders,
 				probes,
 			});
 			if (!data.success) {
@@ -67,18 +64,15 @@ export function E2ESmokePage() {
 
 	return (
 		<>
-			<PageHeader
-				title={t("title")}
-				subtitle={t("subtitle")}
-				rightSlot={
-					<EndpointSelector
-						selectedId={slice.selectedConnectionId}
-						modified={false}
-						onSelect={slice.setSelected}
-					/>
-				}
-			/>
-			<div className="space-y-4 px-8 py-6">
+			<PageHeader title={t("title")} subtitle={t("subtitle")} />
+			<div className="space-y-6 px-8 py-6">
+				<EndpointPicker
+					endpoint={endpoint}
+					selectedConnectionId={slice.selectedConnectionId}
+					onSelect={slice.setSelected}
+					onEndpointChange={slice.setManualEndpoint}
+				/>
+
 				<div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
 					{(["text", "image", "audio"] as ProbeName[]).map((p) => (
 						<ProbeCard
