@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { detectApiType, parseCurlCommand } from "@/lib/curl-parser";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLoadTestStore } from "./store";
 import type { ApiType } from "./types";
 
@@ -52,8 +52,10 @@ function extractSystemPrompt(messages: unknown): string | null {
 export function CurlImport() {
 	const { t } = useTranslation("load-test");
 	const setApiType = useLoadTestStore((s) => s.setApiType);
+	const setSelected = useLoadTestStore((s) => s.setSelected);
 	const patch = useLoadTestStore((s) => s.patch);
 	const curlInput = useLoadTestStore((s) => s.curlInput);
+	const manualEndpoint = useLoadTestStore((s) => s.manualEndpoint);
 	const chat = useLoadTestStore((s) => s.chat);
 	const embeddings = useLoadTestStore((s) => s.embeddings);
 	const rerank = useLoadTestStore((s) => s.rerank);
@@ -76,7 +78,40 @@ export function CurlImport() {
 		setApiType(detected);
 		filled.push(`type=${detected}`);
 
+		// Switch to Manual mode and populate endpoint fields from the curl.
+		setSelected(null);
+		const nextManual = { ...manualEndpoint };
+		if (parsed.url) {
+			nextManual.apiUrl = parsed.url;
+			filled.push("apiUrl");
+		}
+		if (parsed.queryParams) {
+			nextManual.queryParams = parsed.queryParams;
+			filled.push("queryParams");
+		}
+		const auth = parsed.headers.authorization;
+		if (auth) {
+			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
+			if (key) {
+				nextManual.apiKey = key;
+				filled.push("apiKey");
+			}
+		}
+		const customLines: string[] = [];
+		for (const [lower, entry] of Object.entries(parsed.headers)) {
+			if (lower === "authorization" || lower === "content-type") continue;
+			customLines.push(`${entry.originalKey}: ${entry.value}`);
+		}
+		if (customLines.length) {
+			nextManual.customHeaders = customLines.join("\n");
+			filled.push("customHeaders");
+		}
 		const body = parsed.body as Record<string, unknown> | null;
+		if (body && typeof body.model === "string") {
+			nextManual.model = body.model;
+			filled.push("model");
+		}
+		patch("manualEndpoint", nextManual);
 
 		if (detected === "chat" && body) {
 			const prompt = extractUserPrompt(body.messages);
@@ -184,10 +219,6 @@ export function CurlImport() {
 				filled.push("systemPrompt");
 			}
 			patch("chatAudio", nextAudio);
-		}
-
-		if (body && typeof body.model === "string") {
-			filled.push("model");
 		}
 
 		setFeedback(t("curl.filled", { fields: filled.join(", ") }));

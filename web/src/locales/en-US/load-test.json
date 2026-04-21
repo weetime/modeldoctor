@@ -5,7 +5,9 @@
 		"request": "Request",
 		"parameters": "Parameters",
 		"attack": "Attack",
-		"results": "Results"
+		"results": "Results",
+		"endpointManual": "Endpoint (manual)",
+		"endpointManualHint": "Inline values — not saved to the Connections library. Paste a curl to auto-fill, or click Save as connection."
 	},
 	"fields": {
 		"apiType": "API type",
@@ -23,7 +25,15 @@
 		"systemPrompt": "System prompt",
 		"rate": "Rate (QPS)",
 		"duration": "Duration (s)",
-		"default": "Default"
+		"default": "Default",
+		"apiUrl": "API URL",
+		"apiKey": "API Key",
+		"model": "Model",
+		"customHeaders": "Custom headers (one per line)",
+		"queryParams": "Query parameters (one per line)"
+	},
+	"actions": {
+		"saveAsConnection": "Save as connection…"
 	},
 	"curl": {
 		"import": "Import from cURL",

@@ -2,8 +2,17 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ApiType, LoadTestResult } from "./types";
 
+export interface ManualEndpoint {
+	apiUrl: string;
+	apiKey: string;
+	model: string;
+	customHeaders: string;
+	queryParams: string;
+}
+
 export interface LoadTestSlice {
 	selectedConnectionId: string | null;
+	manualEndpoint: ManualEndpoint;
 	modified: boolean;
 	apiType: ApiType;
 	chat: {
@@ -37,22 +46,45 @@ export interface LoadTestSlice {
 	setLastResult: (r: LoadTestResult | null) => void;
 }
 
+const emptyManualEndpoint: ManualEndpoint = {
+	apiUrl: "",
+	apiKey: "",
+	model: "",
+	customHeaders: "",
+	queryParams: "",
+};
+
 const defaults = {
 	selectedConnectionId: null,
+	manualEndpoint: emptyManualEndpoint,
 	modified: false,
 	apiType: "chat" as ApiType,
-	chat: { prompt: "", maxTokens: 1000, temperature: 0.7, stream: false },
-	embeddings: { embeddingInput: "" },
-	rerank: { rerankQuery: "", rerankTexts: "" },
-	images: { imagePrompt: "", imageSize: "1024x1024", imageN: 1 },
+	chat: {
+		prompt: "What is the meaning of life?",
+		maxTokens: 1000,
+		temperature: 0.7,
+		stream: false,
+	},
+	embeddings: { embeddingInput: "What is Deep Learning?" },
+	rerank: {
+		rerankQuery: "What is Deep Learning?",
+		rerankTexts:
+			"Deep learning is a subset of machine learning\nParis is the capital of France\nNeural networks use backpropagation",
+	},
+	images: { imagePrompt: "a cute cat", imageSize: "1024x1024", imageN: 1 },
 	chatVision: {
-		imageUrl: "",
-		prompt: "",
+		imageUrl:
+			"https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+		prompt: "What is in the image? Answer in one sentence.",
 		systemPrompt: "",
 		maxTokens: 256,
 		temperature: 0,
 	},
-	chatAudio: { prompt: "", systemPrompt: "" },
+	chatAudio: {
+		prompt: "Say the word hello.",
+		systemPrompt:
+			"You are Qwen, a virtual human capable of generating text and speech.",
+	},
 	attack: { rate: 2, duration: 60 },
 	curlExpanded: false,
 	curlInput: "",

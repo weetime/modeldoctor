@@ -5,7 +5,9 @@
 		"request": "\u8bf7\u6c42",
 		"parameters": "\u53c2\u6570",
 		"attack": "\u538b\u6d4b",
-		"results": "\u7ed3\u679c"
+		"results": "\u7ed3\u679c",
+		"endpointManual": "\u7aef\u70b9\uff08\u624b\u52a8\uff09",
+		"endpointManualHint": "\u5f53\u524d\u662f\u4e34\u65f6\u914d\u7f6e\uff0c\u672a\u4fdd\u5b58\u5230\u8fde\u63a5\u5e93\u3002\u7c98\u8d34 curl \u53ef\u81ea\u52a8\u586b\u5145\uff0c\u6216\u70b9\u51fb\u4fdd\u5b58\u4e3a\u8fde\u63a5\u3002"
 	},
 	"fields": {
 		"apiType": "API \u7c7b\u578b",
@@ -23,7 +25,15 @@
 		"systemPrompt": "System prompt",
 		"rate": "\u901f\u7387 (QPS)",
 		"duration": "\u65f6\u957f (\u79d2)",
-		"default": "\u9ed8\u8ba4"
+		"default": "\u9ed8\u8ba4",
+		"apiUrl": "API URL",
+		"apiKey": "API Key",
+		"model": "\u6a21\u578b",
+		"customHeaders": "\u81ea\u5b9a\u4e49 Headers\uff08\u6bcf\u884c\u4e00\u6761\uff09",
+		"queryParams": "\u67e5\u8be2\u53c2\u6570\uff08\u6bcf\u884c\u4e00\u6761\uff09"
+	},
+	"actions": {
+		"saveAsConnection": "\u4fdd\u5b58\u4e3a\u8fde\u63a5\u2026"
 	},
 	"curl": {
 		"import": "\u4ece cURL \u5bfc\u5165",
