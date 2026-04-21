@@ -1,31 +1,28 @@
 {
-  "name": "inferbench",
-  "version": "2.0.0",
-  "description": "Model-serving test suite: Vegeta-driven load testing + functional E2E smoke tests with visual results",
+  "name": "modeldoctor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Troubleshooting toolkit for model-serving APIs",
   "main": "server.js",
   "scripts": {
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"pnpm --silent dev:web\" \"pnpm --silent dev:api\"",
+    "dev:web": "vite --config web/vite.config.ts",
+    "dev:api": "node server.js",
+    "build": "vite build --config web/vite.config.ts",
     "start": "node server.js",
-    "dev": "node server.js"
+    "lint": "biome check web/src",
+    "format": "biome format --write web/src",
+    "type-check": "tsc -p web/tsconfig.json --noEmit",
+    "test": "vitest run --config web/vitest.config.ts",
+    "test:watch": "vitest --config web/vitest.config.ts"
   },
-  "keywords": [
-    "inference",
-    "load-testing",
-    "e2e-testing",
-    "multimodal",
-    "vllm",
-    "openai-api",
-    "model-serving",
-    "vegeta"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
     "body-parser": "^1.20.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   },
+  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }
 }
-
