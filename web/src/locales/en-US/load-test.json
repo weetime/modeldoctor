@@ -6,8 +6,8 @@
 		"parameters": "Parameters",
 		"attack": "Attack",
 		"results": "Results",
-		"endpointManual": "Endpoint (manual)",
-		"endpointManualHint": "Inline values — not saved to the Connections library. Paste a curl to auto-fill, or click Save as connection."
+		"endpoint": "Endpoint",
+		"advanced": "Advanced (custom headers, query params)"
 	},
 	"fields": {
 		"apiType": "API type",
@@ -33,7 +33,14 @@
 		"queryParams": "Query parameters (one per line)"
 	},
 	"actions": {
-		"saveAsConnection": "Save as connection…"
+		"saveAsConnection": "Save as connection…",
+		"save": "Save",
+		"saveAs": "Save as…",
+		"pasteCurl": "Paste cURL",
+		"loadFromSaved": "Load from saved",
+		"manual": "— Manual —",
+		"modified": "Modified",
+		"nameConnection": "Connection name"
 	},
 	"curl": {
 		"import": "Import from cURL",

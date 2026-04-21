@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/common/page-header";
-import { EndpointSelector } from "@/components/connection/EndpointSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +12,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
+import { detectApiType, parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, EyeOff } from "lucide-react";
+import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CurlImport } from "./CurlImport";
 import { LoadTestResults } from "./Results";
 import { ChatForm } from "./forms/chat";
 import { ChatAudioForm } from "./forms/chat-audio";
@@ -29,6 +28,8 @@ import { RerankForm } from "./forms/rerank";
 import { type ManualEndpoint, useLoadTestStore } from "./store";
 import { API_TYPES, type ApiType, type LoadTestResult } from "./types";
 
+const MANUAL = "__manual__";
+
 const formByType: Record<ApiType, () => JSX.Element> = {
 	chat: ChatForm,
 	embeddings: EmbeddingsForm,
@@ -38,25 +39,288 @@ const formByType: Record<ApiType, () => JSX.Element> = {
 	"chat-audio": ChatAudioForm,
 };
 
+function extractUserPrompt(messages: unknown): string | null {
+	if (!Array.isArray(messages)) return null;
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const m = messages[i] as { role?: string; content?: unknown };
+		if (m?.role !== "user") continue;
+		if (typeof m.content === "string") return m.content;
+		if (Array.isArray(m.content)) {
+			const textPart = m.content.find(
+				(p: unknown) =>
+					p &&
+					typeof p === "object" &&
+					(p as { type?: string }).type === "text",
+			) as { text?: string } | undefined;
+			if (textPart?.text) return textPart.text;
+		}
+	}
+	return null;
+}
+
+function extractImageUrl(messages: unknown): string | null {
+	if (!Array.isArray(messages)) return null;
+	for (const m of messages) {
+		const content = (m as { content?: unknown }).content;
+		if (!Array.isArray(content)) continue;
+		for (const part of content) {
+			const p = part as { type?: string; image_url?: { url?: string } };
+			if (p?.type === "image_url" && p.image_url?.url) return p.image_url.url;
+		}
+	}
+	return null;
+}
+
+function extractSystemPrompt(messages: unknown): string | null {
+	if (!Array.isArray(messages)) return null;
+	for (const m of messages) {
+		const x = m as { role?: string; content?: unknown };
+		if (x?.role === "system" && typeof x.content === "string") return x.content;
+	}
+	return null;
+}
+
 export function LoadTestPage() {
 	const { t } = useTranslation("load-test");
 	const { t: tc } = useTranslation("common");
 	const slice = useLoadTestStore();
 	const conns = useConnectionsStore();
+	const connectionList = conns.list();
 	const createConn = useConnectionsStore((s) => s.create);
-	const conn = slice.selectedConnectionId
+	const updateConn = useConnectionsStore((s) => s.update);
+	const selectedConn = slice.selectedConnectionId
 		? conns.get(slice.selectedConnectionId)
 		: null;
-	const endpoint: ManualEndpoint = conn ?? slice.manualEndpoint;
-	const isManual = !conn;
 
 	const [error, setError] = useState<string | null>(null);
 	const [progress, setProgress] = useState(0);
 	const [revealKey, setRevealKey] = useState(false);
-	const [saveName, setSaveName] = useState("");
+	const [curlOpen, setCurlOpen] = useState(false);
+	const [curlText, setCurlText] = useState("");
+	const [curlFeedback, setCurlFeedback] = useState<string | null>(null);
 	const [saveOpen, setSaveOpen] = useState(false);
+	const [saveName, setSaveName] = useState("");
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const ActiveForm = formByType[slice.apiType];
+
+	const endpoint = slice.manualEndpoint;
+	const isDirty =
+		!!selectedConn &&
+		(selectedConn.apiUrl !== endpoint.apiUrl ||
+			selectedConn.apiKey !== endpoint.apiKey ||
+			selectedConn.model !== endpoint.model ||
+			selectedConn.customHeaders !== endpoint.customHeaders ||
+			selectedConn.queryParams !== endpoint.queryParams);
+
+	const patchEndpoint = (patch: Partial<ManualEndpoint>) => {
+		slice.patch("manualEndpoint", { ...slice.manualEndpoint, ...patch });
+	};
+
+	const onSelectConnection = (value: string) => {
+		if (value === MANUAL) {
+			slice.setSelected(null);
+			return;
+		}
+		const c = conns.get(value);
+		if (c) {
+			slice.setSelected(c.id);
+			slice.patch("manualEndpoint", {
+				apiUrl: c.apiUrl,
+				apiKey: c.apiKey,
+				model: c.model,
+				customHeaders: c.customHeaders,
+				queryParams: c.queryParams,
+			});
+		}
+	};
+
+	const onSaveClick = () => {
+		setSaveError(null);
+		if (selectedConn) {
+			try {
+				updateConn(selectedConn.id, endpoint);
+			} catch (e) {
+				setSaveError(e instanceof Error ? e.message : tc("errors.unknown"));
+			}
+			return;
+		}
+		setSaveOpen(true);
+		setSaveName("");
+	};
+
+	const onSaveAsSubmit = () => {
+		setSaveError(null);
+		const name = saveName.trim();
+		if (!name) {
+			setSaveError(tc("errors.required"));
+			return;
+		}
+		try {
+			const created = createConn({ name, ...endpoint });
+			slice.setSelected(created.id);
+			setSaveOpen(false);
+			setSaveName("");
+		} catch (e) {
+			setSaveError(e instanceof Error ? e.message : tc("errors.unknown"));
+		}
+	};
+
+	const onParseCurl = () => {
+		const parsed = parseCurlCommand(curlText);
+		if (!parsed.url && !parsed.body) {
+			setCurlFeedback(t("curl.filled", { fields: "—" }));
+			return;
+		}
+		const detected: ApiType = detectApiType(parsed.url, parsed.body);
+		slice.setApiType(detected);
+		const filled: string[] = [`type=${detected}`];
+
+		slice.setSelected(null);
+		const nextEndpoint: ManualEndpoint = { ...slice.manualEndpoint };
+		if (parsed.url) {
+			nextEndpoint.apiUrl = parsed.url;
+			filled.push("apiUrl");
+		}
+		if (parsed.queryParams) {
+			nextEndpoint.queryParams = parsed.queryParams;
+			filled.push("queryParams");
+		}
+		const auth = parsed.headers.authorization;
+		if (auth) {
+			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
+			if (key) {
+				nextEndpoint.apiKey = key;
+				filled.push("apiKey");
+			}
+		}
+		const customLines: string[] = [];
+		for (const [lower, entry] of Object.entries(parsed.headers)) {
+			if (lower === "authorization" || lower === "content-type") continue;
+			customLines.push(`${entry.originalKey}: ${entry.value}`);
+		}
+		if (customLines.length) {
+			nextEndpoint.customHeaders = customLines.join("\n");
+			filled.push("customHeaders");
+		}
+		const body = parsed.body as Record<string, unknown> | null;
+		if (body && typeof body.model === "string") {
+			nextEndpoint.model = body.model;
+			filled.push("model");
+		}
+		slice.patch("manualEndpoint", nextEndpoint);
+
+		if (detected === "chat" && body) {
+			const next = { ...slice.chat };
+			const prompt = extractUserPrompt(body.messages);
+			if (prompt != null) {
+				next.prompt = prompt;
+				filled.push("prompt");
+			}
+			if (typeof body.max_tokens === "number") {
+				next.maxTokens = body.max_tokens;
+				filled.push("maxTokens");
+			}
+			if (typeof body.temperature === "number") {
+				next.temperature = body.temperature;
+				filled.push("temperature");
+			}
+			if (typeof body.stream === "boolean") {
+				next.stream = body.stream;
+				filled.push("stream");
+			}
+			slice.patch("chat", next);
+		}
+		if (detected === "embeddings" && body) {
+			const input = body.input;
+			const text = Array.isArray(input)
+				? input.filter((x) => typeof x === "string").join("\n")
+				: typeof input === "string"
+					? input
+					: null;
+			if (text) {
+				slice.patch("embeddings", {
+					...slice.embeddings,
+					embeddingInput: text,
+				});
+				filled.push("input");
+			}
+		}
+		if (detected === "rerank" && body) {
+			const next = { ...slice.rerank };
+			if (typeof body.query === "string") {
+				next.rerankQuery = body.query;
+				filled.push("query");
+			}
+			if (Array.isArray(body.texts)) {
+				next.rerankTexts = body.texts
+					.filter((x) => typeof x === "string")
+					.join("\n");
+				filled.push("texts");
+			}
+			slice.patch("rerank", next);
+		}
+		if (detected === "images" && body) {
+			const next = { ...slice.images };
+			if (typeof body.prompt === "string") {
+				next.imagePrompt = body.prompt;
+				filled.push("prompt");
+			}
+			if (typeof body.size === "string") {
+				next.imageSize = body.size;
+				filled.push("size");
+			}
+			if (typeof body.n === "number") {
+				next.imageN = body.n;
+				filled.push("n");
+			}
+			slice.patch("images", next);
+		}
+		if (detected === "chat-vision" && body) {
+			const next = { ...slice.chatVision };
+			const imageUrl = extractImageUrl(body.messages);
+			if (imageUrl) {
+				next.imageUrl = imageUrl;
+				filled.push("imageUrl");
+			}
+			const prompt = extractUserPrompt(body.messages);
+			if (prompt) {
+				next.prompt = prompt;
+				filled.push("prompt");
+			}
+			const sys = extractSystemPrompt(body.messages);
+			if (sys) {
+				next.systemPrompt = sys;
+				filled.push("systemPrompt");
+			}
+			if (typeof body.max_tokens === "number") {
+				next.maxTokens = body.max_tokens;
+				filled.push("maxTokens");
+			}
+			if (typeof body.temperature === "number") {
+				next.temperature = body.temperature;
+				filled.push("temperature");
+			}
+			slice.patch("chatVision", next);
+		}
+		if (detected === "chat-audio" && body) {
+			const next = { ...slice.chatAudio };
+			const prompt = extractUserPrompt(body.messages);
+			if (prompt) {
+				next.prompt = prompt;
+				filled.push("prompt");
+			}
+			const sys = extractSystemPrompt(body.messages);
+			if (sys) {
+				next.systemPrompt = sys;
+				filled.push("systemPrompt");
+			}
+			slice.patch("chatAudio", next);
+		}
+
+		setCurlFeedback(t("curl.filled", { fields: filled.join(", ") }));
+		setCurlText("");
+		setTimeout(() => setCurlOpen(false), 1200);
+	};
 
 	const mutation = useMutation<LoadTestResult, ApiError>({
 		mutationFn: async () => {
@@ -87,91 +351,81 @@ export function LoadTestPage() {
 		mutation.mutate(undefined, { onSettled: () => clearInterval(tick) });
 	};
 
-	const onSaveAsConnection = () => {
-		setSaveError(null);
-		const name = saveName.trim();
-		if (!name) {
-			setSaveError(tc("errors.required"));
-			return;
-		}
-		try {
-			const created = createConn({
-				name,
-				apiUrl: slice.manualEndpoint.apiUrl,
-				apiKey: slice.manualEndpoint.apiKey,
-				model: slice.manualEndpoint.model,
-				customHeaders: slice.manualEndpoint.customHeaders,
-				queryParams: slice.manualEndpoint.queryParams,
-			});
-			slice.setSelected(created.id);
-			setSaveName("");
-			setSaveOpen(false);
-		} catch (e) {
-			setSaveError(e instanceof Error ? e.message : tc("errors.unknown"));
-		}
-	};
-
-	const patchManual = (patch: Partial<ManualEndpoint>) => {
-		slice.patch("manualEndpoint", { ...slice.manualEndpoint, ...patch });
-	};
-
-	const canSave =
-		isManual &&
-		slice.manualEndpoint.apiUrl.trim().length > 0 &&
-		slice.manualEndpoint.apiKey.trim().length > 0 &&
-		slice.manualEndpoint.model.trim().length > 0;
-
 	return (
 		<>
-			<PageHeader
-				title={t("title")}
-				subtitle={t("subtitle")}
-				rightSlot={
-					<EndpointSelector
-						selectedId={slice.selectedConnectionId}
-						modified={slice.modified}
-						onSelect={slice.setSelected}
-					/>
-				}
-			/>
+			<PageHeader title={t("title")} subtitle={t("subtitle")} />
 			<div className="space-y-6 px-8 py-6">
-				{isManual ? (
-					<Section
-						title={t("sections.endpointManual")}
-						hint={t("sections.endpointManualHint")}
-						action={
-							canSave ? (
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									onClick={() => {
-										setSaveOpen(true);
-										setSaveError(null);
-									}}
-								>
-									{t("actions.saveAsConnection")}
-								</Button>
-							) : null
-						}
-					>
-						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-							<div className="md:col-span-2">
-								<Label>{t("fields.apiUrl")}</Label>
-								<Input
-									value={slice.manualEndpoint.apiUrl}
-									onChange={(e) => patchManual({ apiUrl: e.target.value })}
-									placeholder="http://host:port/v1/chat/completions"
-									className="font-mono text-xs"
+				<Section
+					title={t("sections.endpoint")}
+					action={
+						<div className="flex flex-wrap items-center gap-2">
+							<Select
+								value={slice.selectedConnectionId ?? MANUAL}
+								onValueChange={onSelectConnection}
+							>
+								<SelectTrigger className="h-8 min-w-[180px] text-xs">
+									<SelectValue placeholder={t("actions.loadFromSaved")} />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={MANUAL}>{t("actions.manual")}</SelectItem>
+									{connectionList.map((c) => (
+										<SelectItem key={c.id} value={c.id}>
+											{c.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							{isDirty ? (
+								<span
+									className="h-2 w-2 rounded-full bg-warning"
+									title={t("actions.modified")}
+									aria-label={t("actions.modified")}
 								/>
-							</div>
+							) : null}
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={onSaveClick}
+								disabled={
+									!endpoint.apiUrl || !endpoint.apiKey || !endpoint.model
+								}
+							>
+								{selectedConn ? t("actions.save") : t("actions.saveAs")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={() => {
+									setCurlOpen((v) => !v);
+									setCurlFeedback(null);
+								}}
+							>
+								<ClipboardPaste className="h-3.5 w-3.5" />
+								<span className="ml-1">{t("actions.pasteCurl")}</span>
+							</Button>
+						</div>
+					}
+				>
+					<div className="space-y-3">
+						<div>
+							<Label>{t("fields.apiUrl")}</Label>
+							<Input
+								value={endpoint.apiUrl}
+								onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
+								placeholder="http://host:port/v1/chat/completions"
+								className="font-mono text-xs"
+							/>
+						</div>
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div>
 								<Label>{t("fields.apiKey")}</Label>
 								<div className="relative">
 									<Input
 										type={revealKey ? "text" : "password"}
-										value={slice.manualEndpoint.apiKey}
-										onChange={(e) => patchManual({ apiKey: e.target.value })}
+										value={endpoint.apiKey}
+										onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
 										placeholder="sk-…"
 										className="font-mono text-xs"
 									/>
@@ -192,109 +446,133 @@ export function LoadTestPage() {
 							<div>
 								<Label>{t("fields.model")}</Label>
 								<Input
-									value={slice.manualEndpoint.model}
-									onChange={(e) => patchManual({ model: e.target.value })}
+									value={endpoint.model}
+									onChange={(e) => patchEndpoint({ model: e.target.value })}
 									placeholder="model-name"
 									className="font-mono text-xs"
 								/>
 							</div>
-							<div className="md:col-span-2">
-								<Label>{t("fields.customHeaders")}</Label>
-								<Textarea
-									rows={2}
-									value={slice.manualEndpoint.customHeaders}
-									onChange={(e) =>
-										patchManual({ customHeaders: e.target.value })
-									}
-									placeholder="Header-Name: value"
-									className="font-mono text-xs"
-								/>
-							</div>
-							<div className="md:col-span-2">
-								<Label>{t("fields.queryParams")}</Label>
-								<Textarea
-									rows={2}
-									value={slice.manualEndpoint.queryParams}
-									onChange={(e) => patchManual({ queryParams: e.target.value })}
-									placeholder="key=value"
-									className="font-mono text-xs"
-								/>
-							</div>
 						</div>
+						<details>
+							<summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+								{t("sections.advanced")}
+							</summary>
+							<div className="mt-2 space-y-3">
+								<div>
+									<Label>{t("fields.customHeaders")}</Label>
+									<Textarea
+										rows={2}
+										value={endpoint.customHeaders}
+										onChange={(e) =>
+											patchEndpoint({ customHeaders: e.target.value })
+										}
+										placeholder="Header-Name: value"
+										className="font-mono text-xs"
+									/>
+								</div>
+								<div>
+									<Label>{t("fields.queryParams")}</Label>
+									<Textarea
+										rows={2}
+										value={endpoint.queryParams}
+										onChange={(e) =>
+											patchEndpoint({ queryParams: e.target.value })
+										}
+										placeholder="key=value"
+										className="font-mono text-xs"
+									/>
+								</div>
+							</div>
+						</details>
+					</div>
 
-						{saveOpen ? (
-							<div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
-								<Input
-									autoFocus
-									value={saveName}
-									onChange={(e) => setSaveName(e.target.value)}
-									placeholder="connection-name"
-									className="h-8 font-mono text-xs"
-								/>
+					{curlOpen ? (
+						<div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+							<Textarea
+								rows={5}
+								value={curlText}
+								onChange={(e) => setCurlText(e.target.value)}
+								placeholder={`curl http://example/v1/chat/completions \\\n  -H "Authorization: Bearer sk-\u2026" \\\n  -d '{...}'`}
+								className="font-mono text-xs"
+							/>
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									size="sm"
+									onClick={onParseCurl}
+									disabled={!curlText.trim()}
+								>
+									{t("curl.parse")}
+								</Button>
 								<Button
 									type="button"
 									size="sm"
 									variant="ghost"
 									onClick={() => {
-										setSaveOpen(false);
-										setSaveError(null);
+										setCurlOpen(false);
+										setCurlFeedback(null);
 									}}
 								>
 									{tc("actions.cancel")}
 								</Button>
-								<Button type="button" size="sm" onClick={onSaveAsConnection}>
-									{tc("actions.save")}
-								</Button>
-								{saveError ? (
-									<span className="text-xs text-destructive">
-										{saveError.toLowerCase().includes("exists")
-											? "name exists"
-											: saveError}
-									</span>
+								{curlFeedback ? (
+									<span className="text-xs text-success">{curlFeedback}</span>
 								) : null}
 							</div>
-						) : null}
-					</Section>
-				) : null}
+						</div>
+					) : null}
+
+					{saveOpen ? (
+						<div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
+							<Input
+								value={saveName}
+								onChange={(e) => setSaveName(e.target.value)}
+								placeholder={t("actions.nameConnection")}
+								className="h-8 font-mono text-xs"
+							/>
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								onClick={() => {
+									setSaveOpen(false);
+									setSaveError(null);
+								}}
+							>
+								{tc("actions.cancel")}
+							</Button>
+							<Button type="button" size="sm" onClick={onSaveAsSubmit}>
+								{tc("actions.save")}
+							</Button>
+							{saveError ? (
+								<span className="text-xs text-destructive">
+									{saveError.toLowerCase().includes("exists")
+										? "name exists"
+										: saveError}
+								</span>
+							) : null}
+						</div>
+					) : null}
+				</Section>
 
 				<Section title={t("sections.request")}>
-					<div className="space-y-3">
-						<div className="grid grid-cols-2 gap-3">
-							<div>
-								<Label>{t("fields.apiType")}</Label>
-								<Select
-									value={slice.apiType}
-									onValueChange={(v) => slice.setApiType(v as ApiType)}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{API_TYPES.map((type) => (
-											<SelectItem key={type} value={type}>
-												{type}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<details
-							open={slice.curlExpanded}
-							onToggle={(e) =>
-								slice.patch(
-									"curlExpanded",
-									(e.target as HTMLDetailsElement).open,
-								)
-							}
+					<div>
+						<Label>{t("fields.apiType")}</Label>
+						<Select
+							value={slice.apiType}
+							onValueChange={(v) => slice.setApiType(v as ApiType)}
 						>
-							<summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-								{t("curl.import")}
-							</summary>
-							<div className="mt-2">
-								<CurlImport />
-							</div>
-						</details>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{API_TYPES.map((type) => (
+									<SelectItem key={type} value={type}>
+										{type}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 				</Section>
 
@@ -361,26 +639,19 @@ export function LoadTestPage() {
 
 function Section({
 	title,
-	hint,
 	action,
 	children,
 }: {
 	title: string;
-	hint?: string;
 	action?: React.ReactNode;
 	children: React.ReactNode;
 }) {
 	return (
 		<section className="rounded-lg border border-border bg-card p-4">
-			<div className="mb-3 flex items-start justify-between gap-2">
-				<div>
-					<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-						{title}
-					</h2>
-					{hint ? (
-						<p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-					) : null}
-				</div>
+			<div className="mb-3 flex items-center justify-between gap-2">
+				<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+					{title}
+				</h2>
 				{action}
 			</div>
 			{children}
