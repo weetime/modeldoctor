@@ -512,3 +512,149 @@ footer a:hover {
     margin-top: 2rem;
 }
 
+
+/* ============================================================
+   Main Tabs  (Load Test / E2E Smoke)
+   ============================================================ */
+.main-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin: 2rem 0 1rem 0;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-panel[hidden] {
+    display: none;
+}
+
+/* ============================================================
+   E2E Smoke cards
+   ============================================================ */
+.e2e-hint {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.e2e-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.e2e-card {
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--card-bg);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: border-left-color 0.2s;
+}
+
+.e2e-card.pass { border-left-color: var(--success-color); }
+.e2e-card.fail { border-left-color: var(--danger-color); }
+.e2e-card.running { border-left-color: var(--warning-color); }
+
+.e2e-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.e2e-head h3 {
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.e2e-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.e2e-status.pass { background: #d1fae5; color: #065f46; }
+.e2e-status.fail { background: #fee2e2; color: #991b1b; }
+.e2e-status.running { background: #fef3c7; color: #92400e; }
+
+.e2e-path {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+    font-family: ui-monospace, Menlo, monospace;
+}
+
+.e2e-output {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.e2e-output .checks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.8rem;
+}
+
+.e2e-output .checks li {
+    padding: 2px 0;
+}
+
+.e2e-output .checks li.ok::before { content: "✓ "; color: var(--success-color); }
+.e2e-output .checks li.bad::before { content: "✗ "; color: var(--danger-color); }
+
+.e2e-output .content-line {
+    background: var(--bg-color);
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    word-break: break-word;
+}
+
+.e2e-output img.preview {
+    max-width: 160px;
+    height: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.e2e-output audio {
+    width: 100%;
+}
+
+.e2e-output .meta {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}

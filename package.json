@@ -1,18 +1,21 @@
 {
-  "name": "vegeta-load-test-control",
-  "version": "1.0.1",
-  "description": "Web-based control interface for Vegeta load testing tool",
+  "name": "inferbench",
+  "version": "2.0.0",
+  "description": "Model-serving test suite: Vegeta-driven load testing + functional E2E smoke tests with visual results",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "keywords": [
-    "vegeta",
+    "inference",
     "load-testing",
-    "performance",
-    "api-testing",
-    "stress-testing"
+    "e2e-testing",
+    "multimodal",
+    "vllm",
+    "openai-api",
+    "model-serving",
+    "vegeta"
   ],
   "author": "",
   "license": "MIT",
@@ -22,7 +25,7 @@
     "cors": "^2.8.5"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
 

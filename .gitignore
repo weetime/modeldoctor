@@ -34,6 +34,15 @@ coverage/
 dist/
 build/
 
+# Git worktrees
+.worktrees/
+
+# Runtime test artifacts
+tmp/*
+!tmp/.gitkeep
+request.json
+request.txt
+
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .cursor/rules/snyk_rules.mdc

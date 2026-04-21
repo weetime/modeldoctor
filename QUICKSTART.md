@@ -51,7 +51,7 @@
 
 #### 🔌 API 配置
 - API URL: `http://10.100.121.67:30888/v1/chat/completions`
-- API Key: `sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff`
+- API Key: `sk-…` (set per environment)
 - Model: `gen-studio-Qwen2.5-0.5B`
 
 #### 📝 请求参数

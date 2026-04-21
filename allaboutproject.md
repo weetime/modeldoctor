@@ -113,7 +113,7 @@ vegeta-test/
 
 1. 在表单中填写配置：
    - API 地址: `http://10.100.121.67:30888/v1/chat/completions`
-   - API Key: `sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff`
+   - API Key: `sk-…` (set per environment)
    - 模型名称: `gen-studio-Qwen2.5-0.5B`
    - 用户提示词: `天为何是蓝色的`
    - QPS: `2`

@@ -1,108 +1,95 @@
-# Vegeta Load Test Control System
+# InferBench
 
-A modern web-based interface for controlling and managing Vegeta HTTP load tests. Perfect for testing LLM APIs and any HTTP endpoints.
+> Model-serving test suite: Vegeta-driven **load testing** + functional **end-to-end smoke tests** for OpenAI-compatible inference APIs (vLLM, vLLM-omni, gateway proxies, etc.).
 
-> 📖 **[快速上手指南 QUICKSTART.md](./QUICKSTART.md)** - 30秒快速启动!
+Two modes in one web UI, sharing a single API config:
 
-## 🚀 Quick Start
+| Mode | What it answers | How |
+|------|----------------|-----|
+| 🚀 Load Test | "How fast / how stable under load?" | Vegeta attack, QPS × duration, parses report into P50/P95/P99 + throughput |
+| 🧪 E2E Smoke | "Does the deployed pipeline actually work?" | One-shot requests through text / image+text / text→audio paths, asserts content |
 
-### Prerequisites
-
-1. **Node.js** (v14 or higher)
-   ```bash
-   node --version
-   ```
-
-2. **Vegeta** load testing tool
-   ```bash
-   # macOS
-   brew install vegeta
-   
-   # Linux
-   wget https://github.com/tsenart/vegeta/releases/download/v12.8.4/vegeta_12.8.4_linux_amd64.tar.gz
-   tar xzf vegeta_12.8.4_linux_amd64.tar.gz
-   sudo mv vegeta /usr/local/bin/
-   ```
-
-### Installation
+## Quick Start
 
 ```bash
-# Install dependencies
+# Prerequisites: Node.js ≥ 18, Vegeta (for load test mode only)
+brew install vegeta          # macOS
+# or download from https://github.com/tsenart/vegeta/releases
+
 npm install
-
-# Start the server
-npm start
+npm start                    # http://localhost:3001
 ```
 
-Open your browser and navigate to: **http://localhost:3000**
+## Supported API Types
 
-## ✨ Features
+Load Test mode builds request bodies for:
+- `chat` — OpenAI `/v1/chat/completions`
+- `embeddings` — `/v1/embeddings`
+- `rerank` — `/rerank`
+- `images` — `/v1/images/generations`
+- `chat-vision` — image (URL or data URL) + text, returns text
+- `chat-audio` — text in, audio out (`modalities: ["audio"]`, exercises omni pipelines)
 
-- 🎯 **Easy Configuration**: Web interface for all test parameters
-- ⚡ **Real-time Results**: Instant feedback on test completion
-- 📊 **Detailed Metrics**: Latency percentiles, throughput, success rates
-- 💾 **History Tracking**: Auto-save test configurations
-- 🎨 **Modern UI**: Clean, responsive design
-- 🔍 **Vegeta Check**: Automatic installation verification
+E2E Smoke mode ships three probes out of the box:
+1. **Text** — deterministic prompt + marker assertion
+2. **Image + Text** — 8×8 red PNG embedded inline, asserts the reply mentions "red"
+3. **Text → Audio** — asserts the response contains a choice with a valid WAV header
 
-## 📖 Usage
+No external assets: the image is generated in-process; the audio is validated by RIFF/WAVE magic bytes.
 
-1. **Configure API Settings**
-   - API URL (e.g., `http://your-api.com/v1/chat/completions`)
-   - API Key
-   - Model Name
-
-2. **Set Request Parameters**
-   - User Prompt
-   - Max Tokens
-   - Temperature
-
-3. **Configure Load Test**
-   - QPS (Requests per second)
-   - Duration (seconds)
-
-4. **Run Test**
-   - Click "Start Load Test"
-   - View results in real-time
-
-## 📁 Project Structure
+## Project Layout
 
 ```
-vegeta-test/
-├── server.js           # Express backend
-├── package.json        # Dependencies
+inferbench/
+├── server.js                          # Thin entry: mounts routes
+├── src/
+│   ├── routes/
+│   │   ├── health.js                  # /api/health, /api/check-vegeta
+│   │   ├── load-test.js               # /api/load-test  (vegeta attack)
+│   │   └── e2e-test.js                # /api/e2e-test   (functional probes)
+│   ├── builders/                      # Shared: build OpenAI-compat request bodies
+│   │   ├── chat.js / embeddings.js / rerank.js / images.js
+│   │   ├── multimodal.js              # chat-vision, chat-audio
+│   │   └── index.js                   # dispatcher + VALID_API_TYPES
+│   ├── probes/                        # E2E assertions
+│   │   ├── text.js / image.js / audio.js
+│   ├── parsers/
+│   │   └── vegeta-report.js
+│   └── utils/
+│       ├── tiny-png.js                # stdlib 8×8 PNG generator
+│       └── wav.js                     # RIFF/WAVE header validator
 ├── public/
-│   ├── index.html      # Web interface
-│   ├── style.css       # Styling
-│   └── app.js          # Frontend logic
-├── request.txt         # Vegeta request file
-├── request.json        # Request body
-└── allaboutproject.md  # Detailed docs
+│   ├── index.html                     # Tabs: Load Test / E2E Smoke
+│   ├── style.css
+│   ├── app.js                         # ES-module entry, no build step
+│   └── pages/
+│       ├── shared-config.js           # API config form + cURL import
+│       ├── load-test.js               # form submit + results rendering
+│       └── e2e-test.js                # 3 cards, audio player, image preview
+├── tmp/                               # runtime artifacts (vegeta request.json/txt)
+├── ai-docs/
+└── package.json
 ```
 
-## 🔧 API Endpoints
+## Adding a Probe or API Type
 
-- `GET /api/health` - Health check
-- `GET /api/check-vegeta` - Verify Vegeta installation
-- `POST /api/load-test` - Execute load test
+**New API type (load test payload):** add a file under `src/builders/`, dispatch in `src/builders/index.js`, add the option to the dropdown in `public/index.html`, and read the new fields in `public/pages/shared-config.js`.
 
-## 📚 Documentation
+**New E2E probe:** add a file under `src/probes/` exporting an async function, register it in the `PROBES` map in `src/routes/e2e-test.js`, and add a card in `public/index.html` + render logic in `public/pages/e2e-test.js`.
 
-See [allaboutproject.md](./allaboutproject.md) for comprehensive documentation including:
-- Detailed architecture
-- API specifications
-- Troubleshooting guide
-- Extension suggestions
+## API Endpoints
 
-## 🤝 Contributing
+- `GET  /api/health`
+- `GET  /api/check-vegeta`
+- `POST /api/load-test` — `{ apiType, apiUrl, apiKey, model, rate, duration, ...typeParams }`
+- `POST /api/e2e-test` — `{ apiUrl, apiKey, model, customHeaders?, probes: ["text","image","audio"] }`
 
-Task tracking and documentation can be found in the `ai-docs/` directory.
+## Notes
 
-## 📝 License
+- For pods without public internet (common in closed K8s clusters), use `data:image/...;base64,...` URLs in Chat · Vision. `makeSolidPng()` in `src/utils/tiny-png.js` shows the minimal stdlib way to generate one.
+- The audio probe looks for `message.audio.data` on any `choice` in the response (vLLM-omni may return audio in `choices[1]` rather than `choices[0]` depending on `modalities` setting).
+- `tmp/` is gitignored except for `.gitkeep`.
+
+## License
 
 MIT
-
----
-
-**Version**: 1.0.1  
-**Last Updated**: 2025-11-06

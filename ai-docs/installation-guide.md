@@ -47,7 +47,7 @@ Use the pre-filled default values:
 
 1. **API Configuration**
    - API URL: `http://10.100.121.67:30888/v1/chat/completions`
-   - API Key: `sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff`
+   - API Key: `sk-…` (set per environment)
    - Model: `gen-studio-Qwen2.5-0.5B`
 
 2. **Request Parameters**

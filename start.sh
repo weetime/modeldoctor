@@ -2,7 +2,7 @@
 
 # Vegeta Load Test Control - Start Script
 
-echo "🚀 Starting Vegeta Load Test Control System..."
+echo "🧪 Starting InferBench..."
 echo ""
 
 # Check if Node.js is installed.
@@ -38,7 +38,7 @@ fi
 
 echo ""
 echo "🎉 All checks passed!"
-echo "🌐 Starting server on http://localhost:3000"
+echo "🌐 Starting server on http://localhost:3001"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

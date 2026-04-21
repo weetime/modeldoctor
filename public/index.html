@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vegeta Load Test Control</title>
+    <title>InferBench · Model Service Test Suite</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🚀 Vegeta Load Test Control</h1>
-            <p class="subtitle">Configure and execute HTTP load tests with ease</p>
+            <h1>🧪 InferBench</h1>
+            <p class="subtitle">Load testing + end-to-end smoke tests for model serving APIs</p>
             <div id="vegetaStatus" class="status-badge"></div>
         </header>
 
@@ -36,6 +36,9 @@
             </section>
 
             <form id="loadTestForm">
+                <!-- Main Tabs: Load Test vs E2E Smoke. Shared API config lives above. -->
+                <!-- (We place tabs AFTER API config so both modes reuse the same URL/token/model.) -->
+
                 <!-- API Configuration Section -->
                 <section class="form-section">
                     <h2>🔌 API Configuration</h2>
@@ -47,6 +50,8 @@
                                 <option value="embeddings">Embeddings</option>
                                 <option value="rerank">Rerank</option>
                                 <option value="images">Image Generation</option>
+                                <option value="chat-vision">Chat · Vision (image + text)</option>
+                                <option value="chat-audio">Chat · Audio Output (text → speech)</option>
                             </select>
                         </div>
 
@@ -69,7 +74,7 @@
                                 id="apiKey"
                                 name="apiKey"
                                 placeholder="sk-xxxxxxxxxxxxx"
-                                value="sk-YAUTMonvpRCMkj5yB5435e8e8cD64654999cA9F3Cc6bF9Ff"
+                                value=""
                                 required
                             >
                         </div>
@@ -110,6 +115,17 @@
                     </div>
                 </section>
 
+                <!-- Mode switcher -->
+                <nav class="main-tabs" role="tablist">
+                    <button type="button" class="tab-btn active" data-tab="load" role="tab">
+                        <span class="btn-icon">🚀</span> Load Test
+                    </button>
+                    <button type="button" class="tab-btn" data-tab="e2e" role="tab">
+                        <span class="btn-icon">🧪</span> E2E Smoke
+                    </button>
+                </nav>
+
+                <div id="panel-load" class="tab-panel active" role="tabpanel">
                 <!-- Request Parameters Section: Chat Completion -->
                 <section class="form-section" id="chatParams">
                     <h2>📝 Chat Completion Parameters</h2>
@@ -249,6 +265,76 @@ Neural networks use backpropagation</textarea>
                     </div>
                 </section>
 
+                <!-- Request Parameters Section: Chat Vision -->
+                <section class="form-section" id="chatVisionParams" style="display: none;">
+                    <h2>📝 Chat Vision Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="visionImageUrl">Image URL or Data URL *</label>
+                            <input
+                                type="text"
+                                id="visionImageUrl"
+                                name="visionImageUrl"
+                                placeholder="https://...jpg  OR  data:image/png;base64,..."
+                                value="https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"
+                            >
+                            <small>Public http(s) URL or <code>data:image/...;base64,...</code> (pod without internet must use data URL)</small>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="visionPrompt">User Prompt *</label>
+                            <textarea
+                                id="visionPrompt"
+                                name="visionPrompt"
+                                rows="3"
+                                placeholder="Describe the image..."
+                                >What is in the image? Answer in one sentence.</textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="visionSystemPrompt">System Prompt (optional)</label>
+                            <textarea
+                                id="visionSystemPrompt"
+                                name="visionSystemPrompt"
+                                rows="2"
+                                placeholder="Leave empty to skip system message"
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="visionMaxTokens">Max Tokens</label>
+                            <input type="number" id="visionMaxTokens" name="visionMaxTokens" value="256" min="1" max="32000">
+                        </div>
+                        <div class="form-group">
+                            <label for="visionTemperature">Temperature</label>
+                            <input type="number" id="visionTemperature" name="visionTemperature" value="0" min="0" max="2" step="0.1">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Request Parameters Section: Chat Audio -->
+                <section class="form-section" id="chatAudioParams" style="display: none;">
+                    <h2>📝 Chat Audio Output Parameters</h2>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="audioPrompt">User Prompt *</label>
+                            <textarea
+                                id="audioPrompt"
+                                name="audioPrompt"
+                                rows="3"
+                                placeholder="Text to synthesize as speech..."
+                                >Say the word hello.</textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="audioSystemPrompt">System Prompt (optional)</label>
+                            <textarea
+                                id="audioSystemPrompt"
+                                name="audioSystemPrompt"
+                                rows="2"
+                                placeholder="e.g.  You are Qwen, capable of generating text and speech."
+                                >You are Qwen, a virtual human capable of generating text and speech.</textarea>
+                            <small>Recommended for Qwen-Omni to trigger audio path reliably</small>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Load Test Parameters Section -->
                 <section class="form-section">
                     <h2>⚡ Load Test Parameters</h2>
@@ -294,6 +380,57 @@ Neural networks use backpropagation</textarea>
                         Reset
                     </button>
                 </div>
+                </div><!-- /#panel-load -->
+
+                <!-- E2E Smoke Panel -->
+                <div id="panel-e2e" class="tab-panel" role="tabpanel" hidden>
+                    <section class="form-section">
+                        <h2>🧪 End-to-End Smoke Test</h2>
+                        <p class="e2e-hint">
+                            Validates the deployed model against three functional scenarios. Uses the API URL, Key and Model above.
+                            No QPS/duration — each probe is one request.
+                        </p>
+                        <div class="e2e-grid">
+                            <div class="e2e-card" id="e2eCard-text" data-probe="text">
+                                <div class="e2e-head">
+                                    <h3>1 · Text</h3>
+                                    <span class="e2e-status" data-status>—</span>
+                                </div>
+                                <p class="e2e-path">thinker (text → text)</p>
+                                <button type="button" class="btn btn-secondary" data-run-probe="text">Run</button>
+                                <div class="e2e-output" data-output></div>
+                            </div>
+
+                            <div class="e2e-card" id="e2eCard-image" data-probe="image">
+                                <div class="e2e-head">
+                                    <h3>2 · Image + Text</h3>
+                                    <span class="e2e-status" data-status>—</span>
+                                </div>
+                                <p class="e2e-path">vision encoder → thinker</p>
+                                <button type="button" class="btn btn-secondary" data-run-probe="image">Run</button>
+                                <div class="e2e-output" data-output></div>
+                            </div>
+
+                            <div class="e2e-card" id="e2eCard-audio" data-probe="audio">
+                                <div class="e2e-head">
+                                    <h3>3 · Text → Audio</h3>
+                                    <span class="e2e-status" data-status>—</span>
+                                </div>
+                                <p class="e2e-path">thinker → talker → code2wav (full 3-stage)</p>
+                                <button type="button" class="btn btn-secondary" data-run-probe="audio">Run</button>
+                                <div class="e2e-output" data-output></div>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="runAllE2E" class="btn btn-primary">
+                                <span class="btn-icon">▶️</span> Run All
+                            </button>
+                            <button type="button" id="resetE2E" class="btn btn-secondary">
+                                <span class="btn-icon">🔄</span> Clear
+                            </button>
+                        </div>
+                    </section>
+                </div><!-- /#panel-e2e -->
             </form>
 
             <!-- Results Section -->
@@ -332,7 +469,7 @@ Neural networks use backpropagation</textarea>
         </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
 
