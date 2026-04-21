@@ -29,6 +29,14 @@
 		"errors": {
 			"duplicateName": "A connection with this name already exists",
 			"invalidUrl": "Must be a valid URL"
+		},
+		"curl": {
+			"import": "Import from cURL",
+			"parse": "Parse & fill",
+			"placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+			"filled": "Filled: {{fields}}",
+			"empty": "Paste a curl command first",
+			"invalid": "Could not extract parameters from curl command"
 		}
 	},
 	"actions": {

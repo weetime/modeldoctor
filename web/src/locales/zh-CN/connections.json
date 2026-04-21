@@ -29,6 +29,14 @@
 		"errors": {
 			"duplicateName": "已存在同名连接",
 			"invalidUrl": "URL 格式无效"
+		},
+		"curl": {
+			"import": "从 cURL 导入",
+			"parse": "解析填充",
+			"placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+			"filled": "已填充：{{fields}}",
+			"empty": "请先粘贴 curl 命令",
+			"invalid": "无法从 curl 命令中解析参数"
 		}
 	},
 	"actions": {

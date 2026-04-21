@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,11 @@ export function ConnectionDialog({
 	const update = useConnectionsStore((s) => s.update);
 	const [revealKey, setRevealKey] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [curlInput, setCurlInput] = useState("");
+	const [curlFeedback, setCurlFeedback] = useState<{
+		kind: "ok" | "err";
+		text: string;
+	} | null>(null);
 
 	const form = useForm<ConnectionInput>({
 		resolver: zodResolver(connectionInputSchema),
@@ -57,8 +63,64 @@ export function ConnectionDialog({
 			form.reset(connection ?? empty);
 			setSubmitError(null);
 			setRevealKey(false);
+			setCurlInput("");
+			setCurlFeedback(null);
 		}
 	}, [open, connection, form]);
+
+	const onParseCurl = () => {
+		const trimmed = curlInput.trim();
+		if (!trimmed) {
+			setCurlFeedback({ kind: "err", text: t("dialog.curl.empty") });
+			return;
+		}
+		const parsed = parseCurlCommand(trimmed);
+		const filled: string[] = [];
+
+		if (parsed.url) {
+			form.setValue("apiUrl", parsed.url, { shouldValidate: true });
+			filled.push(t("dialog.fields.apiUrl"));
+		}
+		if (parsed.queryParams) {
+			form.setValue("queryParams", parsed.queryParams);
+			filled.push(t("dialog.fields.queryParams"));
+		}
+		const auth = parsed.headers.authorization;
+		if (auth) {
+			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
+			if (key) {
+				form.setValue("apiKey", key, { shouldValidate: true });
+				filled.push(t("dialog.fields.apiKey"));
+			}
+		}
+		const customLines: string[] = [];
+		for (const [lower, entry] of Object.entries(parsed.headers)) {
+			if (lower === "authorization" || lower === "content-type") continue;
+			customLines.push(`${entry.originalKey}: ${entry.value}`);
+		}
+		if (customLines.length) {
+			form.setValue("customHeaders", customLines.join("\n"));
+			filled.push(t("dialog.fields.customHeaders"));
+		}
+		const bodyModel =
+			parsed.body &&
+			typeof (parsed.body as { model?: unknown }).model === "string"
+				? (parsed.body as { model: string }).model
+				: "";
+		if (bodyModel) {
+			form.setValue("model", bodyModel, { shouldValidate: true });
+			filled.push(t("dialog.fields.model"));
+		}
+
+		if (filled.length === 0) {
+			setCurlFeedback({ kind: "err", text: t("dialog.curl.invalid") });
+			return;
+		}
+		setCurlFeedback({
+			kind: "ok",
+			text: t("dialog.curl.filled", { fields: filled.join(", ") }),
+		});
+	};
 
 	const onSubmit = form.handleSubmit((values) => {
 		try {
@@ -81,6 +143,42 @@ export function ConnectionDialog({
 				</DialogHeader>
 
 				<form onSubmit={onSubmit} className="space-y-4">
+					<details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+						<summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+							{t("dialog.curl.import")}
+						</summary>
+						<div className="mt-2 space-y-2">
+							<Textarea
+								rows={5}
+								value={curlInput}
+								onChange={(e) => setCurlInput(e.target.value)}
+								placeholder={t("dialog.curl.placeholder")}
+								className="font-mono text-xs"
+							/>
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={onParseCurl}
+								>
+									{t("dialog.curl.parse")}
+								</Button>
+								{curlFeedback ? (
+									<span
+										className={
+											curlFeedback.kind === "ok"
+												? "text-xs text-success"
+												: "text-xs text-destructive"
+										}
+									>
+										{curlFeedback.text}
+									</span>
+								) : null}
+							</div>
+						</div>
+					</details>
+
 					<div>
 						<Label htmlFor="name">{t("dialog.fields.name")}</Label>
 						<Input
