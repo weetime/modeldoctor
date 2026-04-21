@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -12,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useConnectionsStore } from "@/stores/connections-store";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	open: boolean;
@@ -25,7 +25,10 @@ export function ConnectionsImportDialog({ open, onOpenChange }: Props) {
 	const [json, setJson] = useState("");
 	const [mode, setMode] = useState<"merge" | "replace">("merge");
 	const [error, setError] = useState<string | null>(null);
-	const [result, setResult] = useState<{ added: number; skipped: number } | null>(null);
+	const [result, setResult] = useState<{
+		added: number;
+		skipped: number;
+	} | null>(null);
 
 	const onSubmit = () => {
 		setError(null);
@@ -104,10 +107,15 @@ export function ConnectionsImportDialog({ open, onOpenChange }: Props) {
 
 				{result ? (
 					<p className="text-sm text-success">
-						{t("import.result", { added: result.added, skipped: result.skipped })}
+						{t("import.result", {
+							added: result.added,
+							skipped: result.skipped,
+						})}
 					</p>
 				) : null}
-				{error ? <p className="text-sm text-destructive">{t("import.invalid")}</p> : null}
+				{error ? (
+					<p className="text-sm text-destructive">{t("import.invalid")}</p>
+				) : null}
 
 				<DialogFooter>
 					<Button variant="ghost" onClick={() => onOpenChange(false)}>

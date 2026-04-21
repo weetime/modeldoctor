@@ -10,8 +10,16 @@ import zhSidebar from "@/locales/zh-CN/sidebar.json";
 
 void i18n.use(initReactI18next).init({
 	resources: {
-		"en-US": { common: enCommon, sidebar: enSidebar, connections: enConnections },
-		"zh-CN": { common: zhCommon, sidebar: zhSidebar, connections: zhConnections },
+		"en-US": {
+			common: enCommon,
+			sidebar: enSidebar,
+			connections: enConnections,
+		},
+		"zh-CN": {
+			common: zhCommon,
+			sidebar: zhSidebar,
+			connections: zhConnections,
+		},
 	},
 	lng: "en-US",
 	fallbackLng: "en-US",

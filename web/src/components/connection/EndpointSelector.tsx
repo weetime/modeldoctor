@@ -1,8 +1,3 @@
-import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -18,8 +13,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
+import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 const MANUAL = "__manual__";
 
@@ -149,6 +149,7 @@ function NamePrompt({
 	return (
 		<div className="absolute right-8 top-16 z-50 flex w-72 items-center gap-2 rounded-md border border-border bg-card p-2 shadow-md">
 			<input
+				// biome-ignore lint/a11y/noAutofocus: floating name prompt intentionally focuses for fast keyboard entry
 				autoFocus
 				value={value}
 				onChange={(e) => onChange(e.target.value)}

@@ -1,7 +1,3 @@
-import { format } from "date-fns";
-import { Database, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -25,6 +21,10 @@ import {
 } from "@/components/ui/table";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
+import { format } from "date-fns";
+import { Database, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ConnectionDialog } from "./ConnectionDialog";
 import { ConnectionsImportDialog } from "./ConnectionsImportDialog";
 
@@ -57,7 +57,11 @@ export function ConnectionsPage() {
 				subtitle={t("subtitle")}
 				rightSlot={
 					<div className="flex gap-2">
-						<Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setImportOpen(true)}
+						>
 							{t("actions.import")}
 						</Button>
 						<Button
@@ -118,10 +122,16 @@ export function ConnectionsPage() {
 								{list.map((c) => (
 									<TableRow key={c.id}>
 										<TableCell className="font-medium">{c.name}</TableCell>
-										<TableCell className="font-mono text-xs">{c.apiUrl}</TableCell>
-										<TableCell className="font-mono text-xs">{c.model}</TableCell>
+										<TableCell className="font-mono text-xs">
+											{c.apiUrl}
+										</TableCell>
+										<TableCell className="font-mono text-xs">
+											{c.model}
+										</TableCell>
 										<TableCell className="text-xs text-muted-foreground">
-											{c.customHeaders ? `${c.customHeaders.split("\n")[0]}…` : "—"}
+											{c.customHeaders
+												? `${c.customHeaders.split("\n")[0]}…`
+												: "—"}
 										</TableCell>
 										<TableCell className="text-xs text-muted-foreground">
 											{format(new Date(c.createdAt), "yyyy-MM-dd HH:mm")}

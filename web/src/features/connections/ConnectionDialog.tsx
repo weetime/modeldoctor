@@ -1,8 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -16,6 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { type ConnectionInput, connectionInputSchema } from "./schema";
 
 interface ConnectionDialogProps {
@@ -90,7 +90,9 @@ export function ConnectionDialog({
 							{...form.register("name")}
 						/>
 						{form.formState.errors.name ? (
-							<p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+							<p className="mt-1 text-xs text-destructive">
+								{tc("errors.required")}
+							</p>
 						) : null}
 					</div>
 
@@ -133,7 +135,9 @@ export function ConnectionDialog({
 							</button>
 						</div>
 						{form.formState.errors.apiKey ? (
-							<p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+							<p className="mt-1 text-xs text-destructive">
+								{tc("errors.required")}
+							</p>
 						) : null}
 					</div>
 
@@ -146,12 +150,16 @@ export function ConnectionDialog({
 							{...form.register("model")}
 						/>
 						{form.formState.errors.model ? (
-							<p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+							<p className="mt-1 text-xs text-destructive">
+								{tc("errors.required")}
+							</p>
 						) : null}
 					</div>
 
 					<div>
-						<Label htmlFor="customHeaders">{t("dialog.fields.customHeaders")}</Label>
+						<Label htmlFor="customHeaders">
+							{t("dialog.fields.customHeaders")}
+						</Label>
 						<Textarea
 							id="customHeaders"
 							rows={3}
@@ -161,7 +169,9 @@ export function ConnectionDialog({
 					</div>
 
 					<div>
-						<Label htmlFor="queryParams">{t("dialog.fields.queryParams")}</Label>
+						<Label htmlFor="queryParams">
+							{t("dialog.fields.queryParams")}
+						</Label>
 						<Textarea
 							id="queryParams"
 							rows={2}
@@ -179,7 +189,11 @@ export function ConnectionDialog({
 					) : null}
 
 					<DialogFooter>
-						<Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => onOpenChange(false)}
+						>
 							{tc("actions.cancel")}
 						</Button>
 						<Button type="submit">{tc("actions.save")}</Button>
