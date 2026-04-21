@@ -36,9 +36,25 @@
 		"system": "跟随系统"
 	},
 	"endpoint": {
-		"label": "连接",
-		"manual": "— 手动（未保存）—",
-		"modified": "已修改"
+		"label": "端点",
+		"manual": "— 手动 —",
+		"modified": "已修改",
+		"loadFromSaved": "从已保存加载",
+		"save": "保存",
+		"saveAs": "另存为…",
+		"pasteCurl": "粘贴 cURL",
+		"apiUrl": "API URL",
+		"apiKey": "API Key",
+		"model": "模型",
+		"customHeaders": "自定义 Headers（每行一条）",
+		"queryParams": "查询参数（每行一条）",
+		"advanced": "高级（自定义 Headers、查询参数）",
+		"parseCurl": "解析填充",
+		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+		"filled": "已填充：{{fields}}",
+		"nameConnection": "连接名称",
+		"nameExists": "已存在同名连接",
+		"nameRequired": "请输入名称"
 	},
 	"comingSoon": {
 		"title": "敬请期待",

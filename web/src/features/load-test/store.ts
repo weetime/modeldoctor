@@ -1,18 +1,14 @@
+import type { EndpointValues } from "@/types/connection";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ApiType, LoadTestResult } from "./types";
 
-export interface ManualEndpoint {
-	apiUrl: string;
-	apiKey: string;
-	model: string;
-	customHeaders: string;
-	queryParams: string;
-}
+/** @deprecated Use EndpointValues from @/types/connection instead. */
+export type ManualEndpoint = EndpointValues;
 
 export interface LoadTestSlice {
 	selectedConnectionId: string | null;
-	manualEndpoint: ManualEndpoint;
+	manualEndpoint: EndpointValues;
 	modified: boolean;
 	apiType: ApiType;
 	chat: {
@@ -46,7 +42,7 @@ export interface LoadTestSlice {
 	setLastResult: (r: LoadTestResult | null) => void;
 }
 
-const emptyManualEndpoint: ManualEndpoint = {
+const emptyManualEndpoint: EndpointValues = {
 	apiUrl: "",
 	apiKey: "",
 	model: "",
