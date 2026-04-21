@@ -1,0 +1,30 @@
+{
+  "title": "请求调试",
+  "subtitle": "发送单次请求并查看完整的往返信息。",
+  "sections": {
+    "paste": "粘贴 curl",
+    "request": "请求",
+    "response": "响应"
+  },
+  "fields": {
+    "method": "方法",
+    "url": "URL",
+    "headers": "Headers",
+    "body": "Body",
+    "query": "查询参数"
+  },
+  "actions": { "send": "发送", "clear": "清空", "format": "格式化为 JSON" },
+  "response": {
+    "status": "状态",
+    "size": "大小",
+    "ttfb": "TTFB",
+    "total": "总耗时",
+    "tabs": { "body": "Body", "headers": "Headers", "timing": "耗时", "raw": "原文" },
+    "download": "下载"
+  },
+  "empty": {
+    "title": "尚未发送请求",
+    "body": "粘贴一条 curl 命令，或选择一个连接开始。"
+  },
+  "errors": { "invalidJson": "JSON 无效 — Body 未变更。" }
+}
