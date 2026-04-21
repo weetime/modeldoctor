@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { detectApiType, parseCurlCommand } from "@/lib/curl-parser";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLoadTestStore } from "./store";
 import type { ApiType } from "./types";
 
@@ -44,7 +44,9 @@ export function CurlImport() {
 				<Button type="button" size="sm" onClick={onParse}>
 					{t("curl.parse")}
 				</Button>
-				{feedback ? <span className="text-xs text-success">{feedback}</span> : null}
+				{feedback ? (
+					<span className="text-xs text-success">{feedback}</span>
+				) : null}
 			</div>
 		</div>
 	);

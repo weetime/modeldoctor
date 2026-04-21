@@ -1,8 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { EndpointSelector } from "@/components/connection/EndpointSelector";
 import { PageHeader } from "@/components/common/page-header";
+import { EndpointSelector } from "@/components/connection/EndpointSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,14 +14,17 @@ import {
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CurlImport } from "./CurlImport";
+import { LoadTestResults } from "./Results";
 import { ChatForm } from "./forms/chat";
 import { ChatAudioForm } from "./forms/chat-audio";
 import { ChatVisionForm } from "./forms/chat-vision";
 import { EmbeddingsForm } from "./forms/embeddings";
 import { ImagesForm } from "./forms/images";
 import { RerankForm } from "./forms/rerank";
-import { LoadTestResults } from "./Results";
 import { useLoadTestStore } from "./store";
 import { API_TYPES, type ApiType, type LoadTestResult } from "./types";
 
@@ -42,14 +42,17 @@ export function LoadTestPage() {
 	const { t: tc } = useTranslation("common");
 	const slice = useLoadTestStore();
 	const conns = useConnectionsStore();
-	const conn = slice.selectedConnectionId ? conns.get(slice.selectedConnectionId) : null;
+	const conn = slice.selectedConnectionId
+		? conns.get(slice.selectedConnectionId)
+		: null;
 	const [error, setError] = useState<string | null>(null);
 	const [progress, setProgress] = useState(0);
 	const ActiveForm = formByType[slice.apiType];
 
 	const mutation = useMutation<LoadTestResult, ApiError>({
 		mutationFn: async () => {
-			if (!conn) throw new ApiError(400, "Select a connection or enter manual values.");
+			if (!conn)
+				throw new ApiError(400, "Select a connection or enter manual values.");
 			const body = buildLoadTestBody(slice, conn);
 			return api.post("/api/load-test", body);
 		},
@@ -113,7 +116,10 @@ export function LoadTestPage() {
 						<details
 							open={slice.curlExpanded}
 							onToggle={(e) =>
-								slice.patch("curlExpanded", (e.target as HTMLDetailsElement).open)
+								slice.patch(
+									"curlExpanded",
+									(e.target as HTMLDetailsElement).open,
+								)
 							}
 						>
 							<summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
@@ -138,7 +144,10 @@ export function LoadTestPage() {
 								type="number"
 								value={slice.attack.rate}
 								onChange={(e) =>
-									slice.patch("attack", { ...slice.attack, rate: Number(e.target.value) })
+									slice.patch("attack", {
+										...slice.attack,
+										rate: Number(e.target.value),
+									})
 								}
 							/>
 						</div>
@@ -174,7 +183,9 @@ export function LoadTestPage() {
 					</Button>
 				</div>
 
-				{mutation.isPending ? <Progress value={progress} className="h-1" /> : null}
+				{mutation.isPending ? (
+					<Progress value={progress} className="h-1" />
+				) : null}
 
 				<LoadTestResults result={slice.lastResult} error={error} />
 			</div>
@@ -182,7 +193,10 @@ export function LoadTestPage() {
 	);
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+	title,
+	children,
+}: { title: string; children: React.ReactNode }) {
 	return (
 		<section className="rounded-lg border border-border bg-card p-4">
 			<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

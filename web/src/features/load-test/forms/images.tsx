@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -9,6 +8,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "react-i18next";
 import { useLoadTestStore } from "../store";
 
 export function ImagesForm() {
@@ -28,7 +28,10 @@ export function ImagesForm() {
 			</div>
 			<div>
 				<Label>{t("fields.imageSize")}</Label>
-				<Select value={v.imageSize} onValueChange={(val) => set({ imageSize: val })}>
+				<Select
+					value={v.imageSize}
+					onValueChange={(val) => set({ imageSize: val })}
+				>
 					<SelectTrigger>
 						<SelectValue />
 					</SelectTrigger>

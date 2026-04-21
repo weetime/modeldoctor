@@ -6,7 +6,12 @@ export interface LoadTestSlice {
 	selectedConnectionId: string | null;
 	modified: boolean;
 	apiType: ApiType;
-	chat: { prompt: string; maxTokens: number; temperature: number; stream: boolean };
+	chat: {
+		prompt: string;
+		maxTokens: number;
+		temperature: number;
+		stream: boolean;
+	};
 	embeddings: { embeddingInput: string };
 	rerank: { rerankQuery: string; rerankTexts: string };
 	images: { imagePrompt: string; imageSize: string; imageN: number };
@@ -25,7 +30,10 @@ export interface LoadTestSlice {
 	setSelected: (id: string | null) => void;
 	setModified: (m: boolean) => void;
 	setApiType: (t: ApiType) => void;
-	patch: <K extends keyof LoadTestSlice>(key: K, value: LoadTestSlice[K]) => void;
+	patch: <K extends keyof LoadTestSlice>(
+		key: K,
+		value: LoadTestSlice[K],
+	) => void;
 	setLastResult: (r: LoadTestResult | null) => void;
 }
 
