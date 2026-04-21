@@ -1,0 +1,59 @@
+{
+	"appName": "ModelDoctor",
+	"tagline": "Troubleshooting toolkit for model-serving APIs",
+	"actions": {
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"edit": "Edit",
+		"create": "Create",
+		"import": "Import",
+		"export": "Export",
+		"reset": "Reset",
+		"clear": "Clear",
+		"send": "Send",
+		"run": "Run",
+		"runAll": "Run All",
+		"start": "Start",
+		"back": "Back",
+		"manageConnections": "Manage connections",
+		"saveAsNew": "Save as new…",
+		"copy": "Copy",
+		"copied": "Copied",
+		"format": "Format as JSON"
+	},
+	"status": {
+		"idle": "Idle",
+		"running": "Running",
+		"pass": "Pass",
+		"fail": "Fail",
+		"comingSoon": "Soon"
+	},
+	"theme": {
+		"toggle": "Toggle theme",
+		"light": "Light",
+		"dark": "Dark",
+		"system": "System"
+	},
+	"endpoint": {
+		"label": "Endpoint",
+		"manual": "— Manual (unsaved) —",
+		"modified": "Modified"
+	},
+	"comingSoon": {
+		"title": "Coming soon",
+		"body": "This feature is under development.",
+		"backToLoadTest": "Back to Load Test"
+	},
+	"empty": {
+		"noConnections": "No connections yet",
+		"noConnectionsBody": "Create one to get started, or paste a curl command to auto-fill.",
+		"newConnection": "New connection",
+		"pasteCurl": "Paste curl"
+	},
+	"errors": {
+		"unknown": "Unknown error",
+		"network": "Network error",
+		"required": "This field is required"
+	}
+}
