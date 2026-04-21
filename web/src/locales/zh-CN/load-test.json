@@ -22,7 +22,8 @@
 		"imageUrl": "\u56fe\u7247 URL \u6216 data URL",
 		"systemPrompt": "System prompt",
 		"rate": "\u901f\u7387 (QPS)",
-		"duration": "\u65f6\u957f (\u79d2)"
+		"duration": "\u65f6\u957f (\u79d2)",
+		"default": "\u9ed8\u8ba4"
 	},
 	"curl": {
 		"import": "\u4ece cURL \u5bfc\u5165",

@@ -22,7 +22,8 @@
 		"imageUrl": "Image URL or data URL",
 		"systemPrompt": "System prompt",
 		"rate": "Rate (QPS)",
-		"duration": "Duration (s)"
+		"duration": "Duration (s)",
+		"default": "Default"
 	},
 	"curl": {
 		"import": "Import from cURL",

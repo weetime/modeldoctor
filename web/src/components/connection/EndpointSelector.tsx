@@ -146,6 +146,7 @@ function NamePrompt({
 	onCancel: () => void;
 	onSubmit: () => void;
 }) {
+	const { t } = useTranslation("common");
 	return (
 		<div className="absolute right-8 top-16 z-50 flex w-72 items-center gap-2 rounded-md border border-border bg-card p-2 shadow-md">
 			<input
@@ -157,10 +158,10 @@ function NamePrompt({
 				className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs"
 			/>
 			<Button size="sm" variant="ghost" onClick={onCancel}>
-				Cancel
+				{t("actions.cancel")}
 			</Button>
 			<Button size="sm" onClick={onSubmit} disabled={!value.trim()}>
-				Save
+				{t("actions.save")}
 			</Button>
 		</div>
 	);

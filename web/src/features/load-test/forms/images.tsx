@@ -36,7 +36,7 @@ export function ImagesForm() {
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="">Default</SelectItem>
+						<SelectItem value="">{t("fields.default")}</SelectItem>
 						<SelectItem value="256x256">256x256</SelectItem>
 						<SelectItem value="512x512">512x512</SelectItem>
 						<SelectItem value="1024x1024">1024x1024</SelectItem>
