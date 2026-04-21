@@ -203,7 +203,7 @@ export function LoadTestPage() {
 				/>
 
 				<Section title={t("sections.request")}>
-					<div>
+					<div className="max-w-xs">
 						<Label>{t("fields.apiType")}</Label>
 						<Select
 							value={slice.apiType}
