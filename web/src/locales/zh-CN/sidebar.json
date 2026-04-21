@@ -5,6 +5,9 @@
 		"observability": "可观测性",
 		"debug": "排障"
 	},
+	"status": {
+		"comingSoon": "即将推出"
+	},
 	"items": {
 		"loadTest": "压力测试",
 		"soak": "稳定性测试",

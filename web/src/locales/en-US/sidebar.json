@@ -5,6 +5,9 @@
 		"observability": "Observability",
 		"debug": "Debug"
 	},
+	"status": {
+		"comingSoon": "Soon"
+	},
 	"items": {
 		"loadTest": "Load Test",
 		"soak": "Soak / Stability",
