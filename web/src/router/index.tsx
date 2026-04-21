@@ -1,6 +1,7 @@
 import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
+import { ErrorPage } from "@/features/error/ErrorPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
 	{
 		path: "/",
 		element: <AppShell />,
+		errorElement: <ErrorPage />,
 		children: [
 			{ index: true, element: <Navigate to="/load-test" replace /> },
 			{ path: "load-test", element: <LoadTestPage /> },
