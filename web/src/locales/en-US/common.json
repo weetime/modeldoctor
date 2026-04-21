@@ -54,7 +54,8 @@
 		"filled": "Filled: {{fields}}",
 		"nameConnection": "Connection name",
 		"nameExists": "A connection with this name already exists",
-		"nameRequired": "Name is required"
+		"nameRequired": "Name is required",
+		"newConnection": "+ New connection"
 	},
 	"comingSoon": {
 		"title": "Coming soon",

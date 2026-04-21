@@ -5,10 +5,12 @@ import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
@@ -17,6 +19,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const MANUAL = "__manual__";
+const NEW_CONNECTION = "__new__";
 
 export interface EndpointPickerProps {
 	/** Current endpoint values (URL/Key/Model/Headers/Query). */
@@ -63,6 +66,7 @@ export function EndpointPicker({
 	const [saveOpen, setSaveOpen] = useState(false);
 	const [saveName, setSaveName] = useState("");
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const [newDialogOpen, setNewDialogOpen] = useState(false);
 
 	const isDirty =
 		!!selectedConn &&
@@ -84,6 +88,10 @@ export function EndpointPicker({
 	const onSelectValue = (value: string) => {
 		if (value === MANUAL) {
 			onSelect(null);
+			return;
+		}
+		if (value === NEW_CONNECTION) {
+			setNewDialogOpen(true);
 			return;
 		}
 		const c = conns.get(value);
@@ -201,6 +209,10 @@ export function EndpointPicker({
 								{c.name}
 							</SelectItem>
 						))}
+						<SelectSeparator />
+						<SelectItem value={NEW_CONNECTION}>
+							{t("endpoint.newConnection")}
+						</SelectItem>
 					</SelectContent>
 				</Select>
 				{isDirty ? (
@@ -270,6 +282,21 @@ export function EndpointPicker({
 					</div>
 				</div>
 			) : null}
+
+			<ConnectionDialog
+				open={newDialogOpen}
+				onOpenChange={setNewDialogOpen}
+				onSaved={(c) => {
+					onSelect(c.id);
+					onEndpointChange({
+						apiUrl: c.apiUrl,
+						apiKey: c.apiKey,
+						model: c.model,
+						customHeaders: c.customHeaders,
+						queryParams: c.queryParams,
+					});
+				}}
+			/>
 
 			{saveOpen ? (
 				<div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">

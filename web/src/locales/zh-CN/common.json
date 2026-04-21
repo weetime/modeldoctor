@@ -54,7 +54,8 @@
 		"filled": "已填充：{{fields}}",
 		"nameConnection": "连接名称",
 		"nameExists": "已存在同名连接",
-		"nameRequired": "请输入名称"
+		"nameRequired": "请输入名称",
+		"newConnection": "+ 新建连接"
 	},
 	"comingSoon": {
 		"title": "敬请期待",
