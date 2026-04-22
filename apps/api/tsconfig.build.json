@@ -3,7 +3,8 @@
   "compilerOptions": {
     "declaration": false,
     "sourceMap": true,
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "paths": {}
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts", "test"]

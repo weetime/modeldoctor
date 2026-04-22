@@ -1,11 +1,14 @@
 import { NestFactory } from "@nestjs/core";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
 
 async function bootstrap(): Promise<void> {
   const app: INestApplication = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix("api");
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Dev-time CORS: Vite dev server runs on 5173; browser calls here hit the
   // Vite proxy server-to-server, so CORS is not strictly needed for the FE
