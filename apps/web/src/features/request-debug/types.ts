@@ -1,3 +1,8 @@
+import type { DebugProxyResponse } from "@modeldoctor/contracts";
+
+export type { DebugProxyResponse } from "@modeldoctor/contracts";
+
+// FE-only UI types stay here.
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export interface KeyValueRow {
@@ -6,25 +11,9 @@ export interface KeyValueRow {
   enabled: boolean;
 }
 
-export interface DebugResponse {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  body: string;
-  bodyEncoding: "text" | "base64";
-  timingMs: { ttfbMs: number; totalMs: number };
-  sizeBytes: number;
-}
-
-/** Wire format returned by `POST /api/debug/proxy`. */
-export interface DebugProxyResponse {
-  success: boolean;
-  status?: number;
-  statusText?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  bodyEncoding?: "text" | "base64";
-  timingMs?: { ttfbMs: number; totalMs: number };
-  sizeBytes?: number;
-  error?: string;
-}
+/**
+ * FE-only view of the success branch of {@link DebugProxyResponse}, without
+ * the `success` discriminator. This is what the mutation produces after it
+ * narrows the wire-format union.
+ */
+export type DebugResponse = Omit<Extract<DebugProxyResponse, { success: true }>, "success">;

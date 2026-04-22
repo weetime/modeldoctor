@@ -40,7 +40,13 @@ const FAKE_RESULT: LoadTestResult = {
     throughput: 2,
     latencies: { mean: "5ms", p50: "5ms", p95: "6ms", p99: "7ms", max: "9ms" },
   },
-  config: { apiUrl: "http://host/v1/chat/completions", rate: 2, duration: 60 },
+  config: {
+    apiType: "chat",
+    apiUrl: "http://host/v1/chat/completions",
+    model: "test-model",
+    rate: 2,
+    duration: 60,
+  },
 };
 
 describe("LoadTestPage (happy path)", () => {

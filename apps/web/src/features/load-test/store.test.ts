@@ -12,7 +12,13 @@ const FAKE_RESULT: LoadTestResult = {
     throughput: 2,
     latencies: { mean: "5ms", p50: "5ms", p95: "6ms", p99: "7ms", max: "9ms" },
   },
-  config: { apiUrl: "http://a" },
+  config: {
+    apiType: "chat",
+    apiUrl: "http://a",
+    model: "test-model",
+    rate: 2,
+    duration: 60,
+  },
 };
 
 function storedState(): Record<string, unknown> | null {

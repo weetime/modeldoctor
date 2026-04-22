@@ -104,17 +104,17 @@ export function RequestDebugPage() {
         headers,
         body: ["GET", "HEAD"].includes(slice.method) ? null : slice.body,
       });
-      if (!proxy.success || !proxy.headers || !proxy.timingMs) {
-        throw new ApiError(proxy.status ?? 0, proxy.error ?? "proxy error");
+      if (!proxy.success) {
+        throw new ApiError(0, proxy.error || "proxy error");
       }
       return {
-        status: proxy.status ?? 0,
-        statusText: proxy.statusText ?? "",
+        status: proxy.status,
+        statusText: proxy.statusText,
         headers: proxy.headers,
-        body: proxy.body ?? "",
-        bodyEncoding: proxy.bodyEncoding ?? "text",
+        body: proxy.body,
+        bodyEncoding: proxy.bodyEncoding,
         timingMs: proxy.timingMs,
-        sizeBytes: proxy.sizeBytes ?? 0,
+        sizeBytes: proxy.sizeBytes,
       };
     },
     onSuccess: (r) => slice.setLastResponse(r),
