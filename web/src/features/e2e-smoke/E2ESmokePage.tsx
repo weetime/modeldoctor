@@ -19,11 +19,14 @@ export function E2ESmokePage() {
 	const slice = useE2EStore();
 	const endpoint = slice.manualEndpoint;
 
+	const canRun =
+		endpoint.apiUrl.trim().length > 0 &&
+		endpoint.apiKey.trim().length > 0 &&
+		endpoint.model.trim().length > 0;
+	const disabledReason = canRun ? undefined : tc("errors.required");
+
 	const runProbes = async (probes: ProbeName[]) => {
-		if (!endpoint.apiUrl || !endpoint.apiKey || !endpoint.model) {
-			alert(tc("errors.required"));
-			return;
-		}
+		if (!canRun) return;
 		for (const p of probes) slice.setRunning(p, true);
 		try {
 			const data = await api.post<E2EApiResponse>("/api/e2e-test", {
@@ -84,11 +87,16 @@ export function E2ESmokePage() {
 							result={slice.results[p]}
 							running={slice.running[p]}
 							onRun={() => runProbes([p])}
+							disabledReason={disabledReason}
 						/>
 					))}
 				</div>
 				<div className="flex gap-2">
-					<Button onClick={() => runProbes(["text", "image", "audio"])}>
+					<Button
+						onClick={() => runProbes(["text", "image", "audio"])}
+						disabled={!canRun}
+						title={disabledReason}
+					>
 						{t("actions.runAll")}
 					</Button>
 					<Button variant="ghost" onClick={() => slice.resetResults()}>
