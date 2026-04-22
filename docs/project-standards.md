@@ -179,7 +179,7 @@ export const useXxxStore = create<XxxState>()(
 
 - **有服务端持久化、有校验要求的表单**(如「新建/编辑连接」)走 react-hook-form + zod + shadcn `form`。参考 `ConnectionDialog`。
 - **仅 UI 暂存的表单**(Load Test 参数、Request Debug 请求体等)直接受 Zustand store 托管即可,不必引 RHF。理由:每个字段都要跨导航持久化,RHF 的本地 form state 反而绕道。
-- **cURL 解析的填充逻辑**已在 `lib/curl-parser.ts` 提供统一入口,新的导入场景应复用它,不要再各自实现一遍。**TODO** —— 当前 `EndpointPicker.onParseCurl` 与 `ConnectionDialog.onParseCurl` 有重复逻辑,后续应抽到 `lib/apply-curl-to-endpoint.ts`。
+- **cURL 解析的填充逻辑**已在 `lib/curl-parser.ts`(词法 / 语法)与 `lib/apply-curl-to-endpoint.ts`(ParsedCurl → EndpointValues 的 patch)分两层提供;新的导入场景复用这两个,不要各自实现一遍。
 
 ---
 
@@ -240,49 +240,28 @@ export const useXxxStore = create<XxxState>()(
 
 ## 13. 当前待清理清单(存量债务)
 
-以下是本次审计出的具体问题,按优先级排列。**每条都应转成一个任务或 issue**,逐条消化。
+以下是审计出的具体问题,按优先级排列。**每条都应转成一个任务或 issue**,逐条消化。✅ 表示已完成。
 
 ### 高优先级(影响用户体验或正确性)
 
-1. **`LocaleStore` 初次访问可能语言错配**
-   `lib/i18n.ts` 硬写 `lng: "en-US"`;`stores/locale-store.ts` 的 `onRehydrateStorage` 只在 `state` 有值时改语言。首次访问 zh 浏览器的用户理论上可能看到英文闪现。
-   **改法:** `main.tsx` 在 `createRoot(...).render(...)` 之前同步执行
-   `i18n.changeLanguage(useLocaleStore.getState().locale)`。
-
-2. **`E2ESmokePage.runProbes` 用 `window.alert()`**(file:`features/e2e-smoke/E2ESmokePage.tsx:24`)
-   违反反模式清单。改法:禁用「运行」按钮当 `apiUrl/apiKey/model` 任一为空,tooltip 提示原因。
-
-3. **`EndpointPicker` 表单里的 `<Label>` 没有 `htmlFor`**(多处)
-   无障碍问题。给所有 `Input`/`Textarea` 加 `id`,`Label` 加 `htmlFor`。
+1. ✅ **`LocaleStore` 初次访问可能语言错配** —— 已修(`main.tsx` 渲染前同步 `i18n.changeLanguage(store.locale)`,`i18n.init` 去掉硬写 `lng`)。
+2. ✅ **`E2ESmokePage` 用 `window.alert()`** —— 已改为 Run 按钮 `disabled` + `title` tooltip。
+3. ✅ **`EndpointPicker` Label 未绑 Input** —— 已用 `useId()` 绑定 `htmlFor` / `id`。
 
 ### 中优先级(结构 / 可维护性)
 
-4. **两个连接组件并存:`EndpointPicker`(表单型)与 `EndpointSelector`(下拉型)**
-   Request Debug 用前者顶部 bar,其它页面用后者内嵌。建议:
-   - 保留 `EndpointPicker` 作为「完整表单 + 切换」入口(嵌在页面卡片里);
-   - 保留 `EndpointSelector` 作为「紧凑切换 + 管理入口」(放页面 header);
-   - 在本文档中登记两者各自职责,不再混用。
-   ⇒ **已登记到 §5**。
-
-5. **`EndpointPicker.saveOpen` 浮层 vs `EndpointSelector.namePromptOpen` 浮层重复**
-   两处都实现了「另存为...」名字输入的小浮层,UI 不一致。统一到 `ConnectionDialog`(dialog 已支持 create 模式),去掉这两个浮层。
-
-6. **cURL 解析填表逻辑重复两处**(`EndpointPicker.onParseCurl` / `ConnectionDialog.onParseCurl`)
-   抽到 `lib/apply-curl-to-endpoint.ts` 返回 `{ next: EndpointValues; filled: string[] }`。
-
-7. **`LoadTestSlice.modified` / `LoadTestSlice.curlExpanded` 是死字段**
-   没有任何读点。删除。
-
-8. **Request Debug 的 `modified={false}` 硬编码**(`RequestDebugPage.tsx:139`)
-   要么接入真实 dirty 计算,要么从 `EndpointSelector` props 里摘掉 `modified`。
+4. ✅ **两个连接组件职责** —— 已在 §5 登记并在两者 JSDoc 中说明。
+5. ✅ **「另存为」UI 重复** —— 已统一到 `ConnectionDialog`,`EndpointSelector` 的 `NamePrompt` 与无人使用的 save 回调已删。
+6. ✅ **cURL 解析填表重复** —— 已抽到 `lib/apply-curl-to-endpoint.ts`,两处消费者共用。
+7. ✅ **`LoadTestSlice.modified` / `curlExpanded`** —— 已删除(含 `setModified` 与 `@deprecated ManualEndpoint` 类型别名)。
+8. **`RequestDebugPage` 的 `modified={false}` 硬编码**(`RequestDebugPage.tsx`)
+   `EndpointSelector.modified?` 已保留为可选。要么接入真实 dirty 计算(比较当前 `url` / `headers` / `body` 与选中连接派生值),要么直接去掉 prop 传递。
 
 ### 低优先级(收尾)
 
-9. **`E2EApiResponse` / 其它本地接口响应 interface 分散在各页面**
-   抽到 `features/<name>/types.ts` 或 `lib/api-types.ts`。
+9. ✅ **本地接口响应 interface 散在 Page** —— 已移到各 feature 的 `types.ts`(`E2ETestResponse` / `DebugProxyResponse`)。
 
-10. **`E2ESmokePage` 清空结果按钮与「切换连接自动清空」现在独立**
-    可以考虑在 `resetResults` 之外再加 `resetEndpoint()`,给未来的「全部重置」按钮铺路。暂不紧急。
+10. **未提供「全部重置」按钮** —— 各 store 已有 `reset()` 动作,但没有页面 UI 触发。等有明确需求再加,不急。
 
 ---
 
