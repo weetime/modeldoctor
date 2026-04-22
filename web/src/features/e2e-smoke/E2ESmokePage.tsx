@@ -5,13 +5,7 @@ import { ApiError, api } from "@/lib/api-client";
 import { useTranslation } from "react-i18next";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
-import type { ProbeName, ProbeResult } from "./types";
-
-interface E2EApiResponse {
-	success: boolean;
-	results: Array<{ probe: ProbeName } & ProbeResult>;
-	error?: string;
-}
+import type { E2ETestResponse, ProbeName } from "./types";
 
 export function E2ESmokePage() {
 	const { t } = useTranslation("e2e");
@@ -29,7 +23,7 @@ export function E2ESmokePage() {
 		if (!canRun) return;
 		for (const p of probes) slice.setRunning(p, true);
 		try {
-			const data = await api.post<E2EApiResponse>("/api/e2e-test", {
+			const data = await api.post<E2ETestResponse>("/api/e2e-test", {
 				apiUrl: endpoint.apiUrl,
 				apiKey: endpoint.apiKey,
 				model: endpoint.model,

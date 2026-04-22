@@ -20,21 +20,9 @@ import { useTranslation } from "react-i18next";
 import { KeyValueTable } from "./KeyValueTable";
 import { ResponseViewer } from "./ResponseViewer";
 import { useDebugStore } from "./store";
-import type { DebugResponse, HttpMethod } from "./types";
+import type { DebugProxyResponse, DebugResponse, HttpMethod } from "./types";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "DELETE", "PATCH"];
-
-interface ProxyResponse {
-	success: boolean;
-	status?: number;
-	statusText?: string;
-	headers?: Record<string, string>;
-	body?: string;
-	bodyEncoding?: "text" | "base64";
-	timingMs?: { ttfbMs: number; totalMs: number };
-	sizeBytes?: number;
-	error?: string;
-}
 
 export function RequestDebugPage() {
 	const { t } = useTranslation("debug");
@@ -106,7 +94,7 @@ export function RequestDebugPage() {
 				const qs = params.toString();
 				if (qs) url += (url.includes("?") ? "&" : "?") + qs;
 			}
-			const proxy = await api.post<ProxyResponse>("/api/debug/proxy", {
+			const proxy = await api.post<DebugProxyResponse>("/api/debug/proxy", {
 				method: slice.method,
 				url,
 				headers,

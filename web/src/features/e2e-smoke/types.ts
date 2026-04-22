@@ -22,3 +22,10 @@ export interface ProbeResult {
 		error?: string;
 	};
 }
+
+/** Wire format returned by `POST /api/e2e-test`. */
+export interface E2ETestResponse {
+	success: boolean;
+	results: Array<{ probe: ProbeName } & ProbeResult>;
+	error?: string;
+}
