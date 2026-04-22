@@ -10,9 +10,17 @@ interface Props {
 	result: ProbeResult | null;
 	running: boolean;
 	onRun: () => void;
+	/** When set, the Run button is disabled and this string is shown as tooltip. */
+	disabledReason?: string;
 }
 
-export function ProbeCard({ name, result, running, onRun }: Props) {
+export function ProbeCard({
+	name,
+	result,
+	running,
+	onRun,
+	disabledReason,
+}: Props) {
 	const { t } = useTranslation("e2e");
 	const { t: tc } = useTranslation("common");
 	const variant: "default" | "warning" | "success" | "destructive" = running
@@ -50,7 +58,13 @@ export function ProbeCard({ name, result, running, onRun }: Props) {
 				<Badge variant={variant}>{status}</Badge>
 			</div>
 
-			<Button variant="outline" size="sm" onClick={onRun} disabled={running}>
+			<Button
+				variant="outline"
+				size="sm"
+				onClick={onRun}
+				disabled={running || !!disabledReason}
+				title={disabledReason}
+			>
 				{tc("actions.run")}
 			</Button>
 

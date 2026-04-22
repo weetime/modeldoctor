@@ -9,6 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	type EndpointKey,
+	applyCurlToEndpoint,
+} from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
@@ -17,12 +21,19 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { type ConnectionInput, connectionInputSchema } from "./schema";
 
 interface ConnectionDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	connection?: Connection; // undefined → create mode
+	/** If provided, dialog is in edit mode for this connection. */
+	connection?: Connection;
+	/**
+	 * Create-mode prefill — e.g. "Save as new" from an inline endpoint form.
+	 * Ignored when `connection` is set.
+	 */
+	initialValues?: Partial<ConnectionInput>;
 	onSaved?: (c: Connection) => void;
 }
 
@@ -39,6 +50,7 @@ export function ConnectionDialog({
 	open,
 	onOpenChange,
 	connection,
+	initialValues,
 	onSaved,
 }: ConnectionDialogProps) {
 	const { t } = useTranslation("connections");
@@ -48,10 +60,6 @@ export function ConnectionDialog({
 	const [revealKey, setRevealKey] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [curlInput, setCurlInput] = useState("");
-	const [curlFeedback, setCurlFeedback] = useState<{
-		kind: "ok" | "err";
-		text: string;
-	} | null>(null);
 
 	const form = useForm<ConnectionInput>({
 		resolver: zodResolver(connectionInputSchema),
@@ -60,66 +68,40 @@ export function ConnectionDialog({
 
 	useEffect(() => {
 		if (open) {
-			form.reset(connection ?? empty);
+			form.reset(connection ?? { ...empty, ...initialValues });
 			setSubmitError(null);
 			setRevealKey(false);
 			setCurlInput("");
-			setCurlFeedback(null);
 		}
-	}, [open, connection, form]);
+	}, [open, connection, initialValues, form]);
 
 	const onParseCurl = () => {
 		const trimmed = curlInput.trim();
 		if (!trimmed) {
-			setCurlFeedback({ kind: "err", text: t("dialog.curl.empty") });
+			toast.error(t("dialog.curl.empty"));
 			return;
 		}
 		const parsed = parseCurlCommand(trimmed);
-		const filled: string[] = [];
+		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
 
-		if (parsed.url) {
-			form.setValue("apiUrl", parsed.url, { shouldValidate: true });
-			filled.push(t("dialog.fields.apiUrl"));
-		}
-		if (parsed.queryParams) {
-			form.setValue("queryParams", parsed.queryParams);
-			filled.push(t("dialog.fields.queryParams"));
-		}
-		const auth = parsed.headers.authorization;
-		if (auth) {
-			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
-			if (key) {
-				form.setValue("apiKey", key, { shouldValidate: true });
-				filled.push(t("dialog.fields.apiKey"));
-			}
-		}
-		const customLines: string[] = [];
-		for (const [lower, entry] of Object.entries(parsed.headers)) {
-			if (lower === "authorization" || lower === "content-type") continue;
-			customLines.push(`${entry.originalKey}: ${entry.value}`);
-		}
-		if (customLines.length) {
-			form.setValue("customHeaders", customLines.join("\n"));
-			filled.push(t("dialog.fields.customHeaders"));
-		}
-		const bodyModel =
-			parsed.body &&
-			typeof (parsed.body as { model?: unknown }).model === "string"
-				? (parsed.body as { model: string }).model
-				: "";
-		if (bodyModel) {
-			form.setValue("model", bodyModel, { shouldValidate: true });
-			filled.push(t("dialog.fields.model"));
-		}
-
-		if (filled.length === 0) {
-			setCurlFeedback({ kind: "err", text: t("dialog.curl.invalid") });
+		if (filledKeys.length === 0) {
+			toast.error(t("dialog.curl.invalid"));
 			return;
 		}
-		setCurlFeedback({
-			kind: "ok",
-			text: t("dialog.curl.filled", { fields: filled.join(", ") }),
-		});
+
+		const validatedKeys: ReadonlySet<EndpointKey> = new Set([
+			"apiUrl",
+			"apiKey",
+			"model",
+		]);
+		for (const key of filledKeys) {
+			const value = patch[key];
+			if (value === undefined) continue;
+			form.setValue(key, value, { shouldValidate: validatedKeys.has(key) });
+		}
+
+		const localized = filledKeys.map((k) => t(`dialog.fields.${k}`));
+		toast.success(t("dialog.curl.filled", { fields: localized.join(", ") }));
 	};
 
 	const onSubmit = form.handleSubmit((values) => {
@@ -155,27 +137,14 @@ export function ConnectionDialog({
 								placeholder={t("dialog.curl.placeholder")}
 								className="font-mono text-xs"
 							/>
-							<div className="flex items-center gap-2">
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									onClick={onParseCurl}
-								>
-									{t("dialog.curl.parse")}
-								</Button>
-								{curlFeedback ? (
-									<span
-										className={
-											curlFeedback.kind === "ok"
-												? "text-xs text-success"
-												: "text-xs text-destructive"
-										}
-									>
-										{curlFeedback.text}
-									</span>
-								) : null}
-							</div>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={onParseCurl}
+							>
+								{t("dialog.curl.parse")}
+							</Button>
 						</div>
 					</details>
 

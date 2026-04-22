@@ -17,7 +17,6 @@
 		"start": "开始",
 		"back": "返回",
 		"manageConnections": "管理连接",
-		"saveAsNew": "另存为…",
 		"copy": "复制",
 		"copied": "已复制",
 		"format": "格式化为 JSON"
@@ -35,6 +34,10 @@
 		"dark": "深色",
 		"system": "跟随系统"
 	},
+	"sidebar": {
+		"collapse": "收起侧边栏",
+		"expand": "展开侧边栏"
+	},
 	"endpoint": {
 		"label": "端点",
 		"manual": "— 手动 —",
@@ -51,11 +54,11 @@
 		"advanced": "高级（自定义 Headers、查询参数）",
 		"parseCurl": "解析填充",
 		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+		"curlInvalid": "无法解析 cURL，请检查命令后重试",
 		"filled": "已填充：{{fields}}",
-		"nameConnection": "连接名称",
-		"nameExists": "已存在同名连接",
-		"nameRequired": "请输入名称",
-		"newConnection": "+ 新建连接"
+		"newConnection": "+ 新建连接",
+		"saved": "已保存到连接「{{name}}」",
+		"saveFailed": "保存失败"
 	},
 	"comingSoon": {
 		"title": "敬请期待",

@@ -39,8 +39,7 @@
 		"pasteCurl": "\u7c98\u8d34 cURL",
 		"loadFromSaved": "\u4ece\u5df2\u4fdd\u5b58\u52a0\u8f7d",
 		"manual": "\u2014 \u624b\u52a8 \u2014",
-		"modified": "\u5df2\u4fee\u6539",
-		"nameConnection": "\u8fde\u63a5\u540d\u79f0"
+		"modified": "\u5df2\u4fee\u6539"
 	},
 	"curl": {
 		"import": "\u4ece cURL \u5bfc\u5165",

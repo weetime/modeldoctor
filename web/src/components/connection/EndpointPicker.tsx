@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
+import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
 import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const MANUAL = "__manual__";
 const NEW_CONNECTION = "__new__";
@@ -39,9 +41,19 @@ export interface EndpointPickerProps {
 }
 
 /**
- * Unified endpoint editor + connection loader + curl import. The single
- * source of truth for the endpoint values is the controlled `endpoint` prop;
- * consumers own state.
+ * Full endpoint editor embedded inline in a page card: surface the API URL /
+ * Key / Model form, load values from a saved connection, import from cURL, and
+ * save current values as a new connection.
+ *
+ * **When to use:** a feature page that *needs the user to see and edit* the
+ * endpoint values as part of its primary flow (E2E Smoke, Load Test).
+ *
+ * **When NOT to use:** compact pages where the endpoint is incidental and the
+ * user just picks a saved connection — use {@link EndpointSelector} in the
+ * page header instead.
+ *
+ * The single source of truth for the endpoint values is the controlled
+ * `endpoint` prop; consumers own state (typically a Zustand store).
  */
 export function EndpointPicker({
 	endpoint,
@@ -53,7 +65,6 @@ export function EndpointPicker({
 	const { t } = useTranslation("common");
 	const conns = useConnectionsStore();
 	const connectionList = conns.list();
-	const createConn = useConnectionsStore((s) => s.create);
 	const updateConn = useConnectionsStore((s) => s.update);
 	const selectedConn = selectedConnectionId
 		? conns.get(selectedConnectionId)
@@ -62,11 +73,18 @@ export function EndpointPicker({
 	const [revealKey, setRevealKey] = useState(false);
 	const [curlOpen, setCurlOpen] = useState(false);
 	const [curlText, setCurlText] = useState("");
-	const [curlFeedback, setCurlFeedback] = useState<string | null>(null);
-	const [saveOpen, setSaveOpen] = useState(false);
-	const [saveName, setSaveName] = useState("");
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [newDialogOpen, setNewDialogOpen] = useState(false);
+	/**
+	 * `null` = dialog closed.
+	 * `"new"` = "+ New connection" flow, start empty.
+	 * `"saveAs"` = "Save as…" flow, prefill with current endpoint values.
+	 */
+	const [dialogMode, setDialogMode] = useState<"new" | "saveAs" | null>(null);
+
+	const apiUrlId = useId();
+	const apiKeyId = useId();
+	const modelId = useId();
+	const customHeadersId = useId();
+	const queryParamsId = useId();
 
 	const isDirty =
 		!!selectedConn &&
@@ -88,10 +106,11 @@ export function EndpointPicker({
 	const onSelectValue = (value: string) => {
 		if (value === MANUAL) {
 			onSelect(null);
+			onEndpointChange(emptyEndpointValues);
 			return;
 		}
 		if (value === NEW_CONNECTION) {
-			setNewDialogOpen(true);
+			setDialogMode("new");
 			return;
 		}
 		const c = conns.get(value);
@@ -108,88 +127,33 @@ export function EndpointPicker({
 	};
 
 	const onSaveClick = () => {
-		setSaveError(null);
 		if (selectedConn) {
 			try {
 				updateConn(selectedConn.id, endpoint);
+				toast.success(t("endpoint.saved", { name: selectedConn.name }));
 			} catch (e) {
-				setSaveError(e instanceof Error ? e.message : "");
+				toast.error(e instanceof Error ? e.message : t("endpoint.saveFailed"));
 			}
 			return;
 		}
-		setSaveOpen(true);
-		setSaveName("");
-	};
-
-	const onSaveAsSubmit = () => {
-		setSaveError(null);
-		const name = saveName.trim();
-		if (!name) {
-			setSaveError(t("endpoint.nameRequired"));
-			return;
-		}
-		try {
-			const created = createConn({ name, ...endpoint });
-			onSelect(created.id);
-			setSaveOpen(false);
-			setSaveName("");
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : "";
-			setSaveError(
-				msg.toLowerCase().includes("exists") ? t("endpoint.nameExists") : msg,
-			);
-		}
+		setDialogMode("saveAs");
 	};
 
 	const onParseCurl = () => {
 		const parsed = parseCurlCommand(curlText);
 		if (!parsed.url && !parsed.body) {
-			setCurlFeedback(t("endpoint.filled", { fields: "—" }));
+			toast.error(t("endpoint.curlInvalid"));
 			return;
 		}
-		const filled: string[] = [];
-		const next: EndpointValues = { ...endpoint };
-		if (parsed.url) {
-			next.apiUrl = parsed.url;
-			filled.push("apiUrl");
-		}
-		if (parsed.queryParams) {
-			next.queryParams = parsed.queryParams;
-			filled.push("queryParams");
-		}
-		const auth = parsed.headers.authorization;
-		if (auth) {
-			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
-			if (key) {
-				next.apiKey = key;
-				filled.push("apiKey");
-			}
-		}
-		const customLines: string[] = [];
-		for (const [lower, entry] of Object.entries(parsed.headers)) {
-			if (lower === "authorization" || lower === "content-type") continue;
-			customLines.push(`${entry.originalKey}: ${entry.value}`);
-		}
-		if (customLines.length) {
-			next.customHeaders = customLines.join("\n");
-			filled.push("customHeaders");
-		}
-		const body = parsed.body as Record<string, unknown> | null;
-		if (body && typeof body.model === "string") {
-			next.model = body.model;
-			filled.push("model");
-		}
+		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
 		// Parsing a curl moves us off any saved connection.
 		onSelect(null);
-		onEndpointChange(next);
+		onEndpointChange({ ...endpoint, ...patch });
 		onCurlParsed?.(parsed);
 
-		setCurlFeedback(t("endpoint.filled", { fields: filled.join(", ") }));
+		toast.success(t("endpoint.filled", { fields: filledKeys.join(", ") }));
 		setCurlText("");
-		setTimeout(() => {
-			setCurlOpen(false);
-			setCurlFeedback(null);
-		}, 1200);
+		setCurlOpen(false);
 	};
 
 	return (
@@ -236,10 +200,7 @@ export function EndpointPicker({
 					type="button"
 					size="sm"
 					variant="outline"
-					onClick={() => {
-						setCurlOpen((v) => !v);
-						setCurlFeedback(null);
-					}}
+					onClick={() => setCurlOpen((v) => !v)}
 					className="shrink-0"
 				>
 					<ClipboardPaste className="h-3.5 w-3.5" />
@@ -269,23 +230,20 @@ export function EndpointPicker({
 							type="button"
 							size="sm"
 							variant="ghost"
-							onClick={() => {
-								setCurlOpen(false);
-								setCurlFeedback(null);
-							}}
+							onClick={() => setCurlOpen(false)}
 						>
 							{t("actions.cancel")}
 						</Button>
-						{curlFeedback ? (
-							<span className="text-xs text-success">{curlFeedback}</span>
-						) : null}
 					</div>
 				</div>
 			) : null}
 
 			<ConnectionDialog
-				open={newDialogOpen}
-				onOpenChange={setNewDialogOpen}
+				open={dialogMode !== null}
+				onOpenChange={(o) => {
+					if (!o) setDialogMode(null);
+				}}
+				initialValues={dialogMode === "saveAs" ? endpoint : undefined}
 				onSaved={(c) => {
 					onSelect(c.id);
 					onEndpointChange({
@@ -298,42 +256,15 @@ export function EndpointPicker({
 				}}
 			/>
 
-			{saveOpen ? (
-				<div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
-					<Input
-						value={saveName}
-						onChange={(e) => setSaveName(e.target.value)}
-						placeholder={t("endpoint.nameConnection")}
-						className="h-8 font-mono text-xs"
-					/>
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						onClick={() => {
-							setSaveOpen(false);
-							setSaveError(null);
-						}}
-					>
-						{t("actions.cancel")}
-					</Button>
-					<Button type="button" size="sm" onClick={onSaveAsSubmit}>
-						{t("actions.save")}
-					</Button>
-					{saveError ? (
-						<span className="text-xs text-destructive">{saveError}</span>
-					) : null}
-				</div>
-			) : null}
-
 			<section className="rounded-lg border border-border bg-card p-4">
 				<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
 					{t("endpoint.label")}
 				</h2>
 				<div className="space-y-3">
 					<div>
-						<Label>{t("endpoint.apiUrl")}</Label>
+						<Label htmlFor={apiUrlId}>{t("endpoint.apiUrl")}</Label>
 						<Input
+							id={apiUrlId}
 							value={endpoint.apiUrl}
 							onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
 							placeholder="http://host:port/v1/chat/completions"
@@ -342,9 +273,10 @@ export function EndpointPicker({
 					</div>
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						<div>
-							<Label>{t("endpoint.apiKey")}</Label>
+							<Label htmlFor={apiKeyId}>{t("endpoint.apiKey")}</Label>
 							<div className="relative">
 								<Input
+									id={apiKeyId}
 									type={revealKey ? "text" : "password"}
 									value={endpoint.apiKey}
 									onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
@@ -366,8 +298,9 @@ export function EndpointPicker({
 							</div>
 						</div>
 						<div>
-							<Label>{t("endpoint.model")}</Label>
+							<Label htmlFor={modelId}>{t("endpoint.model")}</Label>
 							<Input
+								id={modelId}
 								value={endpoint.model}
 								onChange={(e) => patchEndpoint({ model: e.target.value })}
 								placeholder="model-name"
@@ -381,8 +314,11 @@ export function EndpointPicker({
 						</summary>
 						<div className="mt-2 space-y-3">
 							<div>
-								<Label>{t("endpoint.customHeaders")}</Label>
+								<Label htmlFor={customHeadersId}>
+									{t("endpoint.customHeaders")}
+								</Label>
 								<Textarea
+									id={customHeadersId}
 									rows={2}
 									value={endpoint.customHeaders}
 									onChange={(e) =>
@@ -393,8 +329,11 @@ export function EndpointPicker({
 								/>
 							</div>
 							<div>
-								<Label>{t("endpoint.queryParams")}</Label>
+								<Label htmlFor={queryParamsId}>
+									{t("endpoint.queryParams")}
+								</Label>
 								<Textarea
+									id={queryParamsId}
 									rows={2}
 									value={endpoint.queryParams}
 									onChange={(e) =>

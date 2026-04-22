@@ -16,34 +16,27 @@ import { ApiError, api } from "@/lib/api-client";
 import { parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { useMutation } from "@tanstack/react-query";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyValueTable } from "./KeyValueTable";
 import { ResponseViewer } from "./ResponseViewer";
 import { useDebugStore } from "./store";
-import type { DebugResponse, HttpMethod } from "./types";
+import type { DebugProxyResponse, DebugResponse, HttpMethod } from "./types";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "DELETE", "PATCH"];
-
-interface ProxyResponse {
-	success: boolean;
-	status?: number;
-	statusText?: string;
-	headers?: Record<string, string>;
-	body?: string;
-	bodyEncoding?: "text" | "base64";
-	timingMs?: { ttfbMs: number; totalMs: number };
-	sizeBytes?: number;
-	error?: string;
-}
 
 export function RequestDebugPage() {
 	const { t } = useTranslation("debug");
 	const { t: tc } = useTranslation("common");
 	const slice = useDebugStore();
 	const conns = useConnectionsStore();
+	const methodId = useId();
+	const urlId = useId();
+	const bodyId = useId();
 
 	const onSelect = (id: string | null) => {
 		slice.setSelected(id);
+		slice.resetResults();
 		if (id) {
 			const c = conns.get(id);
 			if (c) {
@@ -105,7 +98,7 @@ export function RequestDebugPage() {
 				const qs = params.toString();
 				if (qs) url += (url.includes("?") ? "&" : "?") + qs;
 			}
-			const proxy = await api.post<ProxyResponse>("/api/debug/proxy", {
+			const proxy = await api.post<DebugProxyResponse>("/api/debug/proxy", {
 				method: slice.method,
 				url,
 				headers,
@@ -136,7 +129,6 @@ export function RequestDebugPage() {
 				rightSlot={
 					<EndpointSelector
 						selectedId={slice.selectedConnectionId}
-						modified={false}
 						onSelect={onSelect}
 					/>
 				}
@@ -163,12 +155,12 @@ export function RequestDebugPage() {
 				<section className="space-y-3 rounded-lg border border-border bg-card p-4">
 					<div className="grid grid-cols-[120px,1fr] gap-3">
 						<div>
-							<Label>{t("fields.method")}</Label>
+							<Label htmlFor={methodId}>{t("fields.method")}</Label>
 							<Select
 								value={slice.method}
 								onValueChange={(v) => slice.patch("method", v as HttpMethod)}
 							>
-								<SelectTrigger>
+								<SelectTrigger id={methodId}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -181,8 +173,9 @@ export function RequestDebugPage() {
 							</Select>
 						</div>
 						<div>
-							<Label>{t("fields.url")}</Label>
+							<Label htmlFor={urlId}>{t("fields.url")}</Label>
 							<Input
+								id={urlId}
 								value={slice.url}
 								onChange={(e) => slice.patch("url", e.target.value)}
 								className="font-mono text-xs"
@@ -204,7 +197,11 @@ export function RequestDebugPage() {
 						</TabsContent>
 						<TabsContent value="body">
 							<div className="space-y-2">
+								<Label htmlFor={bodyId} className="sr-only">
+									{t("fields.body")}
+								</Label>
 								<Textarea
+									id={bodyId}
 									rows={10}
 									className="font-mono text-xs"
 									value={slice.body}
@@ -230,13 +227,7 @@ export function RequestDebugPage() {
 						>
 							{mutation.isPending ? "…" : t("actions.send")}
 						</Button>
-						<Button
-							variant="ghost"
-							onClick={() => {
-								slice.setLastResponse(null);
-								slice.setLastError(null);
-							}}
-						>
+						<Button variant="ghost" onClick={() => slice.resetResults()}>
 							{tc("actions.clear")}
 						</Button>
 					</div>

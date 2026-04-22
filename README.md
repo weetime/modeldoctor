@@ -24,6 +24,20 @@ pnpm dev
 
 Vite serves the frontend on <http://localhost:5173>. Express serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to Express. Edit files in `web/src/`; HMR updates the browser.
 
+### Running multiple worktrees in parallel
+
+This repo is typically checked out as a bare + worktree layout (`main/` + `feat/<name>/`). Each worktree has its own `node_modules` and can run `pnpm dev` independently, **as long as the ports differ**. Override via env:
+
+```bash
+# worktree A (defaults)
+pnpm dev
+
+# worktree B (in another shell)
+VITE_PORT=5174 API_PORT=3002 pnpm dev
+```
+
+The Vite config forwards `/api/*` to `http://localhost:${API_PORT}` so both pairs stay self-consistent. `strictPort: true` means a wrong setting fails loudly instead of auto-falling-back.
+
 ## Production build
 
 ```bash
@@ -62,8 +76,24 @@ BlastBench/
 | `pnpm lint` | Biome lint over `web/src/` |
 | `pnpm format` | Biome format over `web/src/` |
 | `pnpm type-check` | TypeScript no-emit check |
-| `pnpm test` | Vitest run |
+| `pnpm test` | Vitest run (web, jsdom + setup files wired in) |
 | `pnpm test:watch` | Vitest watch mode |
+| `pnpm test:backend` | Vitest for the Express backend (uses `vitest.backend.config.ts`) |
+
+> **Always run `pnpm test`**, not a bare `vitest` or `pnpm exec vitest ...`. The
+> configured script wires up `jsdom`, test setup files (`@testing-library/jest-dom`
+> matchers), and the correct config path. Running vitest outside this script
+> will skip setup and trip spurious "localStorage is not defined" failures.
+
+Before a PR lands, all three of these must pass:
+
+```bash
+pnpm type-check
+pnpm lint
+pnpm test
+```
+
+Conventions and the full debt list live in [`docs/project-standards.md`](docs/project-standards.md).
 
 ## License
 

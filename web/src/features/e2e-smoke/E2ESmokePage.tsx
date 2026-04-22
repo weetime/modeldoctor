@@ -5,13 +5,7 @@ import { ApiError, api } from "@/lib/api-client";
 import { useTranslation } from "react-i18next";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
-import type { ProbeName, ProbeResult } from "./types";
-
-interface E2EApiResponse {
-	success: boolean;
-	results: Array<{ probe: ProbeName } & ProbeResult>;
-	error?: string;
-}
+import type { E2ETestResponse, ProbeName } from "./types";
 
 export function E2ESmokePage() {
 	const { t } = useTranslation("e2e");
@@ -19,14 +13,17 @@ export function E2ESmokePage() {
 	const slice = useE2EStore();
 	const endpoint = slice.manualEndpoint;
 
+	const canRun =
+		endpoint.apiUrl.trim().length > 0 &&
+		endpoint.apiKey.trim().length > 0 &&
+		endpoint.model.trim().length > 0;
+	const disabledReason = canRun ? undefined : tc("errors.required");
+
 	const runProbes = async (probes: ProbeName[]) => {
-		if (!endpoint.apiUrl || !endpoint.apiKey || !endpoint.model) {
-			alert(tc("errors.required"));
-			return;
-		}
+		if (!canRun) return;
 		for (const p of probes) slice.setRunning(p, true);
 		try {
-			const data = await api.post<E2EApiResponse>("/api/e2e-test", {
+			const data = await api.post<E2ETestResponse>("/api/e2e-test", {
 				apiUrl: endpoint.apiUrl,
 				apiKey: endpoint.apiKey,
 				model: endpoint.model,
@@ -69,7 +66,10 @@ export function E2ESmokePage() {
 				<EndpointPicker
 					endpoint={endpoint}
 					selectedConnectionId={slice.selectedConnectionId}
-					onSelect={slice.setSelected}
+					onSelect={(id) => {
+						slice.setSelected(id);
+						slice.resetResults();
+					}}
 					onEndpointChange={slice.setManualEndpoint}
 				/>
 
@@ -81,14 +81,19 @@ export function E2ESmokePage() {
 							result={slice.results[p]}
 							running={slice.running[p]}
 							onRun={() => runProbes([p])}
+							disabledReason={disabledReason}
 						/>
 					))}
 				</div>
 				<div className="flex gap-2">
-					<Button onClick={() => runProbes(["text", "image", "audio"])}>
+					<Button
+						onClick={() => runProbes(["text", "image", "audio"])}
+						disabled={!canRun}
+						title={disabledReason}
+					>
 						{t("actions.runAll")}
 					</Button>
-					<Button variant="ghost" onClick={() => slice.clearAll()}>
+					<Button variant="ghost" onClick={() => slice.resetResults()}>
 						{t("actions.clear")}
 					</Button>
 				</div>
