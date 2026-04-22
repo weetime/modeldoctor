@@ -24,6 +24,20 @@ pnpm dev
 
 Vite serves the frontend on <http://localhost:5173>. Express serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to Express. Edit files in `web/src/`; HMR updates the browser.
 
+### Running multiple worktrees in parallel
+
+This repo is typically checked out as a bare + worktree layout (`main/` + `feat/<name>/`). Each worktree has its own `node_modules` and can run `pnpm dev` independently, **as long as the ports differ**. Override via env:
+
+```bash
+# worktree A (defaults)
+pnpm dev
+
+# worktree B (in another shell)
+VITE_PORT=5174 API_PORT=3002 pnpm dev
+```
+
+The Vite config forwards `/api/*` to `http://localhost:${API_PORT}` so both pairs stay self-consistent. `strictPort: true` means a wrong setting fails loudly instead of auto-falling-back.
+
 ## Production build
 
 ```bash

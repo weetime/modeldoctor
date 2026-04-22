@@ -218,7 +218,11 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 - 仓库是 **bare + worktree 布局**(`/Users/fangyong/vllm/modeldoctor/` 下的 `.bare` + `main/` + `feat/<name>/`)。
 - **feature 开发只在对应 worktree 里改**,**不要**同时改 `main/` 工作区(即使开发服务器跑在另一个 worktree,也不要双写)。让 `main` 通过合并获取变更。
-- 开发服务器端口冲突处理:每个 worktree 用不同的 `VITE_PORT` / `API_PORT`,见 README(TODO:写清楚)。
+- 开发服务器端口:默认 Vite `5173` / Express `3001`。多 worktree 同时跑 `pnpm dev` 时,后续的 worktree 用 env 覆盖,例如
+  ```bash
+  VITE_PORT=5174 API_PORT=3002 pnpm dev
+  ```
+  `vite.config.ts` 里 `server.port` 和 `proxy["/api"].target` 都读这对环境变量,保证 Vite→Express 的代理对齐(见 README)。
 - 提交信息沿用 `type: short desc` 前缀(feat/fix/refactor/ui/chore/docs/i18n),参见 `git log`。
 
 ---

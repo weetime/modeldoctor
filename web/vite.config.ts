@@ -22,6 +22,12 @@ function stripThirdPartyEmoji(): Plugin {
   };
 }
 
+// Ports are overridable so multiple git worktrees can run `pnpm dev`
+// concurrently without colliding. Set VITE_PORT / API_PORT in the shell
+// (or a .env file; Vite loads .env automatically for `vite dev`).
+const VITE_PORT = Number(process.env.VITE_PORT) || 5173;
+const API_PORT = Number(process.env.API_PORT) || 3001;
+
 export default defineConfig({
   root: path.resolve(__dirname),
   css: {
@@ -36,11 +42,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: VITE_PORT,
     strictPort: true,
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: `http://localhost:${API_PORT}`,
         changeOrigin: true,
       },
     },
