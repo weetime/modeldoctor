@@ -9,6 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	type EndpointKey,
+	applyCurlToEndpoint,
+} from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
@@ -75,50 +79,28 @@ export function ConnectionDialog({
 			return;
 		}
 		const parsed = parseCurlCommand(trimmed);
-		const filled: string[] = [];
+		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
 
-		if (parsed.url) {
-			form.setValue("apiUrl", parsed.url, { shouldValidate: true });
-			filled.push(t("dialog.fields.apiUrl"));
-		}
-		if (parsed.queryParams) {
-			form.setValue("queryParams", parsed.queryParams);
-			filled.push(t("dialog.fields.queryParams"));
-		}
-		const auth = parsed.headers.authorization;
-		if (auth) {
-			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
-			if (key) {
-				form.setValue("apiKey", key, { shouldValidate: true });
-				filled.push(t("dialog.fields.apiKey"));
-			}
-		}
-		const customLines: string[] = [];
-		for (const [lower, entry] of Object.entries(parsed.headers)) {
-			if (lower === "authorization" || lower === "content-type") continue;
-			customLines.push(`${entry.originalKey}: ${entry.value}`);
-		}
-		if (customLines.length) {
-			form.setValue("customHeaders", customLines.join("\n"));
-			filled.push(t("dialog.fields.customHeaders"));
-		}
-		const bodyModel =
-			parsed.body &&
-			typeof (parsed.body as { model?: unknown }).model === "string"
-				? (parsed.body as { model: string }).model
-				: "";
-		if (bodyModel) {
-			form.setValue("model", bodyModel, { shouldValidate: true });
-			filled.push(t("dialog.fields.model"));
-		}
-
-		if (filled.length === 0) {
+		if (filledKeys.length === 0) {
 			setCurlFeedback({ kind: "err", text: t("dialog.curl.invalid") });
 			return;
 		}
+
+		const validatedKeys: ReadonlySet<EndpointKey> = new Set([
+			"apiUrl",
+			"apiKey",
+			"model",
+		]);
+		for (const key of filledKeys) {
+			const value = patch[key];
+			if (value === undefined) continue;
+			form.setValue(key, value, { shouldValidate: validatedKeys.has(key) });
+		}
+
+		const localized = filledKeys.map((k) => t(`dialog.fields.${k}`));
 		setCurlFeedback({
 			kind: "ok",
-			text: t("dialog.curl.filled", { fields: filled.join(", ") }),
+			text: t("dialog.curl.filled", { fields: localized.join(", ") }),
 		});
 	};
 

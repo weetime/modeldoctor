@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
+import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
@@ -164,44 +165,13 @@ export function EndpointPicker({
 			setCurlFeedback(t("endpoint.filled", { fields: "—" }));
 			return;
 		}
-		const filled: string[] = [];
-		const next: EndpointValues = { ...endpoint };
-		if (parsed.url) {
-			next.apiUrl = parsed.url;
-			filled.push("apiUrl");
-		}
-		if (parsed.queryParams) {
-			next.queryParams = parsed.queryParams;
-			filled.push("queryParams");
-		}
-		const auth = parsed.headers.authorization;
-		if (auth) {
-			const key = auth.value.replace(/^Bearer\s+/i, "").trim();
-			if (key) {
-				next.apiKey = key;
-				filled.push("apiKey");
-			}
-		}
-		const customLines: string[] = [];
-		for (const [lower, entry] of Object.entries(parsed.headers)) {
-			if (lower === "authorization" || lower === "content-type") continue;
-			customLines.push(`${entry.originalKey}: ${entry.value}`);
-		}
-		if (customLines.length) {
-			next.customHeaders = customLines.join("\n");
-			filled.push("customHeaders");
-		}
-		const body = parsed.body as Record<string, unknown> | null;
-		if (body && typeof body.model === "string") {
-			next.model = body.model;
-			filled.push("model");
-		}
+		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
 		// Parsing a curl moves us off any saved connection.
 		onSelect(null);
-		onEndpointChange(next);
+		onEndpointChange({ ...endpoint, ...patch });
 		onCurlParsed?.(parsed);
 
-		setCurlFeedback(t("endpoint.filled", { fields: filled.join(", ") }));
+		setCurlFeedback(t("endpoint.filled", { fields: filledKeys.join(", ") }));
 		setCurlText("");
 		setTimeout(() => {
 			setCurlOpen(false);
