@@ -240,6 +240,12 @@ importers:
         specifier: ^1
         version: 1.6.1(@types/node@20.19.39)(@vitest/ui@1.6.1)(jsdom@24.1.3)(terser@5.46.1)
 
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^3.23
+        version: 3.25.76
+
 packages:
 
   '@adobe/css-tools@4.4.4':
