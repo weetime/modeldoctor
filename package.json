@@ -7,15 +7,16 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"pnpm -F @modeldoctor/web dev\" \"pnpm -F @modeldoctor/api start:dev\"",
     "dev:legacy": "concurrently -k -n web,api -c cyan,magenta \"pnpm -F @modeldoctor/web dev\" \"node server.js\"",
-    "dev": "pnpm dev:legacy",
-    "build": "pnpm -F @modeldoctor/web build",
-    "start": "node server.js",
+    "build": "pnpm -F @modeldoctor/contracts type-check && pnpm -F @modeldoctor/web build && pnpm -F @modeldoctor/api build",
+    "start": "node apps/api/dist/main.js",
     "lint": "pnpm -r --if-present lint",
     "format": "pnpm -r --if-present format",
     "type-check": "pnpm -r --if-present type-check",
     "test": "pnpm -r --if-present test",
-    "test:backend": "vitest run --config vitest.backend.config.ts"
+    "test:e2e": "pnpm -F @modeldoctor/api test:e2e",
+    "test:backend:legacy": "vitest run --config vitest.backend.config.ts"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
