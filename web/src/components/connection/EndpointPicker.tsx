@@ -39,9 +39,19 @@ export interface EndpointPickerProps {
 }
 
 /**
- * Unified endpoint editor + connection loader + curl import. The single
- * source of truth for the endpoint values is the controlled `endpoint` prop;
- * consumers own state.
+ * Full endpoint editor embedded inline in a page card: surface the API URL /
+ * Key / Model form, load values from a saved connection, import from cURL, and
+ * save current values as a new connection.
+ *
+ * **When to use:** a feature page that *needs the user to see and edit* the
+ * endpoint values as part of its primary flow (E2E Smoke, Load Test).
+ *
+ * **When NOT to use:** compact pages where the endpoint is incidental and the
+ * user just picks a saved connection — use {@link EndpointSelector} in the
+ * page header instead.
+ *
+ * The single source of truth for the endpoint values is the controlled
+ * `endpoint` prop; consumers own state (typically a Zustand store).
  */
 export function EndpointPicker({
 	endpoint,

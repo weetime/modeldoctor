@@ -135,6 +135,18 @@ export const useXxxStore = create<XxxState>()(
 - **`components/common/*` & `components/connection/*`** 可以 i18n、可以读全局 store,但**不得**读 feature store。
 - **feature 子组件** 放 `features/<name>/` 下,可以自由读该 feature 的 store。
 
+### 连接组件:`EndpointPicker` vs `EndpointSelector`
+
+两者都在 `components/connection/`,但定位不同,不得互换:
+
+| 组件 | 位置 | 用于 |
+|---|---|---|
+| **`EndpointPicker`** | 内嵌在页面 body 的 Endpoint 卡片里 | 用户需要**同时看到并编辑** API URL / Key / Model 的主流程页(E2E Smoke、Load Test) |
+| **`EndpointSelector`** | 页面 header 的右上角紧凑位 | 端点是辅助性的、用户主要**只是切换**已保存连接(Request Debug) |
+
+判断规则:**如果页面主流程里用户要改 URL / Key / Model,用 `EndpointPicker`;如果只是从下拉里挑一个已保存的,用 `EndpointSelector`。**
+不要在同一个页面里同时出现两个连接组件。
+
 ### 可访问性(最低要求)
 
 - 所有 `Input` / `Textarea` 必须有 `<Label htmlFor>` 关联,或有 `aria-label`。当前 `EndpointPicker` 里没绑定 id,后续修改该文件时请一并修掉。

@@ -31,6 +31,17 @@ export interface EndpointSelectorProps {
 	onSaveAsNew?: (name: string) => Connection;
 }
 
+/**
+ * Compact connection picker intended for a page header / toolbar slot when the
+ * endpoint form itself is not visible. Shows the dropdown, a modified dot, a
+ * "+" to create a new connection, and a kebab menu for save / manage.
+ *
+ * **When to use:** pages where the endpoint is incidental (e.g. Request
+ * Debug's top-right slot).
+ *
+ * **When NOT to use:** pages where the user edits API URL / Key / Model
+ * inline — use {@link EndpointPicker} embedded in the page body instead.
+ */
 export function EndpointSelector({
 	selectedId,
 	modified,
