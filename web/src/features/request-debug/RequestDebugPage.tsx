@@ -16,6 +16,7 @@ import { ApiError, api } from "@/lib/api-client";
 import { parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { useMutation } from "@tanstack/react-query";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyValueTable } from "./KeyValueTable";
 import { ResponseViewer } from "./ResponseViewer";
@@ -29,6 +30,9 @@ export function RequestDebugPage() {
 	const { t: tc } = useTranslation("common");
 	const slice = useDebugStore();
 	const conns = useConnectionsStore();
+	const methodId = useId();
+	const urlId = useId();
+	const bodyId = useId();
 
 	const onSelect = (id: string | null) => {
 		slice.setSelected(id);
@@ -151,12 +155,12 @@ export function RequestDebugPage() {
 				<section className="space-y-3 rounded-lg border border-border bg-card p-4">
 					<div className="grid grid-cols-[120px,1fr] gap-3">
 						<div>
-							<Label>{t("fields.method")}</Label>
+							<Label htmlFor={methodId}>{t("fields.method")}</Label>
 							<Select
 								value={slice.method}
 								onValueChange={(v) => slice.patch("method", v as HttpMethod)}
 							>
-								<SelectTrigger>
+								<SelectTrigger id={methodId}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -169,8 +173,9 @@ export function RequestDebugPage() {
 							</Select>
 						</div>
 						<div>
-							<Label>{t("fields.url")}</Label>
+							<Label htmlFor={urlId}>{t("fields.url")}</Label>
 							<Input
+								id={urlId}
 								value={slice.url}
 								onChange={(e) => slice.patch("url", e.target.value)}
 								className="font-mono text-xs"
@@ -192,7 +197,11 @@ export function RequestDebugPage() {
 						</TabsContent>
 						<TabsContent value="body">
 							<div className="space-y-2">
+								<Label htmlFor={bodyId} className="sr-only">
+									{t("fields.body")}
+								</Label>
 								<Textarea
+									id={bodyId}
 									rows={10}
 									className="font-mono text-xs"
 									value={slice.body}
