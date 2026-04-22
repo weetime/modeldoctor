@@ -47,6 +47,15 @@ request.txt
 # Snyk Security Extension - AI Rules (auto-generated)
 .cursor/rules/snyk_rules.mdc
 
-# Web workspace
-web/node_modules/
+# Workspace packages
+apps/*/node_modules/
+apps/*/dist/
+packages/*/node_modules/
+packages/*/dist/
+
+# Build caches
+*.tsbuildinfo
 .vite/
+
+# Local Postgres data (arrives in Phase 4)
+postgres-data/

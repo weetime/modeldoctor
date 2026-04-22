@@ -6,7 +6,7 @@ Troubleshooting toolkit for model-serving APIs.
 
 ## Prerequisites
 
-- Node.js ≥ 18
+- Node.js **≥ 20** (upgraded from 18 in Phase 0 of the NestJS refactor)
 - pnpm 9 (`npm install -g pnpm@9`)
 - Vegeta for Load Test (`brew install vegeta` on macOS, or releases at <https://github.com/tsenart/vegeta/releases>)
 
@@ -22,11 +22,11 @@ pnpm install
 pnpm dev
 ```
 
-Vite serves the frontend on <http://localhost:5173>. Express serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to Express. Edit files in `web/src/`; HMR updates the browser.
+Vite serves the frontend on <http://localhost:5173>. NestJS serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to NestJS.
 
 ### Running multiple worktrees in parallel
 
-This repo is typically checked out as a bare + worktree layout (`main/` + `feat/<name>/`). Each worktree has its own `node_modules` and can run `pnpm dev` independently, **as long as the ports differ**. Override via env:
+Each worktree has its own `node_modules` and can run `pnpm dev` independently **as long as the ports differ**. Override via env:
 
 ```bash
 # worktree A (defaults)
@@ -36,7 +36,7 @@ pnpm dev
 VITE_PORT=5174 API_PORT=3002 pnpm dev
 ```
 
-The Vite config forwards `/api/*` to `http://localhost:${API_PORT}` so both pairs stay self-consistent. `strictPort: true` means a wrong setting fails loudly instead of auto-falling-back.
+`strictPort: true` in Vite and an explicit port in Nest's `main.ts` mean a wrong setting fails loudly instead of auto-falling-back.
 
 ## Production build
 
@@ -45,47 +45,38 @@ pnpm build
 pnpm start
 ```
 
-The Vite bundle is emitted to `dist/`. Express serves it on port 3001 together with the API. One port, one process.
+`pnpm build` compiles `@modeldoctor/contracts` (type-check only), then `apps/web` (Vite → `apps/web/dist/`), then `apps/api` (Nest → `apps/api/dist/`). `pnpm start` runs the compiled API (`node apps/api/dist/main.js`). Static web serving from Nest arrives in Phase 2 — for now, `pnpm start` serves API only.
 
 ## Repo layout
 
 ```
-BlastBench/
-├── server.js               # Express entry (API + static serve for dist/)
-├── src/                    # Backend routes, builders, probes, parsers
-├── web/                    # Frontend (Vite root)
-│   ├── index.html
-│   ├── src/
-│   │   ├── main.tsx
-│   │   ├── App.tsx
-│   │   ├── layouts/, components/, features/, stores/, lib/, locales/, router/, types/
-│   │   └── styles/globals.css
-│   ├── vite.config.ts, tsconfig.json, tailwind.config.ts, biome.json
-├── dist/                   # Vite build output (gitignored)
+modeldoctor/
+├── apps/
+│   ├── web/                # React + Vite + TS frontend (@modeldoctor/web)
+│   └── api/                # NestJS 10 backend (@modeldoctor/api) — scaffold only, routes arrive in Phase 1
+├── packages/
+│   └── contracts/          # Shared Zod schemas (@modeldoctor/contracts) — empty in Phase 0
 ├── docs/superpowers/       # Specs and implementation plans
-└── tmp/                    # Runtime artifacts (Vegeta request.txt)
+├── tmp/                    # Runtime artifacts (Vegeta request.txt)
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+└── package.json            # Workspace coordinator
 ```
 
 ## Scripts
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm dev` | Run Vite + Express together |
-| `pnpm build` | Build the frontend to `dist/` |
-| `pnpm start` | Run Express on `dist/` (production) |
-| `pnpm lint` | Biome lint over `web/src/` |
-| `pnpm format` | Biome format over `web/src/` |
-| `pnpm type-check` | TypeScript no-emit check |
-| `pnpm test` | Vitest run (web, jsdom + setup files wired in) |
-| `pnpm test:watch` | Vitest watch mode |
-| `pnpm test:backend` | Vitest for the Express backend (uses `vitest.backend.config.ts`) |
+| `pnpm dev` | Run Vite + NestJS together |
+| `pnpm build` | Build contracts, web, and api |
+| `pnpm start` | Run compiled NestJS (`node apps/api/dist/main.js`) |
+| `pnpm lint` | Biome lint across all packages |
+| `pnpm format` | Biome format across all packages |
+| `pnpm type-check` | `tsc --noEmit` across all packages |
+| `pnpm test` | Vitest across all packages |
+| `pnpm test:e2e` | Nest e2e tests (supertest, empty until Phase 1) |
 
-> **Always run `pnpm test`**, not a bare `vitest` or `pnpm exec vitest ...`. The
-> configured script wires up `jsdom`, test setup files (`@testing-library/jest-dom`
-> matchers), and the correct config path. Running vitest outside this script
-> will skip setup and trip spurious "localStorage is not defined" failures.
-
-Before a PR lands, all three of these must pass:
+Before a PR lands, all three must pass:
 
 ```bash
 pnpm type-check

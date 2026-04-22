@@ -1,0 +1,70 @@
+{
+  "title": "\u538b\u529b\u6d4b\u8bd5",
+  "subtitle": "\u5728\u6301\u7eed QPS \u4e0b\u6d4b\u91cf\u5438\u5410\u548c\u5ef6\u8fdf\u3002",
+  "sections": {
+    "request": "\u8bf7\u6c42",
+    "parameters": "\u53c2\u6570",
+    "attack": "\u538b\u6d4b",
+    "results": "\u7ed3\u679c",
+    "endpoint": "\u7aef\u70b9",
+    "advanced": "\u9ad8\u7ea7\uff08\u81ea\u5b9a\u4e49 Headers\u3001\u67e5\u8be2\u53c2\u6570\uff09"
+  },
+  "fields": {
+    "apiType": "API \u7c7b\u578b",
+    "prompt": "\u7528\u6237\u8f93\u5165",
+    "maxTokens": "\u6700\u5927 tokens",
+    "temperature": "Temperature",
+    "stream": "\u542f\u7528\u6d41\u5f0f",
+    "embeddingInput": "\u8f93\u5165\u6587\u672c",
+    "rerankQuery": "\u67e5\u8be2",
+    "rerankTexts": "\u6587\u672c\uff08\u6bcf\u884c\u4e00\u6761\uff09",
+    "imagePrompt": "\u63d0\u793a\u8bcd",
+    "imageSize": "\u5c3a\u5bf8",
+    "imageN": "\u6570\u91cf",
+    "imageUrl": "\u56fe\u7247 URL \u6216 data URL",
+    "systemPrompt": "System prompt",
+    "rate": "\u901f\u7387 (QPS)",
+    "duration": "\u65f6\u957f (\u79d2)",
+    "default": "\u9ed8\u8ba4",
+    "apiUrl": "API URL",
+    "apiKey": "API Key",
+    "model": "\u6a21\u578b",
+    "customHeaders": "\u81ea\u5b9a\u4e49 Headers\uff08\u6bcf\u884c\u4e00\u6761\uff09",
+    "queryParams": "\u67e5\u8be2\u53c2\u6570\uff08\u6bcf\u884c\u4e00\u6761\uff09"
+  },
+  "actions": {
+    "saveAsConnection": "\u4fdd\u5b58\u4e3a\u8fde\u63a5\u2026",
+    "save": "\u4fdd\u5b58",
+    "saveAs": "\u53e6\u5b58\u4e3a\u2026",
+    "pasteCurl": "\u7c98\u8d34 cURL",
+    "loadFromSaved": "\u4ece\u5df2\u4fdd\u5b58\u52a0\u8f7d",
+    "manual": "\u2014 \u624b\u52a8 \u2014",
+    "modified": "\u5df2\u4fee\u6539"
+  },
+  "curl": {
+    "import": "\u4ece cURL \u5bfc\u5165",
+    "parse": "\u89e3\u6790\u586b\u5145",
+    "filled": "\u5df2\u586b\u5145\uff1a{{fields}}"
+  },
+  "attack": {
+    "start": "\u5f00\u59cb",
+    "running": "\u8fd0\u884c\u4e2d\u2026",
+    "estimated": "\u9884\u8ba1 {{requests}} \u4e2a\u8bf7\u6c42\uff0c\u65f6\u957f {{seconds}}s"
+  },
+  "metrics": {
+    "totalRequests": "\u603b\u8bf7\u6c42\u6570",
+    "successRate": "\u6210\u529f\u7387",
+    "throughput": "\u5438\u5410",
+    "meanLatency": "\u5e73\u5747\u5ef6\u8fdf",
+    "p50": "P50",
+    "p95": "P95",
+    "p99": "P99",
+    "maxLatency": "\u6700\u5927\u5ef6\u8fdf"
+  },
+  "raw": "\u8be6\u7ec6\u62a5\u544a",
+  "config": "\u6d4b\u8bd5\u914d\u7f6e",
+  "alerts": {
+    "success": "\u538b\u6d4b\u5b8c\u6210\u3002",
+    "failure": "\u538b\u6d4b\u5931\u8d25\uff1a{{error}}"
+  }
+}

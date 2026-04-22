@@ -1,0 +1,79 @@
+{
+  "appName": "ModelDoctor",
+  "tagline": "模型服务 API 的排障工具集",
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "新建",
+    "import": "导入",
+    "export": "导出",
+    "reset": "重置",
+    "clear": "清空",
+    "send": "发送",
+    "run": "运行",
+    "runAll": "全部运行",
+    "start": "开始",
+    "back": "返回",
+    "manageConnections": "管理连接",
+    "copy": "复制",
+    "copied": "已复制",
+    "format": "格式化为 JSON"
+  },
+  "status": {
+    "idle": "待运行",
+    "running": "运行中",
+    "pass": "通过",
+    "fail": "失败",
+    "comingSoon": "即将推出"
+  },
+  "theme": {
+    "toggle": "切换主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "sidebar": {
+    "collapse": "收起侧边栏",
+    "expand": "展开侧边栏"
+  },
+  "endpoint": {
+    "label": "端点",
+    "manual": "— 手动 —",
+    "modified": "已修改",
+    "loadFromSaved": "从已保存加载",
+    "save": "保存",
+    "saveAs": "另存为…",
+    "pasteCurl": "粘贴 cURL",
+    "apiUrl": "API URL",
+    "apiKey": "API Key",
+    "model": "模型",
+    "customHeaders": "自定义 Headers（每行一条）",
+    "queryParams": "查询参数（每行一条）",
+    "advanced": "高级（自定义 Headers、查询参数）",
+    "parseCurl": "解析填充",
+    "curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+    "curlInvalid": "无法解析 cURL，请检查命令后重试",
+    "filled": "已填充：{{fields}}",
+    "newConnection": "+ 新建连接",
+    "saved": "已保存到连接「{{name}}」",
+    "saveFailed": "保存失败"
+  },
+  "comingSoon": {
+    "title": "敬请期待",
+    "body": "该功能正在开发中。",
+    "backToLoadTest": "返回 Load Test"
+  },
+  "empty": {
+    "noConnections": "尚未创建任何连接",
+    "noConnectionsBody": "新建一条以开始，或者粘贴一条 curl 自动填充。",
+    "newConnection": "新建连接",
+    "pasteCurl": "粘贴 curl"
+  },
+  "errors": {
+    "unknown": "未知错误",
+    "network": "网络错误",
+    "required": "此项必填"
+  }
+}
