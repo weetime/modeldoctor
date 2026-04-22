@@ -62,8 +62,24 @@ BlastBench/
 | `pnpm lint` | Biome lint over `web/src/` |
 | `pnpm format` | Biome format over `web/src/` |
 | `pnpm type-check` | TypeScript no-emit check |
-| `pnpm test` | Vitest run |
+| `pnpm test` | Vitest run (web, jsdom + setup files wired in) |
 | `pnpm test:watch` | Vitest watch mode |
+| `pnpm test:backend` | Vitest for the Express backend (uses `vitest.backend.config.ts`) |
+
+> **Always run `pnpm test`**, not a bare `vitest` or `pnpm exec vitest ...`. The
+> configured script wires up `jsdom`, test setup files (`@testing-library/jest-dom`
+> matchers), and the correct config path. Running vitest outside this script
+> will skip setup and trip spurious "localStorage is not defined" failures.
+
+Before a PR lands, all three of these must pass:
+
+```bash
+pnpm type-check
+pnpm lint
+pnpm test
+```
+
+Conventions and the full debt list live in [`docs/project-standards.md`](docs/project-standards.md).
 
 ## License
 
