@@ -1,21 +1,22 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
-    "declaration": true,
-    "removeComments": true,
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": ["node", "vitest/globals"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
-    "sourceMap": true,
-    "outDir": "./dist",
+    "target": "ES2022",
     "baseUrl": "./",
+    "outDir": "./dist",
     "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "declaration": false,
+    "sourceMap": true,
+    "paths": {
+      "@modeldoctor/contracts": ["../../packages/contracts/src"]
+    }
+  },
+  "include": ["src/**/*", "vitest.config.mts", "vitest.e2e.config.mts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -29,5 +29,8 @@
     "supertest": "^7",
     "typescript": "^5.4",
     "vitest": "^1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@swc/core"]
   }
 }
