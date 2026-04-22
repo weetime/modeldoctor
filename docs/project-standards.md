@@ -268,6 +268,12 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 10. ✅ **`reset()` 无 UI 触发** —— Settings 页新增「清除测试数据」按钮,调用三个 feature store 的 `reset()`,保留连接库和外观偏好。与原「重置应用状态」(nuclear,清 localStorage + reload)形成两档粒度。
 
+### 刻意不做的事(反向决议,避免反复提起)
+
+- **移动端 / 小屏响应式侧边栏**:目前只做了桌面可折叠的 icon-only 轨(56px),未做 Sheet/Drawer 的 mobile 模式。原因:项目是面向开发者的诊断工具,存在大量宽表格 / monospace 输出,移动端使用场景少;投入产出比低。未来如有真实移动用户需求再加。
+- **本地 API 响应 zod 运行时校验**:§4 已明确「可信本地 API 类型断言即可」。只有**用户输入**与**不可信源**才用 zod(参考 `features/connections/schema.ts`)。在可信边界内引入 zod 只增加样板,不买额外安全。
+- **侧边栏按 locale 重排**:当前 en/zh 两种语言的 group 逻辑顺序相同,没有真实错位。不做字母序重排,保持作者指定的语义顺序(performance / correctness / observability / debug)。
+
 ---
 
 ## 14. 新增 feature 的标准动作清单
