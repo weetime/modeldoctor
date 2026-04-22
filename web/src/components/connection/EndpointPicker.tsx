@@ -15,7 +15,7 @@ import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
 import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const MANUAL = "__manual__";
@@ -67,6 +67,12 @@ export function EndpointPicker({
 	const [saveName, setSaveName] = useState("");
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [newDialogOpen, setNewDialogOpen] = useState(false);
+
+	const apiUrlId = useId();
+	const apiKeyId = useId();
+	const modelId = useId();
+	const customHeadersId = useId();
+	const queryParamsId = useId();
 
 	const isDirty =
 		!!selectedConn &&
@@ -333,8 +339,9 @@ export function EndpointPicker({
 				</h2>
 				<div className="space-y-3">
 					<div>
-						<Label>{t("endpoint.apiUrl")}</Label>
+						<Label htmlFor={apiUrlId}>{t("endpoint.apiUrl")}</Label>
 						<Input
+							id={apiUrlId}
 							value={endpoint.apiUrl}
 							onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
 							placeholder="http://host:port/v1/chat/completions"
@@ -343,9 +350,10 @@ export function EndpointPicker({
 					</div>
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						<div>
-							<Label>{t("endpoint.apiKey")}</Label>
+							<Label htmlFor={apiKeyId}>{t("endpoint.apiKey")}</Label>
 							<div className="relative">
 								<Input
+									id={apiKeyId}
 									type={revealKey ? "text" : "password"}
 									value={endpoint.apiKey}
 									onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
@@ -367,8 +375,9 @@ export function EndpointPicker({
 							</div>
 						</div>
 						<div>
-							<Label>{t("endpoint.model")}</Label>
+							<Label htmlFor={modelId}>{t("endpoint.model")}</Label>
 							<Input
+								id={modelId}
 								value={endpoint.model}
 								onChange={(e) => patchEndpoint({ model: e.target.value })}
 								placeholder="model-name"
@@ -382,8 +391,11 @@ export function EndpointPicker({
 						</summary>
 						<div className="mt-2 space-y-3">
 							<div>
-								<Label>{t("endpoint.customHeaders")}</Label>
+								<Label htmlFor={customHeadersId}>
+									{t("endpoint.customHeaders")}
+								</Label>
 								<Textarea
+									id={customHeadersId}
 									rows={2}
 									value={endpoint.customHeaders}
 									onChange={(e) =>
@@ -394,8 +406,11 @@ export function EndpointPicker({
 								/>
 							</div>
 							<div>
-								<Label>{t("endpoint.queryParams")}</Label>
+								<Label htmlFor={queryParamsId}>
+									{t("endpoint.queryParams")}
+								</Label>
 								<Textarea
+									id={queryParamsId}
 									rows={2}
 									value={endpoint.queryParams}
 									onChange={(e) =>
