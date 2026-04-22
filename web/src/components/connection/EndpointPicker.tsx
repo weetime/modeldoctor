@@ -88,6 +88,7 @@ export function EndpointPicker({
 	const onSelectValue = (value: string) => {
 		if (value === MANUAL) {
 			onSelect(null);
+			onEndpointChange(emptyEndpointValues);
 			return;
 		}
 		if (value === NEW_CONNECTION) {
