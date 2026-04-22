@@ -1,0 +1,76 @@
+{
+	"appName": "ModelDoctor",
+	"tagline": "Troubleshooting toolkit for model-serving APIs",
+	"actions": {
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"edit": "Edit",
+		"create": "Create",
+		"import": "Import",
+		"export": "Export",
+		"reset": "Reset",
+		"clear": "Clear",
+		"send": "Send",
+		"run": "Run",
+		"runAll": "Run All",
+		"start": "Start",
+		"back": "Back",
+		"manageConnections": "Manage connections",
+		"saveAsNew": "Save as new…",
+		"copy": "Copy",
+		"copied": "Copied",
+		"format": "Format as JSON"
+	},
+	"status": {
+		"idle": "Idle",
+		"running": "Running",
+		"pass": "Pass",
+		"fail": "Fail",
+		"comingSoon": "Soon"
+	},
+	"theme": {
+		"toggle": "Toggle theme",
+		"light": "Light",
+		"dark": "Dark",
+		"system": "System"
+	},
+	"endpoint": {
+		"label": "Endpoint",
+		"manual": "— Manual —",
+		"modified": "Modified",
+		"loadFromSaved": "Load from saved",
+		"save": "Save",
+		"saveAs": "Save as…",
+		"pasteCurl": "Paste cURL",
+		"apiUrl": "API URL",
+		"apiKey": "API Key",
+		"model": "Model",
+		"customHeaders": "Custom headers (one per line)",
+		"queryParams": "Query parameters (one per line)",
+		"advanced": "Advanced (custom headers, query params)",
+		"parseCurl": "Parse & fill",
+		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+		"filled": "Filled: {{fields}}",
+		"nameConnection": "Connection name",
+		"nameExists": "A connection with this name already exists",
+		"nameRequired": "Name is required",
+		"newConnection": "+ New connection"
+	},
+	"comingSoon": {
+		"title": "Coming soon",
+		"body": "This feature is under development.",
+		"backToLoadTest": "Back to Load Test"
+	},
+	"empty": {
+		"noConnections": "No connections yet",
+		"noConnectionsBody": "Create one to get started, or paste a curl command to auto-fill.",
+		"newConnection": "New connection",
+		"pasteCurl": "Paste curl"
+	},
+	"errors": {
+		"unknown": "Unknown error",
+		"network": "Network error",
+		"required": "This field is required"
+	}
+}

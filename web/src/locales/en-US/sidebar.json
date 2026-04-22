@@ -1,0 +1,23 @@
+{
+	"groups": {
+		"performance": "Performance",
+		"correctness": "Correctness",
+		"observability": "Observability",
+		"debug": "Debug"
+	},
+	"status": {
+		"comingSoon": "Soon"
+	},
+	"items": {
+		"loadTest": "Load Test",
+		"soak": "Soak / Stability",
+		"streaming": "Streaming TTFT",
+		"e2e": "E2E Smoke",
+		"regression": "Regression",
+		"health": "Health Monitor",
+		"history": "History",
+		"requestDebug": "Request Debug",
+		"connections": "Connections",
+		"settings": "Settings"
+	}
+}

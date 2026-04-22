@@ -1,0 +1,71 @@
+{
+	"title": "Load Test",
+	"subtitle": "Measure throughput and latency under sustained QPS.",
+	"sections": {
+		"request": "Request",
+		"parameters": "Parameters",
+		"attack": "Attack",
+		"results": "Results",
+		"endpoint": "Endpoint",
+		"advanced": "Advanced (custom headers, query params)"
+	},
+	"fields": {
+		"apiType": "API type",
+		"prompt": "User prompt",
+		"maxTokens": "Max tokens",
+		"temperature": "Temperature",
+		"stream": "Stream",
+		"embeddingInput": "Input text",
+		"rerankQuery": "Query",
+		"rerankTexts": "Texts (one per line)",
+		"imagePrompt": "Prompt",
+		"imageSize": "Size",
+		"imageN": "Number",
+		"imageUrl": "Image URL or data URL",
+		"systemPrompt": "System prompt",
+		"rate": "Rate (QPS)",
+		"duration": "Duration (s)",
+		"default": "Default",
+		"apiUrl": "API URL",
+		"apiKey": "API Key",
+		"model": "Model",
+		"customHeaders": "Custom headers (one per line)",
+		"queryParams": "Query parameters (one per line)"
+	},
+	"actions": {
+		"saveAsConnection": "Save as connection…",
+		"save": "Save",
+		"saveAs": "Save as…",
+		"pasteCurl": "Paste cURL",
+		"loadFromSaved": "Load from saved",
+		"manual": "— Manual —",
+		"modified": "Modified",
+		"nameConnection": "Connection name"
+	},
+	"curl": {
+		"import": "Import from cURL",
+		"parse": "Parse & Fill",
+		"filled": "Filled: {{fields}}"
+	},
+	"attack": {
+		"start": "Start",
+		"running": "Running\u2026",
+		"estimated": "About {{requests}} requests over {{seconds}}s"
+	},
+	"metrics": {
+		"totalRequests": "Total Requests",
+		"successRate": "Success Rate",
+		"throughput": "Throughput",
+		"meanLatency": "Mean Latency",
+		"p50": "P50",
+		"p95": "P95",
+		"p99": "P99",
+		"maxLatency": "Max Latency"
+	},
+	"raw": "Detailed report",
+	"config": "Test configuration",
+	"alerts": {
+		"success": "Load test completed.",
+		"failure": "Load test failed: {{error}}"
+	}
+}

@@ -182,7 +182,8 @@ Testing and lint:
 ```bash
 pnpm add -D vitest@^1 @vitest/ui@^1 jsdom@^24 \
   @testing-library/react@^16 @testing-library/jest-dom@^6 @testing-library/user-event@^14 \
-  @biomejs/biome@^1.9
+  @biomejs/biome@^1.9 \
+  @types/node@^20
 ```
 
 - [ ] **Step 2.2: Create `web/vite.config.ts`**
@@ -244,7 +245,7 @@ export default defineConfig({
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
 ```
@@ -259,7 +260,8 @@ export default defineConfig({
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "types": ["node"]
   },
   "include": ["vite.config.ts"]
 }
@@ -555,6 +557,8 @@ Run `pnpm dev:web`. Verify in the browser that the button toggles between light 
 git add -A
 git commit -m "build: add Tailwind CSS, shadcn color tokens, and cn utility"
 ```
+
+> **Note:** Task 4 will append `vitest.config.ts` to `web/tsconfig.node.json`'s `include` array when it creates that file.
 
 ### Task 4: Configure Biome and Vitest
 

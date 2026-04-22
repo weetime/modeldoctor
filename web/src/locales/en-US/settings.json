@@ -1,0 +1,28 @@
+{
+	"title": "Settings",
+	"subtitle": "Appearance, environment, and library data.",
+	"appearance": {
+		"title": "Appearance",
+		"theme": "Theme",
+		"themeOptions": { "light": "Light", "dark": "Dark", "system": "System" },
+		"language": "Language",
+		"languages": { "en": "English", "zh": "中文" }
+	},
+	"environment": {
+		"title": "Environment",
+		"vegeta": "Vegeta",
+		"vegetaCheck": "Check Vegeta",
+		"vegetaInstalled": "Installed at {{path}}",
+		"vegetaMissing": "Vegeta is not installed. Install via:",
+		"version": "Server version",
+		"buildMode": "Build mode"
+	},
+	"data": {
+		"title": "Data",
+		"exportConnections": "Export connections",
+		"importConnections": "Import connections",
+		"resetState": "Reset app state",
+		"resetWarning": "This deletes every connection, every form value, theme, and locale preference. Are you sure?",
+		"resetConfirm": "Reset everything"
+	}
+}

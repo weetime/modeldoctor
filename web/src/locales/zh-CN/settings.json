@@ -1,0 +1,28 @@
+{
+	"title": "设置",
+	"subtitle": "外观、环境与库数据。",
+	"appearance": {
+		"title": "外观",
+		"theme": "主题",
+		"themeOptions": { "light": "浅色", "dark": "深色", "system": "跟随系统" },
+		"language": "语言",
+		"languages": { "en": "English", "zh": "中文" }
+	},
+	"environment": {
+		"title": "环境",
+		"vegeta": "Vegeta",
+		"vegetaCheck": "检查 Vegeta",
+		"vegetaInstalled": "已安装于 {{path}}",
+		"vegetaMissing": "未安装 Vegeta，请通过以下命令安装：",
+		"version": "服务版本",
+		"buildMode": "构建模式"
+	},
+	"data": {
+		"title": "数据",
+		"exportConnections": "导出连接",
+		"importConnections": "导入连接",
+		"resetState": "重置应用状态",
+		"resetWarning": "将删除所有连接、表单数据、主题和语言偏好。确定继续？",
+		"resetConfirm": "确认重置"
+	}
+}

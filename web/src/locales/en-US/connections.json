@@ -1,0 +1,69 @@
+{
+	"title": "Connections",
+	"subtitle": "A library of named API endpoints. Selected from each tab via the Endpoint dropdown.",
+	"table": {
+		"name": "Name",
+		"apiUrl": "API URL",
+		"model": "Model",
+		"customHeaders": "Headers",
+		"createdAt": "Created",
+		"actions": "Actions"
+	},
+	"dialog": {
+		"createTitle": "New connection",
+		"editTitle": "Edit connection",
+		"fields": {
+			"name": "Name",
+			"namePlaceholder": "e.g. prod-vllm",
+			"apiUrl": "API URL",
+			"apiUrlPlaceholder": "http://host:port/v1/chat/completions",
+			"apiKey": "API Key",
+			"apiKeyPlaceholder": "sk-…",
+			"model": "Model",
+			"modelPlaceholder": "model-name",
+			"customHeaders": "Custom headers (one per line)",
+			"customHeadersPlaceholder": "Header-Name: value",
+			"queryParams": "Query parameters (one per line)",
+			"queryParamsPlaceholder": "key=value"
+		},
+		"errors": {
+			"duplicateName": "A connection with this name already exists",
+			"invalidUrl": "Must be a valid URL"
+		},
+		"curl": {
+			"import": "Import from cURL",
+			"parse": "Parse & fill",
+			"placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+			"filled": "Filled: {{fields}}",
+			"empty": "Paste a curl command first",
+			"invalid": "Could not extract parameters from curl command"
+		}
+	},
+	"actions": {
+		"new": "New connection",
+		"import": "Import",
+		"export": "Export",
+		"delete": "Delete",
+		"edit": "Edit"
+	},
+	"delete": {
+		"title": "Delete connection",
+		"body": "Delete \"{{name}}\"? This cannot be undone.",
+		"confirm": "Delete"
+	},
+	"import": {
+		"title": "Import connections",
+		"body": "Paste a previously exported JSON or upload a file.",
+		"mode": "Mode",
+		"merge": "Merge (skip existing names)",
+		"replace": "Replace (wipe current library)",
+		"submit": "Import",
+		"result": "Added {{added}}, skipped {{skipped}}",
+		"invalid": "Invalid JSON or unsupported format."
+	},
+	"empty": {
+		"title": "No connections yet",
+		"body": "Click New connection to add one.",
+		"create": "New connection"
+	}
+}
