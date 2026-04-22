@@ -125,7 +125,6 @@ export function RequestDebugPage() {
 				rightSlot={
 					<EndpointSelector
 						selectedId={slice.selectedConnectionId}
-						modified={false}
 						onSelect={onSelect}
 					/>
 				}
