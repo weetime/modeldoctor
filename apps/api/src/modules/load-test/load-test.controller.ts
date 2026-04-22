@@ -1,0 +1,27 @@
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UsePipes,
+} from "@nestjs/common";
+import { LoadTestService } from "./load-test.service.js";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import {
+  LoadTestRequestSchema,
+  type LoadTestRequest,
+  type LoadTestResponse,
+} from "@modeldoctor/contracts";
+
+@Controller()
+export class LoadTestController {
+  constructor(private readonly svc: LoadTestService) {}
+
+  @Post("load-test")
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(LoadTestRequestSchema))
+  run(@Body() body: LoadTestRequest): Promise<LoadTestResponse> {
+    return this.svc.run(body);
+  }
+}
