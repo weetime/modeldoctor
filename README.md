@@ -24,8 +24,6 @@ pnpm dev
 
 Vite serves the frontend on <http://localhost:5173>. NestJS serves the API on <http://localhost:3001>. Vite proxies `/api/*` through to NestJS.
 
-**Legacy Express backend** (temporarily preserved through Phase 0 and Phase 1 of the refactor): `pnpm dev:legacy` runs Vite against the old `server.js` + `src/*.js` implementation. Phase 1 deletes those files and this script.
-
 ### Running multiple worktrees in parallel
 
 Each worktree has its own `node_modules` and can run `pnpm dev` independently **as long as the ports differ**. Override via env:
@@ -58,8 +56,6 @@ modeldoctor/
 │   └── api/                # NestJS 10 backend (@modeldoctor/api) — scaffold only, routes arrive in Phase 1
 ├── packages/
 │   └── contracts/          # Shared Zod schemas (@modeldoctor/contracts) — empty in Phase 0
-├── server.js               # LEGACY Express entry — deleted by Phase 1
-├── src/                    # LEGACY backend — deleted by Phase 1
 ├── docs/superpowers/       # Specs and implementation plans
 ├── tmp/                    # Runtime artifacts (Vegeta request.txt)
 ├── pnpm-workspace.yaml
@@ -71,8 +67,7 @@ modeldoctor/
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm dev` | Run Vite + NestJS together (new backend) |
-| `pnpm dev:legacy` | Run Vite + legacy Express (remove after Phase 1) |
+| `pnpm dev` | Run Vite + NestJS together |
 | `pnpm build` | Build contracts, web, and api |
 | `pnpm start` | Run compiled NestJS (`node apps/api/dist/main.js`) |
 | `pnpm lint` | Biome lint across all packages |
@@ -80,7 +75,6 @@ modeldoctor/
 | `pnpm type-check` | `tsc --noEmit` across all packages |
 | `pnpm test` | Vitest across all packages |
 | `pnpm test:e2e` | Nest e2e tests (supertest, empty until Phase 1) |
-| `pnpm test:backend:legacy` | Legacy Express tests (removed after Phase 1) |
 
 Before a PR lands, all three must pass:
 

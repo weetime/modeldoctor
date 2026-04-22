@@ -8,20 +8,13 @@
   },
   "scripts": {
     "dev": "concurrently -k -n web,api -c cyan,magenta \"pnpm -F @modeldoctor/web dev\" \"pnpm -F @modeldoctor/api start:dev\"",
-    "dev:legacy": "concurrently -k -n web,api -c cyan,magenta \"pnpm -F @modeldoctor/web dev\" \"node server.js\"",
     "build": "pnpm -F @modeldoctor/contracts type-check && pnpm -F @modeldoctor/web build && pnpm -F @modeldoctor/api build",
     "start": "node apps/api/dist/main.js",
     "lint": "pnpm -r --if-present lint",
     "format": "pnpm -r --if-present format",
     "type-check": "pnpm -r --if-present type-check",
     "test": "pnpm -r --if-present test",
-    "test:e2e": "pnpm -F @modeldoctor/api test:e2e",
-    "test:backend:legacy": "vitest run --config vitest.backend.config.ts"
-  },
-  "dependencies": {
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "test:e2e": "pnpm -F @modeldoctor/api test:e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9",

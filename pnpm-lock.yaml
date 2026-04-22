@@ -7,16 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      body-parser:
-        specifier: ^1.20.2
-        version: 1.20.4
-      cors:
-        specifier: ^2.8.5
-        version: 2.8.6
-      express:
-        specifier: ^4.18.2
-        version: 4.22.1
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9
@@ -2089,10 +2079,6 @@ packages:
 
   cors@2.8.5:
     resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
-    engines: {node: '>= 0.10'}
-
-  cors@2.8.6:
-    resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
     engines: {node: '>= 0.10'}
 
   cosmiconfig@8.3.6:
@@ -5925,11 +5911,6 @@ snapshots:
   core-util-is@1.0.3: {}
 
   cors@2.8.5:
-    dependencies:
-      object-assign: 4.1.1
-      vary: 1.1.2
-
-  cors@2.8.6:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
