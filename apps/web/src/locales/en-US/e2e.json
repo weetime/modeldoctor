@@ -1,11 +1,11 @@
 {
-	"title": "E2E Smoke",
-	"subtitle": "Functional probes across text, image, and audio paths.",
-	"probes": {
-		"text": { "title": "Text", "path": "thinker (text → text)" },
-		"image": { "title": "Image + Text", "path": "vision encoder → thinker" },
-		"audio": { "title": "Text → Audio", "path": "thinker → talker → code2wav" }
-	},
-	"actions": { "run": "Run", "runAll": "Run All", "clear": "Clear results" },
-	"meta": { "latency": "{{ms}} ms" }
+  "title": "E2E Smoke",
+  "subtitle": "Functional probes across text, image, and audio paths.",
+  "probes": {
+    "text": { "title": "Text", "path": "thinker (text → text)" },
+    "image": { "title": "Image + Text", "path": "vision encoder → thinker" },
+    "audio": { "title": "Text → Audio", "path": "thinker → talker → code2wav" }
+  },
+  "actions": { "run": "Run", "runAll": "Run All", "clear": "Clear results" },
+  "meta": { "latency": "{{ms}} ms" }
 }

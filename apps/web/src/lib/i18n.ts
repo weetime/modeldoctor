@@ -17,40 +17,32 @@ import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
 
 void i18n.use(initReactI18next).init({
-	resources: {
-		"en-US": {
-			common: enCommon,
-			sidebar: enSidebar,
-			connections: enConnections,
-			"load-test": enLoadTest,
-			e2e: enE2E,
-			debug: enDebug,
-			settings: enSettings,
-		},
-		"zh-CN": {
-			common: zhCommon,
-			sidebar: zhSidebar,
-			connections: zhConnections,
-			"load-test": zhLoadTest,
-			e2e: zhE2E,
-			debug: zhDebug,
-			settings: zhSettings,
-		},
-	},
-	// `lng` is set by main.tsx from the locale store before first render.
-	fallbackLng: "en-US",
-	defaultNS: "common",
-	ns: [
-		"common",
-		"sidebar",
-		"connections",
-		"load-test",
-		"e2e",
-		"debug",
-		"settings",
-	],
-	interpolation: { escapeValue: false },
-	returnNull: false,
+  resources: {
+    "en-US": {
+      common: enCommon,
+      sidebar: enSidebar,
+      connections: enConnections,
+      "load-test": enLoadTest,
+      e2e: enE2E,
+      debug: enDebug,
+      settings: enSettings,
+    },
+    "zh-CN": {
+      common: zhCommon,
+      sidebar: zhSidebar,
+      connections: zhConnections,
+      "load-test": zhLoadTest,
+      e2e: zhE2E,
+      debug: zhDebug,
+      settings: zhSettings,
+    },
+  },
+  // `lng` is set by main.tsx from the locale store before first render.
+  fallbackLng: "en-US",
+  defaultNS: "common",
+  ns: ["common", "sidebar", "connections", "load-test", "e2e", "debug", "settings"],
+  interpolation: { escapeValue: false },
+  returnNull: false,
 });
 
 export default i18n;

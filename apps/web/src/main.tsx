@@ -11,7 +11,7 @@ import { useLocaleStore } from "./stores/locale-store";
 void i18n.changeLanguage(useLocaleStore.getState().locale);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-	<React.StrictMode>
-		<App />
-	</React.StrictMode>,
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
 );

@@ -1,23 +1,23 @@
 {
-	"groups": {
-		"performance": "性能",
-		"correctness": "正确性",
-		"observability": "可观测性",
-		"debug": "排障"
-	},
-	"status": {
-		"comingSoon": "即将推出"
-	},
-	"items": {
-		"loadTest": "压力测试",
-		"soak": "稳定性测试",
-		"streaming": "流式首字延迟",
-		"e2e": "E2E Smoke",
-		"regression": "回归对比",
-		"health": "健康监控",
-		"history": "历史记录",
-		"requestDebug": "请求调试",
-		"connections": "连接库",
-		"settings": "设置"
-	}
+  "groups": {
+    "performance": "性能",
+    "correctness": "正确性",
+    "observability": "可观测性",
+    "debug": "排障"
+  },
+  "status": {
+    "comingSoon": "即将推出"
+  },
+  "items": {
+    "loadTest": "压力测试",
+    "soak": "稳定性测试",
+    "streaming": "流式首字延迟",
+    "e2e": "E2E Smoke",
+    "regression": "回归对比",
+    "health": "健康监控",
+    "history": "历史记录",
+    "requestDebug": "请求调试",
+    "connections": "连接库",
+    "settings": "设置"
+  }
 }

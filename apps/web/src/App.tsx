@@ -7,22 +7,17 @@ import { Toaster } from "sonner";
 
 const router = createBrowserRouter(routes);
 const queryClient = new QueryClient({
-	defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
+  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
 });
 
 export default function App() {
-	const themeMode = useThemeStore((s) => s.mode);
-	return (
-		<QueryClientProvider client={queryClient}>
-			<TooltipProvider delayDuration={150}>
-				<RouterProvider router={router} />
-				<Toaster
-					position="bottom-right"
-					richColors
-					closeButton
-					theme={themeMode}
-				/>
-			</TooltipProvider>
-		</QueryClientProvider>
-	);
+  const themeMode = useThemeStore((s) => s.mode);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={150}>
+        <RouterProvider router={router} />
+        <Toaster position="bottom-right" richColors closeButton theme={themeMode} />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 }
