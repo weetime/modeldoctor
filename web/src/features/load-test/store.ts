@@ -3,13 +3,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ApiType, LoadTestResult } from "./types";
 
-/** @deprecated Use EndpointValues from @/types/connection instead. */
-export type ManualEndpoint = EndpointValues;
-
 export interface LoadTestSlice {
 	selectedConnectionId: string | null;
 	manualEndpoint: EndpointValues;
-	modified: boolean;
 	apiType: ApiType;
 	chat: {
 		prompt: string;
@@ -29,7 +25,6 @@ export interface LoadTestSlice {
 	};
 	chatAudio: { prompt: string; systemPrompt: string };
 	attack: { rate: number; duration: number };
-	curlExpanded: boolean;
 	curlInput: string;
 	/** Last successful attack result. Transient — not persisted. */
 	lastResult: LoadTestResult | null;
@@ -38,7 +33,6 @@ export interface LoadTestSlice {
 	/** Attack progress 0–100. Transient — not persisted. */
 	progress: number;
 	setSelected: (id: string | null) => void;
-	setModified: (m: boolean) => void;
 	setApiType: (t: ApiType) => void;
 	patch: <K extends keyof LoadTestSlice>(
 		key: K,
@@ -64,7 +58,6 @@ const emptyManualEndpoint: EndpointValues = {
 const INITIAL = {
 	selectedConnectionId: null as string | null,
 	manualEndpoint: emptyManualEndpoint,
-	modified: false,
 	apiType: "chat" as ApiType,
 	chat: {
 		prompt: "What is the meaning of life?",
@@ -93,7 +86,6 @@ const INITIAL = {
 			"You are Qwen, a virtual human capable of generating text and speech.",
 	},
 	attack: { rate: 2, duration: 60 },
-	curlExpanded: false,
 	curlInput: "",
 	lastResult: null as LoadTestResult | null,
 	error: null as string | null,
@@ -104,8 +96,7 @@ export const useLoadTestStore = create<LoadTestSlice>()(
 	persist(
 		(set) => ({
 			...INITIAL,
-			setSelected: (id) => set({ selectedConnectionId: id, modified: false }),
-			setModified: (m) => set({ modified: m }),
+			setSelected: (id) => set({ selectedConnectionId: id }),
 			setApiType: (t) => set({ apiType: t }),
 			patch: (key, value) => set({ [key]: value } as Partial<LoadTestSlice>),
 			setLastResult: (r) => set({ lastResult: r }),
@@ -119,7 +110,6 @@ export const useLoadTestStore = create<LoadTestSlice>()(
 			partialize: (s) => ({
 				selectedConnectionId: s.selectedConnectionId,
 				manualEndpoint: s.manualEndpoint,
-				modified: s.modified,
 				apiType: s.apiType,
 				chat: s.chat,
 				embeddings: s.embeddings,
@@ -128,7 +118,6 @@ export const useLoadTestStore = create<LoadTestSlice>()(
 				chatVision: s.chatVision,
 				chatAudio: s.chatAudio,
 				attack: s.attack,
-				curlExpanded: s.curlExpanded,
 				curlInput: s.curlInput,
 				// lastResult / error / progress are transient — not persisted
 			}),
