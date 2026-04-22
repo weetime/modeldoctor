@@ -50,8 +50,11 @@
 		"advanced": "Advanced (custom headers, query params)",
 		"parseCurl": "Parse & fill",
 		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+		"curlInvalid": "Could not parse cURL — check the command and try again",
 		"filled": "Filled: {{fields}}",
-		"newConnection": "+ New connection"
+		"newConnection": "+ New connection",
+		"saved": "Saved to connection \"{{name}}\"",
+		"saveFailed": "Failed to save"
 	},
 	"comingSoon": {
 		"title": "Coming soon",

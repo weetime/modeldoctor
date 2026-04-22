@@ -50,8 +50,11 @@
 		"advanced": "高级（自定义 Headers、查询参数）",
 		"parseCurl": "解析填充",
 		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
+		"curlInvalid": "无法解析 cURL，请检查命令后重试",
 		"filled": "已填充：{{fields}}",
-		"newConnection": "+ 新建连接"
+		"newConnection": "+ 新建连接",
+		"saved": "已保存到连接「{{name}}」",
+		"saveFailed": "保存失败"
 	},
 	"comingSoon": {
 		"title": "敬请期待",

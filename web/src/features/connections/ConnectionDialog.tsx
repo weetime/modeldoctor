@@ -21,6 +21,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { type ConnectionInput, connectionInputSchema } from "./schema";
 
 interface ConnectionDialogProps {
@@ -59,10 +60,6 @@ export function ConnectionDialog({
 	const [revealKey, setRevealKey] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [curlInput, setCurlInput] = useState("");
-	const [curlFeedback, setCurlFeedback] = useState<{
-		kind: "ok" | "err";
-		text: string;
-	} | null>(null);
 
 	const form = useForm<ConnectionInput>({
 		resolver: zodResolver(connectionInputSchema),
@@ -75,21 +72,20 @@ export function ConnectionDialog({
 			setSubmitError(null);
 			setRevealKey(false);
 			setCurlInput("");
-			setCurlFeedback(null);
 		}
 	}, [open, connection, initialValues, form]);
 
 	const onParseCurl = () => {
 		const trimmed = curlInput.trim();
 		if (!trimmed) {
-			setCurlFeedback({ kind: "err", text: t("dialog.curl.empty") });
+			toast.error(t("dialog.curl.empty"));
 			return;
 		}
 		const parsed = parseCurlCommand(trimmed);
 		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
 
 		if (filledKeys.length === 0) {
-			setCurlFeedback({ kind: "err", text: t("dialog.curl.invalid") });
+			toast.error(t("dialog.curl.invalid"));
 			return;
 		}
 
@@ -105,10 +101,7 @@ export function ConnectionDialog({
 		}
 
 		const localized = filledKeys.map((k) => t(`dialog.fields.${k}`));
-		setCurlFeedback({
-			kind: "ok",
-			text: t("dialog.curl.filled", { fields: localized.join(", ") }),
-		});
+		toast.success(t("dialog.curl.filled", { fields: localized.join(", ") }));
 	};
 
 	const onSubmit = form.handleSubmit((values) => {
@@ -144,27 +137,14 @@ export function ConnectionDialog({
 								placeholder={t("dialog.curl.placeholder")}
 								className="font-mono text-xs"
 							/>
-							<div className="flex items-center gap-2">
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									onClick={onParseCurl}
-								>
-									{t("dialog.curl.parse")}
-								</Button>
-								{curlFeedback ? (
-									<span
-										className={
-											curlFeedback.kind === "ok"
-												? "text-xs text-success"
-												: "text-xs text-destructive"
-										}
-									>
-										{curlFeedback.text}
-									</span>
-								) : null}
-							</div>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={onParseCurl}
+							>
+								{t("dialog.curl.parse")}
+							</Button>
 						</div>
 					</details>
 

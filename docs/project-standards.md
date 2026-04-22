@@ -158,10 +158,12 @@ export const useXxxStore = create<XxxState>()(
 
 | 场景 | 正确做法 | 禁止 |
 |---|---|---|
-| 表单校验错误 | inline `<p className="text-destructive">` 或 shadcn `<Alert variant="destructive">` | `alert()` / `confirm()` |
-| 异步成功提示 | shadcn `<Alert>` 或 inline 小 chip | `alert()` |
+| 表单校验错误(随输入即时反馈) | inline `<p className="text-destructive">` 紧贴字段 | `alert()` / `confirm()` |
+| 结果区常驻状态(压测完成、E2E 各 probe 成败) | shadcn `<Alert>` 或结果卡片(保留细节、可复制) | 用 toast 顶掉详细数据 |
+| 瞬态操作反馈(cURL 解析成功 / 保存成功 / 连接已更新) | sonner `toast.success` / `toast.error`(右下角、2 秒自动消失) | inline 小 chip + `setTimeout` 手动消失 |
 | 需要用户决策 | shadcn `<AlertDialog>` | `confirm()` / `prompt()` |
-| 即将引入(尚未引入) | 全局 toast 系统(建议 `sonner`) | —— |
+
+sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mode`。页面内引入 `import { toast } from "sonner"` 直接用。
 
 ---
 

@@ -18,6 +18,7 @@ import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
 import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const MANUAL = "__manual__";
 const NEW_CONNECTION = "__new__";
@@ -72,14 +73,12 @@ export function EndpointPicker({
 	const [revealKey, setRevealKey] = useState(false);
 	const [curlOpen, setCurlOpen] = useState(false);
 	const [curlText, setCurlText] = useState("");
-	const [curlFeedback, setCurlFeedback] = useState<string | null>(null);
 	/**
 	 * `null` = dialog closed.
 	 * `"new"` = "+ New connection" flow, start empty.
 	 * `"saveAs"` = "Save as…" flow, prefill with current endpoint values.
 	 */
 	const [dialogMode, setDialogMode] = useState<"new" | "saveAs" | null>(null);
-	const [updateError, setUpdateError] = useState<string | null>(null);
 
 	const apiUrlId = useId();
 	const apiKeyId = useId();
@@ -128,12 +127,12 @@ export function EndpointPicker({
 	};
 
 	const onSaveClick = () => {
-		setUpdateError(null);
 		if (selectedConn) {
 			try {
 				updateConn(selectedConn.id, endpoint);
+				toast.success(t("endpoint.saved", { name: selectedConn.name }));
 			} catch (e) {
-				setUpdateError(e instanceof Error ? e.message : "");
+				toast.error(e instanceof Error ? e.message : t("endpoint.saveFailed"));
 			}
 			return;
 		}
@@ -143,7 +142,7 @@ export function EndpointPicker({
 	const onParseCurl = () => {
 		const parsed = parseCurlCommand(curlText);
 		if (!parsed.url && !parsed.body) {
-			setCurlFeedback(t("endpoint.filled", { fields: "—" }));
+			toast.error(t("endpoint.curlInvalid"));
 			return;
 		}
 		const { patch, filledKeys } = applyCurlToEndpoint(parsed);
@@ -152,12 +151,9 @@ export function EndpointPicker({
 		onEndpointChange({ ...endpoint, ...patch });
 		onCurlParsed?.(parsed);
 
-		setCurlFeedback(t("endpoint.filled", { fields: filledKeys.join(", ") }));
+		toast.success(t("endpoint.filled", { fields: filledKeys.join(", ") }));
 		setCurlText("");
-		setTimeout(() => {
-			setCurlOpen(false);
-			setCurlFeedback(null);
-		}, 1200);
+		setCurlOpen(false);
 	};
 
 	return (
@@ -204,10 +200,7 @@ export function EndpointPicker({
 					type="button"
 					size="sm"
 					variant="outline"
-					onClick={() => {
-						setCurlOpen((v) => !v);
-						setCurlFeedback(null);
-					}}
+					onClick={() => setCurlOpen((v) => !v)}
 					className="shrink-0"
 				>
 					<ClipboardPaste className="h-3.5 w-3.5" />
@@ -237,16 +230,10 @@ export function EndpointPicker({
 							type="button"
 							size="sm"
 							variant="ghost"
-							onClick={() => {
-								setCurlOpen(false);
-								setCurlFeedback(null);
-							}}
+							onClick={() => setCurlOpen(false)}
 						>
 							{t("actions.cancel")}
 						</Button>
-						{curlFeedback ? (
-							<span className="text-xs text-success">{curlFeedback}</span>
-						) : null}
 					</div>
 				</div>
 			) : null}
@@ -268,10 +255,6 @@ export function EndpointPicker({
 					});
 				}}
 			/>
-
-			{updateError ? (
-				<p className="text-xs text-destructive">{updateError}</p>
-			) : null}
 
 			<section className="rounded-lg border border-border bg-card p-4">
 				<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
