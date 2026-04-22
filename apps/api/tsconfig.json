@@ -17,6 +17,6 @@
       "@modeldoctor/contracts": ["../../packages/contracts/src"]
     }
   },
-  "include": ["src/**/*", "vitest.config.mts", "vitest.e2e.config.mts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
