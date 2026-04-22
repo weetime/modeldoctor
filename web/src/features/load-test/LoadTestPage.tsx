@@ -15,7 +15,6 @@ import { ApiError, api } from "@/lib/api-client";
 import { type ParsedCurl, detectApiType } from "@/lib/curl-parser";
 import type { EndpointValues } from "@/types/connection";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadTestResults } from "./Results";
 import { ChatForm } from "./forms/chat";
@@ -82,8 +81,6 @@ export function LoadTestPage() {
 	const { t: tc } = useTranslation("common");
 	const slice = useLoadTestStore();
 
-	const [error, setError] = useState<string | null>(null);
-	const [progress, setProgress] = useState(0);
 	const ActiveForm = formByType[slice.apiType];
 
 	const endpoint = slice.manualEndpoint;
@@ -171,20 +168,18 @@ export function LoadTestPage() {
 		},
 		onSuccess: (data) => {
 			slice.setLastResult(data);
-			setProgress(100);
+			slice.setProgress(100);
 		},
-		onError: (e) => setError(e.message),
+		onError: (e) => slice.setError(e.message),
 	});
 
 	const onStart = () => {
-		setError(null);
-		setProgress(0);
-		slice.setLastResult(null);
+		slice.resetResults();
 		const totalMs = slice.attack.duration * 1000;
 		const startedAt = Date.now();
 		const tick = setInterval(() => {
 			const pct = Math.min(99, ((Date.now() - startedAt) / totalMs) * 100);
-			setProgress(pct);
+			slice.setProgress(pct);
 			if (mutation.isIdle === false && !mutation.isPending) clearInterval(tick);
 		}, 250);
 		mutation.mutate(undefined, { onSettled: () => clearInterval(tick) });
@@ -197,7 +192,10 @@ export function LoadTestPage() {
 				<EndpointPicker
 					endpoint={endpoint}
 					selectedConnectionId={slice.selectedConnectionId}
-					onSelect={slice.setSelected}
+					onSelect={(id) => {
+						slice.setSelected(id);
+						slice.resetResults();
+					}}
 					onEndpointChange={onEndpointChange}
 					onCurlParsed={onCurlParsed}
 				/>
@@ -262,23 +260,16 @@ export function LoadTestPage() {
 					<Button onClick={onStart} disabled={mutation.isPending}>
 						{mutation.isPending ? t("attack.running") : t("attack.start")}
 					</Button>
-					<Button
-						variant="ghost"
-						onClick={() => {
-							slice.setLastResult(null);
-							setError(null);
-							setProgress(0);
-						}}
-					>
+					<Button variant="ghost" onClick={() => slice.resetResults()}>
 						{tc("actions.reset")}
 					</Button>
 				</div>
 
 				{mutation.isPending ? (
-					<Progress value={progress} className="h-1" />
+					<Progress value={slice.progress} className="h-1" />
 				) : null}
 
-				<LoadTestResults result={slice.lastResult} error={error} />
+				<LoadTestResults result={slice.lastResult} error={slice.error} />
 			</div>
 		</>
 	);

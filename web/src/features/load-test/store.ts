@@ -31,7 +31,12 @@ export interface LoadTestSlice {
 	attack: { rate: number; duration: number };
 	curlExpanded: boolean;
 	curlInput: string;
+	/** Last successful attack result. Transient — not persisted. */
 	lastResult: LoadTestResult | null;
+	/** Last attack error message. Transient — not persisted. */
+	error: string | null;
+	/** Attack progress 0–100. Transient — not persisted. */
+	progress: number;
 	setSelected: (id: string | null) => void;
 	setModified: (m: boolean) => void;
 	setApiType: (t: ApiType) => void;
@@ -40,6 +45,12 @@ export interface LoadTestSlice {
 		value: LoadTestSlice[K],
 	) => void;
 	setLastResult: (r: LoadTestResult | null) => void;
+	setError: (e: string | null) => void;
+	setProgress: (p: number) => void;
+	/** Clear attack outputs only (result + error + progress). Preserves form config. */
+	resetResults: () => void;
+	/** Full reset to factory defaults, including form config and selection. */
+	reset: () => void;
 }
 
 const emptyManualEndpoint: EndpointValues = {
@@ -50,8 +61,8 @@ const emptyManualEndpoint: EndpointValues = {
 	queryParams: "",
 };
 
-const defaults = {
-	selectedConnectionId: null,
+const INITIAL = {
+	selectedConnectionId: null as string | null,
 	manualEndpoint: emptyManualEndpoint,
 	modified: false,
 	apiType: "chat" as ApiType,
@@ -85,18 +96,42 @@ const defaults = {
 	curlExpanded: false,
 	curlInput: "",
 	lastResult: null as LoadTestResult | null,
+	error: null as string | null,
+	progress: 0,
 };
 
 export const useLoadTestStore = create<LoadTestSlice>()(
 	persist(
 		(set) => ({
-			...defaults,
+			...INITIAL,
 			setSelected: (id) => set({ selectedConnectionId: id, modified: false }),
 			setModified: (m) => set({ modified: m }),
 			setApiType: (t) => set({ apiType: t }),
 			patch: (key, value) => set({ [key]: value } as Partial<LoadTestSlice>),
 			setLastResult: (r) => set({ lastResult: r }),
+			setError: (e) => set({ error: e }),
+			setProgress: (p) => set({ progress: p }),
+			resetResults: () => set({ lastResult: null, error: null, progress: 0 }),
+			reset: () => set(INITIAL),
 		}),
-		{ name: "md.load-test.v1" },
+		{
+			name: "md.load-test.v1",
+			partialize: (s) => ({
+				selectedConnectionId: s.selectedConnectionId,
+				manualEndpoint: s.manualEndpoint,
+				modified: s.modified,
+				apiType: s.apiType,
+				chat: s.chat,
+				embeddings: s.embeddings,
+				rerank: s.rerank,
+				images: s.images,
+				chatVision: s.chatVision,
+				chatAudio: s.chatAudio,
+				attack: s.attack,
+				curlExpanded: s.curlExpanded,
+				curlInput: s.curlInput,
+				// lastResult / error / progress are transient — not persisted
+			}),
+		},
 	),
 );

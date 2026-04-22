@@ -44,6 +44,7 @@ export function RequestDebugPage() {
 
 	const onSelect = (id: string | null) => {
 		slice.setSelected(id);
+		slice.resetResults();
 		if (id) {
 			const c = conns.get(id);
 			if (c) {
@@ -230,13 +231,7 @@ export function RequestDebugPage() {
 						>
 							{mutation.isPending ? "…" : t("actions.send")}
 						</Button>
-						<Button
-							variant="ghost"
-							onClick={() => {
-								slice.setLastResponse(null);
-								slice.setLastError(null);
-							}}
-						>
+						<Button variant="ghost" onClick={() => slice.resetResults()}>
 							{tc("actions.clear")}
 						</Button>
 					</div>

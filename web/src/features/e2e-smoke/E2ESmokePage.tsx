@@ -69,7 +69,10 @@ export function E2ESmokePage() {
 				<EndpointPicker
 					endpoint={endpoint}
 					selectedConnectionId={slice.selectedConnectionId}
-					onSelect={slice.setSelected}
+					onSelect={(id) => {
+						slice.setSelected(id);
+						slice.resetResults();
+					}}
 					onEndpointChange={slice.setManualEndpoint}
 				/>
 
@@ -88,7 +91,7 @@ export function E2ESmokePage() {
 					<Button onClick={() => runProbes(["text", "image", "audio"])}>
 						{t("actions.runAll")}
 					</Button>
-					<Button variant="ghost" onClick={() => slice.clearAll()}>
+					<Button variant="ghost" onClick={() => slice.resetResults()}>
 						{t("actions.clear")}
 					</Button>
 				</div>
