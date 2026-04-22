@@ -37,7 +37,7 @@ void i18n.use(initReactI18next).init({
 			settings: zhSettings,
 		},
 	},
-	lng: "en-US",
+	// `lng` is set by main.tsx from the locale store before first render.
 	fallbackLng: "en-US",
 	defaultNS: "common",
 	ns: [

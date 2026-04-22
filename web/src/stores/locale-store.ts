@@ -23,11 +23,6 @@ export const useLocaleStore = create<LocaleStore>()(
 				set({ locale });
 			},
 		}),
-		{
-			name: "md.locale.v1",
-			onRehydrateStorage: () => (state) => {
-				if (state) i18n.changeLanguage(state.locale);
-			},
-		},
+		{ name: "md.locale.v1" },
 	),
 );
