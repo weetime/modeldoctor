@@ -256,14 +256,13 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 5. ✅ **「另存为」UI 重复** —— 已统一到 `ConnectionDialog`,`EndpointSelector` 的 `NamePrompt` 与无人使用的 save 回调已删。
 6. ✅ **cURL 解析填表重复** —— 已抽到 `lib/apply-curl-to-endpoint.ts`,两处消费者共用。
 7. ✅ **`LoadTestSlice.modified` / `curlExpanded`** —— 已删除(含 `setModified` 与 `@deprecated ManualEndpoint` 类型别名)。
-8. **`RequestDebugPage` 的 `modified={false}` 硬编码**(`RequestDebugPage.tsx`)
-   `EndpointSelector.modified?` 已保留为可选。要么接入真实 dirty 计算(比较当前 `url` / `headers` / `body` 与选中连接派生值),要么直接去掉 prop 传递。
+8. ✅ **`RequestDebugPage` 的 `modified={false}`** —— 已删除该 prop 传递。Request Debug 不承载「保存当前修改回连接」语义,dirty 指示器在此无意义。
 
 ### 低优先级(收尾)
 
 9. ✅ **本地接口响应 interface 散在 Page** —— 已移到各 feature 的 `types.ts`(`E2ETestResponse` / `DebugProxyResponse`)。
 
-10. **未提供「全部重置」按钮** —— 各 store 已有 `reset()` 动作,但没有页面 UI 触发。等有明确需求再加,不急。
+10. ✅ **`reset()` 无 UI 触发** —— Settings 页新增「清除测试数据」按钮,调用三个 feature store 的 `reset()`,保留连接库和外观偏好。与原「重置应用状态」(nuclear,清 localStorage + reload)形成两档粒度。
 
 ---
 

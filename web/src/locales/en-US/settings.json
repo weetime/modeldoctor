@@ -21,6 +21,10 @@
 		"title": "Data",
 		"exportConnections": "Export connections",
 		"importConnections": "Import connections",
+		"clearTestData": "Clear test data",
+		"clearTestDataWarning": "This clears every page's form fields and test results across Load Test, E2E Smoke, and Request Debug. Your connection library and appearance settings are kept.",
+		"clearTestDataConfirm": "Clear test data",
+		"clearTestDataSuccess": "Test data cleared",
 		"resetState": "Reset app state",
 		"resetWarning": "This deletes every connection, every form value, theme, and locale preference. Are you sure?",
 		"resetConfirm": "Reset everything"

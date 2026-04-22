@@ -20,6 +20,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { ConnectionsImportDialog } from "@/features/connections/ConnectionsImportDialog";
+import { useE2EStore } from "@/features/e2e-smoke/store";
+import { useLoadTestStore } from "@/features/load-test/store";
+import { useDebugStore } from "@/features/request-debug/store";
 import { api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
@@ -27,6 +30,7 @@ import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 export function SettingsPage() {
 	const { t } = useTranslation("settings");
@@ -36,8 +40,12 @@ export function SettingsPage() {
 	const locale = useLocaleStore((s) => s.locale);
 	const setLocale = useLocaleStore((s) => s.setLocale);
 	const exportAll = useConnectionsStore((s) => s.exportAll);
+	const resetE2E = useE2EStore((s) => s.reset);
+	const resetLoadTest = useLoadTestStore((s) => s.reset);
+	const resetDebug = useDebugStore((s) => s.reset);
 	const [importOpen, setImportOpen] = useState(false);
 	const [resetOpen, setResetOpen] = useState(false);
+	const [clearOpen, setClearOpen] = useState(false);
 
 	const [vegeta, setVegeta] = useState<{
 		installed: boolean;
@@ -63,6 +71,14 @@ export function SettingsPage() {
 		} catch {
 			setVegeta({ installed: false });
 		}
+	};
+
+	const onClearTestData = () => {
+		resetE2E();
+		resetLoadTest();
+		resetDebug();
+		setClearOpen(false);
+		toast.success(t("data.clearTestDataSuccess"));
 	};
 
 	const onResetAll = () => {
@@ -162,6 +178,13 @@ export function SettingsPage() {
 							{t("data.importConnections")}
 						</Button>
 						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setClearOpen(true)}
+						>
+							{t("data.clearTestData")}
+						</Button>
+						<Button
 							variant="destructive"
 							size="sm"
 							onClick={() => setResetOpen(true)}
@@ -173,6 +196,22 @@ export function SettingsPage() {
 			</div>
 
 			<ConnectionsImportDialog open={importOpen} onOpenChange={setImportOpen} />
+			<AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("data.clearTestData")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("data.clearTestDataWarning")}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
+						<AlertDialogAction onClick={onClearTestData}>
+							{t("data.clearTestDataConfirm")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
