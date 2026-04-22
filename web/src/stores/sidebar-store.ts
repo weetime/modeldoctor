@@ -8,6 +8,8 @@ interface SidebarStore {
 	railCollapsed: boolean;
 	toggleGroup: (id: string) => void;
 	toggleRail: () => void;
+	/** Forget group-collapse state and expand the rail. */
+	reset: () => void;
 }
 
 export const useSidebarStore = create<SidebarStore>()(
@@ -23,6 +25,7 @@ export const useSidebarStore = create<SidebarStore>()(
 					},
 				})),
 			toggleRail: () => set((s) => ({ railCollapsed: !s.railCollapsed })),
+			reset: () => set({ collapsedGroups: {}, railCollapsed: false }),
 		}),
 		{ name: "md.sidebar-groups-collapsed.v1" },
 	),

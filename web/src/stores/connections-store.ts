@@ -22,6 +22,8 @@ export interface ConnectionsStore {
 		json: string,
 		mode: "merge" | "replace",
 	) => { added: number; skipped: number };
+	/** Wipe the library back to an empty state. */
+	reset: () => void;
 }
 
 function nowIso(): string {
@@ -95,6 +97,7 @@ export const useConnectionsStore = create<ConnectionsStore>()(
 				};
 				return JSON.stringify(env, null, 2);
 			},
+			reset: () => set({ connections: [] }),
 			importAll: (json, mode) => {
 				const parsed = JSON.parse(json) as ConnectionsExport;
 				if (parsed.version !== 1) {

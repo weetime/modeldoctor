@@ -6,6 +6,8 @@ export type ThemeMode = "light" | "dark" | "system";
 interface ThemeStore {
 	mode: ThemeMode;
 	setMode: (mode: ThemeMode) => void;
+	/** Revert to the "system" default and update the DOM. */
+	reset: () => void;
 }
 
 function applyMode(mode: ThemeMode): void {
@@ -23,6 +25,10 @@ export const useThemeStore = create<ThemeStore>()(
 			setMode: (mode) => {
 				applyMode(mode);
 				set({ mode });
+			},
+			reset: () => {
+				applyMode("system");
+				set({ mode: "system" });
 			},
 		}),
 		{

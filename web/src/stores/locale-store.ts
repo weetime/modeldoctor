@@ -7,6 +7,8 @@ export type Locale = "en-US" | "zh-CN";
 interface LocaleStore {
 	locale: Locale;
 	setLocale: (locale: Locale) => void;
+	/** Revert to browser-detected locale and update i18next. */
+	reset: () => void;
 }
 
 function detectInitial(): Locale {
@@ -21,6 +23,11 @@ export const useLocaleStore = create<LocaleStore>()(
 			setLocale: (locale) => {
 				i18n.changeLanguage(locale);
 				set({ locale });
+			},
+			reset: () => {
+				const detected = detectInitial();
+				i18n.changeLanguage(detected);
+				set({ locale: detected });
 			},
 		}),
 		{ name: "md.locale.v1" },
