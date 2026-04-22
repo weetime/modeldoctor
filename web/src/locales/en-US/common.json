@@ -17,7 +17,6 @@
 		"start": "Start",
 		"back": "Back",
 		"manageConnections": "Manage connections",
-		"saveAsNew": "Save as new…",
 		"copy": "Copy",
 		"copied": "Copied",
 		"format": "Format as JSON"
@@ -52,9 +51,6 @@
 		"parseCurl": "Parse & fill",
 		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
 		"filled": "Filled: {{fields}}",
-		"nameConnection": "Connection name",
-		"nameExists": "A connection with this name already exists",
-		"nameRequired": "Name is required",
 		"newConnection": "+ New connection"
 	},
 	"comingSoon": {

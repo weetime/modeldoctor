@@ -64,7 +64,6 @@ export function EndpointPicker({
 	const { t } = useTranslation("common");
 	const conns = useConnectionsStore();
 	const connectionList = conns.list();
-	const createConn = useConnectionsStore((s) => s.create);
 	const updateConn = useConnectionsStore((s) => s.update);
 	const selectedConn = selectedConnectionId
 		? conns.get(selectedConnectionId)
@@ -74,10 +73,13 @@ export function EndpointPicker({
 	const [curlOpen, setCurlOpen] = useState(false);
 	const [curlText, setCurlText] = useState("");
 	const [curlFeedback, setCurlFeedback] = useState<string | null>(null);
-	const [saveOpen, setSaveOpen] = useState(false);
-	const [saveName, setSaveName] = useState("");
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [newDialogOpen, setNewDialogOpen] = useState(false);
+	/**
+	 * `null` = dialog closed.
+	 * `"new"` = "+ New connection" flow, start empty.
+	 * `"saveAs"` = "Save as…" flow, prefill with current endpoint values.
+	 */
+	const [dialogMode, setDialogMode] = useState<"new" | "saveAs" | null>(null);
+	const [updateError, setUpdateError] = useState<string | null>(null);
 
 	const apiUrlId = useId();
 	const apiKeyId = useId();
@@ -109,7 +111,7 @@ export function EndpointPicker({
 			return;
 		}
 		if (value === NEW_CONNECTION) {
-			setNewDialogOpen(true);
+			setDialogMode("new");
 			return;
 		}
 		const c = conns.get(value);
@@ -126,37 +128,16 @@ export function EndpointPicker({
 	};
 
 	const onSaveClick = () => {
-		setSaveError(null);
+		setUpdateError(null);
 		if (selectedConn) {
 			try {
 				updateConn(selectedConn.id, endpoint);
 			} catch (e) {
-				setSaveError(e instanceof Error ? e.message : "");
+				setUpdateError(e instanceof Error ? e.message : "");
 			}
 			return;
 		}
-		setSaveOpen(true);
-		setSaveName("");
-	};
-
-	const onSaveAsSubmit = () => {
-		setSaveError(null);
-		const name = saveName.trim();
-		if (!name) {
-			setSaveError(t("endpoint.nameRequired"));
-			return;
-		}
-		try {
-			const created = createConn({ name, ...endpoint });
-			onSelect(created.id);
-			setSaveOpen(false);
-			setSaveName("");
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : "";
-			setSaveError(
-				msg.toLowerCase().includes("exists") ? t("endpoint.nameExists") : msg,
-			);
-		}
+		setDialogMode("saveAs");
 	};
 
 	const onParseCurl = () => {
@@ -271,8 +252,11 @@ export function EndpointPicker({
 			) : null}
 
 			<ConnectionDialog
-				open={newDialogOpen}
-				onOpenChange={setNewDialogOpen}
+				open={dialogMode !== null}
+				onOpenChange={(o) => {
+					if (!o) setDialogMode(null);
+				}}
+				initialValues={dialogMode === "saveAs" ? endpoint : undefined}
 				onSaved={(c) => {
 					onSelect(c.id);
 					onEndpointChange({
@@ -285,32 +269,8 @@ export function EndpointPicker({
 				}}
 			/>
 
-			{saveOpen ? (
-				<div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
-					<Input
-						value={saveName}
-						onChange={(e) => setSaveName(e.target.value)}
-						placeholder={t("endpoint.nameConnection")}
-						className="h-8 font-mono text-xs"
-					/>
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						onClick={() => {
-							setSaveOpen(false);
-							setSaveError(null);
-						}}
-					>
-						{t("actions.cancel")}
-					</Button>
-					<Button type="button" size="sm" onClick={onSaveAsSubmit}>
-						{t("actions.save")}
-					</Button>
-					{saveError ? (
-						<span className="text-xs text-destructive">{saveError}</span>
-					) : null}
-				</div>
+			{updateError ? (
+				<p className="text-xs text-destructive">{updateError}</p>
 			) : null}
 
 			<section className="rounded-lg border border-border bg-card p-4">

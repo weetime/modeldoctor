@@ -39,8 +39,7 @@
 		"pasteCurl": "Paste cURL",
 		"loadFromSaved": "Load from saved",
 		"manual": "— Manual —",
-		"modified": "Modified",
-		"nameConnection": "Connection name"
+		"modified": "Modified"
 	},
 	"curl": {
 		"import": "Import from cURL",

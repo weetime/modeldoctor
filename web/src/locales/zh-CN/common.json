@@ -17,7 +17,6 @@
 		"start": "开始",
 		"back": "返回",
 		"manageConnections": "管理连接",
-		"saveAsNew": "另存为…",
 		"copy": "复制",
 		"copied": "已复制",
 		"format": "格式化为 JSON"
@@ -52,9 +51,6 @@
 		"parseCurl": "解析填充",
 		"curlPlaceholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
 		"filled": "已填充：{{fields}}",
-		"nameConnection": "连接名称",
-		"nameExists": "已存在同名连接",
-		"nameRequired": "请输入名称",
 		"newConnection": "+ 新建连接"
 	},
 	"comingSoon": {

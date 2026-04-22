@@ -3,7 +3,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
 import { useConnectionsStore } from "@/stores/connections-store";
-import type { Connection } from "@/types/connection";
 import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,36 +23,34 @@ const MANUAL = "__manual__";
 
 export interface EndpointSelectorProps {
 	selectedId: string | null;
+	/** When true, shows a small dot indicating the current endpoint differs from the loaded connection. */
 	modified?: boolean;
 	onSelect: (id: string | null) => void;
-	onSaveCurrent?: () => void; // "Save" — write current form back to selected connection
-	onSaveAsNew?: (name: string) => Connection;
 }
 
 /**
  * Compact connection picker intended for a page header / toolbar slot when the
- * endpoint form itself is not visible. Shows the dropdown, a modified dot, a
- * "+" to create a new connection, and a kebab menu for save / manage.
+ * endpoint form itself is not visible. Shows the dropdown, a modified dot,
+ * a "+" to create a new connection, and a kebab menu with a link to the
+ * connections library.
  *
  * **When to use:** pages where the endpoint is incidental (e.g. Request
  * Debug's top-right slot).
  *
  * **When NOT to use:** pages where the user edits API URL / Key / Model
  * inline — use {@link EndpointPicker} embedded in the page body instead.
+ * Save / Save-as-new live on the picker because only it has the current
+ * form values to persist.
  */
 export function EndpointSelector({
 	selectedId,
 	modified,
 	onSelect,
-	onSaveCurrent,
-	onSaveAsNew,
 }: EndpointSelectorProps) {
 	const { t } = useTranslation("common");
 	const navigate = useNavigate();
 	const list = useConnectionsStore((s) => s.list());
 	const [createOpen, setCreateOpen] = useState(false);
-	const [namePromptOpen, setNamePromptOpen] = useState(false);
-	const [draftName, setDraftName] = useState("");
 
 	const currentValue = selectedId ?? MANUAL;
 
@@ -94,22 +90,6 @@ export function EndpointSelector({
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					<DropdownMenuItem
-						disabled={!selectedId || !modified || !onSaveCurrent}
-						onClick={() => onSaveCurrent?.()}
-					>
-						{t("actions.save")}
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						disabled={!onSaveAsNew}
-						onClick={() => {
-							setDraftName("");
-							setNamePromptOpen(true);
-						}}
-					>
-						{t("actions.saveAsNew")}
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
 					<DropdownMenuItem onClick={() => navigate("/connections")}>
 						{t("actions.manageConnections")}
 					</DropdownMenuItem>
@@ -129,51 +109,6 @@ export function EndpointSelector({
 				onOpenChange={setCreateOpen}
 				onSaved={(c) => onSelect(c.id)}
 			/>
-
-			{namePromptOpen ? (
-				<NamePrompt
-					value={draftName}
-					onChange={setDraftName}
-					onCancel={() => setNamePromptOpen(false)}
-					onSubmit={() => {
-						const created = onSaveAsNew?.(draftName.trim());
-						if (created) onSelect(created.id);
-						setNamePromptOpen(false);
-					}}
-				/>
-			) : null}
-		</div>
-	);
-}
-
-function NamePrompt({
-	value,
-	onChange,
-	onCancel,
-	onSubmit,
-}: {
-	value: string;
-	onChange: (v: string) => void;
-	onCancel: () => void;
-	onSubmit: () => void;
-}) {
-	const { t } = useTranslation("common");
-	return (
-		<div className="absolute right-8 top-16 z-50 flex w-72 items-center gap-2 rounded-md border border-border bg-card p-2 shadow-md">
-			<input
-				// biome-ignore lint/a11y/noAutofocus: floating name prompt intentionally focuses for fast keyboard entry
-				autoFocus
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				placeholder="connection-name"
-				className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs"
-			/>
-			<Button size="sm" variant="ghost" onClick={onCancel}>
-				{t("actions.cancel")}
-			</Button>
-			<Button size="sm" onClick={onSubmit} disabled={!value.trim()}>
-				{t("actions.save")}
-			</Button>
 		</div>
 	);
 }

@@ -26,7 +26,13 @@ import { type ConnectionInput, connectionInputSchema } from "./schema";
 interface ConnectionDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	connection?: Connection; // undefined → create mode
+	/** If provided, dialog is in edit mode for this connection. */
+	connection?: Connection;
+	/**
+	 * Create-mode prefill — e.g. "Save as new" from an inline endpoint form.
+	 * Ignored when `connection` is set.
+	 */
+	initialValues?: Partial<ConnectionInput>;
 	onSaved?: (c: Connection) => void;
 }
 
@@ -43,6 +49,7 @@ export function ConnectionDialog({
 	open,
 	onOpenChange,
 	connection,
+	initialValues,
 	onSaved,
 }: ConnectionDialogProps) {
 	const { t } = useTranslation("connections");
@@ -64,13 +71,13 @@ export function ConnectionDialog({
 
 	useEffect(() => {
 		if (open) {
-			form.reset(connection ?? empty);
+			form.reset(connection ?? { ...empty, ...initialValues });
 			setSubmitError(null);
 			setRevealKey(false);
 			setCurlInput("");
 			setCurlFeedback(null);
 		}
-	}, [open, connection, form]);
+	}, [open, connection, initialValues, form]);
 
 	const onParseCurl = () => {
 		const trimmed = curlInput.trim();
