@@ -34,6 +34,10 @@
 		"dark": "深色",
 		"system": "跟随系统"
 	},
+	"sidebar": {
+		"collapse": "收起侧边栏",
+		"expand": "展开侧边栏"
+	},
 	"endpoint": {
 		"label": "端点",
 		"manual": "— 手动 —",

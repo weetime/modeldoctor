@@ -34,6 +34,10 @@
 		"dark": "Dark",
 		"system": "System"
 	},
+	"sidebar": {
+		"collapse": "Collapse sidebar",
+		"expand": "Expand sidebar"
+	},
 	"endpoint": {
 		"label": "Endpoint",
 		"manual": "— Manual —",
