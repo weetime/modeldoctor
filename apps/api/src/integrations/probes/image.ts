@@ -13,8 +13,8 @@
  * are one dir down from `assets/`. Switch to `import.meta.url` only if
  * tsconfig moves to ESM later.
  */
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { buildChatVisionBody } from "../builders/multimodal.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 

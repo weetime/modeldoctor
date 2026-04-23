@@ -1,21 +1,14 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type {
-  LoadTestRequest,
-  LoadTestResponse,
-  LoadTestParsed,
-} from "@modeldoctor/contracts";
+import type { LoadTestParsed, LoadTestRequest, LoadTestResponse } from "@modeldoctor/contracts";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import {
-  buildRequestBody,
-  VALID_API_TYPES,
   type ApiType,
+  VALID_API_TYPES,
+  buildRequestBody,
 } from "../../integrations/builders/index.js";
-import {
-  parseVegetaReport,
-  type VegetaParsed,
-} from "../../integrations/parsers/vegeta-report.js";
+import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
 
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 
@@ -37,9 +30,7 @@ function narrowParsed(v: VegetaParsed): LoadTestParsed {
 @Injectable()
 export class LoadTestService {
   async run(req: LoadTestRequest): Promise<LoadTestResponse> {
-    const apiType = (VALID_API_TYPES as readonly string[]).includes(
-      req.apiType ?? "",
-    )
+    const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
       : "chat";
 
@@ -47,9 +38,7 @@ export class LoadTestService {
     try {
       requestBody = buildRequestBody(apiType, { ...req, model: req.model });
     } catch (e) {
-      throw new InternalServerErrorException(
-        e instanceof Error ? e.message : String(e),
-      );
+      throw new InternalServerErrorException(e instanceof Error ? e.message : String(e));
     }
 
     await fs.mkdir(TMP_DIR, { recursive: true });
@@ -58,7 +47,7 @@ export class LoadTestService {
     await fs.writeFile(jsonPath, JSON.stringify(requestBody, null, 2));
 
     let finalUrl = req.apiUrl;
-    if (req.queryParams && req.queryParams.trim()) {
+    if (req.queryParams?.trim()) {
       const params = req.queryParams
         .split("\n")
         .map((p) => p.trim())
@@ -70,7 +59,7 @@ export class LoadTestService {
     }
 
     let extraHeaders = "";
-    if (req.customHeaders && req.customHeaders.trim()) {
+    if (req.customHeaders?.trim()) {
       const lines = req.customHeaders
         .split("\n")
         .map((h) => h.trim())

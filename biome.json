@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "ignore": ["dist", "node_modules", "coverage"]
+    "ignore": ["**/dist", "**/node_modules", "**/coverage", "**/.vite"]
   },
   "organizeImports": { "enabled": true },
   "formatter": {
@@ -12,6 +12,9 @@
     "lineEnding": "lf"
   },
   "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
     "formatter": {
       "quoteStyle": "double",
       "jsxQuoteStyle": "double",
@@ -23,17 +26,10 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": {
-        "noUselessElse": "warn",
-        "useConst": "warn"
-      },
-      "suspicious": {
-        "noExplicitAny": "warn",
-        "noArrayIndexKey": "warn"
-      },
-      "correctness": {
-        "useExhaustiveDependencies": "warn"
-      }
+      "style": { "noUselessElse": "warn", "useConst": "warn", "useImportType": "off" },
+      "suspicious": { "noExplicitAny": "warn", "noArrayIndexKey": "warn" },
+      "correctness": { "useExhaustiveDependencies": "warn" },
+      "complexity": { "noForEach": "warn" }
     }
   }
 }

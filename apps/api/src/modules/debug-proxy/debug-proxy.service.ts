@@ -1,8 +1,5 @@
+import type { DebugProxyRequest, DebugProxyResponse } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import type {
-  DebugProxyRequest,
-  DebugProxyResponse,
-} from "@modeldoctor/contracts";
 
 const MAX_BODY_BYTES = 20 * 1024 * 1024;
 
@@ -51,9 +48,7 @@ export class DebugProxyService {
       }
 
       const binary = looksBinary(contentType);
-      const body = binary
-        ? buffer.toString("base64")
-        : buffer.toString("utf-8");
+      const body = binary ? buffer.toString("base64") : buffer.toString("utf-8");
       const headers: Record<string, string> = {};
       response.headers.forEach((v, k) => {
         headers[k] = v;

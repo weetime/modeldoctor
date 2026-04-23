@@ -1,13 +1,6 @@
+import type { E2ETestRequest, E2ETestResponse } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import type {
-  E2ETestRequest,
-  E2ETestResponse,
-} from "@modeldoctor/contracts";
-import {
-  PROBES,
-  type ProbeCtx,
-  type ProbeName,
-} from "../../integrations/probes/index.js";
+import { PROBES, type ProbeCtx, type ProbeName } from "../../integrations/probes/index.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};

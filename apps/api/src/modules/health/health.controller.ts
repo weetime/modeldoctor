@@ -1,6 +1,6 @@
+import type { CheckVegetaResponse, HealthResponse } from "@modeldoctor/contracts";
 import { Controller, Get } from "@nestjs/common";
 import { HealthService } from "./health.service.js";
-import type { HealthResponse, CheckVegetaResponse } from "@modeldoctor/contracts";
 
 @Controller()
 export class HealthController {

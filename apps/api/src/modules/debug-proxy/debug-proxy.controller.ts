@@ -1,18 +1,11 @@
 import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UsePipes,
-} from "@nestjs/common";
-import { DebugProxyService } from "./debug-proxy.service.js";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import {
-  DebugProxyRequestSchema,
   type DebugProxyRequest,
+  DebugProxyRequestSchema,
   type DebugProxyResponse,
 } from "@modeldoctor/contracts";
+import { Body, Controller, HttpCode, HttpStatus, Post, UsePipes } from "@nestjs/common";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { DebugProxyService } from "./debug-proxy.service.js";
 
 @Controller("debug")
 export class DebugProxyController {

@@ -1,18 +1,11 @@
 import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UsePipes,
-} from "@nestjs/common";
-import { LoadTestService } from "./load-test.service.js";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import {
-  LoadTestRequestSchema,
   type LoadTestRequest,
+  LoadTestRequestSchema,
   type LoadTestResponse,
 } from "@modeldoctor/contracts";
+import { Body, Controller, HttpCode, HttpStatus, Post, UsePipes } from "@nestjs/common";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { LoadTestService } from "./load-test.service.js";
 
 @Controller()
 export class LoadTestController {

@@ -8,9 +8,9 @@
 
 import { buildChatBody } from "./chat.js";
 import { buildEmbeddingsBody } from "./embeddings.js";
-import { buildRerankBody } from "./rerank.js";
 import { buildImagesBody } from "./images.js";
-import { buildChatVisionBody, buildChatAudioBody } from "./multimodal.js";
+import { buildChatAudioBody, buildChatVisionBody } from "./multimodal.js";
+import { buildRerankBody } from "./rerank.js";
 
 export { buildChatBody } from "./chat.js";
 export { buildEmbeddingsBody } from "./embeddings.js";
@@ -46,25 +46,15 @@ export function buildRequestBody(
     case "chat":
       return buildChatBody(cfg as unknown as Parameters<typeof buildChatBody>[0]);
     case "embeddings":
-      return buildEmbeddingsBody(
-        cfg as unknown as Parameters<typeof buildEmbeddingsBody>[0],
-      );
+      return buildEmbeddingsBody(cfg as unknown as Parameters<typeof buildEmbeddingsBody>[0]);
     case "rerank":
-      return buildRerankBody(
-        cfg as unknown as Parameters<typeof buildRerankBody>[0],
-      );
+      return buildRerankBody(cfg as unknown as Parameters<typeof buildRerankBody>[0]);
     case "images":
-      return buildImagesBody(
-        cfg as unknown as Parameters<typeof buildImagesBody>[0],
-      );
+      return buildImagesBody(cfg as unknown as Parameters<typeof buildImagesBody>[0]);
     case "chat-vision":
-      return buildChatVisionBody(
-        cfg as unknown as Parameters<typeof buildChatVisionBody>[0],
-      );
+      return buildChatVisionBody(cfg as unknown as Parameters<typeof buildChatVisionBody>[0]);
     case "chat-audio":
-      return buildChatAudioBody(
-        cfg as unknown as Parameters<typeof buildChatAudioBody>[0],
-      );
+      return buildChatAudioBody(cfg as unknown as Parameters<typeof buildChatAudioBody>[0]);
     default: {
       const exhaustive: never = apiType;
       throw new Error(`Unknown apiType: ${String(exhaustive)}`);

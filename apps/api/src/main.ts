@@ -1,5 +1,5 @@
-import { NestFactory } from "@nestjs/core";
 import type { INestApplication } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
 

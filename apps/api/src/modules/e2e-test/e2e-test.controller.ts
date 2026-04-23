@@ -1,18 +1,11 @@
 import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UsePipes,
-} from "@nestjs/common";
-import { E2ETestService } from "./e2e-test.service.js";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import {
-  E2ETestRequestSchema,
   type E2ETestRequest,
+  E2ETestRequestSchema,
   type E2ETestResponse,
 } from "@modeldoctor/contracts";
+import { Body, Controller, HttpCode, HttpStatus, Post, UsePipes } from "@nestjs/common";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { E2ETestService } from "./e2e-test.service.js";
 
 @Controller()
 export class E2ETestController {
