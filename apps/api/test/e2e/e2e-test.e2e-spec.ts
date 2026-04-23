@@ -27,8 +27,9 @@ describe("E2ETest (e2e)", () => {
       .post("/api/e2e-test")
       .send({ apiKey: "k", model: "m", probes: ["text"] })
       .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/apiUrl/);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/apiUrl/);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it("rejects empty probes array", async () => {
@@ -36,8 +37,9 @@ describe("E2ETest (e2e)", () => {
       .post("/api/e2e-test")
       .send({ apiUrl: "x", apiKey: "k", model: "m", probes: [] })
       .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/probes/);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/probes/);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it("rejects unknown probe name", async () => {
@@ -45,7 +47,8 @@ describe("E2ETest (e2e)", () => {
       .post("/api/e2e-test")
       .send({ apiUrl: "x", apiKey: "k", model: "m", probes: ["bogus"] })
       .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/probes/);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/probes/);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 });

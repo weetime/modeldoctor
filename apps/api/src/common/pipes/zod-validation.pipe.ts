@@ -17,6 +17,9 @@ export class ZodValidationPipe implements PipeTransform {
     const first = result.error.issues[0];
     const path = first?.path.join(".") || "body";
     const message = first?.message || "Validation failed";
-    throw new BadRequestException(`${path}: ${message}`);
+    throw new BadRequestException({
+      message: `${path}: ${message}`,
+      details: result.error.issues,
+    });
   }
 }
