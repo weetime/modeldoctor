@@ -16,6 +16,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "type-check": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check src",
+    "format": "biome format --write src",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {

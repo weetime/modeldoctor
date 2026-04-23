@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { buildRequestBody, VALID_API_TYPES } from "./index";
+import { describe, expect, it } from "vitest";
+import { VALID_API_TYPES, buildRequestBody } from "./index";
 
 describe("buildRequestBody", () => {
   it("accepts every declared api type without throwing", () => {
@@ -25,8 +25,6 @@ describe("buildRequestBody", () => {
   });
 
   it("rejects an unknown apiType at the type level (runtime throw)", () => {
-    expect(() => buildRequestBody("bogus" as never, {})).toThrow(
-      /Unknown apiType/,
-    );
+    expect(() => buildRequestBody("bogus" as never, {})).toThrow(/Unknown apiType/);
   });
 });

@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 export const DebugProxyRequestSchema = z.object({
-  method: z
-    .enum(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
-    .default("GET"),
+  method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]).default("GET"),
   url: z.string().min(1, "url is required"),
   headers: z.record(z.string()).default({}),
   body: z.union([z.string(), z.null()]).optional(),

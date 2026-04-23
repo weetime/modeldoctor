@@ -29,8 +29,7 @@ export async function runAudioProbe({
   const body = buildChatAudioBody({
     model,
     prompt: "Say the word hello.",
-    systemPrompt:
-      "You are Qwen, a virtual human capable of generating text and speech.",
+    systemPrompt: "You are Qwen, a virtual human capable of generating text and speech.",
   });
 
   const t0 = Date.now();

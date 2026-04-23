@@ -5,7 +5,7 @@
  * The CRC-32 table, chunk layout, and IHDR/IDAT/IEND ordering are preserved.
  */
 
-import zlib from "zlib";
+import zlib from "node:zlib";
 
 // Precomputed CRC-32 table (IEEE polynomial 0xedb88320) — PNG uses this.
 const CRC_TABLE: Uint32Array = (() => {

@@ -27,7 +27,8 @@ describe("LoadTest (e2e)", () => {
       .post("/api/load-test")
       .send({ apiKey: "k", model: "m", rate: 1, duration: 1 })
       .expect(400);
-    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it("rejects rate=0", async () => {
@@ -35,8 +36,9 @@ describe("LoadTest (e2e)", () => {
       .post("/api/load-test")
       .send({ apiUrl: "x", apiKey: "k", model: "m", rate: 0, duration: 1 })
       .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/rate/i);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/rate/i);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
   it("rejects duration>3600", async () => {
@@ -44,7 +46,8 @@ describe("LoadTest (e2e)", () => {
       .post("/api/load-test")
       .send({ apiUrl: "x", apiKey: "k", model: "m", rate: 1, duration: 99999 })
       .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error).toMatch(/duration/i);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/duration/i);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 });

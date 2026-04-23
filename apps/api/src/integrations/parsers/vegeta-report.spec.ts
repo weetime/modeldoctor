@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parseVegetaReport } from "./vegeta-report.js";
 
 // Realistic Vegeta stdout (captured format). The parser was ported verbatim

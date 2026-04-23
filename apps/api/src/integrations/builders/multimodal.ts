@@ -26,8 +26,7 @@ export interface ChatAudioBodyConfig {
 type ChatMessage = {
   role: "system" | "user";
   content: Array<
-    | { type: "text"; text: string }
-    | { type: "image_url"; image_url: { url: string } }
+    { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
   >;
 };
 
@@ -62,8 +61,8 @@ export function buildChatVisionBody({
   return {
     model,
     messages,
-    max_tokens: parseInt(maxTokens as string) || 256,
-    temperature: parseFloat(temperature as string) || 0.0,
+    max_tokens: Number.parseInt(maxTokens as string) || 256,
+    temperature: Number.parseFloat(temperature as string) || 0.0,
   };
 }
 

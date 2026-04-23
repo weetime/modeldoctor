@@ -13,7 +13,6 @@ export function buildEmbeddingsBody({
   model,
   embeddingInput,
 }: EmbeddingsBodyConfig): Record<string, unknown> {
-  if (!embeddingInput)
-    throw new Error("Missing required parameter: embeddingInput");
+  if (!embeddingInput) throw new Error("Missing required parameter: embeddingInput");
   return { model, input: embeddingInput };
 }

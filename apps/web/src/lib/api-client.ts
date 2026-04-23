@@ -1,7 +1,12 @@
+import { StandardErrorResponseSchema } from "@modeldoctor/contracts";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public code?: string,
+    public requestId?: string,
+    public details?: unknown,
   ) {
     super(message);
   }
@@ -25,14 +30,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
   }
   if (!res.ok) {
-    const message =
-      (data &&
-      typeof data === "object" &&
-      "error" in data &&
-      typeof (data as { error: unknown }).error === "string"
-        ? (data as { error: string }).error
-        : null) ?? `HTTP ${res.status}`;
-    throw new ApiError(res.status, message);
+    const parsed = StandardErrorResponseSchema.safeParse(data);
+    if (parsed.success) {
+      throw new ApiError(
+        res.status,
+        parsed.data.error.message,
+        parsed.data.error.code,
+        parsed.data.error.requestId,
+        parsed.data.error.details,
+      );
+    }
+    throw new ApiError(res.status, `HTTP ${res.status}`);
   }
   return data as T;
 }

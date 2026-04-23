@@ -66,7 +66,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
   lines.forEach((line) => {
     if (line.includes("Requests") && line.includes("[total")) {
       const match = line.match(/Requests\s+\[.*?\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.requests = parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.requests = Number.parseInt(match[1]);
 
       const valuesMatch = line.match(/\]\s+([\d.]+),\s+([\d.]+),\s+([\d.]+)/);
       if (
@@ -75,9 +75,9 @@ export function parseVegetaReport(report: string): VegetaParsed {
         valuesMatch[2] !== undefined &&
         valuesMatch[3] !== undefined
       ) {
-        parsed.requests = parseInt(valuesMatch[1]);
-        parsed.rate = parseFloat(valuesMatch[2]);
-        parsed.throughput = parseFloat(valuesMatch[3]);
+        parsed.requests = Number.parseInt(valuesMatch[1]);
+        parsed.rate = Number.parseFloat(valuesMatch[2]);
+        parsed.throughput = Number.parseFloat(valuesMatch[3]);
       }
     }
 
@@ -103,17 +103,17 @@ export function parseVegetaReport(report: string): VegetaParsed {
 
     if (line.includes("Bytes In") && line.includes("[total")) {
       const match = line.match(/\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.bytesIn = parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.bytesIn = Number.parseInt(match[1]);
     }
 
     if (line.includes("Bytes Out") && line.includes("[total")) {
       const match = line.match(/\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.bytesOut = parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.bytesOut = Number.parseInt(match[1]);
     }
 
     if (line.includes("Success") && line.includes("[ratio]")) {
       const match = line.match(/\]\s+([\d.]+)%/);
-      if (match && match[1] !== undefined) parsed.success = parseFloat(match[1]);
+      if (match && match[1] !== undefined) parsed.success = Number.parseFloat(match[1]);
     }
 
     if (line.includes("Status Codes") && line.includes("[code:count]")) {
@@ -123,7 +123,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
         codes.forEach((code) => {
           const [status, count] = code.split(":");
           if (status && count) {
-            parsed.statusCodes[status] = parseInt(count);
+            parsed.statusCodes[status] = Number.parseInt(count);
           }
         });
       }

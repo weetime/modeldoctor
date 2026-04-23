@@ -16,9 +16,7 @@ export const ProbeResultSchema = z.object({
   checks: z.array(ProbeCheckSchema),
   details: z.object({
     content: z.string().optional(),
-    usage: z
-      .object({ prompt_tokens: z.number(), completion_tokens: z.number() })
-      .optional(),
+    usage: z.object({ prompt_tokens: z.number(), completion_tokens: z.number() }).optional(),
     imagePreviewB64: z.string().optional(),
     imageMime: z.string().optional(),
     audioB64: z.string().optional(),

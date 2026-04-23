@@ -29,8 +29,8 @@ export function buildChatBody({
   return {
     model,
     messages: [{ role: "user", content: prompt }],
-    max_tokens: parseInt(maxTokens as string) || 1000,
-    temperature: parseFloat(temperature as string) || 0.7,
+    max_tokens: Number.parseInt(maxTokens as string) || 1000,
+    temperature: Number.parseFloat(temperature as string) || 0.7,
     stream: !!stream,
   };
 }

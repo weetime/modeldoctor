@@ -1,3 +1,5 @@
+import { runAudioProbe } from "./audio.js";
+import { runImageProbe } from "./image.js";
 /**
  * Probe dispatcher + shared types.
  *
@@ -6,8 +8,6 @@
  * apps/web/src/features/e2e-smoke/types.ts byte-for-byte.
  */
 import { runTextProbe } from "./text.js";
-import { runImageProbe } from "./image.js";
-import { runAudioProbe } from "./audio.js";
 
 export { runTextProbe } from "./text.js";
 export { runImageProbe } from "./image.js";

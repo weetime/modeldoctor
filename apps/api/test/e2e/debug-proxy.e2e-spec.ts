@@ -59,15 +59,15 @@ describe("DebugProxy (e2e)", () => {
     await new Promise<void>((r) => upstream.close(() => r()));
   });
 
-  it("rejects missing url with 400 and legacy error shape", async () => {
+  it("rejects missing url with 400 and standard error envelope", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/debug/proxy")
       .send({})
       .expect(400);
-    expect(res.body).toEqual({
-      success: false,
-      error: expect.stringContaining("url"),
-    });
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/url/);
+    expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(Array.isArray(res.body.error.details)).toBe(true);
   });
 
   it("forwards GET and returns decoded text body", async () => {

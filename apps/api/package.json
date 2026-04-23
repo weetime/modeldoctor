@@ -10,6 +10,8 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "type-check": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check src",
+    "format": "biome format --write src",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.mts"
@@ -20,7 +22,9 @@
     "@nestjs/config": "^3",
     "@nestjs/core": "^10",
     "@nestjs/platform-express": "^10",
+    "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7",
+    "nanoid": "^5.1.9",
     "nestjs-pino": "^4",
     "nestjs-zod": "^3",
     "pino": "^9",
