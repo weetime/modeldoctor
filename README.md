@@ -16,6 +16,16 @@ Troubleshooting toolkit for model-serving APIs.
 pnpm install
 ```
 
+## Start Postgres (local dev)
+
+ModelDoctor's backend persists load-test runs and users to Postgres from Phase 4 onward. Start the local container:
+
+```bash
+docker compose up -d postgres
+```
+
+The container listens on `localhost:5432` with credentials `modeldoctor:modeldoctor` (database `modeldoctor`). Data persists in the `postgres-data` Docker volume across restarts. Stop with `docker compose down`.
+
 ## Develop
 
 ```bash
