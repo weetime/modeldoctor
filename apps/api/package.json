@@ -22,6 +22,7 @@
     "@nestjs/config": "^3",
     "@nestjs/core": "^10",
     "@nestjs/platform-express": "^10",
+    "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7",
     "nanoid": "^5.1.9",
     "nestjs-pino": "^4",

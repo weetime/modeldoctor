@@ -1,5 +1,7 @@
+import path from "node:path";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ServeStaticModule } from "@nestjs/serve-static";
 import { LoggerModule } from "nestjs-pino";
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
 import { AppConfigModule } from "./config/config.module.js";
@@ -30,6 +32,23 @@ import { LoadTestModule } from "./modules/load-test/load-test.module.js";
           },
         },
       }),
+    }),
+    ServeStaticModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) => {
+        if (config.get("NODE_ENV", { infer: true }) !== "production") {
+          return []; // empty → no static middleware registered in dev/test
+        }
+        return [
+          {
+            // apps/api/dist/main.js is invoked from repo root via `pnpm start`,
+            // so cwd === repo root → apps/web/dist is the correct target.
+            rootPath: path.resolve(process.cwd(), "apps/web/dist"),
+            exclude: ["/api/(.*)", "/api/docs", "/api/docs-json"],
+          },
+        ];
+      },
     }),
     HealthModule,
     DebugProxyModule,
