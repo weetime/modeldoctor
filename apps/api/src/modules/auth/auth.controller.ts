@@ -17,6 +17,7 @@ import {
   UsePipes,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Throttle } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
@@ -61,6 +62,7 @@ export class AuthController {
     return { accessToken, user };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("login")
   @UsePipes(new ZodValidationPipe(LoginRequestSchema))
@@ -78,6 +80,7 @@ export class AuthController {
     return { accessToken, user };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("refresh")
   async refresh(
