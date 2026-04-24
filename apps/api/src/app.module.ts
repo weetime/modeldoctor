@@ -7,6 +7,7 @@ import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.j
 import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
+import { AuthModule } from "./modules/auth/auth.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
@@ -58,6 +59,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     E2ETestModule,
     LoadTestModule,
     UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule implements NestModule {
