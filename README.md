@@ -18,13 +18,25 @@ pnpm install
 
 ## Start Postgres (local dev)
 
-ModelDoctor's backend persists load-test runs and users to Postgres from Phase 4 onward. Start the local container:
+ModelDoctor's backend persists load-test runs and users to Postgres from Phase 4 onward. The backend expects a database reachable at the `DATABASE_URL` you set in `.env` — the default value points at a locally-running Postgres on `localhost:5432`.
+
+Pick whichever local Postgres suits your machine (Homebrew service, native install, docker run, etc.) and provision the role + database once:
 
 ```bash
-docker compose up -d postgres
+# Example: from any psql session with superuser rights
+CREATE ROLE modeldoctor WITH LOGIN PASSWORD 'modeldoctor' CREATEDB;
+CREATE DATABASE modeldoctor OWNER modeldoctor;
 ```
 
-The container listens on `localhost:5432` with credentials `modeldoctor:modeldoctor` (database `modeldoctor`). Data persists in the `postgres-data` Docker volume across restarts. Stop with `docker compose down`.
+Then apply the Prisma schema:
+
+```bash
+cd apps/api
+DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor \
+  pnpm db:migrate:deploy
+```
+
+Running e2e tests (`pnpm test:e2e`) spins up throwaway Postgres containers via testcontainers and does not touch your local database.
 
 ## Develop
 
