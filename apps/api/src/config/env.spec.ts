@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateEnv } from "./env.schema.js";
 
 describe("validateEnv", () => {
-  it("accepts minimal env (NODE_ENV=test, no DATABASE_URL needed)", () => {
+  it("accepts minimal env in test mode", () => {
     const env = validateEnv({ NODE_ENV: "test" });
     expect(env.NODE_ENV).toBe("test");
     expect(env.PORT).toBe(3001);
@@ -45,5 +45,11 @@ describe("validateEnv", () => {
       DATABASE_URL: "postgresql://u:p@h:5432/d",
     });
     expect(env.DATABASE_URL).toBe("postgresql://u:p@h:5432/d");
+  });
+
+  it("rejects non-URL DATABASE_URL in production", () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: "production", DATABASE_URL: "not-a-url" }),
+    ).toThrow(/DATABASE_URL/);
   });
 });

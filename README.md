@@ -31,10 +31,11 @@ CREATE DATABASE modeldoctor OWNER modeldoctor;
 Then apply the Prisma schema:
 
 ```bash
-cd apps/api
 DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor \
-  pnpm db:migrate:deploy
+  pnpm -F @modeldoctor/api db:migrate:deploy
 ```
+
+For everyday `pnpm dev`, copy `.env.example` to `.env` at the repo root so NestJS picks up `DATABASE_URL` automatically (`.env` is gitignored).
 
 Running e2e tests (`pnpm test:e2e`) spins up throwaway Postgres containers via testcontainers and does not touch your local database.
 
