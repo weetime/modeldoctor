@@ -2,20 +2,21 @@ import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type {
+  ListLoadTestRunsQuery,
+  ListLoadTestRunsResponse,
   LoadTestParsed,
   LoadTestRequest,
   LoadTestResponse,
-  ListLoadTestRunsQuery,
-  ListLoadTestRunsResponse,
 } from "@modeldoctor/contracts";
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service.js";
 import {
   type ApiType,
   VALID_API_TYPES,
   buildRequestBody,
 } from "../../integrations/builders/index.js";
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
-import { PrismaService } from "../../database/prisma.service.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
 
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 
@@ -40,7 +41,7 @@ export class LoadTestService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async run(req: LoadTestRequest): Promise<LoadTestResponse> {
+  async run(req: LoadTestRequest, user: JwtPayload): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
       : "chat";
@@ -88,7 +89,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const timeoutMs = (req.duration + 60) * 1000;
 
     const baseRow = {
-      userId: null, // populated starting Phase 5
+      userId: user.sub,
       apiType,
       apiUrl: finalUrl,
       model: req.model,
@@ -166,11 +167,16 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     };
   }
 
-  async listRuns(query: ListLoadTestRunsQuery): Promise<ListLoadTestRunsResponse> {
+  async listRuns(
+    query: ListLoadTestRunsQuery,
+    user: JwtPayload,
+  ): Promise<ListLoadTestRunsResponse> {
     const limit = query.limit;
+    const whereUser = user.roles.includes("admin") ? {} : { userId: user.sub };
     const rows = await this.prisma.loadTestRun.findMany({
       take: limit + 1, // peek one past to detect a next page
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      where: whereUser,
       // id tiebreaker keeps cursor semantics stable if two rows share createdAt
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });

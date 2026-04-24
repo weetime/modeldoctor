@@ -1,17 +1,19 @@
 import {
-  type LoadTestRequest,
-  LoadTestRequestSchema,
-  type LoadTestResponse,
-  LoadTestResponseSchema,
   type ListLoadTestRunsQuery,
   ListLoadTestRunsQuerySchema,
   type ListLoadTestRunsResponse,
   ListLoadTestRunsResponseSchema,
+  type LoadTestRequest,
+  LoadTestRequestSchema,
+  type LoadTestResponse,
+  LoadTestResponseSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { LoadTestService } from "./load-test.service.js";
 
 class LoadTestRequestDto extends createZodDto(LoadTestRequestSchema) {}
@@ -28,16 +30,20 @@ export class LoadTestController {
   @ApiOkResponse({ type: LoadTestResponseDto })
   @Post("load-test")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(LoadTestRequestSchema))
-  run(@Body() body: LoadTestRequest): Promise<LoadTestResponse> {
-    return this.svc.run(body);
+  run(
+    @Body(new ZodValidationPipe(LoadTestRequestSchema)) body: LoadTestRequest,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<LoadTestResponse> {
+    return this.svc.run(body, user);
   }
 
   @ApiOperation({ summary: "List load-test runs (cursor-paginated, newest first)" })
   @ApiOkResponse({ type: ListLoadTestRunsResponseDto })
   @Get("load-test/runs")
-  @UsePipes(new ZodValidationPipe(ListLoadTestRunsQuerySchema))
-  listRuns(@Query() query: ListLoadTestRunsQuery): Promise<ListLoadTestRunsResponse> {
-    return this.svc.listRuns(query);
+  listRuns(
+    @Query(new ZodValidationPipe(ListLoadTestRunsQuerySchema)) query: ListLoadTestRunsQuery,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ListLoadTestRunsResponse> {
+    return this.svc.listRuns(query, user);
   }
 }

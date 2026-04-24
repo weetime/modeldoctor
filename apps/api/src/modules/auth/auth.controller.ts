@@ -14,7 +14,6 @@ import {
   Res,
   UnauthorizedException,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
@@ -47,9 +46,8 @@ export class AuthController {
 
   @Public()
   @Post("register")
-  @UsePipes(new ZodValidationPipe(RegisterRequestSchema))
   async register(
-    @Body() body: RegisterRequest,
+    @Body(new ZodValidationPipe(RegisterRequestSchema)) body: RegisterRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
     const { accessToken, refreshToken, user } = await this.auth.register(body.email, body.password);
@@ -65,9 +63,8 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("login")
-  @UsePipes(new ZodValidationPipe(LoginRequestSchema))
   async login(
-    @Body() body: LoginRequest,
+    @Body(new ZodValidationPipe(LoginRequestSchema)) body: LoginRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
     const { accessToken, refreshToken, user } = await this.auth.login(body.email, body.password);
