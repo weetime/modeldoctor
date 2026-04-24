@@ -1,18 +1,17 @@
-import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { Test } from "@nestjs/testing";
-import type { INestApplication } from "@nestjs/common";
-import request from "supertest";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { AppModule } from "../../src/app.module.js";
-import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
 describe("DebugProxy (e2e)", () => {
-  let app: INestApplication;
+  let ctx: E2EContext;
   let upstream: http.Server;
   let upstreamUrl: string;
+  let accessToken: string;
 
   beforeAll(async () => {
+    // Start upstream mock server first (no DB needed)
     upstream = http.createServer((req, res) => {
       const chunks: Buffer[] = [];
       req.on("data", (c) => chunks.push(c));
@@ -45,23 +44,23 @@ describe("DebugProxy (e2e)", () => {
     const addr = upstream.address() as AddressInfo;
     upstreamUrl = `http://127.0.0.1:${addr.port}`;
 
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix("api");
-    app.useGlobalFilters(new AllExceptionsFilter());
-    await app.init();
-  });
+    // Boot app with Postgres (needed by global JwtAuthGuard / AuthModule)
+    ctx = await bootE2E();
+
+    // Register a user to obtain a bearer token
+    const registered = await registerUser(ctx.app, "debugproxy@example.com", "Password1!");
+    accessToken = registered.token;
+  }, 120_000);
 
   afterAll(async () => {
-    await app.close();
+    await ctx.teardown();
     await new Promise<void>((r) => upstream.close(() => r()));
   });
 
   it("rejects missing url with 400 and standard error envelope", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/debug/proxy")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({})
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
@@ -71,8 +70,9 @@ describe("DebugProxy (e2e)", () => {
   });
 
   it("forwards GET and returns decoded text body", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/debug/proxy")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({ method: "GET", url: `${upstreamUrl}/text` })
       .expect(200);
     expect(res.body.success).toBe(true);
@@ -83,8 +83,9 @@ describe("DebugProxy (e2e)", () => {
   });
 
   it("base64-encodes binary responses", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/debug/proxy")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({ method: "GET", url: `${upstreamUrl}/image` })
       .expect(200);
     expect(res.body.success).toBe(true);
@@ -93,8 +94,9 @@ describe("DebugProxy (e2e)", () => {
   });
 
   it("forwards POST body", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/debug/proxy")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({
         method: "POST",
         url: `${upstreamUrl}/echo-method`,
@@ -108,8 +110,9 @@ describe("DebugProxy (e2e)", () => {
   });
 
   it("returns success:false with timeout message on abort", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/debug/proxy")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({
         method: "GET",
         url: "http://10.255.255.1",

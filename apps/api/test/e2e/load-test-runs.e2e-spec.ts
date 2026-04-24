@@ -1,46 +1,26 @@
-import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { AppModule } from "../../src/app.module.js";
-import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type TestDatabase, startPostgres } from "../helpers/postgres-container.js";
+import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
 describe("LoadTestRuns (e2e)", () => {
-  let app: INestApplication;
-  let db: TestDatabase;
+  let ctx: E2EContext;
   let adminToken: string;
 
   beforeAll(async () => {
-    db = await startPostgres();
-    // Must set BEFORE module compilation — ConfigModule caches env at boot
-    process.env.DATABASE_URL = db.url;
-
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix("api");
-    app.useGlobalFilters(new AllExceptionsFilter());
-    await app.init();
+    ctx = await bootE2E();
 
     // Register the first user — first user becomes admin (Task 5.6 logic)
-    const registerRes = await request(app.getHttpServer())
-      .post("/api/auth/register")
-      .send({ email: "admin@example.com", password: "Password1!" });
-    adminToken = registerRes.body.accessToken as string;
+    const registered = await registerUser(ctx.app, "admin@example.com", "Password1!");
+    adminToken = registered.token;
   }, 120_000);
 
   afterAll(async () => {
-    if (app) {
-      const prisma = app.get(PrismaService);
-      await prisma.$disconnect();
-      await app.close();
-    }
-    if (db) await db.teardown();
+    await ctx.teardown();
   });
 
   it("returns an empty list when no runs exist", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
@@ -49,7 +29,7 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("inserts a row directly and lists it", async () => {
-    const prisma = app.get(PrismaService);
+    const prisma = ctx.app.get(PrismaService);
     await prisma.loadTestRun.create({
       data: {
         apiType: "chat",
@@ -67,7 +47,7 @@ describe("LoadTestRuns (e2e)", () => {
         rawReport: "raw",
       },
     });
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
@@ -77,7 +57,7 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("paginates with cursor", async () => {
-    const prisma = app.get(PrismaService);
+    const prisma = ctx.app.get(PrismaService);
     // State carries over from the previous test within the same describe; seed 3 more rows
     for (let i = 0; i < 3; i++) {
       await prisma.loadTestRun.create({
@@ -93,14 +73,14 @@ describe("LoadTestRuns (e2e)", () => {
         },
       });
     }
-    const first = await request(app.getHttpServer())
+    const first = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs?limit=2")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
     expect(first.body.items.length).toBe(2);
     expect(first.body.nextCursor).not.toBeNull();
 
-    const second = await request(app.getHttpServer())
+    const second = await request(ctx.app.getHttpServer())
       .get(`/api/load-test/runs?limit=2&cursor=${first.body.nextCursor}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
@@ -115,10 +95,10 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("non-admin users see only their own runs", async () => {
-    const prisma = app.get(PrismaService);
+    const prisma = ctx.app.get(PrismaService);
 
     // Register a second user (role=user, not admin since admin is already taken)
-    const user2Res = await request(app.getHttpServer())
+    const user2Res = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
       .send({ email: "user2@example.com", password: "Password1!" });
     expect(user2Res.status).toBe(201);
@@ -141,14 +121,14 @@ describe("LoadTestRuns (e2e)", () => {
     });
 
     // user2 lists runs — should see only their own run
-    const user2Runs = await request(app.getHttpServer())
+    const user2Runs = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${user2Token}`)
       .expect(200);
     expect(user2Runs.body.items.every((r: { userId: string }) => r.userId === user2Id)).toBe(true);
 
     // admin lists runs — should see all (including user2's run)
-    const adminRuns = await request(app.getHttpServer())
+    const adminRuns = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
@@ -160,13 +140,13 @@ describe("LoadTestRuns (e2e)", () => {
 
   it("admin sees all runs across users", async () => {
     // Register a third user and get their token
-    const user3Res = await request(app.getHttpServer())
+    const user3Res = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
       .send({ email: "user3@example.com", password: "Password1!" });
     expect(user3Res.status).toBe(201);
     const user3Id = user3Res.body.user.id as string;
 
-    const prisma = app.get(PrismaService);
+    const prisma = ctx.app.get(PrismaService);
     await prisma.loadTestRun.create({
       data: {
         userId: user3Id,
@@ -182,7 +162,7 @@ describe("LoadTestRuns (e2e)", () => {
     });
 
     // admin should see this new run
-    const adminRuns = await request(app.getHttpServer())
+    const adminRuns = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
