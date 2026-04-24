@@ -171,7 +171,8 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const rows = await this.prisma.loadTestRun.findMany({
       take: limit + 1, // peek one past to detect a next page
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-      orderBy: { createdAt: "desc" },
+      // id tiebreaker keeps cursor semantics stable if two rows share createdAt
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
     const pageRows = rows.slice(0, limit);
     const items = pageRows.map((r) => ({
