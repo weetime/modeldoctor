@@ -1,6 +1,7 @@
 import path from "node:path";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { LoggerModule } from "nestjs-pino";
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
@@ -8,6 +9,7 @@ import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
+import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
@@ -61,6 +63,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     UsersModule,
     AuthModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

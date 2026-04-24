@@ -1,11 +1,20 @@
-import { Injectable } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { type ExecutionContext, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { AuthGuard, type IAuthGuard } from "@nestjs/passport";
+import { IS_PUBLIC_KEY } from "../../common/decorators/public.decorator.js";
 
-/**
- * Base JWT guard. Task 5.5 will extend this to honor `@Public()` via Reflector
- * and register it globally as an `APP_GUARD`. For now it is only attached
- * explicitly via `@UseGuards(JwtAuthGuard)` on protected routes such as
- * `GET /api/auth/me`.
- */
 @Injectable()
-export class JwtAuthGuard extends AuthGuard("jwt") {}
+export class JwtAuthGuard extends AuthGuard("jwt") {
+  constructor(private readonly reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext): ReturnType<IAuthGuard["canActivate"]> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+    return super.canActivate(context);
+  }
+}
