@@ -40,6 +40,7 @@ export type LoadTestParsed = z.infer<typeof LoadTestParsedSchema>;
 
 export const LoadTestResponseSchema = z.object({
   success: z.literal(true),
+  runId: z.string().optional(),
   report: z.string(),
   parsed: LoadTestParsedSchema,
   config: z.object({

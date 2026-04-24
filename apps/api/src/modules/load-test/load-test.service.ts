@@ -9,6 +9,7 @@ import {
   buildRequestBody,
 } from "../../integrations/builders/index.js";
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
+import { PrismaService } from "../../database/prisma.service.js";
 
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 
@@ -29,6 +30,8 @@ function narrowParsed(v: VegetaParsed): LoadTestParsed {
 
 @Injectable()
 export class LoadTestService {
+  constructor(private readonly prisma: PrismaService) {}
+
   async run(req: LoadTestRequest): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
@@ -76,30 +79,64 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const cmd = `cat ${txtPath} | vegeta attack -rate=${req.rate} -duration=${req.duration}s | vegeta report`;
     const timeoutMs = (req.duration + 60) * 1000;
 
-    const stdout = await new Promise<string>((resolve, reject) => {
-      const child = spawn(cmd, {
-        cwd: TMP_DIR,
-        shell: true,
-        timeout: timeoutMs,
+    const baseRow = {
+      userId: null as string | null, // populated starting Phase 5
+      apiType,
+      apiUrl: finalUrl,
+      model: req.model,
+      rate: req.rate,
+      duration: req.duration,
+    };
+
+    let stdout: string;
+    try {
+      stdout = await new Promise<string>((resolve, reject) => {
+        const child = spawn(cmd, {
+          cwd: TMP_DIR,
+          shell: true,
+          timeout: timeoutMs,
+        });
+        let out = "";
+        let err = "";
+        child.stdout?.on("data", (d: Buffer) => {
+          out += d.toString();
+        });
+        child.stderr?.on("data", (d: Buffer) => {
+          err += d.toString();
+        });
+        child.on("close", (code: number | null) => {
+          if (code === 0) resolve(out);
+          else reject(new Error(`vegeta exited ${code}: ${err || out}`));
+        });
+        child.on("error", (e: Error) => reject(e));
       });
-      let out = "";
-      let err = "";
-      child.stdout?.on("data", (d: Buffer) => {
-        out += d.toString();
+    } catch (err) {
+      await this.prisma.loadTestRun.create({
+        data: {
+          ...baseRow,
+          status: "failed",
+          summaryJson: {}, // Prisma Json column — empty object on failure
+          rawReport: err instanceof Error ? err.message : String(err),
+          completedAt: new Date(),
+        },
       });
-      child.stderr?.on("data", (d: Buffer) => {
-        err += d.toString();
-      });
-      child.on("close", (code: number | null) => {
-        if (code === 0) resolve(out);
-        else reject(new Error(`vegeta exited ${code}: ${err || out}`));
-      });
-      child.on("error", (e: Error) => reject(e));
-    });
+      throw err;
+    }
 
     const parsed = narrowParsed(parseVegetaReport(stdout));
+    const run = await this.prisma.loadTestRun.create({
+      data: {
+        ...baseRow,
+        status: "completed",
+        summaryJson: parsed as unknown as object, // Prisma Json column
+        rawReport: stdout,
+        completedAt: new Date(),
+      },
+    });
+
     return {
       success: true,
+      runId: run.id,
       report: stdout,
       parsed,
       config: {
