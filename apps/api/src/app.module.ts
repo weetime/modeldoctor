@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { LoggerModule } from "nestjs-pino";
+import { RolesGuard } from "./common/guards/roles.guard.js";
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
 import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
@@ -63,7 +64,10 @@ import { UsersModule } from "./modules/users/users.module.js";
     UsersModule,
     AuthModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard }, // runs after JwtAuthGuard
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
