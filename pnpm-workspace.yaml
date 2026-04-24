@@ -1,3 +1,10 @@
 packages:
   - apps/*
   - packages/*
+
+onlyBuiltDependencies:
+  - "@swc/core"
+  - prisma
+  - "@prisma/client"
+  - "@prisma/engines"
+  - argon2
