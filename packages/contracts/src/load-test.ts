@@ -40,6 +40,8 @@ export type LoadTestParsed = z.infer<typeof LoadTestParsedSchema>;
 
 export const LoadTestResponseSchema = z.object({
   success: z.literal(true),
+  // Optional so the FE api-client keeps parsing responses produced before
+  // Phase 4 introduced DB persistence; always present on Phase-4+ servers.
   runId: z.string().optional(),
   report: z.string(),
   parsed: LoadTestParsedSchema,

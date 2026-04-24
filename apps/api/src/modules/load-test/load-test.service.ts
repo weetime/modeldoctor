@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { LoadTestParsed, LoadTestRequest, LoadTestResponse } from "@modeldoctor/contracts";
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import {
   type ApiType,
   VALID_API_TYPES,
@@ -30,6 +30,8 @@ function narrowParsed(v: VegetaParsed): LoadTestParsed {
 
 @Injectable()
 export class LoadTestService {
+  private readonly logger = new Logger(LoadTestService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async run(req: LoadTestRequest): Promise<LoadTestResponse> {
@@ -80,7 +82,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const timeoutMs = (req.duration + 60) * 1000;
 
     const baseRow = {
-      userId: null as string | null, // populated starting Phase 5
+      userId: null, // populated starting Phase 5
       apiType,
       apiUrl: finalUrl,
       model: req.model,
@@ -111,15 +113,24 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
         child.on("error", (e: Error) => reject(e));
       });
     } catch (err) {
-      await this.prisma.loadTestRun.create({
-        data: {
-          ...baseRow,
-          status: "failed",
-          summaryJson: {}, // Prisma Json column — empty object on failure
-          rawReport: err instanceof Error ? err.message : String(err),
-          completedAt: new Date(),
-        },
-      });
+      // Best-effort persistence on failure — swallowing a Prisma error here
+      // would hide the original vegeta failure the caller cares about.
+      try {
+        await this.prisma.loadTestRun.create({
+          data: {
+            ...baseRow,
+            status: "failed",
+            summaryJson: {},
+            rawReport: err instanceof Error ? err.message : String(err),
+            completedAt: new Date(),
+          },
+        });
+      } catch (dbErr) {
+        this.logger.error(
+          { dbErr, vegetaErr: err },
+          "Failed to persist LoadTestRun failure row; rethrowing original error",
+        );
+      }
       throw err;
     }
 
@@ -128,7 +139,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       data: {
         ...baseRow,
         status: "completed",
-        summaryJson: parsed as unknown as object, // Prisma Json column
+        summaryJson: parsed as unknown as object,
         rawReport: stdout,
         completedAt: new Date(),
       },
