@@ -15,12 +15,17 @@ export async function startPostgres(): Promise<TestDatabase> {
     .start();
   const url = container.getConnectionUri();
 
-  // Apply all migrations to the fresh DB
-  execSync("pnpm exec prisma migrate deploy", {
-    cwd: process.cwd(), // apps/api when run via `pnpm -F @modeldoctor/api test:e2e`
-    env: { ...process.env, DATABASE_URL: url },
-    stdio: "inherit",
-  });
+  try {
+    execSync("pnpm exec prisma migrate deploy", {
+      cwd: process.cwd(), // apps/api when run via `pnpm -F @modeldoctor/api test:e2e`
+      env: { ...process.env, DATABASE_URL: url },
+      stdio: "inherit",
+    });
+  } catch (err) {
+    // Stop the container before surfacing the failure so we don't leak docker resources.
+    await container.stop();
+    throw err;
+  }
 
   return {
     container,

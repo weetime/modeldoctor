@@ -87,7 +87,8 @@ describe("LoadTestRuns (e2e)", () => {
     const second = await request(app.getHttpServer())
       .get(`/api/load-test/runs?limit=2&cursor=${first.body.nextCursor}`)
       .expect(200);
-    expect(second.body.items.length).toBeGreaterThan(0);
+    // Total 4 rows (1 from previous it + 3 seeded here), limit=2 → exactly 2 on each page
+    expect(second.body.items.length).toBe(2);
     // Pages must not overlap
     const firstIds = first.body.items.map((r: { id: string }) => r.id);
     const secondIds = second.body.items.map((r: { id: string }) => r.id);
