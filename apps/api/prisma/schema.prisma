@@ -1,0 +1,57 @@
+// apps/api/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  roles        String[] @default([])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  loadTestRuns  LoadTestRun[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([tokenHash])
+}
+
+model LoadTestRun {
+  id          String    @id @default(cuid())
+  userId      String?
+  apiType     String
+  apiUrl      String
+  model       String
+  rate        Int
+  duration    Int
+  status      String    @default("completed")
+  summaryJson Json
+  rawReport   String    @db.Text
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}

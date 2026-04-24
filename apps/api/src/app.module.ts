@@ -6,6 +6,7 @@ import { LoggerModule } from "nestjs-pino";
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
 import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
+import { DatabaseModule } from "./database/database.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
@@ -14,6 +15,7 @@ import { LoadTestModule } from "./modules/load-test/load-test.module.js";
 @Module({
   imports: [
     AppConfigModule,
+    DatabaseModule,
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({

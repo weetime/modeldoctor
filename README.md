@@ -16,6 +16,29 @@ Troubleshooting toolkit for model-serving APIs.
 pnpm install
 ```
 
+## Start Postgres (local dev)
+
+ModelDoctor's backend persists load-test runs and users to Postgres from Phase 4 onward. The backend expects a database reachable at the `DATABASE_URL` you set in `.env` — the default value points at a locally-running Postgres on `localhost:5432`.
+
+Pick whichever local Postgres suits your machine (Homebrew service, native install, docker run, etc.) and provision the role + database once:
+
+```bash
+# Example: from any psql session with superuser rights
+CREATE ROLE modeldoctor WITH LOGIN PASSWORD 'modeldoctor' CREATEDB;
+CREATE DATABASE modeldoctor OWNER modeldoctor;
+```
+
+Then apply the Prisma schema:
+
+```bash
+DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor \
+  pnpm -F @modeldoctor/api db:migrate:deploy
+```
+
+For everyday `pnpm dev`, copy `.env.example` to `.env` at the repo root so NestJS picks up `DATABASE_URL` automatically (`.env` is gitignored).
+
+Running e2e tests (`pnpm test:e2e`) spins up throwaway Postgres containers via testcontainers and does not touch your local database.
+
 ## Develop
 
 ```bash

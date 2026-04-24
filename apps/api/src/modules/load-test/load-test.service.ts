@@ -1,14 +1,21 @@
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { LoadTestParsed, LoadTestRequest, LoadTestResponse } from "@modeldoctor/contracts";
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import type {
+  LoadTestParsed,
+  LoadTestRequest,
+  LoadTestResponse,
+  ListLoadTestRunsQuery,
+  ListLoadTestRunsResponse,
+} from "@modeldoctor/contracts";
+import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import {
   type ApiType,
   VALID_API_TYPES,
   buildRequestBody,
 } from "../../integrations/builders/index.js";
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
+import { PrismaService } from "../../database/prisma.service.js";
 
 const TMP_DIR = path.resolve(process.cwd(), "tmp");
 
@@ -29,6 +36,10 @@ function narrowParsed(v: VegetaParsed): LoadTestParsed {
 
 @Injectable()
 export class LoadTestService {
+  private readonly logger = new Logger(LoadTestService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
   async run(req: LoadTestRequest): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
@@ -76,30 +87,73 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const cmd = `cat ${txtPath} | vegeta attack -rate=${req.rate} -duration=${req.duration}s | vegeta report`;
     const timeoutMs = (req.duration + 60) * 1000;
 
-    const stdout = await new Promise<string>((resolve, reject) => {
-      const child = spawn(cmd, {
-        cwd: TMP_DIR,
-        shell: true,
-        timeout: timeoutMs,
+    const baseRow = {
+      userId: null, // populated starting Phase 5
+      apiType,
+      apiUrl: finalUrl,
+      model: req.model,
+      rate: req.rate,
+      duration: req.duration,
+    };
+
+    let stdout: string;
+    try {
+      stdout = await new Promise<string>((resolve, reject) => {
+        const child = spawn(cmd, {
+          cwd: TMP_DIR,
+          shell: true,
+          timeout: timeoutMs,
+        });
+        let out = "";
+        let err = "";
+        child.stdout?.on("data", (d: Buffer) => {
+          out += d.toString();
+        });
+        child.stderr?.on("data", (d: Buffer) => {
+          err += d.toString();
+        });
+        child.on("close", (code: number | null) => {
+          if (code === 0) resolve(out);
+          else reject(new Error(`vegeta exited ${code}: ${err || out}`));
+        });
+        child.on("error", (e: Error) => reject(e));
       });
-      let out = "";
-      let err = "";
-      child.stdout?.on("data", (d: Buffer) => {
-        out += d.toString();
-      });
-      child.stderr?.on("data", (d: Buffer) => {
-        err += d.toString();
-      });
-      child.on("close", (code: number | null) => {
-        if (code === 0) resolve(out);
-        else reject(new Error(`vegeta exited ${code}: ${err || out}`));
-      });
-      child.on("error", (e: Error) => reject(e));
-    });
+    } catch (err) {
+      // Best-effort persistence on failure — swallowing a Prisma error here
+      // would hide the original vegeta failure the caller cares about.
+      try {
+        await this.prisma.loadTestRun.create({
+          data: {
+            ...baseRow,
+            status: "failed",
+            summaryJson: {},
+            rawReport: err instanceof Error ? err.message : String(err),
+            completedAt: new Date(),
+          },
+        });
+      } catch (dbErr) {
+        this.logger.error(
+          { dbErr, vegetaErr: err },
+          "Failed to persist LoadTestRun failure row; rethrowing original error",
+        );
+      }
+      throw err;
+    }
 
     const parsed = narrowParsed(parseVegetaReport(stdout));
+    const run = await this.prisma.loadTestRun.create({
+      data: {
+        ...baseRow,
+        status: "completed",
+        summaryJson: parsed as unknown as object,
+        rawReport: stdout,
+        completedAt: new Date(),
+      },
+    });
+
     return {
       success: true,
+      runId: run.id,
       report: stdout,
       parsed,
       config: {
@@ -110,5 +164,31 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
         duration: req.duration,
       },
     };
+  }
+
+  async listRuns(query: ListLoadTestRunsQuery): Promise<ListLoadTestRunsResponse> {
+    const limit = query.limit;
+    const rows = await this.prisma.loadTestRun.findMany({
+      take: limit + 1, // peek one past to detect a next page
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      // id tiebreaker keeps cursor semantics stable if two rows share createdAt
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+    const pageRows = rows.slice(0, limit);
+    const items = pageRows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      apiType: r.apiType as ApiType,
+      apiUrl: r.apiUrl,
+      model: r.model,
+      rate: r.rate,
+      duration: r.duration,
+      status: r.status as "completed" | "failed",
+      summaryJson: (r.summaryJson ?? null) as LoadTestParsed | null,
+      createdAt: r.createdAt.toISOString(),
+      completedAt: r.completedAt?.toISOString() ?? null,
+    }));
+    const nextCursor = rows.length > limit ? pageRows[pageRows.length - 1].id : null;
+    return { items, nextCursor };
   }
 }
