@@ -1,7 +1,13 @@
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { LoadTestParsed, LoadTestRequest, LoadTestResponse } from "@modeldoctor/contracts";
+import type {
+  LoadTestParsed,
+  LoadTestRequest,
+  LoadTestResponse,
+  ListLoadTestRunsQuery,
+  ListLoadTestRunsResponse,
+} from "@modeldoctor/contracts";
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import {
   type ApiType,
@@ -158,5 +164,30 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
         duration: req.duration,
       },
     };
+  }
+
+  async listRuns(query: ListLoadTestRunsQuery): Promise<ListLoadTestRunsResponse> {
+    const limit = query.limit;
+    const rows = await this.prisma.loadTestRun.findMany({
+      take: limit + 1, // peek one past to detect a next page
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      orderBy: { createdAt: "desc" },
+    });
+    const pageRows = rows.slice(0, limit);
+    const items = pageRows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      apiType: r.apiType as ApiType,
+      apiUrl: r.apiUrl,
+      model: r.model,
+      rate: r.rate,
+      duration: r.duration,
+      status: r.status as "completed" | "failed",
+      summaryJson: (r.summaryJson ?? null) as LoadTestParsed | null,
+      createdAt: r.createdAt.toISOString(),
+      completedAt: r.completedAt?.toISOString() ?? null,
+    }));
+    const nextCursor = rows.length > limit ? pageRows[pageRows.length - 1].id : null;
+    return { items, nextCursor };
   }
 }

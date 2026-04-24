@@ -54,3 +54,30 @@ export const LoadTestResponseSchema = z.object({
   }),
 });
 export type LoadTestResponse = z.infer<typeof LoadTestResponseSchema>;
+
+export const LoadTestRunSummarySchema = z.object({
+  id: z.string(),
+  userId: z.string().nullable(),
+  apiType: ApiTypeSchema,
+  apiUrl: z.string(),
+  model: z.string(),
+  rate: z.number(),
+  duration: z.number(),
+  status: z.enum(["completed", "failed"]),
+  summaryJson: LoadTestParsedSchema.nullable(),
+  createdAt: z.string(), // ISO
+  completedAt: z.string().nullable(), // ISO
+});
+export type LoadTestRunSummary = z.infer<typeof LoadTestRunSummarySchema>;
+
+export const ListLoadTestRunsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.string().optional(),
+});
+export type ListLoadTestRunsQuery = z.infer<typeof ListLoadTestRunsQuerySchema>;
+
+export const ListLoadTestRunsResponseSchema = z.object({
+  items: z.array(LoadTestRunSummarySchema),
+  nextCursor: z.string().nullable(),
+});
+export type ListLoadTestRunsResponse = z.infer<typeof ListLoadTestRunsResponseSchema>;
