@@ -11,6 +11,7 @@ import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { LoadTestModule } from "./modules/load-test/load-test.module.js";
+import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { LoadTestModule } from "./modules/load-test/load-test.module.js";
     DebugProxyModule,
     E2ETestModule,
     LoadTestModule,
+    UsersModule,
   ],
 })
 export class AppModule implements NestModule {
