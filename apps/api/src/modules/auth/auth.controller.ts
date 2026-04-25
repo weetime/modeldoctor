@@ -1,4 +1,4 @@
-import type { AuthTokenResponse } from "@modeldoctor/contracts";
+import type { AuthTokenResponse, PublicUser } from "@modeldoctor/contracts";
 import {
   type LoginRequest,
   LoginRequestSchema,
@@ -21,6 +21,7 @@ import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { Env } from "../../config/env.schema.js";
+import { UsersService } from "../users/users.service.js";
 import { AuthService } from "./auth.service.js";
 import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import type { JwtPayload } from "./jwt.strategy.js";
@@ -41,6 +42,7 @@ function setRefreshCookie(res: Response, token: string, maxAgeDays: number, isPr
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly users: UsersService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -109,7 +111,8 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get("me")
-  me(@Req() req: Request & { user: JwtPayload }): JwtPayload {
-    return req.user;
+  async me(@Req() req: Request & { user: JwtPayload }): Promise<PublicUser> {
+    const user = await this.users.findById(req.user.sub);
+    return this.users.toPublic(user);
   }
 }

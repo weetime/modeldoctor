@@ -75,22 +75,25 @@ describe("Auth (e2e)", () => {
     expect(refreshCookie).toBeTruthy();
   });
 
-  // ── 6. GET /api/auth/me with bearer → payload shape ──────────────────────
-  it("GET /api/auth/me with bearer → { sub, email, roles }", async () => {
+  // ── 6. GET /api/auth/me with bearer → PublicUser shape ───────────────────
+  it("GET /api/auth/me with bearer → { id, email, roles, createdAt }", async () => {
     const loginRes = await request(ctx.app.getHttpServer())
       .post("/api/auth/login")
       .send({ email: "admin@example.com", password: "Password1!" })
       .expect(201);
     const token = loginRes.body.accessToken as string;
+    const registeredId = loginRes.body.user.id as string;
 
     const meRes = await request(ctx.app.getHttpServer())
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
 
-    expect(meRes.body.sub).toBeTruthy();
+    expect(meRes.body.id).toBeTruthy();
+    expect(meRes.body.id).toBe(registeredId);
     expect(meRes.body.email).toBe("admin@example.com");
     expect(Array.isArray(meRes.body.roles)).toBe(true);
+    expect(meRes.body.createdAt).toBeTruthy();
   });
 
   // ── 7. GET /api/auth/me WITHOUT bearer → 401 ─────────────────────────────

@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "^10",
     "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7",
+    "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.3",
     "argon2": "^0.44.0",

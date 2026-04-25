@@ -1,35 +1,28 @@
 import { CheckVegetaResponseSchema, HealthResponseSchema } from "@modeldoctor/contracts";
-import type { INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { AppModule } from "../../src/app.module.js";
-import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
+import { type E2EContext, bootE2E } from "../helpers/app.js";
 
 describe("Health (e2e)", () => {
-  let app: INestApplication;
+  let ctx: E2EContext;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix("api");
-    app.useGlobalFilters(new AllExceptionsFilter());
-    await app.init();
-  });
+    ctx = await bootE2E();
+  }, 120_000);
 
   afterAll(async () => {
-    await app.close();
+    await ctx.teardown();
   });
 
-  it("GET /api/health → 200 with legacy-compatible shape", async () => {
-    const res = await request(app.getHttpServer()).get("/api/health").expect(200);
+  it("GET /api/health → 200 with terminus shape", async () => {
+    const res = await request(ctx.app.getHttpServer()).get("/api/health").expect(200);
     const parsed = HealthResponseSchema.parse(res.body);
     expect(parsed.status).toBe("ok");
-    expect(new Date(parsed.timestamp).toString()).not.toBe("Invalid Date");
+    expect(res.body.info?.database?.status).toBe("up");
   });
 
   it("GET /api/check-vegeta → 200 with legacy-compatible shape", async () => {
-    const res = await request(app.getHttpServer()).get("/api/check-vegeta").expect(200);
+    const res = await request(ctx.app.getHttpServer()).get("/api/check-vegeta").expect(200);
     const parsed = CheckVegetaResponseSchema.parse(res.body);
     expect(typeof parsed.installed).toBe("boolean");
     if (parsed.installed) {
