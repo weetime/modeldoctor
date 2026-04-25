@@ -11,47 +11,50 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
-  passwordHash String
+  passwordHash String   @map("password_hash")
   roles        String[] @default([])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
 
   refreshTokens RefreshToken[]
   loadTestRuns  LoadTestRun[]
 
   @@index([email])
+  @@map("users")
 }
 
 model RefreshToken {
   id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  userId    String    @map("user_id")
+  tokenHash String    @unique           @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now())   @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@index([tokenHash])
+  @@map("refresh_tokens")
 }
 
 model LoadTestRun {
   id          String    @id @default(cuid())
-  userId      String?
-  apiType     String
-  apiUrl      String
+  userId      String?   @map("user_id")
+  apiType     String    @map("api_type")
+  apiUrl      String    @map("api_url")
   model       String
   rate        Int
   duration    Int
   status      String    @default("completed")
-  summaryJson Json
-  rawReport   String    @db.Text
-  createdAt   DateTime  @default(now())
-  completedAt DateTime?
+  summaryJson Json      @map("summary_json")
+  rawReport   String    @db.Text          @map("raw_report")
+  createdAt   DateTime  @default(now())   @map("created_at")
+  completedAt DateTime? @map("completed_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@map("load_test_runs")
 }
