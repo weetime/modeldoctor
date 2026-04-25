@@ -7,10 +7,9 @@ import { z } from "zod";
 // (typos, "TRUE", "yes", "1", "") throws a ZodError at startup so a
 // misconfigured deployment fails loudly instead of silently flipping.
 const envBoolean = z
-  .union(
-    [z.boolean(), z.enum(["true", "false"])],
-    { errorMap: () => ({ message: 'must be true, false, "true", or "false"' }) },
-  )
+  .union([z.boolean(), z.enum(["true", "false"])], {
+    errorMap: () => ({ message: 'must be true, false, "true", or "false"' }),
+  })
   .transform((v) => (typeof v === "boolean" ? v : v === "true"));
 
 export const EnvSchema = z

@@ -23,7 +23,14 @@ describe("benchmark contracts", () => {
     });
 
     it("BenchmarkProfileSchema includes all 5 named profiles plus custom", () => {
-      for (const p of ["throughput", "latency", "long_context", "generation_heavy", "sharegpt", "custom"]) {
+      for (const p of [
+        "throughput",
+        "latency",
+        "long_context",
+        "generation_heavy",
+        "sharegpt",
+        "custom",
+      ]) {
         expect(BenchmarkProfileSchema.parse(p)).toBe(p);
       }
       expect(() => BenchmarkProfileSchema.parse("unknown")).toThrow();
@@ -85,7 +92,9 @@ describe("benchmark contracts", () => {
     });
 
     it("rejects name longer than 128 chars", () => {
-      expect(() => CreateBenchmarkRequestSchema.parse({ ...valid, name: "x".repeat(129) })).toThrow();
+      expect(() =>
+        CreateBenchmarkRequestSchema.parse({ ...valid, name: "x".repeat(129) }),
+      ).toThrow();
     });
 
     it("rejects non-URL apiUrl", () => {
@@ -97,7 +106,9 @@ describe("benchmark contracts", () => {
     });
 
     it("rejects totalRequests > 100000", () => {
-      expect(() => CreateBenchmarkRequestSchema.parse({ ...valid, totalRequests: 100_001 })).toThrow();
+      expect(() =>
+        CreateBenchmarkRequestSchema.parse({ ...valid, totalRequests: 100_001 }),
+      ).toThrow();
     });
 
     it("allows requestRate=0 (unlimited)", () => {
@@ -195,7 +206,9 @@ describe("benchmark contracts", () => {
 
   describe("ListBenchmarksResponseSchema", () => {
     it("accepts an empty list with null cursor", () => {
-      expect(() => ListBenchmarksResponseSchema.parse({ items: [], nextCursor: null })).not.toThrow();
+      expect(() =>
+        ListBenchmarksResponseSchema.parse({ items: [], nextCursor: null }),
+      ).not.toThrow();
     });
   });
 
@@ -206,7 +219,9 @@ describe("benchmark contracts", () => {
     });
 
     it("BenchmarkStateCallbackSchema rejects progress > 1", () => {
-      expect(() => BenchmarkStateCallbackSchema.parse({ state: "running", progress: 1.5 })).toThrow();
+      expect(() =>
+        BenchmarkStateCallbackSchema.parse({ state: "running", progress: 1.5 }),
+      ).toThrow();
     });
 
     it("BenchmarkMetricsCallbackSchema requires metricsSummary", () => {

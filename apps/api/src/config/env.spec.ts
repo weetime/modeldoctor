@@ -92,8 +92,12 @@ describe("validateEnv", () => {
   });
 
   it("DISABLE_FIRST_USER_ADMIN accepts native booleans", () => {
-    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN).toBe(true);
-    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN).toBe(false);
+    expect(
+      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN,
+    ).toBe(true);
+    expect(
+      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN,
+    ).toBe(false);
   });
 
   it("DISABLE_FIRST_USER_ADMIN rejects ambiguous strings (loud failure on typos)", () => {
