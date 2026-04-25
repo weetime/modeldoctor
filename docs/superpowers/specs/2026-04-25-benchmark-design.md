@@ -24,7 +24,7 @@ A new `Benchmark` feature, end-to-end:
 - **API surface**: NestJS `BenchmarkModule` with create / list / detail / cancel / delete + an internal HMAC-authenticated callback endpoint for the runner pod to report state and metrics.
 - **Execution**: each benchmark run launches a one-shot Kubernetes Job in the same cluster the API runs in. The Job pulls `modeldoctor/benchmark-runner:<tag>`, executes guidellm against the user-supplied OpenAI-compatible endpoint, and POSTs results back to the API.
 - **Runner image**: a Python 3.11-slim image at `apps/benchmark-runner/`, ~50-line Python entrypoint that translates env vars into a guidellm CLI invocation and reports lifecycle + metrics back to the API.
-- **Driver abstraction**: a `BenchmarkExecutionDriver` interface with one production implementation (`K8sJobDriver`) and a concrete plan to add `SubprocessDriver` later if local-without-K8s dev becomes painful.
+- **Driver abstraction**: a `BenchmarkExecutionDriver` interface with two implementations — `K8sJobDriver` (production) and `SubprocessDriver` (local development without K8s). Selected at startup via `BENCHMARK_DRIVER=k8s|subprocess`.
 - **Web UI**: a `Benchmarks` page mirroring GPUStack's two-tab modal (基本信息 / 配置), a list view with status badges + filters, a detail page with the full metrics table and runtime logs, and 5 named profile presets (Throughput, Latency, Long Context, Generation Heavy, ShareGPT).
 - **K8s integration**: ServiceAccount, RBAC (Role + RoleBinding restricted to `batch/v1/jobs` in one namespace), `@kubernetes/client-node` wired into the API.
 
@@ -134,11 +134,11 @@ A throughput-tuned config has bad latency; a latency-tuned config has bad throug
 - **runner pod → api**: HMAC token, generated per run, embedded as env var, validated by `HmacCallbackGuard`. Token is a short HMAC-SHA256 of `(benchmark_id, exp)` signed with `BENCHMARK_CALLBACK_SECRET` (env var on the API). TTL = `max_duration + 15 min` slack.
 - **runner pod → user target endpoint**: standard HTTP. The user-supplied API key flows from the form → DB (encrypted at rest, see §6) → Job env var → guidellm `--api-key`. Secret never logged.
 
-### 2.3 Why K8s Job, Not Subprocess
+### 2.3 Why K8s Job in MVP (and SubprocessDriver alongside it)
 
-The end state is K8s. Building subprocess first would force ~30–40 % of the execution layer to be rewritten when migrating: Job creation API, lifecycle tracking (`pid` → `jobName`), cancellation (`SIGTERM` → `delete job`), result retrieval (file → HTTP callback), error handling (exit code → pod terminated state). The Prisma schema, contracts, controllers, and UI carry over but the interesting surface area churns. Driving the design from K8s Day 1 is cheaper.
+The end state is K8s. Building subprocess-only first would force ~30–40 % of the execution layer to be rewritten when migrating: Job creation API, lifecycle tracking (`pid` → `jobName`), cancellation (`SIGTERM` → `delete job`), result retrieval (file → HTTP callback), error handling (exit code → pod terminated state). The Prisma schema, contracts, controllers, and UI carry over but the interesting surface area churns. Driving the design from K8s Day 1 is cheaper than a subprocess-then-K8s migration.
 
-For local dev without K8s, a `SubprocessDriver` can be added behind the same interface in a follow-up. Anyone with `kubectl` access to 4pd (the user's setup) can develop directly against it.
+`SubprocessDriver` is *not* a transitional crutch — it ships in MVP and stays, because day-to-day development should not require a K8s cluster. The `BenchmarkExecutionDriver` interface forces both implementations to be honest: the same callback flow, the same env-var contract, the same lifecycle. K8s validation happens against a local k3d/kind cluster (fast iteration) or 4pd staging (final validation). See §13 for workflows.
 
 ## 3. Domain Model
 
@@ -426,13 +426,17 @@ Each phase is one PR from `feat/benchmark-phase-<N>` cut from `main`. Same conve
 - `docker run --rm -e ... modeldoctor/benchmark-runner:dev` smoke test against a tiny OpenAI stub.
 - **Output**: pushable runner image, callable manually.
 
-### Phase 3 — K8sJobDriver + callback API
-- `K8sJobDriver` using `@kubernetes/client-node`.
+### Phase 3 — Drivers + callback API
+- `BenchmarkExecutionDriver` interface (`apps/api/src/modules/benchmark/drivers/`).
+- `SubprocessDriver` — `child_process.spawn("guidellm", [...])`, mirrors LoadTest's vegeta pattern. Used for local dev (workflow A) and CI runner-integration tests.
+- `K8sJobDriver` using `@kubernetes/client-node` — Job manifest with env, labels, resource limits, `ttlSecondsAfterFinished`, ServiceAccount.
+- Driver selection via `BENCHMARK_DRIVER=k8s|subprocess` env var; default `subprocess` in dev, `k8s` in production.
 - `/api/internal/benchmarks/:id/{state,metrics}` controller + `HmacCallbackGuard`.
 - `BenchmarkReconciler` with `@nestjs/schedule`.
 - ServiceAccount + Role + RoleBinding YAML in `deploy/k8s/rbac.yaml` (only what the API needs to manage Jobs).
-- Local dev path: `kubectl apply` the RBAC, run API with `~/.kube/config`, run a benchmark, see the Job appear and finish, see metrics appear in the DB.
-- **Output**: end-to-end flow without a UI.
+- Subprocess dev path: `pip install guidellm` on the dev machine, `BENCHMARK_DRIVER=subprocess pnpm dev`, run a benchmark, see metrics in the DB.
+- K8s dev path: `k3d cluster create modeldoctor`, `k3d image import modeldoctor/benchmark-runner:dev`, `kubectl apply -f deploy/k8s/rbac.yaml`, `BENCHMARK_DRIVER=k8s pnpm dev`, run a benchmark, see the Job appear and finish.
+- **Output**: end-to-end flow on both drivers without a UI.
 
 ### Phase 4 — User-facing CRUD API
 - `BenchmarkController`, `BenchmarkService`.
@@ -452,8 +456,8 @@ Each phase is one PR from `feat/benchmark-phase-<N>` cut from `main`. Same conve
 ### Phase 6 — Hardening (optional follow-up)
 - E2E test in CI hitting 4pd.
 - ShareGPT support: download dataset on Job startup with init container, runner wires `--data /data/sharegpt.json`.
-- `SubprocessDriver` fallback for local-without-K8s dev.
 - Live-tail logs (SSE).
+- Application-level concurrent-job cap.
 
 Phases 1–5 are MVP. Phase 6 is post-MVP.
 
@@ -475,5 +479,86 @@ Phases 1–5 are MVP. Phase 6 is post-MVP.
 - **Decode** — the inference phase that emits output tokens; bounded by memory bandwidth.
 - **guidellm** — Neural Magic / vLLM-team OSS LLM benchmarking CLI; the execution engine here.
 - **Profile** — a named workload preset (Throughput / Latency / etc.).
-- **Driver** — pluggable execution backend (`K8sJobDriver`, future `SubprocessDriver`).
+- **Driver** — pluggable execution backend; `K8sJobDriver` (production) and `SubprocessDriver` (local dev) both ship in MVP.
 - **HMAC token** — per-run callback credential; `HMAC_SHA256(secret, "<id>.<exp>")`.
+
+## 13. Development Workflows
+
+Three modes, chosen by what you're working on. Day-to-day dev never touches K8s.
+
+### 13.1 Workflow A — Local subprocess (default, ~90% of dev)
+
+Use for: UI, contracts, controllers, services, runner image (when iterating without K8s), unit tests.
+
+One-time setup:
+```bash
+pipx install guidellm    # or: pip install --user guidellm
+```
+
+Run:
+```bash
+# .env.local
+BENCHMARK_DRIVER=subprocess
+BENCHMARK_CALLBACK_URL=http://localhost:3001
+BENCHMARK_CALLBACK_SECRET=<32-bytes-base64>
+BENCHMARK_API_KEY_ENCRYPTION_KEY=<32-bytes-base64>
+
+pnpm dev   # web on :5173, api on :3001
+```
+
+Submit a benchmark from the UI → `BenchmarkService` calls `SubprocessDriver.start()` → `child_process.spawn("guidellm", [...])` → guidellm runs against the user-supplied target → runner posts callback to `http://localhost:3001/api/internal/...` → metrics in DB.
+
+No K8s, no Docker, no tunnel. Logs go to the same terminal as the API.
+
+### 13.2 Workflow B — Local k3d / kind (K8s-driver iteration)
+
+Use for: changing `K8sJobDriver`, Job manifest, RBAC, runner image's K8s integration. Faster than deploying to 4pd.
+
+One-time setup:
+```bash
+brew install k3d                                              # or: brew install kind
+k3d cluster create modeldoctor                                # or: kind create cluster --name modeldoctor
+kubectl apply -f deploy/k8s/rbac.yaml
+kubectl create namespace modeldoctor-benchmarks
+```
+
+Per-iteration:
+```bash
+docker build -t modeldoctor/benchmark-runner:dev apps/benchmark-runner/
+k3d image import modeldoctor/benchmark-runner:dev -c modeldoctor
+# (or for kind: kind load docker-image modeldoctor/benchmark-runner:dev --name modeldoctor)
+```
+
+Run:
+```bash
+# .env.local
+BENCHMARK_DRIVER=k8s
+BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
+BENCHMARK_RUNNER_IMAGE=modeldoctor/benchmark-runner:dev
+BENCHMARK_CALLBACK_URL=http://host.k3d.internal:3001          # k3d
+# BENCHMARK_CALLBACK_URL=http://host.docker.internal:3001     # kind on Docker Desktop
+KUBECONFIG=~/.kube/config                                     # current-context = k3d-modeldoctor
+
+pnpm dev
+```
+
+`host.k3d.internal` / `host.docker.internal` is how a pod inside the local cluster reaches the dev machine's `localhost:3001`. No tunnel needed.
+
+### 13.3 Workflow C — 4pd staging namespace (final validation)
+
+Use for: pre-PR validation of K8s code, validating real RBAC against 4pd's API server, validating image pull from the company registry, occasional smoke tests.
+
+One-time setup (per dev): a dedicated staging namespace and the API deployed there. Out of scope for this spec — plain `kubectl apply` of standard Deployment / Service / Secret manifests.
+
+Per-iteration: build → push → `kubectl rollout restart deployment/modeldoctor-api -n modeldoctor-staging`. Slower (~2–3 min per cycle), so reserved for final validation, not active iteration.
+
+### 13.4 Mode selection cheat sheet
+
+| What you're doing | Use |
+|---|---|
+| Writing UI components / contracts | A |
+| Adding a controller, service, validation | A |
+| Editing `runner.py` | A |
+| Editing `K8sJobDriver`, Job manifest, RBAC YAML | B |
+| Final pre-PR check on K8s code | C |
+| CI E2E (post-Phase 6) | C |
