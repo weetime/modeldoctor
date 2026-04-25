@@ -6,7 +6,7 @@
 
 **Architecture:** A single Python project at `apps/benchmark-runner/` with one runtime module (`runner/main.py`, ~150 LoC), pure-function helpers for arg-building / metrics-mapping / callback HTTP, and a pytest suite that mocks the `guidellm` subprocess and the `requests.post` call. The Dockerfile produces a `python:3.11-slim`-based image that pre-installs `guidellm` and runs `python -m runner` as the entrypoint. CI builds the image on every PR; pushes happen later (Phase 3 wires this into `BENCHMARK_RUNNER_IMAGE`).
 
-**Tech Stack:** Python 3.11, `guidellm` (pinned), `requests` (HTTP client — same one used by guidellm so no extra dep), `pytest` + `pytest-mock` (dev), `ruff` (lint+format, dev). Standard `venv` + `pip` workflow — no `uv`, no `poetry`, no `hatch` (pick the smallest tool set that works; the user can swap later if desired). Docker with multi-stage build (deps → runtime).
+**Tech Stack:** Python 3.11, `guidellm` (pinned), `requests` (HTTP client — same one used by guidellm so no extra dep), `pytest` + `pytest-mock` (dev), `ruff` (lint+format, dev). **Local dev uses conda** for env management (per user preference); `pip install -e ".[dev]"` runs inside the conda env. Docker uses `python:3.11-slim` directly (no conda in the image — keeps it slim). CI uses `actions/setup-python` (no conda either). The `pyproject.toml` is conda-agnostic; conda is only the local-dev shell.
 
 **Source spec:** `docs/superpowers/specs/2026-04-25-benchmark-design.md` — §5 (Runner Image), §2.1 (where the image fits in the architecture), §2.2 trust boundaries (HMAC token + apiKey via env without leaking to logs/argv), §9 (testing strategy for the runner).
 
@@ -29,9 +29,9 @@ Every commit body ends with `Co-Authored-By: Claude Opus 4.7 (1M context) <norep
 
 **Environment assumptions:**
 - Working directory: the current ModelDoctor repo root.
-- **Python 3.11 available locally**: `python3.11 --version` works (or any Python ≥ 3.11; `python3 --version` if 3.11 is the default). On macOS: `brew install python@3.11` if missing.
+- **conda available locally**: `conda --version` works. The user manages all Python environments via conda; the plan does not assume a system `python3.11` binary on PATH.
 - Docker daemon running: `docker info` succeeds.
-- `pip` works inside the venv. (No `uv` required, but it works if installed — see optional notes.)
+- `pip` works inside the conda env (the plan does `pip install -e ".[dev]"` after `conda activate`).
 - Phase 1 has merged into `feat/restructure` (PR #11). Phase 2 branches from there.
 
 ---
@@ -60,12 +60,12 @@ git checkout -b feat/benchmark-phase-2
 ```
 Expected: `Switched to a new branch 'feat/benchmark-phase-2'`. PR target: `feat/restructure`.
 
-- [ ] **Step 0.4: Confirm Python 3.11**
+- [ ] **Step 0.4: Confirm conda is available**
 
 ```bash
-python3.11 --version
+conda --version
 ```
-Expected: `Python 3.11.x` (or 3.12+ also works for our purposes — but the Docker image pins to 3.11). If missing on macOS: `brew install python@3.11`. The plan's commands use `python3.11` explicitly to avoid grabbing the system Python 3.9; if your default `python3` is already 3.11+, you can substitute.
+Expected: `conda x.y.z` printed (any 23.x or 24.x). If missing, install Miniconda or Anaconda first. The plan uses conda to materialize a Python 3.11 environment in Step 1.5; do not pre-create the env yet.
 
 - [ ] **Step 0.5: Confirm Docker is running**
 
@@ -244,12 +244,15 @@ You should rarely run it directly except for image-level smoke testing.
 
 ```bash
 cd apps/benchmark-runner
-python3.11 -m venv .venv
-source .venv/bin/activate
+conda create -n modeldoctor-benchmark-runner python=3.11 -y
+conda activate modeldoctor-benchmark-runner
 pip install -e ".[dev]"
 pytest
 ruff check .
 ```
+
+(Non-conda contributors can substitute `python3.11 -m venv .venv && source .venv/bin/activate` —
+the project itself is environment-manager-agnostic; only the dev workflow above prefers conda.)
 
 ## Building the image
 
@@ -281,16 +284,18 @@ docker run --rm \
 ```
 ```
 
-- [ ] **Step 1.5: Create venv and install**
+- [ ] **Step 1.5: Create the conda env and install**
 
 ```bash
 cd apps/benchmark-runner
-python3.11 -m venv .venv
-source .venv/bin/activate
+conda create -n modeldoctor-benchmark-runner python=3.11 -y
+conda activate modeldoctor-benchmark-runner
 pip install --upgrade pip
 pip install -e ".[dev]"
 ```
 Expected: `Successfully installed ... guidellm-0.4.0 ... pytest ... ruff ...`. Record what you actually got — if guidellm 0.4.0 has been yanked, drop to 0.4.1 etc. and update the pyproject pin.
+
+(All subsequent task steps that say "activate" mean `conda activate modeldoctor-benchmark-runner`; "deactivate" means `conda deactivate`. The conda env lives outside the repo — nothing to commit, nothing to .gitignore beyond what's already there.)
 
 - [ ] **Step 1.6: Verify the project layout works**
 
@@ -300,10 +305,10 @@ ruff check .
 ```
 Expected: `pytest` reports `0 tests collected` (it's looking, found nothing — fine for now); `ruff check .` exits 0.
 
-- [ ] **Step 1.7: Deactivate venv and return to repo root**
+- [ ] **Step 1.7: Deactivate the env and return to repo root**
 
 ```bash
-deactivate
+conda conda deactivate
 cd ../..
 ```
 
@@ -314,10 +319,11 @@ git add apps/benchmark-runner/
 git commit -m "$(cat <<'EOF'
 chore(benchmark-runner): scaffold Python project
 
-Standard venv + pip workflow (no uv/poetry/hatch — minimum tooling
-that works). pyproject pins guidellm==0.4.0; bumping is a deliberate
-PR with new fixture-based mapper tests. Includes README with the
-env-var contract for manual docker-run smoke testing.
+Conda env + pip install workflow (per user preference; non-conda
+contributors can substitute venv). pyproject pins guidellm==0.4.0;
+bumping is a deliberate PR with new fixture-based mapper tests.
+Includes README with the env-var contract for manual docker-run
+smoke testing.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -438,7 +444,7 @@ class TestBuildGuidellmArgv:
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest tests/test_argv.py
 ```
 Expected: every test fails with `ImportError` / `ModuleNotFoundError` for `runner.argv`.
@@ -538,7 +544,7 @@ Expected: both exit 0. If `ruff format --check` fails, run `ruff format .` to au
 - [ ] **Step 2.6: Commit**
 
 ```bash
-deactivate
+conda deactivate
 cd ../..
 git add apps/benchmark-runner/runner/argv.py apps/benchmark-runner/tests/test_argv.py
 git commit -m "$(cat <<'EOF'
@@ -645,7 +651,7 @@ class TestParseEnv:
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest tests/test_env.py
 ```
 Expected: every test fails with import error.
@@ -736,7 +742,7 @@ Expected: all ~20 tests pass (the parametrize generates 13 missing-var tests).
 ```bash
 ruff check .
 ruff format --check .
-deactivate
+conda deactivate
 cd ../..
 git add apps/benchmark-runner/runner/env.py apps/benchmark-runner/tests/test_env.py
 git commit -m "$(cat <<'EOF'
@@ -886,7 +892,7 @@ class TestPostMetrics:
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest tests/test_callback.py
 ```
 Expected: failures from missing module.
@@ -959,7 +965,7 @@ def post_metrics(
 ```bash
 pytest tests/test_callback.py
 ruff check .
-deactivate
+conda deactivate
 cd ../..
 git add apps/benchmark-runner/runner/callback.py apps/benchmark-runner/tests/test_callback.py
 git commit -m "$(cat <<'EOF'
@@ -1065,7 +1071,7 @@ class TestMapGuidellmReport:
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest tests/test_metrics.py
 ```
 Expected: failures.
@@ -1146,7 +1152,7 @@ def map_guidellm_report_to_summary(raw: dict[str, Any]) -> dict[str, Any]:
 ```bash
 pytest tests/test_metrics.py
 ruff check .
-deactivate
+conda deactivate
 cd ../..
 git add apps/benchmark-runner/runner/metrics.py apps/benchmark-runner/tests/test_metrics.py apps/benchmark-runner/tests/fixtures/
 git commit -m "$(cat <<'EOF'
@@ -1285,7 +1291,7 @@ def test_main_missing_env_exits_with_error(
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest tests/test_main.py
 ```
 Expected: failures.
@@ -1446,7 +1452,7 @@ sys.exit(main())
 ```bash
 pytest
 ruff check .
-deactivate
+conda deactivate
 cd ../..
 git add apps/benchmark-runner/runner/main.py apps/benchmark-runner/runner/__main__.py apps/benchmark-runner/tests/test_main.py
 git commit -m "$(cat <<'EOF'
@@ -1475,7 +1481,7 @@ EOF
 - Create: `apps/benchmark-runner/Dockerfile`
 - Modify: `apps/benchmark-runner/README.md` (expand the smoke-test section)
 
-Multi-stage build: deps stage installs guidellm + project; runtime stage copies the venv and runs `python -m runner`. Image is small enough — `python:3.11-slim` is ~50 MB, guidellm pulls ~400 MB of transformers/tokenizers. Final image ~500 MB.
+Multi-stage build: deps stage installs guidellm + project into the slim image's system site-packages; runtime stage copies that site-packages plus the project source and runs `python -m runner`. (No venv and no conda inside the image — `python:3.11-slim` already gives us a clean isolated Python.) Image is small enough — `python:3.11-slim` is ~50 MB, guidellm pulls ~400 MB of transformers/tokenizers. Final image ~500 MB.
 
 Verification: `docker build` succeeds; `docker run --rm IMAGE python -m runner` errors fast with `MissingEnvError` (proving the entrypoint is wired).
 
@@ -1615,7 +1621,7 @@ EOF
 **Files:**
 - Create: `.github/workflows/benchmark-runner.yml`
 
-A separate workflow for the runner — only fires on pushes that touch `apps/benchmark-runner/**`. Two jobs: `python` (lint + test under venv) and `docker-build` (build only, no push — Phase 3's deploy plan handles registry push). Independent of the existing `ci.yml` because the Python toolchain is orthogonal to pnpm.
+A separate workflow for the runner — only fires on pushes that touch `apps/benchmark-runner/**`. Two jobs: `python` (lint + test under `actions/setup-python` — no conda in CI; conda is a local-dev convenience only) and `docker-build` (build only, no push — Phase 3's deploy plan handles registry push). Independent of the existing `ci.yml` because the Python toolchain is orthogonal to pnpm.
 
 - [ ] **Step 8.1: Create the workflow**
 
@@ -1677,11 +1683,11 @@ jobs:
 
 ```bash
 cd apps/benchmark-runner
-source .venv/bin/activate
+conda activate modeldoctor-benchmark-runner
 pytest
 ruff check .
 ruff format --check .
-deactivate
+conda deactivate
 cd ../..
 docker build -t modeldoctor/benchmark-runner:dev apps/benchmark-runner/
 ```
