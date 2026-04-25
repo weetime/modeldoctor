@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { Module } from "@nestjs/common";
 import { ConfigModule as NestConfigModule } from "@nestjs/config";
 import { validateEnv } from "./env.schema.js";
@@ -8,6 +9,7 @@ import { validateEnv } from "./env.schema.js";
       isGlobal: true,
       cache: true,
       validate: validateEnv,
+      envFilePath: resolve(__dirname, "../../../..", ".env"),
     }),
   ],
   exports: [NestConfigModule],
