@@ -18,7 +18,7 @@ import {
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 
-const TMP_DIR = path.resolve(process.cwd(), "tmp");
+const TMP_DIR = path.resolve(__dirname, "../../../../..", "tmp");
 
 function narrowParsed(v: VegetaParsed): LoadTestParsed {
   return {
