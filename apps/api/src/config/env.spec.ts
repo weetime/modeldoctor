@@ -73,4 +73,33 @@ describe("validateEnv", () => {
     });
     expect(env.JWT_ACCESS_SECRET).toBe("a".repeat(32));
   });
+
+  // DISABLE_FIRST_USER_ADMIN string-to-boolean coercion (safe-by-default semantics).
+  // Regression guard: z.coerce.boolean() treated string "false" as truthy.
+  it("DISABLE_FIRST_USER_ADMIN defaults to false when unset", () => {
+    const env = validateEnv({ NODE_ENV: "test" });
+    expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
+  });
+
+  it('DISABLE_FIRST_USER_ADMIN reads string "false" as boolean false', () => {
+    const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: "false" });
+    expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
+  });
+
+  it('DISABLE_FIRST_USER_ADMIN reads string "true" as boolean true', () => {
+    const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: "true" });
+    expect(env.DISABLE_FIRST_USER_ADMIN).toBe(true);
+  });
+
+  it("DISABLE_FIRST_USER_ADMIN accepts native booleans", () => {
+    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN).toBe(true);
+    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN).toBe(false);
+  });
+
+  it("DISABLE_FIRST_USER_ADMIN treats non-true strings as false (safe default)", () => {
+    for (const v of ["", "0", "no", "off", "TRUE", "yes", "1"]) {
+      const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: v });
+      expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
+    }
+  });
 });
