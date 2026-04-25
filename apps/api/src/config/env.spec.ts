@@ -107,4 +107,30 @@ describe("validateEnv", () => {
       );
     }
   });
+
+  // BENCHMARK_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
+  // base64 string that decodes to exactly 32 bytes (AES-256 key length).
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY is optional", () => {
+    const env = validateEnv({ NODE_ENV: "test" });
+    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBeUndefined();
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
+    const key = Buffer.alloc(32, 0x42).toString("base64");
+    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: key });
+    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBe(key);
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
+    const tooShort = Buffer.alloc(16, 0x42).toString("base64");
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: tooShort }),
+    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
+    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+  });
 });
