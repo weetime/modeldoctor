@@ -25,7 +25,7 @@ Every commit body ends with `Co-Authored-By: Claude Opus 4.7 (1M context) <norep
 
 **Environment assumptions:**
 - Working directory: the current ModelDoctor repo root (whichever worktree the user is on; commands are written repo-root-relative).
-- The local Postgres dev DB is up (`docker compose up -d postgres` — already configured per Spec 2). Without it `db:migrate:dev` will hang.
+- The local Postgres dev DB is brew-managed (`brew services list` shows `postgresql@18` started). `DATABASE_URL` in `.env` points at `localhost:5432`. Without a running Postgres, `db:migrate:dev` will hang.
 - Node ≥ 20, pnpm ≥ 9 — same as Phase 0 of the NestJS refactor.
 - `pnpm install` has been run on the current branch (Prisma 6 client is installed).
 
@@ -51,13 +51,10 @@ Expected: every workspace package green. **If anything is red, stop** — Phase 
 - [ ] **Step 0.3: Confirm the dev DB is reachable**
 
 ```bash
-docker compose ps postgres
+brew services list | grep postgres
+pg_isready -h localhost -p 5432
 ```
-Expected: a row with `STATUS` containing `Up` / `running`. If the container is not running:
-```bash
-docker compose up -d postgres
-```
-Wait ~5 seconds for it to accept connections, then re-run the `ps` check.
+Expected: a `postgresql@<version>` row with status `started`, and `pg_isready` returns `localhost:5432 - accepting connections`. If Postgres is stopped, start it with `brew services start postgresql@18` (adjust version as installed) and wait a couple of seconds.
 
 - [ ] **Step 0.4: Create the Phase 1 branch**
 
