@@ -92,8 +92,12 @@ describe("validateEnv", () => {
   });
 
   it("DISABLE_FIRST_USER_ADMIN accepts native booleans", () => {
-    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN).toBe(true);
-    expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN).toBe(false);
+    expect(
+      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN,
+    ).toBe(true);
+    expect(
+      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN,
+    ).toBe(false);
   });
 
   it("DISABLE_FIRST_USER_ADMIN rejects ambiguous strings (loud failure on typos)", () => {
@@ -106,5 +110,48 @@ describe("validateEnv", () => {
         /DISABLE_FIRST_USER_ADMIN/,
       );
     }
+  });
+
+  // BENCHMARK_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
+  // base64 string that decodes to exactly 32 bytes (AES-256 key length).
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY is optional", () => {
+    const env = validateEnv({ NODE_ENV: "test" });
+    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBeUndefined();
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
+    const key = Buffer.alloc(32, 0x42).toString("base64");
+    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: key });
+    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBe(key);
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
+    const tooShort = Buffer.alloc(16, 0x42).toString("base64");
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: tooShort }),
+    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+  });
+
+  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
+    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+  });
+
+  // BENCHMARK_CALLBACK_SECRET: optional, but if provided must be ≥ 32 chars.
+  it("BENCHMARK_CALLBACK_SECRET is optional", () => {
+    const env = validateEnv({ NODE_ENV: "test" });
+    expect(env.BENCHMARK_CALLBACK_SECRET).toBeUndefined();
+  });
+
+  it("BENCHMARK_CALLBACK_SECRET accepts a 32-char string", () => {
+    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(32) });
+    expect(env.BENCHMARK_CALLBACK_SECRET).toBe("x".repeat(32));
+  });
+
+  it("BENCHMARK_CALLBACK_SECRET rejects a string shorter than 32 chars", () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(31) }),
+    ).toThrow(/BENCHMARK_CALLBACK_SECRET/);
   });
 });

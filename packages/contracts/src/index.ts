@@ -15,3 +15,4 @@ export * from "./debug-proxy.js";
 export * from "./e2e-test.js";
 export * from "./load-test.js";
 export * from "./auth.js";
+export * from "./benchmark.js";

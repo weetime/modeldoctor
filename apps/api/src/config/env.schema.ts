@@ -7,10 +7,9 @@ import { z } from "zod";
 // (typos, "TRUE", "yes", "1", "") throws a ZodError at startup so a
 // misconfigured deployment fails loudly instead of silently flipping.
 const envBoolean = z
-  .union(
-    [z.boolean(), z.enum(["true", "false"])],
-    { errorMap: () => ({ message: 'must be true, false, "true", or "false"' }) },
-  )
+  .union([z.boolean(), z.enum(["true", "false"])], {
+    errorMap: () => ({ message: 'must be true, false, "true", or "false"' }),
+  })
   .transform((v) => (typeof v === "boolean" ? v : v === "true"));
 
 export const EnvSchema = z
@@ -38,6 +37,26 @@ export const EnvSchema = z
     JWT_ACCESS_SECRET: z.string().min(32).optional(),
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
+    // 32-byte base64-encoded AES-256 key used to encrypt user-supplied API
+    // keys at rest. Optional in Phase 1 (the helper is added but no row uses
+    // it yet); Phase 4 tightens to required-when-not-test once the
+    // BenchmarkController persists encrypted rows.
+    BENCHMARK_API_KEY_ENCRYPTION_KEY: z
+      .string()
+      .optional()
+      .refine(
+        (v) => {
+          if (v === undefined) return true;
+          // Reject obviously non-base64 input. Buffer.from is permissive (it
+          // silently drops invalid chars) so we lint with a regex first.
+          if (!/^[A-Za-z0-9+/=]+$/.test(v)) return false;
+          return Buffer.from(v, "base64").length === 32;
+        },
+        { message: "must be a base64 string that decodes to exactly 32 bytes" },
+      ),
+    // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
+    // Phase 1 only validates length when present.
+    BENCHMARK_CALLBACK_SECRET: z.string().min(32).optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {
