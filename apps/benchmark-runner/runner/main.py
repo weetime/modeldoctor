@@ -16,17 +16,26 @@ from runner.metrics import map_guidellm_report_to_summary
 # Default location for guidellm's --output-path. Tests patch this.
 _OUTPUT_PATH = "/tmp/report.json"
 
-# Tail size for stderr included in the state=failed callback.
+# Tail size for stderr included in the state=failed callback. Sized to fit
+# inside the API's 2 KB stateMessage cap with room for the "guidellm exited
+# N: " prefix.
 _STDERR_TAIL_BYTES = 1024
+
+# Tail size for stdout shipped as `logs` on the metrics callback. guidellm's
+# progress output for a 30-min / 1k-request run is easily MBs; an uncapped
+# blob would overflow either an API body limit or the DB column. 16 KB is
+# generous for post-mortem debugging without risking either.
+_STDOUT_TAIL_BYTES = 16 * 1024
 
 logging.basicConfig(level=logging.INFO, format="[runner] %(message)s")
 log = logging.getLogger("runner")
 
 
-def _stderr_tail(stderr: bytes) -> str:
-    if not stderr:
+def _log_tail(buf: bytes, max_bytes: int) -> str:
+    """Decode the last ``max_bytes`` of a captured stream as UTF-8 (lossy)."""
+    if not buf:
         return ""
-    tail = stderr[-_STDERR_TAIL_BYTES:]
+    tail = buf[-max_bytes:]
     try:
         return tail.decode("utf-8", errors="replace")
     except Exception:  # noqa: BLE001 — defensive
@@ -74,7 +83,7 @@ def main() -> int:
     proc = subprocess.run(argv, capture_output=True, check=False)  # noqa: S603
 
     if proc.returncode != 0:
-        msg = f"guidellm exited {proc.returncode}: {_stderr_tail(proc.stderr)}"
+        msg = f"guidellm exited {proc.returncode}: {_log_tail(proc.stderr, _STDERR_TAIL_BYTES)}"
         log.error(msg)
         try:
             post_state(
@@ -115,7 +124,7 @@ def main() -> int:
             benchmark_id=cfg.benchmark_id,
             summary=summary,
             raw=report,
-            logs=proc.stdout.decode("utf-8", errors="replace") if proc.stdout else None,
+            logs=_log_tail(proc.stdout, _STDOUT_TAIL_BYTES) or None,
         )
         post_state(
             callback_url=cfg.callback_url,

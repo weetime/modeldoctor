@@ -80,6 +80,31 @@ def test_main_failure_posts_failed_with_stderr_tail(
     assert post_metrics.call_count == 0
 
 
+def test_main_caps_stdout_logs_at_stdout_tail_bytes(
+    patched: dict[str, MagicMock], env_minimal: dict[str, str], mocker: MockerFixture
+) -> None:
+    # Override the happy-path fake_run to also produce a 1 MB stdout blob.
+    big = b"x" * (1024 * 1024)
+
+    def fake_run_with_big_stdout(argv: list[str], **_: object) -> CompletedProcess[bytes]:
+        for a in argv:
+            if a.startswith("--output-path="):
+                Path(a.split("=", 1)[1]).write_text(FIXTURE.read_text())
+        return CompletedProcess(argv, 0, stdout=big, stderr=b"")
+
+    patched["run"].side_effect = fake_run_with_big_stdout
+    mocker.patch.dict("os.environ", env_minimal, clear=True)
+    mocker.patch("runner.main._OUTPUT_PATH", str(patched["tmp_dir"] / "report.json"))
+
+    rc = main_mod.main()
+    assert rc == 0
+
+    metrics_kwargs = patched["post_metrics"].call_args.kwargs
+    # logs payload is capped at _STDOUT_TAIL_BYTES (16 KB), not the full 1 MB.
+    assert metrics_kwargs["logs"] is not None
+    assert len(metrics_kwargs["logs"].encode("utf-8")) <= main_mod._STDOUT_TAIL_BYTES
+
+
 def test_main_missing_env_exits_with_error(
     mocker: MockerFixture, env_minimal: dict[str, str]
 ) -> None:
