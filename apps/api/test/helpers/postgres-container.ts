@@ -1,5 +1,5 @@
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { execSync } from "node:child_process";
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 
 export interface TestDatabase {
   container: StartedPostgreSqlContainer;

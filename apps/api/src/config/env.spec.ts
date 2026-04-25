@@ -25,9 +25,9 @@ describe("validateEnv", () => {
   });
 
   it("rejects JWT_ACCESS_SECRET shorter than 32 chars when provided", () => {
-    expect(() =>
-      validateEnv({ NODE_ENV: "test", JWT_ACCESS_SECRET: "short" }),
-    ).toThrow(/JWT_ACCESS_SECRET/);
+    expect(() => validateEnv({ NODE_ENV: "test", JWT_ACCESS_SECRET: "short" })).toThrow(
+      /JWT_ACCESS_SECRET/,
+    );
   });
 
   // DATABASE_URL enforcement tests
@@ -49,9 +49,9 @@ describe("validateEnv", () => {
   });
 
   it("rejects non-URL DATABASE_URL in production", () => {
-    expect(() =>
-      validateEnv({ NODE_ENV: "production", DATABASE_URL: "not-a-url" }),
-    ).toThrow(/DATABASE_URL/);
+    expect(() => validateEnv({ NODE_ENV: "production", DATABASE_URL: "not-a-url" })).toThrow(
+      /DATABASE_URL/,
+    );
   });
 
   // JWT_ACCESS_SECRET enforcement tests

@@ -4,7 +4,9 @@ export const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().int().positive().default(3001),
-    LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"]).default("info"),
+    LOG_LEVEL: z
+      .enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"])
+      .default("info"),
 
     // CORS in non-production — comma-separated origin list
     CORS_ORIGINS: z
