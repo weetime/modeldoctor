@@ -2,8 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import { type SidebarItem as Item, sidebarGroups, sidebarUtilityItems } from "./sidebar-config";
@@ -70,6 +71,25 @@ function ItemRow({ item, t, railCollapsed }: ItemRowProps) {
   );
 }
 
+async function handleLogout() {
+  // Clear the in-memory store first: otherwise a parallel 401 anywhere in the
+  // app could trigger silent-refresh and re-hydrate the session while the
+  // logout POST is still in flight. The server-side logout reads the refresh
+  // cookie, not the bearer, so dropping the access token locally is safe.
+  const token = useAuthStore.getState().accessToken;
+  useAuthStore.getState().clear();
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    // ignore — we've already locally logged the user out
+  }
+  window.location.href = "/login";
+}
+
 export function Sidebar() {
   const { t } = useTranslation("sidebar");
   const { t: tc } = useTranslation("common");
@@ -77,6 +97,7 @@ export function Sidebar() {
   const toggleGroup = useSidebarStore((s) => s.toggleGroup);
   const railCollapsed = useSidebarStore((s) => s.railCollapsed);
   const toggleRail = useSidebarStore((s) => s.toggleRail);
+  const userEmail = useAuthStore((s) => s.user?.email);
 
   return (
     <aside
@@ -159,6 +180,46 @@ export function Sidebar() {
       </nav>
 
       <Separator />
+
+      {userEmail ? (
+        <div
+          className={cn(
+            "flex items-center border-b border-border",
+            railCollapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
+          )}
+        >
+          {railCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Logout"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{userEmail}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {userEmail}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Logout"
+                title="Logout"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div className="px-2 py-3">
         {sidebarUtilityItems.map((item) => (

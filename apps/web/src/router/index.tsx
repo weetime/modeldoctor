@@ -1,3 +1,6 @@
+import { LoginPage } from "@/features/auth/LoginPage";
+import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RegisterPage } from "@/features/auth/RegisterPage";
 import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
@@ -30,38 +33,46 @@ function ComingSoonRoute({
 }
 
 export const routes: RouteObject[] = [
+  { path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
+  { path: "/register", element: <RegisterPage />, errorElement: <ErrorPage /> },
   {
-    path: "/",
-    element: <AppShell />,
+    element: <ProtectedRoute />,
     errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/load-test" replace /> },
-      { path: "load-test", element: <LoadTestPage /> },
       {
-        path: "soak",
-        element: <ComingSoonRoute icon={Timer} itemKey="soak" />,
+        path: "/",
+        element: <AppShell />,
+        errorElement: <ErrorPage />,
+        children: [
+          { index: true, element: <Navigate to="/load-test" replace /> },
+          { path: "load-test", element: <LoadTestPage /> },
+          {
+            path: "soak",
+            element: <ComingSoonRoute icon={Timer} itemKey="soak" />,
+          },
+          {
+            path: "streaming",
+            element: <ComingSoonRoute icon={Zap} itemKey="streaming" />,
+          },
+          { path: "e2e", element: <E2ESmokePage /> },
+          {
+            path: "regression",
+            element: <ComingSoonRoute icon={GitCompare} itemKey="regression" />,
+          },
+          {
+            path: "health",
+            element: <ComingSoonRoute icon={HeartPulse} itemKey="health" />,
+          },
+          {
+            path: "history",
+            element: <ComingSoonRoute icon={HistoryIcon} itemKey="history" />,
+          },
+          { path: "debug", element: <RequestDebugPage /> },
+          { path: "connections", element: <ConnectionsPage /> },
+          { path: "settings", element: <SettingsPage /> },
+          { path: "*", element: <NotFoundPage /> },
+        ],
       },
-      {
-        path: "streaming",
-        element: <ComingSoonRoute icon={Zap} itemKey="streaming" />,
-      },
-      { path: "e2e", element: <E2ESmokePage /> },
-      {
-        path: "regression",
-        element: <ComingSoonRoute icon={GitCompare} itemKey="regression" />,
-      },
-      {
-        path: "health",
-        element: <ComingSoonRoute icon={HeartPulse} itemKey="health" />,
-      },
-      {
-        path: "history",
-        element: <ComingSoonRoute icon={HistoryIcon} itemKey="history" />,
-      },
-      { path: "debug", element: <RequestDebugPage /> },
-      { path: "connections", element: <ConnectionsPage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ];
