@@ -96,10 +96,15 @@ describe("validateEnv", () => {
     expect(validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN).toBe(false);
   });
 
-  it("DISABLE_FIRST_USER_ADMIN treats non-true strings as false (safe default)", () => {
-    for (const v of ["", "0", "no", "off", "TRUE", "yes", "1"]) {
-      const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: v });
-      expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
+  it("DISABLE_FIRST_USER_ADMIN rejects ambiguous strings (loud failure on typos)", () => {
+    // Includes common boolean-ish conventions to surface a deliberate design
+    // choice: env vars are strict — typos like "ture" or case-mismatched
+    // "TRUE" must crash boot rather than silently resolve to false (the prior
+    // bug behavior with z.coerce.boolean() was the symmetric mistake).
+    for (const v of ["", "0", "no", "off", "TRUE", "yes", "1", "ture", "False"]) {
+      expect(() => validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: v })).toThrow(
+        /DISABLE_FIRST_USER_ADMIN/,
+      );
     }
   });
 });

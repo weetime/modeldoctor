@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// Reusable helper for boolean env vars. Avoid z.coerce.boolean() — it calls
+// Boolean(input), and Boolean("false") === true (every non-empty string is
+// truthy). This helper accepts either a native boolean (for in-process use)
+// or the exact strings "true"/"false" from process.env; anything else
+// (typos, "TRUE", "yes", "1", "") throws a ZodError at startup so a
+// misconfigured deployment fails loudly instead of silently flipping.
+const envBoolean = z
+  .union(
+    [z.boolean(), z.enum(["true", "false"])],
+    { errorMap: () => ({ message: 'must be true, false, "true", or "false"' }) },
+  )
+  .transform((v) => (typeof v === "boolean" ? v : v === "true"));
+
 export const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -25,12 +38,7 @@ export const EnvSchema = z
     JWT_ACCESS_SECRET: z.string().min(32).optional(),
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
-    // z.coerce.boolean() does Boolean(input), and Boolean("false") === true
-    // (any non-empty string is truthy). For an env-driven safety toggle that
-    // must default to OFF, only the literal string "true" should enable it.
-    DISABLE_FIRST_USER_ADMIN: z
-      .preprocess((v) => (typeof v === "string" ? v === "true" : v), z.boolean())
-      .default(false),
+    DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "test" && !env.DATABASE_URL) {
