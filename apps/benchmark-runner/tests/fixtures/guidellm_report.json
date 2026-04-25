@@ -1,0 +1,22 @@
+{
+  "benchmarks": [
+    {
+      "args": { "rate_type": "throughput" },
+      "metrics": {
+        "time_to_first_token_ms": { "mean": 120, "median": 110, "p95": 200, "p99": 320 },
+        "inter_token_latency_ms": { "mean": 25, "median": 22, "p95": 50, "p99": 80 },
+        "request_latency_ms": { "mean": 1800, "median": 1700, "p95": 2500, "p99": 3200 },
+        "requests_per_second": { "mean": 12.4 },
+        "output_tokens_per_second": { "mean": 1580 },
+        "prompt_tokens_per_second": { "mean": 12700 },
+        "tokens_per_second": { "mean": 14280 },
+        "request_concurrency": { "mean": 8.2, "max": 12 }
+      },
+      "summary": {
+        "requests": 1000,
+        "errors": 1,
+        "incomplete": 1
+      }
+    }
+  ]
+}
