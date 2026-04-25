@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -w -p tsconfig.build.json --preserveWatchOutput",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check src",
     "format": "biome format --write src",
