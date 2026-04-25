@@ -41,6 +41,8 @@ describe("BenchmarkExecutionDriver interface", () => {
     });
     expect(handle).toBe("noop:0");
     await expect(d.cancel(handle)).resolves.toBeUndefined();
+    await expect(d.cancel(handle)).resolves.toBeUndefined(); // idempotent
     await expect(d.cleanup(handle)).resolves.toBeUndefined();
+    await expect(d.cleanup(handle)).resolves.toBeUndefined(); // idempotent
   });
 });

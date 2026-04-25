@@ -3,8 +3,18 @@ import type { BenchmarkApiType, BenchmarkDataset, BenchmarkProfile } from "@mode
 /**
  * Per-run input passed to a driver. Sensitive values (decrypted apiKey,
  * HMAC callback token) are passed by value; the driver is responsible for
- * propagating them to the runner via env or k8s Secret without leaking to
- * logs or process listings.
+ * propagating them safely to the runner without leaking to logs or process
+ * listings.
+ *
+ * Implementer guidance:
+ * - K8sJobDriver: sensitive values MUST be passed via
+ *   `env.valueFrom.secretKeyRef`. Create a per-run Secret (with
+ *   `ownerReferences` to the Job so it gets garbage-collected on Job
+ *   deletion) and reference it from the container's `env`. Plain
+ *   `env.value` strings leak via `kubectl describe`, `kubectl get -o yaml`,
+ *   the K8s API audit log, and any operator with `get jobs` RBAC.
+ * - SubprocessDriver: pass via the spawned process's `env`, never as argv
+ *   (argv shows up in `ps`).
  */
 export interface BenchmarkExecutionContext {
   benchmarkId: string;
