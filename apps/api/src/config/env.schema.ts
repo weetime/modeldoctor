@@ -55,6 +55,9 @@ export const EnvSchema = z
         },
         { message: "must be a base64 string that decodes to exactly 32 bytes" },
       ),
+    // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
+    // Phase 1 only validates length when present.
+    BENCHMARK_CALLBACK_SECRET: z.string().min(32).optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {

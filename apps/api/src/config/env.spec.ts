@@ -133,4 +133,21 @@ describe("validateEnv", () => {
       validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
     ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
   });
+
+  // BENCHMARK_CALLBACK_SECRET: optional, but if provided must be ≥ 32 chars.
+  it("BENCHMARK_CALLBACK_SECRET is optional", () => {
+    const env = validateEnv({ NODE_ENV: "test" });
+    expect(env.BENCHMARK_CALLBACK_SECRET).toBeUndefined();
+  });
+
+  it("BENCHMARK_CALLBACK_SECRET accepts a 32-char string", () => {
+    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(32) });
+    expect(env.BENCHMARK_CALLBACK_SECRET).toBe("x".repeat(32));
+  });
+
+  it("BENCHMARK_CALLBACK_SECRET rejects a string shorter than 32 chars", () => {
+    expect(() =>
+      validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(31) }),
+    ).toThrow(/BENCHMARK_CALLBACK_SECRET/);
+  });
 });
