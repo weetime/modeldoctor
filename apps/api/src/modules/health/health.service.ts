@@ -1,16 +1,12 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import type { CheckVegetaResponse, HealthResponse } from "@modeldoctor/contracts";
+import type { CheckVegetaResponse } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 
 const execP = promisify(exec);
 
 @Injectable()
 export class HealthService {
-  getHealth(): HealthResponse {
-    return { status: "ok", timestamp: new Date().toISOString() };
-  }
-
   async checkVegeta(): Promise<CheckVegetaResponse> {
     try {
       const { stdout } = await execP("which vegeta");

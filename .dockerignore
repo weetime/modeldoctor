@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+.git
+.github
+.vscode
+tmp
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+docs
+ai-docs

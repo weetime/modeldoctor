@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "^10",
     "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7",
+    "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.3",
     "argon2": "^0.44.0",
@@ -41,6 +42,7 @@
     "passport-jwt": "^4.0.1",
     "pino": "^9",
     "pino-http": "^10",
+    "prisma": "^6.19.3",
     "reflect-metadata": "^0.2",
     "rxjs": "^7",
     "zod": "^3.23"
@@ -56,7 +58,6 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6",
     "pino-pretty": "^11",
-    "prisma": "^6.19.3",
     "supertest": "^7",
     "testcontainers": "^11.14.0",
     "unplugin-swc": "^1",

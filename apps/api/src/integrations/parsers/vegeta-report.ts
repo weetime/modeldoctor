@@ -63,7 +63,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
 
   const lines = report.split("\n");
 
-  lines.forEach((line) => {
+  for (const line of lines) {
     if (line.includes("Requests") && line.includes("[total")) {
       const match = line.match(/Requests\s+\[.*?\]\s+([\d.]+)/);
       if (match && match[1] !== undefined) parsed.requests = Number.parseInt(match[1]);
@@ -120,15 +120,15 @@ export function parseVegetaReport(report: string): VegetaParsed {
       const match = line.match(/\[code:count\]\s+(.*)/);
       if (match && match[1] !== undefined) {
         const codes = match[1].trim().split(/\s+/);
-        codes.forEach((code) => {
+        for (const code of codes) {
           const [status, count] = code.split(":");
           if (status && count) {
             parsed.statusCodes[status] = Number.parseInt(count);
           }
-        });
+        }
       }
     }
-  });
+  }
 
   return parsed;
 }
