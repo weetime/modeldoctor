@@ -33,6 +33,13 @@ export const EnvSchema = z
         message: "DATABASE_URL is required when NODE_ENV is not 'test'",
       });
     }
+    if (env.NODE_ENV !== "test" && !env.JWT_ACCESS_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["JWT_ACCESS_SECRET"],
+        message: "JWT_ACCESS_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
   });
 
 export type Env = z.infer<typeof EnvSchema>;

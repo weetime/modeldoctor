@@ -25,6 +25,6 @@
     "vitest": "^1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@swc/core", "prisma", "@prisma/client", "@prisma/engines"]
+    "onlyBuiltDependencies": ["@swc/core", "prisma", "@prisma/client", "@prisma/engines", "argon2"]
   }
 }

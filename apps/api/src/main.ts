@@ -2,6 +2,7 @@ import type { INestApplication } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import cookieParser from "cookie-parser";
 import { Logger } from "nestjs-pino";
 import { patchNestJsSwagger } from "nestjs-zod";
 import { AppModule } from "./app.module";
@@ -15,6 +16,8 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix("api");
 
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  app.use(cookieParser());
 
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   const origins = config.get("CORS_ORIGINS", { infer: true });

@@ -7,6 +7,7 @@ import {
 import { Controller, Get } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
+import { Public } from "../../common/decorators/public.decorator.js";
 import { HealthService } from "./health.service.js";
 
 class HealthResponseDto extends createZodDto(HealthResponseSchema) {}
@@ -17,6 +18,7 @@ class CheckVegetaResponseDto extends createZodDto(CheckVegetaResponseSchema) {}
 export class HealthController {
   constructor(private readonly health: HealthService) {}
 
+  @Public()
   @ApiOperation({ summary: "Liveness probe" })
   @ApiOkResponse({ type: HealthResponseDto })
   @Get("health")
@@ -24,6 +26,7 @@ export class HealthController {
     return this.health.getHealth();
   }
 
+  @Public()
   @ApiOperation({ summary: "Check if Vegeta CLI is installed on the host" })
   @ApiOkResponse({ type: CheckVegetaResponseDto })
   @Get("check-vegeta")

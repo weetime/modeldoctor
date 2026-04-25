@@ -1,10 +1,10 @@
-import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { Test } from "@nestjs/testing";
+import { CheckVegetaResponseSchema, HealthResponseSchema } from "@modeldoctor/contracts";
 import type { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
 import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module.js";
 import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
-import { HealthResponseSchema, CheckVegetaResponseSchema } from "@modeldoctor/contracts";
 
 describe("Health (e2e)", () => {
   let app: INestApplication;

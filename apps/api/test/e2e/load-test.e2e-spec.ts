@@ -1,30 +1,25 @@
-import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { Test } from "@nestjs/testing";
-import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { AppModule } from "../../src/app.module.js";
-import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
 describe("LoadTest (e2e)", () => {
-  let app: INestApplication;
+  let ctx: E2EContext;
+  let accessToken: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = moduleRef.createNestApplication();
-    app.setGlobalPrefix("api");
-    app.useGlobalFilters(new AllExceptionsFilter());
-    await app.init();
-  });
+    ctx = await bootE2E();
+    const registered = await registerUser(ctx.app, "loadtest@example.com", "Password1!");
+    accessToken = registered.token;
+  }, 120_000);
 
   afterAll(async () => {
-    await app.close();
+    await ctx.teardown();
   });
 
   it("rejects missing apiUrl", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({ apiKey: "k", model: "m", rate: 1, duration: 1 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
@@ -32,8 +27,9 @@ describe("LoadTest (e2e)", () => {
   });
 
   it("rejects rate=0", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({ apiUrl: "x", apiKey: "k", model: "m", rate: 0, duration: 1 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
@@ -42,8 +38,9 @@ describe("LoadTest (e2e)", () => {
   });
 
   it("rejects duration>3600", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
+      .set("Authorization", `Bearer ${accessToken}`)
       .send({ apiUrl: "x", apiKey: "k", model: "m", rate: 1, duration: 99999 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");

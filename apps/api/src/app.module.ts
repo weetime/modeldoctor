@@ -1,16 +1,22 @@
 import path from "node:path";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { ServeStaticModule } from "@nestjs/serve-static";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
+import { RolesGuard } from "./common/guards/roles.guard.js";
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
 import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
+import { AuthModule } from "./modules/auth/auth.module.js";
+import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { LoadTestModule } from "./modules/load-test/load-test.module.js";
+import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
   imports: [
@@ -56,6 +62,16 @@ import { LoadTestModule } from "./modules/load-test/load-test.module.js";
     DebugProxyModule,
     E2ETestModule,
     LoadTestModule,
+    UsersModule,
+    AuthModule,
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
+    }),
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard }, // runs after JwtAuthGuard
+    { provide: APP_GUARD, useClass: ThrottlerGuard }, // runs last — throttles by IP
   ],
 })
 export class AppModule implements NestModule {
