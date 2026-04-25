@@ -7,7 +7,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "concurrently -k -n web,api -c cyan,magenta \"pnpm -F @modeldoctor/web dev\" \"pnpm -F @modeldoctor/api start:dev\"",
+    "dev": "pnpm -F @modeldoctor/contracts build && concurrently -k -n contracts,web,api -c yellow,cyan,magenta \"pnpm -F @modeldoctor/contracts dev\" \"pnpm -F @modeldoctor/web dev\" \"pnpm -F @modeldoctor/api start:dev\"",
     "build": "pnpm -F @modeldoctor/contracts build && pnpm -F @modeldoctor/web build && pnpm -F @modeldoctor/api build",
     "start": "node apps/api/dist/main.js",
     "lint": "pnpm -r --if-present lint",
