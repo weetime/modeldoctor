@@ -35,3 +35,22 @@ class TestMapGuidellmReport:
         summary = map_guidellm_report_to_summary(broken)
         assert summary["ttft"]["mean"] == 0
         assert summary["concurrency"]["max"] == 0
+
+    def test_null_metric_objects_default_to_zero(self) -> None:
+        # guidellm has historically emitted JSON null for absent metric groups
+        # rather than omitting the key. Both shapes must collapse to zeros.
+        report = {
+            "benchmarks": [
+                {
+                    "metrics": {
+                        "time_to_first_token_ms": None,
+                        "request_concurrency": None,
+                    },
+                    "summary": None,
+                }
+            ]
+        }
+        summary = map_guidellm_report_to_summary(report)
+        assert summary["ttft"] == {"mean": 0, "p50": 0, "p95": 0, "p99": 0}
+        assert summary["concurrency"] == {"mean": 0, "max": 0}
+        assert summary["requests"] == {"total": 0, "success": 0, "error": 0, "incomplete": 0}
