@@ -1,0 +1,46 @@
+# RBAC required by the ModelDoctor API to manage benchmark Jobs.
+#
+# Scope: namespace-bound (modeldoctor-benchmarks). No cluster-wide perms.
+# The API runs as ServiceAccount modeldoctor-api in namespace `modeldoctor`
+# (rename to match your actual API namespace before applying).
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: modeldoctor-benchmarks
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: modeldoctor-api
+  namespace: modeldoctor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: modeldoctor-benchmark-driver
+  namespace: modeldoctor-benchmarks
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: modeldoctor-benchmark-driver
+  namespace: modeldoctor-benchmarks
+subjects:
+  - kind: ServiceAccount
+    name: modeldoctor-api
+    namespace: modeldoctor
+roleRef:
+  kind: Role
+  name: modeldoctor-benchmark-driver
+  apiGroup: rbac.authorization.k8s.io
