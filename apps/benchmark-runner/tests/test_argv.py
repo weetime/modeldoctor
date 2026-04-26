@@ -94,6 +94,18 @@ class TestBuildGuidellmArgv:
         argv = build_guidellm_argv(_config(), output_path="/tmp/r.json")
         assert "--disable-console" in argv
 
+    def test_api_key_is_passed_via_backend_kwargs(self) -> None:
+        # OpenAIHTTPBackend reads `api_key` from --backend-kwargs JSON and
+        # turns it into the Authorization header. Without this, every real
+        # vLLM/OpenAI target 401s.
+        import json as _json
+
+        argv = build_guidellm_argv(_config(api_key="sk-secret-123"), output_path="/tmp/r.json")
+        bk = next((a for a in argv if a.startswith("--backend-kwargs=")), None)
+        assert bk is not None, "argv must include --backend-kwargs"
+        payload = _json.loads(bk.split("=", 1)[1])
+        assert payload == {"api_key": "sk-secret-123"}
+
     def test_sharegpt_not_yet_supported(self) -> None:
         # ShareGPT is deferred to Phase 6 — the runner refuses now so a
         # mis-routed Phase-1 controller request fails loud.

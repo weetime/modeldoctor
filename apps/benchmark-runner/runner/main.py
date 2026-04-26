@@ -42,6 +42,24 @@ def _log_tail(buf: bytes, max_bytes: int) -> str:
         return repr(tail)
 
 
+def _redacted_argv(argv: list[str]) -> list[str]:
+    """Return ``argv`` with secret-bearing flags rewritten for safe logging.
+
+    The orchestrator logs the full benchmark-runner argv on startup and the
+    captured stdout/stderr later flow into the metrics callback's ``logs``
+    field — so the API + DB will end up with whatever appears here. Any flag
+    we know carries a secret must be redacted before that log line emits.
+    """
+    redacted: list[str] = []
+    for a in argv:
+        # --backend-kwargs JSON contains api_key (see runner.argv).
+        if a.startswith("--backend-kwargs="):
+            redacted.append("--backend-kwargs=***REDACTED***")
+        else:
+            redacted.append(a)
+    return redacted
+
+
 def main() -> int:
     """Run a single benchmark; return process exit code."""
     raw_env = dict(os.environ)
@@ -79,7 +97,7 @@ def main() -> int:
         log.error("running callback failed: %s — continuing anyway", e)
 
     argv = build_guidellm_argv(cfg, output_path=_OUTPUT_PATH)
-    log.info("running: %s", " ".join(argv))
+    log.info("running: %s", " ".join(_redacted_argv(argv)))
     proc = subprocess.run(argv, capture_output=True, check=False)  # noqa: S603
 
     if proc.returncode != 0:
@@ -99,7 +117,8 @@ def main() -> int:
 
     # Parse the report file produced by guidellm.
     try:
-        report = json.loads(open(_OUTPUT_PATH).read())  # noqa: SIM115
+        with open(_OUTPUT_PATH) as f:
+            report = json.load(f)
     except Exception as e:  # noqa: BLE001
         log.error("failed to read report at %s: %s", _OUTPUT_PATH, e)
         try:
