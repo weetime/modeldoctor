@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BenchmarkStateBadge } from "./BenchmarkStateBadge";
 import { BenchmarkActionsCell } from "./BenchmarkActionsCell";
+import { BenchmarkCreateModal } from "./BenchmarkCreateModal";
 import {
   benchmarkKeys,
   useBenchmarkList,
@@ -316,6 +317,8 @@ export function BenchmarkListPage() {
           </>
         )}
       </div>
+
+      <BenchmarkCreateModal />
 
       {/* Cancel confirmation */}
       <AlertDialog

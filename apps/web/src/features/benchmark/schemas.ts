@@ -1,2 +1,7 @@
-// Filled in Task 3.
-export {};
+import {
+  CreateBenchmarkRequestSchema,
+  type CreateBenchmarkRequest,
+} from "@modeldoctor/contracts";
+
+export { CreateBenchmarkRequestSchema };
+export type { CreateBenchmarkRequest };
