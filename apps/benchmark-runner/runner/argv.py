@@ -10,6 +10,7 @@ validation; this module assumes a well-typed ``EnvConfig``.
 
 from __future__ import annotations
 
+import json
 from typing import Literal, NamedTuple
 
 
@@ -47,12 +48,20 @@ def build_guidellm_argv(cfg: EnvConfig, *, output_path: str) -> list[str]:
             "the controller should have rejected this request",
         )
 
+    # The OpenAIHTTPBackend reads `api_key` from --backend-kwargs JSON and
+    # turns it into the Authorization Bearer header. We don't have a less
+    # leak-prone channel — guidellm doesn't read OPENAI_API_KEY from env —
+    # so the orchestrator (runner.main) must redact this argv element before
+    # logging it.
+    backend_kwargs = json.dumps({"api_key": cfg.api_key}, separators=(",", ":"))
+
     argv: list[str] = [
         "benchmark-runner",
         "benchmark",
         "run",
         # OpenAI-compatible HTTP backend covers vLLM and most other servers.
         "--backend=openai_http",
+        f"--backend-kwargs={backend_kwargs}",
         f"--target={cfg.target_url}",
         f"--model={cfg.model}",
         f"--max-requests={cfg.total_requests}",

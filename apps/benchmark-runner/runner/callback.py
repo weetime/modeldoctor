@@ -12,6 +12,16 @@ import requests
 _TIMEOUT_SECONDS = 10
 
 
+def _join(callback_url: str, path: str) -> str:
+    """Concatenate ``callback_url`` and ``path`` without double slashes.
+
+    Drivers may pass ``CALLBACK_URL=http://api/`` (trailing slash) or
+    ``http://api`` (none); both must produce a single ``/api/internal/...``
+    path component or NestJS strict routing returns 404.
+    """
+    return f"{callback_url.rstrip('/')}/{path.lstrip('/')}"
+
+
 def _post(url: str, token: str, body: dict[str, Any]) -> None:
     resp = requests.post(
         url,
@@ -38,7 +48,7 @@ def post_state(
         body["stateMessage"] = message
     if progress is not None:
         body["progress"] = progress
-    _post(f"{callback_url}/api/internal/benchmarks/{benchmark_id}/state", token, body)
+    _post(_join(callback_url, f"api/internal/benchmarks/{benchmark_id}/state"), token, body)
 
 
 def post_metrics(
@@ -54,4 +64,4 @@ def post_metrics(
     body: dict[str, Any] = {"metricsSummary": summary, "rawMetrics": raw}
     if logs is not None:
         body["logs"] = logs
-    _post(f"{callback_url}/api/internal/benchmarks/{benchmark_id}/metrics", token, body)
+    _post(_join(callback_url, f"api/internal/benchmarks/{benchmark_id}/metrics"), token, body)

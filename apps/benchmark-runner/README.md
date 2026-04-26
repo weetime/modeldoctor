@@ -22,6 +22,7 @@ conda activate modeldoctor-benchmark-runner
 pip install -e ".[dev]"
 pytest
 ruff check .
+ruff format --check .   # CI runs this too — `ruff format .` to auto-apply
 ```
 
 (Non-conda contributors can substitute `python3.11 -m venv .venv && source .venv/bin/activate` —
