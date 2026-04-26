@@ -26,6 +26,18 @@ class TestPostState:
         url = fake_post.call_args.args[0]
         assert url == "http://api:3001/api/internal/benchmarks/ck-xyz/state"
 
+    def test_callback_url_trailing_slash_is_normalized(self, fake_post: MagicMock) -> None:
+        # NestJS strict routing 404s on `//api/internal/...` — drivers that
+        # accidentally pass a trailing slash must still hit the right route.
+        post_state(
+            callback_url="http://api:3001/",
+            token="t",
+            benchmark_id="ck",
+            state="running",
+        )
+        url = fake_post.call_args.args[0]
+        assert url == "http://api:3001/api/internal/benchmarks/ck/state"
+
     def test_authorization_header_is_bearer(self, fake_post: MagicMock) -> None:
         post_state(
             callback_url="http://api:3001",
