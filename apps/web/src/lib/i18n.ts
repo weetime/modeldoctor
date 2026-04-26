@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enBenchmark from "@/locales/en-US/benchmark.json";
 import enCommon from "@/locales/en-US/common.json";
 import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
@@ -8,6 +9,7 @@ import enE2E from "@/locales/en-US/e2e.json";
 import enLoadTest from "@/locales/en-US/load-test.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
+import zhBenchmark from "@/locales/zh-CN/benchmark.json";
 import zhCommon from "@/locales/zh-CN/common.json";
 import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
@@ -26,6 +28,7 @@ void i18n.use(initReactI18next).init({
       e2e: enE2E,
       debug: enDebug,
       settings: enSettings,
+      benchmark: enBenchmark,
     },
     "zh-CN": {
       common: zhCommon,
@@ -35,12 +38,13 @@ void i18n.use(initReactI18next).init({
       e2e: zhE2E,
       debug: zhDebug,
       settings: zhSettings,
+      benchmark: zhBenchmark,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
   fallbackLng: "en-US",
   defaultNS: "common",
-  ns: ["common", "sidebar", "connections", "load-test", "e2e", "debug", "settings"],
+  ns: ["common", "sidebar", "connections", "load-test", "e2e", "debug", "settings", "benchmark"],
   interpolation: { escapeValue: false },
   returnNull: false,
 });
