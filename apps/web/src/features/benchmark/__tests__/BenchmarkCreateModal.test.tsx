@@ -19,6 +19,33 @@ import { api } from "@/lib/api-client";
 import { BenchmarkCreateModal } from "../BenchmarkCreateModal";
 import type { BenchmarkRun } from "@modeldoctor/contracts";
 
+const SOURCE_RUN: BenchmarkRun = {
+  id: "src1",
+  userId: "u1",
+  name: "vllm-llama3-tput",
+  description: "first run",
+  profile: "throughput",
+  apiType: "chat",
+  apiUrl: "https://api.test/v1",
+  model: "llama-3-8b",
+  datasetName: "random",
+  datasetInputTokens: 2048,
+  datasetOutputTokens: 256,
+  datasetSeed: 42,
+  requestRate: 0,
+  totalRequests: 500,
+  state: "completed",
+  stateMessage: null,
+  jobName: "j",
+  progress: 1,
+  metricsSummary: null,
+  rawMetrics: null,
+  logs: null,
+  createdAt: "2026-04-26T14:22:00Z",
+  startedAt: "2026-04-26T14:22:00Z",
+  completedAt: "2026-04-26T14:24:00Z",
+};
+
 const FAKE_RUN: BenchmarkRun = {
   id: "newid",
   userId: "u1",
@@ -149,5 +176,31 @@ describe("BenchmarkCreateModal — basic tab", () => {
     expect(
       await screen.findByText(/detail page for navigation target/i),
     ).toBeInTheDocument();
+  });
+
+  it("?duplicate=src1 prefills form with source values and blanks apiKey", async () => {
+    vi.mocked(api.get).mockResolvedValue(SOURCE_RUN);
+
+    render(<BenchmarkCreateModal />, {
+      wrapper: ({ children }) => (
+        <Wrapper initialEntries={["/benchmarks?duplicate=src1"]}>
+          {children}
+        </Wrapper>
+      ),
+    });
+
+    expect(
+      await screen.findByText(/duplicating from/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^name$/i)).toHaveValue("vllm-llama3-tput-2");
+    expect(screen.getByLabelText(/api url/i)).toHaveValue(
+      "https://api.test/v1",
+    );
+    expect(screen.getByLabelText(/^model$/i)).toHaveValue("llama-3-8b");
+    expect(screen.getByLabelText(/api key/i)).toHaveValue("");
+    expect(screen.getByLabelText(/api key/i)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
   });
 });

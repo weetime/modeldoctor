@@ -28,11 +28,30 @@ import {
 import { BenchmarkEndpointFields } from "./BenchmarkEndpointFields";
 import { BenchmarkProfilePicker } from "./BenchmarkProfilePicker";
 import { profileLabelKey } from "./profiles";
-import { useCreateBenchmark } from "./queries";
+import { useCreateBenchmark, useBenchmarkDetail } from "./queries";
 import {
   CreateBenchmarkRequestSchema,
+  type BenchmarkRun,
   type CreateBenchmarkRequest,
 } from "./schemas";
+
+function mapDuplicateToDefaults(run: BenchmarkRun): CreateBenchmarkRequest {
+  return {
+    name: `${run.name}-2`,
+    description: run.description ?? undefined,
+    profile: run.profile,
+    apiType: run.apiType,
+    apiUrl: run.apiUrl,
+    apiKey: "",
+    model: run.model,
+    datasetName: run.datasetName,
+    datasetInputTokens: run.datasetInputTokens ?? undefined,
+    datasetOutputTokens: run.datasetOutputTokens ?? undefined,
+    datasetSeed: run.datasetSeed ?? undefined,
+    requestRate: run.requestRate,
+    totalRequests: run.totalRequests,
+  };
+}
 
 const BASIC_FIELDS: (keyof CreateBenchmarkRequest)[] = [
   "name",
@@ -59,7 +78,11 @@ export function BenchmarkCreateModal() {
   const nameId = useId();
   const descId = useId();
 
-  const open = searchParams.get("create") === "1";
+  const duplicateId = searchParams.get("duplicate");
+  const open = searchParams.get("create") === "1" || duplicateId !== null;
+
+  const sourceQuery = useBenchmarkDetail(duplicateId ?? "");
+  const sourceRun = duplicateId ? sourceQuery.data : undefined;
 
   const form = useForm<CreateBenchmarkRequest>({
     resolver: zodResolver(CreateBenchmarkRequestSchema),
@@ -81,12 +104,19 @@ export function BenchmarkCreateModal() {
   });
 
   useEffect(() => {
-    if (!open) form.reset();
-  }, [open, form]);
+    if (!open) {
+      form.reset();
+      return;
+    }
+    if (sourceRun) {
+      form.reset(mapDuplicateToDefaults(sourceRun));
+    }
+  }, [open, sourceRun, form]);
 
   const close = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("create");
+    next.delete("duplicate");
     setSearchParams(next, { replace: true });
   };
 
@@ -117,6 +147,14 @@ export function BenchmarkCreateModal() {
           <DialogTitle>{t("create.title")}</DialogTitle>
           <DialogDescription>{t("create.subtitle")}</DialogDescription>
         </DialogHeader>
+
+        {duplicateId && sourceRun && (
+          <Alert className="border-yellow-300 bg-yellow-50 text-yellow-900">
+            <AlertDescription>
+              {t("create.duplicateBanner", { name: sourceRun.name })}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <FormProvider {...form}>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -157,7 +195,7 @@ export function BenchmarkCreateModal() {
                     {...form.register("description")}
                   />
                 </div>
-                <BenchmarkEndpointFields />
+                <BenchmarkEndpointFields requireApiKeyHighlight={!!duplicateId} />
               </TabsContent>
 
               <TabsContent value="config" className="space-y-3 pt-2">

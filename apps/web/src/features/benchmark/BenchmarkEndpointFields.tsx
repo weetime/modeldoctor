@@ -13,9 +13,13 @@ import {
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { CreateBenchmarkRequest } from "./schemas";
 
-export function BenchmarkEndpointFields() {
+export function BenchmarkEndpointFields({
+  requireApiKeyHighlight = false,
+}: {
+  requireApiKeyHighlight?: boolean;
+}) {
   const { t } = useTranslation("benchmark");
-  const { register, setValue, control, formState } =
+  const { register, setValue, watch, control, formState } =
     useFormContext<CreateBenchmarkRequest>();
   const apiTypeId = useId();
   const apiUrlId = useId();
@@ -35,6 +39,8 @@ export function BenchmarkEndpointFields() {
   };
 
   const errors = formState.errors;
+  const apiKey = watch("apiKey");
+  const apiKeyError = !!errors.apiKey || (requireApiKeyHighlight && !apiKey);
 
   return (
     <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 space-y-3">
@@ -107,7 +113,8 @@ export function BenchmarkEndpointFields() {
           id={apiKeyId}
           type="password"
           {...register("apiKey")}
-          aria-invalid={!!errors.apiKey}
+          aria-invalid={apiKeyError}
+          className={apiKeyError ? "border-destructive" : undefined}
         />
       </div>
     </div>
