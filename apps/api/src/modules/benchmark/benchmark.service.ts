@@ -215,6 +215,19 @@ export class BenchmarkService {
     });
     return toBenchmarkRunDto(updated);
   }
+
+  async delete(id: string, user: JwtPayload): Promise<void> {
+    const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
+    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
+    if (!(TERMINAL_STATES as readonly string[]).includes(row.state)) {
+      throw new ConflictException({
+        code: ErrorCodes.BENCHMARK_NOT_TERMINAL,
+        message: `Cannot delete a benchmark in state '${row.state}'. Cancel it first.`,
+      });
+    }
+    await this.prisma.benchmarkRun.delete({ where: { id: row.id } });
+  }
 }
 
 export function toBenchmarkRunDto(row: NonNullable<BenchmarkRow>): BenchmarkRunDto {

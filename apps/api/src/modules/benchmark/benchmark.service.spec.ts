@@ -412,3 +412,42 @@ describe("BenchmarkService.cancel", () => {
     await expect(svc.cancel("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe("BenchmarkService.delete", () => {
+  let prisma: PrismaStub;
+  let driver: ReturnType<typeof buildDriver>;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    prisma = buildPrisma();
+    driver = buildDriver();
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+  });
+
+  it.each(["completed", "failed", "canceled"] as const)(
+    "deletes terminal-state row %s",
+    async (state) => {
+      prisma.benchmarkRun.findFirst.mockResolvedValue({ id: "r1", userId: user.sub, state });
+      prisma.benchmarkRun.delete.mockResolvedValue({});
+      await svc.delete("r1", user);
+      expect(prisma.benchmarkRun.delete).toHaveBeenCalledWith({ where: { id: "r1" } });
+    },
+  );
+
+  it.each(["pending", "submitted", "running"] as const)(
+    "rejects delete of non-terminal state %s with BENCHMARK_NOT_TERMINAL",
+    async (state) => {
+      prisma.benchmarkRun.findFirst.mockResolvedValue({ id: "r1", userId: user.sub, state });
+      await expect(svc.delete("r1", user)).rejects.toMatchObject({
+        response: { code: "BENCHMARK_NOT_TERMINAL" },
+        status: 409,
+      });
+      expect(prisma.benchmarkRun.delete).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns 404 for missing / non-owned", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    await expect(svc.delete("missing", user)).rejects.toMatchObject({ status: 404 });
+  });
+});
