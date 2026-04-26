@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -60,6 +61,16 @@ export function BenchmarkDetailPage() {
       }
     }
   }, [data?.state, data?.id, qc]);
+
+  const errorToasted = useRef(false);
+  useEffect(() => {
+    if (isError && !errorToasted.current) {
+      toast.error(t("detail.errors.polling"));
+      errorToasted.current = true;
+    } else if (!isError) {
+      errorToasted.current = false;
+    }
+  }, [isError, t]);
 
   if (!id) {
     return (

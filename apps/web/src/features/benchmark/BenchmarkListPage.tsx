@@ -333,7 +333,7 @@ export function BenchmarkListPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("actions.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>Back</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pendingCancel) cancelMut.mutate(pendingCancel);
@@ -359,7 +359,7 @@ export function BenchmarkListPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("actions.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>Back</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
               onClick={() => {

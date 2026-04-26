@@ -19,6 +19,11 @@ export function BenchmarkLogsPanel({
   const preRef = useRef<HTMLPreElement>(null);
   const isTerminal = (TERMINAL_STATES as readonly string[]).includes(state);
 
+  const size = useMemo(
+    () => (logs ? new TextEncoder().encode(logs).length : 0),
+    [logs],
+  );
+
   useEffect(() => {
     if (preRef.current) {
       preRef.current.scrollTop = preRef.current.scrollHeight;
@@ -32,11 +37,6 @@ export function BenchmarkLogsPanel({
       </div>
     );
   }
-
-  const size = useMemo(
-    () => new TextEncoder().encode(logs).length,
-    [logs],
-  );
 
   return (
     <details
