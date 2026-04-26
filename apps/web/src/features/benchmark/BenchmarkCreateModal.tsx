@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { BenchmarkEndpointFields } from "./BenchmarkEndpointFields";
 import { BenchmarkProfilePicker } from "./BenchmarkProfilePicker";
+import { profileLabelKey } from "./profiles";
 import { useCreateBenchmark } from "./queries";
 import {
   CreateBenchmarkRequestSchema,
@@ -92,6 +93,8 @@ export function BenchmarkCreateModal() {
   const errors = form.formState.errors;
   const basicHasError = BASIC_FIELDS.some((f) => errors[f]);
   const configHasError = CONFIG_FIELDS.some((f) => errors[f]);
+  const profile = form.watch("profile");
+  const datasetName = form.watch("datasetName");
   const navigate = useNavigate();
   const createMut = useCreateBenchmark();
 
@@ -159,30 +162,21 @@ export function BenchmarkCreateModal() {
 
               <TabsContent value="config" className="space-y-3 pt-2">
                 <BenchmarkProfilePicker />
-                {form.watch("profile") !== "custom" &&
-                  form.watch("profile") !== "sharegpt" && (
-                    <Alert>
-                      <AlertDescription>
-                        {t("create.presetLoaded", {
-                          profile: t(
-                            `profiles.${
-                              form.watch("profile") === "long_context"
-                                ? "longContext"
-                                : form.watch("profile") === "generation_heavy"
-                                  ? "generationHeavy"
-                                  : form.watch("profile")
-                            }`,
-                          ),
-                        })}
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                {profile !== "custom" && profile !== "sharegpt" && (
+                  <Alert>
+                    <AlertDescription>
+                      {t("create.presetLoaded", {
+                        profile: t(`profiles.${profileLabelKey(profile)}`),
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>{t("create.fields.dataset")}</Label>
                     <Select
-                      value={form.watch("datasetName")}
+                      value={datasetName}
                       onValueChange={(v) =>
                         form.setValue(
                           "datasetName",
