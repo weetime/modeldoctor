@@ -57,6 +57,12 @@ export const EnvSchema = z
     // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
     // Phase 1 only validates length when present.
     BENCHMARK_CALLBACK_SECRET: z.string().min(32).optional(),
+    // Phase 3 driver + k8s config — full validation in Task 9
+    BENCHMARK_DRIVER: z.enum(["subprocess", "k8s"]).default("subprocess"),
+    BENCHMARK_CALLBACK_URL: z.string().url().optional(),
+    BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
+    BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
+    BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {
@@ -72,6 +78,34 @@ export const EnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["JWT_ACCESS_SECRET"],
         message: "JWT_ACCESS_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_API_KEY_ENCRYPTION_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_API_KEY_ENCRYPTION_KEY"],
+        message: "BENCHMARK_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_CALLBACK_SECRET"],
+        message: "BENCHMARK_CALLBACK_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_CALLBACK_URL"],
+        message: "BENCHMARK_CALLBACK_URL is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.BENCHMARK_DRIVER === "k8s" && !env.BENCHMARK_RUNNER_IMAGE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_RUNNER_IMAGE"],
+        message: "BENCHMARK_RUNNER_IMAGE is required when BENCHMARK_DRIVER='k8s'",
       });
     }
   });

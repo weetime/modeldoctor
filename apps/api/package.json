@@ -21,6 +21,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.mts"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^0.21",
     "@modeldoctor/contracts": "workspace:*",
     "@nestjs/common": "^10",
     "@nestjs/config": "^3",
@@ -28,6 +29,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10",
+    "@nestjs/schedule": "^4",
     "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7",
     "@nestjs/terminus": "^11.1.1",
