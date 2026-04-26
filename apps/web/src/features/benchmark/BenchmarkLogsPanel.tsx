@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { BenchmarkState } from "@modeldoctor/contracts";
 import { TERMINAL_STATES } from "./queries";
@@ -33,7 +33,10 @@ export function BenchmarkLogsPanel({
     );
   }
 
-  const size = new TextEncoder().encode(logs).length;
+  const size = useMemo(
+    () => new TextEncoder().encode(logs).length,
+    [logs],
+  );
 
   return (
     <details

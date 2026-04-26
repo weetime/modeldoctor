@@ -115,13 +115,12 @@ export function BenchmarkDetailPage() {
   const isTerminal = (TERMINAL_STATES as readonly string[]).includes(
     data.state,
   );
-  const duration =
-    data.startedAt && (data.completedAt ?? null)
-      ? formatDistanceStrict(
-          new Date(data.startedAt),
-          new Date(data.completedAt ?? Date.now()),
-        )
-      : null;
+  const duration = data.startedAt
+    ? formatDistanceStrict(
+        new Date(data.startedAt),
+        new Date(data.completedAt ?? Date.now()),
+      )
+    : null;
 
   return (
     <>
