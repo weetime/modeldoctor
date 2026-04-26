@@ -53,7 +53,7 @@ def test_main_happy_path_posts_running_completed_and_metrics(
     metrics_kwargs = patched["post_metrics"].call_args.kwargs
     assert "metricsSummary" not in metrics_kwargs  # passed as 'summary' kwarg
     assert metrics_kwargs["summary"]["ttft"]["mean"] == 120
-    assert metrics_kwargs["raw"]["benchmarks"][0]["summary"]["requests"] == 1000
+    assert metrics_kwargs["raw"]["benchmarks"][0]["metrics"]["request_totals"]["total"] == 1000
 
 
 def test_main_failure_posts_failed_with_stderr_tail(

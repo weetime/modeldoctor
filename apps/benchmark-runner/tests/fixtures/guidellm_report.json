@@ -1,21 +1,52 @@
 {
   "benchmarks": [
     {
-      "args": { "rate_type": "throughput" },
       "metrics": {
-        "time_to_first_token_ms": { "mean": 120, "median": 110, "p95": 200, "p99": 320 },
-        "inter_token_latency_ms": { "mean": 25, "median": 22, "p95": 50, "p99": 80 },
-        "request_latency_ms": { "mean": 1800, "median": 1700, "p95": 2500, "p99": 3200 },
-        "requests_per_second": { "mean": 12.4 },
-        "output_tokens_per_second": { "mean": 1580 },
-        "prompt_tokens_per_second": { "mean": 12700 },
-        "tokens_per_second": { "mean": 14280 },
-        "request_concurrency": { "mean": 8.2, "max": 12 }
-      },
-      "summary": {
-        "requests": 1000,
-        "errors": 1,
-        "incomplete": 1
+        "request_totals": {
+          "successful": 998,
+          "errored": 1,
+          "incomplete": 1,
+          "total": 1000
+        },
+        "request_latency": {
+          "successful": {
+            "mean": 1.800,
+            "median": 1.700,
+            "max": 3.500,
+            "percentiles": { "p50": 1.700, "p95": 2.500, "p99": 3.200 }
+          }
+        },
+        "time_to_first_token_ms": {
+          "successful": {
+            "mean": 120,
+            "median": 110,
+            "max": 400,
+            "percentiles": { "p50": 110, "p95": 200, "p99": 320 }
+          }
+        },
+        "inter_token_latency_ms": {
+          "successful": {
+            "mean": 25,
+            "median": 22,
+            "max": 100,
+            "percentiles": { "p50": 22, "p95": 50, "p99": 80 }
+          }
+        },
+        "requests_per_second": {
+          "successful": { "mean": 12.4 }
+        },
+        "output_tokens_per_second": {
+          "successful": { "mean": 1580 }
+        },
+        "prompt_tokens_per_second": {
+          "successful": { "mean": 12700 }
+        },
+        "tokens_per_second": {
+          "successful": { "mean": 14280 }
+        },
+        "request_concurrency": {
+          "successful": { "mean": 8.2, "max": 12 }
+        }
       }
     }
   ]
