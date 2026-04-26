@@ -313,3 +313,102 @@ describe("BenchmarkService.list + detail", () => {
     await expect(svc.detail("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe("BenchmarkService.cancel", () => {
+  let prisma: PrismaStub;
+  let driver: ReturnType<typeof buildDriver>;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    prisma = buildPrisma();
+    driver = buildDriver();
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+    prisma.benchmarkRun.update.mockImplementation(async ({ where: { id }, data }) => ({
+      id,
+      userId: user.sub,
+      apiKeyCipher: "<encrypted>",
+      apiUrl: "https://x",
+      apiType: "chat",
+      model: "m",
+      profile: "throughput",
+      datasetName: "random",
+      datasetInputTokens: 1024,
+      datasetOutputTokens: 128,
+      datasetSeed: null,
+      requestRate: 0,
+      totalRequests: 1000,
+      name: "n",
+      description: null,
+      state: data.state ?? "running",
+      stateMessage: data.stateMessage ?? null,
+      progress: 0.5,
+      jobName: "subprocess:1",
+      metricsSummary: null,
+      rawMetrics: null,
+      logs: null,
+      createdAt: new Date("2026-04-26T00:00:00Z"),
+      startedAt: new Date("2026-04-26T00:00:01Z"),
+      completedAt: data.completedAt ?? null,
+    }));
+  });
+
+  it("cancel of pending: marks canceled without calling driver", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue({
+      id: "r1",
+      userId: user.sub,
+      state: "pending",
+      jobName: null,
+    });
+    await svc.cancel("r1", user);
+    expect(driver.cancel).not.toHaveBeenCalled();
+    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(upd.data.state).toBe("canceled");
+  });
+
+  it("cancel of running: calls driver.cancel and marks canceled", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue({
+      id: "r1",
+      userId: user.sub,
+      state: "running",
+      jobName: "subprocess:1",
+    });
+    await svc.cancel("r1", user);
+    expect(driver.cancel).toHaveBeenCalledWith("subprocess:1");
+    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(upd.data.state).toBe("canceled");
+  });
+
+  it("cancel still marks canceled if driver.cancel throws (best effort)", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue({
+      id: "r1",
+      userId: user.sub,
+      state: "running",
+      jobName: "subprocess:1",
+    });
+    driver.cancel.mockRejectedValue(new Error("k8s glitch"));
+    await svc.cancel("r1", user);
+    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(upd.data.state).toBe("canceled");
+  });
+
+  it.each(["completed", "failed", "canceled"] as const)(
+    "cancel of terminal state %s rejects with BENCHMARK_ALREADY_TERMINAL",
+    async (state) => {
+      prisma.benchmarkRun.findFirst.mockResolvedValue({
+        id: "r1",
+        userId: user.sub,
+        state,
+        jobName: null,
+      });
+      await expect(svc.cancel("r1", user)).rejects.toMatchObject({
+        response: { code: "BENCHMARK_ALREADY_TERMINAL" },
+        status: 400,
+      });
+    },
+  );
+
+  it("cancel returns 404 for missing / non-owned", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    await expect(svc.cancel("missing", user)).rejects.toMatchObject({ status: 404 });
+  });
+});

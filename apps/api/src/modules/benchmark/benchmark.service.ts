@@ -186,6 +186,35 @@ export class BenchmarkService {
     if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
     return toBenchmarkRunDto(row);
   }
+
+  async cancel(id: string, user: JwtPayload): Promise<BenchmarkRunDto> {
+    const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
+    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
+
+    if ((TERMINAL_STATES as readonly string[]).includes(row.state)) {
+      throw new BadRequestException({
+        code: ErrorCodes.BENCHMARK_ALREADY_TERMINAL,
+        message: `Cannot cancel a benchmark in state '${row.state}'`,
+      });
+    }
+
+    if (row.state !== "pending" && row.jobName) {
+      try {
+        await this.driver.cancel(row.jobName);
+      } catch (e) {
+        this.log.warn(
+          `driver.cancel threw for ${row.id} (handle ${row.jobName}); marking canceled anyway: ${(e as Error).message}`,
+        );
+      }
+    }
+
+    const updated = await this.prisma.benchmarkRun.update({
+      where: { id: row.id },
+      data: { state: "canceled", completedAt: new Date() },
+    });
+    return toBenchmarkRunDto(updated);
+  }
 }
 
 export function toBenchmarkRunDto(row: NonNullable<BenchmarkRow>): BenchmarkRunDto {
