@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { format, formatDistanceStrict } from "date-fns";
 import { ArrowLeft, SearchX } from "lucide-react";
@@ -23,6 +24,7 @@ import { BenchmarkMetricsGrid } from "./BenchmarkMetricsGrid";
 import { BenchmarkLogsPanel } from "./BenchmarkLogsPanel";
 import {
   TERMINAL_STATES,
+  benchmarkKeys,
   useBenchmarkDetail,
   useCancelBenchmark,
   useDeleteBenchmark,
@@ -40,6 +42,24 @@ export function BenchmarkDetailPage() {
   const deleteMut = useDeleteBenchmark();
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const qc = useQueryClient();
+  const prevState = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const next = data?.state;
+    const prev = prevState.current;
+    prevState.current = next;
+    if (
+      prev !== undefined &&
+      next !== undefined &&
+      prev !== next &&
+      (TERMINAL_STATES as readonly string[]).includes(next)
+    ) {
+      if (data) {
+        qc.invalidateQueries({ queryKey: benchmarkKeys.detail(data.id) });
+      }
+    }
+  }, [data?.state, data?.id, qc, data]);
 
   if (!id) {
     return (

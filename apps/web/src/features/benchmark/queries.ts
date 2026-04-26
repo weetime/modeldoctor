@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
+  BenchmarkRun,
   CreateBenchmarkRequest,
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
@@ -29,8 +30,22 @@ export function useBenchmarkDetail(id: string) {
     queryKey: benchmarkKeys.detail(id),
     queryFn: () => benchmarkApi.get(id),
     enabled: id.length > 0,
-    // Polling rules added in Task 6.
-    staleTime: 0,
+    refetchInterval: (query) => {
+      if (query.state.status === "error") return false;
+      const data = query.state.data as BenchmarkRun | undefined;
+      if (!data) return 2000;
+      if ((TERMINAL_STATES as readonly string[]).includes(data.state)) {
+        return false;
+      }
+      return 2000;
+    },
+    refetchIntervalInBackground: false,
+    retry: (failureCount, error) => {
+      const status = (error as { status?: number } | null)?.status;
+      if (status !== undefined && status < 500) return false;
+      return failureCount < 3;
+    },
+    retryDelay: (failureCount) => Math.min(5000 * failureCount, 30_000),
   });
 }
 
