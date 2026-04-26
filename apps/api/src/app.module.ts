@@ -2,6 +2,7 @@ import path from "node:path";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
@@ -12,6 +13,7 @@ import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
+import { BenchmarkModule } from "./modules/benchmark/benchmark.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
@@ -62,6 +64,8 @@ import { UsersModule } from "./modules/users/users.module.js";
     DebugProxyModule,
     E2ETestModule,
     LoadTestModule,
+    BenchmarkModule,
+    ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
     ThrottlerModule.forRoot({
