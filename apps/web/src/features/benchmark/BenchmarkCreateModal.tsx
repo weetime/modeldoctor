@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -17,7 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BenchmarkEndpointFields } from "./BenchmarkEndpointFields";
+import { BenchmarkProfilePicker } from "./BenchmarkProfilePicker";
+import { useCreateBenchmark } from "./queries";
 import {
   CreateBenchmarkRequestSchema,
   type CreateBenchmarkRequest,
@@ -32,9 +42,21 @@ const BASIC_FIELDS: (keyof CreateBenchmarkRequest)[] = [
   "model",
 ];
 
+const CONFIG_FIELDS: (keyof CreateBenchmarkRequest)[] = [
+  "profile",
+  "datasetName",
+  "datasetInputTokens",
+  "datasetOutputTokens",
+  "requestRate",
+  "totalRequests",
+  "datasetSeed",
+];
+
 export function BenchmarkCreateModal() {
   const { t } = useTranslation("benchmark");
   const [searchParams, setSearchParams] = useSearchParams();
+  const nameId = useId();
+  const descId = useId();
 
   const open = searchParams.get("create") === "1";
 
@@ -67,15 +89,18 @@ export function BenchmarkCreateModal() {
     setSearchParams(next, { replace: true });
   };
 
-  const onSubmit = form.handleSubmit((values) => {
-    // Real submit lands in Task 4.
-    toast.success("Submitted (stub)");
-    console.info("benchmark submit stub", values);
-    close();
-  });
-
   const errors = form.formState.errors;
   const basicHasError = BASIC_FIELDS.some((f) => errors[f]);
+  const configHasError = CONFIG_FIELDS.some((f) => errors[f]);
+  const navigate = useNavigate();
+  const createMut = useCreateBenchmark();
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    const run = await createMut.mutateAsync(values);
+    toast.success(`Benchmark "${run.name}" submitted`);
+    close();
+    navigate(`/benchmarks/${run.id}`);
+  });
 
   return (
     <Dialog
@@ -105,25 +130,133 @@ export function BenchmarkCreateModal() {
                 </TabsTrigger>
                 <TabsTrigger value="config">
                   {t("create.tabs.config")}
+                  {configHasError && (
+                    <span
+                      data-testid="config-error-dot"
+                      className="ml-1 inline-block size-1.5 rounded-full bg-destructive"
+                    />
+                  )}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-3 pt-2">
                 <div>
-                  <Label>{t("create.fields.name")}</Label>
-                  <Input {...form.register("name")} />
+                  <Label htmlFor={nameId}>{t("create.fields.name")}</Label>
+                  <Input id={nameId} {...form.register("name")} />
                 </div>
                 <div>
-                  <Label>{t("create.fields.description")}</Label>
-                  <Textarea rows={2} {...form.register("description")} />
+                  <Label htmlFor={descId}>
+                    {t("create.fields.description")}
+                  </Label>
+                  <Textarea
+                    id={descId}
+                    rows={2}
+                    {...form.register("description")}
+                  />
                 </div>
                 <BenchmarkEndpointFields />
               </TabsContent>
 
-              <TabsContent value="config" className="pt-2">
-                <p className="text-sm text-muted-foreground">
-                  Configuration tab implementation arrives in Task 4.
-                </p>
+              <TabsContent value="config" className="space-y-3 pt-2">
+                <BenchmarkProfilePicker />
+                {form.watch("profile") !== "custom" &&
+                  form.watch("profile") !== "sharegpt" && (
+                    <Alert>
+                      <AlertDescription>
+                        {t("create.presetLoaded", {
+                          profile: t(
+                            `profiles.${
+                              form.watch("profile") === "long_context"
+                                ? "longContext"
+                                : form.watch("profile") === "generation_heavy"
+                                  ? "generationHeavy"
+                                  : form.watch("profile")
+                            }`,
+                          ),
+                        })}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{t("create.fields.dataset")}</Label>
+                    <Select
+                      value={form.watch("datasetName")}
+                      onValueChange={(v) =>
+                        form.setValue(
+                          "datasetName",
+                          v as "random" | "sharegpt",
+                          {
+                            shouldValidate: true,
+                          },
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="random">
+                          {t("datasets.random")}
+                        </SelectItem>
+                        <SelectItem value="sharegpt" disabled>
+                          {t("datasets.sharegpt")} {t("comingSoon")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>{t("create.fields.seed")}</Label>
+                    <Input
+                      type="number"
+                      {...form.register("datasetSeed", {
+                        setValueAs: (v) =>
+                          v === "" ? undefined : Number(v),
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{t("create.fields.inputTokens")}</Label>
+                    <Input
+                      type="number"
+                      {...form.register("datasetInputTokens", {
+                        valueAsNumber: true,
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>{t("create.fields.outputTokens")}</Label>
+                    <Input
+                      type="number"
+                      {...form.register("datasetOutputTokens", {
+                        valueAsNumber: true,
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{t("create.fields.requestRate")}</Label>
+                    <Input
+                      type="number"
+                      {...form.register("requestRate", { valueAsNumber: true })}
+                    />
+                  </div>
+                  <div>
+                    <Label>{t("create.fields.totalRequests")}</Label>
+                    <Input
+                      type="number"
+                      {...form.register("totalRequests", {
+                        valueAsNumber: true,
+                      })}
+                    />
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
 
@@ -131,8 +264,11 @@ export function BenchmarkCreateModal() {
               <Button type="button" variant="outline" onClick={close}>
                 {t("actions.cancel")}
               </Button>
-              <Button type="submit" disabled={!form.formState.isValid}>
-                {t("create.submit")}
+              <Button
+                type="submit"
+                disabled={!form.formState.isValid || createMut.isPending}
+              >
+                {createMut.isPending ? "…" : t("create.submit")}
               </Button>
             </DialogFooter>
           </form>
