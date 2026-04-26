@@ -451,3 +451,115 @@ describe("BenchmarkService.delete", () => {
     await expect(svc.delete("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe("BenchmarkService.handleStateCallback", () => {
+  let prisma: PrismaStub;
+  let driver: ReturnType<typeof buildDriver>;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    prisma = buildPrisma();
+    driver = buildDriver();
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+  });
+
+  it("missing row: returns silently without UPDATE", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue(null);
+    await svc.handleStateCallback("missing", { state: "running" });
+    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+  });
+
+  it("submitted → running: UPDATE state and progress", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "submitted" });
+    prisma.benchmarkRun.update.mockResolvedValue({});
+    await svc.handleStateCallback("r1", { state: "running", progress: 0.1 });
+    expect(prisma.benchmarkRun.update).toHaveBeenCalledWith({
+      where: { id: "r1" },
+      data: { state: "running", progress: 0.1, stateMessage: null },
+    });
+  });
+
+  it("running → running (duplicate): no UPDATE", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
+    await svc.handleStateCallback("r1", { state: "running" });
+    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+  });
+
+  it("running → completed: UPDATE with completedAt", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
+    prisma.benchmarkRun.update.mockResolvedValue({});
+    await svc.handleStateCallback("r1", { state: "completed", progress: 1 });
+    const args = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(args.data.state).toBe("completed");
+    expect(args.data.completedAt).toBeInstanceOf(Date);
+    expect(args.data.progress).toBe(1);
+  });
+
+  it.each(["completed", "failed", "canceled"] as const)(
+    "%s → running: silent warn, no UPDATE (forward-only)",
+    async (state) => {
+      prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state });
+      await svc.handleStateCallback("r1", { state: "running" });
+      expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("running → failed: UPDATE with stateMessage truncated to 2048 chars", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
+    prisma.benchmarkRun.update.mockResolvedValue({});
+    const huge = "x".repeat(5000);
+    await svc.handleStateCallback("r1", { state: "failed", stateMessage: huge });
+    const args = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(args.data.state).toBe("failed");
+    expect((args.data.stateMessage as string).length).toBeLessThanOrEqual(2048);
+  });
+});
+
+describe("BenchmarkService.handleMetricsCallback", () => {
+  let prisma: PrismaStub;
+  let driver: ReturnType<typeof buildDriver>;
+  let svc: BenchmarkService;
+
+  const summary = {
+    ttft: { mean: 1, p50: 1, p95: 2, p99: 3 },
+    itl: { mean: 1, p50: 1, p95: 2, p99: 3 },
+    e2eLatency: { mean: 1, p50: 1, p95: 2, p99: 3 },
+    requestsPerSecond: { mean: 10 },
+    outputTokensPerSecond: { mean: 100 },
+    inputTokensPerSecond: { mean: 50 },
+    totalTokensPerSecond: { mean: 150 },
+    concurrency: { mean: 1, max: 1 },
+    requests: { total: 100, success: 99, error: 1, incomplete: 0 },
+  };
+
+  beforeEach(() => {
+    prisma = buildPrisma();
+    driver = buildDriver();
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+  });
+
+  it("writes metrics regardless of state (forensic value)", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "failed" });
+    prisma.benchmarkRun.update.mockResolvedValue({});
+    await svc.handleMetricsCallback("r1", {
+      metricsSummary: summary,
+      rawMetrics: { foo: 1 },
+      logs: "tail",
+    });
+    const args = prisma.benchmarkRun.update.mock.calls[0][0];
+    expect(args.data.metricsSummary).toEqual(summary);
+    expect(args.data.rawMetrics).toEqual({ foo: 1 });
+    expect(args.data.logs).toBe("tail");
+    // state was NOT touched
+    expect(args.data.state).toBeUndefined();
+  });
+
+  it("missing row: silent ok", async () => {
+    prisma.benchmarkRun.findUnique.mockResolvedValue(null);
+    await svc.handleMetricsCallback("missing", {
+      metricsSummary: summary,
+      rawMetrics: null,
+    });
+    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+  });
+});

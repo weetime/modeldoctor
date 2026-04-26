@@ -1,7 +1,9 @@
 import {
+  type BenchmarkMetricsCallback,
   type BenchmarkRun as BenchmarkRunDto,
   type BenchmarkRunSummary,
   type BenchmarkState,
+  type BenchmarkStateCallback,
   type CreateBenchmarkRequest,
   ErrorCodes,
   type ListBenchmarksQuery,
@@ -16,6 +18,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Prisma } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -227,6 +230,72 @@ export class BenchmarkService {
       });
     }
     await this.prisma.benchmarkRun.delete({ where: { id: row.id } });
+  }
+
+  async handleStateCallback(id: string, body: BenchmarkStateCallback): Promise<void> {
+    const row = await this.prisma.benchmarkRun.findUnique({ where: { id } });
+    if (!row) {
+      this.log.warn(`state callback for missing run ${id}; ignoring`);
+      return;
+    }
+    const cur = row.state as BenchmarkState;
+    const next = body.state;
+
+    // Forward-only: a callback cannot drag a terminal row backwards.
+    const isTerminal = (TERMINAL_STATES as readonly string[]).includes(cur);
+    if (isTerminal) {
+      this.log.warn(
+        `state callback ${next} for already-terminal run ${id} (current=${cur}); ignoring`,
+      );
+      return;
+    }
+
+    if (next === "running") {
+      if (cur === "running") return; // duplicate ok
+      await this.prisma.benchmarkRun.update({
+        where: { id },
+        data: {
+          state: "running",
+          progress: body.progress ?? null,
+          stateMessage: null,
+        },
+      });
+      return;
+    }
+
+    if (next === "completed" || next === "failed") {
+      await this.prisma.benchmarkRun.update({
+        where: { id },
+        data: {
+          state: next,
+          stateMessage: body.stateMessage?.slice(0, 2048) ?? null,
+          progress: body.progress ?? null,
+          completedAt: new Date(),
+        },
+      });
+      return;
+    }
+    // Other inbound values (e.g. "canceled") aren't expected from the runner;
+    // ignore them.
+  }
+
+  async handleMetricsCallback(id: string, body: BenchmarkMetricsCallback): Promise<void> {
+    const row = await this.prisma.benchmarkRun.findUnique({ where: { id } });
+    if (!row) {
+      this.log.warn(`metrics callback for missing run ${id}; ignoring`);
+      return;
+    }
+    await this.prisma.benchmarkRun.update({
+      where: { id },
+      data: {
+        metricsSummary: body.metricsSummary as Prisma.InputJsonValue,
+        rawMetrics:
+          body.rawMetrics === undefined || body.rawMetrics === null
+            ? Prisma.DbNull
+            : (body.rawMetrics as Prisma.InputJsonValue),
+        logs: body.logs ?? null,
+      },
+    });
   }
 }
 
