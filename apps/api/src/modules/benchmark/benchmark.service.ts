@@ -4,8 +4,17 @@ import {
   type BenchmarkState,
   type CreateBenchmarkRequest,
   ErrorCodes,
+  type ListBenchmarksQuery,
+  type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
-import { BadRequestException, ConflictException, Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
@@ -149,6 +158,33 @@ export class BenchmarkService {
       },
     });
     return toBenchmarkRunDto(updated);
+  }
+
+  async list(query: ListBenchmarksQuery, user: JwtPayload): Promise<ListBenchmarksResponse> {
+    const limit = query.limit;
+    const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
+    const where: Record<string, unknown> = { ...userScope };
+    if (query.state) where.state = query.state;
+    if (query.profile) where.profile = query.profile;
+    if (query.search) where.name = { contains: query.search, mode: "insensitive" };
+
+    const rows = await this.prisma.benchmarkRun.findMany({
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      where,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+    const pageRows = rows.slice(0, limit);
+    const items = pageRows.map(toBenchmarkRunSummary);
+    const nextCursor = rows.length > limit ? pageRows[pageRows.length - 1].id : null;
+    return { items, nextCursor };
+  }
+
+  async detail(id: string, user: JwtPayload): Promise<BenchmarkRunDto> {
+    const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
+    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
+    return toBenchmarkRunDto(row);
   }
 }
 

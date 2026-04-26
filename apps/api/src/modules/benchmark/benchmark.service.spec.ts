@@ -216,3 +216,100 @@ describe("BenchmarkService.create + start", () => {
     expect(updateCall.data.stateMessage).toMatch(/rbac denied/);
   });
 });
+
+describe("BenchmarkService.list + detail", () => {
+  let prisma: PrismaStub;
+  let driver: ReturnType<typeof buildDriver>;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    prisma = buildPrisma();
+    driver = buildDriver();
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+  });
+
+  function row(over: Partial<{ id: string; name: string; userId: string }> = {}) {
+    return {
+      id: over.id ?? "r1",
+      userId: over.userId ?? user.sub,
+      apiKeyCipher: "<encrypted>",
+      apiUrl: "https://x",
+      apiType: "chat",
+      model: "m",
+      profile: "throughput",
+      datasetName: "random",
+      datasetInputTokens: 1024,
+      datasetOutputTokens: 128,
+      datasetSeed: null,
+      requestRate: 0,
+      totalRequests: 1000,
+      name: over.name ?? "n",
+      description: null,
+      state: "running",
+      stateMessage: null,
+      progress: 0.4,
+      jobName: "subprocess:1",
+      metricsSummary: null,
+      rawMetrics: null,
+      logs: null,
+      createdAt: new Date("2026-04-26T00:00:00Z"),
+      startedAt: new Date("2026-04-26T00:00:01Z"),
+      completedAt: null,
+    };
+  }
+
+  it("scopes non-admin queries to the caller's userId", async () => {
+    prisma.benchmarkRun.findMany.mockResolvedValue([row({ id: "a" })]);
+    await svc.list({ limit: 20 }, user);
+    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
+    expect(args.where.userId).toBe(user.sub);
+  });
+
+  it("admin queries are not scoped by userId", async () => {
+    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    await svc.list({ limit: 20 }, { ...user, roles: ["admin"] });
+    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
+    expect(args.where.userId).toBeUndefined();
+  });
+
+  it("returns peek+1 next-cursor when there are more rows", async () => {
+    const rows = Array.from({ length: 21 }, (_v, i) => row({ id: `r${i}` }));
+    prisma.benchmarkRun.findMany.mockResolvedValue(rows);
+    const out = await svc.list({ limit: 20 }, user);
+    expect(out.items).toHaveLength(20);
+    expect(out.nextCursor).toBe("r19");
+  });
+
+  it("nextCursor is null when at the end", async () => {
+    prisma.benchmarkRun.findMany.mockResolvedValue([row({ id: "r0" })]);
+    const out = await svc.list({ limit: 20 }, user);
+    expect(out.nextCursor).toBeNull();
+  });
+
+  it("applies state + profile filters when provided", async () => {
+    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    await svc.list({ limit: 20, state: "running", profile: "latency" }, user);
+    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
+    expect(args.where.state).toBe("running");
+    expect(args.where.profile).toBe("latency");
+  });
+
+  it("applies search as case-insensitive name contains", async () => {
+    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    await svc.list({ limit: 20, search: "Foo" }, user);
+    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
+    expect(args.where.name).toEqual({ contains: "Foo", mode: "insensitive" });
+  });
+
+  it("detail returns the full row sans apiKeyCipher", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue(row({ id: "x" }));
+    const dto = await svc.detail("x", user);
+    expect(dto.id).toBe("x");
+    expect(dto).not.toHaveProperty("apiKeyCipher");
+  });
+
+  it("detail returns 404 for non-existent / non-owned rows", async () => {
+    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    await expect(svc.detail("missing", user)).rejects.toMatchObject({ status: 404 });
+  });
+});
