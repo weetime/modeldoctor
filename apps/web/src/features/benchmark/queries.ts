@@ -1,4 +1,14 @@
-import type { ListBenchmarksQuery } from "@modeldoctor/contracts";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import type {
+  CreateBenchmarkRequest,
+  ListBenchmarksQuery,
+} from "@modeldoctor/contracts";
+import { benchmarkApi } from "./api";
 
 export const benchmarkKeys = {
   all: ["benchmarks"] as const,
@@ -12,19 +22,9 @@ export const benchmarkKeys = {
 export const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
 export type TerminalState = (typeof TERMINAL_STATES)[number];
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { toast } from "sonner";
-import { benchmarkApi } from "./api";
-import type {
-  CreateBenchmarkRequest,
-  ListBenchmarksQuery as LBQ,
-} from "@modeldoctor/contracts";
+// Hooks added in Task 2 (list) and Task 5 (detail).
 
-export function useBenchmarkList(q: Partial<LBQ>) {
+export function useBenchmarkList(q: Partial<ListBenchmarksQuery>) {
   return useQuery({
     queryKey: benchmarkKeys.list(q),
     queryFn: () => benchmarkApi.list(q),

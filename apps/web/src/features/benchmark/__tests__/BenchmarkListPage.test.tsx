@@ -3,18 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ListBenchmarksResponse } from "@modeldoctor/contracts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 import { BenchmarkListPage } from "../BenchmarkListPage";
-import type { ListBenchmarksResponse } from "@modeldoctor/contracts";
-
-// Radix UI uses Pointer Events and scrollIntoView APIs which jsdom doesn't fully implement.
-beforeAll(() => {
-  window.HTMLElement.prototype.hasPointerCapture = () => false;
-  window.HTMLElement.prototype.setPointerCapture = () => {};
-  window.HTMLElement.prototype.releasePointerCapture = () => {};
-  window.HTMLElement.prototype.scrollIntoView = () => {};
-});
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
