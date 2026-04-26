@@ -107,8 +107,59 @@ Health check: `GET /api/health` returns 200 with `{"status":"ok","info":{"databa
 | `JWT_ACCESS_EXPIRES_IN` | No | `15m` | jsonwebtoken-style duration for access tokens |
 | `JWT_REFRESH_EXPIRES_DAYS` | No | `7` | Refresh-token TTL (also the `md_refresh` cookie's Max-Age) |
 | `DISABLE_FIRST_USER_ADMIN` | No | `false` | When `true`, the first user registered is NOT auto-promoted to the `admin` role |
+| `BENCHMARK_DRIVER` | No | `subprocess` | `subprocess` (local guidellm) or `k8s` (creates a `batch/v1/Job`) |
+| `BENCHMARK_CALLBACK_URL` | **Yes** (non-test) | — | Base URL the runner posts back to (e.g. `http://localhost:3001`, `http://host.k3d.internal:3001`, or `http://modeldoctor-api.modeldoctor.svc:3001`) |
+| `BENCHMARK_API_KEY_ENCRYPTION_KEY` | **Yes** (non-test) | — | 32-byte AES-256 key, base64-encoded — encrypts user-supplied benchmark API keys at rest |
+| `BENCHMARK_CALLBACK_SECRET` | **Yes** (non-test) | — | ≥ 32 chars; per-run HMAC token signing key |
+| `BENCHMARK_K8S_NAMESPACE` | No | `modeldoctor-benchmarks` | Namespace where benchmark Jobs and Secrets land (only used when driver is `k8s`) |
+| `BENCHMARK_RUNNER_IMAGE` | **Yes** (driver=`k8s`) | — | Container image for the runner (e.g. `gpustack/benchmark-runner:v0.0.4`) |
+| `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS` | No | `1800` | Default `--max-seconds` cap applied to runs |
 
-In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers.
+In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers. The `BENCHMARK_*` non-test-required keys follow the same rule.
+
+### Benchmark feature local workflows
+
+The benchmark module launches `gpustack/benchmark-runner` (a guidellm wrapper) either as a Kubernetes Job (`BENCHMARK_DRIVER=k8s`) or as a local subprocess (`BENCHMARK_DRIVER=subprocess`, default).
+
+**Subprocess workflow** (~90% of dev — no K8s needed):
+
+```bash
+# One-time: install benchmark-runner into a conda env on PATH.
+conda create -n modeldoctor-benchmark-runner python=3.11 -y
+conda activate modeldoctor-benchmark-runner
+pip install -e apps/benchmark-runner
+
+# Confirm the CLI is reachable.
+which benchmark-runner
+
+# Generate secrets, then start the dev server.
+echo "BENCHMARK_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> .env
+pnpm dev
+```
+
+POST a benchmark via curl (replace `$JWT` with a token from `/auth/login`):
+
+```bash
+curl -X POST http://localhost:3001/api/benchmarks \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "smoke 1",
+    "profile": "latency",
+    "apiType": "chat",
+    "apiUrl": "https://api.openai.com/v1",
+    "apiKey": "sk-...",
+    "model": "gpt-4o-mini",
+    "datasetName": "random",
+    "datasetInputTokens": 128,
+    "datasetOutputTokens": 64,
+    "requestRate": 1,
+    "totalRequests": 5
+  }'
+```
+
+**k3d workflow** (validates the K8s driver locally): see [`deploy/k8s/README.md`](deploy/k8s/README.md).
 
 ## Repo layout
 
