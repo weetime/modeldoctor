@@ -29,23 +29,43 @@ docker build -t modeldoctor/benchmark-runner:dev apps/benchmark-runner/
 
 ## Running the image (manual smoke test)
 
-See `docs/superpowers/specs/2026-04-25-benchmark-design.md` §5.2 for the env-var contract.
-A minimal invocation:
+The image is meant to be launched by Phase 3's drivers, not by hand. For
+image-level smoke testing:
+
+### Sanity check (just verify the entrypoint)
+
+```bash
+docker run --rm modeldoctor/benchmark-runner:dev
+```
+Expected: exits 1 with `MissingEnvError: Missing required env var: BENCHMARK_ID`.
+Confirms `python -m runner` is wired correctly.
+
+### Real run against a vLLM target
+
+Assumes you have a vLLM (or any OpenAI-compatible) server reachable, and a
+local stub server listening on port 3001 that prints incoming POSTs (a 30-line
+Python `aiohttp` script — see Phase 6's planned integration test).
 
 ```bash
 docker run --rm \
-  -e BENCHMARK_ID=ck-test \
+  -e BENCHMARK_ID=dev-$(date +%s) \
   -e CALLBACK_URL=http://host.docker.internal:3001 \
   -e CALLBACK_TOKEN=dev-token \
-  -e TARGET_URL=http://host.docker.internal:8000/v1 \
-  -e API_KEY=sk-test \
+  -e TARGET_URL=https://your-vllm-host/v1 \
+  -e API_KEY="$VLLM_API_KEY" \
   -e MODEL=facebook/opt-125m \
   -e API_TYPE=chat \
   -e DATASET_NAME=random \
-  -e PROMPT_TOKENS=1024 \
-  -e OUTPUT_TOKENS=128 \
+  -e PROMPT_TOKENS=128 \
+  -e OUTPUT_TOKENS=64 \
   -e REQUEST_RATE=0 \
   -e TOTAL_REQUESTS=10 \
-  -e MAX_DURATION_SECONDS=600 \
+  -e MAX_DURATION_SECONDS=120 \
   modeldoctor/benchmark-runner:dev
 ```
+
+Expected behavior:
+1. Stub server receives `POST /api/internal/benchmarks/<id>/state` with `{"state":"running"}`.
+2. Stub server receives `POST /api/internal/benchmarks/<id>/metrics` with the full summary.
+3. Stub server receives `POST /api/internal/benchmarks/<id>/state` with `{"state":"completed","progress":1.0}`.
+4. Container exits 0.
