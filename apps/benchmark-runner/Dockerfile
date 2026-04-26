@@ -1,33 +1,17 @@
 # syntax=docker/dockerfile:1.6
 
-FROM python:3.11-slim AS deps
-
-ENV PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-WORKDIR /app
-
-# Copy only what's needed for dependency resolution first; this layer
-# is cached as long as pyproject.toml doesn't change.
-COPY pyproject.toml ./
-COPY runner/__init__.py runner/__init__.py
-
-RUN pip install --upgrade pip && pip install .
-
-# ---- runtime stage ----
-
-FROM python:3.11-slim AS runtime
+# gpustack/benchmark-runner is GPUStack's official extension of guidellm —
+# same CLI surface (--target/--rate-type/--max-requests/--output-path/...)
+# plus an --progress-url callback hook. By using it as base we inherit a
+# vetted guidellm install (CPU-only torch, ~2.5 GB) instead of pulling the
+# full ML stack ourselves. Pin to v0.0.3 — bumping is a deliberate PR with
+# new fixture-based metrics-mapper tests.
+FROM gpustack/benchmark-runner:v0.0.3
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
-
-# Copy the entire site-packages from the deps stage. python:3.11-slim's
-# stdlib is enough; we don't need build toolchain at runtime.
-COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Copy the project source. Tests are excluded by .dockerignore.
 COPY runner runner
@@ -36,4 +20,7 @@ COPY runner runner
 RUN useradd --create-home --shell /sbin/nologin runner
 USER runner
 
+# Override the base image's `benchmark-runner benchmark run` entrypoint —
+# our orchestrator wraps that subprocess and adds the env-var contract +
+# state/metrics callbacks defined by @modeldoctor/contracts.
 ENTRYPOINT ["python", "-m", "runner"]

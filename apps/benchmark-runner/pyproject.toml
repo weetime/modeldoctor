@@ -5,15 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "modeldoctor-benchmark-runner"
 version = "0.1.0"
-description = "Thin wrapper around guidellm for ModelDoctor's benchmark feature"
+description = "Thin wrapper around gpustack/benchmark-runner for ModelDoctor's benchmark feature"
 requires-python = ">=3.11"
 dependencies = [
-  # Pin guidellm to a specific minor — bumping is a deliberate PR with new
-  # fixture-based metrics-mapper tests. Update with care.
-  "guidellm==0.4.0",
-  # `requests` is already a transitive dep of guidellm, but we depend on it
-  # explicitly for the callback HTTP client so a future guidellm bump that
-  # drops it doesn't break us.
+  # Runtime guidellm is provided by the gpustack/benchmark-runner Docker
+  # base image — pinned by `FROM gpustack/benchmark-runner:vX.Y.Z` in the
+  # Dockerfile, NOT by this file. Bumping the image is a deliberate PR with
+  # new fixture-based metrics-mapper tests. Local dev installs only the
+  # runner's own runtime deps below.
   "requests>=2.31,<3",
 ]
 

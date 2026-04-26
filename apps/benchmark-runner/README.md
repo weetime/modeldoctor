@@ -1,11 +1,17 @@
 # modeldoctor-benchmark-runner
 
-Thin Python wrapper around [guidellm](https://github.com/neuralmagic/guidellm)
+Thin Python wrapper around [gpustack/benchmark-runner](https://hub.docker.com/r/gpustack/benchmark-runner)
+(GPUStack's extension of [guidellm](https://github.com/neuralmagic/guidellm))
 that runs a single benchmark against an OpenAI-compatible target and POSTs
 lifecycle + metrics back to ModelDoctor's API.
 
 This image is launched by Phase 3's `K8sJobDriver` and `SubprocessDriver`.
 You should rarely run it directly except for image-level smoke testing.
+
+The Docker base ships guidellm with CPU-only torch (~2.5 GB) — bumping the
+`gpustack/benchmark-runner:vX.Y.Z` pin in the Dockerfile is a deliberate
+PR with new fixture-based metrics-mapper tests, since guidellm's report
+schema occasionally renames fields between versions.
 
 ## Local development
 
@@ -42,12 +48,28 @@ Confirms `python -m runner` is wired correctly.
 
 ### Real run against a vLLM target
 
-Assumes you have a vLLM (or any OpenAI-compatible) server reachable, and a
-local stub server listening on port 3001 that prints incoming POSTs (a 30-line
-Python `aiohttp` script — see Phase 6's planned integration test).
+Assumes you have a vLLM (or any OpenAI-compatible) server reachable. To
+observe the runner's callbacks, drop this stub server into a scratch file
+and run it in a second terminal — it logs every incoming POST and 200s:
+
+```python
+# stub_callback.py
+from aiohttp import web
+
+async def echo(request: web.Request) -> web.Response:
+    body = await request.json()
+    print(f"{request.method} {request.path} <- {body}")
+    return web.Response(status=200)
+
+app = web.Application()
+app.router.add_route("*", "/{tail:.*}", echo)
+web.run_app(app, port=3001)
+```
 
 ```bash
-docker run --rm \
+python stub_callback.py        # terminal 2 — listens on :3001
+
+docker run --rm \              # terminal 1
   -e BENCHMARK_ID=dev-$(date +%s) \
   -e CALLBACK_URL=http://host.docker.internal:3001 \
   -e CALLBACK_TOKEN=dev-token \
@@ -64,8 +86,11 @@ docker run --rm \
   modeldoctor/benchmark-runner:dev
 ```
 
+(Linux Docker without Desktop: replace `host.docker.internal` with
+`172.17.0.1`, or pass `--add-host=host.docker.internal:host-gateway`.)
+
 Expected behavior:
-1. Stub server receives `POST /api/internal/benchmarks/<id>/state` with `{"state":"running"}`.
-2. Stub server receives `POST /api/internal/benchmarks/<id>/metrics` with the full summary.
-3. Stub server receives `POST /api/internal/benchmarks/<id>/state` with `{"state":"completed","progress":1.0}`.
+1. Stub prints `POST /api/internal/benchmarks/<id>/state <- {'state': 'running'}`.
+2. Stub prints `POST /api/internal/benchmarks/<id>/metrics <- {...}` (full summary + raw).
+3. Stub prints `POST /api/internal/benchmarks/<id>/state <- {'state': 'completed', 'progress': 1.0}`.
 4. Container exits 0.

@@ -79,11 +79,20 @@ class TestBuildGuidellmArgv:
         argv = build_guidellm_argv(_config(), output_path="/tmp/specific-report.json")
         assert "--output-path=/tmp/specific-report.json" in argv
 
-    def test_command_is_benchmark(self) -> None:
+    def test_command_is_benchmark_runner(self) -> None:
         argv = build_guidellm_argv(_config(), output_path="/tmp/r.json")
-        # First two tokens are the program and subcommand.
-        assert argv[0] == "guidellm"
-        assert argv[1] == "benchmark"
+        # gpustack/benchmark-runner CLI: `benchmark-runner benchmark run`.
+        assert argv[0:3] == ["benchmark-runner", "benchmark", "run"]
+
+    def test_backend_is_openai_http(self) -> None:
+        argv = build_guidellm_argv(_config(), output_path="/tmp/r.json")
+        assert "--backend=openai_http" in argv
+
+    def test_console_is_disabled(self) -> None:
+        # Headless container — the interactive progress bar would just spam
+        # captured stdout. State callbacks carry the lifecycle instead.
+        argv = build_guidellm_argv(_config(), output_path="/tmp/r.json")
+        assert "--disable-console" in argv
 
     def test_sharegpt_not_yet_supported(self) -> None:
         # ShareGPT is deferred to Phase 6 — the runner refuses now so a

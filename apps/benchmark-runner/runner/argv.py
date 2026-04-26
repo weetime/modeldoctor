@@ -1,4 +1,7 @@
-"""Build the `guidellm benchmark ...` argv from a parsed env config.
+"""Build the ``benchmark-runner benchmark run ...`` argv from a parsed env.
+
+Targets the gpustack/benchmark-runner image (an extension of guidellm
+with the same CLI surface plus an ``--progress-url`` callback hook).
 
 Pure function so it's easy to unit test. The env-parsing layer
 (``runner.env``) is responsible for type coercion and required-field
@@ -30,7 +33,7 @@ class EnvConfig(NamedTuple):
 
 
 def build_guidellm_argv(cfg: EnvConfig, *, output_path: str) -> list[str]:
-    """Translate a parsed env into the ``guidellm benchmark ...`` argv.
+    """Translate a parsed env into the ``benchmark-runner benchmark run ...`` argv.
 
     Raises:
         NotImplementedError: if ``dataset_name == "sharegpt"`` — ShareGPT is
@@ -45,20 +48,26 @@ def build_guidellm_argv(cfg: EnvConfig, *, output_path: str) -> list[str]:
         )
 
     argv: list[str] = [
-        "guidellm",
+        "benchmark-runner",
         "benchmark",
+        "run",
+        # OpenAI-compatible HTTP backend covers vLLM and most other servers.
+        "--backend=openai_http",
         f"--target={cfg.target_url}",
         f"--model={cfg.model}",
         f"--max-requests={cfg.total_requests}",
         f"--max-seconds={cfg.max_duration_seconds}",
         f"--output-path={output_path}",
+        # Headless: no interactive progress bar in a container. The state
+        # callbacks (post_state) carry lifecycle; rawMetrics has the rest.
+        "--disable-console",
     ]
 
     if cfg.request_rate > 0:
         argv.append("--rate-type=constant")
         argv.append(f"--rate={cfg.request_rate}")
     else:
-        # 0 means unlimited — let guidellm push as fast as the target allows.
+        # 0 means unlimited — let the runner push as fast as the target allows.
         argv.append("--rate-type=throughput")
 
     # Random dataset: prompt_tokens=N,output_tokens=M synthetic generation.
