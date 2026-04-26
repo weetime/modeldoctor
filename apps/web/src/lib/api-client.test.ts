@@ -157,6 +157,20 @@ describe("api-client", () => {
     expect(useAuthStore.getState().user).toBeNull();
   });
 
+  it("del() issues DELETE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      text: () => Promise.resolve(""),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await api.del("/api/foo/123");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/foo/123",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("does not attempt refresh for /api/auth/ paths", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,

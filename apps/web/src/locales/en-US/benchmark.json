@@ -1,0 +1,115 @@
+{
+  "title": "Benchmark",
+  "subtitle": "Measure token-level latency and throughput against an OpenAI-compatible target endpoint with guidellm.",
+  "actions": {
+    "create": "New",
+    "duplicate": "Duplicate",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "clearFilters": "Clear filters",
+    "loadMore": "Load more",
+    "refresh": "Refresh",
+    "openDetail": "Open"
+  },
+  "list": {
+    "columns": {
+      "name": "Name",
+      "model": "Model",
+      "profile": "Profile",
+      "state": "State",
+      "outputTps": "Output tok/s",
+      "ttftMean": "TTFT mean",
+      "createdAt": "Created"
+    },
+    "filters": {
+      "state": "State",
+      "profile": "Profile",
+      "search": "Search name…"
+    },
+    "empty": {
+      "title": "No benchmarks yet",
+      "description": "Click \"New\" to start a benchmark run.",
+      "filtered": "No benchmarks match these filters."
+    }
+  },
+  "create": {
+    "title": "New benchmark",
+    "subtitle": "Configure target endpoint and workload",
+    "tabs": { "basic": "Basic Info", "config": "Configuration" },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "apiType": "API type",
+      "apiUrl": "API URL",
+      "apiKey": "API Key",
+      "model": "Model",
+      "profile": "Profile",
+      "dataset": "Dataset",
+      "inputTokens": "Input tokens",
+      "outputTokens": "Output tokens",
+      "seed": "Seed (optional)",
+      "requestRate": "Request rate (0 = unlimited)",
+      "totalRequests": "Total requests"
+    },
+    "duplicateBanner": "Duplicating from {{name}}. All fields prefilled except API Key — please re-enter for security.",
+    "presetLoaded": "{{profile}} preset loaded. Edit any field — chip stays {{profile}} (label, not lock). Switch to Custom to start blank.",
+    "loadFromConnection": "Load from saved connection…",
+    "submit": "Run benchmark"
+  },
+  "detail": {
+    "config": {
+      "target": "Target",
+      "model": "Model",
+      "apiType": "API type",
+      "dataset": "Dataset",
+      "rate": "Rate",
+      "totalRequests": "Total requests",
+      "success": "Success",
+      "errors": "Errors"
+    },
+    "metrics": {
+      "ttftMean": "TTFT mean",
+      "ttftP95": "TTFT p95",
+      "ttftP99": "TTFT p99",
+      "itlMean": "ITL mean",
+      "itlP95": "ITL p95",
+      "itlP99": "ITL p99",
+      "outputTps": "Output tok/s",
+      "rps": "Requests/s",
+      "concurrencyMean": "Concurrency mean",
+      "concurrencyMax": "Concurrency max",
+      "successCount": "Success",
+      "errorCount": "Errors"
+    },
+    "logs": {
+      "title": "Logs",
+      "pendingMessage": "Logs available after run completes.",
+      "size": "{{size}}"
+    },
+    "states": {
+      "pending": "Pending",
+      "submitted": "Submitted",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    },
+    "errors": {
+      "loadFailed": "Couldn't load this benchmark",
+      "notFound": "Benchmark not found",
+      "runFailed": "Run failed",
+      "polling": "Lost connection while polling. Retrying…"
+    }
+  },
+  "profiles": {
+    "throughput": "Throughput",
+    "latency": "Latency",
+    "longContext": "Long Context",
+    "generationHeavy": "Generation Heavy",
+    "shareGpt": "ShareGPT",
+    "custom": "Custom"
+  },
+  "datasets": { "random": "Random", "sharegpt": "ShareGPT" },
+  "comingSoon": "(coming soon)"
+}
