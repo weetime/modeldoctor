@@ -1,4 +1,4 @@
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
@@ -103,13 +103,17 @@ export function BenchmarkCreateModal() {
     },
   });
 
+  const duplicateApplied = useRef<string | null>(null);
+
   useEffect(() => {
     if (!open) {
       form.reset();
+      duplicateApplied.current = null;
       return;
     }
-    if (sourceRun) {
+    if (sourceRun && duplicateApplied.current !== sourceRun.id) {
       form.reset(mapDuplicateToDefaults(sourceRun));
+      duplicateApplied.current = sourceRun.id;
     }
   }, [open, sourceRun, form]);
 
