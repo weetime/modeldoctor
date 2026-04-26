@@ -24,6 +24,16 @@ export type TerminalState = (typeof TERMINAL_STATES)[number];
 
 // Hooks added in Task 2 (list) and Task 5 (detail).
 
+export function useBenchmarkDetail(id: string) {
+  return useQuery({
+    queryKey: benchmarkKeys.detail(id),
+    queryFn: () => benchmarkApi.get(id),
+    enabled: id.length > 0,
+    // Polling rules added in Task 6.
+    staleTime: 0,
+  });
+}
+
 export function useBenchmarkList(q: Partial<ListBenchmarksQuery>) {
   return useQuery({
     queryKey: benchmarkKeys.list(q),
