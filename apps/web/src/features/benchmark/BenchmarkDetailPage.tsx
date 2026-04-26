@@ -59,7 +59,7 @@ export function BenchmarkDetailPage() {
         qc.invalidateQueries({ queryKey: benchmarkKeys.detail(data.id) });
       }
     }
-  }, [data?.state, data?.id, qc, data]);
+  }, [data?.state, data?.id, qc]);
 
   if (!id) {
     return (

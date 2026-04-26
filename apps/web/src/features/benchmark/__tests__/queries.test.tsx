@@ -64,6 +64,10 @@ describe("useBenchmarkDetail polling", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
   });
 
   it("polls every 2s while non-terminal", async () => {
@@ -110,10 +114,5 @@ describe("useBenchmarkDetail polling", () => {
 
     await vi.advanceTimersByTimeAsync(10_000);
     expect(api.get).toHaveBeenCalledTimes(1);
-
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "visible",
-    });
   });
 });
