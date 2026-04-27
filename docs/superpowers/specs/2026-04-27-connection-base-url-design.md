@@ -31,7 +31,7 @@ The user chose path 2: the project is pre-production, so we pick the final-form 
 - **`toApiBaseUrl()` helper** in `apps/web/src/lib/curl-parser.ts` — strips known OpenAI-compat path tails. Idempotent: applying it twice yields the same result. Called at curl-paste time AND at form submission (defense-in-depth for users who hand-type a full URL).
 - **`loadTestApiTypePath(apiType): string`** in `packages/contracts/src/load-test.ts` — single source of truth for LoadTest's apiType→OpenAI path mapping.
 - **LoadTest backend** constructs `${apiBaseUrl}${loadTestApiTypePath(apiType)}` instead of using the raw apiUrl.
-- **E2E probes** each construct their own path (`/v1/chat/completions`, `/v1/images/generations`, `/v1/audio/transcriptions`) — probes are 1:1 with paths, no shared util needed.
+- **E2E probes** each construct their own path inline. Today all three (text, image, audio) target `/v1/chat/completions` because they exercise different modalities of CHAT models (vision via image-content parts, omni-models that emit speech via audio modality) — see §3.2. `toApiBaseUrl` defensively strips `images/generations` and `audio/transcriptions` too, so future DALL-E / Whisper probes can be added without re-touching the helper.
 - **Benchmark backend** passes `apiBaseUrl` directly to the runner (already correct after Phase 5 smoke).
 - **Database**: drop and recreate via `prisma migrate reset --force`. New unified initial migration. No data preserved.
 - **localStorage Connections**: bump zustand persist version `0 → 1` so old data is dropped. No `migrate` function. Users re-paste any saved curls.
