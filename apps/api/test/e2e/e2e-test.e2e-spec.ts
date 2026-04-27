@@ -16,14 +16,14 @@ describe("E2ETest (e2e)", () => {
     await ctx.teardown();
   });
 
-  it("rejects missing apiUrl", async () => {
+  it("rejects missing apiBaseUrl", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({ apiKey: "k", model: "m", probes: ["text"] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
-    expect(res.body.error.message).toMatch(/apiUrl/);
+    expect(res.body.error.message).toMatch(/apiBaseUrl/);
     expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
@@ -31,7 +31,7 @@ describe("E2ETest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiUrl: "x", apiKey: "k", model: "m", probes: [] })
+      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", probes: [] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/probes/);
@@ -42,7 +42,7 @@ describe("E2ETest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiUrl: "x", apiKey: "k", model: "m", probes: ["bogus"] })
+      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", probes: ["bogus"] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/probes/);
