@@ -15,9 +15,15 @@ export class ApiError extends Error {
 }
 
 // Serialize concurrent refresh attempts so multiple 401s only issue ONE refresh.
+// Also exported as `refreshAccessToken` so the BootGate (and any other top-level
+// consumer) can dedup against the same in-flight promise. Without dedup,
+// React StrictMode's double-invoked effects in dev fire two parallel
+// /api/auth/refresh POSTs, both carrying the original cookie value; the
+// server's rotation guard sees the second arrival as token reuse and
+// invalidates the entire session.
 let refreshInFlight: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshInFlight) {
     const p: Promise<string | null> = (async () => {
       try {
