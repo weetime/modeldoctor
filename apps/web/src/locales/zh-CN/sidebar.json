@@ -10,6 +10,7 @@
   },
   "items": {
     "loadTest": "压力测试",
+    "benchmark": "基准测试",
     "soak": "稳定性测试",
     "streaming": "流式首字延迟",
     "e2e": "E2E Smoke",
