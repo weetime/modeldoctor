@@ -31,6 +31,11 @@ export default defineConfig({
       // env.schema.ts treats it as optional under NODE_ENV=test; this
       // injects a placeholder so the guard doesn't throw on construction.
       BENCHMARK_CALLBACK_SECRET: "e2e-test-callback-secret-not-for-production-use-32+chars",
+      // BenchmarkService.constructor → decodeKey() runs at module init time,
+      // same constructor-validation pattern. env.schema.ts treats this as
+      // optional in test mode; inject a 32-byte base64 placeholder so the
+      // service can boot. (32 zero bytes; never used to encrypt real data.)
+      BENCHMARK_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     },
   },
 });
