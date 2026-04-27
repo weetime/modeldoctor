@@ -98,7 +98,9 @@ describe("benchmark contracts", () => {
     });
 
     it("rejects non-URL apiBaseUrl", () => {
-      expect(() => CreateBenchmarkRequestSchema.parse({ ...valid, apiBaseUrl: "not-a-url" })).toThrow();
+      expect(() =>
+        CreateBenchmarkRequestSchema.parse({ ...valid, apiBaseUrl: "not-a-url" }),
+      ).toThrow();
     });
 
     it("rejects negative requestRate", () => {
