@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useForm, FormProvider } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 import "@/lib/i18n";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,9 +32,7 @@ function Harness({
     <TooltipProvider>
       <FormProvider {...form}>
         <BenchmarkProfilePicker />
-        <output data-testid="snapshot">
-          {JSON.stringify(form.watch())}
-        </output>
+        <output data-testid="snapshot">{JSON.stringify(form.watch())}</output>
       </FormProvider>
     </TooltipProvider>
   );

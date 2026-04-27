@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
       super(message);
     }
   }
@@ -13,8 +16,8 @@ vi.mock("@/lib/api-client", () => {
 });
 
 import { api } from "@/lib/api-client";
-import { useBenchmarkDetail } from "../queries";
 import type { BenchmarkRun } from "@modeldoctor/contracts";
+import { useBenchmarkDetail } from "../queries";
 
 function makeRun(overrides: Partial<BenchmarkRun> = {}): BenchmarkRun {
   return {

@@ -1,7 +1,7 @@
 import {
-  CreateBenchmarkRequestSchema,
   type BenchmarkRun,
   type CreateBenchmarkRequest,
+  CreateBenchmarkRequestSchema,
 } from "@modeldoctor/contracts";
 
 export { CreateBenchmarkRequestSchema };

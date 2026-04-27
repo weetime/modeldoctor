@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
       super(message);
     }
   }
@@ -15,8 +18,8 @@ vi.mock("@/lib/api-client", () => {
 });
 
 import { api } from "@/lib/api-client";
-import { BenchmarkDetailPage } from "../BenchmarkDetailPage";
 import type { BenchmarkRun } from "@modeldoctor/contracts";
+import { BenchmarkDetailPage } from "../BenchmarkDetailPage";
 
 function Wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({
@@ -84,12 +87,8 @@ describe("BenchmarkDetailPage", () => {
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     expect(await screen.findByText("smoke")).toBeInTheDocument();
     expect(screen.getByText(/Completed/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /duplicate/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^delete$/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /duplicate/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^cancel$/i })).toBeNull();
     expect(screen.getAllByText(/142/).length).toBeGreaterThan(0); // some metric number
   });
@@ -104,13 +103,9 @@ describe("BenchmarkDetailPage", () => {
     });
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     expect(await screen.findByText(/Running/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^cancel$/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^delete$/i })).toBeNull();
-    expect(
-      screen.getByText(/logs available after run completes/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/logs available after run completes/i)).toBeInTheDocument();
   });
 
   it("renders failed run with red Alert and stateMessage", async () => {
@@ -127,9 +122,7 @@ describe("BenchmarkDetailPage", () => {
   });
 
   it("renders 404 EmptyState on ApiError 404", async () => {
-    vi.mocked(api.get).mockRejectedValue(
-      Object.assign(new Error("not found"), { status: 404 }),
-    );
+    vi.mocked(api.get).mockRejectedValue(Object.assign(new Error("not found"), { status: 404 }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     const matches = await screen.findAllByText(/not found/i);
     expect(matches.length).toBeGreaterThan(0);

@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@/lib/i18n";
-import { BenchmarkMetricsGrid } from "../BenchmarkMetricsGrid";
 import type { BenchmarkMetricsSummary } from "@modeldoctor/contracts";
+import { BenchmarkMetricsGrid } from "../BenchmarkMetricsGrid";
 
 const SUMMARY: BenchmarkMetricsSummary = {
   ttft: { mean: 142, p50: 137, p95: 198, p99: 240 },

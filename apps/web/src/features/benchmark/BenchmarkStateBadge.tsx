@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
 import type { BenchmarkState } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 
 const VARIANT: Record<BenchmarkState, string> = {
   pending: "bg-zinc-100 text-zinc-700 border-zinc-200",

@@ -1,7 +1,4 @@
-import type {
-  BenchmarkDataset,
-  BenchmarkProfile,
-} from "@modeldoctor/contracts";
+import type { BenchmarkDataset, BenchmarkProfile } from "@modeldoctor/contracts";
 
 export type LivePreset = Exclude<BenchmarkProfile, "custom" | "sharegpt">;
 

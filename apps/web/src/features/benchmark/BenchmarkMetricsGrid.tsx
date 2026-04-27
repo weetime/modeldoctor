@@ -1,5 +1,5 @@
-import { useTranslation } from "react-i18next";
 import type { BenchmarkMetricsSummary } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 
 interface TileProps {
   label: string;
@@ -11,37 +11,20 @@ interface TileProps {
 
 function Tile({ label, value, unit, subtitle, tone = "default" }: TileProps) {
   const valueColor =
-    tone === "success"
-      ? "text-green-600"
-      : tone === "danger"
-        ? "text-red-600"
-        : "text-foreground";
+    tone === "success" ? "text-green-600" : tone === "danger" ? "text-red-600" : "text-foreground";
   return (
     <div className="rounded-md border border-border p-3">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      <div
-        className={`mt-1 text-2xl font-semibold tabular-nums ${valueColor}`}
-      >
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1 text-2xl font-semibold tabular-nums ${valueColor}`}>
         {value}
-        {unit && (
-          <span className="ml-1 text-sm font-normal text-muted-foreground">
-            {unit}
-          </span>
-        )}
+        {unit && <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span>}
       </div>
-      {subtitle && (
-        <div className="mt-0.5 text-[11px] text-muted-foreground">
-          {subtitle}
-        </div>
-      )}
+      {subtitle && <div className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</div>}
     </div>
   );
 }
 
-const fmt = (n: number | undefined) =>
-  n === undefined ? "—" : n.toFixed(1);
+const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toFixed(1));
 
 export function BenchmarkMetricsGrid({
   summary,
@@ -94,30 +77,17 @@ export function BenchmarkMetricsGrid({
         value={fmt(m?.itl.p99)}
         unit={m ? "ms" : undefined}
       />
-      <Tile
-        label={t("detail.metrics.outputTps")}
-        value={fmt(m?.outputTokensPerSecond.mean)}
-      />
-      <Tile
-        label={t("detail.metrics.rps")}
-        value={fmt(m?.requestsPerSecond.mean)}
-      />
+      <Tile label={t("detail.metrics.outputTps")} value={fmt(m?.outputTokensPerSecond.mean)} />
+      <Tile label={t("detail.metrics.rps")} value={fmt(m?.requestsPerSecond.mean)} />
 
-      <Tile
-        label={t("detail.metrics.concurrencyMean")}
-        value={fmt(m?.concurrency.mean)}
-      />
+      <Tile label={t("detail.metrics.concurrencyMean")} value={fmt(m?.concurrency.mean)} />
       <Tile
         label={t("detail.metrics.concurrencyMax")}
-        value={
-          m?.concurrency.max === undefined ? "—" : String(m.concurrency.max)
-        }
+        value={m?.concurrency.max === undefined ? "—" : String(m.concurrency.max)}
       />
       <Tile
         label={t("detail.metrics.successCount")}
-        value={
-          m?.requests.success === undefined ? "—" : String(m.requests.success)
-        }
+        value={m?.requests.success === undefined ? "—" : String(m.requests.success)}
         tone="success"
       />
       <Tile
