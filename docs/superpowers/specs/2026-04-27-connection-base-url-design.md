@@ -121,18 +121,20 @@ Exhaustive over `ApiType`; TS verifies via `switch` exhaustiveness on the type u
 
 ### 3.2 E2E probes embed their path
 
-Each probe file picks its own path inline. There are three probe files (`text.ts`, `image.ts`, `audio.ts`) and each is 1:1 with one OpenAI endpoint. No shared util — that would be over-abstraction.
+Each probe file uses its own URL path inline. All three current probes target `/v1/chat/completions` because they exercise different modalities of CHAT-COMPLETION models, not separate OpenAI endpoints:
 
 ```ts
-// text.ts
+// text.ts — plain chat completion
 const url = `${ctx.apiBaseUrl}/v1/chat/completions`;
 
-// image.ts
-const url = `${ctx.apiBaseUrl}/v1/images/generations`;
+// image.ts — chat completion with vision input (image_url content parts via buildChatVisionBody)
+const url = `${ctx.apiBaseUrl}/v1/chat/completions`;
 
-// audio.ts
-const url = `${ctx.apiBaseUrl}/v1/audio/transcriptions`;
+// audio.ts — omni-model chat that emits speech (buildChatAudioBody)
+const url = `${ctx.apiBaseUrl}/v1/chat/completions`;
 ```
+
+(Note: the OpenAI surface DOES define `/v1/images/generations` and `/v1/audio/transcriptions` for DALL-E and Whisper. Those are separate APIs that we don't currently exercise. If a probe for image generation or speech transcription is ever added, that probe gets its own path inline — no shared util.)
 
 ### 3.3 Benchmark — no path construction
 
@@ -383,7 +385,7 @@ After commit 3 (web layer), repeat the Phase 5 smoke (spec §12 of `2026-04-26-b
 4. Save the connection.
 5. `/load-test` page: load that connection. Verify EndpointPicker preview shows `→ POST http://10.100.121.67:30888/v1/chat/completions`. Switch apiType to `embeddings`, preview updates to `…/v1/embeddings`. Run a small load test → expect Vegeta to hit the right URL (check apps/api logs).
 6. `/benchmarks` → Add → load the same connection. Verify `apiBaseUrl` field is `http://10.100.121.67:30888`. Run a benchmark with Throughput preset → expect the same end-to-end success as the Phase 5 smoke (40s, 1000/1000, real metrics). Confirms the field rename didn't break the K8s driver.
-7. `/e2e` → load connection, run text/image/audio probes → text probe hits `…/v1/chat/completions`, image hits `…/v1/images/generations`, audio hits `…/v1/audio/transcriptions`.
+7. `/e2e` → load connection, run text/image/audio probes → all three hit `…/v1/chat/completions` (image probe uses vision modality, audio probe uses omni-model speech output — both via chat completions endpoint).
 
 If all 7 pass: the refactor is end-to-end clean. PR ready for merge.
 
