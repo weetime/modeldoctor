@@ -27,7 +27,7 @@ describe("BenchmarkExecutionDriver interface", () => {
       benchmarkId: "ckxxx",
       profile: "throughput",
       apiType: "chat",
-      apiUrl: "http://target",
+      apiBaseUrl: "http://target",
       apiKey: "sk-test",
       model: "facebook/opt-125m",
       datasetName: "random",

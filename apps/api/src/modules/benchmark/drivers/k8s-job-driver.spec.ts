@@ -6,7 +6,7 @@ const ctx: BenchmarkExecutionContext = {
   benchmarkId: "ckabc",
   profile: "throughput",
   apiType: "chat",
-  apiUrl: "https://t",
+  apiBaseUrl: "https://t",
   apiKey: "sk",
   model: "m",
   datasetName: "random",

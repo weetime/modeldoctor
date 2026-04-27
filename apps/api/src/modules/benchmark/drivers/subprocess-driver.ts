@@ -25,7 +25,7 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
       BENCHMARK_ID: ctx.benchmarkId,
       CALLBACK_URL: ctx.callbackUrl,
       CALLBACK_TOKEN: ctx.callbackToken,
-      TARGET_URL: ctx.apiUrl,
+      TARGET_URL: ctx.apiBaseUrl,
       API_KEY: ctx.apiKey,
       MODEL: ctx.model,
       API_TYPE: ctx.apiType,

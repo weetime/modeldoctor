@@ -8,6 +8,7 @@ import type {
   LoadTestRequest,
   LoadTestResponse,
 } from "@modeldoctor/contracts";
+import { loadTestApiTypePath } from "@modeldoctor/contracts";
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service.js";
 import {
@@ -58,7 +59,7 @@ export class LoadTestService {
     const txtPath = path.join(TMP_DIR, "request.txt");
     await fs.writeFile(jsonPath, JSON.stringify(requestBody, null, 2));
 
-    let finalUrl = req.apiUrl;
+    let finalUrl = req.apiBaseUrl + loadTestApiTypePath(apiType);
     if (req.queryParams?.trim()) {
       const params = req.queryParams
         .split("\n")
@@ -91,7 +92,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const baseRow = {
       userId: user.sub,
       apiType,
-      apiUrl: finalUrl,
+      apiBaseUrl: finalUrl,
       model: req.model,
       rate: req.rate,
       duration: req.duration,
@@ -159,7 +160,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       parsed,
       config: {
         apiType,
-        apiUrl: finalUrl,
+        apiBaseUrl: finalUrl,
         model: req.model,
         rate: req.rate,
         duration: req.duration,
@@ -185,7 +186,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       id: r.id,
       userId: r.userId,
       apiType: r.apiType as ApiType,
-      apiUrl: r.apiUrl,
+      apiBaseUrl: r.apiBaseUrl,
       model: r.model,
       rate: r.rate,
       duration: r.duration,

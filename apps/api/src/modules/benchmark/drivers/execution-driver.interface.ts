@@ -22,7 +22,13 @@ export interface BenchmarkExecutionContext {
 
   // Target endpoint
   apiType: BenchmarkApiType;
-  apiUrl: string;
+  /**
+   * Base URL of the OpenAI-compatible target endpoint.
+   * Origin only — no /v1/... path tail. The runner image's wrapper
+   * passes this verbatim as guidellm's --target; guidellm appends
+   * its own /v1/<endpoint> path.
+   */
+  apiBaseUrl: string;
   apiKey: string;
   model: string;
 

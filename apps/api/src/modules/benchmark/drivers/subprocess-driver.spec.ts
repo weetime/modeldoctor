@@ -13,7 +13,7 @@ const baseCtx: BenchmarkExecutionContext = {
   benchmarkId: "ckabc",
   profile: "latency",
   apiType: "chat",
-  apiUrl: "https://api.example.com",
+  apiBaseUrl: "https://api.example.com",
   apiKey: "sk-secret",
   model: "m1",
   datasetName: "random",
