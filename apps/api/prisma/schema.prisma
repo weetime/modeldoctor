@@ -43,7 +43,7 @@ model LoadTestRun {
   id          String    @id @default(cuid())
   userId      String?   @map("user_id")
   apiType     String    @map("api_type")
-  apiUrl      String    @map("api_url")
+  apiBaseUrl  String    @map("api_base_url")
   model       String
   rate        Int
   duration    Int
@@ -71,7 +71,7 @@ model BenchmarkRun {
 
   // Target endpoint
   apiType      String @map("api_type")        // "chat" | "completion"
-  apiUrl       String @map("api_url")
+  apiBaseUrl   String @map("api_base_url")
   apiKeyCipher String @map("api_key_cipher") // AES-256-GCM ciphertext, see common/crypto
   model        String
 

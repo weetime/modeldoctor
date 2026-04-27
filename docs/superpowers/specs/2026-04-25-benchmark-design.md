@@ -30,7 +30,7 @@ A new `Benchmark` feature, end-to-end:
 
 ### 1.3 Explicit Non-Goals
 
-- **No `Cluster` or `ModelInstance` Prisma entities.** GPUStack's benchmark form references a cluster + model-instance because GPUStack itself manages model deployments. ModelDoctor does not. Users supply `apiUrl + apiKey + model` directly, the same way LoadTest accepts them today. The "集群 / 模型实例" fields from the GPUStack screenshot are collapsed into a single endpoint section.
+- **No `Cluster` or `ModelInstance` Prisma entities.** GPUStack's benchmark form references a cluster + model-instance because GPUStack itself manages model deployments. ModelDoctor does not. Users supply `apiBaseUrl + apiKey + model` directly, the same way LoadTest accepts them today. The "集群 / 模型实例" fields from the GPUStack screenshot are collapsed into a single endpoint section.
 - **No K8s deployment manifests for ModelDoctor itself.** The user already runs ModelDoctor in their 4pd cluster. This spec only ships the manifests *the API needs to create benchmark Jobs* (ServiceAccount + Role + RoleBinding for `batch/v1/jobs`); how the API/web/db pods themselves get deployed is out of scope.
 - **No ShareGPT bundled in the runner image.** The `ShareGPT` profile and `dataset=sharegpt` option in the schema are placeholders — the form lets the user pick them, but Phase 1 returns a validation error ("ShareGPT not yet supported"). Backfilled in a follow-up. This keeps the runner image small (~600 MB Python + guidellm vs ~1.2 GB with ShareGPT JSON).
 - **No SSE / WebSocket streaming.** Progress is polled by the web UI every 2s on the detail page. Real-time push deferred.
@@ -156,7 +156,7 @@ model BenchmarkRun {
 
   // Target
   apiType      String    @map("api_type")          // BenchmarkApiType: "chat" | "completion" — narrower than LoadTest's ApiType
-  apiUrl       String    @map("api_url")
+  apiBaseUrl       String    @map("api_base_url")
   apiKeyCipher String    @map("api_key_cipher")    // AES-GCM ciphertext; see §6
   model        String
 
@@ -209,6 +209,10 @@ model BenchmarkRun {
 
 `rawMetrics` is whatever JSON guidellm emits, stored verbatim for forensic / re-analysis use. List-view queries select `metricsSummary` only.
 
+### apiBaseUrl convention
+
+`apiBaseUrl` is the origin (`scheme://host[:port][/proxy-prefix]`) — never includes `/v1/...` or any OpenAI-compatible path tail. The runner image's wrapper translates `--target=$apiBaseUrl` and guidellm appends its own request path. See `2026-04-27-connection-base-url-design.md` for the full rationale.
+
 ### 3.2 User Scoping
 
 Same pattern as `LoadTestRun`: queries filter by `userId = currentUser.sub` unless `currentUser.roles.includes("admin")`. Anyone can create. Admins see all; users see their own. `delete` requires owner-or-admin.
@@ -245,7 +249,7 @@ Profile presets are **client-side**: when the user picks "Throughput" in the mod
 - For `datasetName=sharegpt`: returns 400 in Phase 1 with `code=BENCHMARK_DATASET_UNSUPPORTED`.
 - `requestRate` ≥ 0 (0 = unlimited).
 - `totalRequests` between 1 and 100 000.
-- `apiUrl` must be a valid URL; `model` non-empty; `apiKey` non-empty.
+- `apiBaseUrl` must be a valid URL; `model` non-empty; `apiKey` non-empty.
 - `name` 1–128 chars, unique per user (soft enforced at controller — DB `@@unique([userId, name])` is too strict for re-runs; we only block within active state in service).
 
 ## 5. Runner Image
@@ -369,7 +373,7 @@ Two tabs (mirrors GPUStack screenshot):
 **基本信息 tab**:
 - Name (required)
 - Description (textarea, optional)
-- Endpoint section: API type (chat / completion), API URL, API key, model — laid out same as LoadTest's endpoint picker so the components can be reused.
+- Endpoint section: API type (chat / completion), API Base URL, API key, model — laid out same as LoadTest's endpoint picker so the components can be reused.
 
 **配置 tab**:
 - Profile (radio chips: Throughput / Latency / Long Context / Generation Heavy / ShareGPT / Custom). Picking a non-Custom profile fills the fields below; switching to Custom unlocks them for editing. The ShareGPT chip is disabled in Phase 1 with a "(coming soon)" tooltip — consistent with §1.3 deferring the ShareGPT dataset.

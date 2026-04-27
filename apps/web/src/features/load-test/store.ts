@@ -45,7 +45,7 @@ export interface LoadTestSlice {
 }
 
 const emptyManualEndpoint: EndpointValues = {
-  apiUrl: "",
+  apiBaseUrl: "",
   apiKey: "",
   model: "",
   customHeaders: "",
@@ -102,6 +102,7 @@ export const useLoadTestStore = create<LoadTestSlice>()(
     }),
     {
       name: "md.load-test.v1",
+      version: 1,
       partialize: (s) => ({
         selectedConnectionId: s.selectedConnectionId,
         manualEndpoint: s.manualEndpoint,

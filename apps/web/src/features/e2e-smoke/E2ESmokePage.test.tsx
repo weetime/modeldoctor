@@ -35,7 +35,7 @@ describe("E2ESmokePage (happy path)", () => {
     expect(runAll).toBeDisabled();
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/api url/i), "http://host/v1/chat/completions");
+    await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
 
@@ -73,7 +73,7 @@ describe("E2ESmokePage (happy path)", () => {
 
     const user = userEvent.setup();
     render(<E2ESmokePage />);
-    await user.type(screen.getByLabelText(/api url/i), "http://host/v1/chat/completions");
+    await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
 
@@ -87,7 +87,7 @@ describe("E2ESmokePage (happy path)", () => {
     expect(api.post).toHaveBeenCalledWith(
       "/api/e2e-test",
       expect.objectContaining({
-        apiUrl: "http://host/v1/chat/completions",
+        apiBaseUrl: "http://host",
         apiKey: "sk-test",
         model: "test-model",
         probes: ["text", "image", "audio"],
@@ -125,7 +125,7 @@ describe("E2ESmokePage (happy path)", () => {
 
     const user = userEvent.setup();
     render(<E2ESmokePage />);
-    await user.type(screen.getByLabelText(/api url/i), "http://host/v1/chat/completions");
+    await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
     await user.click(screen.getByRole("button", { name: /run all/i }));

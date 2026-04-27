@@ -27,7 +27,7 @@ function makeRun(overrides: Partial<BenchmarkRun> = {}): BenchmarkRun {
     description: null,
     profile: "throughput",
     apiType: "chat",
-    apiUrl: "https://api/v1",
+    apiBaseUrl: "https://api",
     model: "m",
     datasetName: "random",
     datasetInputTokens: 1024,

@@ -48,6 +48,7 @@ export const useE2EStore = create<E2EState>()(
     }),
     {
       name: "md.e2e.v1",
+      version: 1,
       partialize: (s) => ({
         selectedConnectionId: s.selectedConnectionId,
         manualEndpoint: s.manualEndpoint,

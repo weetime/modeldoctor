@@ -249,7 +249,7 @@ function mapDuplicateToDefaults(run: BenchmarkRun): CreateBenchmarkRequest {
     description: run.description ?? undefined,
     profile: run.profile,
     apiType: run.apiType,
-    apiUrl: run.apiUrl,
+    apiBaseUrl: run.apiBaseUrl,
     apiKey: "",                           // never returned; user must re-enter
     model: run.model,
     datasetName: run.datasetName,
@@ -370,7 +370,7 @@ benchmark
 ├── create
 │   ├── title, subtitle
 │   ├── tabs.{basic, config}
-│   ├── fields.{name, description, apiType, apiUrl, apiKey, model, profile,
+│   ├── fields.{name, description, apiType, apiBaseUrl, apiKey, model, profile,
 │   │           dataset, inputTokens, outputTokens, seed, requestRate, totalRequests}
 │   ├── duplicateBanner   (interpolation: {{name}})
 │   └── presetLoaded      (interpolation: {{profile}})
@@ -457,7 +457,7 @@ Screenshot or screen-recording attached to PR description; not a CI gate.
 
 1. **TanStack Query v5 polling under StrictMode** — first use of `refetchInterval` callback form in this repo. Mitigated by `queries.test.tsx` using `vi.useFakeTimers()` to assert exact poll counts.
 2. **`?create=1` / `?duplicate=:id` and browser back stack** — closing the modal must call `navigate(..., { replace: true })` so back doesn't toggle the modal. Tested in `BenchmarkCreateModal.test.tsx`.
-3. **Duplicate prefill while target run is non-terminal** — `BenchmarkRun.metricsSummary` may be null but `apiUrl/model/apiType/dataset*` are set at create time, so prefill works. Tested.
+3. **Duplicate prefill while target run is non-terminal** — `BenchmarkRun.metricsSummary` may be null but `apiBaseUrl/model/apiType/dataset*` are set at create time, so prefill works. Tested.
 4. **Logs size** — runner posts logs in one chunk on terminal callback. Spec §6 says `logs` is `@db.Text`; large logs (e.g. 1 MB on a noisy run) make the detail JSON heavy. Phase 5 truncates display at 64 KB with a "Show full logs" toggle that fetches the same record again — out of scope here, deferred to Phase 6.
 5. **Profile defaults drift from spec** — `PROFILE_DEFAULTS` and spec §1.4 / §8.3 must stay in sync. A single-line code comment pins this; future changes to profile semantics must update the spec table and the constant together.
 

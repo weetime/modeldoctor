@@ -29,7 +29,7 @@ const SOURCE_RUN: BenchmarkRun = {
   description: "first run",
   profile: "throughput",
   apiType: "chat",
-  apiUrl: "https://api.test/v1",
+  apiBaseUrl: "https://api.test",
   model: "llama-3-8b",
   datasetName: "random",
   datasetInputTokens: 2048,
@@ -56,7 +56,7 @@ const FAKE_RUN: BenchmarkRun = {
   description: null,
   profile: "throughput",
   apiType: "chat",
-  apiUrl: "https://api.test/v1",
+  apiBaseUrl: "https://api.test",
   model: "m",
   datasetName: "random",
   datasetInputTokens: 1024,
@@ -149,7 +149,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
     });
 
     await userEvent.type(screen.getByLabelText(/^name$/i), "smoke");
-    await userEvent.type(screen.getByLabelText(/api url/i), "https://api.test/v1");
+    await userEvent.type(screen.getByLabelText(/api base url/i), "https://api.test");
     await userEvent.type(screen.getByLabelText(/api key/i), "k");
     await userEvent.type(screen.getByLabelText(/^model$/i), "m");
 
@@ -161,7 +161,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
         "/api/benchmarks",
         expect.objectContaining({
           name: "smoke",
-          apiUrl: "https://api.test/v1",
+          apiBaseUrl: "https://api.test",
           apiKey: "k",
           model: "m",
           profile: "throughput",
@@ -182,7 +182,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
 
     expect(await screen.findByText(/duplicating from/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^name$/i)).toHaveValue("vllm-llama3-tput-2");
-    expect(screen.getByLabelText(/api url/i)).toHaveValue("https://api.test/v1");
+    expect(screen.getByLabelText(/api base url/i)).toHaveValue("https://api.test");
     expect(screen.getByLabelText(/^model$/i)).toHaveValue("llama-3-8b");
     expect(screen.getByLabelText(/api key/i)).toHaveValue("");
     expect(screen.getByLabelText(/api key/i)).toHaveAttribute("aria-invalid", "true");

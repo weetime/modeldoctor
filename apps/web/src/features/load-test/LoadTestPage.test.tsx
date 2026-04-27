@@ -42,7 +42,7 @@ const FAKE_RESULT: LoadTestResult = {
   },
   config: {
     apiType: "chat",
-    apiUrl: "http://host/v1/chat/completions",
+    apiBaseUrl: "http://host",
     model: "test-model",
     rate: 2,
     duration: 60,
@@ -65,7 +65,7 @@ describe("LoadTestPage (happy path)", () => {
       </Wrapper>,
     );
 
-    await user.type(screen.getByLabelText(/api url/i), "http://host/v1/chat/completions");
+    await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
 
@@ -80,7 +80,7 @@ describe("LoadTestPage (happy path)", () => {
       "/api/load-test",
       expect.objectContaining({
         apiType: "chat",
-        apiUrl: "http://host/v1/chat/completions",
+        apiBaseUrl: "http://host",
         apiKey: "sk-test",
         model: "test-model",
       }),

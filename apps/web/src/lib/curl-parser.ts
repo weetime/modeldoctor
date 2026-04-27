@@ -73,6 +73,28 @@ export function parseCurlCommand(input: string): ParsedCurl {
   return result;
 }
 
+/**
+ * Strip OpenAI-compatible URL path tails so `apiBaseUrl` is the canonical
+ * origin (scheme://host[:port][/proxy-prefix]) — matches what guidellm
+ * expects as `--target` and what LoadTest/E2E will append paths to.
+ *
+ * Idempotent: applying twice yields the same result. Safe to call at
+ * curl-paste time AND at form submission as defense-in-depth.
+ */
+export function toApiBaseUrl(url: string): string {
+  return url
+    .replace(
+      /\/v1\/(chat\/completions|completions|embeddings|rerank|images\/generations|audio\/transcriptions)\/?$/,
+      "",
+    )
+    .replace(
+      /\/(chat\/completions|completions|embeddings|rerank|images\/generations|audio\/transcriptions)\/?$/,
+      "",
+    )
+    .replace(/\/v1\/?$/, "")
+    .replace(/\/$/, "");
+}
+
 export function detectApiType(url: string, body: Record<string, unknown> | null): ApiType {
   if (url.includes("/images/generations")) return "images";
   if (url.includes("/embeddings")) return "embeddings";

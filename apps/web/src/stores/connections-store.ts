@@ -110,7 +110,8 @@ export const useConnectionsStore = create<ConnectionsStore>()(
       },
     }),
     {
-      name: "md.connections.v1",
+      name: "modeldoctor-connections",
+      version: 1, // bumped from default 0; old format (apiUrl with full URL) is dropped
       partialize: (state) => ({ connections: state.connections }),
     },
   ),

@@ -40,7 +40,7 @@ export function buildJobManifest(ctx: BenchmarkExecutionContext, opts: JobManife
   const env: { name: string; value: string }[] = [
     { name: "BENCHMARK_ID", value: ctx.benchmarkId },
     { name: "CALLBACK_URL", value: ctx.callbackUrl },
-    { name: "TARGET_URL", value: ctx.apiUrl },
+    { name: "TARGET_URL", value: ctx.apiBaseUrl },
     { name: "MODEL", value: ctx.model },
     { name: "API_TYPE", value: ctx.apiType },
     { name: "DATASET_NAME", value: ctx.datasetName },

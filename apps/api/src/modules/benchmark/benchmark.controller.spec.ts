@@ -63,7 +63,7 @@ describe("BenchmarkController", () => {
       name: "n",
       profile: "throughput",
       apiType: "chat",
-      apiUrl: "https://x.com",
+      apiBaseUrl: "https://x.com",
       apiKey: "sk",
       model: "m",
       datasetName: "random",

@@ -100,7 +100,7 @@ export function ConnectionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("table.name")}</TableHead>
-                  <TableHead>{t("table.apiUrl")}</TableHead>
+                  <TableHead>{t("table.apiBaseUrl")}</TableHead>
                   <TableHead>{t("table.model")}</TableHead>
                   <TableHead>{t("table.customHeaders")}</TableHead>
                   <TableHead>{t("table.createdAt")}</TableHead>
@@ -111,7 +111,7 @@ export function ConnectionsPage() {
                 {list.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.apiUrl}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.apiBaseUrl}</TableCell>
                     <TableCell className="font-mono text-xs">{c.model}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {c.customHeaders ? `${c.customHeaders.split("\n")[0]}…` : "—"}

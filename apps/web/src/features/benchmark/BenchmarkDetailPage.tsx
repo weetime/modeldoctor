@@ -212,7 +212,7 @@ export function BenchmarkDetailPage() {
         )}
 
         <div className="grid grid-cols-4 gap-x-6 gap-y-2 rounded-md border border-border bg-muted/30 p-4">
-          <KV label={t("detail.config.target")} value={data.apiUrl} />
+          <KV label={t("detail.config.target")} value={data.apiBaseUrl} />
           <KV label={t("detail.config.model")} value={data.model} />
           <KV label={t("detail.config.apiType")} value={data.apiType} />
           <KV

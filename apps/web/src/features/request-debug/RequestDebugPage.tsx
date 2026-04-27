@@ -40,7 +40,7 @@ export function RequestDebugPage() {
     if (id) {
       const c = conns.get(id);
       if (c) {
-        slice.patch("url", c.apiUrl);
+        slice.patch("url", c.apiBaseUrl);
         const apiKeyHeader = {
           key: "Authorization",
           value: `Bearer ${c.apiKey}`,

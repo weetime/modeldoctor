@@ -1,5 +1,5 @@
 import type { EndpointValues } from "@/types/connection";
-import type { ParsedCurl } from "./curl-parser";
+import { type ParsedCurl, toApiBaseUrl } from "./curl-parser";
 
 export type EndpointKey = keyof EndpointValues;
 
@@ -22,8 +22,8 @@ export function applyCurlToEndpoint(parsed: ParsedCurl): CurlToEndpointResult {
   const filledKeys: EndpointKey[] = [];
 
   if (parsed.url) {
-    patch.apiUrl = parsed.url;
-    filledKeys.push("apiUrl");
+    patch.apiBaseUrl = toApiBaseUrl(parsed.url);
+    filledKeys.push("apiBaseUrl");
   }
   if (parsed.queryParams) {
     patch.queryParams = parsed.queryParams;

@@ -24,7 +24,7 @@ interface ChatCompletionLike {
 }
 
 export async function runTextProbe({
-  apiUrl,
+  apiBaseUrl,
   apiKey,
   model,
   extraHeaders = {},
@@ -36,8 +36,9 @@ export async function runTextProbe({
     temperature: 0,
     stream: false,
   });
+  const targetUrl = `${apiBaseUrl}/v1/chat/completions`;
   const t0 = Date.now();
-  const res = await fetch(apiUrl, {
+  const res = await fetch(targetUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -55,7 +55,7 @@ describe("benchmark contracts", () => {
       name: "throughput-baseline",
       profile: "throughput" as const,
       apiType: "chat" as const,
-      apiUrl: "http://vllm.local:8000/v1",
+      apiBaseUrl: "http://vllm.local:8000",
       apiKey: "sk-test",
       model: "facebook/opt-125m",
       datasetName: "random" as const,
@@ -97,8 +97,10 @@ describe("benchmark contracts", () => {
       ).toThrow();
     });
 
-    it("rejects non-URL apiUrl", () => {
-      expect(() => CreateBenchmarkRequestSchema.parse({ ...valid, apiUrl: "not-a-url" })).toThrow();
+    it("rejects non-URL apiBaseUrl", () => {
+      expect(() =>
+        CreateBenchmarkRequestSchema.parse({ ...valid, apiBaseUrl: "not-a-url" }),
+      ).toThrow();
     });
 
     it("rejects negative requestRate", () => {
@@ -146,7 +148,7 @@ describe("benchmark contracts", () => {
       name: "run-1",
       profile: "throughput" as const,
       apiType: "chat" as const,
-      apiUrl: "http://vllm:8000/v1",
+      apiBaseUrl: "http://vllm:8000",
       model: "facebook/opt-125m",
       datasetName: "random" as const,
       state: "completed" as const,

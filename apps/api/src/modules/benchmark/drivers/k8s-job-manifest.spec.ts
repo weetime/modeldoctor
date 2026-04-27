@@ -6,7 +6,7 @@ const ctx: BenchmarkExecutionContext = {
   benchmarkId: "ckabc123",
   profile: "throughput",
   apiType: "chat",
-  apiUrl: "https://api.example.com/v1",
+  apiBaseUrl: "https://api.example.com",
   apiKey: "sk-supersecret",
   model: "llama-3-70b",
   datasetName: "random",
@@ -106,7 +106,7 @@ describe("k8s-job-manifest", () => {
       expect(env).toMatchObject({
         BENCHMARK_ID: "ckabc123",
         CALLBACK_URL: "http://modeldoctor-api.modeldoctor.svc:3001",
-        TARGET_URL: "https://api.example.com/v1",
+        TARGET_URL: "https://api.example.com",
         MODEL: "llama-3-70b",
         API_TYPE: "chat",
         DATASET_NAME: "random",

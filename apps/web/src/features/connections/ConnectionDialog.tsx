@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
-import { parseCurlCommand } from "@/lib/curl-parser";
+import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +36,7 @@ interface ConnectionDialogProps {
 
 const empty: ConnectionInput = {
   name: "",
-  apiUrl: "",
+  apiBaseUrl: "",
   apiKey: "",
   model: "",
   customHeaders: "",
@@ -86,7 +86,7 @@ export function ConnectionDialog({
       return;
     }
 
-    const validatedKeys: ReadonlySet<EndpointKey> = new Set(["apiUrl", "apiKey", "model"]);
+    const validatedKeys: ReadonlySet<EndpointKey> = new Set(["apiBaseUrl", "apiKey", "model"]);
     for (const key of filledKeys) {
       const value = patch[key];
       if (value === undefined) continue;
@@ -99,7 +99,8 @@ export function ConnectionDialog({
 
   const onSubmit = form.handleSubmit((values) => {
     try {
-      const saved = connection ? update(connection.id, values) : create(values);
+      const sanitized = { ...values, apiBaseUrl: toApiBaseUrl(values.apiBaseUrl) };
+      const saved = connection ? update(connection.id, sanitized) : create(sanitized);
       onSaved?.(saved);
       onOpenChange(false);
     } catch (e) {
@@ -148,16 +149,19 @@ export function ConnectionDialog({
           </div>
 
           <div>
-            <Label htmlFor="apiUrl">{t("dialog.fields.apiUrl")}</Label>
+            <Label htmlFor="apiBaseUrl">{t("dialog.fields.apiBaseUrl")}</Label>
             <Input
-              id="apiUrl"
+              id="apiBaseUrl"
               autoComplete="off"
-              placeholder={t("dialog.fields.apiUrlPlaceholder")}
-              {...form.register("apiUrl")}
+              placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
+              {...form.register("apiBaseUrl")}
             />
-            {form.formState.errors.apiUrl ? (
+            {form.formState.errors.apiBaseUrl ? (
               <p className="mt-1 text-xs text-destructive">{t("dialog.errors.invalidUrl")}</p>
             ) : null}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("dialog.fields.apiBaseUrlHelp")}
+            </p>
           </div>
 
           <div>
