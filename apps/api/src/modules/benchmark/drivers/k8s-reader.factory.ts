@@ -15,7 +15,16 @@ export async function createBenchmarkK8sReader(
   if (driver !== "k8s") return null;
   const k8s = await loadK8sClient();
   const kc = new k8s.KubeConfig();
-  kc.loadFromDefault();
+  // Mirror driver.factory.ts: prefer an explicit KUBECONFIG so out-of-cluster
+  // dev doesn't fall through to ~/.kube/config and accidentally read a real
+  // cluster's context. In-cluster mode (KUBECONFIG unset) is handled by
+  // loadFromDefault()'s ServiceAccount fallback.
+  const explicitKubeconfig = config.get("KUBECONFIG", { infer: true }) as string | undefined;
+  if (explicitKubeconfig) {
+    kc.loadFromFile(explicitKubeconfig);
+  } else {
+    kc.loadFromDefault();
+  }
   const batch = kc.makeApiClient(k8s.BatchV1Api);
   const core = kc.makeApiClient(k8s.CoreV1Api);
   return {

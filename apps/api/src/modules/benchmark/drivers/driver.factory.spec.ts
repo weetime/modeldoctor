@@ -28,6 +28,7 @@ describe("createBenchmarkDriver", () => {
     vi.stubGlobal("__test_kc_loader__", () => ({
       KubeConfig: class {
         loadFromDefault() {}
+        loadFromFile(_path: string) {}
         makeApiClient() {
           return {};
         }
@@ -43,6 +44,46 @@ describe("createBenchmarkDriver", () => {
       }),
     );
     expect(drv).toBeInstanceOf(K8sJobDriver);
+  });
+
+  it("uses KUBECONFIG path via loadFromFile when set, otherwise loadFromDefault", async () => {
+    // Track which loader was called per-instantiation.
+    const calls: string[] = [];
+    vi.stubGlobal("__test_kc_loader__", () => ({
+      KubeConfig: class {
+        loadFromDefault() {
+          calls.push("default");
+        }
+        loadFromFile(path: string) {
+          calls.push(`file:${path}`);
+        }
+        makeApiClient() {
+          return {};
+        }
+      },
+      BatchV1Api: class {},
+      CoreV1Api: class {},
+    }));
+
+    await createBenchmarkDriver(
+      buildConfig({
+        BENCHMARK_DRIVER: "k8s",
+        BENCHMARK_K8S_NAMESPACE: "ns",
+        BENCHMARK_RUNNER_IMAGE: "img:tag",
+        KUBECONFIG: "/custom/kubeconfig",
+      }),
+    );
+    expect(calls).toEqual(["file:/custom/kubeconfig"]);
+
+    calls.length = 0;
+    await createBenchmarkDriver(
+      buildConfig({
+        BENCHMARK_DRIVER: "k8s",
+        BENCHMARK_K8S_NAMESPACE: "ns",
+        BENCHMARK_RUNNER_IMAGE: "img:tag",
+      }),
+    );
+    expect(calls).toEqual(["default"]);
   });
 
   it("rejects unknown driver names", async () => {

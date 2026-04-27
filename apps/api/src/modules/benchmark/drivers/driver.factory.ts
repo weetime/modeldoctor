@@ -30,7 +30,18 @@ export async function createBenchmarkDriver(
     }
     const k8s = await loadK8sClient();
     const kc = new k8s.KubeConfig();
-    kc.loadFromDefault();
+    // Prefer an explicit KUBECONFIG from .env / process.env over loadFromDefault().
+    // @nestjs/config does not always populate process.env, so loadFromDefault()
+    // would silently fall through to ~/.kube/config — easy to mis-target a real
+    // cluster from local dev. ConfigService sees the validated .env value
+    // either way. In-cluster mode leaves KUBECONFIG unset and loadFromDefault()
+    // detects the ServiceAccount mount automatically.
+    const explicitKubeconfig = config.get("KUBECONFIG", { infer: true }) as string | undefined;
+    if (explicitKubeconfig) {
+      kc.loadFromFile(explicitKubeconfig);
+    } else {
+      kc.loadFromDefault();
+    }
     return new K8sJobDriver({
       namespace: ns,
       image,
