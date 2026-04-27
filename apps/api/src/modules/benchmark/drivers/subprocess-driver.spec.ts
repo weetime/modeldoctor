@@ -25,6 +25,8 @@ const baseCtx: BenchmarkExecutionContext = {
   maxDurationSeconds: 600,
   callbackUrl: "http://localhost:3001",
   callbackToken: "tok",
+  validateBackend: true,
+  maxConcurrency: 100,
 };
 
 function fakeChild(pid: number): ChildProcess {

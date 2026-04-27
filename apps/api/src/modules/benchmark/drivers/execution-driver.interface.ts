@@ -38,6 +38,24 @@ export interface BenchmarkExecutionContext {
   // Callback
   callbackUrl: string;
   callbackToken: string;
+
+  // When false, the runner skips guidellm's GET /v1/models probe before
+  // benchmarking — required for OpenAI-compatible gateways that only expose
+  // /v1/chat/completions (e.g. some 4pd gen-studio routes). Default true
+  // matches vanilla guidellm behavior.
+  validateBackend: boolean;
+
+  // Optional HuggingFace tokenizer id (e.g. "Qwen/Qwen2.5-0.5B-Instruct")
+  // forwarded to guidellm via --processor for synthetic prompt token counts.
+  // Required when `model` is a gateway-local name not on HF; if the gateway
+  // model name itself resolves on HF, leave undefined.
+  processor?: string;
+
+  // Max in-flight concurrent requests when requestRate == 0 (throughput mode).
+  // guidellm 0.5.x requires a rate parameter for ThroughputProfile — this is
+  // the concurrency cap, not requests-per-second. Ignored for constant /
+  // poisson rate modes.
+  maxConcurrency: number;
 }
 
 /**

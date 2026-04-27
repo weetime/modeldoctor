@@ -18,6 +18,8 @@ const ctx: BenchmarkExecutionContext = {
   maxDurationSeconds: 1800,
   callbackUrl: "http://modeldoctor-api.modeldoctor.svc:3001",
   callbackToken: "1700000000.deadbeef",
+  validateBackend: true,
+  maxConcurrency: 100,
 };
 
 describe("k8s-job-manifest", () => {

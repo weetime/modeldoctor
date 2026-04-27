@@ -17,6 +17,8 @@ function buildConfig(over: Record<string, unknown> = {}): ConfigService {
         BENCHMARK_CALLBACK_SECRET: SECRET.toString("utf8"),
         BENCHMARK_CALLBACK_URL: "http://localhost:3001",
         BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
+        BENCHMARK_VALIDATE_BACKEND: true,
+        BENCHMARK_DEFAULT_MAX_CONCURRENCY: 100,
         ...over,
       };
       return map[key];

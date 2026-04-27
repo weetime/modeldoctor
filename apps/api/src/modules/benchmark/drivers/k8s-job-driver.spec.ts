@@ -18,6 +18,8 @@ const ctx: BenchmarkExecutionContext = {
   maxDurationSeconds: 60,
   callbackUrl: "http://api:3001",
   callbackToken: "tok",
+  validateBackend: true,
+  maxConcurrency: 100,
 };
 
 interface FakeApis {

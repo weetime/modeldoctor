@@ -70,3 +70,37 @@ class TestParseEnv:
         env_minimal["REQUEST_RATE"] = "-5"
         with pytest.raises(ValueError, match="REQUEST_RATE"):
             parse_env(env_minimal)
+
+    def test_validate_backend_defaults_to_true(self, env_minimal: dict[str, str]) -> None:
+        # Absence of VALIDATE_BACKEND must preserve guidellm's default behavior.
+        cfg = parse_env(env_minimal)
+        assert cfg.validate_backend is True
+
+    def test_validate_backend_false(self, env_minimal: dict[str, str]) -> None:
+        env_minimal["VALIDATE_BACKEND"] = "false"
+        cfg = parse_env(env_minimal)
+        assert cfg.validate_backend is False
+
+    def test_validate_backend_rejects_truthy_aliases(self, env_minimal: dict[str, str]) -> None:
+        # Mirror the API's strict envBoolean: only literal "true"/"false".
+        env_minimal["VALIDATE_BACKEND"] = "yes"
+        with pytest.raises(ValueError, match="VALIDATE_BACKEND"):
+            parse_env(env_minimal)
+
+    def test_processor_defaults_to_none(self, env_minimal: dict[str, str]) -> None:
+        cfg = parse_env(env_minimal)
+        assert cfg.processor is None
+
+    def test_processor_passes_through(self, env_minimal: dict[str, str]) -> None:
+        env_minimal["PROCESSOR"] = "Qwen/Qwen2.5-0.5B-Instruct"
+        cfg = parse_env(env_minimal)
+        assert cfg.processor == "Qwen/Qwen2.5-0.5B-Instruct"
+
+    def test_max_concurrency_defaults_to_100(self, env_minimal: dict[str, str]) -> None:
+        cfg = parse_env(env_minimal)
+        assert cfg.max_concurrency == 100
+
+    def test_max_concurrency_override(self, env_minimal: dict[str, str]) -> None:
+        env_minimal["MAX_CONCURRENCY"] = "32"
+        cfg = parse_env(env_minimal)
+        assert cfg.max_concurrency == 32

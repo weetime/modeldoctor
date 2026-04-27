@@ -43,6 +43,9 @@ export class BenchmarkService {
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
   private readonly defaultMaxDuration: number;
+  private readonly validateBackend: boolean;
+  private readonly processor: string | undefined;
+  private readonly maxConcurrency: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -56,6 +59,21 @@ export class BenchmarkService {
     );
     this.callbackUrl = config.get("BENCHMARK_CALLBACK_URL", { infer: true }) as string;
     this.defaultMaxDuration = config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", {
+      infer: true,
+    }) as number;
+    // Default true (vanilla guidellm). Set BENCHMARK_VALIDATE_BACKEND=false in
+    // the API env to skip the GET /v1/models probe — required when the target
+    // is an OpenAI-compatible gateway that only exposes /v1/chat/completions.
+    this.validateBackend = config.get("BENCHMARK_VALIDATE_BACKEND", { infer: true }) as boolean;
+    // Optional HF tokenizer id passed to guidellm for synthetic prompt token
+    // counting. Required when the target gateway exposes a local model name
+    // (e.g. "gen-studio_…") that doesn't resolve on HuggingFace.
+    this.processor =
+      (config.get("BENCHMARK_PROCESSOR", { infer: true }) as string | undefined) || undefined;
+    // Max concurrent in-flight requests for throughput mode. guidellm 0.5.x
+    // ThroughputProfile requires this. Tune up for high-RPS targets, down
+    // for resource-constrained ones. Constant/poisson rate modes ignore it.
+    this.maxConcurrency = config.get("BENCHMARK_DEFAULT_MAX_CONCURRENCY", {
       infer: true,
     }) as number;
   }
@@ -133,6 +151,9 @@ export class BenchmarkService {
       maxDurationSeconds: this.defaultMaxDuration,
       callbackUrl: this.callbackUrl,
       callbackToken,
+      validateBackend: this.validateBackend,
+      processor: this.processor,
+      maxConcurrency: this.maxConcurrency,
     };
 
     let handle: string;
