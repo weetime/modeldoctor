@@ -37,7 +37,7 @@
       "name": "名称",
       "description": "描述",
       "apiType": "API 类型",
-      "apiUrl": "API URL",
+      "apiBaseUrl": "API Base URL",
       "apiKey": "API Key",
       "model": "模型",
       "profile": "Profile",

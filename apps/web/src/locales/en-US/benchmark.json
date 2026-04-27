@@ -41,7 +41,7 @@
       "name": "Name",
       "description": "Description",
       "apiType": "API type",
-      "apiUrl": "API URL",
+      "apiBaseUrl": "API Base URL",
       "apiKey": "API Key",
       "model": "Model",
       "profile": "Profile",

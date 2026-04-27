@@ -16,7 +16,7 @@ function Harness({
       name: "",
       profile: "throughput",
       apiType: "chat",
-      apiUrl: "",
+      apiBaseUrl: "",
       apiKey: "",
       model: "",
       datasetName: "random",
@@ -36,7 +36,7 @@ describe("BenchmarkEndpointFields", () => {
   it("renders four labeled fields", () => {
     render(<Harness />);
     expect(screen.getByLabelText(/api type/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/api url/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/api base url/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^model$/i)).toBeInTheDocument();
   });
@@ -49,9 +49,9 @@ describe("BenchmarkEndpointFields", () => {
     expect(screen.queryByRole("option", { name: /embedding/i })).toBeNull();
   });
 
-  it("typing in apiUrl updates the form value", async () => {
+  it("typing in apiBaseUrl updates the form value", async () => {
     render(<Harness />);
-    await userEvent.type(screen.getByLabelText(/api url/i), "https://api.test/v1");
-    expect(screen.getByLabelText(/api url/i)).toHaveValue("https://api.test/v1");
+    await userEvent.type(screen.getByLabelText(/api base url/i), "https://api.test");
+    expect(screen.getByLabelText(/api base url/i)).toHaveValue("https://api.test");
   });
 });

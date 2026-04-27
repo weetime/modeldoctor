@@ -5,7 +5,7 @@ export const connectionInputSchema = z.object({
     .string()
     .transform((v) => v.trim())
     .pipe(z.string().min(1, "required")),
-  apiUrl: z.string().url("invalid URL"),
+  apiBaseUrl: z.string().url("invalid URL"),
   apiKey: z.string().min(1, "required"),
   model: z.string().min(1, "required"),
   customHeaders: z.string(),

@@ -22,7 +22,7 @@ export function BenchmarkEndpointFields({
   const { register, setValue, watch, control, formState } =
     useFormContext<CreateBenchmarkRequest>();
   const apiTypeId = useId();
-  const apiUrlId = useId();
+  const apiBaseUrlId = useId();
   const apiKeyId = useId();
   const modelId = useId();
   const connId = useId();
@@ -33,7 +33,7 @@ export function BenchmarkEndpointFields({
     if (connectionId === "__manual__") return;
     const conn = conns.find((c) => c.id === connectionId);
     if (!conn) return;
-    setValue("apiUrl", conn.apiUrl, { shouldValidate: true });
+    setValue("apiBaseUrl", conn.apiBaseUrl, { shouldValidate: true });
     setValue("apiKey", conn.apiKey, { shouldValidate: true });
     setValue("model", conn.model, { shouldValidate: true });
   };
@@ -46,7 +46,7 @@ export function BenchmarkEndpointFields({
     <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t("create.fields.apiUrl")}
+          {t("create.fields.apiBaseUrl")}
         </span>
         {conns.length > 0 && (
           <div className="flex items-center gap-2">
@@ -96,8 +96,8 @@ export function BenchmarkEndpointFields({
       </div>
 
       <div>
-        <Label htmlFor={apiUrlId}>{t("create.fields.apiUrl")}</Label>
-        <Input id={apiUrlId} {...register("apiUrl")} aria-invalid={!!errors.apiUrl} />
+        <Label htmlFor={apiBaseUrlId}>{t("create.fields.apiBaseUrl")}</Label>
+        <Input id={apiBaseUrlId} {...register("apiBaseUrl")} aria-invalid={!!errors.apiBaseUrl} />
       </div>
       <div>
         <Label htmlFor={apiKeyId}>{t("create.fields.apiKey")}</Label>

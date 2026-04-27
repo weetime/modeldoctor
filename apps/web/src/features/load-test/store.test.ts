@@ -14,7 +14,7 @@ const FAKE_RESULT: LoadTestResult = {
   },
   config: {
     apiType: "chat",
-    apiUrl: "http://a",
+    apiBaseUrl: "http://a",
     model: "test-model",
     rate: 2,
     duration: 60,

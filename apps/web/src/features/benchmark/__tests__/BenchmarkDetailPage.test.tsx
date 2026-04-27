@@ -47,7 +47,7 @@ const BASE: BenchmarkRun = {
   description: null,
   profile: "throughput",
   apiType: "chat",
-  apiUrl: "https://api.test/v1",
+  apiBaseUrl: "https://api.test",
   model: "m",
   datasetName: "random",
   datasetInputTokens: 1024,

@@ -26,7 +26,7 @@
     "rate": "\u901f\u7387 (QPS)",
     "duration": "\u65f6\u957f (\u79d2)",
     "default": "\u9ed8\u8ba4",
-    "apiUrl": "API URL",
+    "apiBaseUrl": "API Base URL",
     "apiKey": "API Key",
     "model": "\u6a21\u578b",
     "customHeaders": "\u81ea\u5b9a\u4e49 Headers\uff08\u6bcf\u884c\u4e00\u6761\uff09",

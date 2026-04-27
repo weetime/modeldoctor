@@ -14,7 +14,7 @@ export function E2ESmokePage() {
   const endpoint = slice.manualEndpoint;
 
   const canRun =
-    endpoint.apiUrl.trim().length > 0 &&
+    endpoint.apiBaseUrl.trim().length > 0 &&
     endpoint.apiKey.trim().length > 0 &&
     endpoint.model.trim().length > 0;
   const disabledReason = canRun ? undefined : tc("errors.required");
@@ -24,7 +24,7 @@ export function E2ESmokePage() {
     for (const p of probes) slice.setRunning(p, true);
     try {
       const data = await api.post<E2ETestResponse>("/api/e2e-test", {
-        apiUrl: endpoint.apiUrl,
+        apiBaseUrl: endpoint.apiBaseUrl,
         apiKey: endpoint.apiKey,
         model: endpoint.model,
         customHeaders: endpoint.customHeaders,

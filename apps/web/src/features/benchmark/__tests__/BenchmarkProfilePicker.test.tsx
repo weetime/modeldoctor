@@ -17,7 +17,7 @@ function Harness({
       name: "x",
       profile: "custom",
       apiType: "chat",
-      apiUrl: "https://api/v1",
+      apiBaseUrl: "https://api",
       apiKey: "k",
       model: "m",
       datasetName: "random",

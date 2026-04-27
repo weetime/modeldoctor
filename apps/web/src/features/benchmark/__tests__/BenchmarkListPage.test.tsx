@@ -46,7 +46,7 @@ const ONE_COMPLETED: ListBenchmarksResponse = {
       name: "vllm-llama3-tput",
       profile: "throughput",
       apiType: "chat",
-      apiUrl: "https://api.example.com/v1",
+      apiBaseUrl: "https://api.example.com",
       model: "llama-3-8b",
       datasetName: "random",
       state: "completed",

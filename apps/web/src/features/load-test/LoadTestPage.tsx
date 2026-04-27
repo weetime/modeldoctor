@@ -14,6 +14,7 @@ import {
 import { ApiError, api } from "@/lib/api-client";
 import { type ParsedCurl, detectApiType } from "@/lib/curl-parser";
 import type { EndpointValues } from "@/types/connection";
+import { loadTestApiTypePath } from "@modeldoctor/contracts";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { LoadTestResults } from "./Results";
@@ -153,7 +154,7 @@ export function LoadTestPage() {
 
   const mutation = useMutation<LoadTestResult, ApiError>({
     mutationFn: async () => {
-      if (!endpoint.apiUrl || !endpoint.apiKey || !endpoint.model) {
+      if (!endpoint.apiBaseUrl || !endpoint.apiKey || !endpoint.model) {
         throw new ApiError(400, tc("errors.required"));
       }
       const body = buildLoadTestBody(slice, endpoint);
@@ -191,6 +192,11 @@ export function LoadTestPage() {
           }}
           onEndpointChange={onEndpointChange}
           onCurlParsed={onCurlParsed}
+          previewUrl={
+            endpoint.apiBaseUrl
+              ? `${endpoint.apiBaseUrl}${loadTestApiTypePath(slice.apiType)}`
+              : undefined
+          }
         />
 
         <Section title={t("sections.request")}>
@@ -286,7 +292,7 @@ function buildLoadTestBody(
 ) {
   const base = {
     apiType: s.apiType,
-    apiUrl: endpoint.apiUrl,
+    apiBaseUrl: endpoint.apiBaseUrl,
     apiKey: endpoint.apiKey,
     model: endpoint.model,
     customHeaders: endpoint.customHeaders,

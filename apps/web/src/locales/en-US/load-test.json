@@ -26,7 +26,7 @@
     "rate": "Rate (QPS)",
     "duration": "Duration (s)",
     "default": "Default",
-    "apiUrl": "API URL",
+    "apiBaseUrl": "API Base URL",
     "apiKey": "API Key",
     "model": "Model",
     "customHeaders": "Custom headers (one per line)",

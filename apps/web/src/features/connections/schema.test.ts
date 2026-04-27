@@ -4,7 +4,7 @@ import { connectionInputSchema } from "./schema";
 describe("connectionInputSchema", () => {
   const valid = {
     name: "prod-vllm",
-    apiUrl: "http://10.0.0.1:8000/v1/chat/completions",
+    apiBaseUrl: "http://10.0.0.1:8000",
     apiKey: "sk-abc",
     model: "qwen-2.5-7b",
     customHeaders: "",
@@ -23,7 +23,7 @@ describe("connectionInputSchema", () => {
   it("rejects invalid URL", () => {
     const r = connectionInputSchema.safeParse({
       ...valid,
-      apiUrl: "not-a-url",
+      apiBaseUrl: "not-a-url",
     });
     expect(r.success).toBe(false);
   });

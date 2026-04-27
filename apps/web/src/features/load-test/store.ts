@@ -45,7 +45,7 @@ export interface LoadTestSlice {
 }
 
 const emptyManualEndpoint: EndpointValues = {
-  apiUrl: "",
+  apiBaseUrl: "",
   apiKey: "",
   model: "",
   customHeaders: "",
