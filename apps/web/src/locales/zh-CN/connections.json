@@ -3,7 +3,7 @@
   "subtitle": "已命名的 API 端点集合。在每个测试 tab 顶部的 Endpoint 下拉中选择。",
   "table": {
     "name": "名称",
-    "apiUrl": "API URL",
+    "apiBaseUrl": "API Base URL",
     "model": "模型",
     "customHeaders": "自定义 Headers",
     "createdAt": "创建时间",
@@ -15,8 +15,9 @@
     "fields": {
       "name": "名称",
       "namePlaceholder": "例如 prod-vllm",
-      "apiUrl": "API URL",
-      "apiUrlPlaceholder": "http://host:port/v1/chat/completions",
+      "apiBaseUrl": "API Base URL",
+      "apiBaseUrlPlaceholder": "http://host:port 或 https://api.openai.com",
+      "apiBaseUrlHelp": "只填域名+端口，不要带 /v1/... 路径。",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "sk-…",
       "model": "模型",

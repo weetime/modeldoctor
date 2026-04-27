@@ -3,6 +3,7 @@ import {
   Bug,
   CheckCircle2,
   Database,
+  Gauge,
   GitCompare,
   HeartPulse,
   History,
@@ -31,6 +32,7 @@ export const sidebarGroups: SidebarGroup[] = [
     labelKey: "groups.performance",
     items: [
       { to: "/load-test", icon: Activity, labelKey: "items.loadTest" },
+      { to: "/benchmarks", icon: Gauge, labelKey: "items.benchmark" },
       { to: "/soak", icon: Timer, labelKey: "items.soak", comingSoon: true },
       {
         to: "/streaming",

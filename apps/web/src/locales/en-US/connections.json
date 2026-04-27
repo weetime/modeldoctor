@@ -3,7 +3,7 @@
   "subtitle": "A library of named API endpoints. Selected from each tab via the Endpoint dropdown.",
   "table": {
     "name": "Name",
-    "apiUrl": "API URL",
+    "apiBaseUrl": "API Base URL",
     "model": "Model",
     "customHeaders": "Headers",
     "createdAt": "Created",
@@ -15,8 +15,9 @@
     "fields": {
       "name": "Name",
       "namePlaceholder": "e.g. prod-vllm",
-      "apiUrl": "API URL",
-      "apiUrlPlaceholder": "http://host:port/v1/chat/completions",
+      "apiBaseUrl": "API Base URL",
+      "apiBaseUrlPlaceholder": "http://host:port or https://api.openai.com",
+      "apiBaseUrlHelp": "Origin only — don't include /v1/... paths.",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "sk-…",
       "model": "Model",

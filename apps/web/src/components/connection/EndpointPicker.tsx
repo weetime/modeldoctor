@@ -12,7 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
-import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
+import { type ParsedCurl, parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
 import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
@@ -38,6 +38,11 @@ export interface EndpointPickerProps {
    * have been populated from the parsed curl.
    */
   onCurlParsed?: (parsed: ParsedCurl) => void;
+  /**
+   * Optional: when provided, renders a read-only "→ POST <url>" preview line
+   * below the API Base URL input (e.g. LoadTestPage passes the full request URL).
+   */
+  previewUrl?: string;
 }
 
 /**
@@ -61,6 +66,7 @@ export function EndpointPicker({
   onSelect,
   onEndpointChange,
   onCurlParsed,
+  previewUrl,
 }: EndpointPickerProps) {
   const { t } = useTranslation("common");
   const conns = useConnectionsStore();
@@ -78,7 +84,7 @@ export function EndpointPicker({
    */
   const [dialogMode, setDialogMode] = useState<"new" | "saveAs" | null>(null);
 
-  const apiUrlId = useId();
+  const apiBaseUrlId = useId();
   const apiKeyId = useId();
   const modelId = useId();
   const customHeadersId = useId();
@@ -86,14 +92,14 @@ export function EndpointPicker({
 
   const isDirty =
     !!selectedConn &&
-    (selectedConn.apiUrl !== endpoint.apiUrl ||
+    (selectedConn.apiBaseUrl !== endpoint.apiBaseUrl ||
       selectedConn.apiKey !== endpoint.apiKey ||
       selectedConn.model !== endpoint.model ||
       selectedConn.customHeaders !== endpoint.customHeaders ||
       selectedConn.queryParams !== endpoint.queryParams);
 
   const canSave =
-    endpoint.apiUrl.trim().length > 0 &&
+    endpoint.apiBaseUrl.trim().length > 0 &&
     endpoint.apiKey.trim().length > 0 &&
     endpoint.model.trim().length > 0;
 
@@ -115,7 +121,7 @@ export function EndpointPicker({
     if (c) {
       onSelect(c.id);
       onEndpointChange({
-        apiUrl: c.apiUrl,
+        apiBaseUrl: c.apiBaseUrl,
         apiKey: c.apiKey,
         model: c.model,
         customHeaders: c.customHeaders,
@@ -127,7 +133,8 @@ export function EndpointPicker({
   const onSaveClick = () => {
     if (selectedConn) {
       try {
-        updateConn(selectedConn.id, endpoint);
+        const sanitized = { ...endpoint, apiBaseUrl: toApiBaseUrl(endpoint.apiBaseUrl) };
+        updateConn(selectedConn.id, sanitized);
         toast.success(t("endpoint.saved", { name: selectedConn.name }));
       } catch (e) {
         toast.error(e instanceof Error ? e.message : t("endpoint.saveFailed"));
@@ -230,7 +237,7 @@ export function EndpointPicker({
         onSaved={(c) => {
           onSelect(c.id);
           onEndpointChange({
-            apiUrl: c.apiUrl,
+            apiBaseUrl: c.apiBaseUrl,
             apiKey: c.apiKey,
             model: c.model,
             customHeaders: c.customHeaders,
@@ -245,14 +252,20 @@ export function EndpointPicker({
         </h2>
         <div className="space-y-3">
           <div>
-            <Label htmlFor={apiUrlId}>{t("endpoint.apiUrl")}</Label>
+            <Label htmlFor={apiBaseUrlId}>{t("endpoint.apiBaseUrl")}</Label>
             <Input
-              id={apiUrlId}
-              value={endpoint.apiUrl}
-              onChange={(e) => patchEndpoint({ apiUrl: e.target.value })}
-              placeholder="http://host:port/v1/chat/completions"
+              id={apiBaseUrlId}
+              value={endpoint.apiBaseUrl}
+              onChange={(e) => patchEndpoint({ apiBaseUrl: e.target.value })}
+              placeholder="http://host:port or https://api.openai.com"
               className="font-mono text-xs"
             />
+            <p className="mt-1 text-xs text-muted-foreground">{t("endpoint.apiBaseUrlHelp")}</p>
+            {previewUrl && (
+              <div className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                → POST {previewUrl}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>

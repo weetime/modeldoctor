@@ -33,7 +33,7 @@ describe("LoadTestRuns (e2e)", () => {
     await prisma.loadTestRun.create({
       data: {
         apiType: "chat",
-        apiUrl: "http://x",
+        apiBaseUrl: "http://x",
         model: "m",
         rate: 1,
         duration: 1,
@@ -63,7 +63,7 @@ describe("LoadTestRuns (e2e)", () => {
       await prisma.loadTestRun.create({
         data: {
           apiType: "chat",
-          apiUrl: `http://x/${i}`,
+          apiBaseUrl: `http://x/${i}`,
           model: "m",
           rate: 1,
           duration: 1,
@@ -110,7 +110,7 @@ describe("LoadTestRuns (e2e)", () => {
       data: {
         userId: user2Id,
         apiType: "chat",
-        apiUrl: "http://user2-run",
+        apiBaseUrl: "http://user2-run",
         model: "m",
         rate: 1,
         duration: 1,
@@ -132,7 +132,7 @@ describe("LoadTestRuns (e2e)", () => {
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
-    const adminRunIds = adminRuns.body.items.map((r: { apiUrl: string }) => r.apiUrl);
+    const adminRunIds = adminRuns.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
     expect(adminRunIds).toContain("http://user2-run");
     // admin sees more rows than user2 alone
     expect(adminRuns.body.items.length).toBeGreaterThan(user2Runs.body.items.length);
@@ -151,7 +151,7 @@ describe("LoadTestRuns (e2e)", () => {
       data: {
         userId: user3Id,
         apiType: "completions",
-        apiUrl: "http://user3-run",
+        apiBaseUrl: "http://user3-run",
         model: "m",
         rate: 1,
         duration: 1,
@@ -166,7 +166,7 @@ describe("LoadTestRuns (e2e)", () => {
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
-    const adminUrls = adminRuns.body.items.map((r: { apiUrl: string }) => r.apiUrl);
+    const adminUrls = adminRuns.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
     expect(adminUrls).toContain("http://user3-run");
   });
 });

@@ -18,7 +18,7 @@ export class E2ETestService {
   async run(req: E2ETestRequest): Promise<E2ETestResponse> {
     const extraHeaders = parseHeaderLines(req.customHeaders);
     const ctx: ProbeCtx = {
-      apiUrl: req.apiUrl,
+      apiBaseUrl: req.apiBaseUrl,
       apiKey: req.apiKey,
       model: req.model,
       extraHeaders,

@@ -21,7 +21,7 @@ interface ChatCompletionLike {
 }
 
 export async function runAudioProbe({
-  apiUrl,
+  apiBaseUrl,
   apiKey,
   model,
   extraHeaders = {},
@@ -32,8 +32,9 @@ export async function runAudioProbe({
     systemPrompt: "You are Qwen, a virtual human capable of generating text and speech.",
   });
 
+  const targetUrl = `${apiBaseUrl}/v1/chat/completions`;
   const t0 = Date.now();
-  const res = await fetch(apiUrl, {
+  const res = await fetch(targetUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

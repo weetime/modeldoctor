@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+// Reusable helper for boolean env vars. Avoid z.coerce.boolean() — it calls
+// Boolean(input), and Boolean("false") === true (every non-empty string is
+// truthy). This helper accepts either a native boolean (for in-process use)
+// or the exact strings "true"/"false" from process.env; anything else
+// (typos, "TRUE", "yes", "1", "") throws a ZodError at startup so a
+// misconfigured deployment fails loudly instead of silently flipping.
+const envBoolean = z
+  .union([z.boolean(), z.enum(["true", "false"])], {
+    errorMap: () => ({ message: 'must be true, false, "true", or "false"' }),
+  })
+  .transform((v) => (typeof v === "boolean" ? v : v === "true"));
+
 export const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -25,7 +37,56 @@ export const EnvSchema = z
     JWT_ACCESS_SECRET: z.string().min(32).optional(),
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
-    DISABLE_FIRST_USER_ADMIN: z.coerce.boolean().default(false),
+    // 32-byte base64-encoded AES-256 key used to encrypt user-supplied API
+    // keys at rest. Optional in Phase 1 (the helper is added but no row uses
+    // it yet); Phase 4 tightens to required-when-not-test once the
+    // BenchmarkController persists encrypted rows.
+    BENCHMARK_API_KEY_ENCRYPTION_KEY: z
+      .string()
+      .optional()
+      .refine(
+        (v) => {
+          if (v === undefined) return true;
+          // Reject obviously non-base64 input. Buffer.from is permissive (it
+          // silently drops invalid chars) so we lint with a regex first.
+          if (!/^[A-Za-z0-9+/=]+$/.test(v)) return false;
+          return Buffer.from(v, "base64").length === 32;
+        },
+        { message: "must be a base64 string that decodes to exactly 32 bytes" },
+      ),
+    // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
+    // Phase 1 only validates length when present.
+    BENCHMARK_CALLBACK_SECRET: z.string().min(32).optional(),
+    // Phase 3 driver + k8s config — full validation in Task 9
+    BENCHMARK_DRIVER: z.enum(["subprocess", "k8s"]).default("subprocess"),
+    BENCHMARK_CALLBACK_URL: z.string().url().optional(),
+    BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
+    BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
+    BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
+    // When false, the runner skips guidellm's GET /v1/models probe before
+    // benchmarking. Set this to false when targeting OpenAI-compatible
+    // gateways that only expose /v1/chat/completions (e.g. some 4pd
+    // gen-studio routes). Default true matches vanilla guidellm behavior.
+    BENCHMARK_VALIDATE_BACKEND: envBoolean.default(true),
+    // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
+    // counting (passed as --processor). Set this when the target gateway
+    // exposes a local model name (e.g. "gen-studio_…") that doesn't resolve
+    // on HF — the tokenizer needs to come from somewhere. Example:
+    // BENCHMARK_PROCESSOR=Qwen/Qwen2.5-0.5B-Instruct
+    BENCHMARK_PROCESSOR: z.string().optional(),
+    // Max concurrent in-flight requests for throughput-mode runs.
+    // guidellm 0.5.x ThroughputProfile requires this; constant/poisson rate
+    // modes ignore it. 100 is a sensible default for medium-tier targets;
+    // tune up for high-RPS clusters or down for fragile ones.
+    BENCHMARK_DEFAULT_MAX_CONCURRENCY: z.coerce.number().int().positive().default(100),
+    // Optional override for the kubeconfig file used by the K8s driver.
+    // Out-of-cluster local dev: set this to a specific kubeconfig (e.g. an
+    // isolated k3d config) so the driver doesn't pick up your default
+    // ~/.kube/config (which may point at a real cluster).
+    // In-cluster production: leave unset; @kubernetes/client-node falls back
+    // to the in-cluster ServiceAccount automatically.
+    KUBECONFIG: z.string().optional(),
+    DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "test" && !env.DATABASE_URL) {
@@ -40,6 +101,34 @@ export const EnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["JWT_ACCESS_SECRET"],
         message: "JWT_ACCESS_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_API_KEY_ENCRYPTION_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_API_KEY_ENCRYPTION_KEY"],
+        message: "BENCHMARK_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_CALLBACK_SECRET"],
+        message: "BENCHMARK_CALLBACK_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_CALLBACK_URL"],
+        message: "BENCHMARK_CALLBACK_URL is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.BENCHMARK_DRIVER === "k8s" && !env.BENCHMARK_RUNNER_IMAGE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BENCHMARK_RUNNER_IMAGE"],
+        message: "BENCHMARK_RUNNER_IMAGE is required when BENCHMARK_DRIVER='k8s'",
       });
     }
   });

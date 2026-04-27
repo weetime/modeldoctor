@@ -190,7 +190,7 @@ describe("Auth (e2e)", () => {
       data: {
         userId: adminId,
         apiType: "chat",
-        apiUrl: "http://admin-run",
+        apiBaseUrl: "http://admin-run",
         model: "m",
         rate: 1,
         duration: 1,
@@ -203,7 +203,7 @@ describe("Auth (e2e)", () => {
       data: {
         userId: user2Id,
         apiType: "chat",
-        apiUrl: "http://user2-run",
+        apiBaseUrl: "http://user2-run",
         model: "m",
         rate: 1,
         duration: 1,
@@ -218,7 +218,7 @@ describe("Auth (e2e)", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
 
-    const urls = adminRunsRes.body.items.map((r: { apiUrl: string }) => r.apiUrl);
+    const urls = adminRunsRes.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
     expect(urls).toContain("http://admin-run");
     expect(urls).toContain("http://user2-run");
   });
@@ -239,7 +239,7 @@ describe("Auth (e2e)", () => {
       data: {
         userId,
         apiType: "chat",
-        apiUrl: "http://own-run",
+        apiBaseUrl: "http://own-run",
         model: "m",
         rate: 1,
         duration: 1,
@@ -256,7 +256,7 @@ describe("Auth (e2e)", () => {
 
     // All returned runs must belong to this user
     expect(runsRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(true);
-    expect(runsRes.body.items.some((r: { apiUrl: string }) => r.apiUrl === "http://own-run")).toBe(
+    expect(runsRes.body.items.some((r: { apiBaseUrl: string }) => r.apiBaseUrl === "http://own-run")).toBe(
       true,
     );
   });

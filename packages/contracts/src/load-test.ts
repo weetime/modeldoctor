@@ -13,7 +13,7 @@ export type ApiType = z.infer<typeof ApiTypeSchema>;
 export const LoadTestRequestSchema = z
   .object({
     apiType: ApiTypeSchema.optional(),
-    apiUrl: z.string().min(1),
+    apiBaseUrl: z.string().min(1),
     apiKey: z.string().min(1),
     model: z.string().min(1),
     customHeaders: z.string().optional(),
@@ -47,7 +47,7 @@ export const LoadTestResponseSchema = z.object({
   parsed: LoadTestParsedSchema,
   config: z.object({
     apiType: ApiTypeSchema,
-    apiUrl: z.string(),
+    apiBaseUrl: z.string(),
     model: z.string(),
     rate: z.number(),
     duration: z.number(),
@@ -59,7 +59,7 @@ export const LoadTestRunSummarySchema = z.object({
   id: z.string(),
   userId: z.string().nullable(),
   apiType: ApiTypeSchema,
-  apiUrl: z.string(),
+  apiBaseUrl: z.string(),
   model: z.string(),
   rate: z.number(),
   duration: z.number(),
@@ -81,3 +81,27 @@ export const ListLoadTestRunsResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type ListLoadTestRunsResponse = z.infer<typeof ListLoadTestRunsResponseSchema>;
+
+/**
+ * Map a load-test ApiType to its OpenAI-compatible URL path.
+ *
+ * The connection store holds only the base URL (e.g. "http://host:port"
+ * or "https://api.openai.com"); each backend service constructs the
+ * full target by appending the apiType's path. Exhaustive switch over
+ * `ApiType` — TS will error here if a new variant is added without a
+ * corresponding path.
+ */
+export function loadTestApiTypePath(t: ApiType): string {
+  switch (t) {
+    case "chat":
+    case "chat-vision":
+    case "chat-audio":
+      return "/v1/chat/completions";
+    case "embeddings":
+      return "/v1/embeddings";
+    case "rerank":
+      return "/v1/rerank";
+    case "images":
+      return "/v1/images/generations";
+  }
+}

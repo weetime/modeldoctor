@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useConnectionsStore } from "./connections-store";
 
 const baseInput = {
   name: "prod",
-  apiUrl: "http://x/y",
+  apiBaseUrl: "http://x",
   apiKey: "sk-1",
   model: "m1",
   customHeaders: "",
@@ -114,5 +114,35 @@ describe("connectionsStore", () => {
         .getState()
         .importAll(JSON.stringify({ version: 99, connections: [] }), "merge"),
     ).toThrow(/version/i);
+  });
+
+  it("drops persisted v0 state on version mismatch", async () => {
+    // Pre-populate localStorage with an "old format" snapshot at version 0.
+    localStorage.setItem(
+      "modeldoctor-connections",
+      JSON.stringify({
+        state: {
+          connections: [
+            {
+              id: "c-old",
+              name: "old",
+              apiUrl: "http://old.example.com/v1/chat/completions",
+              apiKey: "k",
+              model: "m",
+              customHeaders: "",
+              queryParams: "",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+        },
+        version: 0,
+      }),
+    );
+
+    // Re-import the store as a fresh module so zustand re-reads localStorage.
+    vi.resetModules();
+    const { useConnectionsStore: fresh } = await import("./connections-store");
+    expect(fresh.getState().list()).toEqual([]);
   });
 });

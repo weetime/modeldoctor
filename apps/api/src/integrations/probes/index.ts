@@ -16,7 +16,7 @@ export { runAudioProbe } from "./audio.js";
 export type ProbeName = "text" | "image" | "audio";
 
 export interface ProbeCtx {
-  apiUrl: string;
+  apiBaseUrl: string;
   apiKey: string;
   model: string;
   extraHeaders: Record<string, string>;

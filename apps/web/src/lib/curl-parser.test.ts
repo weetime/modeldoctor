@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectApiType, parseCurlCommand } from "./curl-parser";
+import { detectApiType, parseCurlCommand, toApiBaseUrl } from "./curl-parser";
 
 describe("parseCurlCommand", () => {
   it("extracts URL", () => {
@@ -69,5 +69,29 @@ describe("detectApiType", () => {
   });
   it("falls back to chat", () => {
     expect(detectApiType("https://x/foo", { messages: [] })).toBe("chat");
+  });
+});
+
+describe("toApiBaseUrl", () => {
+  it.each([
+    ["https://api.openai.com/v1/chat/completions", "https://api.openai.com"],
+    ["https://api.openai.com/v1/embeddings", "https://api.openai.com"],
+    ["https://api.openai.com/v1/rerank", "https://api.openai.com"],
+    ["https://api.openai.com/v1/images/generations", "https://api.openai.com"],
+    ["https://api.openai.com/v1/audio/transcriptions", "https://api.openai.com"],
+    ["https://api.openai.com/v1", "https://api.openai.com"],
+    ["https://api.openai.com/", "https://api.openai.com"],
+    ["https://api.openai.com", "https://api.openai.com"],
+    ["http://10.100.121.67:30888/v1/chat/completions", "http://10.100.121.67:30888"],
+    ["http://gateway/proxy/qwen/v1/chat/completions", "http://gateway/proxy/qwen"],
+    ["http://gateway/proxy/qwen", "http://gateway/proxy/qwen"],
+  ])("strips %s → %s", (input, expected) => {
+    expect(toApiBaseUrl(input)).toBe(expected);
+  });
+
+  it("is idempotent", () => {
+    const url = "https://api.openai.com/v1/chat/completions";
+    const once = toApiBaseUrl(url);
+    expect(toApiBaseUrl(once)).toBe(once);
   });
 });

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modeldoctor-benchmark-runner"
+version = "0.1.0"
+description = "Thin wrapper around gpustack/benchmark-runner for ModelDoctor's benchmark feature"
+requires-python = ">=3.11"
+dependencies = [
+  # Runtime guidellm is provided by the gpustack/benchmark-runner Docker
+  # base image — pinned by `FROM gpustack/benchmark-runner:vX.Y.Z` in the
+  # Dockerfile, NOT by this file. Bumping the image is a deliberate PR with
+  # new fixture-based metrics-mapper tests. Local dev installs only the
+  # runner's own runtime deps below.
+  "requests>=2.31,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "pytest-mock>=3.12,<4",
+  "ruff>=0.5,<1",
+]
+
+[project.scripts]
+# `python -m runner` is the canonical entrypoint; this script is a convenience
+# for ad-hoc use during development.
+modeldoctor-benchmark-runner = "runner.main:main"
+
+[tool.setuptools.packages.find]
+include = ["runner*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4"]

@@ -19,7 +19,7 @@ describe("useE2EStore", () => {
     const s = useE2EStore.getState();
     expect(s.selectedConnectionId).toBeNull();
     expect(s.manualEndpoint).toEqual({
-      apiUrl: "",
+      apiBaseUrl: "",
       apiKey: "",
       model: "",
       customHeaders: "",
@@ -48,7 +48,7 @@ describe("useE2EStore", () => {
     const store = useE2EStore.getState();
     store.setSelected("conn-1");
     store.setManualEndpoint({
-      apiUrl: "http://a",
+      apiBaseUrl: "http://a",
       apiKey: "k",
       model: "m",
       customHeaders: "",
@@ -65,7 +65,7 @@ describe("useE2EStore", () => {
     useE2EStore.getState().resetResults();
     const s = useE2EStore.getState();
     expect(s.selectedConnectionId).toBe("conn-1");
-    expect(s.manualEndpoint.apiUrl).toBe("http://a");
+    expect(s.manualEndpoint.apiBaseUrl).toBe("http://a");
     expect(s.results).toEqual({ text: null, image: null, audio: null });
     expect(s.running).toEqual({ text: false, image: false, audio: false });
   });
@@ -74,7 +74,7 @@ describe("useE2EStore", () => {
     const store = useE2EStore.getState();
     store.setSelected("conn-1");
     store.setManualEndpoint({
-      apiUrl: "http://a",
+      apiBaseUrl: "http://a",
       apiKey: "k",
       model: "m",
       customHeaders: "",
@@ -90,7 +90,7 @@ describe("useE2EStore", () => {
     useE2EStore.getState().reset();
     const s = useE2EStore.getState();
     expect(s.selectedConnectionId).toBeNull();
-    expect(s.manualEndpoint.apiUrl).toBe("");
+    expect(s.manualEndpoint.apiBaseUrl).toBe("");
     expect(s.results.text).toBeNull();
   });
 
@@ -98,7 +98,7 @@ describe("useE2EStore", () => {
     const store = useE2EStore.getState();
     store.setSelected("conn-1");
     store.setManualEndpoint({
-      apiUrl: "http://x",
+      apiBaseUrl: "http://x",
       apiKey: "k",
       model: "m",
       customHeaders: "",

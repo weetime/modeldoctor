@@ -1,7 +1,7 @@
 export interface Connection {
   id: string;
   name: string;
-  apiUrl: string;
+  apiBaseUrl: string;
   apiKey: string;
   model: string;
   customHeaders: string;
@@ -13,11 +13,11 @@ export interface Connection {
 /** The subset of Connection fields a feature page edits inline. */
 export type EndpointValues = Pick<
   Connection,
-  "apiUrl" | "apiKey" | "model" | "customHeaders" | "queryParams"
+  "apiBaseUrl" | "apiKey" | "model" | "customHeaders" | "queryParams"
 >;
 
 export const emptyEndpointValues: EndpointValues = {
-  apiUrl: "",
+  apiBaseUrl: "",
   apiKey: "",
   model: "",
   customHeaders: "",
