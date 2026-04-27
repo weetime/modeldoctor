@@ -21,9 +21,7 @@ export const benchmarkApi = {
   list: (q: Partial<ListBenchmarksQuery>) =>
     api.get<ListBenchmarksResponse>(`/api/benchmarks${buildListQuery(q)}`),
   get: (id: string) => api.get<BenchmarkRun>(`/api/benchmarks/${id}`),
-  create: (body: CreateBenchmarkRequest) =>
-    api.post<BenchmarkRun>("/api/benchmarks", body),
-  cancel: (id: string) =>
-    api.post<BenchmarkRun>(`/api/benchmarks/${id}/cancel`, {}),
+  create: (body: CreateBenchmarkRequest) => api.post<BenchmarkRun>("/api/benchmarks", body),
+  cancel: (id: string) => api.post<BenchmarkRun>(`/api/benchmarks/${id}/cancel`, {}),
   delete: (id: string) => api.del<void>(`/api/benchmarks/${id}`),
 };

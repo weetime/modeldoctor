@@ -6,9 +6,7 @@ import { BenchmarkLogsPanel } from "../BenchmarkLogsPanel";
 describe("BenchmarkLogsPanel", () => {
   it("shows pending message when run is non-terminal and logs are null", () => {
     render(<BenchmarkLogsPanel logs={null} state="running" />);
-    expect(
-      screen.getByText(/logs available after run completes/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/logs available after run completes/i)).toBeInTheDocument();
   });
 
   it("renders logs in a <pre> when present", () => {
@@ -25,12 +23,8 @@ describe("BenchmarkLogsPanel", () => {
   });
 
   it("survives transition from null logs to present logs without hook-order error", () => {
-    const { rerender } = render(
-      <BenchmarkLogsPanel logs={null} state="running" />,
-    );
-    expect(
-      screen.getByText(/logs available after run completes/i),
-    ).toBeInTheDocument();
+    const { rerender } = render(<BenchmarkLogsPanel logs={null} state="running" />);
+    expect(screen.getByText(/logs available after run completes/i)).toBeInTheDocument();
     rerender(<BenchmarkLogsPanel logs="hello world" state="completed" />);
     expect(screen.getByText(/hello world/i)).toBeInTheDocument();
   });

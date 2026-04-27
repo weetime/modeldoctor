@@ -1,23 +1,15 @@
-import { useEffect, useId, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -25,14 +17,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useId, useRef } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { BenchmarkEndpointFields } from "./BenchmarkEndpointFields";
 import { BenchmarkProfilePicker } from "./BenchmarkProfilePicker";
 import { profileLabelKey } from "./profiles";
-import { useCreateBenchmark, useBenchmarkDetail } from "./queries";
+import { useBenchmarkDetail, useCreateBenchmark } from "./queries";
 import {
-  CreateBenchmarkRequestSchema,
   type BenchmarkRun,
   type CreateBenchmarkRequest,
+  CreateBenchmarkRequestSchema,
 } from "./schemas";
 
 function mapDuplicateToDefaults(run: BenchmarkRun): CreateBenchmarkRequest {
@@ -190,14 +190,8 @@ export function BenchmarkCreateModal() {
                   <Input id={nameId} {...form.register("name")} />
                 </div>
                 <div>
-                  <Label htmlFor={descId}>
-                    {t("create.fields.description")}
-                  </Label>
-                  <Textarea
-                    id={descId}
-                    rows={2}
-                    {...form.register("description")}
-                  />
+                  <Label htmlFor={descId}>{t("create.fields.description")}</Label>
+                  <Textarea id={descId} rows={2} {...form.register("description")} />
                 </div>
                 <BenchmarkEndpointFields requireApiKeyHighlight={!!duplicateId} />
               </TabsContent>
@@ -220,22 +214,16 @@ export function BenchmarkCreateModal() {
                     <Select
                       value={datasetName}
                       onValueChange={(v) =>
-                        form.setValue(
-                          "datasetName",
-                          v as "random" | "sharegpt",
-                          {
-                            shouldValidate: true,
-                          },
-                        )
+                        form.setValue("datasetName", v as "random" | "sharegpt", {
+                          shouldValidate: true,
+                        })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="random">
-                          {t("datasets.random")}
-                        </SelectItem>
+                        <SelectItem value="random">{t("datasets.random")}</SelectItem>
                         <SelectItem value="sharegpt" disabled>
                           {t("datasets.sharegpt")} {t("comingSoon")}
                         </SelectItem>
@@ -247,8 +235,7 @@ export function BenchmarkCreateModal() {
                     <Input
                       type="number"
                       {...form.register("datasetSeed", {
-                        setValueAs: (v) =>
-                          v === "" ? undefined : Number(v),
+                        setValueAs: (v) => (v === "" ? undefined : Number(v)),
                       })}
                     />
                   </div>
@@ -300,10 +287,7 @@ export function BenchmarkCreateModal() {
               <Button type="button" variant="outline" onClick={close}>
                 {t("actions.cancel")}
               </Button>
-              <Button
-                type="submit"
-                disabled={!form.formState.isValid || createMut.isPending}
-              >
+              <Button type="submit" disabled={!form.formState.isValid || createMut.isPending}>
                 {createMut.isPending ? "…" : t("create.submit")}
               </Button>
             </DialogFooter>

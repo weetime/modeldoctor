@@ -1,11 +1,16 @@
-import { useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,30 +29,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { BenchmarkStateBadge } from "./BenchmarkStateBadge";
+import type { BenchmarkProfile, BenchmarkState } from "@modeldoctor/contracts";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { Activity } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link, useSearchParams } from "react-router-dom";
 import { BenchmarkActionsCell } from "./BenchmarkActionsCell";
 import { BenchmarkCreateModal } from "./BenchmarkCreateModal";
-import {
-  benchmarkKeys,
-  useBenchmarkList,
-  useCancelBenchmark,
-  useDeleteBenchmark,
-} from "./queries";
-import type {
-  BenchmarkProfile,
-  BenchmarkState,
-} from "@modeldoctor/contracts";
-import { Activity } from "lucide-react";
+import { BenchmarkStateBadge } from "./BenchmarkStateBadge";
+import { benchmarkKeys, useBenchmarkList, useCancelBenchmark, useDeleteBenchmark } from "./queries";
 
 const PROFILES: BenchmarkProfile[] = [
   "throughput",
@@ -90,8 +82,7 @@ export function BenchmarkListPage() {
   const qc = useQueryClient();
 
   const [stateFilter, setStateFilter] = useState<BenchmarkState | undefined>();
-  const [profileFilter, setProfileFilter] =
-    useState<BenchmarkProfile | undefined>();
+  const [profileFilter, setProfileFilter] = useState<BenchmarkProfile | undefined>();
   const [search, setSearch] = useState("");
   const [pendingCancel, setPendingCancel] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -111,9 +102,7 @@ export function BenchmarkListPage() {
   const deleteMut = useDeleteBenchmark();
 
   const isFiltered =
-    stateFilter !== undefined ||
-    profileFilter !== undefined ||
-    search.trim() !== "";
+    stateFilter !== undefined || profileFilter !== undefined || search.trim() !== "";
 
   return (
     <>
@@ -125,16 +114,11 @@ export function BenchmarkListPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                qc.invalidateQueries({ queryKey: benchmarkKeys.lists() })
-              }
+              onClick={() => qc.invalidateQueries({ queryKey: benchmarkKeys.lists() })}
             >
               {t("actions.refresh")}
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setSearchParams({ create: "1" })}
-            >
+            <Button size="sm" onClick={() => setSearchParams({ create: "1" })}>
               {t("actions.create")}
             </Button>
           </div>
@@ -145,14 +129,9 @@ export function BenchmarkListPage() {
         <div className="flex flex-wrap gap-2">
           <Select
             value={stateFilter ?? ALL}
-            onValueChange={(v) =>
-              setStateFilter(v === ALL ? undefined : (v as BenchmarkState))
-            }
+            onValueChange={(v) => setStateFilter(v === ALL ? undefined : (v as BenchmarkState))}
           >
-            <SelectTrigger
-              className="w-[180px]"
-              aria-label={t("list.filters.state")}
-            >
+            <SelectTrigger className="w-[180px]" aria-label={t("list.filters.state")}>
               <SelectValue placeholder={t("list.filters.state")} />
             </SelectTrigger>
             <SelectContent>
@@ -167,14 +146,9 @@ export function BenchmarkListPage() {
 
           <Select
             value={profileFilter ?? ALL}
-            onValueChange={(v) =>
-              setProfileFilter(v === ALL ? undefined : (v as BenchmarkProfile))
-            }
+            onValueChange={(v) => setProfileFilter(v === ALL ? undefined : (v as BenchmarkProfile))}
           >
-            <SelectTrigger
-              className="w-[180px]"
-              aria-label={t("list.filters.profile")}
-            >
+            <SelectTrigger className="w-[180px]" aria-label={t("list.filters.profile")}>
               <SelectValue placeholder={t("list.filters.profile")} />
             </SelectTrigger>
             <SelectContent>
@@ -246,12 +220,8 @@ export function BenchmarkListPage() {
                     <TableHead>{t("list.columns.model")}</TableHead>
                     <TableHead>{t("list.columns.profile")}</TableHead>
                     <TableHead>{t("list.columns.state")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("list.columns.outputTps")}
-                    </TableHead>
-                    <TableHead className="text-right">
-                      {t("list.columns.ttftMean")}
-                    </TableHead>
+                    <TableHead className="text-right">{t("list.columns.outputTps")}</TableHead>
+                    <TableHead className="text-right">{t("list.columns.ttftMean")}</TableHead>
                     <TableHead>{t("list.columns.createdAt")}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -328,9 +298,7 @@ export function BenchmarkListPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("actions.cancel")}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              In-flight requests will be terminated.
-            </AlertDialogDescription>
+            <AlertDialogDescription>In-flight requests will be terminated.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Back</AlertDialogCancel>

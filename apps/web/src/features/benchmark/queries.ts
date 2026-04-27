@@ -1,21 +1,16 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { toast } from "sonner";
 import type {
   BenchmarkRun,
   CreateBenchmarkRequest,
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { benchmarkApi } from "./api";
 
 export const benchmarkKeys = {
   all: ["benchmarks"] as const,
   lists: () => [...benchmarkKeys.all, "list"] as const,
-  list: (q: Partial<ListBenchmarksQuery>) =>
-    [...benchmarkKeys.lists(), q] as const,
+  list: (q: Partial<ListBenchmarksQuery>) => [...benchmarkKeys.lists(), q] as const,
   details: () => [...benchmarkKeys.all, "detail"] as const,
   detail: (id: string) => [...benchmarkKeys.details(), id] as const,
 };
@@ -83,7 +78,7 @@ export function useDeleteBenchmark() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => benchmarkApi.delete(id),
-    onSuccess: (_: void, id: string) => {
+    onSuccess: (_data, id: string) => {
       qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });
       qc.removeQueries({ queryKey: benchmarkKeys.detail(id) });
     },

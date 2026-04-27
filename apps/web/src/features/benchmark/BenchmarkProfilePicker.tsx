@@ -1,19 +1,10 @@
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { BenchmarkProfile } from "@modeldoctor/contracts";
 import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import {
-  PROFILE_DEFAULTS,
-  PROFILE_ORDER,
-  profileLabelKey,
-  type LivePreset,
-} from "./profiles";
-import type { BenchmarkProfile } from "@modeldoctor/contracts";
+import { type LivePreset, PROFILE_DEFAULTS, PROFILE_ORDER, profileLabelKey } from "./profiles";
 import type { CreateBenchmarkRequest } from "./schemas";
 
 export function BenchmarkProfilePicker() {
@@ -62,9 +53,7 @@ export function BenchmarkProfilePicker() {
           >
             {label}
             {disabled && (
-              <span className="ml-1 text-[10px] text-muted-foreground">
-                {t("comingSoon")}
-              </span>
+              <span className="ml-1 text-[10px] text-muted-foreground">{t("comingSoon")}</span>
             )}
           </Button>
         );

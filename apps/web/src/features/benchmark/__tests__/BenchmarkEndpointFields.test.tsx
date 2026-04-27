@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useForm, FormProvider } from "react-hook-form";
-import { describe, it, expect } from "vitest";
+import { FormProvider, useForm } from "react-hook-form";
+import { describe, expect, it } from "vitest";
 import "@/lib/i18n";
 import { BenchmarkEndpointFields } from "../BenchmarkEndpointFields";
 import type { CreateBenchmarkRequest } from "../schemas";
@@ -45,20 +45,13 @@ describe("BenchmarkEndpointFields", () => {
     render(<Harness />);
     await userEvent.click(screen.getByLabelText(/api type/i));
     expect(screen.getByRole("option", { name: /chat/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /completion/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /completion/i })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /embedding/i })).toBeNull();
   });
 
   it("typing in apiUrl updates the form value", async () => {
     render(<Harness />);
-    await userEvent.type(
-      screen.getByLabelText(/api url/i),
-      "https://api.test/v1",
-    );
-    expect(screen.getByLabelText(/api url/i)).toHaveValue(
-      "https://api.test/v1",
-    );
+    await userEvent.type(screen.getByLabelText(/api url/i), "https://api.test/v1");
+    expect(screen.getByLabelText(/api url/i)).toHaveValue("https://api.test/v1");
   });
 });

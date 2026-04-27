@@ -1,6 +1,6 @@
+import type { BenchmarkState } from "@modeldoctor/contracts";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { BenchmarkState } from "@modeldoctor/contracts";
 import { TERMINAL_STATES } from "./queries";
 
 function formatSize(bytes: number): string {
@@ -19,10 +19,7 @@ export function BenchmarkLogsPanel({
   const preRef = useRef<HTMLPreElement>(null);
   const isTerminal = (TERMINAL_STATES as readonly string[]).includes(state);
 
-  const size = useMemo(
-    () => (logs ? new TextEncoder().encode(logs).length : 0),
-    [logs],
-  );
+  const size = useMemo(() => (logs ? new TextEncoder().encode(logs).length : 0), [logs]);
 
   useEffect(() => {
     if (preRef.current) {
@@ -39,22 +36,18 @@ export function BenchmarkLogsPanel({
   }
 
   return (
-    <details
-      className="rounded-md border border-border"
-      open={isTerminal}
-      role="region"
-      aria-label={t("detail.logs.title")}
-    >
-      <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground select-none">
-        ▾ {t("detail.logs.title")}{" "}
-        <span className="ml-1">({formatSize(size)})</span>
-      </summary>
-      <pre
-        ref={preRef}
-        className="m-0 max-h-[300px] overflow-auto rounded-b-md bg-zinc-900 p-3 text-[11px] text-zinc-200"
-      >
-        {logs}
-      </pre>
-    </details>
+    <section aria-label={t("detail.logs.title")}>
+      <details className="rounded-md border border-border" open={isTerminal}>
+        <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground select-none">
+          ▾ {t("detail.logs.title")} <span className="ml-1">({formatSize(size)})</span>
+        </summary>
+        <pre
+          ref={preRef}
+          className="m-0 max-h-[300px] overflow-auto rounded-b-md bg-zinc-900 p-3 text-[11px] text-zinc-200"
+        >
+          {logs}
+        </pre>
+      </details>
+    </section>
   );
 }

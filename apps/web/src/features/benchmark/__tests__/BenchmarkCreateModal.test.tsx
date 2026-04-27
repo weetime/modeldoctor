@@ -2,13 +2,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
       super(message);
     }
   }
@@ -16,8 +19,8 @@ vi.mock("@/lib/api-client", () => {
 });
 
 import { api } from "@/lib/api-client";
-import { BenchmarkCreateModal } from "../BenchmarkCreateModal";
 import type { BenchmarkRun } from "@modeldoctor/contracts";
+import { BenchmarkCreateModal } from "../BenchmarkCreateModal";
 
 const SOURCE_RUN: BenchmarkRun = {
   id: "src1",
@@ -88,10 +91,7 @@ function Wrapper({
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/benchmarks" element={children} />
-          <Route
-            path="/benchmarks/:id"
-            element={<div>detail page for navigation target</div>}
-          />
+          <Route path="/benchmarks/:id" element={<div>detail page for navigation target</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -126,9 +126,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
       ),
     });
     expect(screen.getByRole("tab", { name: /basic info/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: /configuration/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /configuration/i })).toBeInTheDocument();
   });
 
   it("closes when Cancel is clicked and clears the URL search param", async () => {
@@ -151,10 +149,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
     });
 
     await userEvent.type(screen.getByLabelText(/^name$/i), "smoke");
-    await userEvent.type(
-      screen.getByLabelText(/api url/i),
-      "https://api.test/v1",
-    );
+    await userEvent.type(screen.getByLabelText(/api url/i), "https://api.test/v1");
     await userEvent.type(screen.getByLabelText(/api key/i), "k");
     await userEvent.type(screen.getByLabelText(/^model$/i), "m");
 
@@ -173,9 +168,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
         }),
       ),
     );
-    expect(
-      await screen.findByText(/detail page for navigation target/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/detail page for navigation target/i)).toBeInTheDocument();
   });
 
   it("?duplicate=src1 prefills form with source values and blanks apiKey", async () => {
@@ -183,25 +176,15 @@ describe("BenchmarkCreateModal — basic tab", () => {
 
     render(<BenchmarkCreateModal />, {
       wrapper: ({ children }) => (
-        <Wrapper initialEntries={["/benchmarks?duplicate=src1"]}>
-          {children}
-        </Wrapper>
+        <Wrapper initialEntries={["/benchmarks?duplicate=src1"]}>{children}</Wrapper>
       ),
     });
 
-    expect(
-      await screen.findByText(/duplicating from/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/duplicating from/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^name$/i)).toHaveValue("vllm-llama3-tput-2");
-    expect(screen.getByLabelText(/api url/i)).toHaveValue(
-      "https://api.test/v1",
-    );
+    expect(screen.getByLabelText(/api url/i)).toHaveValue("https://api.test/v1");
     expect(screen.getByLabelText(/^model$/i)).toHaveValue("llama-3-8b");
     expect(screen.getByLabelText(/api key/i)).toHaveValue("");
-    expect(screen.getByLabelText(/api key/i)).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    expect(screen.getByLabelText(/api key/i)).toHaveAttribute("aria-invalid", "true");
   });
-
 });

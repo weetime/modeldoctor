@@ -1,6 +1,3 @@
-import { useId } from "react";
-import { useFormContext, Controller } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,6 +8,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnectionsStore } from "@/stores/connections-store";
+import { useId } from "react";
+import { Controller, useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import type { CreateBenchmarkRequest } from "./schemas";
 
 export function BenchmarkEndpointFields({
@@ -91,21 +91,13 @@ export function BenchmarkEndpointFields({
         </div>
         <div className="col-span-2">
           <Label htmlFor={modelId}>{t("create.fields.model")}</Label>
-          <Input
-            id={modelId}
-            {...register("model")}
-            aria-invalid={!!errors.model}
-          />
+          <Input id={modelId} {...register("model")} aria-invalid={!!errors.model} />
         </div>
       </div>
 
       <div>
         <Label htmlFor={apiUrlId}>{t("create.fields.apiUrl")}</Label>
-        <Input
-          id={apiUrlId}
-          {...register("apiUrl")}
-          aria-invalid={!!errors.apiUrl}
-        />
+        <Input id={apiUrlId} {...register("apiUrl")} aria-invalid={!!errors.apiUrl} />
       </div>
       <div>
         <Label htmlFor={apiKeyId}>{t("create.fields.apiKey")}</Label>

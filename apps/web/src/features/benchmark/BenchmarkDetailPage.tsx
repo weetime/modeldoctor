@@ -1,15 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { format, formatDistanceStrict } from "date-fns";
-import { ArrowLeft, SearchX } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +11,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BenchmarkStateBadge } from "./BenchmarkStateBadge";
-import { BenchmarkMetricsGrid } from "./BenchmarkMetricsGrid";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useQueryClient } from "@tanstack/react-query";
+import { format, formatDistanceStrict } from "date-fns";
+import { ArrowLeft, SearchX } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { BenchmarkLogsPanel } from "./BenchmarkLogsPanel";
+import { BenchmarkMetricsGrid } from "./BenchmarkMetricsGrid";
+import { BenchmarkStateBadge } from "./BenchmarkStateBadge";
+import { profileLabelKey } from "./profiles";
 import {
   TERMINAL_STATES,
   benchmarkKeys,
@@ -30,15 +31,12 @@ import {
   useCancelBenchmark,
   useDeleteBenchmark,
 } from "./queries";
-import { profileLabelKey } from "./profiles";
 
 export function BenchmarkDetailPage() {
   const { t } = useTranslation("benchmark");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, isError, error, refetch } = useBenchmarkDetail(
-    id ?? "",
-  );
+  const { data, isLoading, isError, error, refetch } = useBenchmarkDetail(id ?? "");
   const cancelMut = useCancelBenchmark();
   const deleteMut = useDeleteBenchmark();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -143,14 +141,9 @@ export function BenchmarkDetailPage() {
     );
   }
 
-  const isTerminal = (TERMINAL_STATES as readonly string[]).includes(
-    data.state,
-  );
+  const isTerminal = (TERMINAL_STATES as readonly string[]).includes(data.state);
   const duration = data.startedAt
-    ? formatDistanceStrict(
-        new Date(data.startedAt),
-        new Date(data.completedAt ?? Date.now()),
-      )
+    ? formatDistanceStrict(new Date(data.startedAt), new Date(data.completedAt ?? Date.now()))
     : null;
 
   return (
@@ -160,20 +153,12 @@ export function BenchmarkDetailPage() {
         subtitle={`${t(`profiles.${profileLabelKey(data.profile)}`)}`}
         rightSlot={
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/benchmarks")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate("/benchmarks")}>
               <ArrowLeft className="mr-1 size-4" />
               List
             </Button>
             {!isTerminal && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmCancel(true)}
-              >
+              <Button variant="destructive" size="sm" onClick={() => setConfirmCancel(true)}>
                 {t("actions.cancel")}
               </Button>
             )}
@@ -182,17 +167,11 @@ export function BenchmarkDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    navigate(`/benchmarks?duplicate=${data.id}`)
-                  }
+                  onClick={() => navigate(`/benchmarks?duplicate=${data.id}`)}
                 >
                   {t("actions.duplicate")}
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setConfirmDelete(true)}
-                >
+                <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
                   {t("actions.delete")}
                 </Button>
               </>
@@ -204,15 +183,11 @@ export function BenchmarkDetailPage() {
       <div className="space-y-4 px-8 py-6">
         <div className="flex items-center gap-3">
           <BenchmarkStateBadge state={data.state} />
-          {duration && (
-            <span className="text-xs text-muted-foreground">{duration}</span>
-          )}
+          {duration && <span className="text-xs text-muted-foreground">{duration}</span>}
           {data.startedAt && (
             <span className="text-xs text-muted-foreground">
               {format(new Date(data.startedAt), "yyyy-MM-dd HH:mm")}
-              {data.completedAt
-                ? ` → ${format(new Date(data.completedAt), "HH:mm")}`
-                : ""}
+              {data.completedAt ? ` → ${format(new Date(data.completedAt), "HH:mm")}` : ""}
             </span>
           )}
         </div>
@@ -252,14 +227,9 @@ export function BenchmarkDetailPage() {
           />
           <KV
             label={t("detail.config.rate")}
-            value={
-              data.requestRate === 0 ? "unlimited" : `${data.requestRate}/s`
-            }
+            value={data.requestRate === 0 ? "unlimited" : `${data.requestRate}/s`}
           />
-          <KV
-            label={t("detail.config.totalRequests")}
-            value={String(data.totalRequests)}
-          />
+          <KV label={t("detail.config.totalRequests")} value={String(data.totalRequests)} />
           <KV
             label={t("detail.config.success")}
             value={
@@ -270,11 +240,7 @@ export function BenchmarkDetailPage() {
           />
           <KV
             label={t("detail.config.errors")}
-            value={
-              data.metricsSummary
-                ? String(data.metricsSummary.requests.error)
-                : "—"
-            }
+            value={data.metricsSummary ? String(data.metricsSummary.requests.error) : "—"}
           />
         </div>
 
@@ -287,9 +253,7 @@ export function BenchmarkDetailPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("actions.cancel")}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              In-flight requests will be terminated.
-            </AlertDialogDescription>
+            <AlertDialogDescription>In-flight requests will be terminated.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Back</AlertDialogCancel>
@@ -336,9 +300,7 @@ export function BenchmarkDetailPage() {
 function KV({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="text-sm font-medium text-foreground">{value}</div>
     </div>
   );
