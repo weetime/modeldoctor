@@ -92,7 +92,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const baseRow = {
       userId: user.sub,
       apiType,
-      apiBaseUrl: finalUrl,
+      apiBaseUrl: req.apiBaseUrl,
       model: req.model,
       rate: req.rate,
       duration: req.duration,
@@ -160,7 +160,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       parsed,
       config: {
         apiType,
-        apiBaseUrl: finalUrl,
+        apiBaseUrl: req.apiBaseUrl,
         model: req.model,
         rate: req.rate,
         duration: req.duration,
