@@ -28,8 +28,11 @@ export const ProbeResultSchema = z.object({
 });
 export type ProbeResult = z.infer<typeof ProbeResultSchema>;
 
+// Convention: `apiBaseUrl` is the origin (scheme://host[:port][/proxy-prefix]),
+// without `/v1/...` path tail. Each probe constructs its target URL by
+// appending its OpenAI-compatible path.
 export const E2ETestRequestSchema = z.object({
-  apiUrl: z.string().min(1),
+  apiBaseUrl: z.string().min(1),
   apiKey: z.string().min(1),
   model: z.string().min(1),
   customHeaders: z.string().optional(),

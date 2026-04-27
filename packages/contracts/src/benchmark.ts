@@ -70,7 +70,8 @@ export const CreateBenchmarkRequestSchema = z
     description: z.string().max(2048).optional(),
     profile: BenchmarkProfileSchema,
     apiType: BenchmarkApiTypeSchema,
-    apiUrl: z.string().url(),
+    /** Base URL of the OpenAI-compatible endpoint (no `/v1/...` path tail; guidellm appends it). */
+    apiBaseUrl: z.string().url(),
     apiKey: z.string().min(1),
     model: z.string().min(1),
     datasetName: BenchmarkDatasetSchema,
@@ -110,7 +111,8 @@ export const BenchmarkRunSummarySchema = z.object({
   name: z.string(),
   profile: BenchmarkProfileSchema,
   apiType: BenchmarkApiTypeSchema,
-  apiUrl: z.string(),
+  /** Base URL of the OpenAI-compatible endpoint (no `/v1/...` path tail; guidellm appends it). */
+  apiBaseUrl: z.string(),
   model: z.string(),
   datasetName: BenchmarkDatasetSchema,
   state: BenchmarkStateSchema,
