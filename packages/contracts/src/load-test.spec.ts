@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ApiType } from "./load-test";
-import { loadTestApiTypePath } from "./load-test";
+import { ApiTypeSchema, loadTestApiTypePath } from "./load-test";
 
 describe("loadTestApiTypePath", () => {
   it("maps chat-family types to /v1/chat/completions", () => {
@@ -22,15 +21,10 @@ describe("loadTestApiTypePath", () => {
   });
 
   it("type union exhaustively covered", () => {
-    const all: ApiType[] = [
-      "chat",
-      "embeddings",
-      "rerank",
-      "images",
-      "chat-vision",
-      "chat-audio",
-    ];
-    for (const t of all) {
+    // Derive from the schema so adding a new variant to ApiTypeSchema
+    // automatically expands this test (rather than silently passing
+    // against a stale string-literal subset).
+    for (const t of ApiTypeSchema.options) {
       expect(typeof loadTestApiTypePath(t)).toBe("string");
       expect(loadTestApiTypePath(t).startsWith("/v1/")).toBe(true);
     }
