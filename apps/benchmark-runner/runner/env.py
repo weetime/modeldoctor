@@ -48,6 +48,29 @@ def _literal(env: dict[str, str], key: str, allowed: tuple[str, ...]) -> str:
     return raw
 
 
+def _optional_str(env: dict[str, str], key: str) -> str | None:
+    """Return env[key] if non-empty, else None. Distinguishes unset from set-empty."""
+    if key not in env or env[key] == "":
+        return None
+    return env[key]
+
+
+def _optional_bool(env: dict[str, str], key: str, *, default: bool) -> bool:
+    """Parse a strictly true/false env var; default if absent or empty.
+
+    Reject anything else loudly so a typo (``"yes"``, ``"1"``) doesn't silently
+    flip semantics — same posture as the API's envBoolean helper.
+    """
+    if key not in env or env[key] == "":
+        return default
+    raw = env[key]
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise ValueError(f'{key} must be "true" or "false", got {raw!r}')
+
+
 def parse_env(env: dict[str, str]) -> EnvConfig:
     """Parse env into a typed config; raise on missing or malformed fields."""
     return EnvConfig(
@@ -65,4 +88,7 @@ def parse_env(env: dict[str, str]) -> EnvConfig:
         request_rate=_required_int(env, "REQUEST_RATE", min_value=0),
         total_requests=_required_int(env, "TOTAL_REQUESTS", min_value=1),
         max_duration_seconds=_required_int(env, "MAX_DURATION_SECONDS", min_value=1),
+        validate_backend=_optional_bool(env, "VALIDATE_BACKEND", default=True),
+        processor=_optional_str(env, "PROCESSOR"),
+        max_concurrency=_optional_int(env, "MAX_CONCURRENCY") or 100,
     )

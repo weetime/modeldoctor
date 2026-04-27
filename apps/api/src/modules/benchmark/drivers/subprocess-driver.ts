@@ -35,10 +35,15 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
       REQUEST_RATE: String(ctx.requestRate),
       TOTAL_REQUESTS: String(ctx.totalRequests),
       MAX_DURATION_SECONDS: String(ctx.maxDurationSeconds),
+      VALIDATE_BACKEND: ctx.validateBackend ? "true" : "false",
     };
     if (ctx.datasetSeed !== undefined) {
       env.DATASET_SEED = String(ctx.datasetSeed);
     }
+    if (ctx.processor) {
+      env.PROCESSOR = ctx.processor;
+    }
+    env.MAX_CONCURRENCY = String(ctx.maxConcurrency);
 
     const child = spawn("benchmark-runner", args, {
       env,

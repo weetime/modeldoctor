@@ -49,10 +49,15 @@ export function buildJobManifest(ctx: BenchmarkExecutionContext, opts: JobManife
     { name: "REQUEST_RATE", value: String(ctx.requestRate) },
     { name: "TOTAL_REQUESTS", value: String(ctx.totalRequests) },
     { name: "MAX_DURATION_SECONDS", value: String(ctx.maxDurationSeconds) },
+    { name: "VALIDATE_BACKEND", value: ctx.validateBackend ? "true" : "false" },
   ];
   if (ctx.datasetSeed !== undefined) {
     env.push({ name: "DATASET_SEED", value: String(ctx.datasetSeed) });
   }
+  if (ctx.processor) {
+    env.push({ name: "PROCESSOR", value: ctx.processor });
+  }
+  env.push({ name: "MAX_CONCURRENCY", value: String(ctx.maxConcurrency) });
 
   return {
     apiVersion: "batch/v1",

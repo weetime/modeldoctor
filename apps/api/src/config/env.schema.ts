@@ -63,6 +63,22 @@ export const EnvSchema = z
     BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
     BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
+    // When false, the runner skips guidellm's GET /v1/models probe before
+    // benchmarking. Set this to false when targeting OpenAI-compatible
+    // gateways that only expose /v1/chat/completions (e.g. some 4pd
+    // gen-studio routes). Default true matches vanilla guidellm behavior.
+    BENCHMARK_VALIDATE_BACKEND: envBoolean.default(true),
+    // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
+    // counting (passed as --processor). Set this when the target gateway
+    // exposes a local model name (e.g. "gen-studio_…") that doesn't resolve
+    // on HF — the tokenizer needs to come from somewhere. Example:
+    // BENCHMARK_PROCESSOR=Qwen/Qwen2.5-0.5B-Instruct
+    BENCHMARK_PROCESSOR: z.string().optional(),
+    // Max concurrent in-flight requests for throughput-mode runs.
+    // guidellm 0.5.x ThroughputProfile requires this; constant/poisson rate
+    // modes ignore it. 100 is a sensible default for medium-tier targets;
+    // tune up for high-RPS clusters or down for fragile ones.
+    BENCHMARK_DEFAULT_MAX_CONCURRENCY: z.coerce.number().int().positive().default(100),
     // Optional override for the kubeconfig file used by the K8s driver.
     // Out-of-cluster local dev: set this to a specific kubeconfig (e.g. an
     // isolated k3d config) so the driver doesn't pick up your default

@@ -38,6 +38,8 @@ describe("BenchmarkExecutionDriver interface", () => {
       maxDurationSeconds: 1800,
       callbackUrl: "http://api:3001",
       callbackToken: "hmac-token",
+      validateBackend: true,
+      maxConcurrency: 100,
     });
     expect(handle).toBe("noop:0");
     await expect(d.cancel(handle)).resolves.toBeUndefined();

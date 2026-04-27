@@ -21,16 +21,22 @@ def _config(**overrides: object) -> EnvConfig:
         request_rate=0,
         total_requests=1000,
         max_duration_seconds=1800,
+        validate_backend=True,
+        processor=None,
+        max_concurrency=100,
     )
     return base._replace(**overrides)  # type: ignore[arg-type]
 
 
 class TestBuildGuidellmArgv:
     def test_throughput_when_rate_is_zero(self) -> None:
+        # request_rate=0 → throughput mode. guidellm 0.5.x ThroughputProfile
+        # requires --rate (concurrency cap), so we always emit it from
+        # max_concurrency. Pre-0.5 ignored --rate for throughput.
         argv = build_guidellm_argv(_config(request_rate=0), output_path="/tmp/r.json")
         assert "--rate-type=throughput" in argv
         assert "--rate=0" not in argv
-        assert not any(a.startswith("--rate=") for a in argv)
+        assert "--rate=100" in argv  # default max_concurrency from fixture
 
     def test_constant_when_rate_is_positive(self) -> None:
         argv = build_guidellm_argv(_config(request_rate=10), output_path="/tmp/r.json")
@@ -111,3 +117,52 @@ class TestBuildGuidellmArgv:
         # mis-routed Phase-1 controller request fails loud.
         with pytest.raises(NotImplementedError, match="sharegpt"):
             build_guidellm_argv(_config(dataset_name="sharegpt"), output_path="/tmp/r.json")
+
+    def test_validate_backend_true_omits_field(self) -> None:
+        # Default True preserves vanilla guidellm: validate_backend is NOT
+        # included in --backend-kwargs (guidellm constructor default = True).
+        import json as _json
+
+        argv = build_guidellm_argv(_config(validate_backend=True), output_path="/tmp/r.json")
+        bk = next((a for a in argv if a.startswith("--backend-kwargs=")), None)
+        assert bk is not None
+        payload = _json.loads(bk.split("=", 1)[1])
+        assert "validate_backend" not in payload
+
+    def test_validate_backend_false_includes_field(self) -> None:
+        # When the operator opts out (e.g. target gateway lacks /v1/models),
+        # the wrapper writes "validate_backend": false into the JSON dict.
+        import json as _json
+
+        argv = build_guidellm_argv(_config(validate_backend=False), output_path="/tmp/r.json")
+        bk = next((a for a in argv if a.startswith("--backend-kwargs=")), None)
+        assert bk is not None
+        payload = _json.loads(bk.split("=", 1)[1])
+        assert payload.get("validate_backend") is False
+
+    def test_processor_none_omits_flag(self) -> None:
+        argv = build_guidellm_argv(_config(processor=None), output_path="/tmp/r.json")
+        assert not any(a.startswith("--processor=") for a in argv)
+
+    def test_processor_set_appends_flag(self) -> None:
+        argv = build_guidellm_argv(
+            _config(processor="Qwen/Qwen2.5-0.5B-Instruct"), output_path="/tmp/r.json"
+        )
+        assert "--processor=Qwen/Qwen2.5-0.5B-Instruct" in argv
+
+    def test_throughput_includes_max_concurrency_as_rate(self) -> None:
+        # guidellm 0.5.x ThroughputProfile requires --rate; we send max_concurrency.
+        argv = build_guidellm_argv(
+            _config(request_rate=0, max_concurrency=200), output_path="/tmp/r.json"
+        )
+        assert "--rate-type=throughput" in argv
+        assert "--rate=200" in argv
+
+    def test_constant_rate_ignores_max_concurrency(self) -> None:
+        # Constant rate mode uses --rate as RPS — max_concurrency irrelevant here.
+        argv = build_guidellm_argv(
+            _config(request_rate=5, max_concurrency=200), output_path="/tmp/r.json"
+        )
+        assert "--rate-type=constant" in argv
+        assert "--rate=5" in argv
+        assert "--rate=200" not in argv
