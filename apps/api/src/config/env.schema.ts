@@ -63,6 +63,13 @@ export const EnvSchema = z
     BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
     BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
+    // Optional override for the kubeconfig file used by the K8s driver.
+    // Out-of-cluster local dev: set this to a specific kubeconfig (e.g. an
+    // isolated k3d config) so the driver doesn't pick up your default
+    // ~/.kube/config (which may point at a real cluster).
+    // In-cluster production: leave unset; @kubernetes/client-node falls back
+    // to the in-cluster ServiceAccount automatically.
+    KUBECONFIG: z.string().optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
   })
   .superRefine((env, ctx) => {
