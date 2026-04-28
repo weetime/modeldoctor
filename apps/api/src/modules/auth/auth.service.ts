@@ -87,7 +87,12 @@ export class AuthService {
   }
 
   async issueNewSession(user: PublicUser): Promise<IssuedTokens> {
-    return this.issueRotation(user, null);
+    // Run the two-step chain-root insert (create with placeholder familyId,
+    // then update familyId = self.id) inside a transaction so a crash between
+    // the two writes can never leave an orphaned __pending__ row in the table.
+    return this.prisma.$transaction(async (tx) =>
+      this.issueRotation(user, null, tx as Pick<PrismaService, "refreshToken">),
+    );
   }
 
   /**

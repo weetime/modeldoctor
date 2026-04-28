@@ -6,7 +6,16 @@ import type { UsersService } from "../users/users.service.js";
 import { AuthService } from "./auth.service.js";
 
 function makePrismaMock() {
-  return {
+  const mock: {
+    refreshToken: {
+      create: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      updateMany: ReturnType<typeof vi.fn>;
+    };
+    $transaction: ReturnType<typeof vi.fn>;
+    $queryRaw: ReturnType<typeof vi.fn>;
+  } = {
     refreshToken: {
       create: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: "rt-new",
@@ -16,9 +25,14 @@ function makePrismaMock() {
       update: vi.fn(),
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb({})),
+    // Pass the prisma instance itself as the tx client so $transaction-wrapped
+    // calls (e.g. issueNewSession's chain-root insert) hit the same spies as
+    // direct calls. This matches Prisma's runtime behavior where tx.refreshToken
+    // exposes the same delegate as prisma.refreshToken.
+    $transaction: vi.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb(mock)),
     $queryRaw: vi.fn(),
   };
+  return mock;
 }
 
 function makeService() {
@@ -115,5 +129,18 @@ describe("AuthService.issueNewSession (register/login)", () => {
     users.verifyPassword = vi.fn().mockResolvedValue(true);
     await service.login("u@x", "Password1!");
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("runs chain-root insert inside a $transaction (atomicity contract)", async () => {
+    const { service, prisma } = makeService();
+    const publicUser = { id: "u1", email: "u@x", roles: ["user"], createdAt: "iso" };
+
+    await service.issueNewSession(publicUser);
+
+    // The whole chain-root insert (create + familyId-patch update) must
+    // be wrapped in $transaction so a crash between the two writes can
+    // never leave an orphan row with familyId === "__pending__".
+    const txCalls = (prisma.$transaction as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    expect(txCalls.length, "issueNewSession must call $transaction").toBeGreaterThanOrEqual(1);
   });
 });
