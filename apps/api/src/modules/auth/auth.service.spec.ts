@@ -144,3 +144,69 @@ describe("AuthService.issueNewSession (register/login)", () => {
     expect(txCalls.length, "issueNewSession must call $transaction").toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("AuthService.refresh (happy path)", () => {
+  it("rotates: revokes parent + replacedById, child has parentId+familyId, used FOR UPDATE", async () => {
+    const presented = "raw-refresh-token-xxx";
+    const parentRow = {
+      id: "rt-parent",
+      user_id: "u1",
+      family_id: "fam-1",
+      parent_id: null,
+      replaced_by_id: null,
+      expires_at: new Date(Date.now() + 86_400_000),
+      revoked_at: null,
+    };
+    const { service, prisma } = makeService();
+
+    // FOR UPDATE returns the parent row.
+    (prisma.$queryRaw as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      parentRow,
+    ]);
+
+    // After issueRotation creates the child, the service does
+    // tx.refreshToken.findUnique({ where: { tokenHash } }) to find the row id.
+    // Provide a deterministic id so the assertion on replacedById is stable.
+    (
+      prisma.refreshToken.findUnique as unknown as { mockResolvedValue: (v: unknown) => void }
+    ).mockResolvedValue({ id: "rt-child" });
+
+    // create() returns whatever data was passed in, with id = "rt-new".
+    // (this mock was set in makePrismaMock and we keep its default behavior.)
+
+    const result = await service.refresh(presented);
+
+    expect(result.kind).toBe("rotated");
+    if (result.kind !== "rotated") throw new Error("type narrow");
+    expect(result.refreshToken).toBeTruthy();
+    expect(result.accessToken).toBe("access-jwt");
+    expect(result.user.id).toBe("u1");
+
+    // Parent was marked revoked + replacedBy = the child id.
+    const updateCalls = (prisma.refreshToken.update as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls;
+    expect(updateCalls.length).toBeGreaterThanOrEqual(1);
+    const lastUpdate = updateCalls.at(-1)?.[0] as {
+      where: { id: string };
+      data: { revokedAt: Date; replacedById: string };
+    };
+    expect(lastUpdate.where.id).toBe("rt-parent");
+    expect(lastUpdate.data.revokedAt).toBeInstanceOf(Date);
+    expect(lastUpdate.data.replacedById).toBe("rt-child");
+
+    // Child create call carries parentId+familyId from the parent row.
+    const createCalls = (prisma.refreshToken.create as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls;
+    const createArg = createCalls.at(-1)?.[0] as { data: { parentId: string; familyId: string } };
+    expect(createArg.data.parentId).toBe("rt-parent");
+    expect(createArg.data.familyId).toBe("fam-1");
+
+    // The SELECT used FOR UPDATE.
+    const queryCalls = (prisma.$queryRaw as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    expect(queryCalls.length).toBeGreaterThanOrEqual(1);
+    // $queryRaw is a tagged template; the first arg is the TemplateStringsArray.
+    // Stringify all of it to grep for FOR UPDATE.
+    const sql = String(queryCalls[0]?.[0] ?? "");
+    expect(sql.toUpperCase()).toContain("FOR UPDATE");
+  });
+});

@@ -14,9 +14,19 @@ export interface IssuedTokens {
   user: PublicUser;
 }
 
+export type RefreshResult =
+  | { kind: "rotated"; accessToken: string; refreshToken: string; user: PublicUser }
+  | { kind: "graceReplayed"; accessToken: string; user: PublicUser };
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  // 30-second grace window per OAuth 2.0 Security BCP §4.13.2: a recently-
+  // revoked refresh token whose successor still exists may still mint a fresh
+  // access token (no cookie rotation). Eliminates StrictMode / multi-tab /
+  // network-retry false-positive theft detections.
+  private static readonly GRACE_WINDOW_MS = 30_000;
 
   constructor(
     private readonly users: UsersService,
@@ -45,35 +55,126 @@ export class AuthService {
     return this.issueNewSession(this.users.toPublic(row));
   }
 
-  async refresh(presentedToken: string): Promise<IssuedTokens> {
-    const tokenHash = this.sha256hex(presentedToken);
-    const row = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
-    if (!row) throw new UnauthorizedException("Invalid refresh token");
-
-    const now = new Date();
-    if (row.expiresAt < now) throw new UnauthorizedException("Refresh token expired");
-
-    if (row.revokedAt !== null) {
-      // THEFT DETECTION: a revoked token was presented → revoke ALL of this
-      // user's outstanding refresh tokens to invalidate any concurrent session.
-      await this.prisma.refreshToken.updateMany({
-        where: { userId: row.userId, revokedAt: null },
-        data: { revokedAt: now },
-      });
-      this.logger.warn(
-        { userId: row.userId, rowId: row.id },
-        "Refresh token theft detected; all tokens revoked",
-      );
-      throw new UnauthorizedException("Refresh token reused; session invalidated");
+  async refresh(presentedToken: string): Promise<RefreshResult> {
+    try {
+      return await this.refreshOnce(presentedToken);
+    } catch (e) {
+      // Postgres serialization_failure (40001) — only happens under
+      // Serializable isolation when two concurrent rotations of the same
+      // family race past the FOR UPDATE lock. Retrying once gives the
+      // loser a chance to observe the winner's revoked_at + replaced_by_id
+      // and route through the grace-replay branch.
+      if (this.isSerializationFailure(e)) {
+        return await this.refreshOnce(presentedToken);
+      }
+      throw e;
     }
+  }
 
-    // Happy path: rotate — revoke the old token and issue a new pair.
-    await this.prisma.refreshToken.update({
-      where: { id: row.id },
-      data: { revokedAt: now },
-    });
-    const user = await this.users.findById(row.userId);
-    return this.issueRotation(this.users.toPublic(user), null);
+  private isSerializationFailure(err: unknown): boolean {
+    if (typeof err !== "object" || err === null) return false;
+    const code = (err as { code?: string }).code;
+    return code === "P2034" || code === "40001";
+  }
+
+  private async refreshOnce(presentedToken: string): Promise<RefreshResult> {
+    const tokenHash = this.sha256hex(presentedToken);
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const rows = await tx.$queryRaw<
+          Array<{
+            id: string;
+            user_id: string;
+            family_id: string;
+            parent_id: string | null;
+            replaced_by_id: string | null;
+            expires_at: Date;
+            revoked_at: Date | null;
+          }>
+        >`SELECT id, user_id, family_id, parent_id, replaced_by_id, expires_at, revoked_at
+            FROM "refresh_tokens"
+            WHERE "token_hash" = ${tokenHash}
+            FOR UPDATE`;
+
+        const presented = rows[0];
+        if (!presented) throw new UnauthorizedException("Invalid refresh token");
+
+        const now = new Date();
+        if (presented.expires_at < now) {
+          throw new UnauthorizedException("Refresh token expired");
+        }
+
+        if (presented.revoked_at !== null) {
+          // Inside grace window AND a successor exists → assume legitimate
+          // racing tab / network retry. Mint a new access token; do NOT
+          // rotate the cookie (the successor cookie is already in the
+          // browser's cookie jar from the first rotation).
+          const sinceRevoke = now.getTime() - presented.revoked_at.getTime();
+          if (presented.replaced_by_id && sinceRevoke < AuthService.GRACE_WINDOW_MS) {
+            const userRow = await this.users.findById(presented.user_id);
+            const publicUser = this.users.toPublic(userRow);
+            const payload: JwtPayload = {
+              sub: publicUser.id,
+              email: publicUser.email,
+              roles: publicUser.roles,
+            };
+            const accessToken = await this.jwt.signAsync(payload, {
+              secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }) ?? "",
+              expiresIn: this.config.get("JWT_ACCESS_EXPIRES_IN", { infer: true }),
+            });
+            return { kind: "graceReplayed", accessToken, user: publicUser };
+          }
+
+          // Outside grace window → genuine reuse. Revoke the entire family
+          // (NOT every token of this user — concurrent sessions are
+          // independent rotation chains).
+          await tx.refreshToken.updateMany({
+            where: { familyId: presented.family_id, revokedAt: null },
+            data: { revokedAt: now },
+          });
+          this.logger.warn(
+            { userId: presented.user_id, familyId: presented.family_id, rowId: presented.id },
+            "Refresh token theft detected; family revoked",
+          );
+          throw new UnauthorizedException("Refresh token reused; session invalidated");
+        }
+
+        // HAPPY PATH — extend the chain. Issue a child rotation under the
+        // same family; mark the parent revoked + replacedBy.
+        const userRow = await this.users.findById(presented.user_id);
+        const publicUser = this.users.toPublic(userRow);
+        const issued = await this.issueRotation(
+          publicUser,
+          { id: presented.id, familyId: presented.family_id },
+          tx as Pick<PrismaService, "refreshToken">,
+        );
+
+        // Find the child id we just created so we can wire replacedById.
+        // issueRotation doesn't return the row, so we re-query — cheap
+        // because token_hash is uniquely indexed.
+        const childRow = await tx.refreshToken.findUnique({
+          where: { tokenHash: this.sha256hex(issued.refreshToken) },
+          select: { id: true },
+        });
+        if (!childRow) {
+          throw new Error("rotation invariant: child row missing after issue");
+        }
+
+        await tx.refreshToken.update({
+          where: { id: presented.id },
+          data: { revokedAt: now, replacedById: childRow.id },
+        });
+
+        return {
+          kind: "rotated",
+          accessToken: issued.accessToken,
+          refreshToken: issued.refreshToken,
+          user: publicUser,
+        };
+      },
+      { isolationLevel: "Serializable" },
+    );
   }
 
   async logout(presentedToken: string): Promise<void> {
