@@ -79,8 +79,14 @@ export class AuthService {
 
   private isSerializationFailure(err: unknown): boolean {
     if (typeof err !== "object" || err === null) return false;
-    const code = (err as { code?: string }).code;
-    return code === "P2034" || code === "40001";
+    const e = err as { code?: string; meta?: { code?: string } };
+    // Direct match on Prisma's transaction-conflict code or the Postgres
+    // SQLSTATE. Plus: under interactive $transaction(...) Prisma surfaces
+    // serialization_failure as P2010 with the SQLSTATE in meta.code, which
+    // is the actual shape we hit in concurrent rotations of the same cookie.
+    return (
+      e.code === "P2034" || e.code === "40001" || (e.code === "P2010" && e.meta?.code === "40001")
+    );
   }
 
   private async refreshOnce(presentedToken: string): Promise<RefreshResult> {
