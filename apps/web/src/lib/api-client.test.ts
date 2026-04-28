@@ -12,7 +12,7 @@ const mockUser = {
 describe("api-client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    useAuthStore.setState({ accessToken: null, user: null });
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
   });
 
   it("returns parsed JSON on success", async () => {
@@ -74,7 +74,11 @@ describe("api-client", () => {
   });
 
   it("attaches Authorization header when accessToken is in store", async () => {
-    useAuthStore.setState({ accessToken: "my-token", user: mockUser });
+    useAuthStore.setState({
+      accessToken: "my-token",
+      user: mockUser,
+      accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+    });
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -89,7 +93,11 @@ describe("api-client", () => {
   });
 
   it("on 401 → refreshes → retries original request with new token", async () => {
-    useAuthStore.setState({ accessToken: "expired-token", user: mockUser });
+    useAuthStore.setState({
+      accessToken: "expired-token",
+      user: mockUser,
+      accessTokenExpiresAt: new Date(Date.now() - 1000).toISOString(),
+    });
 
     const fetchMock = vi
       .fn()
@@ -106,7 +114,12 @@ describe("api-client", () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ accessToken: "new-token", user: mockUser }),
+        json: () =>
+          Promise.resolve({
+            accessToken: "new-token",
+            accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+            user: mockUser,
+          }),
       })
       // Third call: retried original request with new token
       .mockResolvedValueOnce({
@@ -126,10 +139,15 @@ describe("api-client", () => {
 
     // Store should be updated with new token
     expect(useAuthStore.getState().accessToken).toBe("new-token");
+    expect(useAuthStore.getState().accessTokenExpiresAt).toBeTruthy();
   });
 
   it("on 401 → refresh fails → clears store and throws ApiError", async () => {
-    useAuthStore.setState({ accessToken: "expired-token", user: mockUser });
+    useAuthStore.setState({
+      accessToken: "expired-token",
+      user: mockUser,
+      accessTokenExpiresAt: new Date(Date.now() - 1000).toISOString(),
+    });
 
     const fetchMock = vi
       .fn()
@@ -139,10 +157,11 @@ describe("api-client", () => {
         status: 401,
         text: () => Promise.resolve(""),
       })
-      // Second call: refresh fails
+      // Second call: refresh fails (genuine auth failure)
       .mockResolvedValueOnce({
         ok: false,
         status: 401,
+        headers: { get: () => null },
         json: () => Promise.resolve({}),
       });
 
@@ -155,6 +174,7 @@ describe("api-client", () => {
 
     expect(useAuthStore.getState().accessToken).toBeNull();
     expect(useAuthStore.getState().user).toBeNull();
+    expect(useAuthStore.getState().accessTokenExpiresAt).toBeNull();
   });
 
   it("del() issues DELETE", async () => {
@@ -189,12 +209,16 @@ describe("api-client", () => {
 
 describe("api-client: concurrent 401s issue only one refresh", () => {
   beforeEach(() => {
-    useAuthStore.setState({ accessToken: "old-token", user: mockUser });
+    useAuthStore.setState({
+      accessToken: "old-token",
+      user: mockUser,
+      accessTokenExpiresAt: new Date(Date.now() - 1000).toISOString(),
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    useAuthStore.setState({ accessToken: null, user: null });
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
   });
 
   it("fires only a single /api/auth/refresh request for concurrent 401s", async () => {
@@ -205,7 +229,12 @@ describe("api-client: concurrent 401s issue only one refresh", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ accessToken: "fresh-token", user: mockUser }),
+          json: () =>
+            Promise.resolve({
+              accessToken: "fresh-token",
+              accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+              user: mockUser,
+            }),
         });
       }
       // Simulate 401 for all other calls on first attempt
@@ -225,7 +254,12 @@ describe("api-client: concurrent 401s issue only one refresh", () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ accessToken: "fresh-token", user: mockUser }),
+          json: () =>
+            Promise.resolve({
+              accessToken: "fresh-token",
+              accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+              user: mockUser,
+            }),
         });
       }
       // Return 401 on the initial access-token calls, success after
@@ -255,5 +289,78 @@ describe("api-client: concurrent 401s issue only one refresh", () => {
 
     void fetchMock;
     void callCount;
+  });
+});
+
+describe("api-client.refreshAccessToken: discriminated result", () => {
+  beforeEach(() => {
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
+  });
+
+  it("200 + body → { kind: 'ok', accessToken }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            accessToken: "fresh",
+            accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+            user: mockUser,
+          }),
+      }),
+    );
+    const { refreshAccessToken } = await import("./api-client");
+    const result = await refreshAccessToken();
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") expect(result.accessToken).toBe("fresh");
+  });
+
+  it("401 → { kind: 'unauthenticated' }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        headers: { get: () => null },
+        json: () => Promise.resolve({}),
+      }),
+    );
+    const { refreshAccessToken } = await import("./api-client");
+    const result = await refreshAccessToken();
+    expect(result.kind).toBe("unauthenticated");
+  });
+
+  it("429 with Retry-After → { kind: 'transient', retryAfterMs > 0 }", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: (k: string) => (k === "Retry-After" ? "3" : null) },
+        json: () => Promise.resolve({}),
+      }),
+    );
+    const { refreshAccessToken } = await import("./api-client");
+    const result = await refreshAccessToken();
+    expect(result.kind).toBe("transient");
+    if (result.kind === "transient") {
+      expect(result.status).toBe(429);
+      expect(result.retryAfterMs).toBe(3000);
+    }
+  });
+
+  it("network error → { kind: 'transient', status: 0 }", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const { refreshAccessToken } = await import("./api-client");
+    const result = await refreshAccessToken();
+    expect(result.kind).toBe("transient");
+    if (result.kind === "transient") expect(result.status).toBe(0);
   });
 });

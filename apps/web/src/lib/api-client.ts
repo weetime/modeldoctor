@@ -14,39 +14,55 @@ export class ApiError extends Error {
   }
 }
 
-// Serialize concurrent refresh attempts so multiple 401s only issue ONE refresh.
-// Also exported as `refreshAccessToken` so the BootGate (and any other top-level
-// consumer) can dedup against the same in-flight promise. Without dedup,
-// React StrictMode's double-invoked effects in dev fire two parallel
-// /api/auth/refresh POSTs, both carrying the original cookie value; the
-// server's rotation guard sees the second arrival as token reuse and
-// invalidates the entire session.
-let refreshInFlight: Promise<string | null> | null = null;
+/**
+ * Discriminated outcome of a /api/auth/refresh attempt. Distinguishes a
+ * genuine auth failure (401/403 — clear store, redirect to /login) from
+ * a transient blip (429/5xx/network — retry with backoff, do NOT clear
+ * the store). Used by BootGate, the proactive scheduler, and the 401
+ * recovery path inside request().
+ */
+export type RefreshResult =
+  | { kind: "ok"; accessToken: string }
+  | { kind: "unauthenticated" }
+  | { kind: "transient"; status: number; retryAfterMs: number };
 
-export async function refreshAccessToken(): Promise<string | null> {
-  if (!refreshInFlight) {
-    const p: Promise<string | null> = (async () => {
-      try {
-        const res = await fetch("/api/auth/refresh", {
-          method: "POST",
-          credentials: "include",
-        });
-        if (!res.ok) return null;
-        const body = (await res.json()) as { accessToken: string; user: PublicUser };
-        useAuthStore.getState().setAuth(body.accessToken, body.user);
-        return body.accessToken;
-      } catch {
-        return null;
+// Single-tab in-flight dedup. Cross-tab dedup arrives in B5 via Web Locks.
+let refreshInFlight: Promise<RefreshResult> | null = null;
+
+export async function refreshAccessToken(): Promise<RefreshResult> {
+  if (refreshInFlight) return refreshInFlight;
+  const p: Promise<RefreshResult> = (async () => {
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const body = (await res.json()) as {
+          accessToken: string;
+          accessTokenExpiresAt: string;
+          user: PublicUser;
+        };
+        useAuthStore.getState().setAuth(body.accessToken, body.user, body.accessTokenExpiresAt);
+        return { kind: "ok", accessToken: body.accessToken };
       }
-    })();
-    refreshInFlight = p;
-    // Identity check: if another refresh took over before this one settled,
-    // don't clobber the newer promise reference.
-    p.finally(() => {
-      if (refreshInFlight === p) refreshInFlight = null;
-    });
-  }
-  return refreshInFlight;
+      if (res.status === 401 || res.status === 403) {
+        return { kind: "unauthenticated" };
+      }
+      // 429 / 5xx — transient. Honor Retry-After if present (seconds).
+      const ra = res.headers.get("Retry-After");
+      const retryAfterMs = ra ? Math.max(0, Number.parseInt(ra, 10) * 1000) : 0;
+      return { kind: "transient", status: res.status, retryAfterMs };
+    } catch {
+      // Network error.
+      return { kind: "transient", status: 0, retryAfterMs: 0 };
+    }
+  })();
+  refreshInFlight = p;
+  void p.finally(() => {
+    if (refreshInFlight === p) refreshInFlight = null;
+  });
+  return p;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -60,15 +76,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res = await doFetch(useAuthStore.getState().accessToken);
 
   if (res.status === 401 && !path.startsWith("/api/auth/")) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      res = await doFetch(newToken);
-    } else {
+    const result = await refreshAccessToken();
+    if (result.kind === "ok") {
+      res = await doFetch(result.accessToken);
+    } else if (result.kind === "unauthenticated") {
       useAuthStore.getState().clear();
       if (typeof window !== "undefined" && window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
       throw new ApiError(401, "Unauthorized");
+    } else {
+      // transient — surface the original 401 since we couldn't recover here.
+      // Don't clear the store; the proactive scheduler (B8) or a later
+      // request will retry on its own.
+      throw new ApiError(401, "Unauthorized (refresh transient)");
     }
   }
 

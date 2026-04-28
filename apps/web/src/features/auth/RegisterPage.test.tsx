@@ -41,7 +41,7 @@ function renderRegisterPage() {
 
 describe("RegisterPage", () => {
   beforeEach(() => {
-    useAuthStore.setState({ accessToken: null, user: null });
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
     vi.mocked(api.post).mockReset();
     vi.mocked(toast.error).mockReset();
   });
@@ -84,6 +84,7 @@ describe("RegisterPage", () => {
   it("posts to /api/auth/register and updates the store on success", async () => {
     vi.mocked(api.post).mockResolvedValue({
       accessToken: "tok-register",
+      accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
       user: mockUser,
     });
 
