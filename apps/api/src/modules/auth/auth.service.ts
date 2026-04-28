@@ -1,6 +1,12 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { PublicUser } from "@modeldoctor/contracts";
-import { ConflictException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import type { Env } from "../../config/env.schema.js";
@@ -59,12 +65,12 @@ export class AuthService {
     try {
       return await this.refreshOnce(presentedToken);
     } catch (e) {
-      // Postgres serialization_failure (40001) — only happens under
-      // Serializable isolation when two concurrent rotations of the same
-      // family race past the FOR UPDATE lock. Retrying once gives the
-      // loser a chance to observe the winner's revoked_at + replaced_by_id
-      // and route through the grace-replay branch.
       if (this.isSerializationFailure(e)) {
+        // Postgres serialization_failure (40001 / Prisma P2034). Happens under
+        // Serializable isolation when two concurrent rotations of the same
+        // family race past the FOR UPDATE lock. The retry observes the
+        // winner's commit and routes through the grace-replay branch.
+        this.logger.debug("refresh retried after serialization_failure");
         return await this.refreshOnce(presentedToken);
       }
       throw e;
@@ -158,7 +164,16 @@ export class AuthService {
           select: { id: true },
         });
         if (!childRow) {
-          throw new Error("rotation invariant: child row missing after issue");
+          // Should be unreachable: we just created this row inside the same
+          // transaction. If it ever fires, it's a severe Prisma read-after-write
+          // invariant violation and ops should be paged.
+          this.logger.error(
+            { userId: presented.user_id, familyId: presented.family_id, parentRowId: presented.id },
+            "rotation invariant: child row missing after issue",
+          );
+          throw new InternalServerErrorException(
+            "rotation invariant: child row missing after issue",
+          );
         }
 
         await tx.refreshToken.update({
