@@ -210,3 +210,91 @@ describe("AuthService.refresh (happy path)", () => {
     expect(sql.toUpperCase()).toContain("FOR UPDATE");
   });
 });
+
+describe("AuthService.refresh (grace-window replay)", () => {
+  it("revoked < 30s ago + replacedById set → 'graceReplayed', no cookie rotation, family untouched", async () => {
+    const { service, prisma } = makeService();
+    const revokedAt = new Date(Date.now() - 5_000); // 5s ago — well within grace
+    (prisma.$queryRaw as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: "rt-old",
+        user_id: "u1",
+        family_id: "fam-1",
+        parent_id: null,
+        replaced_by_id: "rt-new",
+        expires_at: new Date(Date.now() + 86_400_000),
+        revoked_at: revokedAt,
+      },
+    ]);
+
+    const result = await service.refresh("any-presented-value");
+
+    expect(result.kind).toBe("graceReplayed");
+    if (result.kind !== "graceReplayed") throw new Error("type narrow");
+    expect(result.accessToken).toBe("access-jwt");
+    expect("refreshToken" in result).toBe(false);
+
+    // Family must NOT be revoked (no updateMany call).
+    expect(
+      (prisma.refreshToken.updateMany as unknown as { mock: { calls: unknown[] } }).mock.calls
+        .length,
+    ).toBe(0);
+    // No new child created.
+    expect(
+      (prisma.refreshToken.create as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(0);
+    // No row updates either (the grace branch must touch zero rows).
+    expect(
+      (prisma.refreshToken.update as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(0);
+  });
+});
+
+describe("AuthService.refresh (outside-grace theft)", () => {
+  it("revoked > 30s ago → revokes entire family by familyId + throws Unauthorized", async () => {
+    const { service, prisma } = makeService();
+    const revokedAt = new Date(Date.now() - 60_000); // 60s ago — past grace
+    (prisma.$queryRaw as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: "rt-old",
+        user_id: "u1",
+        family_id: "fam-1",
+        parent_id: null,
+        replaced_by_id: "rt-new",
+        expires_at: new Date(Date.now() + 86_400_000),
+        revoked_at: revokedAt,
+      },
+    ]);
+
+    await expect(service.refresh("any-presented-value")).rejects.toThrow(/reused/);
+
+    const updateManyCalls = (
+      prisma.refreshToken.updateMany as unknown as { mock: { calls: unknown[][] } }
+    ).mock.calls;
+    expect(updateManyCalls.length).toBe(1);
+    const [arg] = updateManyCalls[0] as [{ where: { familyId: string; revokedAt: null } }];
+    expect(arg.where.familyId).toBe("fam-1");
+    expect(arg.where.revokedAt).toBeNull();
+  });
+
+  it("revoked + replacedById null → genuine reuse (no successor) → revokes family regardless of timing", async () => {
+    const { service, prisma } = makeService();
+    (prisma.$queryRaw as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: "rt-orphan",
+        user_id: "u1",
+        family_id: "fam-2",
+        parent_id: null,
+        replaced_by_id: null, // no successor → treat as reuse regardless of timing
+        expires_at: new Date(Date.now() + 86_400_000),
+        revoked_at: new Date(Date.now() - 1_000),
+      },
+    ]);
+
+    await expect(service.refresh("orphan")).rejects.toThrow(/reused/);
+    expect(
+      (prisma.refreshToken.updateMany as unknown as { mock: { calls: unknown[] } }).mock.calls
+        .length,
+    ).toBe(1);
+  });
+});
