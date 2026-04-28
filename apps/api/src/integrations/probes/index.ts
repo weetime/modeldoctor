@@ -6,6 +6,7 @@ import { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 import { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
 import { runRerankCohereProbe } from "./rerank-cohere.js";
 import { runRerankTEIProbe } from "./rerank-tei.js";
+import { runTTSProbe } from "./tts.js";
 
 export { runChatTextProbe } from "./chat-text.js";
 export { runChatVisionProbe } from "./chat-vision.js";
@@ -14,6 +15,7 @@ export { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
 export { runRerankTEIProbe } from "./rerank-tei.js";
 export { runRerankCohereProbe } from "./rerank-cohere.js";
+export { runTTSProbe } from "./tts.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
@@ -70,4 +72,5 @@ export const PROBES: Partial<Record<ProbeName, Probe>> = {
   "embeddings-tei": runEmbeddingsTEIProbe,
   "rerank-tei": runRerankTEIProbe,
   "rerank-cohere": runRerankCohereProbe,
+  tts: runTTSProbe,
 };
