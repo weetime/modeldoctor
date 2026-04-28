@@ -1,4 +1,5 @@
 import type { ProbeName } from "@modeldoctor/contracts";
+import { runASRProbe } from "./asr.js";
 import { runChatAudioOmniProbe } from "./chat-audio-omni.js";
 import { runChatTextProbe } from "./chat-text.js";
 import { runChatVisionProbe } from "./chat-vision.js";
@@ -16,6 +17,7 @@ export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
 export { runRerankTEIProbe } from "./rerank-tei.js";
 export { runRerankCohereProbe } from "./rerank-cohere.js";
 export { runTTSProbe } from "./tts.js";
+export { runASRProbe } from "./asr.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
@@ -73,4 +75,5 @@ export const PROBES: Partial<Record<ProbeName, Probe>> = {
   "rerank-tei": runRerankTEIProbe,
   "rerank-cohere": runRerankCohereProbe,
   tts: runTTSProbe,
+  asr: runASRProbe,
 };
