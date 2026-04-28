@@ -16,13 +16,20 @@ import type { JwtPayload } from "./jwt.strategy.js";
 
 export interface IssuedTokens {
   accessToken: string;
+  accessTokenExpiresAt: Date;
   refreshToken: string;
   user: PublicUser;
 }
 
 export type RefreshResult =
-  | { kind: "rotated"; accessToken: string; refreshToken: string; user: PublicUser }
-  | { kind: "graceReplayed"; accessToken: string; user: PublicUser };
+  | {
+      kind: "rotated";
+      accessToken: string;
+      accessTokenExpiresAt: Date;
+      refreshToken: string;
+      user: PublicUser;
+    }
+  | { kind: "graceReplayed"; accessToken: string; accessTokenExpiresAt: Date; user: PublicUser };
 
 @Injectable()
 export class AuthService {
@@ -91,8 +98,14 @@ export class AuthService {
 
   private async refreshOnce(presentedToken: string): Promise<RefreshResult> {
     type TxnOutcome =
-      | { kind: "rotated"; accessToken: string; refreshToken: string; user: PublicUser }
-      | { kind: "graceReplayed"; accessToken: string; user: PublicUser }
+      | {
+          kind: "rotated";
+          accessToken: string;
+          accessTokenExpiresAt: Date;
+          refreshToken: string;
+          user: PublicUser;
+        }
+      | { kind: "graceReplayed"; accessToken: string; accessTokenExpiresAt: Date; user: PublicUser }
       | { kind: "theft"; userId: string; familyId: string; rowId: string };
 
     const tokenHash = this.sha256hex(presentedToken);
@@ -137,7 +150,11 @@ export class AuthService {
               secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }) ?? "",
               expiresIn: this.config.get("JWT_ACCESS_EXPIRES_IN", { infer: true }),
             });
-            return { kind: "graceReplayed", accessToken, user: publicUser };
+            const expiresInMs = this.parseExpiresInMs(
+              this.config.get("JWT_ACCESS_EXPIRES_IN", { infer: true }) ?? "15m",
+            );
+            const accessTokenExpiresAt = new Date(Date.now() + expiresInMs);
+            return { kind: "graceReplayed", accessToken, accessTokenExpiresAt, user: publicUser };
           }
 
           // THEFT — revoke the family inside the txn, then return a sentinel
@@ -191,6 +208,7 @@ export class AuthService {
         return {
           kind: "rotated",
           accessToken: issued.accessToken,
+          accessTokenExpiresAt: issued.accessTokenExpiresAt,
           refreshToken: issued.refreshToken,
           user: publicUser,
         };
@@ -249,6 +267,10 @@ export class AuthService {
       secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }) ?? "",
       expiresIn: this.config.get("JWT_ACCESS_EXPIRES_IN", { infer: true }),
     });
+    const expiresInMs = this.parseExpiresInMs(
+      this.config.get("JWT_ACCESS_EXPIRES_IN", { infer: true }) ?? "15m",
+    );
+    const accessTokenExpiresAt = new Date(Date.now() + expiresInMs);
 
     // Refresh token: 48 random bytes → 64-char base64url string. High entropy
     // means SHA-256 is sufficient for storage (see plan design note). Argon2
@@ -285,7 +307,21 @@ export class AuthService {
       });
     }
 
-    return { accessToken, refreshToken, user };
+    return { accessToken, accessTokenExpiresAt, refreshToken, user };
+  }
+
+  /**
+   * Parse JWT_ACCESS_EXPIRES_IN (e.g. "15m", "1h", "7200s", or a bare integer
+   * meaning seconds) to milliseconds. Mirrors @nestjs/jwt's expiresIn parsing
+   * so the value we surface to clients matches the JWT exp claim itself.
+   */
+  private parseExpiresInMs(value: string): number {
+    const match = /^(\d+)\s*(s|m|h|d)?$/.exec(value);
+    if (!match) throw new Error(`Invalid JWT_ACCESS_EXPIRES_IN: ${value}`);
+    const n = Number.parseInt(match[1] ?? "", 10);
+    const unit = match[2] ?? "s";
+    const ms = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 }[unit] ?? 1_000;
+    return n * ms;
   }
 
   private sha256hex(value: string): string {

@@ -36,7 +36,7 @@ export function LoginPage() {
     setSubmitError(null);
     try {
       const data = await api.post<AuthTokenResponse>("/api/auth/login", values);
-      setAuth(data.accessToken, data.user);
+      setAuth(data.accessToken, data.user, data.accessTokenExpiresAt);
       navigate(from, { replace: true });
     } catch (e) {
       setSubmitError(e instanceof ApiError ? e.message : "Login failed");

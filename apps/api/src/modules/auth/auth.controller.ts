@@ -27,6 +27,7 @@ import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import type { JwtPayload } from "./jwt.strategy.js";
 
 const REFRESH_COOKIE = "md_refresh";
+const SESSION_COOKIE = "md_session";
 
 function setRefreshCookie(res: Response, token: string, maxAgeDays: number, isProd: boolean): void {
   res.cookie(REFRESH_COOKIE, token, {
@@ -36,6 +37,30 @@ function setRefreshCookie(res: Response, token: string, maxAgeDays: number, isPr
     path: "/api/auth",
     maxAge: maxAgeDays * 86_400_000,
   });
+}
+
+/**
+ * Non-HttpOnly companion cookie. Holds NO sensitive value — it's a presence
+ * flag (`1`). Lets the SPA's BootGate skip the /refresh probe entirely when
+ * the user has clearly never logged in (or has logged out), avoiding
+ * pointless 401s and rate-limit pressure.
+ *
+ * Path=/ so JS on any route can read it; SameSite=Lax so it survives
+ * top-level cross-site navigations into the app.
+ */
+function setSessionCookie(res: Response, maxAgeDays: number, isProd: boolean): void {
+  res.cookie(SESSION_COOKIE, "1", {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeDays * 86_400_000,
+  });
+}
+
+function clearAuthCookies(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
 }
 
 @Controller("auth")
@@ -52,14 +77,23 @@ export class AuthController {
     @Body(new ZodValidationPipe(RegisterRequestSchema)) body: RegisterRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
-    const { accessToken, refreshToken, user } = await this.auth.register(body.email, body.password);
+    const issued = await this.auth.register(body.email, body.password);
     setRefreshCookie(
       res,
-      refreshToken,
+      issued.refreshToken,
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
-    return { accessToken, user };
+    setSessionCookie(
+      res,
+      this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+      this.config.get("NODE_ENV", { infer: true }) === "production",
+    );
+    return {
+      accessToken: issued.accessToken,
+      accessTokenExpiresAt: issued.accessTokenExpiresAt.toISOString(),
+      user: issued.user,
+    };
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -69,14 +103,23 @@ export class AuthController {
     @Body(new ZodValidationPipe(LoginRequestSchema)) body: LoginRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
-    const { accessToken, refreshToken, user } = await this.auth.login(body.email, body.password);
+    const issued = await this.auth.login(body.email, body.password);
     setRefreshCookie(
       res,
-      refreshToken,
+      issued.refreshToken,
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
-    return { accessToken, user };
+    setSessionCookie(
+      res,
+      this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+      this.config.get("NODE_ENV", { infer: true }) === "production",
+    );
+    return {
+      accessToken: issued.accessToken,
+      accessTokenExpiresAt: issued.accessTokenExpiresAt.toISOString(),
+      user: issued.user,
+    };
   }
 
   @Public()
@@ -95,10 +138,19 @@ export class AuthController {
         this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
         this.config.get("NODE_ENV", { infer: true }) === "production",
       );
+      setSessionCookie(
+        res,
+        this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+        this.config.get("NODE_ENV", { infer: true }) === "production",
+      );
     }
     // Grace-replayed: do not touch the cookie — the legitimate caller's
     // freshly-issued cookie is already in the browser's jar.
-    return { accessToken: result.accessToken, user: result.user };
+    return {
+      accessToken: result.accessToken,
+      accessTokenExpiresAt: result.accessTokenExpiresAt.toISOString(),
+      user: result.user,
+    };
   }
 
   @Post("logout")
@@ -108,7 +160,7 @@ export class AuthController {
   ): Promise<{ ok: true }> {
     const presented = (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
     if (presented) await this.auth.logout(presented);
-    res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+    clearAuthCookies(res);
     return { ok: true };
   }
 

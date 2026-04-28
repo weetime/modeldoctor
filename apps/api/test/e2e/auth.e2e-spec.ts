@@ -22,6 +22,8 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof res.body.accessTokenExpiresAt).toBe("string");
     expect(res.body.user.email).toBe("admin@example.com");
     expect(res.body.user.roles).toEqual(["admin"]);
     expect(res.body.user.id).toBeTruthy();
@@ -33,6 +35,9 @@ describe("Auth (e2e)", () => {
     expect(refreshCookie).toBeTruthy();
     expect(refreshCookie).toMatch(/HttpOnly/i);
     expect(refreshCookie).toMatch(/Path=\/api\/auth/i);
+    const sessionCookie = cookies.find((c) => c.startsWith("md_session="));
+    expect(sessionCookie, "md_session set on register").toBeTruthy();
+    expect(sessionCookie).toMatch(/^md_session=1(;|$)/);
   });
 
   // ── 2. Register second user → role=user ──────────────────────────────────
@@ -69,10 +74,15 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof res.body.accessTokenExpiresAt).toBe("string");
     const rawCookies = res.headers["set-cookie"] as string[] | string | undefined;
     const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
     const refreshCookie = cookies.find((c) => c.startsWith("md_refresh="));
     expect(refreshCookie).toBeTruthy();
+    const sessionCookie = cookies.find((c) => c.startsWith("md_session="));
+    expect(sessionCookie, "md_session set on register").toBeTruthy();
+    expect(sessionCookie).toMatch(/^md_session=1(;|$)/);
   });
 
   // ── 6. GET /api/auth/me with bearer → PublicUser shape ───────────────────
@@ -81,6 +91,9 @@ describe("Auth (e2e)", () => {
       .post("/api/auth/login")
       .send({ email: "admin@example.com", password: "Password1!" })
       .expect(201);
+    expect(loginRes.body.accessToken).toBeTruthy();
+    expect(loginRes.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof loginRes.body.accessTokenExpiresAt).toBe("string");
     const token = loginRes.body.accessToken as string;
     const registeredId = loginRes.body.user.id as string;
 
@@ -117,11 +130,16 @@ describe("Auth (e2e)", () => {
 
     const refreshRes = await agent.post("/api/auth/refresh").expect(201);
     expect(refreshRes.body.accessToken).toBeTruthy();
+    expect(refreshRes.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof refreshRes.body.accessTokenExpiresAt).toBe("string");
 
     const rawCookies = refreshRes.headers["set-cookie"] as string[] | string | undefined;
     const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
     const refreshCookie = cookies.find((c) => c.startsWith("md_refresh="));
     expect(refreshCookie).toBeTruthy();
+    const sessionCookie = cookies.find((c) => c.startsWith("md_session="));
+    expect(sessionCookie, "md_session set on register").toBeTruthy();
+    expect(sessionCookie).toMatch(/^md_session=1(;|$)/);
   });
 
   // ── Theft detection: outside-grace replay still kills the family ─────────
@@ -192,6 +210,8 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(replay.body.accessToken).toBeTruthy();
+    expect(replay.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof replay.body.accessTokenExpiresAt).toBe("string");
     const setCookieHeader = replay.headers["set-cookie"] as string[] | undefined;
     const hasNewRefreshCookie = !!setCookieHeader?.some((c) => c.startsWith("md_refresh="));
     expect(hasNewRefreshCookie, "grace-replay must NOT rotate cookie").toBe(false);
@@ -248,6 +268,8 @@ describe("Auth (e2e)", () => {
       .set("Cookie", cookieB)
       .expect(201);
     expect(bRotated.body.accessToken).toBeTruthy();
+    expect(bRotated.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof bRotated.body.accessTokenExpiresAt).toBe("string");
   });
 
   // ── 11. Admin sees runs from all users ────────────────────────────────────
@@ -367,6 +389,10 @@ describe("Auth (e2e)", () => {
     expect(resB.status, "second refresh").toBe(201);
     expect(resA.body.accessToken).toBeTruthy();
     expect(resB.body.accessToken).toBeTruthy();
+    expect(resA.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof resA.body.accessTokenExpiresAt).toBe("string");
+    expect(resB.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof resB.body.accessTokenExpiresAt).toBe("string");
 
     const aSetsCookie = !!(resA.headers["set-cookie"] as string[] | undefined)?.some((c) =>
       c.startsWith("md_refresh="),
@@ -376,5 +402,42 @@ describe("Auth (e2e)", () => {
     );
     // Exactly one of the two should rotate the cookie; the loser is grace-replayed.
     expect(aSetsCookie !== bSetsCookie, "exactly one rotates cookie").toBe(true);
+  });
+
+  // ── md_session companion cookie ──────────────────────────────────────────
+  it("login sets md_session=1 (non-HttpOnly, Path=/); logout clears it", async () => {
+    // Register the user first (admin@example.com may not exist in this test ordering;
+    // use a fresh user to keep the test self-contained)
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/register")
+      .send({ email: "session-cookie@example.com", password: "Password1!" })
+      .expect(201);
+
+    const loginRes = await request(ctx.app.getHttpServer())
+      .post("/api/auth/login")
+      .send({ email: "session-cookie@example.com", password: "Password1!" })
+      .expect(201);
+
+    const cookies = (loginRes.headers["set-cookie"] as string[]) ?? [];
+    const sessionCookie = cookies.find((c) => c.startsWith("md_session="));
+    expect(sessionCookie, "md_session present").toBeTruthy();
+    expect(sessionCookie).toMatch(/^md_session=1(;|$)/);
+    expect(sessionCookie).not.toMatch(/HttpOnly/i);
+    expect(sessionCookie).toMatch(/Path=\/(;|$)/);
+    expect(sessionCookie).toMatch(/SameSite=Lax/i);
+
+    // Logout should clear both cookies. /logout is behind the global
+    // JwtAuthGuard, so we need a Bearer token to reach the handler.
+    const accessToken = loginRes.body.accessToken as string;
+    const logoutRes = await request(ctx.app.getHttpServer())
+      .post("/api/auth/logout")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("Cookie", (sessionCookie as string).split(";")[0])
+      .expect(201);
+    const logoutCookies = (logoutRes.headers["set-cookie"] as string[]) ?? [];
+    const clearedSession = logoutCookies.find((c) => c.startsWith("md_session="));
+    expect(clearedSession, "md_session clear directive").toBeTruthy();
+    // Express clearCookie sets Expires to the epoch.
+    expect(clearedSession).toMatch(/Expires=Thu, 01 Jan 1970/i);
   });
 });
