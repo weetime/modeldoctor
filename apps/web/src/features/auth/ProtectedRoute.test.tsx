@@ -27,6 +27,14 @@ function renderWithRoutes(initialPath = "/") {
 describe("ProtectedRoute", () => {
   beforeEach(() => {
     useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
+    // These tests semantically assume "user has a session, probe runs".
+    // BootGate now short-circuits when md_session is absent, so set it
+    // explicitly here to keep the existing scenarios meaningful.
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      configurable: true,
+      value: "md_session=1",
+    });
     vi.restoreAllMocks();
   });
 
@@ -100,5 +108,51 @@ describe("ProtectedRoute", () => {
     });
 
     expect(useAuthStore.getState().accessToken).toBe("tok-from-cookie");
+  });
+});
+
+describe("ProtectedRoute / BootGate session-cookie precheck", () => {
+  beforeEach(() => {
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
+    Object.defineProperty(document, "cookie", { writable: true, configurable: true, value: "" });
+    vi.restoreAllMocks();
+  });
+
+  it("when md_session cookie is absent → redirects to /login WITHOUT calling /refresh", async () => {
+    Object.defineProperty(document, "cookie", { writable: true, configurable: true, value: "" });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithRoutes("/");
+
+    await waitFor(() => {
+      expect(screen.getByText("Login page")).toBeInTheDocument();
+    });
+    expect(fetchMock, "no /refresh probe when no session cookie").not.toHaveBeenCalled();
+  });
+
+  it("when md_session=1 is present → calls /refresh and renders protected", async () => {
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      configurable: true,
+      value: "md_session=1; theme=dark",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            accessToken: "ok",
+            accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+            user: mockUser,
+          }),
+      }),
+    );
+    renderWithRoutes("/");
+    await waitFor(() =>
+      expect(screen.getByText("Protected content")).toBeInTheDocument(),
+    );
   });
 });

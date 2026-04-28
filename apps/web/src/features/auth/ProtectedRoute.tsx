@@ -7,20 +7,32 @@ interface BootGateProps {
   children: ReactNode;
 }
 
+function hasSessionCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  // Lightweight scan — no need for a full parser. Looks for "md_session=1"
+  // anywhere in the cookie header (with the standard "; "-separated form
+  // browsers emit). False positives are harmless: we'd just probe /refresh
+  // and gracefully handle the 401.
+  return /(?:^|;\s*)md_session=1(?:;|$)/.test(document.cookie);
+}
+
 function BootGate({ children }: BootGateProps) {
-  // On mount, attempt a silent /api/auth/refresh so reloads re-hydrate the
-  // session via the HttpOnly cookie. Delegates to api-client's module-level
-  // refreshAccessToken so React StrictMode's double-invoked effects in dev
-  // dedup against a single in-flight refresh — otherwise both POSTs would
-  // carry the same cookie, and the server's rotation guard would treat the
-  // second arrival as a reuse attack and invalidate the whole session.
   const [probed, setProbed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    // Already authenticated in this session → no need to probe.
+    if (useAuthStore.getState().accessToken) {
+      setProbed(true);
+      return;
+    }
+    // No session cookie → user has never logged in (or has logged out).
+    // Skip the network call entirely; ProtectedRoute will Navigate to /login.
+    if (!hasSessionCookie()) {
+      setProbed(true);
+      return;
+    }
     void refreshAccessToken().finally(() => {
-      // refreshAccessToken populates the auth store on success; the only
-      // job left here is to release the loading gate so child routes render.
       if (!cancelled) setProbed(true);
     });
     return () => {
