@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/stores/auth-store";
 import type { PublicUser } from "@modeldoctor/contracts";
 import { StandardErrorResponseSchema } from "@modeldoctor/contracts";
+import { coordinatedRefresh } from "./auth-coordinator";
 
 export class ApiError extends Error {
   constructor(
@@ -26,12 +27,8 @@ export type RefreshResult =
   | { kind: "unauthenticated" }
   | { kind: "transient"; status: number; retryAfterMs: number };
 
-// Single-tab in-flight dedup. Cross-tab dedup arrives in B5 via Web Locks.
-let refreshInFlight: Promise<RefreshResult> | null = null;
-
 export async function refreshAccessToken(): Promise<RefreshResult> {
-  if (refreshInFlight) return refreshInFlight;
-  const p: Promise<RefreshResult> = (async () => {
+  return coordinatedRefresh(async () => {
     try {
       const res = await fetch("/api/auth/refresh", {
         method: "POST",
@@ -57,12 +54,7 @@ export async function refreshAccessToken(): Promise<RefreshResult> {
       // Network error.
       return { kind: "transient", status: 0, retryAfterMs: 0 };
     }
-  })();
-  refreshInFlight = p;
-  void p.finally(() => {
-    if (refreshInFlight === p) refreshInFlight = null;
   });
-  return p;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
