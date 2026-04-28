@@ -20,7 +20,7 @@ describe("E2ETest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiKey: "k", model: "m", probes: ["text"] })
+      .send({ apiKey: "k", model: "m", probes: ["chat-text"] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/apiBaseUrl/);

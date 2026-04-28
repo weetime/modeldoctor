@@ -1,5 +1,5 @@
 /**
- * Image+text probe.
+ * Chat-vision probe (image + text).
  *
  * Ported verbatim from the legacy CJS probe (src/probes/image.js).
  * Sends a cat photo and asserts the reply recognizes it as a cat.
@@ -26,11 +26,12 @@ interface ChatCompletionLike {
   choices?: Array<{ message?: { content?: string } }>;
 }
 
-export async function runImageProbe({
+export async function runChatVisionProbe({
   apiBaseUrl,
   apiKey,
   model,
   extraHeaders = {},
+  pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
   const body = buildChatVisionBody({
     model,
@@ -39,7 +40,8 @@ export async function runImageProbe({
     maxTokens: 16,
     temperature: 0,
   });
-  const targetUrl = `${apiBaseUrl}/v1/chat/completions`;
+  const path = pathOverride ?? "/v1/chat/completions";
+  const targetUrl = `${apiBaseUrl}${path}`;
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",

@@ -1,6 +1,6 @@
-import type { E2ETestRequest, E2ETestResponse } from "@modeldoctor/contracts";
+import type { E2ETestRequest, E2ETestResponse, ProbeName } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import { PROBES, type ProbeCtx, type ProbeName } from "../../integrations/probes/index.js";
+import { PROBES, type ProbeCtx } from "../../integrations/probes/index.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -17,17 +17,28 @@ function parseHeaderLines(s: string | undefined): Record<string, string> {
 export class E2ETestService {
   async run(req: E2ETestRequest): Promise<E2ETestResponse> {
     const extraHeaders = parseHeaderLines(req.customHeaders);
-    const ctx: ProbeCtx = {
-      apiBaseUrl: req.apiBaseUrl,
-      apiKey: req.apiKey,
-      model: req.model,
-      extraHeaders,
-    };
 
     const results = await Promise.all(
       req.probes.map(async (name: ProbeName) => {
+        const probe = PROBES[name];
+        if (!probe) {
+          return {
+            probe: name,
+            pass: false,
+            latencyMs: null,
+            checks: [{ name: "probe-not-implemented", pass: false }],
+            details: { error: `Probe '${name}' not implemented` },
+          };
+        }
+        const ctx: ProbeCtx = {
+          apiBaseUrl: req.apiBaseUrl,
+          apiKey: req.apiKey,
+          model: req.model,
+          extraHeaders,
+          pathOverride: req.pathOverride?.[name],
+        };
         try {
-          const r = await PROBES[name](ctx);
+          const r = await probe(ctx);
           return { probe: name, ...r };
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
