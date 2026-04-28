@@ -64,11 +64,7 @@ export interface ProbeResult {
 
 export type Probe = (ctx: ProbeCtx) => Promise<ProbeResult>;
 
-// Subsequent tasks (3..7) add the remaining 7 probes — embeddings-openai/tei,
-// rerank-tei/cohere, tts, asr, image-gen. The Partial<> here is temporary
-// for the duration of those tasks; Task 8 narrows it back to a complete
-// Record once every probe is wired.
-export const PROBES: Partial<Record<ProbeName, Probe>> = {
+export const PROBES: Record<ProbeName, Probe> = {
   "chat-text": runChatTextProbe,
   "chat-vision": runChatVisionProbe,
   "chat-audio-omni": runChatAudioOmniProbe,

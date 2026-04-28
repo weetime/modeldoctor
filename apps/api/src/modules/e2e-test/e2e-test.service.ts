@@ -20,16 +20,6 @@ export class E2ETestService {
 
     const results = await Promise.all(
       req.probes.map(async (name: ProbeName) => {
-        const probe = PROBES[name];
-        if (!probe) {
-          return {
-            probe: name,
-            pass: false,
-            latencyMs: null,
-            checks: [{ name: "probe-not-implemented", pass: false }],
-            details: { error: `Probe '${name}' not implemented` },
-          };
-        }
         const ctx: ProbeCtx = {
           apiBaseUrl: req.apiBaseUrl,
           apiKey: req.apiKey,
@@ -38,7 +28,7 @@ export class E2ETestService {
           pathOverride: req.pathOverride?.[name],
         };
         try {
-          const r = await probe(ctx);
+          const r = await PROBES[name](ctx);
           return { probe: name, ...r };
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
