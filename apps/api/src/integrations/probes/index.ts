@@ -5,6 +5,7 @@ import { runChatTextProbe } from "./chat-text.js";
 import { runChatVisionProbe } from "./chat-vision.js";
 import { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 import { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
+import { runImageGenProbe } from "./image-gen.js";
 import { runRerankCohereProbe } from "./rerank-cohere.js";
 import { runRerankTEIProbe } from "./rerank-tei.js";
 import { runTTSProbe } from "./tts.js";
@@ -18,6 +19,7 @@ export { runRerankTEIProbe } from "./rerank-tei.js";
 export { runRerankCohereProbe } from "./rerank-cohere.js";
 export { runTTSProbe } from "./tts.js";
 export { runASRProbe } from "./asr.js";
+export { runImageGenProbe } from "./image-gen.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
@@ -76,4 +78,5 @@ export const PROBES: Partial<Record<ProbeName, Probe>> = {
   "rerank-cohere": runRerankCohereProbe,
   tts: runTTSProbe,
   asr: runASRProbe,
+  "image-gen": runImageGenProbe,
 };
