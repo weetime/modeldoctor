@@ -180,6 +180,7 @@ describe("AuthService.refresh (happy path)", () => {
     if (result.kind !== "rotated") throw new Error("type narrow");
     expect(result.refreshToken).toBeTruthy();
     expect(result.accessToken).toBe("access-jwt");
+    expect(result.accessTokenExpiresAt).toBeInstanceOf(Date);
     expect(result.user.id).toBe("u1");
 
     // Parent was marked revoked + replacedBy = the child id.
@@ -232,6 +233,7 @@ describe("AuthService.refresh (grace-window replay)", () => {
     expect(result.kind).toBe("graceReplayed");
     if (result.kind !== "graceReplayed") throw new Error("type narrow");
     expect(result.accessToken).toBe("access-jwt");
+    expect(result.accessTokenExpiresAt).toBeInstanceOf(Date);
     expect("refreshToken" in result).toBe(false);
 
     // Family must NOT be revoked (no updateMany call).

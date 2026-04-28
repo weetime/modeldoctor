@@ -77,10 +77,10 @@ export class AuthController {
     @Body(new ZodValidationPipe(RegisterRequestSchema)) body: RegisterRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
-    const { accessToken, refreshToken, user } = await this.auth.register(body.email, body.password);
+    const issued = await this.auth.register(body.email, body.password);
     setRefreshCookie(
       res,
-      refreshToken,
+      issued.refreshToken,
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
@@ -89,7 +89,11 @@ export class AuthController {
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
-    return { accessToken, user };
+    return {
+      accessToken: issued.accessToken,
+      accessTokenExpiresAt: issued.accessTokenExpiresAt.toISOString(),
+      user: issued.user,
+    };
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -99,10 +103,10 @@ export class AuthController {
     @Body(new ZodValidationPipe(LoginRequestSchema)) body: LoginRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokenResponse> {
-    const { accessToken, refreshToken, user } = await this.auth.login(body.email, body.password);
+    const issued = await this.auth.login(body.email, body.password);
     setRefreshCookie(
       res,
-      refreshToken,
+      issued.refreshToken,
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
@@ -111,7 +115,11 @@ export class AuthController {
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
-    return { accessToken, user };
+    return {
+      accessToken: issued.accessToken,
+      accessTokenExpiresAt: issued.accessTokenExpiresAt.toISOString(),
+      user: issued.user,
+    };
   }
 
   @Public()
@@ -138,7 +146,11 @@ export class AuthController {
     }
     // Grace-replayed: do not touch the cookie — the legitimate caller's
     // freshly-issued cookie is already in the browser's jar.
-    return { accessToken: result.accessToken, user: result.user };
+    return {
+      accessToken: result.accessToken,
+      accessTokenExpiresAt: result.accessTokenExpiresAt.toISOString(),
+      user: result.user,
+    };
   }
 
   @Post("logout")

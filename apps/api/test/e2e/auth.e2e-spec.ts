@@ -22,6 +22,8 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof res.body.accessTokenExpiresAt).toBe("string");
     expect(res.body.user.email).toBe("admin@example.com");
     expect(res.body.user.roles).toEqual(["admin"]);
     expect(res.body.user.id).toBeTruthy();
@@ -72,6 +74,8 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof res.body.accessTokenExpiresAt).toBe("string");
     const rawCookies = res.headers["set-cookie"] as string[] | string | undefined;
     const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
     const refreshCookie = cookies.find((c) => c.startsWith("md_refresh="));
@@ -87,6 +91,9 @@ describe("Auth (e2e)", () => {
       .post("/api/auth/login")
       .send({ email: "admin@example.com", password: "Password1!" })
       .expect(201);
+    expect(loginRes.body.accessToken).toBeTruthy();
+    expect(loginRes.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof loginRes.body.accessTokenExpiresAt).toBe("string");
     const token = loginRes.body.accessToken as string;
     const registeredId = loginRes.body.user.id as string;
 
@@ -123,6 +130,8 @@ describe("Auth (e2e)", () => {
 
     const refreshRes = await agent.post("/api/auth/refresh").expect(201);
     expect(refreshRes.body.accessToken).toBeTruthy();
+    expect(refreshRes.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof refreshRes.body.accessTokenExpiresAt).toBe("string");
 
     const rawCookies = refreshRes.headers["set-cookie"] as string[] | string | undefined;
     const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
@@ -201,6 +210,8 @@ describe("Auth (e2e)", () => {
       .expect(201);
 
     expect(replay.body.accessToken).toBeTruthy();
+    expect(replay.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof replay.body.accessTokenExpiresAt).toBe("string");
     const setCookieHeader = replay.headers["set-cookie"] as string[] | undefined;
     const hasNewRefreshCookie = !!setCookieHeader?.some((c) => c.startsWith("md_refresh="));
     expect(hasNewRefreshCookie, "grace-replay must NOT rotate cookie").toBe(false);
@@ -257,6 +268,8 @@ describe("Auth (e2e)", () => {
       .set("Cookie", cookieB)
       .expect(201);
     expect(bRotated.body.accessToken).toBeTruthy();
+    expect(bRotated.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof bRotated.body.accessTokenExpiresAt).toBe("string");
   });
 
   // ── 11. Admin sees runs from all users ────────────────────────────────────
@@ -376,6 +389,10 @@ describe("Auth (e2e)", () => {
     expect(resB.status, "second refresh").toBe(201);
     expect(resA.body.accessToken).toBeTruthy();
     expect(resB.body.accessToken).toBeTruthy();
+    expect(resA.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof resA.body.accessTokenExpiresAt).toBe("string");
+    expect(resB.body.accessTokenExpiresAt).toBeTruthy();
+    expect(typeof resB.body.accessTokenExpiresAt).toBe("string");
 
     const aSetsCookie = !!(resA.headers["set-cookie"] as string[] | undefined)?.some((c) =>
       c.startsWith("md_refresh="),
