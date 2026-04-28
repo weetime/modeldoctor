@@ -1,4 +1,5 @@
 import { refreshAccessToken } from "@/lib/api-client";
+import { retryWithBackoff } from "@/lib/retry-with-backoff";
 import { useAuthStore } from "@/stores/auth-store";
 import { type ReactNode, useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
@@ -32,7 +33,9 @@ function BootGate({ children }: BootGateProps) {
       setProbed(true);
       return;
     }
-    void refreshAccessToken().finally(() => {
+    void retryWithBackoff(refreshAccessToken, (r) =>
+      r.kind === "transient" ? { retryAfterMs: r.retryAfterMs } : false,
+    ).finally(() => {
       if (!cancelled) setProbed(true);
     });
     return () => {

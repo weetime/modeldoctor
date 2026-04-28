@@ -151,8 +151,50 @@ describe("ProtectedRoute / BootGate session-cookie precheck", () => {
       }),
     );
     renderWithRoutes("/");
-    await waitFor(() =>
-      expect(screen.getByText("Protected content")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Protected content")).toBeInTheDocument());
+  });
+});
+
+describe("ProtectedRoute / BootGate transient retry", () => {
+  beforeEach(() => {
+    useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
+    Object.defineProperty(document, "cookie", {
+      writable: true,
+      configurable: true,
+      value: "md_session=1",
+    });
+    vi.restoreAllMocks();
+  });
+
+  it("retries on 429 transient then succeeds → renders protected content", async () => {
+    let call = 0;
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      call += 1;
+      if (call === 1) {
+        return {
+          ok: false,
+          status: 429,
+          headers: { get: () => null },
+          json: () => Promise.resolve({}),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            accessToken: "ok-after-retry",
+            accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+            user: mockUser,
+          }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithRoutes("/");
+    await waitFor(() => expect(screen.getByText("Protected content")).toBeInTheDocument(), {
+      timeout: 5_000,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
