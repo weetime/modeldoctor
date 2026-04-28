@@ -19,6 +19,11 @@ export type LoginRequest = RegisterRequest;
 
 export const AuthTokenResponseSchema = z.object({
   accessToken: z.string(),
+  // ISO 8601. Lets the SPA schedule a silent refresh ~30s before this
+  // moment instead of waiting for a 401. Never trust this for security
+  // decisions on the server; it's purely a UX hint. Source-of-truth is
+  // the JWT exp claim.
+  accessTokenExpiresAt: z.string().datetime(),
   user: PublicUserSchema,
 });
 export type AuthTokenResponse = z.infer<typeof AuthTokenResponseSchema>;
