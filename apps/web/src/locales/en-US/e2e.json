@@ -1,11 +1,68 @@
 {
   "title": "E2E Smoke",
-  "subtitle": "Functional probes across text, image, and audio paths.",
-  "probes": {
-    "text": { "title": "Text", "path": "thinker (text → text)" },
-    "image": { "title": "Image + Text", "path": "vision encoder → thinker" },
-    "audio": { "title": "Text → Audio", "path": "thinker → talker → code2wav" }
+  "subtitle": "Functional probes covering text / image / audio / embeddings / rerank / image-gen pipelines.",
+  "category": {
+    "label": "Category",
+    "options": {
+      "chat": "Chat",
+      "audio": "Audio",
+      "embeddings": "Embeddings",
+      "rerank": "Rerank",
+      "image": "Image gen"
+    }
   },
-  "actions": { "run": "Run", "runAll": "Run All", "clear": "Clear results" },
-  "meta": { "latency": "{{ms}} ms" }
+  "path": {
+    "resetToDefault": "Reset to default"
+  },
+  "actions": {
+    "run": "Run",
+    "runCategory": "Run {{category}}",
+    "clear": "Clear results"
+  },
+  "meta": {
+    "latency": "Latency: {{ms}} ms",
+    "embeddingDims": "{{dims}} dims"
+  },
+  "probes": {
+    "chat-text": {
+      "title": "Text",
+      "subtitle": "thinker (text → text)"
+    },
+    "chat-vision": {
+      "title": "Vision",
+      "subtitle": "vision encoder → thinker"
+    },
+    "chat-audio-omni": {
+      "title": "Omni audio",
+      "subtitle": "thinker → talker → code2wav"
+    },
+    "tts": {
+      "title": "TTS",
+      "subtitle": "text → speech (raw audio bytes)"
+    },
+    "asr": {
+      "title": "ASR",
+      "subtitle": "speech → text"
+    },
+    "embeddings-openai": {
+      "title": "Embeddings (OpenAI)",
+      "subtitle": "POST /v1/embeddings, body { input }"
+    },
+    "embeddings-tei": {
+      "title": "Embeddings (TEI)",
+      "subtitle": "POST /embed, body { inputs[] }"
+    },
+    "rerank-tei": {
+      "title": "Rerank (TEI)",
+      "subtitle": "POST /rerank, body { texts[] }"
+    },
+    "rerank-cohere": {
+      "title": "Rerank (Cohere)",
+      "subtitle": "POST /v1/rerank, body { documents[] }"
+    },
+    "image-gen": {
+      "title": "Image generation",
+      "subtitle": "text → image (URL or b64_json)"
+    }
+  }
 }

@@ -1,11 +1,68 @@
 {
   "title": "E2E Smoke",
-  "subtitle": "覆盖文本 / 图像 / 音频路径的功能性 probe。",
-  "probes": {
-    "text": { "title": "文本", "path": "thinker (text → text)" },
-    "image": { "title": "图像 + 文本", "path": "vision encoder → thinker" },
-    "audio": { "title": "文本 → 音频", "path": "thinker → talker → code2wav" }
+  "subtitle": "覆盖 文本 / 图像 / 语音 / 嵌入 / 重排序 / 图像生成 路径的功能性 probe。",
+  "category": {
+    "label": "分类",
+    "options": {
+      "chat": "对话",
+      "audio": "语音",
+      "embeddings": "嵌入",
+      "rerank": "重排序",
+      "image": "生图"
+    }
   },
-  "actions": { "run": "运行", "runAll": "全部运行", "clear": "清空结果" },
-  "meta": { "latency": "{{ms}} ms" }
+  "path": {
+    "resetToDefault": "恢复默认"
+  },
+  "actions": {
+    "run": "运行",
+    "runCategory": "运行「{{category}}」",
+    "clear": "清空结果"
+  },
+  "meta": {
+    "latency": "耗时:{{ms}} ms",
+    "embeddingDims": "{{dims}} 维"
+  },
+  "probes": {
+    "chat-text": {
+      "title": "文本",
+      "subtitle": "thinker (text → text)"
+    },
+    "chat-vision": {
+      "title": "图像 + 文本",
+      "subtitle": "vision encoder → thinker"
+    },
+    "chat-audio-omni": {
+      "title": "Omni 语音",
+      "subtitle": "thinker → talker → code2wav"
+    },
+    "tts": {
+      "title": "TTS",
+      "subtitle": "文本 → 语音(裸 audio bytes)"
+    },
+    "asr": {
+      "title": "ASR",
+      "subtitle": "语音 → 文本"
+    },
+    "embeddings-openai": {
+      "title": "嵌入(OpenAI)",
+      "subtitle": "POST /v1/embeddings,body { input }"
+    },
+    "embeddings-tei": {
+      "title": "嵌入(TEI)",
+      "subtitle": "POST /embed,body { inputs[] }"
+    },
+    "rerank-tei": {
+      "title": "重排序(TEI)",
+      "subtitle": "POST /rerank,body { texts[] }"
+    },
+    "rerank-cohere": {
+      "title": "重排序(Cohere)",
+      "subtitle": "POST /v1/rerank,body { documents[] }"
+    },
+    "image-gen": {
+      "title": "图像生成",
+      "subtitle": "文本 → 图像(URL 或 b64_json)"
+    }
+  }
 }
