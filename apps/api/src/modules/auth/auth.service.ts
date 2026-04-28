@@ -90,10 +90,15 @@ export class AuthService {
   }
 
   private async refreshOnce(presentedToken: string): Promise<RefreshResult> {
+    type TxnOutcome =
+      | { kind: "rotated"; accessToken: string; refreshToken: string; user: PublicUser }
+      | { kind: "graceReplayed"; accessToken: string; user: PublicUser }
+      | { kind: "theft"; userId: string; familyId: string; rowId: string };
+
     const tokenHash = this.sha256hex(presentedToken);
 
-    return this.prisma.$transaction(
-      async (tx) => {
+    const outcome = await this.prisma.$transaction(
+      async (tx): Promise<TxnOutcome> => {
         const rows = await tx.$queryRaw<
           Array<{
             id: string;
@@ -118,12 +123,9 @@ export class AuthService {
         }
 
         if (presented.revoked_at !== null) {
-          // Inside grace window AND a successor exists → assume legitimate
-          // racing tab / network retry. Mint a new access token; do NOT
-          // rotate the cookie (the successor cookie is already in the
-          // browser's cookie jar from the first rotation).
           const sinceRevoke = now.getTime() - presented.revoked_at.getTime();
           if (presented.replaced_by_id && sinceRevoke < AuthService.GRACE_WINDOW_MS) {
+            // GRACE REPLAY — mint a fresh access token, do NOT touch any rows.
             const userRow = await this.users.findById(presented.user_id);
             const publicUser = this.users.toPublic(userRow);
             const payload: JwtPayload = {
@@ -138,22 +140,23 @@ export class AuthService {
             return { kind: "graceReplayed", accessToken, user: publicUser };
           }
 
-          // Outside grace window → genuine reuse. Revoke the entire family
-          // (NOT every token of this user — concurrent sessions are
-          // independent rotation chains).
+          // THEFT — revoke the family inside the txn, then return a sentinel
+          // so the caller can throw AFTER the txn commits. Throwing here
+          // would roll the family-revoke back; that would leave siblings
+          // alive and silently weaken the security guarantee.
           await tx.refreshToken.updateMany({
             where: { familyId: presented.family_id, revokedAt: null },
             data: { revokedAt: now },
           });
-          this.logger.warn(
-            { userId: presented.user_id, familyId: presented.family_id, rowId: presented.id },
-            "Refresh token theft detected; family revoked",
-          );
-          throw new UnauthorizedException("Refresh token reused; session invalidated");
+          return {
+            kind: "theft",
+            userId: presented.user_id,
+            familyId: presented.family_id,
+            rowId: presented.id,
+          };
         }
 
-        // HAPPY PATH — extend the chain. Issue a child rotation under the
-        // same family; mark the parent revoked + replacedBy.
+        // HAPPY PATH — extend the chain.
         const userRow = await this.users.findById(presented.user_id);
         const publicUser = this.users.toPublic(userRow);
         const issued = await this.issueRotation(
@@ -162,19 +165,17 @@ export class AuthService {
           tx as Pick<PrismaService, "refreshToken">,
         );
 
-        // Find the child id we just created so we can wire replacedById.
-        // issueRotation doesn't return the row, so we re-query — cheap
-        // because token_hash is uniquely indexed.
         const childRow = await tx.refreshToken.findUnique({
           where: { tokenHash: this.sha256hex(issued.refreshToken) },
           select: { id: true },
         });
         if (!childRow) {
-          // Should be unreachable: we just created this row inside the same
-          // transaction. If it ever fires, it's a severe Prisma read-after-write
-          // invariant violation and ops should be paged.
           this.logger.error(
-            { userId: presented.user_id, familyId: presented.family_id, parentRowId: presented.id },
+            {
+              userId: presented.user_id,
+              familyId: presented.family_id,
+              parentRowId: presented.id,
+            },
             "rotation invariant: child row missing after issue",
           );
           throw new InternalServerErrorException(
@@ -196,6 +197,15 @@ export class AuthService {
       },
       { isolationLevel: "Serializable" },
     );
+
+    if (outcome.kind === "theft") {
+      this.logger.warn(
+        { userId: outcome.userId, familyId: outcome.familyId, rowId: outcome.rowId },
+        "Refresh token theft detected; family revoked",
+      );
+      throw new UnauthorizedException("Refresh token reused; session invalidated");
+    }
+    return outcome;
   }
 
   async logout(presentedToken: string): Promise<void> {
