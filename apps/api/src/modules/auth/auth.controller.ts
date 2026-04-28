@@ -27,6 +27,7 @@ import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import type { JwtPayload } from "./jwt.strategy.js";
 
 const REFRESH_COOKIE = "md_refresh";
+const SESSION_COOKIE = "md_session";
 
 function setRefreshCookie(res: Response, token: string, maxAgeDays: number, isProd: boolean): void {
   res.cookie(REFRESH_COOKIE, token, {
@@ -36,6 +37,30 @@ function setRefreshCookie(res: Response, token: string, maxAgeDays: number, isPr
     path: "/api/auth",
     maxAge: maxAgeDays * 86_400_000,
   });
+}
+
+/**
+ * Non-HttpOnly companion cookie. Holds NO sensitive value — it's a presence
+ * flag (`1`). Lets the SPA's BootGate skip the /refresh probe entirely when
+ * the user has clearly never logged in (or has logged out), avoiding
+ * pointless 401s and rate-limit pressure.
+ *
+ * Path=/ so JS on any route can read it; SameSite=Lax so it survives
+ * top-level cross-site navigations into the app.
+ */
+function setSessionCookie(res: Response, maxAgeDays: number, isProd: boolean): void {
+  res.cookie(SESSION_COOKIE, "1", {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeDays * 86_400_000,
+  });
+}
+
+function clearAuthCookies(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
 }
 
 @Controller("auth")
@@ -59,6 +84,11 @@ export class AuthController {
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
+    setSessionCookie(
+      res,
+      this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+      this.config.get("NODE_ENV", { infer: true }) === "production",
+    );
     return { accessToken, user };
   }
 
@@ -73,6 +103,11 @@ export class AuthController {
     setRefreshCookie(
       res,
       refreshToken,
+      this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+      this.config.get("NODE_ENV", { infer: true }) === "production",
+    );
+    setSessionCookie(
+      res,
       this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
       this.config.get("NODE_ENV", { infer: true }) === "production",
     );
@@ -95,6 +130,11 @@ export class AuthController {
         this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
         this.config.get("NODE_ENV", { infer: true }) === "production",
       );
+      setSessionCookie(
+        res,
+        this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+        this.config.get("NODE_ENV", { infer: true }) === "production",
+      );
     }
     // Grace-replayed: do not touch the cookie — the legitimate caller's
     // freshly-issued cookie is already in the browser's jar.
@@ -108,7 +148,7 @@ export class AuthController {
   ): Promise<{ ok: true }> {
     const presented = (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
     if (presented) await this.auth.logout(presented);
-    res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+    clearAuthCookies(res);
     return { ok: true };
   }
 
