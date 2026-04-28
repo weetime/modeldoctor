@@ -79,7 +79,6 @@ export class AuthController {
     return { accessToken, user };
   }
 
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("refresh")
   async refresh(
