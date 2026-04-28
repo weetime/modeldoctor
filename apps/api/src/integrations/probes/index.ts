@@ -2,10 +2,14 @@ import type { ProbeName } from "@modeldoctor/contracts";
 import { runChatAudioOmniProbe } from "./chat-audio-omni.js";
 import { runChatTextProbe } from "./chat-text.js";
 import { runChatVisionProbe } from "./chat-vision.js";
+import { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
+import { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
 
 export { runChatTextProbe } from "./chat-text.js";
 export { runChatVisionProbe } from "./chat-vision.js";
 export { runChatAudioOmniProbe } from "./chat-audio-omni.js";
+export { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
+export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
@@ -58,4 +62,6 @@ export const PROBES: Partial<Record<ProbeName, Probe>> = {
   "chat-text": runChatTextProbe,
   "chat-vision": runChatVisionProbe,
   "chat-audio-omni": runChatAudioOmniProbe,
+  "embeddings-openai": runEmbeddingsOpenAIProbe,
+  "embeddings-tei": runEmbeddingsTEIProbe,
 };
