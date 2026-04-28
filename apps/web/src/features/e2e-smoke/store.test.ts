@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useE2EStore } from "./store";
 
-const PERSIST_KEY = "md.e2e.v1";
+const PERSIST_KEY = "md.e2e.v2";
 
 function storedState(): Record<string, unknown> | null {
   const raw = localStorage.getItem(PERSIST_KEY);
@@ -15,7 +15,7 @@ describe("useE2EStore", () => {
     useE2EStore.getState().reset();
   });
 
-  it("starts with empty endpoint, no selection, no results", () => {
+  it("starts with empty endpoint, no selection, default category 'chat', no results", () => {
     const s = useE2EStore.getState();
     expect(s.selectedConnectionId).toBeNull();
     expect(s.manualEndpoint).toEqual({
@@ -25,26 +25,28 @@ describe("useE2EStore", () => {
       customHeaders: "",
       queryParams: "",
     });
-    expect(s.results).toEqual({ text: null, image: null, audio: null });
-    expect(s.running).toEqual({ text: false, image: false, audio: false });
+    expect(s.selectedCategory).toBe("chat");
+    expect(s.pathOverrides).toEqual({});
+    expect(s.results).toEqual({});
+    expect(s.running).toEqual({});
   });
 
-  it("setResult / setRunning update the specific probe only", () => {
-    useE2EStore.getState().setRunning("text", true);
-    useE2EStore.getState().setResult("image", {
+  it("setResult / setRunning update the specific probe only (sparse map)", () => {
+    useE2EStore.getState().setRunning("chat-text", true);
+    useE2EStore.getState().setResult("chat-vision", {
       pass: true,
       latencyMs: 42,
       checks: [],
       details: {},
     });
     const s = useE2EStore.getState();
-    expect(s.running).toEqual({ text: true, image: false, audio: false });
-    expect(s.results.image?.pass).toBe(true);
-    expect(s.results.text).toBeNull();
-    expect(s.results.audio).toBeNull();
+    expect(s.running["chat-text"]).toBe(true);
+    expect(s.running["chat-vision"]).toBeUndefined();
+    expect(s.results["chat-vision"]?.pass).toBe(true);
+    expect(s.results["chat-text"]).toBeUndefined();
   });
 
-  it("resetResults clears outputs but preserves endpoint + selection", () => {
+  it("resetResults clears outputs but preserves endpoint, selection, category, overrides", () => {
     const store = useE2EStore.getState();
     store.setSelected("conn-1");
     store.setManualEndpoint({
@@ -54,69 +56,63 @@ describe("useE2EStore", () => {
       customHeaders: "",
       queryParams: "",
     });
-    store.setResult("text", {
+    store.setSelectedCategory("audio");
+    store.setPathOverride("tts", "/custom/tts");
+    store.setResult("chat-text", {
       pass: false,
       latencyMs: 5,
       checks: [],
       details: {},
     });
-    store.setRunning("audio", true);
+    store.setRunning("chat-vision", true);
 
-    useE2EStore.getState().resetResults();
+    store.resetResults();
+
     const s = useE2EStore.getState();
     expect(s.selectedConnectionId).toBe("conn-1");
     expect(s.manualEndpoint.apiBaseUrl).toBe("http://a");
-    expect(s.results).toEqual({ text: null, image: null, audio: null });
-    expect(s.running).toEqual({ text: false, image: false, audio: false });
+    expect(s.selectedCategory).toBe("audio");
+    expect(s.pathOverrides).toEqual({ tts: "/custom/tts" });
+    expect(s.results).toEqual({});
+    expect(s.running).toEqual({});
   });
 
-  it("reset clears everything including endpoint and selection", () => {
+  it("setPathOverride / clearPathOverride toggle a key", () => {
     const store = useE2EStore.getState();
-    store.setSelected("conn-1");
+    store.setPathOverride("rerank-tei", "/v2/rerank");
+    expect(useE2EStore.getState().pathOverrides["rerank-tei"]).toBe("/v2/rerank");
+
+    store.clearPathOverride("rerank-tei");
+    expect(useE2EStore.getState().pathOverrides["rerank-tei"]).toBeUndefined();
+  });
+
+  it("persists endpoint, selectedCategory, and pathOverrides to localStorage v2 key", () => {
+    const store = useE2EStore.getState();
     store.setManualEndpoint({
-      apiBaseUrl: "http://a",
+      apiBaseUrl: "http://b",
       apiKey: "k",
       model: "m",
       customHeaders: "",
       queryParams: "",
     });
-    store.setResult("text", {
-      pass: true,
-      latencyMs: 1,
-      checks: [],
-      details: {},
-    });
-
-    useE2EStore.getState().reset();
-    const s = useE2EStore.getState();
-    expect(s.selectedConnectionId).toBeNull();
-    expect(s.manualEndpoint.apiBaseUrl).toBe("");
-    expect(s.results.text).toBeNull();
-  });
-
-  it("persists only selection + endpoint, not transient results/running", () => {
-    const store = useE2EStore.getState();
-    store.setSelected("conn-1");
-    store.setManualEndpoint({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
-      customHeaders: "",
-      queryParams: "",
-    });
-    store.setResult("text", {
-      pass: true,
-      latencyMs: 10,
-      checks: [],
-      details: {},
-    });
-    store.setRunning("image", true);
+    store.setSelectedCategory("embeddings");
+    store.setPathOverride("embeddings-tei", "/v2/embed");
 
     const persisted = storedState();
     expect(persisted).not.toBeNull();
-    expect(Object.keys(persisted as object).sort()).toEqual([
-      "manualEndpoint",
-      "selectedConnectionId",
-    ]);
+    expect(persisted?.manualEndpoint).toMatchObject({ apiBaseUrl: "http://b" });
+    expect(persisted?.selectedCategory).toBe("embeddings");
+    expect(persisted?.pathOverrides).toEqual({ "embeddings-tei": "/v2/embed" });
+  });
+
+  it("does NOT persist results or running (transient by design)", () => {
+    const store = useE2EStore.getState();
+    store.setRunning("chat-text", true);
+    store.setResult("chat-vision", { pass: true, latencyMs: 10, checks: [], details: {} });
+
+    const persisted = storedState();
+    expect(persisted).not.toBeNull();
+    expect(persisted?.results).toBeUndefined();
+    expect(persisted?.running).toBeUndefined();
   });
 });
