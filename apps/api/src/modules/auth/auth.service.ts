@@ -34,7 +34,7 @@ export class AuthService {
     const roles = !disableFirstAdmin && total === 0 ? ["admin"] : ["user"];
 
     const user = await this.users.create(email, password, roles);
-    return this.issueTokens(user);
+    return this.issueNewSession(user);
   }
 
   async login(email: string, password: string): Promise<IssuedTokens> {
@@ -42,7 +42,7 @@ export class AuthService {
     if (!row) throw new UnauthorizedException("Invalid credentials");
     const ok = await this.users.verifyPassword(row.passwordHash, password);
     if (!ok) throw new UnauthorizedException("Invalid credentials");
-    return this.issueTokens(this.users.toPublic(row));
+    return this.issueNewSession(this.users.toPublic(row));
   }
 
   async refresh(presentedToken: string): Promise<IssuedTokens> {
@@ -73,7 +73,7 @@ export class AuthService {
       data: { revokedAt: now },
     });
     const user = await this.users.findById(row.userId);
-    return this.issueTokens(this.users.toPublic(user));
+    return this.issueRotation(this.users.toPublic(user), null);
   }
 
   async logout(presentedToken: string): Promise<void> {
@@ -86,7 +86,27 @@ export class AuthService {
     });
   }
 
-  async issueTokens(user: PublicUser): Promise<IssuedTokens> {
+  async issueNewSession(user: PublicUser): Promise<IssuedTokens> {
+    return this.issueRotation(user, null);
+  }
+
+  /**
+   * Internal helper. Creates a new RefreshToken row + signs an access token.
+   * If `parent` is null, this token starts a new family (familyId = self.id).
+   * Otherwise, familyId is inherited from the parent and parentId is set.
+   *
+   * The optional `tx` argument lets Task A3's transactional refresh path
+   * route the writes through its $transaction client. Defaults to the
+   * shared PrismaService.
+   *
+   * Caller is responsible for marking parent.replacedById = newRow.id and
+   * parent.revokedAt = now() inside the same transaction (see refresh()).
+   */
+  private async issueRotation(
+    user: PublicUser,
+    parent: { id: string; familyId: string } | null,
+    tx: Pick<PrismaService, "refreshToken"> = this.prisma,
+  ): Promise<IssuedTokens> {
     const payload: JwtPayload = { sub: user.id, email: user.email, roles: user.roles };
     const accessToken = await this.jwt.signAsync(payload, {
       secret: this.config.get("JWT_ACCESS_SECRET", { infer: true }) ?? "",
@@ -100,13 +120,33 @@ export class AuthService {
     const refreshDays = this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true });
     const expiresAt = new Date(Date.now() + refreshDays * 86_400_000);
 
-    await this.prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: this.sha256hex(refreshToken),
-        expiresAt,
-      },
-    });
+    if (parent === null) {
+      // Root of a new family. Two-step: create with placeholder, then patch
+      // familyId = self.id. Avoids needing a pre-generated cuid in app code.
+      const created = await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: this.sha256hex(refreshToken),
+          expiresAt,
+          familyId: "__pending__",
+          parentId: null,
+        },
+      });
+      await tx.refreshToken.update({
+        where: { id: created.id },
+        data: { familyId: created.id },
+      });
+    } else {
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: this.sha256hex(refreshToken),
+          expiresAt,
+          familyId: parent.familyId,
+          parentId: parent.id,
+        },
+      });
+    }
 
     return { accessToken, refreshToken, user };
   }
