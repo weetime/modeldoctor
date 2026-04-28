@@ -4,12 +4,16 @@ import { runChatTextProbe } from "./chat-text.js";
 import { runChatVisionProbe } from "./chat-vision.js";
 import { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 import { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
+import { runRerankCohereProbe } from "./rerank-cohere.js";
+import { runRerankTEIProbe } from "./rerank-tei.js";
 
 export { runChatTextProbe } from "./chat-text.js";
 export { runChatVisionProbe } from "./chat-vision.js";
 export { runChatAudioOmniProbe } from "./chat-audio-omni.js";
 export { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
+export { runRerankTEIProbe } from "./rerank-tei.js";
+export { runRerankCohereProbe } from "./rerank-cohere.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
@@ -64,4 +68,6 @@ export const PROBES: Partial<Record<ProbeName, Probe>> = {
   "chat-audio-omni": runChatAudioOmniProbe,
   "embeddings-openai": runEmbeddingsOpenAIProbe,
   "embeddings-tei": runEmbeddingsTEIProbe,
+  "rerank-tei": runRerankTEIProbe,
+  "rerank-cohere": runRerankCohereProbe,
 };
