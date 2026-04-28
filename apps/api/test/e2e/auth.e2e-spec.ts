@@ -124,46 +124,130 @@ describe("Auth (e2e)", () => {
     expect(refreshCookie).toBeTruthy();
   });
 
-  // ── 10. Theft detection ───────────────────────────────────────────────────
-  it("theft detection: replaying revoked cookie revokes all tokens", async () => {
-    // Register a fresh user for this test
+  // ── Theft detection: outside-grace replay still kills the family ─────────
+  it("theft: replaying revoked cookie OUTSIDE grace window → 401 + family revoked", async () => {
     const regRes = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
       .send({ email: "theft-test@example.com", password: "Password1!" })
       .expect(201);
 
-    // Extract cookie A from register response
-    const rawCookiesA = regRes.headers["set-cookie"] as string[] | string | undefined;
-    const cookiesA = Array.isArray(rawCookiesA) ? rawCookiesA : rawCookiesA ? [rawCookiesA] : [];
-    const cookieStringA = cookiesA.find((c) => c.startsWith("md_refresh="));
-    expect(cookieStringA).toBeTruthy();
-    // Extract just the "md_refresh=XXX" part (cookieStringA is guaranteed truthy by the expect above)
-    const cookieValueA = (cookieStringA as string).split(";")[0];
+    const cookieValueA = (
+      (regRes.headers["set-cookie"] as string[]).find((c) => c.startsWith("md_refresh=")) as string
+    ).split(";")[0];
 
-    // First refresh with cookie A → succeeds, gets new cookie B
     const refreshResB = await request(ctx.app.getHttpServer())
       .post("/api/auth/refresh")
       .set("Cookie", cookieValueA)
       .expect(201);
-    expect(refreshResB.body.accessToken).toBeTruthy();
+    const cookieValueB = (
+      (refreshResB.headers["set-cookie"] as string[]).find((c) =>
+        c.startsWith("md_refresh="),
+      ) as string
+    ).split(";")[0];
 
-    const rawCookiesB = refreshResB.headers["set-cookie"] as string[] | string | undefined;
-    const cookiesB = Array.isArray(rawCookiesB) ? rawCookiesB : rawCookiesB ? [rawCookiesB] : [];
-    const cookieStringB = cookiesB.find((c) => c.startsWith("md_refresh="));
-    expect(cookieStringB).toBeTruthy();
-    const cookieValueB = (cookieStringB as string).split(";")[0];
+    // Force A's revoked_at past the 30s grace window
+    const prisma = ctx.app.get(PrismaService);
+    const { createHash } = await import("node:crypto");
+    const aHash = createHash("sha256").update(cookieValueA.split("=")[1]).digest("hex");
+    await prisma.$executeRaw`
+      UPDATE "refresh_tokens"
+      SET "revoked_at" = NOW() - INTERVAL '60 seconds'
+      WHERE "token_hash" = ${aHash}
+    `;
 
-    // Second refresh still using old cookie A (now revoked) → 401 theft detection
+    // Now A's replay is outside grace → 401 + family revoked
     await request(ctx.app.getHttpServer())
       .post("/api/auth/refresh")
       .set("Cookie", cookieValueA)
       .expect(401);
 
-    // Third refresh using the new cookie B (all tokens now revoked by theft detection) → 401
+    // B (the legitimate successor) was in the same family → also 401
     await request(ctx.app.getHttpServer())
       .post("/api/auth/refresh")
       .set("Cookie", cookieValueB)
       .expect(401);
+  });
+
+  // ── Grace-replay: replaying revoked cookie INSIDE grace returns access token ─
+  it("grace replay: replaying revoked cookie INSIDE grace → 201 + accessToken, NO Set-Cookie", async () => {
+    const regRes = await request(ctx.app.getHttpServer())
+      .post("/api/auth/register")
+      .send({ email: "grace-replay@example.com", password: "Password1!" })
+      .expect(201);
+
+    const cookieValueA = (
+      (regRes.headers["set-cookie"] as string[]).find((c) => c.startsWith("md_refresh=")) as string
+    ).split(";")[0];
+
+    // Rotate once → A is revoked, A' is the live cookie
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", cookieValueA)
+      .expect(201);
+
+    // Immediately replay A — within the 30s grace window
+    const replay = await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", cookieValueA)
+      .expect(201);
+
+    expect(replay.body.accessToken).toBeTruthy();
+    const setCookieHeader = replay.headers["set-cookie"] as string[] | undefined;
+    const hasNewRefreshCookie = !!setCookieHeader?.some((c) => c.startsWith("md_refresh="));
+    expect(hasNewRefreshCookie, "grace-replay must NOT rotate cookie").toBe(false);
+  });
+
+  // ── Theft on family A does not invalidate family B (concurrent sessions) ──
+  it("theft on one family revokes only that family; second session of same user still rotates", async () => {
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/register")
+      .send({ email: "two-sessions@example.com", password: "Password1!" })
+      .expect(201);
+
+    const loginA = await request(ctx.app.getHttpServer())
+      .post("/api/auth/login")
+      .send({ email: "two-sessions@example.com", password: "Password1!" })
+      .expect(201);
+    const loginB = await request(ctx.app.getHttpServer())
+      .post("/api/auth/login")
+      .send({ email: "two-sessions@example.com", password: "Password1!" })
+      .expect(201);
+
+    const cookieA = (
+      (loginA.headers["set-cookie"] as string[]).find((c) => c.startsWith("md_refresh=")) as string
+    ).split(";")[0];
+    const cookieB = (
+      (loginB.headers["set-cookie"] as string[]).find((c) => c.startsWith("md_refresh=")) as string
+    ).split(";")[0];
+
+    // Device A rotates A → A'
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", cookieA)
+      .expect(201);
+
+    // Force A's revoked_at past grace → outside-grace theft detection on family A
+    const prisma = ctx.app.get(PrismaService);
+    const { createHash } = await import("node:crypto");
+    const aHash = createHash("sha256").update(cookieA.split("=")[1]).digest("hex");
+    await prisma.$executeRaw`
+      UPDATE "refresh_tokens"
+      SET "revoked_at" = NOW() - INTERVAL '60 seconds'
+      WHERE "token_hash" = ${aHash}
+    `;
+
+    // Replay A → 401 + family A revoked
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", cookieA)
+      .expect(401);
+
+    // Device B is a SEPARATE family → still works
+    const bRotated = await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", cookieB)
+      .expect(201);
+    expect(bRotated.body.accessToken).toBeTruthy();
   });
 
   // ── 11. Admin sees runs from all users ────────────────────────────────────
