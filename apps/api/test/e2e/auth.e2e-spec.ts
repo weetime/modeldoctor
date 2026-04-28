@@ -260,4 +260,37 @@ describe("Auth (e2e)", () => {
       true,
     );
   });
+
+  // ── Grace window: concurrent refresh ──────────────────────────────────────
+  it("two concurrent /refresh with same cookie → both 201; exactly one rotates cookie", async () => {
+    const regRes = await request(ctx.app.getHttpServer())
+      .post("/api/auth/register")
+      .send({ email: "concurrent-refresh@example.com", password: "Password1!" })
+      .expect(201);
+
+    const rawCookies = regRes.headers["set-cookie"] as string[] | string | undefined;
+    const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
+    const cookieValue = (
+      cookies.find((c) => c.startsWith("md_refresh=")) as string
+    ).split(";")[0];
+
+    const [resA, resB] = await Promise.all([
+      request(ctx.app.getHttpServer()).post("/api/auth/refresh").set("Cookie", cookieValue),
+      request(ctx.app.getHttpServer()).post("/api/auth/refresh").set("Cookie", cookieValue),
+    ]);
+
+    expect(resA.status, "first refresh").toBe(201);
+    expect(resB.status, "second refresh").toBe(201);
+    expect(resA.body.accessToken).toBeTruthy();
+    expect(resB.body.accessToken).toBeTruthy();
+
+    const aSetsCookie = !!(resA.headers["set-cookie"] as string[] | undefined)?.some((c) =>
+      c.startsWith("md_refresh="),
+    );
+    const bSetsCookie = !!(resB.headers["set-cookie"] as string[] | undefined)?.some((c) =>
+      c.startsWith("md_refresh="),
+    );
+    // Exactly one of the two should rotate the cookie; the loser is grace-replayed.
+    expect(aSetsCookie !== bSetsCookie, "exactly one rotates cookie").toBe(true);
+  });
 });
