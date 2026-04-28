@@ -10,9 +10,10 @@ import {
 } from "@/components/ui/select";
 import { ApiError, api } from "@/lib/api-client";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
-import type { E2ETestResponse, ProbeCategory, ProbeName } from "./types";
+import type { E2ETestResponse, ProbeCategory, ProbeName, ProbeResult } from "./types";
 import { PROBES_BY_CATEGORY } from "./types";
 
 const CATEGORIES: ProbeCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
@@ -29,6 +30,17 @@ export function E2ESmokePage() {
     endpoint.apiKey.trim().length > 0 &&
     endpoint.model.trim().length > 0;
   const disabledReason = canRun ? undefined : tc("errors.required");
+
+  const notifyFailures = (entries: { probe: ProbeName; result: ProbeResult }[]) => {
+    for (const { probe, result } of entries) {
+      if (result.pass) continue;
+      const failedCheck = result.checks.find((c) => !c.pass);
+      const reason = failedCheck
+        ? `${failedCheck.name}${failedCheck.info ? ` (${failedCheck.info})` : ""}`
+        : (result.details.error ?? "unknown");
+      toast.error(t(`probes.${probe}.title`), { description: reason });
+    }
+  };
 
   const runProbes = async (probes: ProbeName[]) => {
     if (!canRun) return;
@@ -48,29 +60,38 @@ export function E2ESmokePage() {
           : {}),
       });
       if (!data.success) {
+        const failed: { probe: ProbeName; result: ProbeResult }[] = [];
         for (const p of probes) {
-          slice.setResult(p, {
+          const result: ProbeResult = {
             pass: false,
             latencyMs: null,
             checks: [{ name: "request", pass: false, info: data.error }],
             details: { error: data.error ?? "unknown" },
-          });
+          };
+          slice.setResult(p, result);
+          failed.push({ probe: p, result });
         }
+        notifyFailures(failed);
         return;
       }
       for (const r of data.results) {
         slice.setResult(r.probe, r);
       }
+      notifyFailures(data.results.map((r) => ({ probe: r.probe, result: r })));
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "network";
+      const failed: { probe: ProbeName; result: ProbeResult }[] = [];
       for (const p of probes) {
-        slice.setResult(p, {
+        const result: ProbeResult = {
           pass: false,
           latencyMs: null,
           checks: [{ name: "request", pass: false, info: msg }],
           details: { error: msg },
-        });
+        };
+        slice.setResult(p, result);
+        failed.push({ probe: p, result });
       }
+      notifyFailures(failed);
     } finally {
       for (const p of probes) slice.setRunning(p, false);
     }
