@@ -79,6 +79,7 @@ export async function runRerankCohereProbe({
     checks,
     details: {
       ...(results ? { rerankResults: results } : {}),
+      ...(!pass ? { error: `status=${res.status} body=${rawText.slice(0, 500)}` } : {}),
     },
   };
 }

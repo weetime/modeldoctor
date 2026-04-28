@@ -65,6 +65,14 @@ export async function runTTSProbe({
   // probe but skip the preview to avoid confusion when the FE expects WAV.
   const audioB64 = format === "wav" ? buf.toString("base64") : undefined;
 
+  // Surface the response body as text when the probe failed AND the response
+  // wasn't audio (i.e. we got an error envelope from the gateway). Decoding
+  // 500 bytes of binary audio as utf-8 would just be garbage, so guard on
+  // !audio/*. Truncate to 500 bytes so a long HTML error page can't bloat
+  // the result payload.
+  const errorPreview =
+    !pass && !contentType.startsWith("audio/") ? buf.subarray(0, 500).toString("utf8") : undefined;
+
   return {
     pass,
     latencyMs,
@@ -72,6 +80,7 @@ export async function runTTSProbe({
     details: {
       audioBytes: bytes,
       ...(audioB64 ? { audioB64 } : {}),
+      ...(errorPreview ? { error: `status=${res.status} body=${errorPreview}` } : {}),
     },
   };
 }

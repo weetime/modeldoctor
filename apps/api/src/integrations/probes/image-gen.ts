@@ -71,6 +71,7 @@ export async function runImageGenProbe({
     details: {
       ...(url ? { imageGenUrl: url } : {}),
       ...(b64 ? { imageGenB64: b64 } : {}),
+      ...(!pass ? { error: `status=${res.status} body=${rawText.slice(0, 500)}` } : {}),
     },
   };
 }

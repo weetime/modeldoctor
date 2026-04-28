@@ -66,6 +66,7 @@ export async function runEmbeddingsOpenAIProbe({
     details: {
       embeddingDims: dims,
       ...(sample ? { embeddingSample: sample } : {}),
+      ...(!pass ? { error: `status=${res.status} body=${rawText.slice(0, 500)}` } : {}),
     },
   };
 }

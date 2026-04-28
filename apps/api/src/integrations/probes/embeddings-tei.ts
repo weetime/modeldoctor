@@ -60,6 +60,7 @@ export async function runEmbeddingsTEIProbe({
     details: {
       embeddingDims: dims,
       ...(vec ? { embeddingSample: vec.slice(0, 4) } : {}),
+      ...(!pass ? { error: `status=${res.status} body=${rawText.slice(0, 500)}` } : {}),
     },
   };
 }
