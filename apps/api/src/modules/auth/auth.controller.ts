@@ -79,7 +79,6 @@ export class AuthController {
     return { accessToken, user };
   }
 
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("refresh")
   async refresh(
@@ -88,14 +87,18 @@ export class AuthController {
   ): Promise<AuthTokenResponse> {
     const presented = (req.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
     if (!presented) throw new UnauthorizedException("No refresh cookie");
-    const { accessToken, refreshToken, user } = await this.auth.refresh(presented);
-    setRefreshCookie(
-      res,
-      refreshToken,
-      this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
-      this.config.get("NODE_ENV", { infer: true }) === "production",
-    );
-    return { accessToken, user };
+    const result = await this.auth.refresh(presented);
+    if (result.kind === "rotated") {
+      setRefreshCookie(
+        res,
+        result.refreshToken,
+        this.config.get("JWT_REFRESH_EXPIRES_DAYS", { infer: true }),
+        this.config.get("NODE_ENV", { infer: true }) === "production",
+      );
+    }
+    // Grace-replayed: do not touch the cookie — the legitimate caller's
+    // freshly-issued cookie is already in the browser's jar.
+    return { accessToken: result.accessToken, user: result.user };
   }
 
   @Post("logout")
