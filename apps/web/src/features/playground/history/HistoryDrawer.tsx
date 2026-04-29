@@ -89,7 +89,19 @@ export function HistoryDrawer<S>({ useHistoryStore }: HistoryDrawerProps<S>) {
                     ev.stopPropagation();
                     removeEntry(e.id);
                   }}
-                  onPointerDown={(ev) => ev.stopPropagation()}
+                  // Radix DropdownMenuItem decides whether to fire onSelect on
+                  // pointer-up by inspecting whether pointer-down's default was
+                  // prevented. Both preventDefault and stopPropagation are
+                  // required: the former blocks the select-trigger, the latter
+                  // keeps the menuitem from re-receiving the event.
+                  onPointerDown={(ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                  }}
+                  onPointerUp={(ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                  }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
