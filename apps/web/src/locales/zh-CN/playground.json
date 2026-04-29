@@ -1,0 +1,56 @@
+{
+  "title": "试验场",
+  "categories": {
+    "chat": "对话",
+    "audio": "语音",
+    "embeddings": "嵌入",
+    "rerank": "重排",
+    "image": "图像"
+  },
+  "endpoint": {
+    "categoryFilter": "分类过滤",
+    "showAll": "显示全部",
+    "categoryMismatch": "当前连接是 {{category}} 类，与本页不符",
+    "clearSelection": "清除",
+    "noMatchingConnections": "暂无 {{category}} 类连接",
+    "newConnection": "+ 新建连接"
+  },
+  "chat": {
+    "title": "对话",
+    "subtitle": "向 chat-completions 接口发送一条消息，查看回复。",
+    "system": {
+      "label": "系统消息",
+      "placeholder": "可选。如：你是一个有帮助的助手。"
+    },
+    "composer": {
+      "placeholder": "输入消息…",
+      "send": "发送",
+      "sending": "发送中…",
+      "needConnection": "请先选择一个对话类连接"
+    },
+    "messages": {
+      "system": "系统",
+      "user": "用户",
+      "assistant": "助手",
+      "empty": "发送一条消息开始对话。"
+    },
+    "params": {
+      "title": "参数",
+      "temperature": "Temperature",
+      "maxTokens": "Max Tokens",
+      "topP": "Top P",
+      "frequencyPenalty": "Frequency Penalty",
+      "presencePenalty": "Presence Penalty",
+      "seed": "Seed",
+      "stop": "停止序列",
+      "stream": "流式 (Phase 2)"
+    },
+    "errors": {
+      "send": "发送失败：{{message}}"
+    }
+  },
+  "comingSoon": {
+    "title": "Phase {{phase}} 推出",
+    "body": "本模态在 Playground 路线图中，但还没实现。"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Playground",
+  "categories": {
+    "chat": "Chat",
+    "audio": "Audio",
+    "embeddings": "Embeddings",
+    "rerank": "Rerank",
+    "image": "Image"
+  },
+  "endpoint": {
+    "categoryFilter": "Category filter",
+    "showAll": "Show all",
+    "categoryMismatch": "Selected connection's category ({{category}}) doesn't match this page",
+    "clearSelection": "Clear",
+    "noMatchingConnections": "No {{category}} connections yet",
+    "newConnection": "+ New connection"
+  },
+  "chat": {
+    "title": "Chat",
+    "subtitle": "Send a single message to a chat-completions endpoint and see the reply.",
+    "system": {
+      "label": "System message",
+      "placeholder": "Optional. e.g. You are a helpful assistant."
+    },
+    "composer": {
+      "placeholder": "Type your message…",
+      "send": "Send",
+      "sending": "Sending…",
+      "needConnection": "Pick a chat connection first"
+    },
+    "messages": {
+      "system": "system",
+      "user": "user",
+      "assistant": "assistant",
+      "empty": "Send a message to get started."
+    },
+    "params": {
+      "title": "Parameters",
+      "temperature": "Temperature",
+      "maxTokens": "Max Tokens",
+      "topP": "Top P",
+      "frequencyPenalty": "Frequency Penalty",
+      "presencePenalty": "Presence Penalty",
+      "seed": "Seed",
+      "stop": "Stop Sequence",
+      "stream": "Stream (Phase 2)"
+    },
+    "errors": {
+      "send": "Failed to send: {{message}}"
+    }
+  },
+  "comingSoon": {
+    "title": "Coming in Phase {{phase}}",
+    "body": "This modality is part of the Playground roadmap but isn't built yet."
+  }
+}
