@@ -86,7 +86,6 @@
   "filters": {
     "label": "Filter",
     "allCategories": "All categories",
-    "allTags": "All tags",
-    "clear": "Clear filters"
+    "allTags": "All tags"
   }
 }

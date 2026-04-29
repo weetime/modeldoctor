@@ -86,7 +86,6 @@
   "filters": {
     "label": "筛选",
     "allCategories": "全部分类",
-    "allTags": "全部标签",
-    "clear": "清除筛选"
+    "allTags": "全部标签"
   }
 }

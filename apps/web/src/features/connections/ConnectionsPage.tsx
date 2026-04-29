@@ -32,7 +32,7 @@ import type { Connection } from "@/types/connection";
 import type { ModalityCategory } from "@modeldoctor/contracts";
 import { format } from "date-fns";
 import { Database, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectionDialog } from "./ConnectionDialog";
 import { ConnectionsImportDialog } from "./ConnectionsImportDialog";
@@ -48,6 +48,12 @@ export function ConnectionsPage() {
   const [filterTag, setFilterTag] = useState<string | "all">("all");
 
   const allTags = Array.from(new Set(list.flatMap((c) => c.tags))).sort();
+
+  useEffect(() => {
+    if (filterTag !== "all" && !allTags.includes(filterTag)) {
+      setFilterTag("all");
+    }
+  }, [allTags, filterTag]);
 
   const filtered = list.filter((c) => {
     if (filterCategory !== "all" && c.category !== filterCategory) return false;
