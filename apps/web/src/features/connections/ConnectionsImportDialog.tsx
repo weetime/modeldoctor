@@ -78,7 +78,7 @@ export function ConnectionsImportDialog({ open, onOpenChange }: Props) {
         <Textarea
           rows={8}
           className="font-mono text-xs"
-          placeholder='{"version":1,"connections":[…]}'
+          placeholder='{"version":2,"connections":[…]}'
           value={json}
           onChange={(e) => setJson(e.target.value)}
         />

@@ -79,7 +79,7 @@ export const useConnectionsStore = create<ConnectionsStore>()(
       },
       exportAll: () => {
         const env: ConnectionsExport = {
-          version: 1,
+          version: 2,
           connections: get().connections,
         };
         return JSON.stringify(env, null, 2);
@@ -87,7 +87,7 @@ export const useConnectionsStore = create<ConnectionsStore>()(
       reset: () => set({ connections: [] }),
       importAll: (json, mode) => {
         const parsed = JSON.parse(json) as ConnectionsExport;
-        if (parsed.version !== 1) {
+        if (parsed.version !== 2) {
           throw new Error(`Unsupported export version: ${parsed.version}`);
         }
         if (mode === "replace") {
@@ -111,7 +111,7 @@ export const useConnectionsStore = create<ConnectionsStore>()(
     }),
     {
       name: "modeldoctor-connections",
-      version: 1, // bumped from default 0; old format (apiUrl with full URL) is dropped
+      version: 2, // bumped from 1; v1 (pre-category) data is dropped
       partialize: (state) => ({ connections: state.connections }),
     },
   ),

@@ -1,5 +1,6 @@
 {
   "groups": {
+    "playground": "Playground",
     "performance": "Performance",
     "correctness": "Correctness",
     "observability": "Observability",
@@ -9,6 +10,11 @@
     "comingSoon": "Soon"
   },
   "items": {
+    "playgroundChat": "Chat",
+    "playgroundImage": "Image",
+    "playgroundAudio": "Audio",
+    "playgroundEmbeddings": "Embeddings",
+    "playgroundRerank": "Rerank",
     "loadTest": "Load Test",
     "benchmark": "Benchmark",
     "soak": "Soak / Stability",

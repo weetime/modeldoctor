@@ -9,14 +9,19 @@ import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
+import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import {
   type Activity,
+  Boxes,
   GitCompare,
   HeartPulse,
   History as HistoryIcon,
+  Image as ImageIcon,
+  ListOrdered,
+  Mic,
   Timer,
   Zap,
 } from "lucide-react";
@@ -74,6 +79,24 @@ export const routes: RouteObject[] = [
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
           { path: "settings", element: <SettingsPage /> },
+          { path: "playground", element: <Navigate to="/playground/chat" replace /> },
+          { path: "playground/chat", element: <ChatPage /> },
+          {
+            path: "playground/image",
+            element: <ComingSoonRoute icon={ImageIcon} itemKey="playgroundImage" />,
+          },
+          {
+            path: "playground/audio",
+            element: <ComingSoonRoute icon={Mic} itemKey="playgroundAudio" />,
+          },
+          {
+            path: "playground/embeddings",
+            element: <ComingSoonRoute icon={Boxes} itemKey="playgroundEmbeddings" />,
+          },
+          {
+            path: "playground/rerank",
+            element: <ComingSoonRoute icon={ListOrdered} itemKey="playgroundRerank" />,
+          },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

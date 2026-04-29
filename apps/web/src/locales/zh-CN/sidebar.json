@@ -1,5 +1,6 @@
 {
   "groups": {
+    "playground": "试验场",
     "performance": "性能",
     "correctness": "正确性",
     "observability": "可观测性",
@@ -9,6 +10,11 @@
     "comingSoon": "即将推出"
   },
   "items": {
+    "playgroundChat": "对话",
+    "playgroundImage": "图像",
+    "playgroundAudio": "语音",
+    "playgroundEmbeddings": "嵌入",
+    "playgroundRerank": "重排",
     "loadTest": "压力测试",
     "benchmark": "基准测试",
     "soak": "稳定性测试",

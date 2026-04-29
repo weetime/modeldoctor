@@ -1,5 +1,6 @@
 import {
   Activity,
+  Boxes,
   Bug,
   CheckCircle2,
   Database,
@@ -7,7 +8,11 @@ import {
   GitCompare,
   HeartPulse,
   History,
+  Image as ImageIcon,
+  ListOrdered,
   type LucideIcon,
+  MessageSquare,
+  Mic,
   Settings,
   Timer,
   Zap,
@@ -27,6 +32,32 @@ export interface SidebarGroup {
 }
 
 export const sidebarGroups: SidebarGroup[] = [
+  {
+    id: "playground",
+    labelKey: "groups.playground",
+    items: [
+      { to: "/playground/chat", icon: MessageSquare, labelKey: "items.playgroundChat" },
+      {
+        to: "/playground/image",
+        icon: ImageIcon,
+        labelKey: "items.playgroundImage",
+        comingSoon: true,
+      },
+      { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio", comingSoon: true },
+      {
+        to: "/playground/embeddings",
+        icon: Boxes,
+        labelKey: "items.playgroundEmbeddings",
+        comingSoon: true,
+      },
+      {
+        to: "/playground/rerank",
+        icon: ListOrdered,
+        labelKey: "items.playgroundRerank",
+        comingSoon: true,
+      },
+    ],
+  },
   {
     id: "performance",
     labelKey: "groups.performance",
