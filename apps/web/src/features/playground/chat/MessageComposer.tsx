@@ -7,7 +7,9 @@ interface MessageComposerProps {
   systemMessage: string;
   onSystemMessageChange: (s: string) => void;
   onSend: (text: string) => void;
+  onStop: () => void;
   sending: boolean;
+  streaming: boolean;
   disabled: boolean;
   disabledReason?: string;
 }
@@ -16,7 +18,9 @@ export function MessageComposer({
   systemMessage,
   onSystemMessageChange,
   onSend,
+  onStop,
   sending,
+  streaming,
   disabled,
   disabledReason,
 }: MessageComposerProps) {
@@ -51,7 +55,7 @@ export function MessageComposer({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey && !streaming) {
               e.preventDefault();
               submit();
             }
@@ -60,13 +64,19 @@ export function MessageComposer({
           className="text-sm"
           disabled={disabled || sending}
         />
-        <Button
-          onClick={submit}
-          disabled={disabled || sending || !draft.trim()}
-          title={disabled ? disabledReason : undefined}
-        >
-          {sending ? t("chat.composer.sending") : t("chat.composer.send")}
-        </Button>
+        {streaming ? (
+          <Button variant="destructive" onClick={onStop}>
+            {t("chat.composer.stop")}
+          </Button>
+        ) : (
+          <Button
+            onClick={submit}
+            disabled={disabled || sending || !draft.trim()}
+            title={disabled ? disabledReason : undefined}
+          >
+            {sending ? t("chat.composer.sending") : t("chat.composer.send")}
+          </Button>
+        )}
       </div>
       {disabled && disabledReason ? (
         <output className="mt-1 block text-[11px] text-muted-foreground">{disabledReason}</output>

@@ -26,6 +26,7 @@
       "placeholder": "Type your message…",
       "send": "Send",
       "sending": "Sending…",
+      "stop": "Stop",
       "needConnection": "Pick a chat connection first"
     },
     "messages": {

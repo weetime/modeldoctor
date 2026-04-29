@@ -26,6 +26,7 @@
       "placeholder": "输入消息…",
       "send": "发送",
       "sending": "发送中…",
+      "stop": "停止",
       "needConnection": "请先选择一个对话类连接"
     },
     "messages": {

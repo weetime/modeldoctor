@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/common/page-header";
 import { ApiError, api } from "@/lib/api-client";
+import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   ChatMessage,
@@ -26,44 +27,98 @@ export function ChatPage() {
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
 
   const onSend = async (text: string) => {
-    if (!conn) return;
-    slice.appendMessage({ role: "user", content: text });
-    slice.setSending(true);
-    slice.setError(null);
+    // Read everything fresh from the store to avoid stale-closure bugs.
+    const fresh = useChatStore.getState();
+    const connNow = fresh.selectedConnectionId
+      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
+      : null;
+    if (!connNow) return;
 
+    fresh.appendMessage({ role: "user", content: text });
+    fresh.setSending(true);
+    fresh.setError(null);
+
+    // After the appendMessage above, the freshest messages list is:
+    const stateAfterAppend = useChatStore.getState();
     const messages: ChatMessage[] = [
-      ...(slice.systemMessage.trim()
-        ? [{ role: "system" as const, content: slice.systemMessage.trim() }]
+      ...(stateAfterAppend.systemMessage.trim()
+        ? [{ role: "system" as const, content: stateAfterAppend.systemMessage.trim() }]
         : []),
-      ...slice.messages,
-      { role: "user" as const, content: text },
+      ...stateAfterAppend.messages,
     ];
 
     const body: PlaygroundChatRequest = {
-      apiBaseUrl: conn.apiBaseUrl,
-      apiKey: conn.apiKey,
-      model: conn.model,
-      customHeaders: conn.customHeaders || undefined,
-      queryParams: conn.queryParams || undefined,
+      apiBaseUrl: connNow.apiBaseUrl,
+      apiKey: connNow.apiKey,
+      model: connNow.model,
+      customHeaders: connNow.customHeaders || undefined,
+      queryParams: connNow.queryParams || undefined,
       messages,
-      params: slice.params,
+      params: stateAfterAppend.params,
     };
+
+    if (stateAfterAppend.params.stream) {
+      const ac = new AbortController();
+      fresh.setStreaming(true);
+      fresh.setAbortController(ac);
+      try {
+        await playgroundFetchStream({
+          path: "/api/playground/chat",
+          body,
+          signal: ac.signal,
+          onSseEvent: (data) => {
+            if (data === "[DONE]") return;
+            try {
+              const evt = JSON.parse(data) as {
+                choices?: Array<{ delta?: { content?: string } }>;
+              };
+              const tok = evt.choices?.[0]?.delta?.content;
+              if (tok) useChatStore.getState().appendAssistantToken(tok);
+            } catch {
+              // Ignore non-JSON SSE comments.
+            }
+          },
+        });
+      } catch (e) {
+        // AbortError is expected when user clicks Stop; do not toast.
+        if (!(e instanceof DOMException && e.name === "AbortError")) {
+          const msg = e instanceof Error ? e.message : "stream failed";
+          useChatStore.getState().setError(msg);
+          toast.error(t("chat.errors.send", { message: msg }));
+        }
+      } finally {
+        const s = useChatStore.getState();
+        s.setStreaming(false);
+        s.setAbortController(null);
+        s.setSending(false);
+      }
+      return;
+    }
+
+    // Non-streaming path
     try {
       const res = await api.post<PlaygroundChatResponse>("/api/playground/chat", body);
       if (res.success) {
-        slice.appendMessage({ role: "assistant", content: res.content ?? "" });
+        useChatStore.getState().appendMessage({
+          role: "assistant",
+          content: res.content ?? "",
+        });
       } else {
         const msg = res.error ?? "unknown";
-        slice.setError(msg);
+        useChatStore.getState().setError(msg);
         toast.error(t("chat.errors.send", { message: msg }));
       }
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "network";
-      slice.setError(msg);
+      useChatStore.getState().setError(msg);
       toast.error(t("chat.errors.send", { message: msg }));
     } finally {
-      slice.setSending(false);
+      useChatStore.getState().setSending(false);
     }
+  };
+
+  const onStop = () => {
+    useChatStore.getState().abortController?.abort();
   };
 
   return (
@@ -94,7 +149,9 @@ export function ChatPage() {
           systemMessage={slice.systemMessage}
           onSystemMessageChange={slice.setSystemMessage}
           onSend={onSend}
+          onStop={onStop}
           sending={slice.sending}
+          streaming={slice.streaming}
           disabled={!canSend}
           disabledReason={disabledReason}
         />
