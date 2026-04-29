@@ -5,6 +5,7 @@
  * Body: { model, input: "..." }
  * Response: { data: [{ embedding: number[] }] }
  */
+import { buildHeaders, buildUrl } from "../openai-client/index.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 
 interface OpenAIEmbeddingResponse {
@@ -19,18 +20,21 @@ export async function runEmbeddingsOpenAIProbe({
   extraHeaders = {},
   pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
-  const path = pathOverride ?? "/v1/embeddings";
-  const targetUrl = `${apiBaseUrl}${path}`;
+  const targetUrl = buildUrl({
+    apiBaseUrl,
+    defaultPath: "/v1/embeddings",
+    pathOverride,
+  });
+  const headers = {
+    ...buildHeaders(apiKey, undefined),
+    ...extraHeaders,
+  };
   const body = { model, input: "Embed this short test sentence." };
 
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...extraHeaders,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const latencyMs = Date.now() - t0;
