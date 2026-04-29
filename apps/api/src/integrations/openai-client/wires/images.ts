@@ -7,7 +7,7 @@ export interface BuildImagesBodyInput {
   seed?: number;
 }
 
-export function buildImagesBody(input: BuildImagesBodyInput): Record<string, unknown> {
+export function buildPlaygroundImagesBody(input: BuildImagesBodyInput): Record<string, unknown> {
   const body: Record<string, unknown> = { model: input.model, prompt: input.prompt };
   if (input.size !== undefined) body.size = input.size;
   if (input.n !== undefined) body.n = input.n;

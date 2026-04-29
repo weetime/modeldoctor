@@ -5,7 +5,7 @@ export interface BuildEmbeddingsBodyInput {
   dimensions?: number;
 }
 
-export function buildEmbeddingsBody({
+export function buildPlaygroundEmbeddingsBody({
   model,
   input,
   encodingFormat,

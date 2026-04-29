@@ -7,18 +7,25 @@ export interface BuildRerankBodyInput {
   wire: "cohere" | "tei";
 }
 
-export function buildRerankBody(input: BuildRerankBodyInput): Record<string, unknown> {
-  if (input.wire === "tei") {
-    return { model: input.model, query: input.query, texts: input.documents };
+export function buildPlaygroundRerankBody(input: BuildRerankBodyInput): Record<string, unknown> {
+  switch (input.wire) {
+    case "tei":
+      return { model: input.model, query: input.query, texts: input.documents };
+    case "cohere": {
+      const body: Record<string, unknown> = {
+        model: input.model,
+        query: input.query,
+        documents: input.documents,
+      };
+      if (input.topN !== undefined) body.top_n = input.topN;
+      if (input.returnDocuments !== undefined) body.return_documents = input.returnDocuments;
+      return body;
+    }
+    default: {
+      const _exhaustive: never = input.wire;
+      throw new Error(`Unknown rerank wire: ${String(_exhaustive)}`);
+    }
   }
-  const body: Record<string, unknown> = {
-    model: input.model,
-    query: input.query,
-    documents: input.documents,
-  };
-  if (input.topN !== undefined) body.top_n = input.topN;
-  if (input.returnDocuments !== undefined) body.return_documents = input.returnDocuments;
-  return body;
 }
 
 export interface RerankHit {

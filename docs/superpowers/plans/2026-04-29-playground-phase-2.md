@@ -1749,7 +1749,7 @@ import type {
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import {
-  buildEmbeddingsBody,
+  buildPlaygroundEmbeddingsBody,
   buildHeaders,
   buildUrl,
   parseEmbeddingsResponse,
@@ -1768,7 +1768,7 @@ export class EmbeddingsService {
       queryParams: req.queryParams,
     });
     const headers = buildHeaders(req.apiKey, req.customHeaders);
-    const body = buildEmbeddingsBody({
+    const body = buildPlaygroundEmbeddingsBody({
       model: req.model,
       input: req.input,
       encodingFormat: req.encodingFormat,
@@ -2004,7 +2004,7 @@ import type {
 import { Injectable } from "@nestjs/common";
 import {
   buildHeaders,
-  buildRerankBody,
+  buildPlaygroundRerankBody,
   buildUrl,
   parseRerankResponse,
 } from "../../integrations/openai-client/index.js";
@@ -2024,7 +2024,7 @@ export class RerankService {
       queryParams: req.queryParams,
     });
     const headers = buildHeaders(req.apiKey, req.customHeaders);
-    const body = buildRerankBody({
+    const body = buildPlaygroundRerankBody({
       model: req.model,
       query: req.query,
       documents: req.documents,
@@ -2214,7 +2214,7 @@ import type {
 import { Injectable } from "@nestjs/common";
 import {
   buildHeaders,
-  buildImagesBody,
+  buildPlaygroundImagesBody,
   buildUrl,
   parseImagesResponse,
 } from "../../integrations/openai-client/index.js";
@@ -2232,7 +2232,7 @@ export class ImagesService {
       queryParams: req.queryParams,
     });
     const headers = buildHeaders(req.apiKey, req.customHeaders);
-    const body = buildImagesBody({
+    const body = buildPlaygroundImagesBody({
       model: req.model,
       prompt: req.prompt,
       size: req.size,

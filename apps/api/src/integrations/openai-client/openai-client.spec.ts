@@ -86,9 +86,9 @@ describe("buildUrl", () => {
 });
 
 import { buildPlaygroundChatBody, parsePlaygroundChatResponse } from "./wires/chat.js";
-import { buildEmbeddingsBody, parseEmbeddingsResponse } from "./wires/embeddings.js";
-import { buildImagesBody, parseImagesResponse } from "./wires/images.js";
-import { buildRerankBody, parseRerankResponse } from "./wires/rerank.js";
+import { buildPlaygroundEmbeddingsBody, parseEmbeddingsResponse } from "./wires/embeddings.js";
+import { buildPlaygroundImagesBody, parseImagesResponse } from "./wires/images.js";
+import { buildPlaygroundRerankBody, parseRerankResponse } from "./wires/rerank.js";
 
 describe("wires/chat", () => {
   const messages = [{ role: "user" as const, content: "hi" }];
@@ -145,20 +145,20 @@ describe("wires/chat", () => {
 });
 
 describe("wires/embeddings", () => {
-  it("buildEmbeddingsBody supports single + array input", () => {
-    expect(buildEmbeddingsBody({ model: "m", input: "one" })).toEqual({
+  it("buildPlaygroundEmbeddingsBody supports single + array input", () => {
+    expect(buildPlaygroundEmbeddingsBody({ model: "m", input: "one" })).toEqual({
       model: "m",
       input: "one",
     });
-    expect(buildEmbeddingsBody({ model: "m", input: ["a", "b"] })).toEqual({
+    expect(buildPlaygroundEmbeddingsBody({ model: "m", input: ["a", "b"] })).toEqual({
       model: "m",
       input: ["a", "b"],
     });
   });
 
-  it("buildEmbeddingsBody adds optional encoding_format and dimensions", () => {
+  it("buildPlaygroundEmbeddingsBody adds optional encoding_format and dimensions", () => {
     expect(
-      buildEmbeddingsBody({
+      buildPlaygroundEmbeddingsBody({
         model: "m",
         input: "x",
         encodingFormat: "base64",
@@ -184,9 +184,9 @@ describe("wires/embeddings", () => {
 });
 
 describe("wires/rerank", () => {
-  it("buildRerankBody emits cohere shape by default (documents + top_n)", () => {
+  it("buildPlaygroundRerankBody emits cohere shape by default (documents + top_n)", () => {
     expect(
-      buildRerankBody({
+      buildPlaygroundRerankBody({
         model: "m",
         query: "q",
         documents: ["a", "b"],
@@ -197,10 +197,10 @@ describe("wires/rerank", () => {
     ).toEqual({ model: "m", query: "q", documents: ["a", "b"], top_n: 3, return_documents: true });
   });
 
-  it("buildRerankBody emits tei shape when wire=tei (texts, no top_n)", () => {
-    expect(buildRerankBody({ model: "m", query: "q", documents: ["a", "b"], wire: "tei" })).toEqual(
-      { model: "m", query: "q", texts: ["a", "b"] },
-    );
+  it("buildPlaygroundRerankBody emits tei shape when wire=tei (texts, no top_n)", () => {
+    expect(
+      buildPlaygroundRerankBody({ model: "m", query: "q", documents: ["a", "b"], wire: "tei" }),
+    ).toEqual({ model: "m", query: "q", texts: ["a", "b"] });
   });
 
   it("parseRerankResponse handles cohere {results: [{index, relevance_score}]}", () => {
@@ -231,9 +231,9 @@ describe("wires/rerank", () => {
 });
 
 describe("wires/images", () => {
-  it("buildImagesBody includes optional size / n / response_format / seed", () => {
+  it("buildPlaygroundImagesBody includes optional size / n / response_format / seed", () => {
     expect(
-      buildImagesBody({
+      buildPlaygroundImagesBody({
         model: "m",
         prompt: "p",
         size: "512x512",
