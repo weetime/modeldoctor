@@ -15,6 +15,7 @@
  * the FE-allowed fields and fold parse-failure context into `details.error`.
  */
 import { buildChatBody } from "../builders/chat.js";
+import { buildHeaders, buildUrl } from "../openai-client/index.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 
 interface ChatCompletionLike {
@@ -37,16 +38,19 @@ export async function runChatTextProbe({
     temperature: 0,
     stream: false,
   });
-  const path = pathOverride ?? "/v1/chat/completions";
-  const targetUrl = `${apiBaseUrl}${path}`;
+  const targetUrl = buildUrl({
+    apiBaseUrl,
+    defaultPath: "/v1/chat/completions",
+    pathOverride,
+  });
+  const headers = {
+    ...buildHeaders(apiKey, undefined),
+    ...extraHeaders,
+  };
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...extraHeaders,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const latencyMs = Date.now() - t0;

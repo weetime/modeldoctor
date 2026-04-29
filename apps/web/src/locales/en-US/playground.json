@@ -11,7 +11,9 @@
     "categoryFilter": "Category filter",
     "showAll": "Show all",
     "categoryMismatch": "Selected connection's category ({{category}}) doesn't match this page",
+    "categoryMismatchHint": "Category {{category}} doesn't match this page (you can still pick it)",
     "clearSelection": "Clear",
+    "pickConnection": "Pick a {{category}} connection",
     "noMatchingConnections": "No {{category}} connections yet",
     "newConnection": "+ New connection"
   },
@@ -26,6 +28,7 @@
       "placeholder": "Type your message…",
       "send": "Send",
       "sending": "Sending…",
+      "stop": "Stop",
       "needConnection": "Pick a chat connection first"
     },
     "messages": {
@@ -43,14 +46,90 @@
       "presencePenalty": "Presence Penalty",
       "seed": "Seed",
       "stop": "Stop Sequence",
-      "stream": "Stream (Phase 2)"
+      "stream": "Streaming"
     },
     "errors": {
       "send": "Failed to send: {{message}}"
     }
   },
+  "history": {
+    "title": "History",
+    "newSession": "+ New session",
+    "empty": "No history",
+    "untitled": "(empty)",
+    "delete": "Delete this entry",
+    "restoreTitle": "Restore session",
+    "restoreConfirm": "Overwrite the current session with this entry?",
+    "restoreAction": "Restore",
+    "cancel": "Cancel",
+    "turnsPrefix": "{{count}} turn",
+    "turnsPrefixPlural": "{{count}} turns"
+  },
   "comingSoon": {
     "title": "Coming in Phase {{phase}}",
     "body": "This modality is part of the Playground roadmap but isn't built yet."
+  },
+  "viewCode": {
+    "title": "View Code",
+    "copy": "Copy",
+    "copied": "Copied",
+    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>"
+  },
+  "embeddings": {
+    "title": "Embeddings",
+    "subtitle": "Generate embedding vectors and visualise them in 2D.",
+    "addInput": "+ Add input",
+    "clear": "Clear",
+    "batchMode": "Batch input",
+    "batchPlaceholder": "One input per line.",
+    "send": "Send",
+    "sending": "Sending…",
+    "tabs": { "chart": "Chart", "json": "JSON" },
+    "chart": {
+      "title": "PCA scatter",
+      "minThree": "≥ 3 inputs required to visualise.",
+      "empty": "Submit inputs to see a 2D PCA scatter."
+    },
+    "params": {
+      "title": "Embedding Parameters",
+      "encodingFormat": "Encoding format",
+      "dimensions": "Dimensions"
+    }
+  },
+  "image": {
+    "title": "Image",
+    "subtitle": "Generate images from a text prompt.",
+    "promptPlaceholder": "Describe the image…",
+    "previewEmpty": "Generated images will appear here.",
+    "send": "Generate",
+    "sending": "Generating…",
+    "random": "Random prompt",
+    "params": {
+      "title": "Image Parameters",
+      "size": "Size",
+      "sizeCustom": "Custom",
+      "n": "N",
+      "seed": "Seed",
+      "seedRandom": "(random)",
+      "randomSeed": "Random seed each request"
+    }
+  },
+  "rerank": {
+    "title": "Rerank",
+    "subtitle": "Rerank documents against a query.",
+    "query": "Query",
+    "queryPlaceholder": "Type the query…",
+    "documents": "Documents",
+    "addDoc": "+ Doc",
+    "batchMode": "Batch input",
+    "batchPlaceholder": "One document per line.",
+    "send": "Send",
+    "sending": "Sending…",
+    "params": {
+      "title": "Rerank Parameters",
+      "wire": "Wire",
+      "topN": "Top N",
+      "returnDocuments": "Return documents"
+    }
   }
 }

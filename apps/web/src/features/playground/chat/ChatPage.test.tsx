@@ -5,7 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatPage } from "./ChatPage";
-import { useChatStore } from "./store";
+import { useChatHistoryStore } from "./history";
+import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -41,6 +42,16 @@ describe("ChatPage", () => {
     localStorage.clear();
     useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
+    // Reset the module-level history singleton (localStorage.clear() doesn't
+    // touch its in-memory state) and prime its current entry with stream:false
+    // so the ChatPage's mount-time restore effect doesn't override our intent.
+    useChatHistoryStore.getState().reset();
+    useChatHistoryStore.getState().save({
+      systemMessage: "",
+      messages: [],
+      params: { ...DEFAULT_CHAT_PARAMS, stream: false },
+      selectedConnectionId: null,
+    });
     vi.mocked(api.post).mockReset();
   });
 
@@ -153,5 +164,124 @@ describe("ChatPage", () => {
         { role: "user", content: "hi 2" },
       ]);
     });
+  });
+});
+
+describe("ChatPage streaming", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useConnectionsStore.setState({ connections: [] });
+    useChatStore.getState().reset();
+    useChatHistoryStore.getState().reset(); // NEW — same singleton-clear concern
+    vi.mocked(api.post).mockReset();
+  });
+
+  it("streams SSE tokens into the assistant message and the Stop button aborts", async () => {
+    seedChatConn();
+    // Mock playgroundFetchStream by hijacking fetch
+    const encoder = new TextEncoder();
+    let abortedByCaller = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+        const stream = new ReadableStream<Uint8Array>({
+          async start(c) {
+            c.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hel"}}]}\n\n'));
+            // Wait for caller abort
+            await new Promise<void>((resolve) => {
+              (init.signal as AbortSignal).addEventListener(
+                "abort",
+                () => {
+                  abortedByCaller = true;
+                  resolve();
+                },
+                { once: true },
+              );
+            });
+          },
+          cancel() {},
+        });
+        return Promise.resolve(new Response(stream, { status: 200 }));
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+    await user.type(screen.getByPlaceholderText(/type your message|输入消息/i), "hi");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+
+    await waitFor(() => expect(screen.getByText(/^hel$/)).toBeInTheDocument());
+
+    // Stop button visible while streaming
+    const stopBtn = await screen.findByRole("button", { name: /^stop$|^停止$/i });
+    await user.click(stopBtn);
+    await waitFor(() => expect(abortedByCaller).toBe(true));
+    vi.unstubAllGlobals();
+  });
+
+  it("multi-turn after abort: turn 2 includes turn-1 user + partial assistant + turn-2 user", async () => {
+    seedChatConn();
+    const calls: Array<{ messages: Array<{ role: string; content: string }> }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string) as {
+          messages: Array<{ role: string; content: string }>;
+        };
+        calls.push(body);
+        const enc = new TextEncoder();
+        const sig = init.signal as AbortSignal;
+        const stream = new ReadableStream<Uint8Array>({
+          async start(c) {
+            c.enqueue(
+              enc.encode(`data: {"choices":[{"delta":{"content":"R${calls.length}"}}]}\n\n`),
+            );
+            await new Promise<void>((resolve) =>
+              sig.addEventListener("abort", () => resolve(), { once: true }),
+            );
+          },
+        });
+        return Promise.resolve(new Response(stream, { status: 200 }));
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+
+    // Turn 1
+    const input = screen.getByPlaceholderText(/type your message|输入消息/i);
+    await user.type(input, "hi 1");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+    await waitFor(() => expect(screen.getByText(/^R1$/)).toBeInTheDocument());
+    await user.click(await screen.findByRole("button", { name: /^stop$|^停止$/i }));
+
+    // Turn 2 — should send [user-hi-1, assistant-R1, user-hi-2]
+    // After abort, streaming flips false; the Stop button is replaced by Send.
+    // (Send remains disabled until we type, since !draft.trim() disables it.)
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^stop$|^停止$/i })).not.toBeInTheDocument(),
+    );
+    await user.type(input, "hi 2");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+
+    await waitFor(() => expect(calls.length).toBe(2));
+    expect(calls[1].messages).toEqual([
+      { role: "user", content: "hi 1" },
+      { role: "assistant", content: "R1" },
+      { role: "user", content: "hi 2" },
+    ]);
+    vi.unstubAllGlobals();
   });
 });

@@ -1,0 +1,163 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`genChatSnippets > renders curl/python/node with placeholder API key (snapshot) 1`] = `
+"curl -X POST http://upstream.test/v1/chat/completions \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m1",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "temperature": 0.5,
+  "max_tokens": 100
+}'"
+`;
+
+exports[`genChatSnippets > renders curl/python/node with placeholder API key (snapshot) 2`] = `
+"from openai import OpenAI
+
+client = OpenAI(base_url="http://upstream.test", api_key="<YOUR_API_KEY>")
+resp = client.chat.completions.create(
+    model="m1",
+    messages=[{"role":"user","content":"hi"}],
+    temperature=0.5,
+    max_tokens=100,
+)
+print(resp.choices[0].message.content)"
+`;
+
+exports[`genChatSnippets > renders curl/python/node with placeholder API key (snapshot) 3`] = `
+"import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "http://upstream.test",
+  apiKey: "<YOUR_API_KEY>",
+});
+const resp = await client.chat.completions.create({
+  "model": "m1",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "temperature": 0.5,
+  "max_tokens": 100
+});
+console.log(resp.choices[0].message.content);"
+`;
+
+exports[`genEmbeddingsSnippets > renders single + array input (snapshot) 1`] = `
+"curl -X POST http://x/v1/embeddings \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m",
+  "input": "hello"
+}'"
+`;
+
+exports[`genEmbeddingsSnippets > renders single + array input (snapshot) 2`] = `
+"from openai import OpenAI
+
+client = OpenAI(base_url="http://x", api_key="<YOUR_API_KEY>")
+resp = client.embeddings.create(model="m", input=["a","b"])
+print(len(resp.data[0].embedding))"
+`;
+
+exports[`genImagesSnippets > renders prompt + size + n (snapshot) 1`] = `
+"curl -X POST http://x/v1/images/generations \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m",
+  "prompt": "a red apple",
+  "size": "512x512",
+  "n": 1
+}'"
+`;
+
+exports[`genImagesSnippets > renders prompt + size + n (snapshot) 2`] = `
+"from openai import OpenAI
+
+client = OpenAI(base_url="http://x", api_key="<YOUR_API_KEY>")
+resp = client.images.generate(
+    model="m",
+    prompt="a red apple",
+    size="512x512",
+    n=1,
+)
+print(resp.data[0].url or resp.data[0].b64_json[:32])"
+`;
+
+exports[`genRerankSnippets > renders cohere wire (snapshot) 1`] = `
+"curl -X POST http://x/v1/rerank \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m",
+  "query": "q",
+  "documents": [
+    "a",
+    "b"
+  ],
+  "top_n": 2
+}'"
+`;
+
+exports[`genRerankSnippets > renders cohere wire (snapshot) 2`] = `
+"import requests, json
+
+resp = requests.post(
+    "http://x/v1/rerank",
+    headers={"Authorization": "Bearer <YOUR_API_KEY>", "Content-Type": "application/json"},
+    data=json.dumps({
+  "model": "m",
+  "query": "q",
+  "documents": [
+    "a",
+    "b"
+  ],
+  "top_n": 2
+}),
+)
+print(resp.json())"
+`;
+
+exports[`genRerankSnippets > renders cohere wire (snapshot) 3`] = `
+"const resp = await fetch("http://x/v1/rerank", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer <YOUR_API_KEY>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+  "model": "m",
+  "query": "q",
+  "documents": [
+    "a",
+    "b"
+  ],
+  "top_n": 2
+}),
+});
+console.log(await resp.json());"
+`;
+
+exports[`genRerankSnippets > renders tei wire (snapshot) 1`] = `
+"curl -X POST http://x/rerank \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m",
+  "query": "q",
+  "texts": [
+    "a",
+    "b"
+  ]
+}'"
+`;

@@ -16,12 +16,14 @@ describe("useChatStore", () => {
   });
 
   it("initializes params with OpenAI-default values for the 5 sliderable fields", () => {
+    // stream:true added in Phase 2 — streaming is now the default playground UX
     expect(useChatStore.getState().params).toEqual({
       temperature: 1,
       maxTokens: 1024,
       topP: 1,
       frequencyPenalty: 0,
       presencePenalty: 0,
+      stream: true,
     });
   });
 
@@ -61,5 +63,43 @@ describe("useChatStore", () => {
     expect(useChatStore.getState().selectedConnectionId).toBeNull();
     expect(useChatStore.getState().messages).toEqual([]);
     expect(useChatStore.getState().systemMessage).toBe("");
+  });
+});
+
+describe("ChatStore — streaming additions", () => {
+  beforeEach(() => useChatStore.getState().reset());
+
+  it("appendAssistantToken creates a new assistant message if last is not assistant", () => {
+    useChatStore.getState().appendMessage({ role: "user", content: "hi" });
+    useChatStore.getState().appendAssistantToken("hel");
+    expect(useChatStore.getState().messages.at(-1)).toEqual({
+      role: "assistant",
+      content: "hel",
+    });
+  });
+
+  it("appendAssistantToken extends the last assistant message", () => {
+    useChatStore.getState().appendAssistantToken("hel");
+    useChatStore.getState().appendAssistantToken("lo");
+    expect(useChatStore.getState().messages).toEqual([{ role: "assistant", content: "hello" }]);
+  });
+
+  it("setStreaming + setAbortController track stream lifecycle", () => {
+    const ac = new AbortController();
+    useChatStore.getState().setStreaming(true);
+    useChatStore.getState().setAbortController(ac);
+    expect(useChatStore.getState().streaming).toBe(true);
+    expect(useChatStore.getState().abortController).toBe(ac);
+    useChatStore.getState().setStreaming(false);
+    useChatStore.getState().setAbortController(null);
+    expect(useChatStore.getState().abortController).toBeNull();
+  });
+
+  it("reset clears streaming + abortController", () => {
+    useChatStore.getState().setStreaming(true);
+    useChatStore.getState().setAbortController(new AbortController());
+    useChatStore.getState().reset();
+    expect(useChatStore.getState().streaming).toBe(false);
+    expect(useChatStore.getState().abortController).toBeNull();
   });
 });

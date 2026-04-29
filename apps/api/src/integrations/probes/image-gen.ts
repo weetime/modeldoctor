@@ -6,6 +6,7 @@
  *
  * Either url or b64_json is sufficient (depends on response_format).
  */
+import { buildHeaders, buildUrl } from "../openai-client/index.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 
 interface ImageGenResponse {
@@ -19,8 +20,15 @@ export async function runImageGenProbe({
   extraHeaders = {},
   pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
-  const path = pathOverride ?? "/v1/images/generations";
-  const targetUrl = `${apiBaseUrl}${path}`;
+  const targetUrl = buildUrl({
+    apiBaseUrl,
+    defaultPath: "/v1/images/generations",
+    pathOverride,
+  });
+  const headers = {
+    ...buildHeaders(apiKey, undefined),
+    ...extraHeaders,
+  };
   const body = {
     model,
     prompt: "A small red apple on a white background.",
@@ -31,11 +39,7 @@ export async function runImageGenProbe({
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...extraHeaders,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const latencyMs = Date.now() - t0;

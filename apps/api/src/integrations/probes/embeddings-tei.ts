@@ -5,6 +5,7 @@
  * Body: { inputs: ["..."] }
  * Response: number[][] (one embedding vector per input).
  */
+import { buildHeaders, buildUrl } from "../openai-client/index.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 
 export async function runEmbeddingsTEIProbe({
@@ -14,18 +15,21 @@ export async function runEmbeddingsTEIProbe({
   extraHeaders = {},
   pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
-  const path = pathOverride ?? "/embed";
-  const targetUrl = `${apiBaseUrl}${path}`;
+  const targetUrl = buildUrl({
+    apiBaseUrl,
+    defaultPath: "/embed",
+    pathOverride,
+  });
+  const headers = {
+    ...buildHeaders(apiKey, undefined),
+    ...extraHeaders,
+  };
   const body = { inputs: ["Embed this short test sentence."] };
 
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...extraHeaders,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const latencyMs = Date.now() - t0;

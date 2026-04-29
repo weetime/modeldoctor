@@ -5,6 +5,7 @@
  * Body: { query, texts: [...], model? }
  * Response: [{ index, score }] sorted by score desc.
  */
+import { buildHeaders, buildUrl } from "../openai-client/index.js";
 import type { ProbeCtx, ProbeResult } from "./index.js";
 
 const TEST_QUERY = "What is the fastest mammal?";
@@ -21,18 +22,21 @@ export async function runRerankTEIProbe({
   extraHeaders = {},
   pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
-  const path = pathOverride ?? "/rerank";
-  const targetUrl = `${apiBaseUrl}${path}`;
+  const targetUrl = buildUrl({
+    apiBaseUrl,
+    defaultPath: "/rerank",
+    pathOverride,
+  });
+  const headers = {
+    ...buildHeaders(apiKey, undefined),
+    ...extraHeaders,
+  };
   const body = { model, query: TEST_QUERY, texts: TEST_TEXTS };
 
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...extraHeaders,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const latencyMs = Date.now() - t0;

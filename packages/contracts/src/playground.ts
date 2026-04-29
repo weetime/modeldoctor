@@ -77,3 +77,89 @@ export const PlaygroundChatResponseSchema = z.object({
     .optional(),
 });
 export type PlaygroundChatResponse = z.infer<typeof PlaygroundChatResponseSchema>;
+
+// ─── Embeddings ───────────────────────────────────────────────────────────
+
+export const PlaygroundEmbeddingsRequestSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  pathOverride: z.string().optional(),
+  input: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+  encodingFormat: z.enum(["float", "base64"]).optional(),
+  dimensions: z.number().int().positive().optional(),
+});
+export type PlaygroundEmbeddingsRequest = z.infer<typeof PlaygroundEmbeddingsRequestSchema>;
+
+export const PlaygroundEmbeddingsResponseSchema = z.object({
+  success: z.boolean(),
+  embeddings: z.array(z.array(z.number())).optional(),
+  error: z.string().optional(),
+  latencyMs: z.number(),
+  usage: z
+    .object({
+      prompt_tokens: z.number().optional(),
+      total_tokens: z.number().optional(),
+    })
+    .optional(),
+});
+export type PlaygroundEmbeddingsResponse = z.infer<typeof PlaygroundEmbeddingsResponseSchema>;
+
+// ─── Rerank ──────────────────────────────────────────────────────────────
+
+export const PlaygroundRerankRequestSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  pathOverride: z.string().optional(),
+  query: z.string().min(1),
+  documents: z.array(z.string().min(1)).min(1),
+  topN: z.number().int().positive().optional(),
+  returnDocuments: z.boolean().optional(),
+  wire: z.enum(["cohere", "tei"]).default("cohere"),
+});
+export type PlaygroundRerankRequest = z.infer<typeof PlaygroundRerankRequestSchema>;
+
+export const PlaygroundRerankResponseSchema = z.object({
+  success: z.boolean(),
+  results: z.array(z.object({ index: z.number().int(), score: z.number() })).optional(),
+  error: z.string().optional(),
+  latencyMs: z.number(),
+});
+export type PlaygroundRerankResponse = z.infer<typeof PlaygroundRerankResponseSchema>;
+
+// ─── Images ──────────────────────────────────────────────────────────────
+
+export const PlaygroundImagesRequestSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  pathOverride: z.string().optional(),
+  prompt: z.string().min(1),
+  size: z.string().optional(),
+  n: z.number().int().positive().optional(),
+  responseFormat: z.enum(["url", "b64_json"]).optional(),
+  seed: z.number().int().optional(),
+});
+export type PlaygroundImagesRequest = z.infer<typeof PlaygroundImagesRequestSchema>;
+
+export const PlaygroundImagesResponseSchema = z.object({
+  success: z.boolean(),
+  artifacts: z
+    .array(
+      z.object({
+        url: z.string().optional(),
+        b64Json: z.string().optional(),
+      }),
+    )
+    .optional(),
+  error: z.string().optional(),
+  latencyMs: z.number(),
+});
+export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSchema>;

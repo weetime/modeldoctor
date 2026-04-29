@@ -1,72 +1,38 @@
 import type { PlaygroundChatRequest, PlaygroundChatResponse } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
+import {
+  buildHeaders,
+  buildPlaygroundChatBody,
+  buildUrl,
+  parsePlaygroundChatResponse,
+} from "../../integrations/openai-client/index.js";
 
 const DEFAULT_PATH = "/v1/chat/completions";
 const MAX_ERROR_BODY_BYTES = 1024;
 
-function parseHeaderLines(s: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!s || !s.trim()) return out;
-  for (const rawLine of s.split("\n").map((l) => l.trim())) {
-    if (!rawLine || !rawLine.includes(":")) continue;
-    const idx = rawLine.indexOf(":");
-    out[rawLine.slice(0, idx).trim()] = rawLine.slice(idx + 1).trim();
-  }
-  return out;
-}
-
-function parseQueryLines(s: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!s || !s.trim()) return out;
-  for (const rawLine of s.split("\n").map((l) => l.trim())) {
-    if (!rawLine || !rawLine.includes("=")) continue;
-    const idx = rawLine.indexOf("=");
-    out[rawLine.slice(0, idx).trim()] = rawLine.slice(idx + 1).trim();
-  }
-  return out;
-}
-
-function buildBody(req: PlaygroundChatRequest): Record<string, unknown> {
-  const p = req.params ?? {};
-  const body: Record<string, unknown> = {
-    model: req.model,
-    messages: req.messages,
-  };
-  if (p.temperature !== undefined) body.temperature = p.temperature;
-  if (p.maxTokens !== undefined) body.max_tokens = p.maxTokens;
-  if (p.topP !== undefined) body.top_p = p.topP;
-  if (p.frequencyPenalty !== undefined) body.frequency_penalty = p.frequencyPenalty;
-  if (p.presencePenalty !== undefined) body.presence_penalty = p.presencePenalty;
-  if (p.seed !== undefined) body.seed = p.seed;
-  if (p.stop !== undefined) body.stop = p.stop;
-  // Phase 1: stream is ignored (always non-streaming).
-  return body;
-}
-
 @Injectable()
 export class ChatService {
   async run(req: PlaygroundChatRequest): Promise<PlaygroundChatResponse> {
-    const base = req.apiBaseUrl.replace(/\/+$/, "");
-    const path = (req.pathOverride ?? DEFAULT_PATH).replace(/^(?!\/)/, "/");
-    let url = base + path;
-    const qp = parseQueryLines(req.queryParams);
-    const qpKeys = Object.keys(qp);
-    if (qpKeys.length > 0) {
-      const search = new URLSearchParams();
-      for (const k of qpKeys) search.set(k, qp[k]);
-      url += (url.includes("?") ? "&" : "?") + search.toString();
-    }
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${req.apiKey}`,
-      ...parseHeaderLines(req.customHeaders),
-    };
+    const url = buildUrl({
+      apiBaseUrl: req.apiBaseUrl,
+      defaultPath: DEFAULT_PATH,
+      pathOverride: req.pathOverride,
+      queryParams: req.queryParams,
+    });
+    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    // Phase 1 contract: stream is ignored for this non-streaming path.
+    const params = { ...req.params, stream: undefined };
+    const body = buildPlaygroundChatBody({
+      model: req.model,
+      messages: req.messages,
+      params,
+    });
     const start = Date.now();
     try {
       const res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify(buildBody(req)),
+        body: JSON.stringify(body),
       });
       const latencyMs = Date.now() - start;
       if (!res.ok) {
@@ -77,16 +43,13 @@ export class ChatService {
           latencyMs,
         };
       }
-      const json = (await res.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-      };
-      const content = json.choices?.[0]?.message?.content ?? "";
+      const json = await res.json();
+      const parsed = parsePlaygroundChatResponse(json);
       return {
         success: true,
-        content,
+        content: parsed.content,
         latencyMs,
-        usage: json.usage,
+        usage: parsed.usage,
       };
     } catch (e) {
       return {
@@ -95,5 +58,41 @@ export class ChatService {
         latencyMs: Date.now() - start,
       };
     }
+  }
+
+  async runStream(
+    req: PlaygroundChatRequest,
+  ): Promise<
+    { kind: "ok"; upstream: Response } | { kind: "error"; status: number; error: string }
+  > {
+    const url = buildUrl({
+      apiBaseUrl: req.apiBaseUrl,
+      defaultPath: DEFAULT_PATH,
+      pathOverride: req.pathOverride,
+      queryParams: req.queryParams,
+    });
+    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const body = buildPlaygroundChatBody({
+      model: req.model,
+      messages: req.messages,
+      params: { ...req.params, stream: true },
+    });
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => "");
+      return {
+        kind: "error",
+        status: upstream.status,
+        error: `upstream ${upstream.status}: ${text || upstream.statusText}`.slice(
+          0,
+          MAX_ERROR_BODY_BYTES,
+        ),
+      };
+    }
+    return { kind: "ok", upstream };
   }
 }

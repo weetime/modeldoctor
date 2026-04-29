@@ -11,7 +11,9 @@
     "categoryFilter": "分类过滤",
     "showAll": "显示全部",
     "categoryMismatch": "当前连接是 {{category}} 类，与本页不符",
+    "categoryMismatchHint": "{{category}} 类与本页不符（仍可选用）",
     "clearSelection": "清除",
+    "pickConnection": "选择一个 {{category}} 连接",
     "noMatchingConnections": "暂无 {{category}} 类连接",
     "newConnection": "+ 新建连接"
   },
@@ -26,6 +28,7 @@
       "placeholder": "输入消息…",
       "send": "发送",
       "sending": "发送中…",
+      "stop": "停止",
       "needConnection": "请先选择一个对话类连接"
     },
     "messages": {
@@ -43,14 +46,90 @@
       "presencePenalty": "Presence Penalty",
       "seed": "Seed",
       "stop": "停止序列",
-      "stream": "流式 (Phase 2)"
+      "stream": "流式"
     },
     "errors": {
       "send": "发送失败：{{message}}"
     }
   },
+  "history": {
+    "title": "历史",
+    "newSession": "+ 新会话",
+    "empty": "暂无历史",
+    "untitled": "(空)",
+    "delete": "删除这条记录",
+    "restoreTitle": "恢复会话",
+    "restoreConfirm": "用这条记录覆盖当前会话？",
+    "restoreAction": "恢复",
+    "cancel": "取消",
+    "turnsPrefix": "{{count}} 轮",
+    "turnsPrefixPlural": "{{count}} 轮"
+  },
   "comingSoon": {
     "title": "Phase {{phase}} 推出",
     "body": "本模态在 Playground 路线图中，但还没实现。"
+  },
+  "viewCode": {
+    "title": "查看代码",
+    "copy": "复制",
+    "copied": "已复制",
+    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>"
+  },
+  "embeddings": {
+    "title": "嵌入",
+    "subtitle": "生成嵌入向量并在 2D 中可视化。",
+    "addInput": "+ 添加输入",
+    "clear": "清空",
+    "batchMode": "批量输入",
+    "batchPlaceholder": "每行一条输入。",
+    "send": "发送",
+    "sending": "发送中…",
+    "tabs": { "chart": "图表", "json": "JSON" },
+    "chart": {
+      "title": "PCA 散点",
+      "minThree": "≥ 3 条输入才能可视化。",
+      "empty": "提交输入后这里会显示 2D PCA 散点图。"
+    },
+    "params": {
+      "title": "嵌入参数",
+      "encodingFormat": "编码格式",
+      "dimensions": "维度"
+    }
+  },
+  "image": {
+    "title": "图像",
+    "subtitle": "根据文本提示生成图像。",
+    "promptPlaceholder": "描述要生成的图像…",
+    "previewEmpty": "生成的图片将出现在这里。",
+    "send": "生成",
+    "sending": "生成中…",
+    "random": "随机提示",
+    "params": {
+      "title": "图像参数",
+      "size": "尺寸",
+      "sizeCustom": "自定义",
+      "n": "数量",
+      "seed": "Seed",
+      "seedRandom": "(随机)",
+      "randomSeed": "每次请求随机 Seed"
+    }
+  },
+  "rerank": {
+    "title": "重排",
+    "subtitle": "针对查询对文档排序。",
+    "query": "查询",
+    "queryPlaceholder": "输入查询…",
+    "documents": "文档",
+    "addDoc": "+ 文档",
+    "batchMode": "批量输入",
+    "batchPlaceholder": "每行一条文档。",
+    "send": "发送",
+    "sending": "发送中…",
+    "params": {
+      "title": "重排参数",
+      "wire": "协议",
+      "topN": "Top N",
+      "returnDocuments": "返回文档"
+    }
   }
 }

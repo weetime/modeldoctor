@@ -10,17 +10,17 @@ import { ErrorPage } from "@/features/error/ErrorPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
+import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
+import { ImagePage } from "@/features/playground/image/ImagePage";
+import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import {
   type Activity,
-  Boxes,
   GitCompare,
   HeartPulse,
   History as HistoryIcon,
-  Image as ImageIcon,
-  ListOrdered,
   Mic,
   Timer,
   Zap,
@@ -81,22 +81,13 @@ export const routes: RouteObject[] = [
           { path: "settings", element: <SettingsPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
-          {
-            path: "playground/image",
-            element: <ComingSoonRoute icon={ImageIcon} itemKey="playgroundImage" />,
-          },
+          { path: "playground/image", element: <ImagePage /> },
           {
             path: "playground/audio",
             element: <ComingSoonRoute icon={Mic} itemKey="playgroundAudio" />,
           },
-          {
-            path: "playground/embeddings",
-            element: <ComingSoonRoute icon={Boxes} itemKey="playgroundEmbeddings" />,
-          },
-          {
-            path: "playground/rerank",
-            element: <ComingSoonRoute icon={ListOrdered} itemKey="playgroundRerank" />,
-          },
+          { path: "playground/embeddings", element: <EmbeddingsPage /> },
+          { path: "playground/rerank", element: <RerankPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },
