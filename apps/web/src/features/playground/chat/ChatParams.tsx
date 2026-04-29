@@ -93,17 +93,14 @@ export function ChatParams({ value, onChange }: ChatParamsProps) {
         <Label className="text-xs text-muted-foreground">{t("chat.params.stop")}</Label>
         <Input
           value={value.stop?.join(",") ?? ""}
-          onChange={(e) =>
-            onChange({
-              stop: e.target.value
-                ? e.target.value
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : undefined,
-            })
-          }
-          placeholder=","
+          onChange={(e) => {
+            const parts = e.target.value
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            onChange({ stop: parts.length > 0 ? parts : undefined });
+          }}
+          placeholder="stop1, stop2"
           className="h-8 text-xs"
         />
       </div>

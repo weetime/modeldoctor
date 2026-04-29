@@ -20,7 +20,8 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
   return (
     <div className="flex flex-col gap-3 px-6 py-4">
       {messages.map((m, idx) => (
-        <div key={`${idx}-${m.role}`} className="rounded-md border border-border bg-card p-3">
+        // biome-ignore lint/suspicious/noArrayIndexKey: append-only Phase 1; stable id is a Phase 2 concern
+        <div key={idx} className="rounded-md border border-border bg-card p-3">
           <div className="mb-1 text-xs font-semibold text-muted-foreground">
             {t(`chat.messages.${m.role}`)}
           </div>

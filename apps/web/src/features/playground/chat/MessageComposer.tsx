@@ -68,6 +68,9 @@ export function MessageComposer({
           {sending ? t("chat.composer.sending") : t("chat.composer.send")}
         </Button>
       </div>
+      {disabled && disabledReason ? (
+        <output className="mt-1 block text-[11px] text-muted-foreground">{disabledReason}</output>
+      ) : null}
     </div>
   );
 }
