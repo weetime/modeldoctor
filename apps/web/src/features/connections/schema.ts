@@ -13,16 +13,15 @@ export const connectionInputSchema = z.object({
   queryParams: z.string(),
   category: ModalityCategorySchema,
   tags: z
-    .array(z.string())
+    .array(z.string().trim())
     .default([])
     .transform((arr) => {
       const seen = new Set<string>();
       const out: string[] = [];
       for (const t of arr) {
-        const trimmed = t.trim();
-        if (!trimmed || seen.has(trimmed)) continue;
-        seen.add(trimmed);
-        out.push(trimmed);
+        if (!t || seen.has(t)) continue;
+        seen.add(t);
+        out.push(t);
       }
       return out;
     }),
