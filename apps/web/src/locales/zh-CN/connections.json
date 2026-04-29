@@ -82,5 +82,11 @@
     "title": "尚未创建任何连接",
     "body": "点击「新建连接」开始。",
     "create": "新建连接"
+  },
+  "filters": {
+    "label": "筛选",
+    "allCategories": "全部分类",
+    "allTags": "全部标签",
+    "clear": "清除筛选"
   }
 }

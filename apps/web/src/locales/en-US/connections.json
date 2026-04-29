@@ -82,5 +82,11 @@
     "title": "No connections yet",
     "body": "Click New connection to add one.",
     "create": "New connection"
+  },
+  "filters": {
+    "label": "Filter",
+    "allCategories": "All categories",
+    "allTags": "All tags",
+    "clear": "Clear filters"
   }
 }

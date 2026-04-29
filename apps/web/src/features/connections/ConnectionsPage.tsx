@@ -10,7 +10,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
+import type { ModalityCategory } from "@modeldoctor/contracts";
 import { format } from "date-fns";
 import { Database, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -34,6 +43,17 @@ export function ConnectionsPage() {
   const list = useConnectionsStore((s) => s.list());
   const removeConn = useConnectionsStore((s) => s.remove);
   const exportAll = useConnectionsStore((s) => s.exportAll);
+
+  const [filterCategory, setFilterCategory] = useState<ModalityCategory | "all">("all");
+  const [filterTag, setFilterTag] = useState<string | "all">("all");
+
+  const allTags = Array.from(new Set(list.flatMap((c) => c.tags))).sort();
+
+  const filtered = list.filter((c) => {
+    if (filterCategory !== "all" && c.category !== filterCategory) return false;
+    if (filterTag !== "all" && !c.tags.includes(filterTag)) return false;
+    return true;
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Connection | undefined>(undefined);
@@ -95,6 +115,32 @@ export function ConnectionsPage() {
             }
           />
         ) : (
+          <>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t("filters.label")}:</span>
+            <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as ModalityCategory | "all")}>
+              <SelectTrigger className="h-8 w-40 text-xs" aria-label={t("dialog.fields.category")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filters.allCategories")}</SelectItem>
+                {(["chat", "audio", "embeddings", "rerank", "image"] as ModalityCategory[]).map((c) => (
+                  <SelectItem key={c} value={c}>{t(`dialog.categoryOptions.${c}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterTag} onValueChange={setFilterTag}>
+              <SelectTrigger className="h-8 w-40 text-xs" aria-label={t("dialog.fields.tags")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filters.allTags")}</SelectItem>
+                {allTags.map((tag) => (
+                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="rounded-lg border border-border bg-card">
             <Table>
               <TableHeader>
@@ -102,17 +148,33 @@ export function ConnectionsPage() {
                   <TableHead>{t("table.name")}</TableHead>
                   <TableHead>{t("table.apiBaseUrl")}</TableHead>
                   <TableHead>{t("table.model")}</TableHead>
+                  <TableHead>{t("table.category")}</TableHead>
+                  <TableHead>{t("table.tags")}</TableHead>
                   <TableHead>{t("table.customHeaders")}</TableHead>
                   <TableHead>{t("table.createdAt")}</TableHead>
                   <TableHead className="w-[120px] text-right">{t("table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.map((c) => (
+                {filtered.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="font-mono text-xs">{c.apiBaseUrl}</TableCell>
                     <TableCell className="font-mono text-xs">{c.model}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {t(`dialog.categoryOptions.${c.category}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {c.tags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {c.customHeaders ? `${c.customHeaders.split("\n")[0]}…` : "—"}
                     </TableCell>
@@ -145,6 +207,7 @@ export function ConnectionsPage() {
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </div>
 
