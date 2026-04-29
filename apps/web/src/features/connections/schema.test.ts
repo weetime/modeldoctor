@@ -9,6 +9,7 @@ describe("connectionInputSchema", () => {
     model: "qwen-2.5-7b",
     customHeaders: "",
     queryParams: "",
+    category: "chat" as const,
   };
 
   it("accepts a valid input", () => {
@@ -45,5 +46,40 @@ describe("connectionInputSchema", () => {
     });
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.name).toBe("staging");
+  });
+});
+
+describe("connectionInputSchema (category + tags)", () => {
+  const baseInput = {
+    name: "n",
+    apiBaseUrl: "http://x",
+    apiKey: "k",
+    model: "m",
+    customHeaders: "",
+    queryParams: "",
+  };
+
+  it("requires a category", () => {
+    expect(() => connectionInputSchema.parse({ ...baseInput, tags: [] })).toThrow();
+  });
+
+  it("rejects an unknown category", () => {
+    expect(() =>
+      connectionInputSchema.parse({ ...baseInput, category: "video", tags: [] }),
+    ).toThrow();
+  });
+
+  it("trims and dedupes tags", () => {
+    const out = connectionInputSchema.parse({
+      ...baseInput,
+      category: "chat",
+      tags: ["  vLLM  ", "vLLM", "production", ""],
+    });
+    expect(out.tags).toEqual(["vLLM", "production"]);
+  });
+
+  it("defaults tags to an empty array when omitted", () => {
+    const out = connectionInputSchema.parse({ ...baseInput, category: "chat" });
+    expect(out.tags).toEqual([]);
   });
 });

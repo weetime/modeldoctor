@@ -1,3 +1,5 @@
+import type { ModalityCategory } from "@modeldoctor/contracts";
+
 export interface Connection {
   id: string;
   name: string;
@@ -6,6 +8,8 @@ export interface Connection {
   model: string;
   customHeaders: string;
   queryParams: string;
+  category: ModalityCategory;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +29,6 @@ export const emptyEndpointValues: EndpointValues = {
 };
 
 export interface ConnectionsExport {
-  version: 1;
+  version: 2;
   connections: Connection[];
 }
