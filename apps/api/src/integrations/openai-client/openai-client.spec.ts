@@ -262,3 +262,62 @@ describe("wires/images", () => {
     ]);
   });
 });
+
+import { pipeUpstreamSseToResponse } from "./sse.js";
+
+describe("pipeUpstreamSseToResponse", () => {
+  it("copies upstream chunks to res.write and ends res", async () => {
+    // Build a minimal Web ReadableStream from text chunks
+    const encoder = new TextEncoder();
+    const upstream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(encoder.encode("data: hello\n\n"));
+        c.enqueue(encoder.encode("data: world\n\n"));
+        c.close();
+      },
+    });
+    const written: string[] = [];
+    let ended = false;
+    const res = {
+      write: (chunk: Uint8Array) => {
+        written.push(new TextDecoder().decode(chunk));
+        return true;
+      },
+      end: () => {
+        ended = true;
+      },
+      on: () => {},
+    } as unknown as import("express").Response;
+    const ac = new AbortController();
+    await pipeUpstreamSseToResponse(upstream, res, ac);
+    expect(written.join("")).toBe("data: hello\n\ndata: world\n\n");
+    expect(ended).toBe(true);
+  });
+
+  it("aborts upstream when res emits 'close' before drain", async () => {
+    let aborted = false;
+    const upstream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("data: 1\n\n"));
+        // do not close — wait for cancel
+      },
+      cancel() {
+        aborted = true;
+      },
+    });
+    const handlers: Record<string, () => void> = {};
+    const res = {
+      write: () => true,
+      end: () => {},
+      on: (ev: string, cb: () => void) => {
+        handlers[ev] = cb;
+      },
+    } as unknown as import("express").Response;
+    const ac = new AbortController();
+    const p = pipeUpstreamSseToResponse(upstream, res, ac);
+    handlers.close?.();
+    await p;
+    expect(aborted).toBe(true);
+    expect(ac.signal.aborted).toBe(true);
+  });
+});
