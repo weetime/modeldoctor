@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import type { ChatParams as ChatParamsType } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 
@@ -39,49 +40,100 @@ function NumField({
   );
 }
 
+function SliderField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  defaultDisplayValue,
+}: {
+  label: string;
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  min: number;
+  max: number;
+  step: number;
+  defaultDisplayValue: number;
+}) {
+  const sliderValue = value ?? defaultDisplayValue;
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        <Input
+          type="number"
+          step={step}
+          min={min}
+          max={max}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+          className="h-7 w-20 text-xs"
+        />
+      </div>
+      <Slider
+        value={[sliderValue]}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={(v) => onChange(v[0])}
+        className="mt-2"
+        aria-label={label}
+      />
+    </div>
+  );
+}
+
 export function ChatParams({ value, onChange }: ChatParamsProps) {
   const { t } = useTranslation("playground");
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold">{t("chat.params.title")}</h3>
-      <NumField
+      <SliderField
         label={t("chat.params.temperature")}
         value={value.temperature}
         onChange={(v) => onChange({ temperature: v })}
-        step={0.1}
         min={0}
         max={2}
+        step={0.1}
+        defaultDisplayValue={1}
       />
-      <NumField
+      <SliderField
         label={t("chat.params.maxTokens")}
         value={value.maxTokens}
         onChange={(v) => onChange({ maxTokens: v })}
-        step={1}
         min={1}
+        max={8192}
+        step={1}
+        defaultDisplayValue={1024}
       />
-      <NumField
+      <SliderField
         label={t("chat.params.topP")}
         value={value.topP}
         onChange={(v) => onChange({ topP: v })}
-        step={0.05}
         min={0}
         max={1}
+        step={0.05}
+        defaultDisplayValue={1}
       />
-      <NumField
+      <SliderField
         label={t("chat.params.frequencyPenalty")}
         value={value.frequencyPenalty}
         onChange={(v) => onChange({ frequencyPenalty: v })}
-        step={0.1}
         min={-2}
         max={2}
+        step={0.1}
+        defaultDisplayValue={0}
       />
-      <NumField
+      <SliderField
         label={t("chat.params.presencePenalty")}
         value={value.presencePenalty}
         onChange={(v) => onChange({ presencePenalty: v })}
-        step={0.1}
         min={-2}
         max={2}
+        step={0.1}
+        defaultDisplayValue={0}
       />
       <NumField
         label={t("chat.params.seed")}
