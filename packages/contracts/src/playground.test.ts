@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  type ChatMessage,
   ChatMessageSchema,
-  type PlaygroundChatRequest,
   PlaygroundChatRequestSchema,
-  type PlaygroundChatResponse,
   PlaygroundChatResponseSchema,
   PlaygroundEmbeddingsRequestSchema,
   PlaygroundEmbeddingsResponseSchema,
