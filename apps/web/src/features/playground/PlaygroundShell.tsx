@@ -28,7 +28,7 @@ export function PlaygroundShell({
   const [panelOpen, setPanelOpen] = useState(rightPanelDefaultOpen);
 
   return (
-    <div className="flex h-[calc(100vh-0px)] min-h-0 flex-col">
+    <div className="flex h-screen min-h-0 flex-col">
       <header className="flex items-center justify-between border-b border-border px-6 py-3">
         <div className="flex items-center gap-1">
           {tabs?.map((tab) => (
