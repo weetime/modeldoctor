@@ -5,7 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatPage } from "./ChatPage";
-import { useChatStore } from "./store";
+import { useChatHistoryStore } from "./history";
+import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -41,8 +42,16 @@ describe("ChatPage", () => {
     localStorage.clear();
     useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
-    // Opt out of streaming for these tests (DEFAULT_CHAT_PARAMS.stream is now true).
-    useChatStore.getState().patchParams({ stream: false });
+    // Reset the module-level history singleton (localStorage.clear() doesn't
+    // touch its in-memory state) and prime its current entry with stream:false
+    // so the ChatPage's mount-time restore effect doesn't override our intent.
+    useChatHistoryStore.getState().reset();
+    useChatHistoryStore.getState().save({
+      systemMessage: "",
+      messages: [],
+      params: { ...DEFAULT_CHAT_PARAMS, stream: false },
+      selectedConnectionId: null,
+    });
     vi.mocked(api.post).mockReset();
   });
 
@@ -163,6 +172,7 @@ describe("ChatPage streaming", () => {
     localStorage.clear();
     useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
+    useChatHistoryStore.getState().reset(); // NEW — same singleton-clear concern
     vi.mocked(api.post).mockReset();
   });
 

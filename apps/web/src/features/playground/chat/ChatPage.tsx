@@ -7,13 +7,17 @@ import type {
   PlaygroundChatRequest,
   PlaygroundChatResponse,
 } from "@modeldoctor/contracts";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { genChatSnippets } from "../code-snippets/chat";
+import { HistoryDrawer } from "../history/HistoryDrawer";
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
+import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
 export function ChatPage() {
@@ -25,6 +29,50 @@ export function ChatPage() {
 
   const canSend = !!conn;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
+
+  const restoreSnap = (snap: ChatHistorySnapshot) => {
+    // Replace store state with the restored snapshot
+    const s = useChatStore.getState();
+    s.reset();
+    s.setSystemMessage(snap.systemMessage);
+    s.patchParams(snap.params);
+    s.setSelected(snap.selectedConnectionId);
+    for (const m of snap.messages) s.appendMessage(m);
+  };
+
+  const historyCurrentId = useChatHistoryStore((h) => h.currentId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only sync on currentId change, not on snapshot
+  useEffect(() => {
+    // When current history entry changes (e.g. newSession or restore),
+    // sync chat-store from the new snapshot.
+    const snap = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
+    if (snap) restoreSnap(snap.snapshot);
+  }, [historyCurrentId]);
+
+  // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
+  useEffect(() => {
+    useChatHistoryStore.getState().scheduleAutoSave({
+      systemMessage: slice.systemMessage,
+      messages: slice.messages,
+      params: slice.params,
+      selectedConnectionId: slice.selectedConnectionId,
+    });
+  }, [slice.systemMessage, slice.messages, slice.params, slice.selectedConnectionId]);
+
+  const snippets =
+    conn != null
+      ? genChatSnippets({
+          apiBaseUrl: conn.apiBaseUrl,
+          model: conn.model,
+          messages: [
+            ...(slice.systemMessage.trim()
+              ? [{ role: "system" as const, content: slice.systemMessage.trim() }]
+              : []),
+            ...slice.messages,
+          ],
+          params: slice.params,
+        })
+      : null;
 
   const onSend = async (text: string) => {
     // Read everything fresh from the store to avoid stale-closure bugs.
@@ -124,6 +172,8 @@ export function ChatPage() {
   return (
     <PlaygroundShell
       category="chat"
+      viewCodeSnippets={snippets}
+      historySlot={<HistoryDrawer useHistoryStore={useChatHistoryStore} />}
       paramsSlot={
         <div className="space-y-4">
           <CategoryEndpointSelector
