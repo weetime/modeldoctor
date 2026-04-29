@@ -12,6 +12,8 @@ import { create } from "zustand";
  * OpenAI-compatible server this is a no-op (server would have used the
  * same default if the field were absent), but it makes the wire payload
  * slightly larger and is observable in the network tab.
+ *
+ * Phase 2: stream defaults to true — streaming is the default playground UX.
  */
 export const DEFAULT_CHAT_PARAMS: ChatParams = {
   temperature: 1,
@@ -19,6 +21,7 @@ export const DEFAULT_CHAT_PARAMS: ChatParams = {
   topP: 1,
   frequencyPenalty: 0,
   presencePenalty: 0,
+  stream: true,
 };
 
 export interface ChatStoreState {
@@ -27,13 +30,18 @@ export interface ChatStoreState {
   messages: ChatMessage[];
   params: ChatParams;
   sending: boolean;
+  streaming: boolean;
+  abortController: AbortController | null;
   error: string | null;
   setSelected: (id: string | null) => void;
   setSystemMessage: (s: string) => void;
   appendMessage: (m: ChatMessage) => void;
+  appendAssistantToken: (s: string) => void;
   clearMessages: () => void;
   patchParams: (p: Partial<ChatParams>) => void;
   setSending: (b: boolean) => void;
+  setStreaming: (b: boolean) => void;
+  setAbortController: (ac: AbortController | null) => void;
   setError: (s: string | null) => void;
   reset: () => void;
 }
@@ -44,6 +52,8 @@ const initial = {
   messages: [] as ChatMessage[],
   params: { ...DEFAULT_CHAT_PARAMS },
   sending: false,
+  streaming: false,
+  abortController: null as AbortController | null,
   error: null as string | null,
 };
 
@@ -52,9 +62,22 @@ export const useChatStore = create<ChatStoreState>((set) => ({
   setSelected: (id) => set({ selectedConnectionId: id }),
   setSystemMessage: (s) => set({ systemMessage: s }),
   appendMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
+  appendAssistantToken: (token) =>
+    set((s) => {
+      const last = s.messages.at(-1);
+      if (last && last.role === "assistant" && typeof last.content === "string") {
+        const updated: ChatMessage = { ...last, content: last.content + token };
+        return { messages: [...s.messages.slice(0, -1), updated] };
+      }
+      return {
+        messages: [...s.messages, { role: "assistant", content: token }],
+      };
+    }),
   clearMessages: () => set({ messages: [] }),
   patchParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
   setSending: (b) => set({ sending: b }),
+  setStreaming: (b) => set({ streaming: b }),
+  setAbortController: (ac) => set({ abortController: ac }),
   setError: (e) => set({ error: e }),
   reset: () => set({ ...initial }),
 }));
