@@ -15,6 +15,16 @@ describe("useChatStore", () => {
     expect(s.sending).toBe(false);
   });
 
+  it("initializes params with OpenAI-default values for the 5 sliderable fields", () => {
+    expect(useChatStore.getState().params).toEqual({
+      temperature: 1,
+      maxTokens: 1024,
+      topP: 1,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+    });
+  });
+
   it("appendMessage adds to the end", () => {
     const m: ChatMessage = { role: "user", content: "hi" };
     useChatStore.getState().appendMessage(m);
@@ -29,7 +39,10 @@ describe("useChatStore", () => {
   it("patchParams merges with existing params", () => {
     useChatStore.getState().patchParams({ temperature: 0.5 });
     useChatStore.getState().patchParams({ maxTokens: 100 });
-    expect(useChatStore.getState().params).toEqual({ temperature: 0.5, maxTokens: 100 });
+    expect(useChatStore.getState().params).toMatchObject({
+      temperature: 0.5,
+      maxTokens: 100,
+    });
   });
 
   it("clearMessages keeps system message but drops messages", () => {
