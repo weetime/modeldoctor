@@ -113,4 +113,45 @@ describe("ChatPage", () => {
       expect(screen.getByText(/upstream 500: boom/)).toBeInTheDocument();
     });
   });
+
+  it("multi-turn: turn 2 sends [user-1, assistant-1, user-2] without duplicates", async () => {
+    // Turn 1: success returns "reply-1"
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ success: true, content: "reply-1", latencyMs: 1 })
+      .mockResolvedValueOnce({ success: true, content: "reply-2", latencyMs: 1 });
+
+    seedChatConn();
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
+
+    // Pick connection
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+
+    // Turn 1
+    const input = screen.getByPlaceholderText(/type your message|输入消息/i);
+    await user.type(input, "hi 1");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+    await waitFor(() => expect(screen.getByText("reply-1")).toBeInTheDocument());
+
+    // Turn 2
+    await user.type(input, "hi 2");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+
+    await waitFor(() => {
+      // Confirm second call's payload has 3 messages, no duplicates
+      const secondCall = vi.mocked(api.post).mock.calls[1];
+      expect(secondCall[0]).toBe("/api/playground/chat");
+      const body = secondCall[1] as { messages: Array<{ role: string; content: string }> };
+      expect(body.messages).toEqual([
+        { role: "user", content: "hi 1" },
+        { role: "assistant", content: "reply-1" },
+        { role: "user", content: "hi 2" },
+      ]);
+    });
+  });
 });
