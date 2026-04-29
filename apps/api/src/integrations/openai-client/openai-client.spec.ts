@@ -84,3 +84,181 @@ describe("buildUrl", () => {
     expect(url).toBe("http://x/p?a=1&b=2");
   });
 });
+
+import { buildPlaygroundChatBody, parsePlaygroundChatResponse } from "./wires/chat.js";
+import { buildEmbeddingsBody, parseEmbeddingsResponse } from "./wires/embeddings.js";
+import { buildImagesBody, parseImagesResponse } from "./wires/images.js";
+import { buildRerankBody, parseRerankResponse } from "./wires/rerank.js";
+
+describe("wires/chat", () => {
+  const messages = [{ role: "user" as const, content: "hi" }];
+
+  it("buildPlaygroundChatBody returns OpenAI shape with snake_case mapping", () => {
+    const body = buildPlaygroundChatBody({
+      model: "m",
+      messages,
+      params: {
+        temperature: 0.5,
+        maxTokens: 100,
+        topP: 0.9,
+        frequencyPenalty: 0.1,
+        presencePenalty: 0.2,
+        seed: 7,
+        stop: ["</s>"],
+        stream: true,
+      },
+    });
+    expect(body).toEqual({
+      model: "m",
+      messages,
+      temperature: 0.5,
+      max_tokens: 100,
+      top_p: 0.9,
+      frequency_penalty: 0.1,
+      presence_penalty: 0.2,
+      seed: 7,
+      stop: ["</s>"],
+      stream: true,
+    });
+  });
+
+  it("buildPlaygroundChatBody omits undefined params", () => {
+    const body = buildPlaygroundChatBody({ model: "m", messages, params: {} });
+    expect(body).toEqual({ model: "m", messages });
+  });
+
+  it("parsePlaygroundChatResponse returns content + usage", () => {
+    expect(
+      parsePlaygroundChatResponse({
+        choices: [{ message: { content: "hello" } }],
+        usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 },
+      }),
+    ).toEqual({
+      content: "hello",
+      usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 },
+    });
+  });
+
+  it("parsePlaygroundChatResponse defaults content to empty string", () => {
+    expect(parsePlaygroundChatResponse({})).toEqual({ content: "", usage: undefined });
+  });
+});
+
+describe("wires/embeddings", () => {
+  it("buildEmbeddingsBody supports single + array input", () => {
+    expect(buildEmbeddingsBody({ model: "m", input: "one" })).toEqual({
+      model: "m",
+      input: "one",
+    });
+    expect(buildEmbeddingsBody({ model: "m", input: ["a", "b"] })).toEqual({
+      model: "m",
+      input: ["a", "b"],
+    });
+  });
+
+  it("buildEmbeddingsBody adds optional encoding_format and dimensions", () => {
+    expect(
+      buildEmbeddingsBody({
+        model: "m",
+        input: "x",
+        encodingFormat: "base64",
+        dimensions: 256,
+      }),
+    ).toEqual({ model: "m", input: "x", encoding_format: "base64", dimensions: 256 });
+  });
+
+  it("parseEmbeddingsResponse returns array of vectors + usage", () => {
+    expect(
+      parseEmbeddingsResponse({
+        data: [{ embedding: [0.1, 0.2] }, { embedding: [0.3, 0.4] }],
+        usage: { prompt_tokens: 5, total_tokens: 5 },
+      }),
+    ).toEqual({
+      embeddings: [
+        [0.1, 0.2],
+        [0.3, 0.4],
+      ],
+      usage: { prompt_tokens: 5, total_tokens: 5 },
+    });
+  });
+});
+
+describe("wires/rerank", () => {
+  it("buildRerankBody emits cohere shape by default (documents + top_n)", () => {
+    expect(
+      buildRerankBody({
+        model: "m",
+        query: "q",
+        documents: ["a", "b"],
+        topN: 3,
+        returnDocuments: true,
+        wire: "cohere",
+      }),
+    ).toEqual({ model: "m", query: "q", documents: ["a", "b"], top_n: 3, return_documents: true });
+  });
+
+  it("buildRerankBody emits tei shape when wire=tei (texts, no top_n)", () => {
+    expect(buildRerankBody({ model: "m", query: "q", documents: ["a", "b"], wire: "tei" })).toEqual(
+      { model: "m", query: "q", texts: ["a", "b"] },
+    );
+  });
+
+  it("parseRerankResponse handles cohere {results: [{index, relevance_score}]}", () => {
+    expect(
+      parseRerankResponse({
+        results: [
+          { index: 1, relevance_score: 0.9 },
+          { index: 0, relevance_score: 0.4 },
+        ],
+      }),
+    ).toEqual([
+      { index: 1, score: 0.9 },
+      { index: 0, score: 0.4 },
+    ]);
+  });
+
+  it("parseRerankResponse handles tei top-level [{index, score}]", () => {
+    expect(
+      parseRerankResponse([
+        { index: 0, score: 0.8 },
+        { index: 1, score: 0.2 },
+      ]),
+    ).toEqual([
+      { index: 0, score: 0.8 },
+      { index: 1, score: 0.2 },
+    ]);
+  });
+});
+
+describe("wires/images", () => {
+  it("buildImagesBody includes optional size / n / response_format / seed", () => {
+    expect(
+      buildImagesBody({
+        model: "m",
+        prompt: "p",
+        size: "512x512",
+        n: 2,
+        responseFormat: "b64_json",
+        seed: 42,
+      }),
+    ).toEqual({
+      model: "m",
+      prompt: "p",
+      size: "512x512",
+      n: 2,
+      response_format: "b64_json",
+      seed: 42,
+    });
+  });
+
+  it("parseImagesResponse returns artifacts array preserving url and b64_json", () => {
+    expect(
+      parseImagesResponse({
+        data: [{ url: "http://i/0" }, { b64_json: "AAA" }],
+      }),
+    ).toEqual([
+      { url: "http://i/0", b64Json: undefined },
+      { url: undefined, b64Json: "AAA" },
+    ]);
+  });
+});
