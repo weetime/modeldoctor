@@ -49,6 +49,8 @@ export function RerankPage() {
   const canSubmit = !!conn && slice.query.trim().length > 0 && docs.length > 0 && !slice.loading;
 
   const currentId = useRerankHistoryStore((h) => h.currentId);
+  const restoreVersion = useRerankHistoryStore((h) => h.restoreVersion);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
     const entry = useRerankHistoryStore.getState().list.find((e) => e.id === currentId);
     if (!entry) return;
@@ -65,7 +67,7 @@ export function RerankPage() {
       }
     }
     s.patchParams(entry.snapshot.params);
-  }, [currentId]);
+  }, [currentId, restoreVersion]);
 
   useEffect(() => {
     useRerankHistoryStore.getState().scheduleAutoSave({

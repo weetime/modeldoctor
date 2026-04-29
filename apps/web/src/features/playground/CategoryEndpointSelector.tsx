@@ -39,9 +39,10 @@ export function CategoryEndpointSelector({
       <Select value={selectedConnectionId ?? ""} onValueChange={(v) => onSelect(v || null)}>
         <SelectTrigger className="w-full">
           <SelectValue
-            placeholder={t("endpoint.noMatchingConnections", {
-              category: tc(`dialog.categoryOptions.${category}`),
-            })}
+            placeholder={t(
+              visible.length === 0 ? "endpoint.noMatchingConnections" : "endpoint.pickConnection",
+              { category: tc(`dialog.categoryOptions.${category}`) },
+            )}
           />
         </SelectTrigger>
         <SelectContent>
@@ -52,15 +53,25 @@ export function CategoryEndpointSelector({
               })}
             </div>
           ) : (
-            visible.map((c) => (
-              <SelectItem
-                key={c.id}
-                value={c.id}
-                className={c.category !== category ? "opacity-60" : ""}
-              >
-                {c.name}
-              </SelectItem>
-            ))
+            visible.map((c) => {
+              const mismatch = c.category !== category;
+              return (
+                <SelectItem
+                  key={c.id}
+                  value={c.id}
+                  className={mismatch ? "opacity-60" : ""}
+                  title={
+                    mismatch
+                      ? t("endpoint.categoryMismatchHint", {
+                          category: tc(`dialog.categoryOptions.${c.category}`),
+                        })
+                      : undefined
+                  }
+                >
+                  {c.name}
+                </SelectItem>
+              );
+            })
           )}
         </SelectContent>
       </Select>

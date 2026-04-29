@@ -1,7 +1,7 @@
 import "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { HistoryDrawer } from "./HistoryDrawer";
 import { createHistoryStore } from "./createHistoryStore";
 
@@ -38,17 +38,31 @@ describe("HistoryDrawer", () => {
     expect(useStore.getState().list).toHaveLength(2);
   });
 
-  it("clicking an old entry confirms then restores", async () => {
+  it("clicking an old entry opens AlertDialog; confirm restores into top", async () => {
     useStore.getState().save({ text: "first" });
     useStore.getState().newSession();
     useStore.getState().save({ text: "second" });
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<HistoryDrawer useHistoryStore={useStore} />);
     await user.click(screen.getByRole("button", { name: /history|历史/i }));
     await user.click(await screen.findByText("first"));
-    expect(confirmSpy).toHaveBeenCalled();
+    // AlertDialog appears with Restore + Cancel
+    const restoreBtn = await screen.findByRole("button", { name: /^restore$|^恢复$/i });
+    await user.click(restoreBtn);
     expect(useStore.getState().list[0].snapshot.text).toBe("first");
-    confirmSpy.mockRestore();
+  });
+
+  it("clicking an old entry's trash icon removes the entry without restoring", async () => {
+    useStore.getState().save({ text: "first" });
+    useStore.getState().newSession();
+    useStore.getState().save({ text: "second" });
+    const user = userEvent.setup();
+    render(<HistoryDrawer useHistoryStore={useStore} />);
+    await user.click(screen.getByRole("button", { name: /history|历史/i }));
+    const delBtn = await screen.findByRole("button", { name: /delete this entry|删除这条记录/i });
+    await user.click(delBtn);
+    // Old entry gone, current intact
+    expect(useStore.getState().list).toHaveLength(1);
+    expect(useStore.getState().list[0].snapshot.text).toBe("second");
   });
 });

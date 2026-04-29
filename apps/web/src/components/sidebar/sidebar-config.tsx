@@ -37,25 +37,14 @@ export const sidebarGroups: SidebarGroup[] = [
     labelKey: "groups.playground",
     items: [
       { to: "/playground/chat", icon: MessageSquare, labelKey: "items.playgroundChat" },
-      {
-        to: "/playground/image",
-        icon: ImageIcon,
-        labelKey: "items.playgroundImage",
-        comingSoon: true,
-      },
+      { to: "/playground/image", icon: ImageIcon, labelKey: "items.playgroundImage" },
       { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio", comingSoon: true },
       {
         to: "/playground/embeddings",
         icon: Boxes,
         labelKey: "items.playgroundEmbeddings",
-        comingSoon: true,
       },
-      {
-        to: "/playground/rerank",
-        icon: ListOrdered,
-        labelKey: "items.playgroundRerank",
-        comingSoon: true,
-      },
+      { to: "/playground/rerank", icon: ListOrdered, labelKey: "items.playgroundRerank" },
     ],
   },
   {

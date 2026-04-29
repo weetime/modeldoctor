@@ -49,6 +49,8 @@ export function EmbeddingsPage() {
 
   // History sync
   const historyCurrentId = useEmbeddingsHistoryStore((h) => h.currentId);
+  const historyRestoreVersion = useEmbeddingsHistoryStore((h) => h.restoreVersion);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
     const entry = useEmbeddingsHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
     if (!entry) return;
@@ -64,7 +66,7 @@ export function EmbeddingsPage() {
       }
     }
     s.patchParams(entry.snapshot.params);
-  }, [historyCurrentId]);
+  }, [historyCurrentId, historyRestoreVersion]);
 
   useEffect(() => {
     useEmbeddingsHistoryStore.getState().scheduleAutoSave({

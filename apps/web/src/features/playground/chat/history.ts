@@ -26,6 +26,9 @@ export const useChatHistoryStore = createHistoryStore<ChatHistorySnapshot>({
   preview: (s) => {
     const lastUser = [...s.messages].reverse().find((m) => m.role === "user");
     if (!lastUser) return "";
-    return typeof lastUser.content === "string" ? lastUser.content.slice(0, 80) : "[multimodal]";
+    const turns = s.messages.filter((m) => m.role === "user").length;
+    const text =
+      typeof lastUser.content === "string" ? lastUser.content.slice(0, 80) : "[multimodal]";
+    return turns > 1 ? `${turns} turns · ${text}` : text;
   },
 });

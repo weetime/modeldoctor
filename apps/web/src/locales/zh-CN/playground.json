@@ -11,7 +11,9 @@
     "categoryFilter": "分类过滤",
     "showAll": "显示全部",
     "categoryMismatch": "当前连接是 {{category}} 类，与本页不符",
+    "categoryMismatchHint": "{{category}} 类与本页不符（仍可选用）",
     "clearSelection": "清除",
+    "pickConnection": "选择一个 {{category}} 连接",
     "noMatchingConnections": "暂无 {{category}} 类连接",
     "newConnection": "+ 新建连接"
   },
@@ -44,7 +46,7 @@
       "presencePenalty": "Presence Penalty",
       "seed": "Seed",
       "stop": "停止序列",
-      "stream": "流式 (Phase 2)"
+      "stream": "流式"
     },
     "errors": {
       "send": "发送失败：{{message}}"
@@ -55,7 +57,13 @@
     "newSession": "+ 新会话",
     "empty": "暂无历史",
     "untitled": "(空)",
-    "restoreConfirm": "用这条记录覆盖当前会话？"
+    "delete": "删除这条记录",
+    "restoreTitle": "恢复会话",
+    "restoreConfirm": "用这条记录覆盖当前会话？",
+    "restoreAction": "恢复",
+    "cancel": "取消",
+    "turnsPrefix": "{{count}} 轮",
+    "turnsPrefixPlural": "{{count}} 轮"
   },
   "comingSoon": {
     "title": "Phase {{phase}} 推出",

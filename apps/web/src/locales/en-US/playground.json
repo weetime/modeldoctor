@@ -11,7 +11,9 @@
     "categoryFilter": "Category filter",
     "showAll": "Show all",
     "categoryMismatch": "Selected connection's category ({{category}}) doesn't match this page",
+    "categoryMismatchHint": "Category {{category}} doesn't match this page (you can still pick it)",
     "clearSelection": "Clear",
+    "pickConnection": "Pick a {{category}} connection",
     "noMatchingConnections": "No {{category}} connections yet",
     "newConnection": "+ New connection"
   },
@@ -44,7 +46,7 @@
       "presencePenalty": "Presence Penalty",
       "seed": "Seed",
       "stop": "Stop Sequence",
-      "stream": "Stream (Phase 2)"
+      "stream": "Streaming"
     },
     "errors": {
       "send": "Failed to send: {{message}}"
@@ -55,7 +57,13 @@
     "newSession": "+ New session",
     "empty": "No history",
     "untitled": "(empty)",
-    "restoreConfirm": "Overwrite the current session with this entry?"
+    "delete": "Delete this entry",
+    "restoreTitle": "Restore session",
+    "restoreConfirm": "Overwrite the current session with this entry?",
+    "restoreAction": "Restore",
+    "cancel": "Cancel",
+    "turnsPrefix": "{{count}} turn",
+    "turnsPrefixPlural": "{{count}} turns"
   },
   "comingSoon": {
     "title": "Coming in Phase {{phase}}",

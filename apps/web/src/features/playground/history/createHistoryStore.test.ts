@@ -100,4 +100,50 @@ describe("createHistoryStore", () => {
       vi.useRealTimers();
     }
   });
+
+  it("removeEntry deletes a non-current entry but is a no-op for current", () => {
+    const useStore = createHistoryStore<DummySnap>({
+      name: "md-test-history-remove",
+      blank: () => ({ text: "" }),
+      preview: (s) => s.text,
+    });
+    useStore.getState().save({ text: "first" });
+    useStore.getState().newSession();
+    useStore.getState().save({ text: "second" });
+    expect(useStore.getState().list).toHaveLength(2);
+
+    const oldId = useStore.getState().list[1].id;
+    useStore.getState().removeEntry(oldId);
+    expect(useStore.getState().list).toHaveLength(1);
+
+    // current is no-op
+    const currentId = useStore.getState().currentId;
+    useStore.getState().removeEntry(currentId);
+    expect(useStore.getState().list).toHaveLength(1);
+    expect(useStore.getState().currentId).toBe(currentId);
+  });
+
+  it("restoreVersion bumps on newSession and restore but not on save/autosave", () => {
+    const useStore = createHistoryStore<DummySnap>({
+      name: "md-test-history-7",
+      blank: () => ({ text: "" }),
+      preview: (s) => s.text,
+    });
+    const v0 = useStore.getState().restoreVersion;
+    expect(v0).toBe(0);
+
+    useStore.getState().save({ text: "x" });
+    expect(useStore.getState().restoreVersion).toBe(v0); // save does not bump
+
+    useStore.getState().newSession();
+    const v1 = useStore.getState().restoreVersion;
+    expect(v1).toBe(v0 + 1);
+
+    useStore.getState().save({ text: "y" });
+    expect(useStore.getState().restoreVersion).toBe(v1); // still no bump
+
+    const oldId = useStore.getState().list[1].id;
+    useStore.getState().restore(oldId);
+    expect(useStore.getState().restoreVersion).toBe(v1 + 1);
+  });
 });

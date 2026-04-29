@@ -34,12 +34,14 @@ describe("computePca2D", () => {
     expect(out).toHaveLength(1);
   });
 
-  it("runs ≤ 30 vectors × 1024 dims in under 100ms", () => {
+  it("runs ≤ 30 vectors × 1024 dims in under 250ms", () => {
+    // Empirical target is <50ms on idle hardware; allow 5× headroom for
+    // CI / shared-machine scheduling jitter.
     const vecs = Array.from({ length: 30 }, () =>
       Array.from({ length: 1024 }, () => Math.random()),
     );
     const t0 = performance.now();
     computePca2D(vecs);
-    expect(performance.now() - t0).toBeLessThan(100);
+    expect(performance.now() - t0).toBeLessThan(250);
   });
 });

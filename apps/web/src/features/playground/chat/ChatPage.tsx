@@ -41,13 +41,12 @@ export function ChatPage() {
   };
 
   const historyCurrentId = useChatHistoryStore((h) => h.currentId);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only sync on currentId change, not on snapshot
+  const historyRestoreVersion = useChatHistoryStore((h) => h.restoreVersion);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
-    // When current history entry changes (e.g. newSession or restore),
-    // sync chat-store from the new snapshot.
     const snap = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
     if (snap) restoreSnap(snap.snapshot);
-  }, [historyCurrentId]);
+  }, [historyCurrentId, historyRestoreVersion]);
 
   // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
   useEffect(() => {

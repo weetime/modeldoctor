@@ -145,7 +145,25 @@ export function ConnectionDialog({
           <DialogTitle>{connection ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
+        <form onSubmit={onSubmit} autoComplete="off" className="flex min-h-0 flex-1 flex-col gap-4">
+          {/* Honeypots: Chrome ignores autocomplete=off when a password field is present.
+              Hidden text + password inputs absorb the autofill before it reaches our real fields. */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            tabIndex={-1}
+            aria-hidden="true"
+            style={{ position: "absolute", opacity: 0, height: 0, width: 0, pointerEvents: "none" }}
+          />
+          <input
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            tabIndex={-1}
+            aria-hidden="true"
+            style={{ position: "absolute", opacity: 0, height: 0, width: 0, pointerEvents: "none" }}
+          />
           <div className="flex-1 space-y-4 overflow-y-auto pr-1">
             <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
               <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
@@ -230,7 +248,7 @@ export function ConnectionDialog({
               <div className="relative">
                 <Input
                   id="apiKey"
-                  autoComplete="off"
+                  autoComplete="new-password"
                   type={revealKey ? "text" : "password"}
                   placeholder={t("dialog.fields.apiKeyPlaceholder")}
                   {...form.register("apiKey")}

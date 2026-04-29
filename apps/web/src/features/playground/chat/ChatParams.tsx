@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import type { ChatParams as ChatParamsType } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 
@@ -156,7 +157,16 @@ export function ChatParams({ value, onChange }: ChatParamsProps) {
           className="h-8 text-xs"
         />
       </div>
-      <p className="text-[10px] italic text-muted-foreground">{t("chat.params.stream")}</p>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground" htmlFor="chat-stream-toggle">
+          {t("chat.params.stream")}
+        </Label>
+        <Switch
+          id="chat-stream-toggle"
+          checked={value.stream ?? true}
+          onCheckedChange={(b) => onChange({ stream: b })}
+        />
+      </div>
     </div>
   );
 }

@@ -42,6 +42,8 @@ export function ImagePage() {
 
   // History sync
   const currentId = useImageHistoryStore((h) => h.currentId);
+  const restoreVersion = useImageHistoryStore((h) => h.restoreVersion);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
     const entry = useImageHistoryStore.getState().list.find((e) => e.id === currentId);
     if (!entry) return;
@@ -50,7 +52,7 @@ export function ImagePage() {
     s.setSelected(entry.snapshot.selectedConnectionId);
     s.setPrompt(entry.snapshot.prompt);
     s.patchParams(entry.snapshot.params);
-  }, [currentId]);
+  }, [currentId, restoreVersion]);
 
   useEffect(() => {
     useImageHistoryStore.getState().scheduleAutoSave({
