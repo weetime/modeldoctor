@@ -50,6 +50,13 @@
       "send": "发送失败：{{message}}"
     }
   },
+  "history": {
+    "title": "历史",
+    "newSession": "+ 新会话",
+    "empty": "暂无历史",
+    "untitled": "(空)",
+    "restoreConfirm": "用这条记录覆盖当前会话？"
+  },
   "comingSoon": {
     "title": "Phase {{phase}} 推出",
     "body": "本模态在 Playground 路线图中，但还没实现。"

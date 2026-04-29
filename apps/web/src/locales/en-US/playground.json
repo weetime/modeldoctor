@@ -50,6 +50,13 @@
       "send": "Failed to send: {{message}}"
     }
   },
+  "history": {
+    "title": "History",
+    "newSession": "+ New session",
+    "empty": "No history",
+    "untitled": "(empty)",
+    "restoreConfirm": "Overwrite the current session with this entry?"
+  },
   "comingSoon": {
     "title": "Coming in Phase {{phase}}",
     "body": "This modality is part of the Playground roadmap but isn't built yet."
