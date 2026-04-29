@@ -59,4 +59,40 @@ export class ChatService {
       };
     }
   }
+
+  async runStream(
+    req: PlaygroundChatRequest,
+  ): Promise<
+    { kind: "ok"; upstream: Response } | { kind: "error"; status: number; error: string }
+  > {
+    const url = buildUrl({
+      apiBaseUrl: req.apiBaseUrl,
+      defaultPath: DEFAULT_PATH,
+      pathOverride: req.pathOverride,
+      queryParams: req.queryParams,
+    });
+    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const body = buildPlaygroundChatBody({
+      model: req.model,
+      messages: req.messages,
+      params: { ...req.params, stream: true },
+    });
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => "");
+      return {
+        kind: "error",
+        status: upstream.status,
+        error: `upstream ${upstream.status}: ${text || upstream.statusText}`.slice(
+          0,
+          MAX_ERROR_BODY_BYTES,
+        ),
+      };
+    }
+    return { kind: "ok", upstream };
+  }
 }

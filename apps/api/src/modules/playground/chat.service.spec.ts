@@ -170,3 +170,61 @@ describe("ChatService.run", () => {
     expect(url.split("?")[0]).toBe("http://x/v1/chat/completions");
   });
 });
+
+describe("ChatService.runStream", () => {
+  let svc: ChatService;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    svc = new ChatService();
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the upstream Response with stream body and stream:true in body", async () => {
+    const upstream = new Response(
+      new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new TextEncoder().encode("data: hi\n\n"));
+          c.close();
+        },
+      }),
+      { status: 200, headers: { "content-type": "text/event-stream" } },
+    );
+    fetchMock.mockResolvedValue(upstream);
+
+    const result = await svc.runStream({
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "m",
+      messages: [{ role: "user", content: "h" }],
+      params: { stream: true },
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.upstream).toBe(upstream);
+    }
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.stream).toBe(true);
+  });
+
+  it("returns kind=error with status when upstream non-2xx", async () => {
+    fetchMock.mockResolvedValue(new Response("nope", { status: 502 }));
+    const result = await svc.runStream({
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "m",
+      messages: [{ role: "user", content: "h" }],
+      params: { stream: true },
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.status).toBe(502);
+      expect(result.error).toMatch(/nope/);
+    }
+  });
+});
