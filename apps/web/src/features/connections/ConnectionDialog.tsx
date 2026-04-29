@@ -8,15 +8,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { Connection } from "@/types/connection";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import type { ModalityCategory } from "@modeldoctor/contracts";
+import { Eye, EyeOff, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { type ConnectionInput, connectionInputSchema } from "./schema";
@@ -34,14 +42,31 @@ interface ConnectionDialogProps {
   onSaved?: (c: Connection) => void;
 }
 
-const empty: ConnectionInput = {
+// Defaults for a fresh dialog. Intentionally Partial so `category` can be
+// unset — the user must pick one to satisfy the schema's required enum.
+const empty: Partial<ConnectionInput> = {
   name: "",
   apiBaseUrl: "",
   apiKey: "",
   model: "",
   customHeaders: "",
   queryParams: "",
+  tags: [],
 };
+
+const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
+const PRESET_TAGS = [
+  "vLLM",
+  "SGLang",
+  "TGI",
+  "Ollama",
+  "OpenAI",
+  "Anthropic",
+  "multimodal",
+  "streaming",
+  "production",
+  "test",
+];
 
 export function ConnectionDialog({
   open,
@@ -57,6 +82,7 @@ export function ConnectionDialog({
   const [revealKey, setRevealKey] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [curlInput, setCurlInput] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
 
   const form = useForm<ConnectionInput>({
     resolver: zodResolver(connectionInputSchema),
@@ -69,6 +95,7 @@ export function ConnectionDialog({
       setSubmitError(null);
       setRevealKey(false);
       setCurlInput("");
+      setTagDraft("");
     }
   }, [open, connection, initialValues, form]);
 
@@ -199,6 +226,104 @@ export function ConnectionDialog({
             {form.formState.errors.model ? (
               <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
             ) : null}
+          </div>
+
+          <div>
+            <Label htmlFor="category">{t("dialog.fields.category")}</Label>
+            <Controller
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger id="category" aria-label={t("dialog.fields.category")}>
+                    <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {t(`dialog.categoryOptions.${c}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.categoryHelp")}</p>
+            {form.formState.errors.category ? (
+              <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+            ) : null}
+          </div>
+
+          <div>
+            <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
+            <Controller
+              control={form.control}
+              name="tags"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                const tryAdd = (raw: string) => {
+                  const trimmed = raw.trim();
+                  if (!trimmed) return;
+                  if (current.includes(trimmed)) return;
+                  field.onChange([...current, trimmed]);
+                };
+                const remove = (tag: string) =>
+                  field.onChange(current.filter((t: string) => t !== tag));
+                const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
+                return (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {current.map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            aria-label={t("dialog.fields.tagsRemove", {
+                              tag,
+                              defaultValue: `Remove tag ${tag}`,
+                            })}
+                            onClick={() => remove(tag)}
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <Input
+                      id="tags"
+                      value={tagDraft}
+                      onChange={(e) => setTagDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          tryAdd(tagDraft);
+                          setTagDraft("");
+                        }
+                      }}
+                      placeholder={t("dialog.fields.tagsPlaceholder")}
+                    />
+                    {suggestions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {suggestions.slice(0, 8).map((s) => (
+                          <button
+                            type="button"
+                            key={s}
+                            onClick={() => tryAdd(s)}
+                            className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
+                          >
+                            + {s}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.tagsHelp")}</p>
           </div>
 
           <div>

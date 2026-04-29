@@ -7,7 +7,9 @@
     "model": "Model",
     "customHeaders": "Headers",
     "createdAt": "Created",
-    "actions": "Actions"
+    "actions": "Actions",
+    "category": "Category",
+    "tags": "Tags"
   },
   "dialog": {
     "createTitle": "New connection",
@@ -25,7 +27,21 @@
       "customHeaders": "Custom headers (one per line)",
       "customHeadersPlaceholder": "Header-Name: value",
       "queryParams": "Query parameters (one per line)",
-      "queryParamsPlaceholder": "key=value"
+      "queryParamsPlaceholder": "key=value",
+      "category": "Category",
+      "categoryHelp": "Used by the Playground to filter the connection picker.",
+      "categoryPlaceholder": "Select a category…",
+      "tags": "Tags",
+      "tagsPlaceholder": "Type and press Enter (e.g. vLLM, production)",
+      "tagsHelp": "Optional. Used for grouping and quick filtering.",
+      "tagsRemove": "Remove tag {{tag}}"
+    },
+    "categoryOptions": {
+      "chat": "Chat",
+      "audio": "Audio",
+      "embeddings": "Embeddings",
+      "rerank": "Rerank",
+      "image": "Image"
     },
     "errors": {
       "duplicateName": "A connection with this name already exists",

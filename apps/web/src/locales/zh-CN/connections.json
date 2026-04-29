@@ -7,7 +7,9 @@
     "model": "模型",
     "customHeaders": "自定义 Headers",
     "createdAt": "创建时间",
-    "actions": "操作"
+    "actions": "操作",
+    "category": "分类",
+    "tags": "标签"
   },
   "dialog": {
     "createTitle": "新建连接",
@@ -25,7 +27,21 @@
       "customHeaders": "自定义 Headers（每行一条）",
       "customHeadersPlaceholder": "Header-Name: value",
       "queryParams": "查询参数（每行一条）",
-      "queryParamsPlaceholder": "key=value"
+      "queryParamsPlaceholder": "key=value",
+      "category": "分类",
+      "categoryHelp": "Playground 用它来过滤连接下拉。",
+      "categoryPlaceholder": "请选择分类…",
+      "tags": "标签",
+      "tagsPlaceholder": "输入后按回车（如 vLLM、production）",
+      "tagsHelp": "可选。用于分组和快速筛选。",
+      "tagsRemove": "移除标签 {{tag}}"
+    },
+    "categoryOptions": {
+      "chat": "对话",
+      "audio": "语音",
+      "embeddings": "嵌入",
+      "rerank": "重排",
+      "image": "图像"
     },
     "errors": {
       "duplicateName": "已存在同名连接",
