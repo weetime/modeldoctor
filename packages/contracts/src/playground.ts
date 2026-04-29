@@ -16,6 +16,7 @@ export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
     input_audio: z.object({ data: z.string(), format: z.string() }),
   }),
 ]);
+export type ChatMessageContentPart = z.infer<typeof ChatMessageContentPartSchema>;
 
 export const ChatMessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
@@ -37,6 +38,14 @@ export const ChatParamsSchema = z
   .partial();
 export type ChatParams = z.infer<typeof ChatParamsSchema>;
 
+/**
+ * Phase 1 request to POST /api/playground/chat (non-streaming).
+ *
+ * Note: there's no separate `systemMessage` field — callers prepend
+ * `{ role: "system", content: ... }` to `messages` directly. This keeps
+ * the wire shape closer to OpenAI's native chat-completions API and
+ * removes a layer of frontend-side message-array rebuilding.
+ */
 export const PlaygroundChatRequestSchema = z.object({
   apiBaseUrl: z.string().min(1),
   apiKey: z.string().min(1),
