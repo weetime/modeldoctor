@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ModalityCategorySchema, type ModalityCategory } from "./modality.js";
+import { type ModalityCategory, ModalityCategorySchema } from "./modality.js";
 
 describe("ModalityCategorySchema", () => {
   it("accepts each of the 5 known categories", () => {
