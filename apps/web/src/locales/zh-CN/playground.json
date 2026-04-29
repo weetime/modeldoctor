@@ -66,5 +66,26 @@
     "copy": "复制",
     "copied": "已复制",
     "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>"
+  },
+  "embeddings": {
+    "title": "嵌入",
+    "subtitle": "生成嵌入向量并在 2D 中可视化。",
+    "addInput": "+ 添加输入",
+    "clear": "清空",
+    "batchMode": "批量输入",
+    "batchPlaceholder": "每行一条输入。",
+    "send": "发送",
+    "sending": "发送中…",
+    "tabs": { "chart": "图表", "json": "JSON" },
+    "chart": {
+      "title": "PCA 散点",
+      "minThree": "≥ 3 条输入才能可视化。",
+      "empty": "提交输入后这里会显示 2D PCA 散点图。"
+    },
+    "params": {
+      "title": "嵌入参数",
+      "encodingFormat": "编码格式",
+      "dimensions": "维度"
+    }
   }
 }

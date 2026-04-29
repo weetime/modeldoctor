@@ -66,5 +66,26 @@
     "copy": "Copy",
     "copied": "Copied",
     "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>"
+  },
+  "embeddings": {
+    "title": "Embeddings",
+    "subtitle": "Generate embedding vectors and visualise them in 2D.",
+    "addInput": "+ Add input",
+    "clear": "Clear",
+    "batchMode": "Batch input",
+    "batchPlaceholder": "One input per line.",
+    "send": "Send",
+    "sending": "Sending…",
+    "tabs": { "chart": "Chart", "json": "JSON" },
+    "chart": {
+      "title": "PCA scatter",
+      "minThree": "≥ 3 inputs required to visualise.",
+      "empty": "Submit inputs to see a 2D PCA scatter."
+    },
+    "params": {
+      "title": "Embedding Parameters",
+      "encodingFormat": "Encoding format",
+      "dimensions": "Dimensions"
+    }
   }
 }
