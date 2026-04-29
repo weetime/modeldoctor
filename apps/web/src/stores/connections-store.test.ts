@@ -8,6 +8,8 @@ const baseInput = {
   model: "m1",
   customHeaders: "",
   queryParams: "",
+  category: "chat" as const,
+  tags: [] as string[],
 };
 
 describe("connectionsStore", () => {
@@ -63,22 +65,24 @@ describe("connectionsStore", () => {
     useConnectionsStore.getState().create(baseInput);
     const json = useConnectionsStore.getState().exportAll();
     const parsed = JSON.parse(json);
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.connections).toHaveLength(1);
   });
 
   it("importAll merge preserves existing names and skips collisions", () => {
     useConnectionsStore.getState().create(baseInput);
     const incoming = JSON.stringify({
-      version: 1,
+      version: 2,
       connections: [
-        { ...baseInput, id: "ext-1", createdAt: "x", updatedAt: "x" },
+        { ...baseInput, id: "ext-1", createdAt: "x", updatedAt: "x", category: "chat", tags: [] },
         {
           ...baseInput,
           id: "ext-2",
           name: "new",
           createdAt: "x",
           updatedAt: "x",
+          category: "chat",
+          tags: [],
         },
       ],
     });
@@ -91,7 +95,7 @@ describe("connectionsStore", () => {
   it("importAll replace wipes existing", () => {
     useConnectionsStore.getState().create(baseInput);
     const incoming = JSON.stringify({
-      version: 1,
+      version: 2,
       connections: [
         {
           ...baseInput,
@@ -99,6 +103,8 @@ describe("connectionsStore", () => {
           name: "only",
           createdAt: "x",
           updatedAt: "x",
+          category: "chat",
+          tags: [],
         },
       ],
     });
@@ -116,8 +122,16 @@ describe("connectionsStore", () => {
     ).toThrow(/version/i);
   });
 
-  it("drops persisted v0 state on version mismatch", async () => {
-    // Pre-populate localStorage with an "old format" snapshot at version 0.
+  it("importAll rejects v1 envelopes (no longer supported)", () => {
+    expect(() =>
+      useConnectionsStore
+        .getState()
+        .importAll(JSON.stringify({ version: 1, connections: [] }), "merge"),
+    ).toThrow(/version/i);
+  });
+
+  it("drops persisted v1 state on version mismatch", async () => {
+    // Pre-populate localStorage with a v1 snapshot — must be discarded.
     localStorage.setItem(
       "modeldoctor-connections",
       JSON.stringify({
@@ -126,21 +140,21 @@ describe("connectionsStore", () => {
             {
               id: "c-old",
               name: "old",
-              apiUrl: "http://old.example.com/v1/chat/completions",
+              apiBaseUrl: "http://old.example.com",
               apiKey: "k",
               model: "m",
               customHeaders: "",
               queryParams: "",
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
+              // no category / no tags — v1 record
             },
           ],
         },
-        version: 0,
+        version: 1,
       }),
     );
 
-    // Re-import the store as a fresh module so zustand re-reads localStorage.
     vi.resetModules();
     const { useConnectionsStore: fresh } = await import("./connections-store");
     expect(fresh.getState().list()).toEqual([]);
