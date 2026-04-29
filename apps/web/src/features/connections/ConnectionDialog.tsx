@@ -55,6 +55,8 @@ const empty: Partial<ConnectionInput> = {
 };
 
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
+const MAX_SUGGESTION_CHIPS = 8;
+
 const PRESET_TAGS = [
   "vLLM",
   "SGLang",
@@ -230,6 +232,7 @@ export function ConnectionDialog({
 
           <div>
             <Label htmlFor="category">{t("dialog.fields.category")}</Label>
+            {/* onBlur not wired — RHF default mode is onSubmit; revisit if mode changes to onBlur/all */}
             <Controller
               control={form.control}
               name="category"
@@ -268,7 +271,7 @@ export function ConnectionDialog({
                   field.onChange([...current, trimmed]);
                 };
                 const remove = (tag: string) =>
-                  field.onChange(current.filter((t: string) => t !== tag));
+                  field.onChange(current.filter((item: string) => item !== tag));
                 const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
                 return (
                   <div className="space-y-2">
@@ -307,7 +310,7 @@ export function ConnectionDialog({
                     />
                     {suggestions.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {suggestions.slice(0, 8).map((s) => (
+                        {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
                           <button
                             type="button"
                             key={s}
