@@ -58,9 +58,9 @@ describe("buildUrl", () => {
   });
 
   it("normalises pathOverride lacking a leading slash", () => {
-    expect(
-      buildUrl({ apiBaseUrl: "http://x", defaultPath: "/d", pathOverride: "custom" }),
-    ).toBe("http://x/custom");
+    expect(buildUrl({ apiBaseUrl: "http://x", defaultPath: "/d", pathOverride: "custom" })).toBe(
+      "http://x/custom",
+    );
   });
 
   it("appends queryParams as URLSearchParams", () => {
