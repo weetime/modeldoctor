@@ -140,224 +140,230 @@ export function ConnectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
         <DialogHeader>
           <DialogTitle>{connection ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
-            <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-              {t("dialog.curl.import")}
-            </summary>
-            <div className="mt-2 space-y-2">
-              <Textarea
-                rows={5}
-                value={curlInput}
-                onChange={(e) => setCurlInput(e.target.value)}
-                placeholder={t("dialog.curl.placeholder")}
-                className="font-mono text-xs"
-              />
-              <Button type="button" size="sm" variant="outline" onClick={onParseCurl}>
-                {t("dialog.curl.parse")}
-              </Button>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+            <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                {t("dialog.curl.import")}
+              </summary>
+              <div className="mt-2 space-y-2">
+                <Textarea
+                  rows={5}
+                  value={curlInput}
+                  onChange={(e) => setCurlInput(e.target.value)}
+                  placeholder={t("dialog.curl.placeholder")}
+                  className="font-mono text-xs"
+                />
+                <Button type="button" size="sm" variant="outline" onClick={onParseCurl}>
+                  {t("dialog.curl.parse")}
+                </Button>
+              </div>
+            </details>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="name">{t("dialog.fields.name")}</Label>
+                <Input
+                  id="name"
+                  autoComplete="off"
+                  placeholder={t("dialog.fields.namePlaceholder")}
+                  {...form.register("name")}
+                />
+                {form.formState.errors.name ? (
+                  <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+                ) : null}
+              </div>
+
+              <div>
+                <Label htmlFor="category">{t("dialog.fields.category")}</Label>
+                {/* onBlur not wired — RHF default mode is onSubmit; revisit if mode changes to onBlur/all */}
+                <Controller
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                      <SelectTrigger id="category" aria-label={t("dialog.fields.category")}>
+                        <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {t(`dialog.categoryOptions.${c}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("dialog.fields.categoryHelp")}
+                </p>
+                {form.formState.errors.category ? (
+                  <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+                ) : null}
+              </div>
             </div>
-          </details>
 
-          <div>
-            <Label htmlFor="name">{t("dialog.fields.name")}</Label>
-            <Input
-              id="name"
-              autoComplete="off"
-              placeholder={t("dialog.fields.namePlaceholder")}
-              {...form.register("name")}
-            />
-            {form.formState.errors.name ? (
-              <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-            ) : null}
-          </div>
-
-          <div>
-            <Label htmlFor="apiBaseUrl">{t("dialog.fields.apiBaseUrl")}</Label>
-            <Input
-              id="apiBaseUrl"
-              autoComplete="off"
-              placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
-              {...form.register("apiBaseUrl")}
-            />
-            {form.formState.errors.apiBaseUrl ? (
-              <p className="mt-1 text-xs text-destructive">{t("dialog.errors.invalidUrl")}</p>
-            ) : null}
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("dialog.fields.apiBaseUrlHelp")}
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="apiKey">{t("dialog.fields.apiKey")}</Label>
-            <div className="relative">
+            <div>
+              <Label htmlFor="apiBaseUrl">{t("dialog.fields.apiBaseUrl")}</Label>
               <Input
-                id="apiKey"
+                id="apiBaseUrl"
                 autoComplete="off"
-                type={revealKey ? "text" : "password"}
-                placeholder={t("dialog.fields.apiKeyPlaceholder")}
-                {...form.register("apiKey")}
+                placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
+                {...form.register("apiBaseUrl")}
               />
-              <button
-                type="button"
-                onClick={() => setRevealKey((v) => !v)}
-                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                aria-label={revealKey ? "hide" : "show"}
-              >
-                {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+              {form.formState.errors.apiBaseUrl ? (
+                <p className="mt-1 text-xs text-destructive">{t("dialog.errors.invalidUrl")}</p>
+              ) : null}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("dialog.fields.apiBaseUrlHelp")}
+              </p>
             </div>
-            {form.formState.errors.apiKey ? (
-              <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-            ) : null}
-          </div>
 
-          <div>
-            <Label htmlFor="model">{t("dialog.fields.model")}</Label>
-            <Input
-              id="model"
-              autoComplete="off"
-              placeholder={t("dialog.fields.modelPlaceholder")}
-              {...form.register("model")}
-            />
-            {form.formState.errors.model ? (
-              <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-            ) : null}
-          </div>
+            <div>
+              <Label htmlFor="apiKey">{t("dialog.fields.apiKey")}</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  autoComplete="off"
+                  type={revealKey ? "text" : "password"}
+                  placeholder={t("dialog.fields.apiKeyPlaceholder")}
+                  {...form.register("apiKey")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRevealKey((v) => !v)}
+                  className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                  aria-label={revealKey ? "hide" : "show"}
+                >
+                  {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {form.formState.errors.apiKey ? (
+                <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+              ) : null}
+            </div>
 
-          <div>
-            <Label htmlFor="category">{t("dialog.fields.category")}</Label>
-            {/* onBlur not wired — RHF default mode is onSubmit; revisit if mode changes to onBlur/all */}
-            <Controller
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                  <SelectTrigger id="category" aria-label={t("dialog.fields.category")}>
-                    <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {t(`dialog.categoryOptions.${c}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.categoryHelp")}</p>
-            {form.formState.errors.category ? (
-              <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-            ) : null}
-          </div>
+            <div>
+              <Label htmlFor="model">{t("dialog.fields.model")}</Label>
+              <Input
+                id="model"
+                autoComplete="off"
+                placeholder={t("dialog.fields.modelPlaceholder")}
+                {...form.register("model")}
+              />
+              {form.formState.errors.model ? (
+                <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
+              ) : null}
+            </div>
 
-          <div>
-            <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
-            <Controller
-              control={form.control}
-              name="tags"
-              render={({ field }) => {
-                const current = field.value ?? [];
-                const tryAdd = (raw: string) => {
-                  const trimmed = raw.trim();
-                  if (!trimmed) return;
-                  if (current.includes(trimmed)) return;
-                  field.onChange([...current, trimmed]);
-                };
-                const remove = (tag: string) =>
-                  field.onChange(current.filter((item: string) => item !== tag));
-                const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
-                return (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {current.map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
-                        >
-                          {tag}
-                          <button
-                            type="button"
-                            aria-label={t("dialog.fields.tagsRemove", {
-                              tag,
-                              defaultValue: `Remove tag ${tag}`,
-                            })}
-                            onClick={() => remove(tag)}
-                          >
-                            <XIcon className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    <Input
-                      id="tags"
-                      value={tagDraft}
-                      onChange={(e) => setTagDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          tryAdd(tagDraft);
-                          setTagDraft("");
-                        }
-                      }}
-                      placeholder={t("dialog.fields.tagsPlaceholder")}
-                    />
-                    {suggestions.length > 0 ? (
+            <div>
+              <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
+              <Controller
+                control={form.control}
+                name="tags"
+                render={({ field }) => {
+                  const current = field.value ?? [];
+                  const tryAdd = (raw: string) => {
+                    const trimmed = raw.trim();
+                    if (!trimmed) return;
+                    if (current.includes(trimmed)) return;
+                    field.onChange([...current, trimmed]);
+                  };
+                  const remove = (tag: string) =>
+                    field.onChange(current.filter((item: string) => item !== tag));
+                  const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
+                  return (
+                    <div className="space-y-2">
                       <div className="flex flex-wrap gap-1">
-                        {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
-                          <button
-                            type="button"
-                            key={s}
-                            onClick={() => tryAdd(s)}
-                            className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
+                        {current.map((tag: string) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
                           >
-                            + {s}
-                          </button>
+                            {tag}
+                            <button
+                              type="button"
+                              aria-label={t("dialog.fields.tagsRemove", {
+                                tag,
+                                defaultValue: `Remove tag ${tag}`,
+                              })}
+                              onClick={() => remove(tag)}
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </span>
                         ))}
                       </div>
-                    ) : null}
-                  </div>
-                );
-              }}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.tagsHelp")}</p>
+                      <Input
+                        id="tags"
+                        value={tagDraft}
+                        onChange={(e) => setTagDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            tryAdd(tagDraft);
+                            setTagDraft("");
+                          }
+                        }}
+                        placeholder={t("dialog.fields.tagsPlaceholder")}
+                      />
+                      {suggestions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
+                            <button
+                              type="button"
+                              key={s}
+                              onClick={() => tryAdd(s)}
+                              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
+                            >
+                              + {s}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                }}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.tagsHelp")}</p>
+            </div>
+
+            <div>
+              <Label htmlFor="customHeaders">{t("dialog.fields.customHeaders")}</Label>
+              <Textarea
+                id="customHeaders"
+                rows={3}
+                placeholder={t("dialog.fields.customHeadersPlaceholder")}
+                {...form.register("customHeaders")}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="queryParams">{t("dialog.fields.queryParams")}</Label>
+              <Textarea
+                id="queryParams"
+                rows={2}
+                placeholder={t("dialog.fields.queryParamsPlaceholder")}
+                {...form.register("queryParams")}
+              />
+            </div>
+
+            {submitError ? (
+              <p className="text-sm text-destructive">
+                {submitError.toLowerCase().includes("exists")
+                  ? t("dialog.errors.duplicateName")
+                  : submitError}
+              </p>
+            ) : null}
           </div>
 
-          <div>
-            <Label htmlFor="customHeaders">{t("dialog.fields.customHeaders")}</Label>
-            <Textarea
-              id="customHeaders"
-              rows={3}
-              placeholder={t("dialog.fields.customHeadersPlaceholder")}
-              {...form.register("customHeaders")}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="queryParams">{t("dialog.fields.queryParams")}</Label>
-            <Textarea
-              id="queryParams"
-              rows={2}
-              placeholder={t("dialog.fields.queryParamsPlaceholder")}
-              {...form.register("queryParams")}
-            />
-          </div>
-
-          {submitError ? (
-            <p className="text-sm text-destructive">
-              {submitError.toLowerCase().includes("exists")
-                ? t("dialog.errors.duplicateName")
-                : submitError}
-            </p>
-          ) : null}
-
-          <DialogFooter>
+          <DialogFooter className="border-t border-border pt-3">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {tc("actions.cancel")}
             </Button>
