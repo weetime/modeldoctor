@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import "@/lib/i18n";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import "@/lib/i18n";
 import { E2ESmokePage } from "./E2ESmokePage";
 import { useE2EStore } from "./store";
 import type { E2ETestResponse } from "./types";
@@ -22,50 +22,55 @@ vi.mock("@/lib/api-client", () => {
 
 import { api } from "@/lib/api-client";
 
-describe("E2ESmokePage (happy path)", () => {
+/**
+ * The page renders one "Run" button per probe card AND a "Run Category"
+ * button below the grid. We disambiguate by always picking the LAST
+ * button matching the run regex — that's the run-category one. (Per-probe
+ * cards render before the action row in the JSX.)
+ */
+function getRunCategoryButton(): HTMLElement {
+  const all = screen.getAllByRole("button").filter((b) => /run|运行/i.test(b.textContent ?? ""));
+  if (all.length === 0) throw new Error("no run-category button found");
+  return all[all.length - 1] as HTMLElement;
+}
+
+describe("E2ESmokePage (default Chat category)", () => {
   beforeEach(() => {
     localStorage.clear();
     useE2EStore.getState().reset();
     vi.mocked(api.post).mockReset();
   });
 
-  it("Run All is disabled until endpoint fields are filled", async () => {
+  it("Run-category button is disabled until endpoint fields are filled", async () => {
     render(<E2ESmokePage />);
-    const runAll = screen.getByRole("button", { name: /run all/i });
-    expect(runAll).toBeDisabled();
+    const btn = getRunCategoryButton();
+    expect(btn).toBeDisabled();
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
 
-    expect(runAll).toBeEnabled();
+    expect(btn).toBeEnabled();
   });
 
-  it("Run All posts to /api/e2e-test and renders three Pass cards", async () => {
+  it("Run posts probes for the chat category and renders Pass cards", async () => {
     const response: E2ETestResponse = {
       success: true,
       results: [
         {
-          probe: "text",
+          probe: "chat-text",
           pass: true,
           latencyMs: 12,
           checks: [{ name: "HTTP status 200", pass: true, info: "200" }],
           details: { content: "OK-TEXT-123" },
         },
         {
-          probe: "image",
+          probe: "chat-vision",
           pass: true,
           latencyMs: 34,
           checks: [{ name: "Reply mentions 'cat'", pass: true }],
           details: { content: "Cat" },
-        },
-        {
-          probe: "audio",
-          pass: true,
-          latencyMs: 56,
-          checks: [{ name: "Valid WAV header", pass: true }],
-          details: { numChoices: 1 },
         },
       ],
     };
@@ -77,11 +82,11 @@ describe("E2ESmokePage (happy path)", () => {
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
 
-    await user.click(screen.getByRole("button", { name: /run all/i }));
+    await user.click(getRunCategoryButton());
 
     await waitFor(() => {
       const badges = screen.getAllByText(/^(pass|通过)$/i);
-      expect(badges).toHaveLength(3);
+      expect(badges).toHaveLength(2);
     });
 
     expect(api.post).toHaveBeenCalledWith(
@@ -90,7 +95,7 @@ describe("E2ESmokePage (happy path)", () => {
         apiBaseUrl: "http://host",
         apiKey: "sk-test",
         model: "test-model",
-        probes: ["text", "image", "audio"],
+        probes: ["chat-text", "chat-vision"],
       }),
     );
   });
@@ -99,27 +104,8 @@ describe("E2ESmokePage (happy path)", () => {
     vi.mocked(api.post).mockResolvedValue({
       success: true,
       results: [
-        {
-          probe: "text",
-          pass: false,
-          latencyMs: 10,
-          checks: [{ name: "HTTP status 200", pass: false, info: "500" }],
-          details: {},
-        },
-        {
-          probe: "image",
-          pass: false,
-          latencyMs: 10,
-          checks: [],
-          details: {},
-        },
-        {
-          probe: "audio",
-          pass: false,
-          latencyMs: 10,
-          checks: [],
-          details: {},
-        },
+        { probe: "chat-text", pass: false, latencyMs: 10, checks: [], details: {} },
+        { probe: "chat-vision", pass: false, latencyMs: 10, checks: [], details: {} },
       ],
     });
 
@@ -128,14 +114,34 @@ describe("E2ESmokePage (happy path)", () => {
     await user.type(screen.getByLabelText(/api base url/i), "http://host");
     await user.type(screen.getByLabelText(/api key/i), "sk-test");
     await user.type(screen.getByLabelText(/^model$/i), "test-model");
-    await user.click(screen.getByRole("button", { name: /run all/i }));
+
+    await user.click(getRunCategoryButton());
 
     await waitFor(() => {
       const fails = screen.getAllByText(/^(fail|失败)$/i);
-      expect(fails).toHaveLength(3);
+      expect(fails).toHaveLength(2);
     });
   });
-});
 
-// Silence: helper unused in this file but kept for when we expand
-void within;
+  it("path override only sent for probes the user customized", async () => {
+    vi.mocked(api.post).mockResolvedValue({ success: true, results: [] });
+    useE2EStore.getState().setPathOverride("chat-text", "/custom/chat");
+
+    const user = userEvent.setup();
+    render(<E2ESmokePage />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://host");
+    await user.type(screen.getByLabelText(/api key/i), "sk-test");
+    await user.type(screen.getByLabelText(/^model$/i), "test-model");
+
+    await user.click(getRunCategoryButton());
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/api/e2e-test",
+        expect.objectContaining({
+          pathOverride: { "chat-text": "/custom/chat" },
+        }),
+      ),
+    );
+  });
+});

@@ -1,5 +1,5 @@
 /**
- * Text→audio probe.
+ * Chat-audio-omni probe (text → text+audio).
  *
  * Ported verbatim from the legacy CJS probe (src/probes/audio.js).
  * Asserts the response contains a valid WAV payload in some choice.
@@ -20,11 +20,12 @@ interface ChatCompletionLike {
   choices?: AudioChoice[];
 }
 
-export async function runAudioProbe({
+export async function runChatAudioOmniProbe({
   apiBaseUrl,
   apiKey,
   model,
   extraHeaders = {},
+  pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
   const body = buildChatAudioBody({
     model,
@@ -32,7 +33,8 @@ export async function runAudioProbe({
     systemPrompt: "You are Qwen, a virtual human capable of generating text and speech.",
   });
 
-  const targetUrl = `${apiBaseUrl}/v1/chat/completions`;
+  const path = pathOverride ?? "/v1/chat/completions";
+  const targetUrl = `${apiBaseUrl}${path}`;
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",

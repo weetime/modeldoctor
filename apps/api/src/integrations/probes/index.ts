@@ -1,25 +1,37 @@
-import { runAudioProbe } from "./audio.js";
-import { runImageProbe } from "./image.js";
-/**
- * Probe dispatcher + shared types.
- *
- * Each probe takes a ProbeCtx, makes a real HTTP call to the upstream model,
- * and returns a ProbeResult whose `details` shape matches the FE contract at
- * apps/web/src/features/e2e-smoke/types.ts byte-for-byte.
- */
-import { runTextProbe } from "./text.js";
+import type { ProbeName } from "@modeldoctor/contracts";
+import { runASRProbe } from "./asr.js";
+import { runChatAudioOmniProbe } from "./chat-audio-omni.js";
+import { runChatTextProbe } from "./chat-text.js";
+import { runChatVisionProbe } from "./chat-vision.js";
+import { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
+import { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
+import { runImageGenProbe } from "./image-gen.js";
+import { runRerankCohereProbe } from "./rerank-cohere.js";
+import { runRerankTEIProbe } from "./rerank-tei.js";
+import { runTTSProbe } from "./tts.js";
 
-export { runTextProbe } from "./text.js";
-export { runImageProbe } from "./image.js";
-export { runAudioProbe } from "./audio.js";
-
-export type ProbeName = "text" | "image" | "audio";
+export { runChatTextProbe } from "./chat-text.js";
+export { runChatVisionProbe } from "./chat-vision.js";
+export { runChatAudioOmniProbe } from "./chat-audio-omni.js";
+export { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
+export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
+export { runRerankTEIProbe } from "./rerank-tei.js";
+export { runRerankCohereProbe } from "./rerank-cohere.js";
+export { runTTSProbe } from "./tts.js";
+export { runASRProbe } from "./asr.js";
+export { runImageGenProbe } from "./image-gen.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;
   apiKey: string;
   model: string;
   extraHeaders: Record<string, string>;
+  /**
+   * Optional path override (from the request's pathOverride[probeName]).
+   * If undefined, the probe falls back to its hardcoded OpenAI / TEI /
+   * Cohere default. Always starts with "/" — the probe prepends apiBaseUrl.
+   */
+  pathOverride?: string;
 }
 
 export interface ProbeCheck {
@@ -42,13 +54,25 @@ export interface ProbeResult {
     numChoices?: number;
     textReply?: string;
     error?: string;
+    embeddingDims?: number;
+    embeddingSample?: number[];
+    rerankResults?: { index: number; score: number }[];
+    imageGenUrl?: string;
+    imageGenB64?: string;
   };
 }
 
 export type Probe = (ctx: ProbeCtx) => Promise<ProbeResult>;
 
 export const PROBES: Record<ProbeName, Probe> = {
-  text: runTextProbe,
-  image: runImageProbe,
-  audio: runAudioProbe,
+  "chat-text": runChatTextProbe,
+  "chat-vision": runChatVisionProbe,
+  "chat-audio-omni": runChatAudioOmniProbe,
+  "embeddings-openai": runEmbeddingsOpenAIProbe,
+  "embeddings-tei": runEmbeddingsTEIProbe,
+  "rerank-tei": runRerankTEIProbe,
+  "rerank-cohere": runRerankCohereProbe,
+  tts: runTTSProbe,
+  asr: runASRProbe,
+  "image-gen": runImageGenProbe,
 };

@@ -1,5 +1,5 @@
 /**
- * Text-only probe.
+ * Chat-text probe.
  *
  * Ported verbatim from the legacy CJS probe (src/probes/text.js).
  * Sends a deterministic prompt and asserts the reply contains a marker.
@@ -23,11 +23,12 @@ interface ChatCompletionLike {
   model?: string;
 }
 
-export async function runTextProbe({
+export async function runChatTextProbe({
   apiBaseUrl,
   apiKey,
   model,
   extraHeaders = {},
+  pathOverride,
 }: ProbeCtx): Promise<ProbeResult> {
   const body = buildChatBody({
     model,
@@ -36,7 +37,8 @@ export async function runTextProbe({
     temperature: 0,
     stream: false,
   });
-  const targetUrl = `${apiBaseUrl}/v1/chat/completions`;
+  const path = pathOverride ?? "/v1/chat/completions";
+  const targetUrl = `${apiBaseUrl}${path}`;
   const t0 = Date.now();
   const res = await fetch(targetUrl, {
     method: "POST",
