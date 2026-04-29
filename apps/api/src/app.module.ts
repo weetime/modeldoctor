@@ -18,6 +18,7 @@ import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { LoadTestModule } from "./modules/load-test/load-test.module.js";
+import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
@@ -64,6 +65,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     DebugProxyModule,
     E2ETestModule,
     LoadTestModule,
+    PlaygroundModule,
     BenchmarkModule,
     ScheduleModule.forRoot(),
     UsersModule,
