@@ -87,5 +87,23 @@
       "encodingFormat": "Encoding format",
       "dimensions": "Dimensions"
     }
+  },
+  "image": {
+    "title": "Image",
+    "subtitle": "Generate images from a text prompt.",
+    "promptPlaceholder": "Describe the image…",
+    "previewEmpty": "Generated images will appear here.",
+    "send": "Generate",
+    "sending": "Generating…",
+    "random": "Random prompt",
+    "params": {
+      "title": "Image Parameters",
+      "size": "Size",
+      "sizeCustom": "Custom",
+      "n": "N",
+      "seed": "Seed",
+      "seedRandom": "(random)",
+      "randomSeed": "Random seed each request"
+    }
   }
 }

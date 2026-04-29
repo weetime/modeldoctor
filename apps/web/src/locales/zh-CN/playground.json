@@ -87,5 +87,23 @@
       "encodingFormat": "编码格式",
       "dimensions": "维度"
     }
+  },
+  "image": {
+    "title": "图像",
+    "subtitle": "根据文本提示生成图像。",
+    "promptPlaceholder": "描述要生成的图像…",
+    "previewEmpty": "生成的图片将出现在这里。",
+    "send": "生成",
+    "sending": "生成中…",
+    "random": "随机提示",
+    "params": {
+      "title": "图像参数",
+      "size": "尺寸",
+      "sizeCustom": "自定义",
+      "n": "数量",
+      "seed": "Seed",
+      "seedRandom": "(随机)",
+      "randomSeed": "每次请求随机 Seed"
+    }
   }
 }
