@@ -23,7 +23,10 @@ export const ProbeNameSchema = z.enum([
 ]);
 export type ProbeName = z.infer<typeof ProbeNameSchema>;
 
-export const ProbeCategorySchema = z.enum(["chat", "audio", "embeddings", "rerank", "image"]);
+import { ModalityCategorySchema } from "./modality.js";
+
+// Alias kept for backwards-compatible naming inside e2e-probe code paths.
+export const ProbeCategorySchema = ModalityCategorySchema;
 export type ProbeCategory = z.infer<typeof ProbeCategorySchema>;
 
 /**
