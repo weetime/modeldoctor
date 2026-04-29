@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { ModalityCategory } from "@modeldoctor/contracts";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface CategoryEndpointSelectorProps {
@@ -32,7 +32,7 @@ export function CategoryEndpointSelector({
     ? (list.find((c) => c.id === selectedConnectionId) ?? null)
     : null;
   const mismatched = selected && selected.category !== category;
-  const showAllId = "playground-show-all-connections";
+  const showAllId = useId();
 
   return (
     <div className="space-y-2">
@@ -76,7 +76,7 @@ export function CategoryEndpointSelector({
       </label>
 
       {mismatched ? (
-        <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning-foreground">
+        <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
           <span>
             {t("endpoint.categoryMismatch", {
               category: tc(`dialog.categoryOptions.${selected?.category}`),
