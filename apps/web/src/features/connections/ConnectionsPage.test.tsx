@@ -1,9 +1,9 @@
 import "@/lib/i18n";
+import { useConnectionsStore } from "@/stores/connections-store";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { ConnectionsPage } from "./ConnectionsPage";
 
 function seed() {
