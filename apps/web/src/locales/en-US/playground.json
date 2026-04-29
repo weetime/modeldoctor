@@ -105,5 +105,23 @@
       "seedRandom": "(random)",
       "randomSeed": "Random seed each request"
     }
+  },
+  "rerank": {
+    "title": "Rerank",
+    "subtitle": "Rerank documents against a query.",
+    "query": "Query",
+    "queryPlaceholder": "Type the query…",
+    "documents": "Documents",
+    "addDoc": "+ Doc",
+    "batchMode": "Batch input",
+    "batchPlaceholder": "One document per line.",
+    "send": "Send",
+    "sending": "Sending…",
+    "params": {
+      "title": "Rerank Parameters",
+      "wire": "Wire",
+      "topN": "Top N",
+      "returnDocuments": "Return documents"
+    }
   }
 }
