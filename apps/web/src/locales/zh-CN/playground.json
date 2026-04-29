@@ -60,5 +60,11 @@
   "comingSoon": {
     "title": "Phase {{phase}} 推出",
     "body": "本模态在 Playground 路线图中，但还没实现。"
+  },
+  "viewCode": {
+    "title": "查看代码",
+    "copy": "复制",
+    "copied": "已复制",
+    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>"
   }
 }

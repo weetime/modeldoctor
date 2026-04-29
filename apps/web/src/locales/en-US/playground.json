@@ -60,5 +60,11 @@
   "comingSoon": {
     "title": "Coming in Phase {{phase}}",
     "body": "This modality is part of the Playground roadmap but isn't built yet."
+  },
+  "viewCode": {
+    "title": "View Code",
+    "copy": "Copy",
+    "copied": "Copied",
+    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>"
   }
 }
