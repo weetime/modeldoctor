@@ -137,4 +137,36 @@ describe("ChatService.run", () => {
     expect(out.success).toBe(false);
     expect(out.error).toMatch(/network kaboom/);
   });
+
+  it("collapses trailing slash in apiBaseUrl to a single slash", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
+    );
+    await svc.run({
+      apiBaseUrl: "http://x.test/",
+      apiKey: "k",
+      model: "m",
+      messages: [{ role: "user", content: "h" }],
+      params: {},
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe("http://x.test/v1/chat/completions");
+  });
+
+  it("appends queryParams (newline-delimited key=value) to the URL", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
+    );
+    await svc.run({
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "m",
+      queryParams: "api-version=2024-02-01\nfoo=bar",
+      messages: [{ role: "user", content: "h" }],
+      params: {},
+    });
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("api-version=2024-02-01");
+    expect(url).toContain("foo=bar");
+    expect(url.split("?")[0]).toBe("http://x/v1/chat/completions");
+  });
 });

@@ -2,6 +2,7 @@ import type { PlaygroundChatRequest, PlaygroundChatResponse } from "@modeldoctor
 import { Injectable } from "@nestjs/common";
 
 const DEFAULT_PATH = "/v1/chat/completions";
+const MAX_ERROR_BODY_BYTES = 1024;
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -9,6 +10,17 @@ function parseHeaderLines(s: string | undefined): Record<string, string> {
   for (const rawLine of s.split("\n").map((l) => l.trim())) {
     if (!rawLine || !rawLine.includes(":")) continue;
     const idx = rawLine.indexOf(":");
+    out[rawLine.slice(0, idx).trim()] = rawLine.slice(idx + 1).trim();
+  }
+  return out;
+}
+
+function parseQueryLines(s: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!s || !s.trim()) return out;
+  for (const rawLine of s.split("\n").map((l) => l.trim())) {
+    if (!rawLine || !rawLine.includes("=")) continue;
+    const idx = rawLine.indexOf("=");
     out[rawLine.slice(0, idx).trim()] = rawLine.slice(idx + 1).trim();
   }
   return out;
@@ -34,7 +46,16 @@ function buildBody(req: PlaygroundChatRequest): Record<string, unknown> {
 @Injectable()
 export class ChatService {
   async run(req: PlaygroundChatRequest): Promise<PlaygroundChatResponse> {
-    const url = req.apiBaseUrl + (req.pathOverride ?? DEFAULT_PATH);
+    const base = req.apiBaseUrl.replace(/\/+$/, "");
+    const path = (req.pathOverride ?? DEFAULT_PATH).replace(/^(?!\/)/, "/");
+    let url = base + path;
+    const qp = parseQueryLines(req.queryParams);
+    const qpKeys = Object.keys(qp);
+    if (qpKeys.length > 0) {
+      const search = new URLSearchParams();
+      for (const k of qpKeys) search.set(k, qp[k]);
+      url += (url.includes("?") ? "&" : "?") + search.toString();
+    }
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${req.apiKey}`,
@@ -52,7 +73,7 @@ export class ChatService {
         const text = await res.text().catch(() => "");
         return {
           success: false,
-          error: `upstream ${res.status}: ${text || res.statusText}`.slice(0, 1024),
+          error: `upstream ${res.status}: ${text || res.statusText}`.slice(0, MAX_ERROR_BODY_BYTES),
           latencyMs,
         };
       }
