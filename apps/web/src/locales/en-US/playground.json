@@ -121,6 +121,9 @@
       "minThree": "≥ 3 inputs required to visualise.",
       "empty": "Submit inputs to see a 2D PCA scatter."
     },
+    "scatter": {
+      "ariaLabel": "PCA scatter plot of embeddings"
+    },
     "params": {
       "title": "Embedding Parameters",
       "encodingFormat": "Encoding format",
