@@ -117,16 +117,16 @@ export function ChatComparePage() {
       category="chat"
       paramsSlot={null}
       rightPanelDefaultOpen={false}
+      historySlot={
+        <>
+          <CompareHistoryControls />
+          <PanelCountSwitcher />
+        </>
+      }
     >
       <ChatModeTabs />
-      <div className="flex flex-col gap-3 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <PageHeader title={t("chat.compare.title")} subtitle={t("chat.compare.subtitle")} />
-          <div className="flex items-center gap-2">
-            <CompareHistoryControls />
-            <PanelCountSwitcher />
-          </div>
-        </div>
+      <PageHeader title={t("chat.compare.title")} subtitle={t("chat.compare.subtitle")} />
+      <div className="px-6 pb-3">
         <details>
           <summary className="cursor-pointer text-xs text-muted-foreground">
             {t("chat.system.label")}
