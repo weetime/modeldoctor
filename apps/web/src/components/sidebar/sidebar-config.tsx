@@ -38,7 +38,7 @@ export const sidebarGroups: SidebarGroup[] = [
     items: [
       { to: "/playground/chat", icon: MessageSquare, labelKey: "items.playgroundChat" },
       { to: "/playground/image", icon: ImageIcon, labelKey: "items.playgroundImage" },
-      { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio", comingSoon: true },
+      { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio" },
       {
         to: "/playground/embeddings",
         icon: Boxes,

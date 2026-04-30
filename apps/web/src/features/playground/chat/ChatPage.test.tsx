@@ -4,8 +4,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChatPage } from "./ChatPage";
-import { useChatHistoryStore } from "./history";
+import { ChatPage, sanitizeChatSnapshot } from "./ChatPage";
+import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
 vi.mock("@/lib/api-client", () => {
@@ -164,6 +164,53 @@ describe("ChatPage", () => {
         { role: "user", content: "hi 2" },
       ]);
     });
+  });
+});
+
+describe("sanitizeChatSnapshot", () => {
+  it("leaves string-content messages alone", () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "be helpful",
+      messages: [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+      ],
+      params: {}, selectedConnectionId: null,
+    };
+    expect(sanitizeChatSnapshot(snap)).toEqual(snap);
+  });
+
+  it("collapses multimodal user message to text + dropped marker", () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "describe this" },
+            { type: "image_url", image_url: { url: "data:image/png;base64,xxx" } },
+            { type: "input_audio", input_audio: { data: "yyy", format: "webm" } },
+          ],
+        },
+      ],
+      params: {}, selectedConnectionId: null,
+    };
+    const out = sanitizeChatSnapshot(snap);
+    expect(out.messages[0].content).toContain("describe this");
+    expect(out.messages[0].content).toContain("📎 2 attachment");
+    expect(typeof out.messages[0].content).toBe("string");
+  });
+
+  it("preserves a multimodal message that has only text parts (no dropped marker)", () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [
+        { role: "user", content: [{ type: "text", text: "only text" }] },
+      ],
+      params: {}, selectedConnectionId: null,
+    };
+    const out = sanitizeChatSnapshot(snap);
+    expect(out.messages[0].content).toEqual([{ type: "text", text: "only text" }]);
   });
 });
 

@@ -29,7 +29,19 @@
       "send": "发送",
       "sending": "发送中…",
       "stop": "停止",
-      "needConnection": "请先选择一个对话类连接"
+      "needConnection": "请先选择一个对话类连接",
+      "attachments": {
+        "image": "附加图片",
+        "audio": "附加音频",
+        "file": "附加文件",
+        "remove": "移除附件",
+        "fileNotSent": "（不发送）"
+      },
+      "errors": {
+        "tooManyAttachments": "最多允许 {{max}} 个附件",
+        "attachmentTooLarge": "文件超过 {{maxMb}}MB 限制",
+        "attachmentRead": "读取文件失败：{{message}}"
+      }
     },
     "messages": {
       "system": "系统",
@@ -50,6 +62,25 @@
     },
     "errors": {
       "send": "发送失败：{{message}}"
+    },
+    "compare": {
+      "title": "对比",
+      "subtitle": "把同一条消息并行发到最多 4 个 chat 连接。",
+      "panelCount": "面板数",
+      "sendN": "发送到 {{count}} 个",
+      "stopAll": "全部停止",
+      "clearAll": "全部清空",
+      "params": "参数",
+      "stop": "停止",
+      "clear": "清空面板",
+      "errors": {
+        "noConnection": "请为该面板选择连接",
+        "allDisconnected": "请先在上面任意面板选一个连接"
+      },
+      "modeTabs": {
+        "single": "单聊",
+        "compare": "对比"
+      }
     }
   },
   "history": {
@@ -130,6 +161,55 @@
       "wire": "协议",
       "topN": "Top N",
       "returnDocuments": "返回文档"
+    }
+  },
+  "audio": {
+    "title": "音频",
+    "subtitle": "文本转语音 (TTS) 或语音转文本 (STT)。",
+    "tabs": { "tts": "TTS", "stt": "STT" },
+    "tts": {
+      "title": "文本转语音",
+      "inputLabel": "文本",
+      "inputPlaceholder": "输入要合成的文本…",
+      "placeholder": "生成的音频将出现在这里",
+      "send": "生成",
+      "sending": "生成中…",
+      "autoPlay": "自动播放",
+      "errors": { "send": "TTS 失败：{{message}}" },
+      "params": {
+        "voice": "声音",
+        "format": "格式",
+        "speed": "速度",
+        "advanced": "高级",
+        "referenceAudio": "参考音频",
+        "referenceText": "参考文本"
+      },
+      "advancedV2Note": "声音克隆 — Phase 4"
+    },
+    "stt": {
+      "title": "语音转文本",
+      "uploadPlaceholder": "拖放音频文件或点击上传",
+      "upload": "上传",
+      "transcribe": "转录",
+      "transcribing": "转录中…",
+      "clearFile": "移除文件",
+      "clearResult": "清除结果",
+      "copy": "复制",
+      "copied": "已复制",
+      "resultLabel": "转录结果",
+      "errors": { "transcribe": "转录失败：{{message}}" },
+      "recorder": {
+        "start": "录音",
+        "stop": "停止",
+        "requiresHttps": "录音需要 HTTPS 或 localhost",
+        "permissionDenied": "麦克风权限被拒绝"
+      },
+      "params": {
+        "language": "语言",
+        "task": "任务",
+        "prompt": "提示词",
+        "temperature": "温度"
+      }
     }
   }
 }

@@ -11,14 +11,35 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
+import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
+import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
+
+export function sanitizeChatSnapshot(snap: ChatHistorySnapshot): ChatHistorySnapshot {
+  return {
+    ...snap,
+    messages: snap.messages.map((m) => {
+      if (typeof m.content === "string") return m;
+      const textParts = m.content.filter(
+        (p): p is { type: "text"; text: string } => p.type === "text",
+      );
+      const droppedCount = m.content.length - textParts.length;
+      if (droppedCount === 0) return m;
+      const text =
+        textParts.map((p) => p.text).join("\n") +
+        (textParts.length > 0 ? "\n\n" : "") +
+        `📎 ${droppedCount} attachment${droppedCount > 1 ? "s" : ""} not saved in history`;
+      return { ...m, content: text };
+    }),
+  };
+}
 
 export function ChatPage() {
   const { t } = useTranslation("playground");
@@ -50,12 +71,14 @@ export function ChatPage() {
 
   // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
   useEffect(() => {
-    useChatHistoryStore.getState().scheduleAutoSave({
-      systemMessage: slice.systemMessage,
-      messages: slice.messages,
-      params: slice.params,
-      selectedConnectionId: slice.selectedConnectionId,
-    });
+    useChatHistoryStore.getState().scheduleAutoSave(
+      sanitizeChatSnapshot({
+        systemMessage: slice.systemMessage,
+        messages: slice.messages,
+        params: slice.params,
+        selectedConnectionId: slice.selectedConnectionId,
+      }),
+    );
   }, [slice.systemMessage, slice.messages, slice.params, slice.selectedConnectionId]);
 
   const snippets =
@@ -73,7 +96,7 @@ export function ChatPage() {
         })
       : null;
 
-  const onSend = async (text: string) => {
+  const onSend = async (text: string, attachments: AttachedFile[]) => {
     // Read everything fresh from the store to avoid stale-closure bugs.
     const fresh = useChatStore.getState();
     const connNow = fresh.selectedConnectionId
@@ -81,7 +104,8 @@ export function ChatPage() {
       : null;
     if (!connNow) return;
 
-    fresh.appendMessage({ role: "user", content: text });
+    const content = buildContentParts(text, attachments);
+    fresh.appendMessage({ role: "user", content });
     fresh.setSending(true);
     fresh.setError(null);
 
@@ -184,6 +208,7 @@ export function ChatPage() {
         </div>
       }
     >
+      <ChatModeTabs />
       <PageHeader title={t("chat.title")} subtitle={t("chat.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 overflow-y-auto">

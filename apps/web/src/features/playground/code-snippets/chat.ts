@@ -15,6 +15,28 @@ export interface CodeSnippets {
 
 const PLACEHOLDER = "<YOUR_API_KEY>";
 
+function shortenForSnippet(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((m) => {
+    if (typeof m.content === "string") return m;
+    return {
+      ...m,
+      content: m.content.map((p) => {
+        if (p.type === "image_url" && p.image_url.url.startsWith("data:")) {
+          const head = p.image_url.url.slice(0, 30); // e.g. "data:image/png;base64,"
+          return { ...p, image_url: { url: `${head}<BASE64_IMAGE_DATA_TRUNCATED>` } };
+        }
+        if (p.type === "input_audio") {
+          return {
+            ...p,
+            input_audio: { ...p.input_audio, data: "<BASE64_AUDIO_DATA_TRUNCATED>" },
+          };
+        }
+        return p;
+      }),
+    };
+  });
+}
+
 function buildBody(input: ChatSnippetInput): Record<string, unknown> {
   const body: Record<string, unknown> = {
     model: input.model,
@@ -33,8 +55,9 @@ function buildBody(input: ChatSnippetInput): Record<string, unknown> {
 }
 
 export function genChatSnippets(input: ChatSnippetInput): CodeSnippets {
+  const safeMessages = shortenForSnippet(input.messages);
   const url = `${input.apiBaseUrl.replace(/\/+$/, "")}/v1/chat/completions`;
-  const body = buildBody(input);
+  const body = buildBody({ ...input, messages: safeMessages });
   const bodyJson = JSON.stringify(body, null, 2);
   const curl = `curl -X POST ${url} \\
   -H "Authorization: Bearer ${PLACEHOLDER}" \\

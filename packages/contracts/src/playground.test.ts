@@ -9,6 +9,10 @@ import {
   PlaygroundImagesResponseSchema,
   PlaygroundRerankRequestSchema,
   PlaygroundRerankResponseSchema,
+  PlaygroundTtsRequestSchema,
+  PlaygroundTtsResponseSchema,
+  PlaygroundTranscriptionsBodySchema,
+  PlaygroundTranscriptionsResponseSchema,
 } from "./playground.js";
 
 describe("ChatMessageSchema", () => {
@@ -165,5 +169,62 @@ describe("PlaygroundImagesResponseSchema", () => {
         latencyMs: 50,
       }),
     ).not.toThrow();
+  });
+});
+
+describe("PlaygroundTtsRequestSchema", () => {
+  it("applies defaults for voice + format", () => {
+    const parsed = PlaygroundTtsRequestSchema.parse({
+      apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "hi",
+    });
+    expect(parsed.voice).toBe("alloy");
+    expect(parsed.format).toBe("mp3");
+  });
+
+  it("rejects invalid format", () => {
+    expect(() =>
+      PlaygroundTtsRequestSchema.parse({
+        apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "hi", format: "wav-bogus",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects empty input", () => {
+    expect(() =>
+      PlaygroundTtsRequestSchema.parse({ apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "" }),
+    ).toThrow();
+  });
+});
+
+describe("PlaygroundTranscriptionsBodySchema", () => {
+  it("applies default task=transcribe", () => {
+    const parsed = PlaygroundTranscriptionsBodySchema.parse({
+      apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1",
+    });
+    expect(parsed.task).toBe("transcribe");
+  });
+
+  it("accepts language + prompt + temperature", () => {
+    const parsed = PlaygroundTranscriptionsBodySchema.parse({
+      apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1",
+      language: "zh", prompt: "domain terms", temperature: 0.2,
+    });
+    expect(parsed.language).toBe("zh");
+    expect(parsed.temperature).toBe(0.2);
+  });
+
+  it("rejects invalid task", () => {
+    expect(() =>
+      PlaygroundTranscriptionsBodySchema.parse({
+        apiBaseUrl: "http://x", apiKey: "k", model: "m", task: "summarize",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("PlaygroundTtsResponseSchema + PlaygroundTranscriptionsResponseSchema", () => {
+  it("response shapes are validatable", () => {
+    expect(PlaygroundTtsResponseSchema.parse({ success: true, audioBase64: "abc", format: "mp3", latencyMs: 100 }).success).toBe(true);
+    expect(PlaygroundTranscriptionsResponseSchema.parse({ success: true, text: "hello", latencyMs: 100 }).success).toBe(true);
   });
 });

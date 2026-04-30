@@ -163,3 +163,50 @@ export const PlaygroundImagesResponseSchema = z.object({
   latencyMs: z.number(),
 });
 export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSchema>;
+
+// ─── Audio TTS ──────────────────────────────────────────────────────────
+export const PlaygroundTtsRequestSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  pathOverride: z.string().optional(),
+  input: z.string().min(1),
+  voice: z.string().min(1).default("alloy"),
+  format: z.enum(["mp3", "wav", "flac", "opus", "aac", "pcm"]).default("mp3"),
+  speed: z.number().min(0.25).max(4.0).optional(),
+});
+export type PlaygroundTtsRequest = z.infer<typeof PlaygroundTtsRequestSchema>;
+
+export const PlaygroundTtsResponseSchema = z.object({
+  success: z.boolean(),
+  audioBase64: z.string().optional(),
+  format: z.string().optional(),
+  error: z.string().optional(),
+  latencyMs: z.number(),
+});
+export type PlaygroundTtsResponse = z.infer<typeof PlaygroundTtsResponseSchema>;
+
+// ─── Audio STT (Transcriptions) ─────────────────────────────────────────
+export const PlaygroundTranscriptionsBodySchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  pathOverride: z.string().optional(),
+  language: z.string().optional(),
+  task: z.enum(["transcribe", "translate"]).default("transcribe"),
+  prompt: z.string().optional(),
+  temperature: z.number().min(0).max(1).optional(),
+});
+export type PlaygroundTranscriptionsBody = z.infer<typeof PlaygroundTranscriptionsBodySchema>;
+
+export const PlaygroundTranscriptionsResponseSchema = z.object({
+  success: z.boolean(),
+  text: z.string().optional(),
+  error: z.string().optional(),
+  latencyMs: z.number(),
+});
+export type PlaygroundTranscriptionsResponse = z.infer<typeof PlaygroundTranscriptionsResponseSchema>;
