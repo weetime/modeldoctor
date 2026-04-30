@@ -2,7 +2,7 @@ import type { ChatMessage, ChatParams } from "@modeldoctor/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type PanelCount = 2 | 3 | 4;
+export type PanelCount = 2 | 3 | 4 | 6 | 8;
 
 export interface PanelState {
   // Persisted
@@ -126,7 +126,7 @@ export const useCompareStore = create<CompareStoreState>()(
     }),
     {
       name: "md-playground-chat-compare-layout",
-      version: 1,
+      version: 2,
       partialize: (s) => ({
         panelCount: s.panelCount,
         sharedSystemMessage: s.sharedSystemMessage,

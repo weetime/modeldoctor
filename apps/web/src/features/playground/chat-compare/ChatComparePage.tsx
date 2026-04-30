@@ -138,7 +138,7 @@ export function ChatComparePage() {
       </div>
       <div
         className="grid min-h-0 flex-1 gap-3 overflow-x-auto px-6"
-        style={{ gridTemplateColumns: `repeat(${panelCount}, minmax(280px, 1fr))` }}
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))" }}
       >
         {panels.map((_, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: index is panel identity in this store
