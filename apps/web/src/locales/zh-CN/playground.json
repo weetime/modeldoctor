@@ -143,5 +143,54 @@
       "topN": "Top N",
       "returnDocuments": "返回文档"
     }
+  },
+  "audio": {
+    "title": "音频",
+    "subtitle": "文本转语音 (TTS) 或语音转文本 (STT)。",
+    "tabs": { "tts": "TTS", "stt": "STT" },
+    "tts": {
+      "title": "文本转语音",
+      "inputLabel": "文本",
+      "inputPlaceholder": "输入要合成的文本…",
+      "placeholder": "生成的音频将出现在这里",
+      "send": "生成",
+      "sending": "生成中…",
+      "autoPlay": "自动播放",
+      "errors": { "send": "TTS 失败：{{message}}" },
+      "params": {
+        "voice": "声音",
+        "format": "格式",
+        "speed": "速度",
+        "advanced": "高级",
+        "referenceAudio": "参考音频",
+        "referenceText": "参考文本"
+      },
+      "advancedV2Note": "声音克隆 — Phase 4"
+    },
+    "stt": {
+      "title": "语音转文本",
+      "uploadPlaceholder": "拖放音频文件或点击上传",
+      "upload": "上传",
+      "transcribe": "转录",
+      "transcribing": "转录中…",
+      "clearFile": "移除文件",
+      "clearResult": "清除结果",
+      "copy": "复制",
+      "copied": "已复制",
+      "resultLabel": "转录结果",
+      "errors": { "transcribe": "转录失败：{{message}}" },
+      "recorder": {
+        "start": "录音",
+        "stop": "停止",
+        "requiresHttps": "录音需要 HTTPS 或 localhost",
+        "permissionDenied": "麦克风权限被拒绝"
+      },
+      "params": {
+        "language": "语言",
+        "task": "任务",
+        "prompt": "提示词",
+        "temperature": "温度"
+      }
+    }
   }
 }

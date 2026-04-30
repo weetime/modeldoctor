@@ -143,5 +143,54 @@
       "topN": "Top N",
       "returnDocuments": "Return documents"
     }
+  },
+  "audio": {
+    "title": "Audio",
+    "subtitle": "Synthesize speech (TTS) or transcribe audio (STT).",
+    "tabs": { "tts": "TTS", "stt": "STT" },
+    "tts": {
+      "title": "Text to speech",
+      "inputLabel": "Text",
+      "inputPlaceholder": "Enter text to synthesize…",
+      "placeholder": "Generated audio will appear here",
+      "send": "Generate",
+      "sending": "Generating…",
+      "autoPlay": "Auto-play",
+      "errors": { "send": "TTS failed: {{message}}" },
+      "params": {
+        "voice": "Voice",
+        "format": "Format",
+        "speed": "Speed",
+        "advanced": "Advanced",
+        "referenceAudio": "Reference audio",
+        "referenceText": "Reference text"
+      },
+      "advancedV2Note": "Voice cloning — Phase 4"
+    },
+    "stt": {
+      "title": "Speech to text",
+      "uploadPlaceholder": "Drag & drop audio or click to upload",
+      "upload": "Upload",
+      "transcribe": "Transcribe",
+      "transcribing": "Transcribing…",
+      "clearFile": "Remove file",
+      "clearResult": "Clear result",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "resultLabel": "Transcription",
+      "errors": { "transcribe": "Transcription failed: {{message}}" },
+      "recorder": {
+        "start": "Record",
+        "stop": "Stop",
+        "requiresHttps": "Recording requires HTTPS or localhost",
+        "permissionDenied": "Microphone permission denied"
+      },
+      "params": {
+        "language": "Language",
+        "task": "Task",
+        "prompt": "Prompt",
+        "temperature": "Temperature"
+      }
+    }
   }
 }
