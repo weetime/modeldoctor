@@ -88,6 +88,20 @@
       }
     }
   },
+  "chatCompare": {
+    "history": {
+      "title": "Snapshots",
+      "saveSnapshot": "Save snapshot",
+      "snapshotSaved": "Snapshot saved",
+      "saveFailed": "Failed to save snapshot",
+      "restore": "Restore",
+      "restored": "Snapshot restored",
+      "restoreFailed": "Failed to restore snapshot",
+      "delete": "Delete snapshot",
+      "empty": "No saved snapshots",
+      "untitled": "(empty snapshot)"
+    }
+  },
   "history": {
     "title": "History",
     "newSession": "+ New session",

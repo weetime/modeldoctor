@@ -1,11 +1,9 @@
 import { PageHeader } from "@/components/common/page-header";
 import { ApiError, api } from "@/lib/api-client";
-import { base64ToBlob, blobToDataUrl, dataUrlToBlob } from "@/lib/dataUrl";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   ChatMessage,
-  ChatMessageContentPart,
   PlaygroundChatRequest,
   PlaygroundChatResponse,
 } from "@modeldoctor/contracts";
@@ -17,15 +15,17 @@ import { PlaygroundShell } from "../PlaygroundShell";
 import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
+import {
+  applyBlobPatches,
+  persistMessageAttachments,
+  rehydrateMessageBlobs,
+} from "../history/persistAttachments";
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
 import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
-
-/** Sentinel prefix used to replace inline binary data in saved snapshots. */
-const IDB_PREFIX = "idb://";
 
 /**
  * Walk message content parts, store each binary part as a Blob in IDB, and
@@ -37,70 +37,9 @@ export async function persistAttachments(
   entryId: string,
   snap: ChatHistorySnapshot,
 ): Promise<ChatHistorySnapshot> {
-  const out = structuredClone(snap);
   const store = useChatHistoryStore.getState();
-
-  for (let i = 0; i < out.messages.length; i++) {
-    const m = out.messages[i];
-    if (typeof m.content === "string") continue;
-
-    const promises: Array<Promise<{ j: number; part: ChatMessageContentPart }>> = [];
-
-    for (let j = 0; j < m.content.length; j++) {
-      const p = m.content[j];
-      const key = `msg${i}.part${j}`;
-
-      if (p.type === "image_url" && p.image_url.url.startsWith("data:")) {
-        promises.push(
-          (async () => {
-            const blob = dataUrlToBlob(p.image_url.url);
-            await store.putBlob(entryId, key, blob);
-            return {
-              j,
-              part: { ...p, image_url: { url: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
-            };
-          })(),
-        );
-      } else if (
-        p.type === "input_audio" &&
-        p.input_audio.data &&
-        // input_audio.data is raw base64 (no "data:" prefix), so we guard with
-        // !startsWith(IDB_PREFIX) rather than startsWith("data:") as used above
-        // for image_url / input_file which carry full data URLs.
-        !p.input_audio.data.startsWith(IDB_PREFIX)
-      ) {
-        promises.push(
-          (async () => {
-            const blob = base64ToBlob(p.input_audio.data, `audio/${p.input_audio.format}`);
-            await store.putBlob(entryId, key, blob);
-            return {
-              j,
-              part: { ...p, input_audio: { ...p.input_audio, data: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
-            };
-          })(),
-        );
-      } else if (p.type === "input_file" && p.file.file_data.startsWith("data:")) {
-        promises.push(
-          (async () => {
-            const blob = dataUrlToBlob(p.file.file_data);
-            await store.putBlob(entryId, key, blob);
-            return {
-              j,
-              part: { ...p, file: { ...p.file, file_data: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
-            };
-          })(),
-        );
-      }
-    }
-
-    // Parallel writes — all blobs for this message go concurrently.
-    const results = await Promise.all(promises);
-    for (const { j, part } of results) {
-      (out.messages[i].content as ChatMessageContentPart[])[j] = part;
-    }
-  }
-
-  return out;
+  const sanitisedMessages = await persistMessageAttachments(entryId, snap.messages, store);
+  return { ...snap, messages: sanitisedMessages };
 }
 
 /**
@@ -108,78 +47,20 @@ export async function persistAttachments(
  * `idb://`, fetch the Blob, convert back to data URL, and inject into the
  * current chat store state. Runs asynchronously after the sync restore call.
  */
-export async function rehydrateChatBlobs(entryId: string, snap: ChatHistorySnapshot): Promise<void> {
+export async function rehydrateChatBlobs(
+  entryId: string,
+  snap: ChatHistorySnapshot,
+): Promise<void> {
   const store = useChatHistoryStore.getState();
-
-  type Patch = { msgIdx: number; partIdx: number; field: "url" | "data" | "file_data"; value: string };
-  const patches: Array<Promise<Patch | null>> = [];
-
-  for (let i = 0; i < snap.messages.length; i++) {
-    const m = snap.messages[i];
-    if (typeof m.content === "string") continue;
-
-    for (let j = 0; j < m.content.length; j++) {
-      const p = m.content[j];
-      const key = `msg${i}.part${j}`;
-
-      if (p.type === "image_url" && p.image_url.url === `${IDB_PREFIX}${key}`) {
-        patches.push(
-          (async () => {
-            const blob = await store.getBlob(entryId, key);
-            if (!blob) return null;
-            const dataUrl = await blobToDataUrl(blob);
-            return { msgIdx: i, partIdx: j, field: "url" as const, value: dataUrl };
-          })(),
-        );
-      } else if (p.type === "input_audio" && p.input_audio.data === `${IDB_PREFIX}${key}`) {
-        patches.push(
-          (async () => {
-            const blob = await store.getBlob(entryId, key);
-            if (!blob) return null;
-            const dataUrl = await blobToDataUrl(blob);
-            // Strip the `data:<mime>;base64,` header — input_audio.data is raw base64.
-            const b64 = dataUrl.split(",", 2)[1] ?? "";
-            return { msgIdx: i, partIdx: j, field: "data" as const, value: b64 };
-          })(),
-        );
-      } else if (p.type === "input_file" && p.file.file_data === `${IDB_PREFIX}${key}`) {
-        patches.push(
-          (async () => {
-            const blob = await store.getBlob(entryId, key);
-            if (!blob) return null;
-            const dataUrl = await blobToDataUrl(blob);
-            return { msgIdx: i, partIdx: j, field: "file_data" as const, value: dataUrl };
-          })(),
-        );
-      }
-    }
-  }
-
-  const resolved = await Promise.all(patches);
-  const applied = resolved.filter((p): p is Patch => p !== null);
-  if (applied.length === 0) return;
+  const patches = await rehydrateMessageBlobs(entryId, snap.messages, store);
+  if (patches.length === 0) return;
 
   // Snapshot current non-message state before reset, then apply patches to messages.
   const chatState = useChatStore.getState();
   const systemMessage = chatState.systemMessage;
   const params = chatState.params;
   const selectedConnectionId = chatState.selectedConnectionId;
-  const msgs = structuredClone(chatState.messages) as ChatMessage[];
-
-  for (const { msgIdx, partIdx, field, value } of applied) {
-    const m = msgs[msgIdx];
-    if (!m || typeof m.content === "string") continue;
-    const part = m.content[partIdx];
-    if (!part) continue;
-
-    if (field === "url" && part.type === "image_url") {
-      part.image_url = { ...part.image_url, url: value };
-    } else if (field === "data" && part.type === "input_audio") {
-      part.input_audio = { ...part.input_audio, data: value };
-    } else if (field === "file_data" && part.type === "input_file") {
-      part.file = { ...part.file, file_data: value };
-    }
-  }
+  const msgs = applyBlobPatches(chatState.messages as ChatMessage[], patches);
 
   // Rebuild the store with patched messages (reset wipes all, then re-apply).
   chatState.reset();

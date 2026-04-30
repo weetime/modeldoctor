@@ -88,6 +88,20 @@
       }
     }
   },
+  "chatCompare": {
+    "history": {
+      "title": "快照",
+      "saveSnapshot": "保存快照",
+      "snapshotSaved": "快照已保存",
+      "saveFailed": "保存快照失败",
+      "restore": "恢复",
+      "restored": "快照已恢复",
+      "restoreFailed": "恢复快照失败",
+      "delete": "删除快照",
+      "empty": "暂无已保存快照",
+      "untitled": "（空快照）"
+    }
+  },
   "history": {
     "title": "历史",
     "newSession": "+ 新会话",

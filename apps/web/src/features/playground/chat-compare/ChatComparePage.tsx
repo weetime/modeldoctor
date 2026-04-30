@@ -15,6 +15,7 @@ import { type AttachedFile, buildContentParts } from "../chat/attachments";
 import { MessageComposer } from "../chat/MessageComposer";
 import { ChatModeTabs } from "./ChatModeTabs";
 import { ChatPanel } from "./ChatPanel";
+import { CompareHistoryControls } from "./CompareHistory";
 import { PanelCountSwitcher } from "./PanelCountSwitcher";
 import { useCompareStore } from "./store";
 
@@ -121,7 +122,10 @@ export function ChatComparePage() {
       <div className="flex flex-col gap-3 px-6 py-3">
         <div className="flex items-center justify-between">
           <PageHeader title={t("chat.compare.title")} subtitle={t("chat.compare.subtitle")} />
-          <PanelCountSwitcher />
+          <div className="flex items-center gap-2">
+            <CompareHistoryControls />
+            <PanelCountSwitcher />
+          </div>
         </div>
         <details>
           <summary className="cursor-pointer text-xs text-muted-foreground">
