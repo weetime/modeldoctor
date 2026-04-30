@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { useConnectionsStore } from "@/stores/connections-store";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -198,6 +197,8 @@ export function AudioPage() {
   return (
     <PlaygroundShell
       category="audio"
+      title={t("audio.title")}
+      subtitle={t("audio.subtitle")}
       tabs={[
         { key: "tts", label: t("audio.tabs.tts") },
         { key: "stt", label: t("audio.tabs.stt") },
@@ -233,7 +234,6 @@ export function AudioPage() {
         </div>
       }
     >
-      <PageHeader title={t("audio.title")} subtitle={t("audio.subtitle")} />
       {tab === "tts" ? <TtsTab /> : <SttTab />}
     </PlaygroundShell>
   );
