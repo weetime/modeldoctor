@@ -11,7 +11,7 @@ interface SttParamsProps {
   onChange: (p: Partial<SttSlice>) => void;
 }
 
-const COMMON_LANGUAGES = ["", "auto", "zh", "en", "ja", "ko", "es", "fr", "de"];
+const COMMON_LANGUAGES = ["auto", "zh", "en", "ja", "ko", "es", "fr", "de"];
 
 export function SttParams({ value, onChange }: SttParamsProps) {
   const { t } = useTranslation("playground");
@@ -26,7 +26,7 @@ export function SttParams({ value, onChange }: SttParamsProps) {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {COMMON_LANGUAGES.map((l) => (
-              <SelectItem key={l || "auto"} value={l || "auto"}>{l || "auto"}</SelectItem>
+              <SelectItem key={l} value={l}>{l}</SelectItem>
             ))}
           </SelectContent>
         </Select>
