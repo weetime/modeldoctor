@@ -1744,9 +1744,14 @@ async function persistAttachments(entryId: string, snap: ChatSnapshot): Promise<
 
 When `restore` is called or when a saved snapshot is loaded, reverse the above: if a content-part field starts with `idb://`, read the blob, convert back to data URL via `FileReader`, and inject into state. Do this asynchronously after `restore`; chat UI can show a spinner per attachment until ready.
 
-- [ ] **Step 6: Remove "📎 not saved" indicator**
+- [x] **Step 6: Remove "📎 not saved" indicator** — **NO-OP**
 
-Delete the JSX node and i18n key in HistoryDrawer (and tests asserting it).
+  The `📎 N attachment(s) not saved` indicator was inlined inside
+  `sanitizeChatSnapshot` in `ChatPage.tsx` (removed as part of dcf1484 when
+  that function was replaced by `persistAttachments`). It was never a JSX node
+  in `HistoryDrawer.tsx`. Confirmed via `grep -rn "attachment(s) not saved"`
+  returning zero matches across all of `apps/web/src/`. Plan annotation added
+  in follow-up commit per review request.
 
 - [ ] **Step 7: Tests + type check**
 

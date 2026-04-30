@@ -10,6 +10,9 @@
  * Convert a data URL (e.g. `data:image/png;base64,...`) to a Blob.
  */
 export function dataUrlToBlob(dataUrl: string): Blob {
+  if (!dataUrl.startsWith("data:")) {
+    throw new TypeError(`dataUrlToBlob: expected a data URL, got "${dataUrl.slice(0, 32)}..."`);
+  }
   const [header, b64] = dataUrl.split(",", 2);
   const mime = header.replace(/^data:/, "").replace(/;base64$/, "");
   const bytes = atob(b64 ?? "");

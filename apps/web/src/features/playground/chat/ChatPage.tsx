@@ -61,7 +61,14 @@ export async function persistAttachments(
             };
           })(),
         );
-      } else if (p.type === "input_audio" && p.input_audio.data && !p.input_audio.data.startsWith(IDB_PREFIX)) {
+      } else if (
+        p.type === "input_audio" &&
+        p.input_audio.data &&
+        // input_audio.data is raw base64 (no "data:" prefix), so we guard with
+        // !startsWith(IDB_PREFIX) rather than startsWith("data:") as used above
+        // for image_url / input_file which carry full data URLs.
+        !p.input_audio.data.startsWith(IDB_PREFIX)
+      ) {
         promises.push(
           (async () => {
             const blob = base64ToBlob(p.input_audio.data, `audio/${p.input_audio.format}`);

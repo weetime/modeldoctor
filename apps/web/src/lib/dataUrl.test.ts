@@ -11,6 +11,11 @@ describe("dataUrlToBlob", () => {
     expect(blob.size).toBeGreaterThan(0);
   });
 
+  it("throws TypeError for non-data-URL input", () => {
+    expect(() => dataUrlToBlob("idb://msg0.part0")).toThrow(TypeError);
+    expect(() => dataUrlToBlob("idb://msg0.part0")).toThrow("dataUrlToBlob: expected a data URL");
+  });
+
   it("round-trips: dataUrlToBlob → blobToDataUrl reproduces original data URL", async () => {
     const original =
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
