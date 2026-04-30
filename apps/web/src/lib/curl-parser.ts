@@ -74,25 +74,24 @@ export function parseCurlCommand(input: string): ParsedCurl {
 }
 
 /**
- * Strip OpenAI-compatible URL path tails so `apiBaseUrl` is the canonical
- * origin (scheme://host[:port][/proxy-prefix]) — matches what guidellm
- * expects as `--target` and what LoadTest/E2E will append paths to.
+ * Reduce an arbitrary OpenAI-compatible URL down to its `apiBaseUrl` —
+ * `scheme://host[:port][/proxy-prefix]` — without enumerating endpoint
+ * names. Strategy: parse via WHATWG URL, then split the path at the first
+ * `/v\d+` segment if present (drops the version segment and everything
+ * after); otherwise keep `origin + pathname` so gateway proxy prefixes
+ * survive (e.g. `http://gateway/proxy/qwen` with no version segment).
  *
- * Idempotent: applying twice yields the same result. Safe to call at
- * curl-paste time AND at form submission as defense-in-depth.
+ * Idempotent: applying twice yields the same result.
  */
 export function toApiBaseUrl(url: string): string {
-  return url
-    .replace(
-      /\/v1\/(chat\/completions|completions|embeddings|rerank|images\/generations|audio\/transcriptions)\/?$/,
-      "",
-    )
-    .replace(
-      /\/(chat\/completions|completions|embeddings|rerank|images\/generations|audio\/transcriptions)\/?$/,
-      "",
-    )
-    .replace(/\/v1\/?$/, "")
-    .replace(/\/$/, "");
+  try {
+    const u = new URL(url);
+    const m = u.pathname.match(/^(.*?)\/v\d+(?:\/.*)?$/);
+    const path = m ? m[1] : u.pathname;
+    return (u.origin + path).replace(/\/+$/, "");
+  } catch {
+    return url.replace(/\/+$/, "");
+  }
 }
 
 export function detectApiType(url: string, body: Record<string, unknown> | null): ApiType {

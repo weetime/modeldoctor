@@ -78,13 +78,18 @@ describe("toApiBaseUrl", () => {
     ["https://api.openai.com/v1/embeddings", "https://api.openai.com"],
     ["https://api.openai.com/v1/rerank", "https://api.openai.com"],
     ["https://api.openai.com/v1/images/generations", "https://api.openai.com"],
+    ["https://api.openai.com/v1/images/edits", "https://api.openai.com"],
     ["https://api.openai.com/v1/audio/transcriptions", "https://api.openai.com"],
+    ["https://api.openai.com/v1/audio/speech", "https://api.openai.com"],
     ["https://api.openai.com/v1", "https://api.openai.com"],
     ["https://api.openai.com/", "https://api.openai.com"],
     ["https://api.openai.com", "https://api.openai.com"],
     ["http://10.100.121.67:30888/v1/chat/completions", "http://10.100.121.67:30888"],
+    ["http://10.100.121.67:30888/v1/audio/speech", "http://10.100.121.67:30888"],
     ["http://gateway/proxy/qwen/v1/chat/completions", "http://gateway/proxy/qwen"],
+    ["http://gateway/proxy/qwen/v2/some/future/route", "http://gateway/proxy/qwen"],
     ["http://gateway/proxy/qwen", "http://gateway/proxy/qwen"],
+    ["http://gateway/proxy/qwen/", "http://gateway/proxy/qwen"],
   ])("strips %s → %s", (input, expected) => {
     expect(toApiBaseUrl(input)).toBe(expected);
   });
@@ -93,5 +98,10 @@ describe("toApiBaseUrl", () => {
     const url = "https://api.openai.com/v1/chat/completions";
     const once = toApiBaseUrl(url);
     expect(toApiBaseUrl(once)).toBe(once);
+  });
+
+  it("returns input unchanged for non-URL strings", () => {
+    expect(toApiBaseUrl("not a url")).toBe("not a url");
+    expect(toApiBaseUrl("")).toBe("");
   });
 });
