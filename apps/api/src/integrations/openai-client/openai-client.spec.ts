@@ -181,6 +181,20 @@ describe("wires/embeddings", () => {
       usage: { prompt_tokens: 5, total_tokens: 5 },
     });
   });
+
+  it("parseEmbeddingsResponse decodes base64 float32 embeddings", () => {
+    // Encode two vectors as little-endian float32 base64 strings.
+    const enc = (vec: number[]): string => {
+      const f = new Float32Array(vec);
+      return Buffer.from(f.buffer, f.byteOffset, f.byteLength).toString("base64");
+    };
+    const result = parseEmbeddingsResponse({
+      data: [{ embedding: enc([1.0, -2.0, 0.5]) }, { embedding: enc([0.25, 0.5]) }],
+    });
+    expect(result.embeddings).toHaveLength(2);
+    expect(result.embeddings[0]).toEqual([1.0, -2.0, 0.5]);
+    expect(result.embeddings[1]).toEqual([0.25, 0.5]);
+  });
 });
 
 describe("wires/rerank", () => {
