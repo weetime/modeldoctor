@@ -5,6 +5,8 @@ import { z } from "zod";
  * array of typed content parts (used for multimodal — image_url, input_audio
  * — added in Phase 2).
  */
+// Must match ALLOWED_FILE_MIMES in apps/web/src/features/playground/chat/attachments.ts
+// and the <input accept> string in apps/web/src/features/playground/chat/MessageComposer.tsx
 const FILE_MIME_RE =
   /^data:(application\/pdf|text\/plain|application\/json|text\/markdown|text\/x-markdown);base64,[A-Za-z0-9+/=]+$/;
 

@@ -220,6 +220,7 @@ export function MessageComposer({
           e.target.value = "";
         }}
       />
+      {/* Must match ALLOWED_FILE_MIMES in attachments.ts and FILE_MIME_RE in @modeldoctor/contracts/src/playground.ts */}
       <input
         ref={fileInputRef}
         type="file"

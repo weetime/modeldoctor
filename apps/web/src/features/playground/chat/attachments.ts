@@ -10,6 +10,8 @@ export const ATTACHMENT_LIMITS = {
   maxSizeBytes: 10 * 1024 * 1024,
 };
 
+// Must match FILE_MIME_RE in packages/contracts/src/playground.ts
+// and the <input accept> string in MessageComposer.tsx
 export const ALLOWED_FILE_MIMES = new Set([
   "application/pdf",
   "text/plain",
@@ -18,6 +20,7 @@ export const ALLOWED_FILE_MIMES = new Set([
   "text/x-markdown",
 ]);
 
+// 8 MB raw → ~10.7 MB base64-encoded; safely under the 25 MB total chat body cap.
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 export function buildContentParts(
