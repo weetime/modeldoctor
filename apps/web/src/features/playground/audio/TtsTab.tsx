@@ -31,26 +31,32 @@ export function TtsTab() {
   const canSend = !!conn && tts.input.trim().length > 0 && !tts.sending;
 
   const onSend = async () => {
-    if (!conn) return;
+    // Read everything fresh from the store to avoid stale-closure bugs.
+    const fresh = useAudioStore.getState();
+    const connNow = fresh.selectedConnectionId
+      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
+      : null;
+    if (!connNow) return;
+
     const body: PlaygroundTtsRequest = {
-      apiBaseUrl: conn.apiBaseUrl,
-      apiKey: conn.apiKey,
-      model: conn.model,
-      customHeaders: conn.customHeaders || undefined,
-      queryParams: conn.queryParams || undefined,
-      input: tts.input,
-      voice: tts.voice,
-      format: tts.format,
-      speed: tts.speed,
+      apiBaseUrl: connNow.apiBaseUrl,
+      apiKey: connNow.apiKey,
+      model: connNow.model,
+      customHeaders: connNow.customHeaders || undefined,
+      queryParams: connNow.queryParams || undefined,
+      input: fresh.tts.input,
+      voice: fresh.tts.voice,
+      format: fresh.tts.format,
+      speed: fresh.tts.speed,
     };
-    useAudioStore.getState().setTtsSending(true);
-    useAudioStore.getState().setTtsError(null);
+    fresh.setTtsSending(true);
+    fresh.setTtsError(null);
     try {
       const res = await api.post<PlaygroundTtsResponse>("/api/playground/audio/tts", body);
       if (res.success && res.audioBase64) {
         useAudioStore.getState().setTtsResult({
           audioBase64: res.audioBase64,
-          format: res.format ?? tts.format,
+          format: res.format ?? fresh.tts.format,
         });
       } else {
         const msg = res.error ?? "unknown";
