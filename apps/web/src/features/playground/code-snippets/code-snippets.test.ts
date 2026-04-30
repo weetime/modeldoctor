@@ -234,6 +234,52 @@ describe("genChatSnippets multimodal truncation (readable / full dual view)", ()
   });
 });
 
+describe("genChatSnippets input_file truncation (readable / full dual view)", () => {
+  const fileMessages: ChatMessage[] = [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "analyze this file" },
+        {
+          type: "input_file",
+          file: {
+            filename: "doc.pdf",
+            file_data: `data:application/pdf;base64,${"C".repeat(50000)}`,
+          },
+        },
+      ],
+    },
+  ];
+
+  it("readable view truncates input_file data; full view preserves it", () => {
+    const out = genChatSnippets({
+      apiBaseUrl: "http://x",
+      model: "m",
+      messages: fileMessages,
+      params: {},
+    });
+    // readable truncates with marker
+    expect(out.curlReadable).toMatch(/CCCCCCCC\.\.\.\{\d+ KB truncated\}/);
+    expect(out.curlReadable).not.toContain("C".repeat(1000));
+    // full preserves all data
+    expect(out.curlFull).toContain("C".repeat(1000));
+    expect(out.pythonReadable).toMatch(/CCCCCCCC\.\.\.\{\d+ KB truncated\}/);
+    expect(out.pythonFull).toContain("C".repeat(1000));
+    expect(out.nodeReadable).toMatch(/CCCCCCCC\.\.\.\{\d+ KB truncated\}/);
+    expect(out.nodeFull).toContain("C".repeat(1000));
+  });
+
+  it("snapshot: input_file readable and full dual view", () => {
+    const out = genChatSnippets({
+      apiBaseUrl: "http://x",
+      model: "m",
+      messages: fileMessages,
+      params: {},
+    });
+    expect(out).toMatchSnapshot();
+  });
+});
+
 describe("base64 readable / full split (plan Step 2 tests)", () => {
   // Payload must be > 1 KB (1024 chars) to trigger truncation per spec § 9.1.
   const reqWithImage = {

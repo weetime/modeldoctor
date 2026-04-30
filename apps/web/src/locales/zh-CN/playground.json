@@ -34,13 +34,18 @@
         "image": "附加图片",
         "audio": "附加音频",
         "file": "附加文件",
-        "remove": "移除附件",
-        "fileNotSent": "（不发送）"
+        "remove": "移除附件"
       },
       "errors": {
         "tooManyAttachments": "最多允许 {{max}} 个附件",
         "attachmentTooLarge": "文件超过 {{maxMb}}MB 限制",
         "attachmentRead": "读取文件失败：{{message}}"
+      }
+    },
+    "attachments": {
+      "file": {
+        "unsupportedMime": "不支持该文件类型。允许：PDF、纯文本、JSON、Markdown。",
+        "tooLarge": "文件过大，最大 8 MB。"
       }
     },
     "messages": {

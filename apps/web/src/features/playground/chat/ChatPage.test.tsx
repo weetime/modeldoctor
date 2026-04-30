@@ -167,6 +167,71 @@ describe("ChatPage", () => {
   });
 });
 
+describe("ChatPage file attachment upload", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useConnectionsStore.setState({ connections: [] });
+    useChatStore.getState().reset();
+    useChatHistoryStore.getState().reset();
+    useChatHistoryStore.getState().save({
+      systemMessage: "",
+      messages: [],
+      params: { ...DEFAULT_CHAT_PARAMS, stream: false },
+      selectedConnectionId: null,
+    });
+    vi.mocked(api.post).mockReset();
+  });
+
+  it("sends input_file content part when a PDF file attachment is added", async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      success: true,
+      content: "file analyzed",
+      latencyMs: 10,
+    });
+    seedChatConn();
+    const user = userEvent.setup();
+    const { container } = render(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
+
+    // Pick the connection
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+
+    // Attach a PDF file
+    const fileInput = container.querySelector('input[type="file"][aria-label]') as HTMLInputElement;
+    const pdfFile = new File(["%PDF-1.4 hello"], "report.pdf", {
+      type: "application/pdf",
+    });
+    // Fire file pick (FileReader runs async)
+    const { fireEvent: fe } = await import("@testing-library/react");
+    fe.change(fileInput, { target: { files: [pdfFile] } });
+    // Wait for FileReader to complete
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Type text and send
+    await user.type(screen.getByPlaceholderText(/type your message|输入消息/i), "analyze");
+    await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+
+    await waitFor(() => {
+      const [, body] = vi.mocked(api.post).mock.calls[0] as [
+        string,
+        { messages: Array<{ role: string; content: unknown }> },
+      ];
+      const content = body.messages[0].content as Array<{
+        type: string;
+        file?: { filename: string };
+      }>;
+      expect(Array.isArray(content)).toBe(true);
+      const filePart = content.find((p) => p.type === "input_file");
+      expect(filePart).toBeDefined();
+      expect(filePart?.file?.filename).toBe("report.pdf");
+    });
+  });
+});
+
 describe("sanitizeChatSnapshot", () => {
   it("leaves string-content messages alone", () => {
     const snap: ChatHistorySnapshot = {
@@ -175,7 +240,8 @@ describe("sanitizeChatSnapshot", () => {
         { role: "user", content: "hi" },
         { role: "assistant", content: "hello" },
       ],
-      params: {}, selectedConnectionId: null,
+      params: {},
+      selectedConnectionId: null,
     };
     expect(sanitizeChatSnapshot(snap)).toEqual(snap);
   });
@@ -193,7 +259,8 @@ describe("sanitizeChatSnapshot", () => {
           ],
         },
       ],
-      params: {}, selectedConnectionId: null,
+      params: {},
+      selectedConnectionId: null,
     };
     const out = sanitizeChatSnapshot(snap);
     expect(out.messages[0].content).toContain("describe this");
@@ -204,10 +271,9 @@ describe("sanitizeChatSnapshot", () => {
   it("preserves a multimodal message that has only text parts (no dropped marker)", () => {
     const snap: ChatHistorySnapshot = {
       systemMessage: "",
-      messages: [
-        { role: "user", content: [{ type: "text", text: "only text" }] },
-      ],
-      params: {}, selectedConnectionId: null,
+      messages: [{ role: "user", content: [{ type: "text", text: "only text" }] }],
+      params: {},
+      selectedConnectionId: null,
     };
     const out = sanitizeChatSnapshot(snap);
     expect(out.messages[0].content).toEqual([{ type: "text", text: "only text" }]);

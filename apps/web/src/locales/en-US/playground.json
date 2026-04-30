@@ -34,13 +34,18 @@
         "image": "Attach image",
         "audio": "Attach audio",
         "file": "Attach file",
-        "remove": "Remove attachment",
-        "fileNotSent": "(not sent)"
+        "remove": "Remove attachment"
       },
       "errors": {
         "tooManyAttachments": "Maximum {{max}} attachments allowed",
         "attachmentTooLarge": "File exceeds {{maxMb}}MB limit",
         "attachmentRead": "Failed to read file: {{message}}"
+      }
+    },
+    "attachments": {
+      "file": {
+        "unsupportedMime": "File type not supported. Allowed: PDF, plain text, JSON, Markdown.",
+        "tooLarge": "File is too large. Maximum size is 8 MB."
       }
     },
     "messages": {

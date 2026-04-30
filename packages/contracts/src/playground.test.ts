@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ChatMessageContentPartSchema,
   ChatMessageSchema,
   PlaygroundChatRequestSchema,
   PlaygroundChatResponseSchema,
@@ -9,11 +10,59 @@ import {
   PlaygroundImagesResponseSchema,
   PlaygroundRerankRequestSchema,
   PlaygroundRerankResponseSchema,
-  PlaygroundTtsRequestSchema,
-  PlaygroundTtsResponseSchema,
   PlaygroundTranscriptionsBodySchema,
   PlaygroundTranscriptionsResponseSchema,
+  PlaygroundTtsRequestSchema,
+  PlaygroundTtsResponseSchema,
 } from "./playground.js";
+
+describe("ChatMessageContentPartSchema — input_file", () => {
+  it("accepts input_file with PDF base64 data URL", () => {
+    const r = ChatMessageContentPartSchema.parse({
+      type: "input_file",
+      file: {
+        filename: "doc.pdf",
+        file_data: "data:application/pdf;base64,JVBERi0xLjQ=",
+      },
+    });
+    expect(r.type).toBe("input_file");
+  });
+
+  it("accepts input_file with text/plain mime", () => {
+    const r = ChatMessageContentPartSchema.parse({
+      type: "input_file",
+      file: {
+        filename: "readme.txt",
+        file_data: "data:text/plain;base64,aGVsbG8=",
+      },
+    });
+    expect(r.type).toBe("input_file");
+  });
+
+  it("rejects input_file with non-whitelisted mime", () => {
+    expect(() =>
+      ChatMessageContentPartSchema.parse({
+        type: "input_file",
+        file: {
+          filename: "x.exe",
+          file_data: "data:application/x-msdownload;base64,AA==",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects input_file with missing filename", () => {
+    expect(() =>
+      ChatMessageContentPartSchema.parse({
+        type: "input_file",
+        file: {
+          filename: "",
+          file_data: "data:application/pdf;base64,JVBERi0xLjQ=",
+        },
+      }),
+    ).toThrow();
+  });
+});
 
 describe("ChatMessageSchema", () => {
   it("accepts a string-content message", () => {
@@ -175,7 +224,10 @@ describe("PlaygroundImagesResponseSchema", () => {
 describe("PlaygroundTtsRequestSchema", () => {
   it("applies defaults for voice + format", () => {
     const parsed = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "hi",
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "m",
+      input: "hi",
     });
     expect(parsed.voice).toBe("alloy");
     expect(parsed.format).toBe("mp3");
@@ -184,14 +236,23 @@ describe("PlaygroundTtsRequestSchema", () => {
   it("rejects invalid format", () => {
     expect(() =>
       PlaygroundTtsRequestSchema.parse({
-        apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "hi", format: "wav-bogus",
+        apiBaseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        input: "hi",
+        format: "wav-bogus",
       }),
     ).toThrow();
   });
 
   it("rejects empty input", () => {
     expect(() =>
-      PlaygroundTtsRequestSchema.parse({ apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "" }),
+      PlaygroundTtsRequestSchema.parse({
+        apiBaseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        input: "",
+      }),
     ).toThrow();
   });
 });
@@ -199,15 +260,21 @@ describe("PlaygroundTtsRequestSchema", () => {
 describe("PlaygroundTranscriptionsBodySchema", () => {
   it("applies default task=transcribe", () => {
     const parsed = PlaygroundTranscriptionsBodySchema.parse({
-      apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1",
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "whisper-1",
     });
     expect(parsed.task).toBe("transcribe");
   });
 
   it("accepts language + prompt + temperature", () => {
     const parsed = PlaygroundTranscriptionsBodySchema.parse({
-      apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1",
-      language: "zh", prompt: "domain terms", temperature: 0.2,
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "whisper-1",
+      language: "zh",
+      prompt: "domain terms",
+      temperature: 0.2,
     });
     expect(parsed.language).toBe("zh");
     expect(parsed.temperature).toBe(0.2);
@@ -216,7 +283,10 @@ describe("PlaygroundTranscriptionsBodySchema", () => {
   it("rejects invalid task", () => {
     expect(() =>
       PlaygroundTranscriptionsBodySchema.parse({
-        apiBaseUrl: "http://x", apiKey: "k", model: "m", task: "summarize",
+        apiBaseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        task: "summarize",
       }),
     ).toThrow();
   });
@@ -224,16 +294,30 @@ describe("PlaygroundTranscriptionsBodySchema", () => {
 
 describe("PlaygroundTtsResponseSchema + PlaygroundTranscriptionsResponseSchema", () => {
   it("response shapes are validatable", () => {
-    expect(PlaygroundTtsResponseSchema.parse({ success: true, audioBase64: "abc", format: "mp3", latencyMs: 100 }).success).toBe(true);
-    expect(PlaygroundTranscriptionsResponseSchema.parse({ success: true, text: "hello", latencyMs: 100 }).success).toBe(true);
+    expect(
+      PlaygroundTtsResponseSchema.parse({
+        success: true,
+        audioBase64: "abc",
+        format: "mp3",
+        latencyMs: 100,
+      }).success,
+    ).toBe(true);
+    expect(
+      PlaygroundTranscriptionsResponseSchema.parse({ success: true, text: "hello", latencyMs: 100 })
+        .success,
+    ).toBe(true);
   });
 });
 
 describe("PlaygroundTtsRequestSchema reference fields", () => {
   it("accepts reference_audio_base64 + reference_text", () => {
     const r = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "https://x.example.com", apiKey: "k", model: "m",
-      input: "hello", voice: "alloy", format: "wav",
+      apiBaseUrl: "https://x.example.com",
+      apiKey: "k",
+      model: "m",
+      input: "hello",
+      voice: "alloy",
+      format: "wav",
       reference_audio_base64: "data:audio/wav;base64,UklGRgAAAA==",
       reference_text: "transcript",
     });
@@ -241,15 +325,24 @@ describe("PlaygroundTtsRequestSchema reference fields", () => {
     expect(r.reference_text).toBe("transcript");
   });
   it("rejects malformed data URL", () => {
-    expect(() => PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "https://x", apiKey: "k", model: "m", input: "x",
-      voice: "alloy", format: "wav",
-      reference_audio_base64: "not-a-data-url",
-    })).toThrow();
+    expect(() =>
+      PlaygroundTtsRequestSchema.parse({
+        apiBaseUrl: "https://x",
+        apiKey: "k",
+        model: "m",
+        input: "x",
+        voice: "alloy",
+        format: "wav",
+        reference_audio_base64: "not-a-data-url",
+      }),
+    ).toThrow();
   });
   it("accepts omitted reference fields (fully optional)", () => {
     const r = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "https://x", apiKey: "k", model: "m", input: "hi",
+      apiBaseUrl: "https://x",
+      apiKey: "k",
+      model: "m",
+      input: "hi",
     });
     expect(r.reference_audio_base64).toBeUndefined();
     expect(r.reference_text).toBeUndefined();

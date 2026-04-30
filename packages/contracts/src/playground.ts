@@ -5,6 +5,17 @@ import { z } from "zod";
  * array of typed content parts (used for multimodal — image_url, input_audio
  * — added in Phase 2).
  */
+const FILE_MIME_RE =
+  /^data:(application\/pdf|text\/plain|application\/json|text\/markdown|text\/x-markdown);base64,[A-Za-z0-9+/=]+$/;
+
+const InputFilePartSchema = z.object({
+  type: z.literal("input_file"),
+  file: z.object({
+    filename: z.string().min(1).max(256),
+    file_data: z.string().regex(FILE_MIME_RE),
+  }),
+});
+
 export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string() }),
   z.object({
@@ -15,6 +26,7 @@ export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
     type: z.literal("input_audio"),
     input_audio: z.object({ data: z.string(), format: z.string() }),
   }),
+  InputFilePartSchema,
 ]);
 export type ChatMessageContentPart = z.infer<typeof ChatMessageContentPartSchema>;
 
@@ -221,4 +233,6 @@ export const PlaygroundTranscriptionsResponseSchema = z.object({
   error: z.string().optional(),
   latencyMs: z.number(),
 });
-export type PlaygroundTranscriptionsResponse = z.infer<typeof PlaygroundTranscriptionsResponseSchema>;
+export type PlaygroundTranscriptionsResponse = z.infer<
+  typeof PlaygroundTranscriptionsResponseSchema
+>;

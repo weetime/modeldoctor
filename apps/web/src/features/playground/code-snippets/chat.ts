@@ -78,6 +78,16 @@ function buildMessages(messages: ChatMessage[], variant: "readable" | "full"): C
             },
           };
         }
+        if (p.type === "input_file") {
+          const { readable, full } = truncateDataUrl(p.file.file_data);
+          return {
+            ...p,
+            file: {
+              ...p.file,
+              file_data: variant === "readable" ? readable : full,
+            },
+          };
+        }
         return p;
       }),
     };
