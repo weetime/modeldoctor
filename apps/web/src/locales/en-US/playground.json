@@ -40,7 +40,8 @@
         "tooManyAttachments": "Maximum {{max}} attachments allowed",
         "attachmentTooLarge": "File exceeds {{maxMb}}MB limit",
         "attachmentRead": "Failed to read file: {{message}}"
-      }
+      },
+      "demoPrompt": "Write a haiku about model evaluation."
     },
     "attachments": {
       "file": {
@@ -154,7 +155,11 @@
       "title": "Embedding Parameters",
       "encodingFormat": "Encoding format",
       "dimensions": "Dimensions"
-    }
+    },
+    "demoInputs": [
+      "The quick brown fox jumps over the lazy dog.",
+      "Large language models can encode text into dense vectors."
+    ]
   },
   "image": {
     "title": "Image",
@@ -168,6 +173,7 @@
       "generate": "Generate",
       "edit": "Edit (Inpaint)"
     },
+    "demoPrompt": "A serene Japanese garden in watercolor style, soft morning light.",
     "params": {
       "title": "Image Parameters",
       "size": "Size",
@@ -215,7 +221,14 @@
       "wire": "Wire",
       "topN": "Top N",
       "returnDocuments": "Return documents"
-    }
+    },
+    "demoQuery": "What is retrieval-augmented generation?",
+    "demoDocuments": [
+      "Retrieval-augmented generation (RAG) combines a retriever with a generator to ground LLM outputs in external sources.",
+      "Vector databases store embeddings to support similarity search at scale.",
+      "Reranking models reorder candidate passages to improve top-K relevance after a first-pass retrieval.",
+      "Prompt engineering is the practice of designing inputs to elicit better LLM responses."
+    ]
   },
   "audio": {
     "title": "Audio",
