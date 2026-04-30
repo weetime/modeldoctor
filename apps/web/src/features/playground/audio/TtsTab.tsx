@@ -1,13 +1,12 @@
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundTtsRequest, PlaygroundTtsResponse } from "@modeldoctor/contracts";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PromptComposer } from "../_shared/PromptComposer";
 import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
 
@@ -108,28 +107,29 @@ export function TtsTab() {
           {tts.error}
         </div>
       ) : null}
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <Label className="text-xs">{t("audio.tts.inputLabel")}</Label>
-          <Textarea
-            rows={3}
-            value={tts.input}
-            placeholder={t("audio.tts.inputPlaceholder")}
-            onChange={(e) => useAudioStore.getState().patchTts({ input: e.target.value })}
-          />
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={tts.autoPlay}
-              onCheckedChange={(v) => useAudioStore.getState().patchTts({ autoPlay: !!v })}
-            />
-            <Label className="text-xs">{t("audio.tts.autoPlay")}</Label>
-          </div>
-          <Button onClick={onSend} disabled={!canSend}>
-            {tts.sending ? t("audio.tts.sending") : t("audio.tts.send")}
-          </Button>
-        </div>
+      <div>
+        <Label htmlFor="tts-input" className="mb-1 block text-xs">
+          {t("audio.tts.inputLabel")}
+        </Label>
+        <PromptComposer
+          inputId="tts-input"
+          value={tts.input}
+          onChange={(v) => useAudioStore.getState().patchTts({ input: v })}
+          onSubmit={onSend}
+          sendLabel={tts.sending ? t("audio.tts.sending") : t("audio.tts.send")}
+          sendDisabled={!canSend}
+          rows={3}
+          placeholder={t("audio.tts.inputPlaceholder")}
+          toolbar={
+            <>
+              <Switch
+                checked={tts.autoPlay}
+                onCheckedChange={(v) => useAudioStore.getState().patchTts({ autoPlay: !!v })}
+              />
+              <Label className="text-xs">{t("audio.tts.autoPlay")}</Label>
+            </>
+          }
+        />
       </div>
     </div>
   );
