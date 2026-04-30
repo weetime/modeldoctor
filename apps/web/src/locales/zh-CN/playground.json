@@ -70,7 +70,7 @@
     },
     "compare": {
       "title": "对比",
-      "subtitle": "把同一条消息并行发到最多 4 个 chat 连接。",
+      "subtitle": "把同一条消息并行发到最多 8 个 chat 连接。",
       "panelCount": "面板数",
       "sendN": "发送到 {{count}} 个",
       "stopAll": "全部停止",

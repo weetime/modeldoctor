@@ -70,7 +70,7 @@
     },
     "compare": {
       "title": "Compare",
-      "subtitle": "Send the same prompt to up to 4 chat connections in parallel.",
+      "subtitle": "Send the same prompt to up to 8 chat connections in parallel.",
       "panelCount": "Panels",
       "sendN": "Send to {{count}}",
       "stopAll": "Stop all",
