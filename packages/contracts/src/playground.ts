@@ -178,6 +178,30 @@ export const PlaygroundImagesResponseSchema = z.object({
 });
 export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSchema>;
 
+/**
+ * Body fields (non-file parts) of the multipart POST to
+ * /api/playground/images/edit. The `image` and `mask` parts are
+ * separate file fields validated by the controller's multer interceptor.
+ *
+ * Numbers arrive as strings on the wire because multipart fields are
+ * always text — the controller coerces `n` with `Number()` and parses
+ * `customHeaders` as JSON (when present).
+ */
+export const PlaygroundImagesEditMultipartFieldsSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  prompt: z.string().min(1),
+  /** Multipart fields are strings; controller coerces to a positive int. */
+  n: z.string().regex(/^\d+$/).optional(),
+  size: z.string().optional(),
+});
+export type PlaygroundImagesEditMultipartFields = z.infer<
+  typeof PlaygroundImagesEditMultipartFieldsSchema
+>;
+
 // ─── Audio TTS ──────────────────────────────────────────────────────────
 // ~2-minute reference clip at average speaking rate (≈150 wpm).
 const REFERENCE_TEXT_MAX_CHARS = 2000;

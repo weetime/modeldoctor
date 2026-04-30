@@ -53,7 +53,9 @@ describe("ImagePage", () => {
     await user.click(screen.getByRole("option", { name: /img-1/i }));
     await user.type(screen.getByPlaceholderText(/describe|提示|描述/i), "a red apple");
     // The Send button regex matches "Generate" but we tighten to avoid "Generating…" while in-flight
-    await user.click(screen.getByRole("button", { name: /^generate$|^生成$/i }));
+    await user.click(
+      screen.getAllByRole("button", { name: /^generate$|^生成$/i }).at(-1) as HTMLElement,
+    );
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith(
         "/api/playground/images",
@@ -63,5 +65,38 @@ describe("ImagePage", () => {
     await waitFor(() => {
       expect(screen.getByRole("img")).toHaveAttribute("src", "http://image/0");
     });
+  });
+
+  it("renders Generate + Edit tabs and toggles to InpaintMode when clicked", async () => {
+    seedConn();
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/playground/image"]}>
+        <ImagePage />
+      </MemoryRouter>,
+    );
+    // Both Generate buttons (tab + Send) — at minimum the tab. Tab is the first.
+    expect(
+      screen.getAllByRole("button", { name: /^generate$|^生成$/i }).length,
+    ).toBeGreaterThanOrEqual(1);
+    const editTab = screen.getByRole("button", {
+      name: /^edit \(inpaint\)$|^编辑\(局部重绘\)$/i,
+    });
+    expect(editTab).toBeInTheDocument();
+    await user.click(editTab);
+    // After switch, the inpaint upload prompt is shown.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /upload image|上传图片/i })).toBeInTheDocument(),
+    );
+  });
+
+  it("starts in Inpaint mode when URL has ?mode=edit", () => {
+    seedConn();
+    render(
+      <MemoryRouter initialEntries={["/playground/image?mode=edit"]}>
+        <ImagePage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: /upload image|上传图片/i })).toBeInTheDocument();
   });
 });

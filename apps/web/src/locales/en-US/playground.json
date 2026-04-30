@@ -144,12 +144,16 @@
   },
   "image": {
     "title": "Image",
-    "subtitle": "Generate images from a text prompt.",
+    "subtitle": "Generate or edit images from a text prompt.",
     "promptPlaceholder": "Describe the image…",
     "previewEmpty": "Generated images will appear here.",
     "send": "Generate",
     "sending": "Generating…",
     "random": "Random prompt",
+    "tabs": {
+      "generate": "Generate",
+      "edit": "Edit (Inpaint)"
+    },
     "params": {
       "title": "Image Parameters",
       "size": "Size",
@@ -158,6 +162,27 @@
       "seed": "Seed",
       "seedRandom": "(random)",
       "randomSeed": "Random seed each request"
+    },
+    "inpaint": {
+      "uploadPrompt": "Upload an image to start editing.",
+      "upload": "Upload image",
+      "clear": "Clear image",
+      "brushSize": "Brush size",
+      "undo": "Undo",
+      "reset": "Reset",
+      "baseCanvas": "Source image",
+      "overlayCanvas": "Mask paint area",
+      "promptLabel": "Edit prompt",
+      "promptPlaceholder": "Describe what should appear in the masked region…",
+      "send": "Edit",
+      "sending": "Editing…",
+      "previewEmpty": "Edited images will appear here.",
+      "maskHint": "Paint the area to inpaint. The painted (red) region will be replaced.",
+      "errors": {
+        "imageTooLarge": "Image must be under 5 MB.",
+        "imageTypeUnsupported": "Image must be PNG, JPEG, or WebP.",
+        "missingMask": "Paint a mask area before submitting."
+      }
     }
   },
   "rerank": {

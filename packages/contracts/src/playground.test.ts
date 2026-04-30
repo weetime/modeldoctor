@@ -6,6 +6,7 @@ import {
   PlaygroundChatResponseSchema,
   PlaygroundEmbeddingsRequestSchema,
   PlaygroundEmbeddingsResponseSchema,
+  PlaygroundImagesEditMultipartFieldsSchema,
   PlaygroundImagesRequestSchema,
   PlaygroundImagesResponseSchema,
   PlaygroundRerankRequestSchema,
@@ -218,6 +219,30 @@ describe("PlaygroundImagesResponseSchema", () => {
         latencyMs: 50,
       }),
     ).not.toThrow();
+  });
+});
+
+describe("PlaygroundImagesEditMultipartFieldsSchema", () => {
+  const base = {
+    apiBaseUrl: "http://x",
+    apiKey: "k",
+    model: "m",
+    prompt: "make the dog wear a hat",
+  };
+  it("accepts a minimal request", () => {
+    expect(() => PlaygroundImagesEditMultipartFieldsSchema.parse(base)).not.toThrow();
+  });
+  it("accepts n as a numeric string", () => {
+    const parsed = PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, n: "2" });
+    expect(parsed.n).toBe("2");
+  });
+  it("rejects non-numeric n string", () => {
+    expect(() =>
+      PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, n: "two" }),
+    ).toThrow();
+  });
+  it("rejects empty prompt", () => {
+    expect(() => PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, prompt: "" })).toThrow();
   });
 });
 

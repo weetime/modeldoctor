@@ -144,12 +144,16 @@
   },
   "image": {
     "title": "图像",
-    "subtitle": "根据文本提示生成图像。",
+    "subtitle": "根据文本提示生成或编辑图像。",
     "promptPlaceholder": "描述要生成的图像…",
     "previewEmpty": "生成的图片将出现在这里。",
     "send": "生成",
     "sending": "生成中…",
     "random": "随机提示",
+    "tabs": {
+      "generate": "生成",
+      "edit": "编辑(局部重绘)"
+    },
     "params": {
       "title": "图像参数",
       "size": "尺寸",
@@ -158,6 +162,27 @@
       "seed": "Seed",
       "seedRandom": "(随机)",
       "randomSeed": "每次请求随机 Seed"
+    },
+    "inpaint": {
+      "uploadPrompt": "上传一张图片开始编辑。",
+      "upload": "上传图片",
+      "clear": "移除图片",
+      "brushSize": "画笔大小",
+      "undo": "撤销",
+      "reset": "清除",
+      "baseCanvas": "源图像",
+      "overlayCanvas": "蒙版绘制区域",
+      "promptLabel": "编辑提示",
+      "promptPlaceholder": "描述蒙版区域内应出现的内容…",
+      "send": "编辑",
+      "sending": "编辑中…",
+      "previewEmpty": "编辑后的图片将出现在这里。",
+      "maskHint": "在需要重绘的区域涂抹。红色区域将被替换。",
+      "errors": {
+        "imageTooLarge": "图片大小需小于 5 MB。",
+        "imageTypeUnsupported": "图片格式必须为 PNG、JPEG 或 WebP。",
+        "missingMask": "提交前请先绘制蒙版区域。"
+      }
     }
   },
   "rerank": {
