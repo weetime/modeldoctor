@@ -1,5 +1,6 @@
 import { type StoreApi, type UseBoundStore, create } from "zustand";
-import { persist } from "zustand/middleware";
+import { type PersistStorage, type StorageValue, persist } from "zustand/middleware";
+import { idb } from "./idbStorage";
 
 export interface HistoryEntry<S> {
   id: string;
@@ -25,10 +26,13 @@ export interface HistoryStoreState<S> {
   /** Remove a single non-current entry. No-op for the current entry. */
   removeEntry: (id: string) => void;
   reset: () => void;
+  // Phase 4 additions:
+  putBlob: (entryId: string, key: string, blob: Blob) => Promise<void>;
+  getBlob: (entryId: string, key: string) => Promise<Blob | null>;
 }
 
 export interface CreateHistoryStoreInput<S> {
-  /** localStorage key — must be unique per modality. */
+  /** IDB state store key — must be unique per modality. */
   name: string;
   /** Returns a fresh blank snapshot for new sessions. */
   blank: () => S;
@@ -45,6 +49,21 @@ function newId(): string {
     ? globalThis.crypto.randomUUID()
     : `h_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
 }
+
+// JSON-string passthrough storage adapter that zustand persist expects.
+// zustand expects parsed objects from getItem; we store raw JSON strings in IDB.
+const idbStringStorage: PersistStorage<unknown> = {
+  getItem: async (name) => {
+    const raw = await idb.getItem(name);
+    return raw ? (JSON.parse(raw) as StorageValue<unknown>) : null;
+  },
+  setItem: async (name, value) => {
+    await idb.setItem(name, JSON.stringify(value));
+  },
+  removeItem: async (name) => {
+    await idb.removeItem(name);
+  },
+};
 
 export function createHistoryStore<S>(
   input: CreateHistoryStoreInput<S>,
@@ -115,13 +134,25 @@ export function createHistoryStore<S>(
           set((s) => {
             // Never remove the current entry — UI must guard against this too.
             if (id === s.currentId) return s;
+            // fire-and-forget blob cleanup; UI doesn't need to await
+            void idb.deleteEntryBlobs(id);
             return { list: s.list.filter((e) => e.id !== id) };
           }),
-        reset: () => set(seed()),
+        reset: () => {
+          // Clear persisted state from IDB
+          void idb.removeItem(input.name);
+          set(seed());
+        },
+        putBlob: async (entryId, key, blob) => {
+          await idb.putBlob(entryId, key, blob);
+        },
+        getBlob: async (entryId, key) => idb.getBlob(entryId, key),
       }),
       {
         name: input.name,
-        version: 1,
+        version: 2, // 1 → 2: storage migrated to IDB; old localStorage data discarded
+        storage: idbStringStorage,
+        // No migrate function: per "no compat shims" policy, version 1 data is dropped.
       },
     ),
   );
