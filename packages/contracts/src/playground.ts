@@ -176,6 +176,15 @@ export const PlaygroundTtsRequestSchema = z.object({
   voice: z.string().min(1).default("alloy"),
   format: z.enum(["mp3", "wav", "flac", "opus", "aac", "pcm"]).default("mp3"),
   speed: z.number().min(0.25).max(4.0).optional(),
+  reference_audio_base64: z
+    .string()
+    .regex(
+      /^data:audio\/(wav|mp3|mpeg|webm|ogg|flac);base64,[A-Za-z0-9+/=]+$/,
+      "reference_audio_base64 must be a valid audio data URL",
+    )
+    .max(20 * 1024 * 1024, "reference_audio_base64 must be ≤ 20 MB")
+    .optional(),
+  reference_text: z.string().max(2000).optional(),
 });
 export type PlaygroundTtsRequest = z.infer<typeof PlaygroundTtsRequestSchema>;
 

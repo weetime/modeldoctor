@@ -1,21 +1,56 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildPlaygroundTtsBody,
-  parsePlaygroundTtsResponse,
   buildPlaygroundTranscriptionsFormData,
+  buildPlaygroundTtsBody,
   parsePlaygroundTranscriptionsResponse,
+  parsePlaygroundTtsResponse,
 } from "./audio.js";
 
 describe("buildPlaygroundTtsBody", () => {
   it("maps fields to OpenAI shape", () => {
     expect(
-      buildPlaygroundTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "mp3", speed: 1.2 }),
+      buildPlaygroundTtsBody({
+        model: "tts-1",
+        input: "hi",
+        voice: "alloy",
+        format: "mp3",
+        speed: 1.2,
+      }),
     ).toEqual({ model: "tts-1", input: "hi", voice: "alloy", response_format: "mp3", speed: 1.2 });
   });
 
   it("omits speed when undefined", () => {
-    const body = buildPlaygroundTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "wav" });
+    const body = buildPlaygroundTtsBody({
+      model: "tts-1",
+      input: "hi",
+      voice: "alloy",
+      format: "wav",
+    });
     expect(body).not.toHaveProperty("speed");
+  });
+
+  it("includes reference_audio_base64 and reference_text when provided", () => {
+    const body = buildPlaygroundTtsBody({
+      model: "tts-1",
+      input: "hi",
+      voice: "alloy",
+      format: "wav",
+      reference_audio_base64: "data:audio/wav;base64,UklGRgAAAA==",
+      reference_text: "hello transcript",
+    });
+    expect(body.reference_audio_base64).toBe("data:audio/wav;base64,UklGRgAAAA==");
+    expect(body.reference_text).toBe("hello transcript");
+  });
+
+  it("omits reference fields when absent", () => {
+    const body = buildPlaygroundTtsBody({
+      model: "tts-1",
+      input: "hi",
+      voice: "alloy",
+      format: "wav",
+    });
+    expect(body).not.toHaveProperty("reference_audio_base64");
+    expect(body).not.toHaveProperty("reference_text");
   });
 });
 

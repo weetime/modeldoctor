@@ -1,6 +1,6 @@
 import {
-  type PlaygroundTranscriptionsResponse,
   PlaygroundTranscriptionsBodySchema,
+  type PlaygroundTranscriptionsResponse,
   PlaygroundTranscriptionsResponseSchema,
   type PlaygroundTtsRequest,
   PlaygroundTtsRequestSchema,
@@ -44,6 +44,13 @@ export class AudioController {
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(PlaygroundTtsRequestSchema))
   tts(@Body() body: PlaygroundTtsRequest): Promise<PlaygroundTtsResponse> {
+    if (body.reference_audio_base64) {
+      const b64 = body.reference_audio_base64.split(",")[1] ?? "";
+      const bytes = Math.floor(b64.length * 0.75);
+      if (bytes > 15 * 1024 * 1024) {
+        throw new BadRequestException("reference_audio_base64 exceeds 15 MB decoded");
+      }
+    }
     return this.svc.runTts(body);
   }
 

@@ -192,9 +192,13 @@
         "speed": "速度",
         "advanced": "高级",
         "referenceAudio": "参考音频",
-        "referenceText": "参考文本"
-      },
-      "advancedV2Note": "声音克隆 — Phase 4"
+        "referenceAudioHint": "可选 — 克隆声音来源（≤15 MB，wav/mp3/flac）",
+        "referenceAudioTooLarge": "参考音频必须 ≤ 15 MB",
+        "removeReferenceAudio": "移除",
+        "referenceText": "参考文本",
+        "referenceTextHint": "可选 — 参考音频的转录文本",
+        "referenceTextPlaceholder": "参考音频中说的原文（有助于提升克隆质量）"
+      }
     },
     "stt": {
       "title": "语音转文本",

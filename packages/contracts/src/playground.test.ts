@@ -228,3 +228,30 @@ describe("PlaygroundTtsResponseSchema + PlaygroundTranscriptionsResponseSchema",
     expect(PlaygroundTranscriptionsResponseSchema.parse({ success: true, text: "hello", latencyMs: 100 }).success).toBe(true);
   });
 });
+
+describe("PlaygroundTtsRequestSchema reference fields", () => {
+  it("accepts reference_audio_base64 + reference_text", () => {
+    const r = PlaygroundTtsRequestSchema.parse({
+      apiBaseUrl: "https://x.example.com", apiKey: "k", model: "m",
+      input: "hello", voice: "alloy", format: "wav",
+      reference_audio_base64: "data:audio/wav;base64,UklGRgAAAA==",
+      reference_text: "transcript",
+    });
+    expect(r.reference_audio_base64).toMatch(/^data:audio\//);
+    expect(r.reference_text).toBe("transcript");
+  });
+  it("rejects malformed data URL", () => {
+    expect(() => PlaygroundTtsRequestSchema.parse({
+      apiBaseUrl: "https://x", apiKey: "k", model: "m", input: "x",
+      voice: "alloy", format: "wav",
+      reference_audio_base64: "not-a-data-url",
+    })).toThrow();
+  });
+  it("accepts omitted reference fields (fully optional)", () => {
+    const r = PlaygroundTtsRequestSchema.parse({
+      apiBaseUrl: "https://x", apiKey: "k", model: "m", input: "hi",
+    });
+    expect(r.reference_audio_base64).toBeUndefined();
+    expect(r.reference_text).toBeUndefined();
+  });
+});

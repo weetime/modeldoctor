@@ -192,9 +192,13 @@
         "speed": "Speed",
         "advanced": "Advanced",
         "referenceAudio": "Reference audio",
-        "referenceText": "Reference text"
-      },
-      "advancedV2Note": "Voice cloning — Phase 4"
+        "referenceAudioHint": "Optional — voice clone source (≤15 MB, wav/mp3/flac)",
+        "referenceAudioTooLarge": "Reference audio must be ≤ 15 MB",
+        "removeReferenceAudio": "Remove",
+        "referenceText": "Reference text",
+        "referenceTextHint": "Optional — transcript of the reference audio",
+        "referenceTextPlaceholder": "The exact text spoken in the reference audio (improves clone quality)"
+      }
     },
     "stt": {
       "title": "Speech to text",

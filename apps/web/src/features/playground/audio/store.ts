@@ -11,6 +11,10 @@ export interface TtsSlice {
   result: { audioBase64: string; format: string } | null;
   sending: boolean;
   error: string | null;
+  /** Voice cloning — optional reference audio as a data URL */
+  referenceAudioBase64?: string;
+  referenceAudioFilename?: string;
+  referenceText?: string;
 }
 
 export interface SttSlice {
@@ -36,11 +40,17 @@ export interface AudioStoreState {
   patchStt: (p: Partial<SttSlice>) => void;
   setTtsResult: (r: { audioBase64: string; format: string } | null) => void;
   setSttResult: (text: string | null) => void;
-  setSttFileMeta: (meta: { name: string | null; size: number | null; mimeType: string | null }) => void;
+  setSttFileMeta: (meta: {
+    name: string | null;
+    size: number | null;
+    mimeType: string | null;
+  }) => void;
   setTtsSending: (b: boolean) => void;
   setSttSending: (b: boolean) => void;
   setTtsError: (e: string | null) => void;
   setSttError: (e: string | null) => void;
+  setReferenceAudio: (ref: { base64: string; filename: string } | null) => void;
+  setReferenceText: (t: string) => void;
   resetTts: () => void;
   resetStt: () => void;
 }
@@ -85,6 +95,17 @@ export const useAudioStore = create<AudioStoreState>((set) => ({
   setSttSending: (b) => set((s) => ({ stt: { ...s.stt, sending: b } })),
   setTtsError: (e) => set((s) => ({ tts: { ...s.tts, error: e } })),
   setSttError: (e) => set((s) => ({ stt: { ...s.stt, error: e } })),
-  resetTts: () => set((s) => ({ tts: { ...initialTts }, selectedConnectionId: s.selectedConnectionId })),
-  resetStt: () => set((s) => ({ stt: { ...initialStt }, selectedConnectionId: s.selectedConnectionId })),
+  setReferenceAudio: (ref) =>
+    set((s) => ({
+      tts: {
+        ...s.tts,
+        referenceAudioBase64: ref?.base64,
+        referenceAudioFilename: ref?.filename,
+      },
+    })),
+  setReferenceText: (t) => set((s) => ({ tts: { ...s.tts, referenceText: t } })),
+  resetTts: () =>
+    set((s) => ({ tts: { ...initialTts }, selectedConnectionId: s.selectedConnectionId })),
+  resetStt: () =>
+    set((s) => ({ stt: { ...initialStt }, selectedConnectionId: s.selectedConnectionId })),
 }));

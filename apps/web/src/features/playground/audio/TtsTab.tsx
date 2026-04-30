@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -14,7 +14,9 @@ export function TtsTab() {
   const { t } = useTranslation("playground");
   const tts = useAudioStore((s) => s.tts);
   const selectedConnectionId = useAudioStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) => (selectedConnectionId ? s.get(selectedConnectionId) : null));
+  const conn = useConnectionsStore((s) =>
+    selectedConnectionId ? s.get(selectedConnectionId) : null,
+  );
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // autoPlay when result changes
@@ -23,7 +25,9 @@ export function TtsTab() {
       const p = audioRef.current.play?.();
       // play() returns a Promise in real browsers; jsdom returns undefined — guard both.
       if (p && typeof p.catch === "function") {
-        p.catch(() => {/* user-gesture autoplay block — silently ignore */});
+        p.catch(() => {
+          /* user-gesture autoplay block — silently ignore */
+        });
       }
     }
   }, [tts.result, tts.autoPlay]);
@@ -48,6 +52,8 @@ export function TtsTab() {
       voice: fresh.tts.voice,
       format: fresh.tts.format,
       speed: fresh.tts.speed,
+      reference_audio_base64: fresh.tts.referenceAudioBase64,
+      reference_text: fresh.tts.referenceText,
     };
     fresh.setTtsSending(true);
     fresh.setTtsError(null);
