@@ -135,12 +135,23 @@ export function createHistoryStore<S>(
             // Never remove the current entry — UI must guard against this too.
             if (id === s.currentId) return s;
             // fire-and-forget blob cleanup; UI doesn't need to await
-            void idb.deleteEntryBlobs(id);
+            idb
+              .deleteEntryBlobs(id)
+              .catch((e) =>
+                console.error("[HistoryStore] Failed to delete blobs for entry", id, e),
+              );
             return { list: s.list.filter((e) => e.id !== id) };
           }),
         reset: () => {
-          // Clear persisted state from IDB
-          void idb.removeItem(input.name);
+          // IDB serializes readwrite transactions on the same object store, so the
+          // remove below always commits before zustand's subsequent setItem write
+          // triggered by `set(seed())`. Fire-and-forget is safe; we log on failure
+          // for debuggability.
+          idb
+            .removeItem(input.name)
+            .catch((e) =>
+              console.error("[HistoryStore] Failed to clear persisted state on reset", e),
+            );
           set(seed());
         },
         putBlob: async (entryId, key, blob) => {

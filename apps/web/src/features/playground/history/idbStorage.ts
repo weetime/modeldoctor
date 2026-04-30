@@ -1,6 +1,7 @@
 import { type IDBPDatabase, openDB } from "idb";
 
 export const DB_NAME = "modeldoctor-playground";
+// Bump DB_VERSION only alongside a new upgrade(db) migration step — IDB will reject the open otherwise.
 const DB_VERSION = 1;
 const STATE_STORE = "state"; // zustand JSON state
 const BLOB_STORE = "blobs"; // binary attachments
