@@ -20,7 +20,6 @@ export const lightTheme = {
   backgroundColor: "transparent",
   textStyle: { color: "rgb(15 23 42)" },
   axisPointer: { lineStyle: { color: "rgba(15,23,42,0.3)" } },
-  splitLine: { lineStyle: { color: "rgba(15,23,42,0.1)" } },
 };
 
 export const darkTheme = {
@@ -28,7 +27,6 @@ export const darkTheme = {
   backgroundColor: "transparent",
   textStyle: { color: "rgb(226 232 240)" },
   axisPointer: { lineStyle: { color: "rgba(226,232,240,0.3)" } },
-  splitLine: { lineStyle: { color: "rgba(226,232,240,0.1)" } },
 };
 
 export function applyTheme(opt: EChartsOption, dark: boolean): EChartsOption {
@@ -37,6 +35,7 @@ export function applyTheme(opt: EChartsOption, dark: boolean): EChartsOption {
     color: t.color,
     backgroundColor: t.backgroundColor,
     textStyle: t.textStyle,
+    axisPointer: t.axisPointer,
     ...opt,
   };
 }

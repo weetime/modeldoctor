@@ -12,6 +12,7 @@ import {
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useMemo } from "react";
+import { useThemeStore } from "../../stores/theme-store";
 import { applyTheme } from "./theme";
 
 // Tree-shake ECharts: register only what we use.
@@ -132,20 +133,23 @@ function buildOption<K extends ChartKind>(
   return { ...opt, ...extra };
 }
 
-function isDarkTheme(modeProp: ChartProps<ChartKind>["theme"]): boolean {
-  if (modeProp === "dark") return true;
-  if (modeProp === "light") return false;
-  if (typeof window === "undefined") return false;
-  return document.documentElement.classList.contains("dark");
-}
-
 export function Chart<K extends ChartKind>(props: ChartProps<K>) {
   const { kind, data, options, theme = "auto", height = 360, loading, empty, ariaLabel } = props;
 
-  const dark = isDarkTheme(theme);
+  const storeMode = useThemeStore((s) => s.mode);
+  const dark =
+    theme === "dark"
+      ? true
+      : theme === "light"
+        ? false
+        : storeMode === "dark" ||
+          (storeMode === "system" &&
+            typeof window !== "undefined" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const option = useMemo(
     () => applyTheme(buildOption(kind, data, options), dark),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [kind, data, options, dark],
   );
 
@@ -162,13 +166,15 @@ export function Chart<K extends ChartKind>(props: ChartProps<K>) {
   if (empty) {
     const msg = typeof empty === "string" ? empty : "No data";
     return (
-      <output
+      // biome-ignore lint/a11y/useSemanticElements: <div role="status"> is the convention in this codebase
+      <div
+        role="status"
         aria-label={ariaLabel}
         style={{ height }}
         className="flex items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground"
       >
         {msg}
-      </output>
+      </div>
     );
   }
   return (
