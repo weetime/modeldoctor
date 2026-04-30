@@ -51,6 +51,83 @@ const resp = await client.chat.completions.create({
 console.log(resp.choices[0].message.content);"
 `;
 
+exports[`genChatSnippets multimodal truncation > replaces image_url data URLs and input_audio data with truncation markers 1`] = `
+{
+  "curl": "curl -X POST http://x/v1/chat/completions \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "model": "m",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "describe"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/png;base64,AAAAAAAA<BASE64_IMAGE_DATA_TRUNCATED>"
+          }
+        },
+        {
+          "type": "input_audio",
+          "input_audio": {
+            "data": "<BASE64_AUDIO_DATA_TRUNCATED>",
+            "format": "webm"
+          }
+        }
+      ]
+    }
+  ]
+}'",
+  "node": "import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "http://x",
+  apiKey: "<YOUR_API_KEY>",
+});
+const resp = await client.chat.completions.create({
+  "model": "m",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "describe"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/png;base64,AAAAAAAA<BASE64_IMAGE_DATA_TRUNCATED>"
+          }
+        },
+        {
+          "type": "input_audio",
+          "input_audio": {
+            "data": "<BASE64_AUDIO_DATA_TRUNCATED>",
+            "format": "webm"
+          }
+        }
+      ]
+    }
+  ]
+});
+console.log(resp.choices[0].message.content);",
+  "python": "from openai import OpenAI
+
+client = OpenAI(base_url="http://x", api_key="<YOUR_API_KEY>")
+resp = client.chat.completions.create(
+    model="m",
+    messages=[{"role":"user","content":[{"type":"text","text":"describe"},{"type":"image_url","image_url":{"url":"data:image/png;base64,AAAAAAAA<BASE64_IMAGE_DATA_TRUNCATED>"}},{"type":"input_audio","input_audio":{"data":"<BASE64_AUDIO_DATA_TRUNCATED>","format":"webm"}}]}],
+)
+print(resp.choices[0].message.content)",
+}
+`;
+
 exports[`genEmbeddingsSnippets > renders single + array input (snapshot) 1`] = `
 "curl -X POST http://x/v1/embeddings \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
