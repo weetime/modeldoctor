@@ -29,10 +29,18 @@ const renderStt = () =>
   );
 
 describe("SttTab", () => {
+  const mockCreateObjectURL = vi.fn(() => "blob:mock");
+  const mockRevokeObjectURL = vi.fn();
+
   beforeEach(() => {
     // jsdom does not implement URL.createObjectURL; stub it to avoid crashes
     // when the audio preview element renders after a blob is adopted.
-    vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:mock") });
+    vi.stubGlobal("URL", {
+      createObjectURL: mockCreateObjectURL,
+      revokeObjectURL: mockRevokeObjectURL,
+      parse: (URL as any).parse,
+      canParse: (URL as any).canParse,
+    });
     useAudioStore.setState((s) => ({
       ...s,
       selectedConnectionId: "c1",
@@ -56,6 +64,8 @@ describe("SttTab", () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    mockCreateObjectURL.mockClear();
+    mockRevokeObjectURL.mockClear();
   });
 
   it("transcribe button is disabled when no file", () => {
