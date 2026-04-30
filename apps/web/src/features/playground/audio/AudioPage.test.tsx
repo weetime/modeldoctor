@@ -8,7 +8,21 @@ import { AudioPage } from "./AudioPage";
 import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
 
-vi.mock("./TtsTab", () => ({ TtsTab: () => <div data-testid="tts-tab" /> }));
+// Render TtsTab's <audio> element so we can assert on its src after rehydration.
+vi.mock("./TtsTab", () => ({
+  TtsTab: () => {
+    const tts = useAudioStore((s) => s.tts);
+    return tts.result ? (
+      // biome-ignore lint/a11y/useMediaCaption: test stub
+      <audio
+        data-testid="tts-audio"
+        src={`data:audio/${tts.result.format};base64,${tts.result.audioBase64}`}
+      />
+    ) : (
+      <div data-testid="tts-tab" />
+    );
+  },
+}));
 vi.mock("./SttTab", () => ({ SttTab: () => <div data-testid="stt-tab" /> }));
 
 const renderAt = (initialEntry: string) =>
@@ -128,12 +142,20 @@ describe("AudioPage – TTS history play button", () => {
     await waitFor(() => {
       expect(getBlobSpy).toHaveBeenCalledWith(oldId, "tts_result");
     });
-    // FileReader.readAsDataURL → setTtsResult called with a data URL
+
+    // setTtsResult must be called with RAW base64 (no data: prefix) and the correct format.
     await waitFor(() => {
-      expect(setResultSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ audioBase64: expect.stringContaining("data:audio/") }),
-      );
+      expect(setResultSpy).toHaveBeenCalled();
     });
+    const callArg = setResultSpy.mock.calls[0][0] as { audioBase64: string; format: string };
+    // Invariant: audioBase64 must NOT start with "data:" — TtsTab prepends the header itself.
+    expect(callArg.audioBase64).not.toMatch(/^data:/);
+    // format must be set from the blob MIME type
+    expect(callArg.format).toBe("mp3");
+
+    // The rendered <audio src> must be a well-formed single data URL.
+    const audioEl = await screen.findByTestId("tts-audio");
+    expect(audioEl.getAttribute("src")).toMatch(/^data:audio\/[^;]+;base64,[A-Za-z0-9+/=]+$/);
 
     getBlobSpy.mockRestore();
     setResultSpy.mockRestore();

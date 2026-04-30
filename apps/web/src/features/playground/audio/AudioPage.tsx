@@ -117,9 +117,13 @@ export function AudioPage() {
         const reader = new FileReader();
         reader.onload = () => {
           const dataUrl = reader.result as string;
-          // format comes from data URL mime: data:audio/<fmt>;base64,...
-          const fmt = dataUrl.match(/^data:audio\/([^;]+);/)?.[1] ?? fallbackFormat;
-          useAudioStore.getState().setTtsResult({ audioBase64: dataUrl, format: fmt });
+          // Match the success-path invariant: store raw base64, not a data URL.
+          // TtsTab's <audio src> already prepends 'data:audio/<format>;base64,'.
+          const m = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+          if (!m) return; // unrecognized blob, silently skip
+          const [, mime, base64] = m;
+          const fmt = mime.split("/")[1] ?? fallbackFormat;
+          useAudioStore.getState().setTtsResult({ audioBase64: base64, format: fmt as TtsFormat });
         };
         reader.readAsDataURL(blob);
       })
