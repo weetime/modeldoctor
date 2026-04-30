@@ -1,6 +1,3 @@
-// Minimal subset of Express.Multer.File (full type provided by @types/multer in Task 4).
-type MulterFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
-
 import {
   type PlaygroundTranscriptionsResponse,
   PlaygroundTranscriptionsBodySchema,
@@ -58,7 +55,7 @@ export class AudioController {
     FileInterceptor("file", { limits: { fileSize: TRANSCRIPTIONS_FILE_SIZE_LIMIT } }),
   )
   async transcriptions(
-    @UploadedFile() file: MulterFile | undefined,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @Body() rawBody: unknown,
   ): Promise<PlaygroundTranscriptionsResponse> {
     if (!file) throw new BadRequestException("missing 'file' part in multipart body");
