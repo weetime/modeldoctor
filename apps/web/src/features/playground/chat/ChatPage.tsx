@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
+import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
@@ -207,6 +208,7 @@ export function ChatPage() {
         </div>
       }
     >
+      <ChatModeTabs />
       <PageHeader title={t("chat.title")} subtitle={t("chat.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 overflow-y-auto">
