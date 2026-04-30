@@ -29,7 +29,19 @@
       "send": "发送",
       "sending": "发送中…",
       "stop": "停止",
-      "needConnection": "请先选择一个对话类连接"
+      "needConnection": "请先选择一个对话类连接",
+      "attachments": {
+        "image": "附加图片",
+        "audio": "附加音频",
+        "file": "附加文件",
+        "remove": "移除附件",
+        "fileNotSent": "（不发送）"
+      },
+      "errors": {
+        "tooManyAttachments": "最多允许 {{max}} 个附件",
+        "attachmentTooLarge": "文件超过 {{maxMb}}MB 限制",
+        "attachmentRead": "读取文件失败：{{message}}"
+      }
     },
     "messages": {
       "system": "系统",

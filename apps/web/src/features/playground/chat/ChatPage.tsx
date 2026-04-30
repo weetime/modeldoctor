@@ -17,6 +17,7 @@ import { HistoryDrawer } from "../history/HistoryDrawer";
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
+import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
@@ -73,7 +74,7 @@ export function ChatPage() {
         })
       : null;
 
-  const onSend = async (text: string) => {
+  const onSend = async (text: string, attachments: AttachedFile[]) => {
     // Read everything fresh from the store to avoid stale-closure bugs.
     const fresh = useChatStore.getState();
     const connNow = fresh.selectedConnectionId
@@ -81,7 +82,8 @@ export function ChatPage() {
       : null;
     if (!connNow) return;
 
-    fresh.appendMessage({ role: "user", content: text });
+    const content = buildContentParts(text, attachments);
+    fresh.appendMessage({ role: "user", content });
     fresh.setSending(true);
     fresh.setError(null);
 

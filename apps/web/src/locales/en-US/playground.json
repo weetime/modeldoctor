@@ -29,7 +29,19 @@
       "send": "Send",
       "sending": "Sending…",
       "stop": "Stop",
-      "needConnection": "Pick a chat connection first"
+      "needConnection": "Pick a chat connection first",
+      "attachments": {
+        "image": "Attach image",
+        "audio": "Attach audio",
+        "file": "Attach file",
+        "remove": "Remove attachment",
+        "fileNotSent": "(not sent)"
+      },
+      "errors": {
+        "tooManyAttachments": "Maximum {{max}} attachments allowed",
+        "attachmentTooLarge": "File exceeds {{maxMb}}MB limit",
+        "attachmentRead": "Failed to read file: {{message}}"
+      }
     },
     "messages": {
       "system": "system",
