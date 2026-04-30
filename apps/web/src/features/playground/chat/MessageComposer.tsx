@@ -4,6 +4,7 @@ import { ImageIcon, Mic, Paperclip, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { consumeDemoSeed } from "../_shared/demo-seed";
 import {
   ALLOWED_FILE_MIMES,
   ATTACHMENT_LIMITS,
@@ -23,6 +24,8 @@ interface MessageComposerProps {
   disabledReason?: string;
   /** Override Send button label (Compare uses "Send to N"). */
   sendLabelOverride?: string;
+  /** When set, seed the input with `chat.composer.demoPrompt` once per browser. */
+  demoSeedKey?: string;
 }
 
 export function MessageComposer({
@@ -35,9 +38,16 @@ export function MessageComposer({
   disabled,
   disabledReason,
   sendLabelOverride,
+  demoSeedKey,
 }: MessageComposerProps) {
   const { t } = useTranslation("playground");
-  const [draft, setDraft] = useState("");
+  // First-visit demo prompt seed (chat only — opted in by ChatPage). Done
+  // inside useState's lazy initializer so the seeded value survives React
+  // Strict Mode's dev-only double-mount: consumeDemoSeed memoises its
+  // decision per page-load, so both mount cycles agree on the same answer.
+  const [draft, setDraft] = useState<string>(() =>
+    demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "",
+  );
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);

@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundImagesRequest, PlaygroundImagesResponse } from "@modeldoctor/contracts";
@@ -11,6 +10,8 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { PromptComposer } from "../_shared/PromptComposer";
+import { consumeDemoSeed } from "../_shared/demo-seed";
 import { genImagesSnippets } from "../code-snippets/images";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
@@ -68,6 +69,16 @@ export function ImagePage() {
       params: slice.params,
     });
   }, [slice.selectedConnectionId, slice.prompt, slice.params]);
+
+  // First-visit demo prompt seed (generate mode only).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only
+  useEffect(() => {
+    const s = useImageStore.getState();
+    if (s.prompt !== "") return;
+    if (!consumeDemoSeed("image")) return;
+    const demo = t("image.demoPrompt");
+    if (demo) s.setPrompt(demo);
+  }, []);
 
   const onSubmit = async () => {
     if (!conn) return;
@@ -171,21 +182,25 @@ export function ImagePage() {
               </div>
             )}
           </div>
-          <div className="flex gap-2">
-            <Textarea
-              rows={2}
-              value={slice.prompt}
-              onChange={(e) => slice.setPrompt(e.target.value)}
-              placeholder={t("image.promptPlaceholder")}
-              className="text-sm"
-            />
-            <Button variant="ghost" onClick={onRandomPrompt} aria-label={t("image.random")}>
-              <Dice5 className="h-4 w-4" />
-            </Button>
-            <Button onClick={onSubmit} disabled={!canSubmit}>
-              {slice.loading ? t("image.sending") : t("image.send")}
-            </Button>
-          </div>
+          <PromptComposer
+            value={slice.prompt}
+            onChange={slice.setPrompt}
+            onSubmit={onSubmit}
+            sendLabel={slice.loading ? t("image.sending") : t("image.send")}
+            sendDisabled={!canSubmit}
+            placeholder={t("image.promptPlaceholder")}
+            toolbar={
+              <Button
+                variant="outline"
+                size="icon"
+                type="button"
+                onClick={onRandomPrompt}
+                aria-label={t("image.random")}
+              >
+                <Dice5 className="h-4 w-4" />
+              </Button>
+            }
+          />
           {slice.error ? <span className="text-xs text-destructive">{slice.error}</span> : null}
         </div>
       ) : (
