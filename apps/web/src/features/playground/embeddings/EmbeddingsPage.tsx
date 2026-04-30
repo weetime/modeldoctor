@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { consumeDemoSeed } from "../_shared/demo-seed";
 import { genEmbeddingsSnippets } from "../code-snippets/embeddings";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
@@ -77,6 +78,23 @@ export function EmbeddingsPage() {
       params: slice.params,
     });
   }, [slice.selectedConnectionId, slice.inputs, slice.batchMode, slice.params]);
+
+  // First-visit demo seed: only fires when inputs are still the blank
+  // initial value (avoids stomping on a snapshot the user is restoring).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only
+  useEffect(() => {
+    const s = useEmbeddingsStore.getState();
+    const isBlank = s.inputs.length === 1 && s.inputs[0] === "";
+    if (!isBlank) return;
+    if (!consumeDemoSeed("embeddings")) return;
+    const demos = t("embeddings.demoInputs", { returnObjects: true }) as string[];
+    if (!Array.isArray(demos) || demos.length === 0) return;
+    s.setInputAt(0, demos[0]);
+    for (let i = 1; i < demos.length; i++) {
+      s.addInput();
+      s.setInputAt(i, demos[i]);
+    }
+  }, []);
 
   const onSubmit = async () => {
     if (!conn) return;

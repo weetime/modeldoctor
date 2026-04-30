@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { consumeDemoSeed } from "../_shared/demo-seed";
 import { genRerankSnippets } from "../code-snippets/rerank";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
@@ -78,6 +79,24 @@ export function RerankPage() {
       params: slice.params,
     });
   }, [slice.selectedConnectionId, slice.query, slice.documents, slice.batchMode, slice.params]);
+
+  // First-visit demo seed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only
+  useEffect(() => {
+    const s = useRerankStore.getState();
+    const isBlank = s.query === "" && s.documents.length === 1 && s.documents[0] === "";
+    if (!isBlank) return;
+    if (!consumeDemoSeed("rerank")) return;
+    const demoQ = t("rerank.demoQuery");
+    const demoDocs = t("rerank.demoDocuments", { returnObjects: true }) as string[];
+    if (!demoQ || !Array.isArray(demoDocs) || demoDocs.length === 0) return;
+    s.setQuery(demoQ);
+    s.setDocAt(0, demoDocs[0]);
+    for (let i = 1; i < demoDocs.length; i++) {
+      s.addDocument();
+      s.setDocAt(i, demoDocs[i]);
+    }
+  }, []);
 
   const onSubmit = async () => {
     if (!conn) return;

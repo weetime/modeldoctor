@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
 import { playgroundFetchMultipart } from "@/lib/playground-multipart";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -8,6 +7,7 @@ import { Download, ImageUp, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PromptComposer } from "../_shared/PromptComposer";
 import { MaskPainter } from "./MaskPainter";
 import { useImageStore } from "./store";
 
@@ -187,19 +187,15 @@ export function InpaintMode() {
         <label htmlFor="inpaint-prompt" className="mb-1 block text-xs text-muted-foreground">
           {t("image.inpaint.promptLabel")}
         </label>
-        <div className="flex gap-2">
-          <Textarea
-            id="inpaint-prompt"
-            rows={2}
-            value={inpaint.prompt}
-            onChange={(e) => useImageStore.getState().patchInpaint({ prompt: e.target.value })}
-            placeholder={t("image.inpaint.promptPlaceholder")}
-            className="text-sm"
-          />
-          <Button onClick={onSubmit} disabled={!canSubmit}>
-            {inpaint.loading ? t("image.inpaint.sending") : t("image.inpaint.send")}
-          </Button>
-        </div>
+        <PromptComposer
+          inputId="inpaint-prompt"
+          value={inpaint.prompt}
+          onChange={(v) => useImageStore.getState().patchInpaint({ prompt: v })}
+          onSubmit={onSubmit}
+          sendLabel={inpaint.loading ? t("image.inpaint.sending") : t("image.inpaint.send")}
+          sendDisabled={!canSubmit}
+          placeholder={t("image.inpaint.promptPlaceholder")}
+        />
       </div>
 
       {inpaint.error ? (

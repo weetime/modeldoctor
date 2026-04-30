@@ -266,6 +266,7 @@ export function ChatPage() {
           streaming={slice.streaming}
           disabled={!canSend}
           disabledReason={disabledReason}
+          demoSeedKey="chat"
         />
       </div>
     </PlaygroundShell>
