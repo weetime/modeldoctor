@@ -11,6 +11,8 @@ import { TtsParams } from "./TtsParams";
 import { TtsTab } from "./TtsTab";
 import { type AudioHistorySnapshot, useAudioHistoryStore } from "./history";
 import { type TtsFormat, useAudioStore } from "./store";
+import { genAudioSnippets } from "../code-snippets/audio";
+import { useConnectionsStore } from "@/stores/connections-store";
 
 type Tab = "tts" | "stt";
 
@@ -69,7 +71,17 @@ export function AudioPage() {
     stt.language, stt.task, stt.prompt, stt.temperature, stt.fileName, stt.result,
   ]);
 
-  const snippets = null; // placeholder — Task 14 will add genAudioSnippets
+  const conn = useConnectionsStore((s) =>
+    selectedConnectionId ? s.get(selectedConnectionId) : null,
+  );
+  const snippets = conn
+    ? genAudioSnippets({
+        activeTab: tab,
+        apiBaseUrl: conn.apiBaseUrl,
+        tts,
+        stt,
+      })
+    : null;
 
   return (
     <PlaygroundShell

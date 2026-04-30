@@ -1,5 +1,68 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`genAudioSnippets — STT > includes /v1/audio/transcriptions path and multipart -F flags 1`] = `
+{
+  "curl": "curl -X POST https://upstream.example/v1/audio/transcriptions \\ \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\ \\
+  -F "file=@audio.wav" \\ \\
+  -F "model=<YOUR_MODEL>" \\
+  -F "language=zh" \\
+  -F "task=transcribe" \\
+  -F "prompt=domain terms" \\
+  -F "temperature=0.2"",
+  "node": "import OpenAI from "openai";
+import { createReadStream } from "fs";
+const client = new OpenAI({ baseURL: "https://upstream.example", apiKey: "<YOUR_API_KEY>" });
+const resp = await client.audio.transcriptions.create({
+  model: "<YOUR_MODEL>",
+  file: createReadStream("audio.wav"),
+  language: "zh",
+  prompt: "domain terms",
+  temperature: 0.2,
+});
+console.log(resp.text);",
+  "python": "from openai import OpenAI
+client = OpenAI(base_url="https://upstream.example", api_key="<YOUR_API_KEY>")
+resp = client.audio.transcriptions.create(
+    model="<YOUR_MODEL>",
+    file=open("audio.wav", "rb"),
+    language="zh",
+    prompt="domain terms",
+    temperature=0.2,
+)
+print(resp.text)",
+}
+`;
+
+exports[`genAudioSnippets — TTS > includes /v1/audio/speech path and key fields in all 3 languages 1`] = `
+{
+  "curl": "curl -X POST https://upstream.example/v1/audio/speech \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  --output speech.mp3 \\
+  -d '{"model":"<YOUR_MODEL>","input":"Hello world.","voice":"alloy","response_format":"mp3","speed":1}'",
+  "node": "import OpenAI from "openai";
+import { writeFileSync } from "fs";
+const client = new OpenAI({ baseURL: "https://upstream.example", apiKey: "<YOUR_API_KEY>" });
+const resp = await client.audio.speech.create({
+  model: "<YOUR_MODEL>",
+  voice: "alloy",
+  input: "Hello world.",
+  response_format: "mp3",
+});
+writeFileSync("speech.mp3", Buffer.from(await resp.arrayBuffer()));",
+  "python": "from openai import OpenAI
+client = OpenAI(base_url="https://upstream.example", api_key="<YOUR_API_KEY>")
+with client.audio.speech.with_streaming_response.create(
+    model="<YOUR_MODEL>",
+    voice="alloy",
+    input="Hello world.",
+    response_format="mp3",
+) as resp:
+    resp.stream_to_file("speech.mp3")",
+}
+`;
+
 exports[`genChatSnippets > renders curl/python/node with placeholder API key (snapshot) 1`] = `
 "curl -X POST http://upstream.test/v1/chat/completions \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
