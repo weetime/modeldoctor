@@ -185,6 +185,7 @@
       "send": "Generate",
       "sending": "Generating…",
       "autoPlay": "Auto-play",
+      "playHistoryEntry": "Play recorded audio",
       "errors": { "send": "TTS failed: {{message}}" },
       "params": {
         "voice": "Voice",

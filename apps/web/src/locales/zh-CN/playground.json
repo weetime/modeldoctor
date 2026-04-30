@@ -185,6 +185,7 @@
       "send": "生成",
       "sending": "生成中…",
       "autoPlay": "自动播放",
+      "playHistoryEntry": "播放录音",
       "errors": { "send": "TTS 失败：{{message}}" },
       "params": {
         "voice": "声音",

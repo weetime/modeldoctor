@@ -8,6 +8,7 @@ import type { PlaygroundTtsRequest, PlaygroundTtsResponse } from "@modeldoctor/c
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
 
 export function TtsTab() {
@@ -60,10 +61,19 @@ export function TtsTab() {
     try {
       const res = await api.post<PlaygroundTtsResponse>("/api/playground/audio/tts", body);
       if (res.success && res.audioBase64) {
-        useAudioStore.getState().setTtsResult({
-          audioBase64: res.audioBase64,
-          format: res.format ?? fresh.tts.format,
-        });
+        const format = res.format ?? fresh.tts.format;
+        useAudioStore.getState().setTtsResult({ audioBase64: res.audioBase64, format });
+        // Persist the audio blob to IDB for history replay
+        const b64 = res.audioBase64.match(/^data:[^;]+;base64,(.*)$/)?.[1] ?? res.audioBase64;
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: `audio/${format}` });
+        const entryId = useAudioHistoryStore.getState().currentId;
+        useAudioHistoryStore
+          .getState()
+          .putBlob(entryId, "tts_result", blob)
+          .catch((err) => {
+            console.error("[TtsTab] Failed to persist audio blob:", err);
+          });
       } else {
         const msg = res.error ?? "unknown";
         useAudioStore.getState().setTtsError(msg);

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TtsTab } from "./TtsTab";
+import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
 
 const renderTts = () =>
@@ -83,6 +84,35 @@ describe("TtsTab", () => {
     expect(container.querySelector("audio")?.getAttribute("src")).toBe(
       "data:audio/mp3;base64,aGVsbG8=",
     );
+  });
+
+  it("persists TTS result as a Blob in IDB via putBlob on success", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(
+        JSON.stringify({ success: true, audioBase64: "aGVsbG8=", format: "mp3", latencyMs: 50 }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const putBlobSpy = vi
+      .spyOn(useAudioHistoryStore.getState(), "putBlob")
+      .mockResolvedValue(undefined);
+    const expectedId = useAudioHistoryStore.getState().currentId;
+    seedConn();
+    const conn = useConnectionsStore.getState().list()[0];
+    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: conn.id }));
+    renderTts();
+    const textarea = screen.getByRole("textbox");
+    await userEvent.type(textarea, "hello");
+    await userEvent.click(screen.getByRole("button", { name: /generate|send/i }));
+    await waitFor(() => {
+      expect(useAudioStore.getState().tts.result).not.toBeNull();
+    });
+    await waitFor(() => {
+      expect(putBlobSpy).toHaveBeenCalledWith(expectedId, "tts_result", expect.any(Blob));
+    });
+    const blobArg = putBlobSpy.mock.calls[0][2] as Blob;
+    expect(blobArg.type).toBe("audio/mp3");
+    putBlobSpy.mockRestore();
   });
 
   it("includes reference_audio_base64 and reference_text in TTS request body", async () => {

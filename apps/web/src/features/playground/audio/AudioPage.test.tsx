@@ -1,9 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import i18n from "@/lib/i18n";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AudioPage } from "./AudioPage";
+import { useAudioHistoryStore } from "./history";
+import { useAudioStore } from "./store";
 
 vi.mock("./TtsTab", () => ({ TtsTab: () => <div data-testid="tts-tab" /> }));
 vi.mock("./SttTab", () => ({ SttTab: () => <div data-testid="stt-tab" /> }));
@@ -30,5 +33,109 @@ describe("AudioPage", () => {
     renderAt("/playground/audio?tab=stt");
     expect(screen.getByTestId("stt-tab")).toBeInTheDocument();
     expect(screen.queryByTestId("tts-tab")).not.toBeInTheDocument();
+  });
+});
+
+describe("AudioPage – TTS history play button", () => {
+  beforeEach(() => {
+    useAudioHistoryStore.getState().reset();
+    useAudioStore.setState((s) => ({
+      ...s,
+      selectedConnectionId: null,
+      tts: { ...s.tts, result: null, error: null },
+    }));
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:fake-url"),
+      revokeObjectURL: vi.fn(),
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("history row renders a play button when a blob exists for the entry", async () => {
+    const user = userEvent.setup();
+    // Seed an old entry with a preview
+    useAudioHistoryStore.getState().save({
+      selectedConnectionId: null,
+      tts: { input: "hello world", voice: "alloy", format: "mp3", autoPlay: true },
+      stt: { language: "", task: "transcribe", prompt: "", fileName: null, resultText: null },
+      activeTab: "tts",
+    });
+    const oldId = useAudioHistoryStore.getState().currentId;
+    useAudioHistoryStore.getState().newSession();
+
+    // Mock getBlob to return a blob for the old entry
+    const fakeBlob = new Blob(["fake-audio"], { type: "audio/mp3" });
+    const getBlobSpy = vi
+      .spyOn(useAudioHistoryStore.getState(), "getBlob")
+      .mockImplementation(async (entryId, key) => {
+        if (entryId === oldId && key === "tts_result") return fakeBlob;
+        return null;
+      });
+
+    renderAt("/playground/audio");
+    // Open the history drawer
+    await user.click(screen.getByRole("button", { name: /history|历史/i }));
+    // The old entry row should have a play button
+    const playBtn = await screen.findByRole("button", { name: /play recorded audio|播放录音/i });
+    expect(playBtn).toBeInTheDocument();
+
+    // Click play — should call getBlob then createObjectURL
+    await user.click(playBtn);
+    await waitFor(() => {
+      expect(getBlobSpy).toHaveBeenCalledWith(oldId, "tts_result");
+    });
+    await waitFor(() => {
+      expect(URL.createObjectURL).toHaveBeenCalledWith(fakeBlob);
+    });
+
+    getBlobSpy.mockRestore();
+  });
+
+  it("restoring a history entry with a TTS blob rehydrates the audio player", async () => {
+    const user = userEvent.setup();
+    // Seed an old entry
+    useAudioHistoryStore.getState().save({
+      selectedConnectionId: null,
+      tts: { input: "rehydrate me", voice: "alloy", format: "mp3", autoPlay: true },
+      stt: { language: "", task: "transcribe", prompt: "", fileName: null, resultText: null },
+      activeTab: "tts",
+    });
+    const oldId = useAudioHistoryStore.getState().currentId;
+    useAudioHistoryStore.getState().newSession();
+
+    const fakeBlob = new Blob(["fake-audio-bytes"], { type: "audio/mp3" });
+    const getBlobSpy = vi
+      .spyOn(useAudioHistoryStore.getState(), "getBlob")
+      .mockImplementation(async (entryId, key) => {
+        if (entryId === oldId && key === "tts_result") return fakeBlob;
+        return null;
+      });
+
+    // Track setTtsResult calls
+    const setResultSpy = vi.spyOn(useAudioStore.getState(), "setTtsResult");
+
+    renderAt("/playground/audio");
+    // Open history drawer
+    await user.click(screen.getByRole("button", { name: /history|历史/i }));
+    // Click on the old entry to open the restore dialog (preview is "🔊 rehydrate me")
+    await user.click(await screen.findByText(/rehydrate me/));
+    // Confirm restore
+    await user.click(await screen.findByRole("button", { name: /^restore$|^恢复$/i }));
+
+    // After restore, getBlob should be called for rehydration
+    await waitFor(() => {
+      expect(getBlobSpy).toHaveBeenCalledWith(oldId, "tts_result");
+    });
+    // FileReader.readAsDataURL → setTtsResult called with a data URL
+    await waitFor(() => {
+      expect(setResultSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ audioBase64: expect.stringContaining("data:audio/") }),
+      );
+    });
+
+    getBlobSpy.mockRestore();
+    setResultSpy.mockRestore();
   });
 });
