@@ -7,6 +7,38 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InpaintMode } from "./InpaintMode";
 import { useImageStore } from "./store";
 
+// Mock MaskPainter so tests can simulate mask painting without a real canvas.
+// The stub renders a button labelled "Paint Mask" that calls onMaskChange with
+// a non-null Blob, and a "Clear Mask" button that calls it with null.
+vi.mock("./MaskPainter", () => ({
+  MaskPainter: ({
+    onMaskChange,
+  }: {
+    imageUrl: string;
+    width: number;
+    height: number;
+    brushSize: number;
+    onBrushSizeChange?: (n: number) => void;
+    onMaskChange: (mask: Blob | null) => void;
+  }) => (
+    <div>
+      <input type="range" aria-label="Brush size" onChange={() => {}} defaultValue={20} />
+      <button type="button" onClick={() => onMaskChange(new Blob(["mask"]))}>
+        Paint Mask
+      </button>
+      <button type="button" onClick={() => onMaskChange(null)}>
+        Clear Mask
+      </button>
+      <button type="button" aria-label="Reset">
+        Reset
+      </button>
+      <button type="button" aria-label="Undo">
+        Undo
+      </button>
+    </div>
+  ),
+}));
+
 const renderInpaint = () =>
   render(
     <I18nextProvider i18n={i18n}>
@@ -98,18 +130,9 @@ describe("InpaintMode", () => {
     expect(screen.getByRole("button", { name: /undo|撤销/i })).toBeInTheDocument();
   });
 
-  it("posts FormData to /api/playground/images/edit when submit is clicked", async () => {
+  it("Submit button is disabled when image and prompt are set but no mask is painted", async () => {
     seedConn();
-    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response(
-        JSON.stringify({ success: true, artifacts: [{ url: "http://i/edit" }], latencyMs: 9 }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
     renderInpaint();
-    // Inject upstream state directly — userEvent + canvas painting can't
-    // produce a non-empty mask in jsdom (canvas is unimplemented). Instead
-    // we exercise the multipart-build path by stuffing the refs/state.
     const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "in.png", {
       type: "image/png",
     });
@@ -119,9 +142,55 @@ describe("InpaintMode", () => {
     await waitFor(() => expect(useImageStore.getState().inpaint.imageName).toBe("in.png"));
     useImageStore.getState().patchInpaint({ prompt: "make it blue" });
 
-    // Click Send. With no mask painted, it should toast-and-bail (i.e. no
-    // fetch). Verify the fetch isn't called.
+    // No mask painted yet — button must be disabled.
+    const send = screen.getByRole("button", { name: /^edit$|^编辑$/i });
+    expect(send).toBeDisabled();
+  });
+
+  it("Submit button becomes enabled after onMaskChange fires with a non-null blob", async () => {
+    seedConn();
+    renderInpaint();
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "in.png", {
+      type: "image/png",
+    });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+    if (!fileInput) throw new Error("no file input");
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await waitFor(() => expect(useImageStore.getState().inpaint.imageName).toBe("in.png"));
+    useImageStore.getState().patchInpaint({ prompt: "make it blue" });
+
+    // Simulate the user painting a mask via the stub MaskPainter.
+    await userEvent.click(screen.getByRole("button", { name: /paint mask/i }));
+
+    const send = screen.getByRole("button", { name: /^edit$|^编辑$/i });
+    expect(send).toBeEnabled();
+  });
+
+  it("posts FormData to /api/playground/images/edit when submit is clicked", async () => {
+    seedConn();
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response(
+        JSON.stringify({ success: true, artifacts: [{ url: "http://i/edit" }], latencyMs: 9 }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    renderInpaint();
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "in.png", {
+      type: "image/png",
+    });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+    if (!fileInput) throw new Error("no file input");
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await waitFor(() => expect(useImageStore.getState().inpaint.imageName).toBe("in.png"));
+    useImageStore.getState().patchInpaint({ prompt: "make it blue" });
+
+    // Paint a mask so canSubmit becomes true.
+    await userEvent.click(screen.getByRole("button", { name: /paint mask/i }));
+
+    // Now click Send — fetch should be called.
     await userEvent.click(screen.getByRole("button", { name: /^edit$|^编辑$/i }));
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    await waitFor(() =>
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0),
+    );
   });
 });

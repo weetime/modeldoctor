@@ -30,6 +30,7 @@ export function InpaintMode() {
   const maskBlobRef = useRef<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [hasMask, setHasMask] = useState(false);
 
   // Revoke any previous object URL when the image changes / on unmount.
   useEffect(() => {
@@ -53,6 +54,7 @@ export function InpaintMode() {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     imageBlobRef.current = file;
     maskBlobRef.current = null;
+    setHasMask(false);
     const url = URL.createObjectURL(file);
     setImageUrl(url);
     useImageStore.getState().patchInpaint({
@@ -67,6 +69,7 @@ export function InpaintMode() {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     imageBlobRef.current = null;
     maskBlobRef.current = null;
+    setHasMask(false);
     setImageUrl(null);
     useImageStore.getState().patchInpaint({
       imageName: null,
@@ -78,10 +81,15 @@ export function InpaintMode() {
 
   const onMaskChange = (blob: Blob | null) => {
     maskBlobRef.current = blob;
+    setHasMask(blob !== null);
   };
 
   const canSubmit =
-    !!conn && !!imageBlobRef.current && inpaint.prompt.trim().length > 0 && !inpaint.loading;
+    !!conn &&
+    !!imageBlobRef.current &&
+    inpaint.prompt.trim().length > 0 &&
+    hasMask &&
+    !inpaint.loading;
 
   const onSubmit = async () => {
     const fresh = useImageStore.getState();
