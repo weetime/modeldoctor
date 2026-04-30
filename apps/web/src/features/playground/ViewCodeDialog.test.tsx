@@ -113,3 +113,38 @@ describe("ViewCodeDialog — base64 snippets (readable !== full)", () => {
     expect(writeText).toHaveBeenCalledWith(base64Snips.curlFull);
   });
 });
+
+describe("ViewCodeDialog — long-line wrap (Issue #32)", () => {
+  it("renders <pre> with whitespace-pre-wrap and break-all so long lines never widen the dialog", () => {
+    const longLineSnips = {
+      curlReadable: `curl -X POST http://x -d '{"content":"${"A".repeat(2048)}"}'`,
+      curlFull: `curl -X POST http://x -d '{"content":"${"A".repeat(2048)}"}'`,
+      pythonReadable: "x",
+      pythonFull: "x",
+      nodeReadable: "x",
+      nodeFull: "x",
+    };
+    render(<ViewCodeDialog open={true} onOpenChange={() => {}} snippets={longLineSnips} />);
+    const pre = document.querySelector("pre");
+    expect(pre).toBeTruthy();
+    expect(pre?.className).toContain("whitespace-pre-wrap");
+    expect(pre?.className).toContain("break-all");
+    expect(pre?.className).toContain("max-w-full");
+  });
+
+  it("Tabs and TabsContent have min-w-0 so grid children can shrink", () => {
+    render(<ViewCodeDialog open={true} onOpenChange={() => {}} snippets={plainSnips} />);
+    const tabList = document.querySelector("[role='tablist']");
+    expect(tabList).toBeTruthy();
+    // In the ViewCodeDialog, TabsList is wrapped in a flex div:
+    //   <Tabs className="min-w-0">          ← Tabs root (grandparent)
+    //     <div className="flex ...">        ← layout wrapper (parent)
+    //       <TabsList>                      ← tabList (role="tablist")
+    // closest("[data-orientation]") doesn't work because Radix puts
+    // data-orientation on BOTH the Tabs root AND the TabsList element.
+    const tabsRoot = tabList?.parentElement?.parentElement;
+    expect(tabsRoot?.className).toContain("min-w-0");
+    const activePanel = document.querySelector("[role='tabpanel']");
+    expect(activePanel?.className).toContain("min-w-0");
+  });
+});

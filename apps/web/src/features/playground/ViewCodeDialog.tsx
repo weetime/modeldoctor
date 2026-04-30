@@ -30,6 +30,14 @@ function getSnippet(snippets: CodeSnippets, lang: Lang, view: View): string {
   return view === "readable" ? snippets.nodeReadable : snippets.nodeFull;
 }
 
+function CodeBlock({ text }: { text: string }) {
+  return (
+    <pre className="max-h-[60vh] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 text-xs">
+      {text}
+    </pre>
+  );
+}
+
 export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogProps) {
   const { t } = useTranslation("playground");
   const [active, setActive] = useState<Lang>("curl");
@@ -107,7 +115,7 @@ export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogP
           </div>
         )}
 
-        <Tabs value={active} onValueChange={(v) => setActive(v as Lang)}>
+        <Tabs value={active} onValueChange={(v) => setActive(v as Lang)} className="min-w-0">
           <div className="flex items-center justify-between gap-2">
             <TabsList>
               <TabsTrigger value="curl">curl</TabsTrigger>
@@ -132,20 +140,14 @@ export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogP
               </Button>
             )}
           </div>
-          <TabsContent value="curl">
-            <pre className="max-h-[60vh] overflow-auto rounded-md bg-muted p-3 text-xs">
-              {currentText}
-            </pre>
+          <TabsContent value="curl" className="min-w-0">
+            <CodeBlock text={currentText} />
           </TabsContent>
-          <TabsContent value="python">
-            <pre className="max-h-[60vh] overflow-auto rounded-md bg-muted p-3 text-xs">
-              {currentText}
-            </pre>
+          <TabsContent value="python" className="min-w-0">
+            <CodeBlock text={currentText} />
           </TabsContent>
-          <TabsContent value="node">
-            <pre className="max-h-[60vh] overflow-auto rounded-md bg-muted p-3 text-xs">
-              {currentText}
-            </pre>
+          <TabsContent value="node" className="min-w-0">
+            <CodeBlock text={currentText} />
           </TabsContent>
         </Tabs>
         <p className="text-[10px] italic text-muted-foreground">{t("viewCode.keyPlaceholder")}</p>
