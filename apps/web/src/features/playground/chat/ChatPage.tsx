@@ -21,6 +21,25 @@ import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
+export function sanitizeChatSnapshot(snap: ChatHistorySnapshot): ChatHistorySnapshot {
+  return {
+    ...snap,
+    messages: snap.messages.map((m) => {
+      if (typeof m.content === "string") return m;
+      const textParts = m.content.filter(
+        (p): p is { type: "text"; text: string } => p.type === "text",
+      );
+      const droppedCount = m.content.length - textParts.length;
+      if (droppedCount === 0) return m;
+      const text =
+        textParts.map((p) => p.text).join("\n") +
+        (textParts.length > 0 ? "\n\n" : "") +
+        `📎 ${droppedCount} attachment${droppedCount > 1 ? "s" : ""} not saved in history`;
+      return { ...m, content: text };
+    }),
+  };
+}
+
 export function ChatPage() {
   const { t } = useTranslation("playground");
   const slice = useChatStore();
@@ -51,12 +70,14 @@ export function ChatPage() {
 
   // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
   useEffect(() => {
-    useChatHistoryStore.getState().scheduleAutoSave({
-      systemMessage: slice.systemMessage,
-      messages: slice.messages,
-      params: slice.params,
-      selectedConnectionId: slice.selectedConnectionId,
-    });
+    useChatHistoryStore.getState().scheduleAutoSave(
+      sanitizeChatSnapshot({
+        systemMessage: slice.systemMessage,
+        messages: slice.messages,
+        params: slice.params,
+        selectedConnectionId: slice.selectedConnectionId,
+      }),
+    );
   }, [slice.systemMessage, slice.messages, slice.params, slice.selectedConnectionId]);
 
   const snippets =
