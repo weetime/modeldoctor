@@ -40,7 +40,8 @@
         "tooManyAttachments": "最多允许 {{max}} 个附件",
         "attachmentTooLarge": "文件超过 {{maxMb}}MB 限制",
         "attachmentRead": "读取文件失败：{{message}}"
-      }
+      },
+      "demoPrompt": "用一句俳句概括模型评测的乐趣。"
     },
     "attachments": {
       "file": {
@@ -154,7 +155,11 @@
       "title": "嵌入参数",
       "encodingFormat": "编码格式",
       "dimensions": "维度"
-    }
+    },
+    "demoInputs": [
+      "敏捷的棕色狐狸跳过了那只懒狗。",
+      "大语言模型可以把文本编码成稠密向量。"
+    ]
   },
   "image": {
     "title": "图像",
@@ -168,6 +173,7 @@
       "generate": "生成",
       "edit": "编辑(局部重绘)"
     },
+    "demoPrompt": "水彩风格的日式庭园，清晨柔光。",
     "params": {
       "title": "图像参数",
       "size": "尺寸",
@@ -215,7 +221,14 @@
       "wire": "协议",
       "topN": "Top N",
       "returnDocuments": "返回文档"
-    }
+    },
+    "demoQuery": "什么是检索增强生成（RAG）？",
+    "demoDocuments": [
+      "检索增强生成（RAG）将检索器与生成器结合，让 LLM 输出基于外部知识源。",
+      "向量数据库存储嵌入向量，支持大规模相似度检索。",
+      "重排模型在初次检索之后对候选段落重新排序，以提升 top-K 相关性。",
+      "提示词工程是通过设计输入来获得更好 LLM 响应的实践。"
+    ]
   },
   "audio": {
     "title": "音频",
