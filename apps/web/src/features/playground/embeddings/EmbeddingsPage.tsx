@@ -18,7 +18,8 @@ import { genEmbeddingsSnippets } from "../code-snippets/embeddings";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
 import { EmbeddingsParamsPanel } from "./EmbeddingsParams";
-import { PcaScatter } from "./PcaScatter";
+import { EmbeddingsScatter } from "./EmbeddingsScatter";
+import { computePca2D } from "./pca";
 import { useEmbeddingsStore } from "./store";
 
 interface Snap {
@@ -208,7 +209,16 @@ export function EmbeddingsPage() {
             </TabsList>
             <TabsContent value="chart" className="h-[60vh]">
               {slice.result ? (
-                <PcaScatter vectors={slice.result} labels={slice.inputs} />
+                slice.result.length >= 3 ? (
+                  <EmbeddingsScatter
+                    inputs={slice.inputs}
+                    coords={computePca2D(slice.result).map(([x, y]) => ({ x, y }))}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                    {t("embeddings.chart.minThree")}
+                  </div>
+                )
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                   {t("embeddings.chart.empty")}

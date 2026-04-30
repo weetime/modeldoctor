@@ -11,7 +11,13 @@ import { RerankController } from "./rerank.controller.js";
 import { RerankService } from "./rerank.service.js";
 
 @Module({
-  controllers: [ChatController, EmbeddingsController, RerankController, ImagesController, AudioController],
+  controllers: [
+    ChatController,
+    EmbeddingsController,
+    RerankController,
+    ImagesController,
+    AudioController,
+  ],
   providers: [ChatService, EmbeddingsService, RerankService, ImagesService, AudioService],
 })
 export class PlaygroundModule {}

@@ -34,13 +34,18 @@
         "image": "附加图片",
         "audio": "附加音频",
         "file": "附加文件",
-        "remove": "移除附件",
-        "fileNotSent": "（不发送）"
+        "remove": "移除附件"
       },
       "errors": {
         "tooManyAttachments": "最多允许 {{max}} 个附件",
         "attachmentTooLarge": "文件超过 {{maxMb}}MB 限制",
         "attachmentRead": "读取文件失败：{{message}}"
+      }
+    },
+    "attachments": {
+      "file": {
+        "unsupportedMime": "不支持该文件类型。允许：PDF、纯文本、JSON、Markdown。",
+        "tooLarge": "文件过大，最大 8 MB。"
       }
     },
     "messages": {
@@ -83,6 +88,20 @@
       }
     }
   },
+  "chatCompare": {
+    "history": {
+      "title": "快照",
+      "saveSnapshot": "保存快照",
+      "snapshotSaved": "快照已保存",
+      "saveFailed": "保存快照失败",
+      "restore": "恢复",
+      "restored": "快照已恢复",
+      "restoreFailed": "恢复快照失败",
+      "delete": "删除快照",
+      "empty": "暂无已保存快照",
+      "untitled": "（空快照）"
+    }
+  },
   "history": {
     "title": "历史",
     "newSession": "+ 新会话",
@@ -104,7 +123,14 @@
     "title": "查看代码",
     "copy": "复制",
     "copied": "已复制",
-    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>"
+    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>",
+    "base64Banner": "代码片段包含 {{kb}} KB 的 base64 数据",
+    "viewReadable": "可读视图（已截断）",
+    "viewFull": "完整数据（可复制执行）",
+    "copyReadable": "复制可读版本",
+    "copyFull": "复制完整数据",
+    "copiedReadable": "已复制可读版本",
+    "copiedFull": "已复制完整版本"
   },
   "embeddings": {
     "title": "嵌入",
@@ -121,6 +147,9 @@
       "minThree": "≥ 3 条输入才能可视化。",
       "empty": "提交输入后这里会显示 2D PCA 散点图。"
     },
+    "scatter": {
+      "ariaLabel": "嵌入向量 PCA 散点图"
+    },
     "params": {
       "title": "嵌入参数",
       "encodingFormat": "编码格式",
@@ -129,12 +158,16 @@
   },
   "image": {
     "title": "图像",
-    "subtitle": "根据文本提示生成图像。",
+    "subtitle": "根据文本提示生成或编辑图像。",
     "promptPlaceholder": "描述要生成的图像…",
     "previewEmpty": "生成的图片将出现在这里。",
     "send": "生成",
     "sending": "生成中…",
     "random": "随机提示",
+    "tabs": {
+      "generate": "生成",
+      "edit": "编辑(局部重绘)"
+    },
     "params": {
       "title": "图像参数",
       "size": "尺寸",
@@ -143,6 +176,27 @@
       "seed": "Seed",
       "seedRandom": "(随机)",
       "randomSeed": "每次请求随机 Seed"
+    },
+    "inpaint": {
+      "uploadPrompt": "上传一张图片开始编辑。",
+      "upload": "上传图片",
+      "clear": "移除图片",
+      "brushSize": "画笔大小",
+      "undo": "撤销",
+      "reset": "清除",
+      "baseCanvas": "源图像",
+      "overlayCanvas": "蒙版绘制区域",
+      "promptLabel": "编辑提示",
+      "promptPlaceholder": "描述蒙版区域内应出现的内容…",
+      "send": "编辑",
+      "sending": "编辑中…",
+      "previewEmpty": "编辑后的图片将出现在这里。",
+      "maskHint": "在需要重绘的区域涂抹。红色区域将被替换。",
+      "errors": {
+        "imageTooLarge": "图片大小需小于 5 MB。",
+        "imageTypeUnsupported": "图片格式必须为 PNG、JPEG 或 WebP。",
+        "missingMask": "提交前请先绘制蒙版区域。"
+      }
     }
   },
   "rerank": {
@@ -175,6 +229,7 @@
       "send": "生成",
       "sending": "生成中…",
       "autoPlay": "自动播放",
+      "playHistoryEntry": "播放录音",
       "errors": { "send": "TTS 失败：{{message}}" },
       "params": {
         "voice": "声音",
@@ -182,9 +237,13 @@
         "speed": "速度",
         "advanced": "高级",
         "referenceAudio": "参考音频",
-        "referenceText": "参考文本"
-      },
-      "advancedV2Note": "声音克隆 — Phase 4"
+        "referenceAudioHint": "可选 — 克隆声音来源（≤15 MB，wav/mp3/flac）",
+        "referenceAudioTooLarge": "参考音频必须 ≤ 15 MB",
+        "removeReferenceAudio": "移除",
+        "referenceText": "参考文本",
+        "referenceTextHint": "可选 — 参考音频的转录文本",
+        "referenceTextPlaceholder": "参考音频中说的原文（有助于提升克隆质量）"
+      }
     },
     "stt": {
       "title": "语音转文本",

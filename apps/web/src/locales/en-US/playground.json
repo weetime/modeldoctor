@@ -34,13 +34,18 @@
         "image": "Attach image",
         "audio": "Attach audio",
         "file": "Attach file",
-        "remove": "Remove attachment",
-        "fileNotSent": "(not sent)"
+        "remove": "Remove attachment"
       },
       "errors": {
         "tooManyAttachments": "Maximum {{max}} attachments allowed",
         "attachmentTooLarge": "File exceeds {{maxMb}}MB limit",
         "attachmentRead": "Failed to read file: {{message}}"
+      }
+    },
+    "attachments": {
+      "file": {
+        "unsupportedMime": "File type not supported. Allowed: PDF, plain text, JSON, Markdown.",
+        "tooLarge": "File is too large. Maximum size is 8 MB."
       }
     },
     "messages": {
@@ -83,6 +88,20 @@
       }
     }
   },
+  "chatCompare": {
+    "history": {
+      "title": "Snapshots",
+      "saveSnapshot": "Save snapshot",
+      "snapshotSaved": "Snapshot saved",
+      "saveFailed": "Failed to save snapshot",
+      "restore": "Restore",
+      "restored": "Snapshot restored",
+      "restoreFailed": "Failed to restore snapshot",
+      "delete": "Delete snapshot",
+      "empty": "No saved snapshots",
+      "untitled": "(empty snapshot)"
+    }
+  },
   "history": {
     "title": "History",
     "newSession": "+ New session",
@@ -104,7 +123,14 @@
     "title": "View Code",
     "copy": "Copy",
     "copied": "Copied",
-    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>"
+    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>",
+    "base64Banner": "Snippet contains {{kb}} KB of base64 data",
+    "viewReadable": "Readable view (truncated)",
+    "viewFull": "Full data (copy-ready)",
+    "copyReadable": "Copy readable",
+    "copyFull": "Copy full data",
+    "copiedReadable": "Copied readable snippet",
+    "copiedFull": "Copied full snippet"
   },
   "embeddings": {
     "title": "Embeddings",
@@ -121,6 +147,9 @@
       "minThree": "≥ 3 inputs required to visualise.",
       "empty": "Submit inputs to see a 2D PCA scatter."
     },
+    "scatter": {
+      "ariaLabel": "PCA scatter plot of embeddings"
+    },
     "params": {
       "title": "Embedding Parameters",
       "encodingFormat": "Encoding format",
@@ -129,12 +158,16 @@
   },
   "image": {
     "title": "Image",
-    "subtitle": "Generate images from a text prompt.",
+    "subtitle": "Generate or edit images from a text prompt.",
     "promptPlaceholder": "Describe the image…",
     "previewEmpty": "Generated images will appear here.",
     "send": "Generate",
     "sending": "Generating…",
     "random": "Random prompt",
+    "tabs": {
+      "generate": "Generate",
+      "edit": "Edit (Inpaint)"
+    },
     "params": {
       "title": "Image Parameters",
       "size": "Size",
@@ -143,6 +176,27 @@
       "seed": "Seed",
       "seedRandom": "(random)",
       "randomSeed": "Random seed each request"
+    },
+    "inpaint": {
+      "uploadPrompt": "Upload an image to start editing.",
+      "upload": "Upload image",
+      "clear": "Clear image",
+      "brushSize": "Brush size",
+      "undo": "Undo",
+      "reset": "Reset",
+      "baseCanvas": "Source image",
+      "overlayCanvas": "Mask paint area",
+      "promptLabel": "Edit prompt",
+      "promptPlaceholder": "Describe what should appear in the masked region…",
+      "send": "Edit",
+      "sending": "Editing…",
+      "previewEmpty": "Edited images will appear here.",
+      "maskHint": "Paint the area to inpaint. The painted (red) region will be replaced.",
+      "errors": {
+        "imageTooLarge": "Image must be under 5 MB.",
+        "imageTypeUnsupported": "Image must be PNG, JPEG, or WebP.",
+        "missingMask": "Paint a mask area before submitting."
+      }
     }
   },
   "rerank": {
@@ -175,6 +229,7 @@
       "send": "Generate",
       "sending": "Generating…",
       "autoPlay": "Auto-play",
+      "playHistoryEntry": "Play recorded audio",
       "errors": { "send": "TTS failed: {{message}}" },
       "params": {
         "voice": "Voice",
@@ -182,9 +237,13 @@
         "speed": "Speed",
         "advanced": "Advanced",
         "referenceAudio": "Reference audio",
-        "referenceText": "Reference text"
-      },
-      "advancedV2Note": "Voice cloning — Phase 4"
+        "referenceAudioHint": "Optional — voice clone source (≤15 MB, wav/mp3/flac)",
+        "referenceAudioTooLarge": "Reference audio must be ≤ 15 MB",
+        "removeReferenceAudio": "Remove",
+        "referenceText": "Reference text",
+        "referenceTextHint": "Optional — transcript of the reference audio",
+        "referenceTextPlaceholder": "The exact text spoken in the reference audio (improves clone quality)"
+      }
     },
     "stt": {
       "title": "Speech to text",

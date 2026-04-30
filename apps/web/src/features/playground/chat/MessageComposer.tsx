@@ -4,7 +4,13 @@ import { ImageIcon, Mic, Paperclip, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ATTACHMENT_LIMITS, type AttachedFile, readFileAsAttachment } from "./attachments";
+import {
+  ALLOWED_FILE_MIMES,
+  ATTACHMENT_LIMITS,
+  type AttachedFile,
+  MAX_FILE_BYTES,
+  readFileAsAttachment,
+} from "./attachments";
 
 interface MessageComposerProps {
   systemMessage: string;
@@ -45,13 +51,24 @@ export function MessageComposer({
       );
       return;
     }
-    if (file.size > ATTACHMENT_LIMITS.maxSizeBytes) {
-      toast.error(
-        t("chat.composer.errors.attachmentTooLarge", {
-          maxMb: Math.floor(ATTACHMENT_LIMITS.maxSizeBytes / 1024 / 1024),
-        }),
-      );
-      return;
+    if (kind === "file") {
+      if (!ALLOWED_FILE_MIMES.has(file.type)) {
+        toast.error(t("chat.attachments.file.unsupportedMime"));
+        return;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        toast.error(t("chat.attachments.file.tooLarge"));
+        return;
+      }
+    } else {
+      if (file.size > ATTACHMENT_LIMITS.maxSizeBytes) {
+        toast.error(
+          t("chat.composer.errors.attachmentTooLarge", {
+            maxMb: Math.floor(ATTACHMENT_LIMITS.maxSizeBytes / 1024 / 1024),
+          }),
+        );
+        return;
+      }
     }
     try {
       const att = await readFileAsAttachment(file, kind);
@@ -105,11 +122,6 @@ export function MessageComposer({
                 <Paperclip className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="max-w-[140px] truncate">{a.name}</span>
-              {a.kind === "file" ? (
-                <span className="text-muted-foreground">
-                  {t("chat.composer.attachments.fileNotSent")}
-                </span>
-              ) : null}
               <button
                 type="button"
                 onClick={() => removeAttachment(idx)}
@@ -208,9 +220,12 @@ export function MessageComposer({
           e.target.value = "";
         }}
       />
+      {/* Must match ALLOWED_FILE_MIMES in attachments.ts and FILE_MIME_RE in @modeldoctor/contracts/src/playground.ts */}
       <input
         ref={fileInputRef}
         type="file"
+        accept="application/pdf,text/plain,application/json,text/markdown,text/x-markdown"
+        aria-label={t("chat.composer.attachments.file")}
         hidden
         onChange={(e) => {
           handlePick(e.target.files?.[0], "file");

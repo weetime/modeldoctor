@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { type PanelCount, useCompareStore } from "./store";
 
-const COUNTS: PanelCount[] = [2, 3, 4];
+const COUNTS: PanelCount[] = [2, 3, 4, 6, 8];
 
 export function PanelCountSwitcher() {
   const { t } = useTranslation("playground");

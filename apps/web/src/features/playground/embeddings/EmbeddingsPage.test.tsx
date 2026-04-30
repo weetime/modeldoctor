@@ -9,6 +9,12 @@ vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {}
   return { ApiError, api: { post: vi.fn() } };
 });
+
+vi.mock("echarts-for-react", () => ({
+  default: ({ style }: { style?: React.CSSProperties }) => (
+    <div data-testid="echart" style={style} />
+  ),
+}));
 import { api } from "@/lib/api-client";
 import { EmbeddingsPage, useEmbeddingsHistoryStore } from "./EmbeddingsPage";
 import { useEmbeddingsStore } from "./store";
@@ -70,6 +76,6 @@ describe("EmbeddingsPage", () => {
         expect.objectContaining({ input: ["a", "b", "c"] }),
       );
     });
-    expect(await screen.findByRole("img", { name: /pca scatter/i })).toBeInTheDocument();
+    expect(await screen.findByLabelText(/pca scatter/i)).toBeInTheDocument();
   });
 });

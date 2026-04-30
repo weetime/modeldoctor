@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -8,13 +8,16 @@ import type { PlaygroundTtsRequest, PlaygroundTtsResponse } from "@modeldoctor/c
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
 
 export function TtsTab() {
   const { t } = useTranslation("playground");
   const tts = useAudioStore((s) => s.tts);
   const selectedConnectionId = useAudioStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) => (selectedConnectionId ? s.get(selectedConnectionId) : null));
+  const conn = useConnectionsStore((s) =>
+    selectedConnectionId ? s.get(selectedConnectionId) : null,
+  );
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // autoPlay when result changes
@@ -23,7 +26,9 @@ export function TtsTab() {
       const p = audioRef.current.play?.();
       // play() returns a Promise in real browsers; jsdom returns undefined — guard both.
       if (p && typeof p.catch === "function") {
-        p.catch(() => {/* user-gesture autoplay block — silently ignore */});
+        p.catch(() => {
+          /* user-gesture autoplay block — silently ignore */
+        });
       }
     }
   }, [tts.result, tts.autoPlay]);
@@ -48,16 +53,27 @@ export function TtsTab() {
       voice: fresh.tts.voice,
       format: fresh.tts.format,
       speed: fresh.tts.speed,
+      reference_audio_base64: fresh.tts.referenceAudioBase64,
+      reference_text: fresh.tts.referenceText,
     };
     fresh.setTtsSending(true);
     fresh.setTtsError(null);
     try {
       const res = await api.post<PlaygroundTtsResponse>("/api/playground/audio/tts", body);
       if (res.success && res.audioBase64) {
-        useAudioStore.getState().setTtsResult({
-          audioBase64: res.audioBase64,
-          format: res.format ?? fresh.tts.format,
-        });
+        const format = res.format ?? fresh.tts.format;
+        useAudioStore.getState().setTtsResult({ audioBase64: res.audioBase64, format });
+        // Persist the audio blob to IDB for history replay
+        const b64 = res.audioBase64.match(/^data:[^;]+;base64,(.*)$/)?.[1] ?? res.audioBase64;
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: `audio/${format}` });
+        const entryId = useAudioHistoryStore.getState().currentId;
+        useAudioHistoryStore
+          .getState()
+          .putBlob(entryId, "tts_result", blob)
+          .catch((err) => {
+            console.error("[TtsTab] Failed to persist audio blob:", err);
+          });
       } else {
         const msg = res.error ?? "unknown";
         useAudioStore.getState().setTtsError(msg);

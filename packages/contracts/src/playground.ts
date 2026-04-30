@@ -5,6 +5,19 @@ import { z } from "zod";
  * array of typed content parts (used for multimodal — image_url, input_audio
  * — added in Phase 2).
  */
+// Must match ALLOWED_FILE_MIMES in apps/web/src/features/playground/chat/attachments.ts
+// and the <input accept> string in apps/web/src/features/playground/chat/MessageComposer.tsx
+const FILE_MIME_RE =
+  /^data:(application\/pdf|text\/plain|application\/json|text\/markdown|text\/x-markdown);base64,[A-Za-z0-9+/=]+$/;
+
+const InputFilePartSchema = z.object({
+  type: z.literal("input_file"),
+  file: z.object({
+    filename: z.string().min(1).max(256),
+    file_data: z.string().regex(FILE_MIME_RE),
+  }),
+});
+
 export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string() }),
   z.object({
@@ -15,6 +28,7 @@ export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
     type: z.literal("input_audio"),
     input_audio: z.object({ data: z.string(), format: z.string() }),
   }),
+  InputFilePartSchema,
 ]);
 export type ChatMessageContentPart = z.infer<typeof ChatMessageContentPartSchema>;
 
@@ -164,7 +178,34 @@ export const PlaygroundImagesResponseSchema = z.object({
 });
 export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSchema>;
 
+/**
+ * Body fields (non-file parts) of the multipart POST to
+ * /api/playground/images/edit. The `image` and `mask` parts are
+ * separate file fields validated by the controller's multer interceptor.
+ *
+ * Numbers arrive as strings on the wire because multipart fields are
+ * always text — the controller coerces `n` with `Number()` and parses
+ * `customHeaders` as JSON (when present).
+ */
+export const PlaygroundImagesEditMultipartFieldsSchema = z.object({
+  apiBaseUrl: z.string().min(1),
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+  customHeaders: z.string().optional(),
+  queryParams: z.string().optional(),
+  prompt: z.string().min(1),
+  /** Multipart fields are strings; controller coerces to a positive int. */
+  n: z.string().regex(/^\d+$/).optional(),
+  size: z.string().optional(),
+});
+export type PlaygroundImagesEditMultipartFields = z.infer<
+  typeof PlaygroundImagesEditMultipartFieldsSchema
+>;
+
 // ─── Audio TTS ──────────────────────────────────────────────────────────
+// ~2-minute reference clip at average speaking rate (≈150 wpm).
+const REFERENCE_TEXT_MAX_CHARS = 2000;
+
 export const PlaygroundTtsRequestSchema = z.object({
   apiBaseUrl: z.string().min(1),
   apiKey: z.string().min(1),
@@ -176,6 +217,15 @@ export const PlaygroundTtsRequestSchema = z.object({
   voice: z.string().min(1).default("alloy"),
   format: z.enum(["mp3", "wav", "flac", "opus", "aac", "pcm"]).default("mp3"),
   speed: z.number().min(0.25).max(4.0).optional(),
+  reference_audio_base64: z
+    .string()
+    .regex(
+      /^data:audio\/(wav|mp3|mpeg|webm|ogg|flac);base64,[A-Za-z0-9+/=]+$/,
+      "reference_audio_base64 must be a valid audio data URL",
+    )
+    .max(20 * 1024 * 1024, "reference_audio_base64 must be ≤ 20 MB")
+    .optional(),
+  reference_text: z.string().max(REFERENCE_TEXT_MAX_CHARS).optional(),
 });
 export type PlaygroundTtsRequest = z.infer<typeof PlaygroundTtsRequestSchema>;
 
@@ -209,4 +259,6 @@ export const PlaygroundTranscriptionsResponseSchema = z.object({
   error: z.string().optional(),
   latencyMs: z.number(),
 });
-export type PlaygroundTranscriptionsResponse = z.infer<typeof PlaygroundTranscriptionsResponseSchema>;
+export type PlaygroundTranscriptionsResponse = z.infer<
+  typeof PlaygroundTranscriptionsResponseSchema
+>;

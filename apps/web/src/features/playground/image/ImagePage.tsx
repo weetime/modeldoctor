@@ -7,6 +7,7 @@ import type { PlaygroundImagesRequest, PlaygroundImagesResponse } from "@modeldo
 import { Dice5, Download } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
@@ -14,6 +15,7 @@ import { genImagesSnippets } from "../code-snippets/images";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
 import { ImageParamsPanel } from "./ImageParams";
+import { InpaintMode } from "./InpaintMode";
 import { type ImageParams as ImageParamsT, useImageStore } from "./store";
 
 interface Snap {
@@ -32,6 +34,8 @@ export const useImageHistoryStore = createHistoryStore<Snap>({
   preview: (s) => s.prompt.slice(0, 80),
 });
 
+type Mode = "generate" | "edit";
+
 export function ImagePage() {
   const { t } = useTranslation("playground");
   const slice = useImageStore();
@@ -40,7 +44,10 @@ export function ImagePage() {
   );
   const canSubmit = !!conn && slice.prompt.trim().length > 0 && !slice.loading;
 
-  // History sync
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode: Mode = searchParams.get("mode") === "edit" ? "edit" : "generate";
+
+  // History sync (generate mode only — inpaint state isn't persisted by design)
   const currentId = useImageHistoryStore((h) => h.currentId);
   const restoreVersion = useImageHistoryStore((h) => h.restoreVersion);
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
@@ -108,23 +115,36 @@ export function ImagePage() {
     slice.setPrompt(rolls[Math.floor(Math.random() * rolls.length)]);
   };
 
-  const snippets = conn
-    ? genImagesSnippets({
-        apiBaseUrl: conn.apiBaseUrl,
-        model: conn.model,
-        prompt: slice.prompt,
-        size: slice.params.size,
-        n: slice.params.n,
-        responseFormat: slice.params.responseFormat,
-        seed: slice.params.seed,
-      })
-    : null;
+  const snippets =
+    conn && mode === "generate"
+      ? genImagesSnippets({
+          apiBaseUrl: conn.apiBaseUrl,
+          model: conn.model,
+          prompt: slice.prompt,
+          size: slice.params.size,
+          n: slice.params.n,
+          responseFormat: slice.params.responseFormat,
+          seed: slice.params.seed,
+        })
+      : null;
 
   return (
     <PlaygroundShell
       category="image"
+      tabs={[
+        { key: "generate", label: t("image.tabs.generate") },
+        { key: "edit", label: t("image.tabs.edit") },
+      ]}
+      activeTab={mode}
+      onTabChange={(k) => {
+        const next = new URLSearchParams(searchParams);
+        next.set("mode", k);
+        setSearchParams(next, { replace: true });
+      }}
       viewCodeSnippets={snippets}
-      historySlot={<HistoryDrawer useHistoryStore={useImageHistoryStore} />}
+      historySlot={
+        mode === "generate" ? <HistoryDrawer useHistoryStore={useImageHistoryStore} /> : null
+      }
       paramsSlot={
         <div className="space-y-4">
           <CategoryEndpointSelector
@@ -137,36 +157,40 @@ export function ImagePage() {
       }
     >
       <PageHeader title={t("image.title")} subtitle={t("image.subtitle")} />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
-        <div className="flex h-[60vh] items-center justify-center rounded-md border border-dashed border-border bg-muted/30">
-          {slice.results.length === 0 ? (
-            <span className="text-xs text-muted-foreground">{t("image.previewEmpty")}</span>
-          ) : (
-            <div className="grid grid-flow-col gap-3">
-              {slice.results.map((a, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: artifacts replaced wholesale on each submit
-                <ImageArtifactView key={i} artifact={a} alt={slice.prompt} />
-              ))}
-            </div>
-          )}
+      {mode === "generate" ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
+          <div className="flex h-[60vh] items-center justify-center rounded-md border border-dashed border-border bg-muted/30">
+            {slice.results.length === 0 ? (
+              <span className="text-xs text-muted-foreground">{t("image.previewEmpty")}</span>
+            ) : (
+              <div className="grid grid-flow-col gap-3">
+                {slice.results.map((a, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: artifacts replaced wholesale on each submit
+                  <ImageArtifactView key={i} artifact={a} alt={slice.prompt} />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Textarea
+              rows={2}
+              value={slice.prompt}
+              onChange={(e) => slice.setPrompt(e.target.value)}
+              placeholder={t("image.promptPlaceholder")}
+              className="text-sm"
+            />
+            <Button variant="ghost" onClick={onRandomPrompt} aria-label={t("image.random")}>
+              <Dice5 className="h-4 w-4" />
+            </Button>
+            <Button onClick={onSubmit} disabled={!canSubmit}>
+              {slice.loading ? t("image.sending") : t("image.send")}
+            </Button>
+          </div>
+          {slice.error ? <span className="text-xs text-destructive">{slice.error}</span> : null}
         </div>
-        <div className="flex gap-2">
-          <Textarea
-            rows={2}
-            value={slice.prompt}
-            onChange={(e) => slice.setPrompt(e.target.value)}
-            placeholder={t("image.promptPlaceholder")}
-            className="text-sm"
-          />
-          <Button variant="ghost" onClick={onRandomPrompt} aria-label={t("image.random")}>
-            <Dice5 className="h-4 w-4" />
-          </Button>
-          <Button onClick={onSubmit} disabled={!canSubmit}>
-            {slice.loading ? t("image.sending") : t("image.send")}
-          </Button>
-        </div>
-        {slice.error ? <span className="text-xs text-destructive">{slice.error}</span> : null}
-      </div>
+      ) : (
+        <InpaintMode />
+      )}
     </PlaygroundShell>
   );
 }

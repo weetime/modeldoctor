@@ -33,6 +33,45 @@ describe("useCompareStore", () => {
     expect(s.panels[3].selectedConnectionId).toBeNull();
   });
 
+  it("setPanelCount grows from 2 → 6 with blank panels", () => {
+    useCompareStore.getState().setPanelCount(6);
+    const s = useCompareStore.getState();
+    expect(s.panelCount).toBe(6);
+    expect(s.panels).toHaveLength(6);
+    for (let i = 2; i < 6; i++) {
+      expect(s.panels[i].selectedConnectionId).toBeNull();
+      expect(s.panels[i].messages).toEqual([]);
+    }
+  });
+
+  it("setPanelCount grows from 2 → 8 with blank panels", () => {
+    useCompareStore.getState().setPanelCount(8);
+    const s = useCompareStore.getState();
+    expect(s.panelCount).toBe(8);
+    expect(s.panels).toHaveLength(8);
+    for (let i = 2; i < 8; i++) {
+      expect(s.panels[i].selectedConnectionId).toBeNull();
+      expect(s.panels[i].messages).toEqual([]);
+    }
+  });
+
+  it("setPanelCount shrinks 8 → 3 dropping the tail panels", () => {
+    useCompareStore.getState().setPanelCount(8);
+    for (let i = 0; i < 8; i++) {
+      useCompareStore.getState().setPanelConnection(i, `conn-${i}`);
+    }
+    useCompareStore.getState().setPanelCount(3);
+    const s = useCompareStore.getState();
+    expect(s.panelCount).toBe(3);
+    expect(s.panels).toHaveLength(3);
+    // only first 3 connections remain
+    for (let i = 0; i < 3; i++) {
+      expect(s.panels[i].selectedConnectionId).toBe(`conn-${i}`);
+    }
+    // tail panels gone
+    expect(s.panels.find((p) => p.selectedConnectionId === "conn-7")).toBeUndefined();
+  });
+
   it("setPanelCount shrinks 4 → 2 dropping the tail", () => {
     useCompareStore.getState().setPanelCount(4);
     useCompareStore.getState().setPanelConnection(3, "conn-tail");
@@ -93,7 +132,7 @@ describe("useCompareStore", () => {
             { selectedConnectionId: "y", params: {} },
           ],
         },
-        version: 1,
+        version: 2,
       }),
     );
 
@@ -114,5 +153,29 @@ describe("useCompareStore", () => {
       expect(p.abortController).toBeNull();
       expect(p.error).toBeNull();
     }
+  });
+
+  it("discards stale v1 data and falls back to initial state", async () => {
+    // v1 data — should be dropped silently on load (no migrate function)
+    localStorage.setItem(
+      "md-playground-chat-compare-layout",
+      JSON.stringify({
+        state: {
+          panelCount: 4,
+          sharedSystemMessage: "old data",
+          panels: [
+            { selectedConnectionId: "stale", params: {} },
+          ],
+        },
+        version: 1,
+      }),
+    );
+
+    vi.resetModules();
+    const mod = await import("./store");
+    const s = mod.useCompareStore.getState();
+    // v1 data discarded — store starts with defaults
+    expect(s.panelCount).toBe(2);
+    expect(s.sharedSystemMessage).toBe("");
   });
 });

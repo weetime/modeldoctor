@@ -18,16 +18,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { History, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { StoreApi, UseBoundStore } from "zustand";
-import type { HistoryStoreState } from "./createHistoryStore";
+import type { HistoryEntry, HistoryStoreState } from "./createHistoryStore";
 
 export interface HistoryDrawerProps<S> {
   useHistoryStore: UseBoundStore<StoreApi<HistoryStoreState<S>>>;
+  /** Optional slot for extra controls per history row (e.g. a play button for audio). */
+  renderRowExtras?: (entry: HistoryEntry<S>) => ReactNode;
+  /**
+   * Called just AFTER restore() is confirmed, with the source entry (the one being
+   * restored FROM). Lets callers read blobs or perform side-effects tied to that entry.
+   */
+  onRestoreConfirm?: (sourceEntry: HistoryEntry<S>) => void;
 }
 
-export function HistoryDrawer<S>({ useHistoryStore }: HistoryDrawerProps<S>) {
+export function HistoryDrawer<S>({
+  useHistoryStore,
+  renderRowExtras,
+  onRestoreConfirm,
+}: HistoryDrawerProps<S>) {
   const { t } = useTranslation("playground");
   const list = useHistoryStore((s) => s.list);
   const currentId = useHistoryStore((s) => s.currentId);
@@ -80,6 +91,7 @@ export function HistoryDrawer<S>({ useHistoryStore }: HistoryDrawerProps<S>) {
                     {new Date(e.createdAt).toLocaleString()}
                   </span>
                 </div>
+                {renderRowExtras?.(e)}
                 <button
                   type="button"
                   aria-label={t("history.delete")}
@@ -126,7 +138,13 @@ export function HistoryDrawer<S>({ useHistoryStore }: HistoryDrawerProps<S>) {
             <AlertDialogCancel>{t("history.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingRestoreId) restore(pendingRestoreId);
+                if (pendingRestoreId) {
+                  restore(pendingRestoreId);
+                  if (onRestoreConfirm) {
+                    const sourceEntry = list.find((e) => e.id === pendingRestoreId);
+                    if (sourceEntry) onRestoreConfirm(sourceEntry);
+                  }
+                }
                 setPendingRestoreId(null);
               }}
             >

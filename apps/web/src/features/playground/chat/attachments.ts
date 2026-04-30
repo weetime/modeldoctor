@@ -3,12 +3,25 @@ import type { ChatMessageContentPart } from "@modeldoctor/contracts";
 export type AttachedFile =
   | { kind: "image"; dataUrl: string; mimeType: string; sizeBytes: number; name: string }
   | { kind: "audio"; dataUrl: string; mimeType: string; sizeBytes: number; name: string }
-  | { kind: "file"; name: string; sizeBytes: number };
+  | { kind: "file"; dataUrl: string; mimeType: string; sizeBytes: number; name: string };
 
 export const ATTACHMENT_LIMITS = {
   maxCount: 5,
   maxSizeBytes: 10 * 1024 * 1024,
 };
+
+// Must match FILE_MIME_RE in packages/contracts/src/playground.ts
+// and the <input accept> string in MessageComposer.tsx
+export const ALLOWED_FILE_MIMES = new Set([
+  "application/pdf",
+  "text/plain",
+  "application/json",
+  "text/markdown",
+  "text/x-markdown",
+]);
+
+// 8 MB raw → ~10.7 MB base64-encoded; safely under the 25 MB total chat body cap.
+export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 export function buildContentParts(
   text: string,
@@ -24,8 +37,12 @@ export function buildContentParts(
       const b64 = a.dataUrl.split(",", 2)[1] ?? "";
       const format = a.mimeType.split("/")[1]?.split(";")[0] ?? "webm";
       parts.push({ type: "input_audio", input_audio: { data: b64, format } });
+    } else if (a.kind === "file") {
+      parts.push({
+        type: "input_file",
+        file: { filename: a.name, file_data: a.dataUrl },
+      });
     }
-    // kind === "file" silently dropped per spec § 4.1 — placeholder only, not sent
   }
   return parts;
 }
@@ -34,9 +51,6 @@ export function readFileAsAttachment(
   file: File,
   kind: AttachedFile["kind"],
 ): Promise<AttachedFile> {
-  if (kind === "file") {
-    return Promise.resolve({ kind: "file", name: file.name, sizeBytes: file.size });
-  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -44,7 +58,13 @@ export function readFileAsAttachment(
       resolve({
         kind,
         dataUrl,
-        mimeType: file.type || (kind === "image" ? "image/png" : "audio/webm"),
+        mimeType:
+          file.type ||
+          (kind === "image"
+            ? "image/png"
+            : kind === "audio"
+              ? "audio/webm"
+              : "application/octet-stream"),
         sizeBytes: file.size,
         name: file.name,
       });

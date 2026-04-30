@@ -1,4 +1,5 @@
 import type { SttSlice, TtsSlice } from "../audio/store";
+import { noBase64Snippets, truncateDataUrl } from "./chat";
 import type { CodeSnippets } from "./chat";
 
 const KEY = "<YOUR_API_KEY>";
@@ -12,19 +13,31 @@ export interface GenAudioSnippetsInput {
   stt: SttSlice;
 }
 
-export function genAudioSnippets({ activeTab, apiBaseUrl, tts, stt }: GenAudioSnippetsInput): CodeSnippets {
+export function genAudioSnippets({
+  activeTab,
+  apiBaseUrl,
+  tts,
+  stt,
+}: GenAudioSnippetsInput): CodeSnippets {
   return activeTab === "tts" ? genTts(apiBaseUrl, tts) : genStt(apiBaseUrl, stt);
 }
 
-function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
+function buildTtsSnippet(
+  apiBaseUrl: string,
+  tts: TtsSlice,
+  refAudio: string | undefined,
+): { curl: string; python: string; node: string } {
   const url = `${apiBaseUrl}${TTS_PATH}`;
-  const body = {
+  const body: Record<string, unknown> = {
     model: "<YOUR_MODEL>",
     input: tts.input || "Hello world.",
     voice: tts.voice,
     response_format: tts.format,
-    ...(tts.speed !== undefined ? { speed: tts.speed } : {}),
   };
+  if (tts.speed !== undefined) body.speed = tts.speed;
+  if (refAudio !== undefined) body.reference_audio_base64 = refAudio;
+  if (tts.referenceText) body.reference_text = tts.referenceText;
+
   const curl = [
     `curl -X POST ${url} \\`,
     `  -H "Authorization: Bearer ${KEY}" \\`,
@@ -40,12 +53,15 @@ function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
     `    response_format="${tts.format}"`,
   ];
   if (tts.speed !== undefined) pythonOpts.push(`    speed=${tts.speed}`);
+  if (refAudio !== undefined)
+    pythonOpts.push(`    reference_audio_base64=${JSON.stringify(refAudio)}`);
+  if (tts.referenceText) pythonOpts.push(`    reference_text=${JSON.stringify(tts.referenceText)}`);
   const python = [
     "from openai import OpenAI",
     `client = OpenAI(base_url="${apiBaseUrl}", api_key="${KEY}")`,
     "with client.audio.speech.with_streaming_response.create(",
-    pythonOpts.join(",\n") + ",",
-    `) as resp:`,
+    `${pythonOpts.join(",\n")},`,
+    ") as resp:",
     `    resp.stream_to_file("speech.${tts.format}")`,
   ].join("\n");
 
@@ -56,17 +72,40 @@ function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
     `  response_format: "${tts.format}"`,
   ];
   if (tts.speed !== undefined) nodeOpts.push(`  speed: ${tts.speed}`);
+  if (refAudio !== undefined)
+    nodeOpts.push(`  reference_audio_base64: ${JSON.stringify(refAudio)}`);
+  if (tts.referenceText) nodeOpts.push(`  reference_text: ${JSON.stringify(tts.referenceText)}`);
   const node = [
     `import OpenAI from "openai";`,
     `import { writeFileSync } from "fs";`,
     `const client = new OpenAI({ baseURL: "${apiBaseUrl}", apiKey: "${KEY}" });`,
-    `const resp = await client.audio.speech.create({`,
-    nodeOpts.join(",\n") + ",",
-    `});`,
+    "const resp = await client.audio.speech.create({",
+    `${nodeOpts.join(",\n")},`,
+    "});",
     `writeFileSync("speech.${tts.format}", Buffer.from(await resp.arrayBuffer()));`,
   ].join("\n");
 
   return { curl, python, node };
+}
+
+function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
+  if (!tts.referenceAudioBase64) {
+    const { curl, python, node } = buildTtsSnippet(apiBaseUrl, tts, undefined);
+    return noBase64Snippets(curl, python, node);
+  }
+  // Dual-view: readable truncates the data URL, full keeps it intact.
+  const { readable: refReadable, full: refFull } = truncateDataUrl(tts.referenceAudioBase64);
+  const {
+    curl: curlReadable,
+    python: pythonReadable,
+    node: nodeReadable,
+  } = buildTtsSnippet(apiBaseUrl, tts, refReadable);
+  const {
+    curl: curlFull,
+    python: pythonFull,
+    node: nodeFull,
+  } = buildTtsSnippet(apiBaseUrl, tts, refFull);
+  return { curlReadable, curlFull, pythonReadable, pythonFull, nodeReadable, nodeFull };
 }
 
 function genStt(apiBaseUrl: string, stt: SttSlice): CodeSnippets {
@@ -84,27 +123,22 @@ function genStt(apiBaseUrl: string, stt: SttSlice): CodeSnippets {
   if (stt.temperature !== undefined) curlParts.push(`  -F "temperature=${stt.temperature}"`);
   const curl = curlParts.join(" \\\n");
 
-  const pythonOpts: string[] = [
-    `    model="<YOUR_MODEL>"`,
-    `    file=open("${fileName}", "rb")`,
-  ];
+  const pythonOpts: string[] = [`    model="<YOUR_MODEL>"`, `    file=open("${fileName}", "rb")`];
   if (stt.language) pythonOpts.push(`    language="${stt.language}"`);
-  if (stt.task && stt.task !== "transcribe") pythonOpts.push(`    # task="${stt.task}" -> use audio.translations.create instead`);
+  if (stt.task && stt.task !== "transcribe")
+    pythonOpts.push(`    # task="${stt.task}" -> use audio.translations.create instead`);
   if (stt.prompt) pythonOpts.push(`    prompt=${JSON.stringify(stt.prompt)}`);
   if (stt.temperature !== undefined) pythonOpts.push(`    temperature=${stt.temperature}`);
   const python = [
     "from openai import OpenAI",
     `client = OpenAI(base_url="${apiBaseUrl}", api_key="${KEY}")`,
-    `resp = client.audio.transcriptions.create(`,
-    pythonOpts.join(",\n") + ",",
-    `)`,
-    `print(resp.text)`,
+    "resp = client.audio.transcriptions.create(",
+    `${pythonOpts.join(",\n")},`,
+    ")",
+    "print(resp.text)",
   ].join("\n");
 
-  const nodeOpts: string[] = [
-    `  model: "<YOUR_MODEL>"`,
-    `  file: createReadStream("${fileName}")`,
-  ];
+  const nodeOpts: string[] = [`  model: "<YOUR_MODEL>"`, `  file: createReadStream("${fileName}")`];
   if (stt.language) nodeOpts.push(`  language: "${stt.language}"`);
   if (stt.prompt) nodeOpts.push(`  prompt: ${JSON.stringify(stt.prompt)}`);
   if (stt.temperature !== undefined) nodeOpts.push(`  temperature: ${stt.temperature}`);
@@ -112,11 +146,11 @@ function genStt(apiBaseUrl: string, stt: SttSlice): CodeSnippets {
     `import OpenAI from "openai";`,
     `import { createReadStream } from "fs";`,
     `const client = new OpenAI({ baseURL: "${apiBaseUrl}", apiKey: "${KEY}" });`,
-    `const resp = await client.audio.transcriptions.create({`,
-    nodeOpts.join(",\n") + ",",
-    `});`,
-    `console.log(resp.text);`,
+    "const resp = await client.audio.transcriptions.create({",
+    `${nodeOpts.join(",\n")},`,
+    "});",
+    "console.log(resp.text);",
   ].join("\n");
 
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }

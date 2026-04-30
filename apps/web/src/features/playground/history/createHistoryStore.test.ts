@@ -1,3 +1,4 @@
+import { Blob as NodeBlob } from "node:buffer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createHistoryStore } from "./createHistoryStore";
 
@@ -7,6 +8,8 @@ interface DummySnap {
 
 describe("createHistoryStore", () => {
   beforeEach(() => {
+    // localStorage is no longer the backing store (IDB is), but clear it anyway
+    // for completeness; IDB state is isolated by unique name keys per test.
     localStorage.clear();
   });
 
@@ -145,5 +148,38 @@ describe("createHistoryStore", () => {
     const oldId = useStore.getState().list[1].id;
     useStore.getState().restore(oldId);
     expect(useStore.getState().restoreVersion).toBe(v1 + 1);
+  });
+
+  it("putBlob then getBlob round-trips a Blob keyed by entryId+attachmentKey", async () => {
+    const useStore = createHistoryStore<{ x: number }>({
+      name: "md-test-blob",
+      blank: () => ({ x: 0 }),
+      preview: () => "",
+    });
+    // Use Node.js native Blob so structuredClone works in fake-indexeddb
+    const blob = new NodeBlob(["payload"], { type: "image/png" }) as unknown as Blob;
+    const id = useStore.getState().currentId;
+    await useStore.getState().putBlob(id, "thumb", blob);
+    const got = await useStore.getState().getBlob(id, "thumb");
+    expect(got).not.toBeNull();
+    const ab = await got?.arrayBuffer();
+    expect(Buffer.from(ab ?? new ArrayBuffer(0)).toString("utf8")).toBe("payload");
+  });
+
+  it("removeEntry also clears its blobs", async () => {
+    const useStore = createHistoryStore<{ x: number }>({
+      name: "md-test-blob-cleanup",
+      blank: () => ({ x: 0 }),
+      preview: () => "",
+    });
+    // create a 2nd entry, attach blob, remove
+    useStore.getState().newSession(); // makes a fresh entry, pushes prev to position 1
+    const prevId = useStore.getState().list[1].id;
+    await useStore.getState().putBlob(prevId, "k", new NodeBlob(["x"]) as unknown as Blob);
+    expect(await useStore.getState().getBlob(prevId, "k")).not.toBeNull();
+    useStore.getState().removeEntry(prevId);
+    // give async cleanup a tick
+    await new Promise((r) => setTimeout(r, 10));
+    expect(await useStore.getState().getBlob(prevId, "k")).toBeNull();
   });
 });

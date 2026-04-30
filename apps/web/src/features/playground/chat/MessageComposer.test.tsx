@@ -3,8 +3,8 @@ import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MessageComposer } from "./MessageComposer";
 
 vi.mock("sonner", () => ({
@@ -108,15 +108,59 @@ describe("MessageComposer attachments", () => {
   });
 });
 
+describe("MessageComposer file attachment validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects unsupported mime type with unsupportedMime toast", async () => {
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
+    const fileInput = container.querySelector('input[type="file"][aria-label]') as HTMLInputElement;
+    expect(fileInput).toBeDefined();
+
+    const file = new File(["x"], "evil.exe", { type: "application/x-msdownload" });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(vi.mocked(toast).error).toHaveBeenCalledWith(expect.stringMatching(/not supported/i));
+  });
+
+  it("rejects file > 8 MB with tooLarge toast", async () => {
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
+    const fileInput = container.querySelector('input[type="file"][aria-label]') as HTMLInputElement;
+    expect(fileInput).toBeDefined();
+
+    const file = new File([new Uint8Array(9 * 1024 * 1024)], "big.pdf", {
+      type: "application/pdf",
+    });
+    Object.defineProperty(file, "size", { value: 9 * 1024 * 1024 });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(vi.mocked(toast).error).toHaveBeenCalledWith(expect.stringMatching(/too large/i));
+  });
+
+  it("accepts a PDF and shows filename without (not sent) marker", async () => {
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
+    const fileInput = container.querySelector('input[type="file"][aria-label]') as HTMLInputElement;
+    expect(fileInput).toBeDefined();
+
+    const file = new File(["%PDF-1.4"], "hello.pdf", { type: "application/pdf" });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.queryByText(/not sent/i)).not.toBeInTheDocument();
+    expect(screen.getByText("hello.pdf")).toBeInTheDocument();
+  });
+});
+
 describe("MessageComposer attachment validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("rejects 6th attachment with tooManyAttachments toast", async () => {
-    const { container } = renderWithI18n(
-      <MessageComposer {...baseProps} onSend={vi.fn()} />,
-    );
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
     const imageInput = container.querySelector(
       'input[type="file"][accept="image/*"]',
     ) as HTMLInputElement;
@@ -142,9 +186,7 @@ describe("MessageComposer attachment validation", () => {
   });
 
   it("rejects oversized attachment with attachmentTooLarge toast", async () => {
-    const { container } = renderWithI18n(
-      <MessageComposer {...baseProps} onSend={vi.fn()} />,
-    );
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
     const imageInput = container.querySelector(
       'input[type="file"][accept="image/*"]',
     ) as HTMLInputElement;
@@ -163,9 +205,7 @@ describe("MessageComposer attachment validation", () => {
   });
 
   it("removes attachment when chip X is clicked", async () => {
-    const { container } = renderWithI18n(
-      <MessageComposer {...baseProps} onSend={vi.fn()} />,
-    );
+    const { container } = renderWithI18n(<MessageComposer {...baseProps} onSend={vi.fn()} />);
     const imageInput = container.querySelector(
       'input[type="file"][accept="image/*"]',
     ) as HTMLInputElement;

@@ -34,7 +34,13 @@ export class AudioService {
     });
     const headers = buildHeaders(req.apiKey, req.customHeaders);
     const body = buildPlaygroundTtsBody({
-      model: req.model, input: req.input, voice: req.voice, format: req.format, speed: req.speed,
+      model: req.model,
+      input: req.input,
+      voice: req.voice,
+      format: req.format,
+      speed: req.speed,
+      reference_audio_base64: req.reference_audio_base64,
+      reference_text: req.reference_text,
     });
     const start = Date.now();
     try {
@@ -59,7 +65,9 @@ export class AudioService {
     }
   }
 
-  async runTranscriptions(input: RunTranscriptionsInput): Promise<PlaygroundTranscriptionsResponse> {
+  async runTranscriptions(
+    input: RunTranscriptionsInput,
+  ): Promise<PlaygroundTranscriptionsResponse> {
     const { file, body } = input;
     const url = buildUrl({
       apiBaseUrl: body.apiBaseUrl,

@@ -13,6 +13,17 @@ export interface ImageArtifact {
   b64Json?: string;
 }
 
+export interface InpaintState {
+  /** Source-image filename (purely for display; the actual blob is in a ref). */
+  imageName: string | null;
+  imageMimeType: string | null;
+  brushSize: number;
+  prompt: string;
+  loading: boolean;
+  results: ImageArtifact[];
+  error: string | null;
+}
+
 export interface ImageStoreState {
   selectedConnectionId: string | null;
   prompt: string;
@@ -20,14 +31,27 @@ export interface ImageStoreState {
   loading: boolean;
   results: ImageArtifact[];
   error: string | null;
+  inpaint: InpaintState;
   setSelected: (id: string | null) => void;
   setPrompt: (s: string) => void;
   patchParams: (p: Partial<ImageParams>) => void;
   setLoading: (b: boolean) => void;
   setResults: (r: ImageArtifact[]) => void;
   setError: (s: string | null) => void;
+  patchInpaint: (p: Partial<InpaintState>) => void;
+  resetInpaint: () => void;
   reset: () => void;
 }
+
+const initialInpaint: InpaintState = {
+  imageName: null,
+  imageMimeType: null,
+  brushSize: 30,
+  prompt: "",
+  loading: false,
+  results: [],
+  error: null,
+};
 
 const initial = {
   selectedConnectionId: null,
@@ -40,6 +64,7 @@ const initial = {
   loading: false,
   results: [] as ImageArtifact[],
   error: null as string | null,
+  inpaint: { ...initialInpaint },
 };
 
 export const useImageStore = create<ImageStoreState>((set) => ({
@@ -50,5 +75,7 @@ export const useImageStore = create<ImageStoreState>((set) => ({
   setLoading: (b) => set({ loading: b }),
   setResults: (r) => set({ results: r }),
   setError: (e) => set({ error: e }),
-  reset: () => set({ ...initial }),
+  patchInpaint: (p) => set((s) => ({ inpaint: { ...s.inpaint, ...p } })),
+  resetInpaint: () => set({ inpaint: { ...initialInpaint } }),
+  reset: () => set({ ...initial, inpaint: { ...initialInpaint } }),
 }));

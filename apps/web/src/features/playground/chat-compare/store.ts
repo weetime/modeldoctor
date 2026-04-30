@@ -2,7 +2,21 @@ import type { ChatMessage, ChatParams } from "@modeldoctor/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type PanelCount = 2 | 3 | 4;
+export type PanelCount = 2 | 3 | 4 | 6 | 8;
+
+/**
+ * Snapshot shape for explicit save/restore via IDB (Phase 4 P3).
+ * Separate from the LS working-state persist (which drops messages).
+ */
+export interface CompareSnapshot {
+  panelCount: PanelCount;
+  systemMessage: string;
+  panels: Array<{
+    connectionId: string | null;
+    params: ChatParams;
+    messages: ChatMessage[];
+  }>;
+}
 
 export interface PanelState {
   // Persisted
@@ -45,6 +59,12 @@ export interface CompareStoreState {
   setPanelError: (i: number, e: string | null) => void;
   resetPanel: (i: number) => void;
   abortAll: () => void;
+  /**
+   * Replace the working state with a saved CompareSnapshot (Phase 4 P3).
+   * Ephemeral fields (sending, streaming, abortController, error) are blanked.
+   * Called after IDB blob rehydration completes.
+   */
+  restoreSnapshot: (snap: CompareSnapshot) => void;
 }
 
 const updatePanel = (panels: PanelState[], i: number, patch: Partial<PanelState>): PanelState[] =>
@@ -123,10 +143,22 @@ export const useCompareStore = create<CompareStoreState>()(
         const { panels } = get();
         for (const p of panels) p.abortController?.abort();
       },
+
+      restoreSnapshot: (snap) =>
+        set(() => ({
+          panelCount: snap.panelCount,
+          sharedSystemMessage: snap.systemMessage,
+          panels: snap.panels.map((p) => ({
+            ...blankPanel(),
+            selectedConnectionId: p.connectionId,
+            params: p.params,
+            messages: p.messages,
+          })),
+        })),
     }),
     {
       name: "md-playground-chat-compare-layout",
-      version: 1,
+      version: 2,
       partialize: (s) => ({
         panelCount: s.panelCount,
         sharedSystemMessage: s.sharedSystemMessage,

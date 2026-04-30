@@ -11,10 +11,15 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
-import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
+import {
+  applyBlobPatches,
+  persistMessageAttachments,
+  rehydrateMessageBlobs,
+} from "../history/persistAttachments";
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
@@ -22,23 +27,47 @@ import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
-export function sanitizeChatSnapshot(snap: ChatHistorySnapshot): ChatHistorySnapshot {
-  return {
-    ...snap,
-    messages: snap.messages.map((m) => {
-      if (typeof m.content === "string") return m;
-      const textParts = m.content.filter(
-        (p): p is { type: "text"; text: string } => p.type === "text",
-      );
-      const droppedCount = m.content.length - textParts.length;
-      if (droppedCount === 0) return m;
-      const text =
-        textParts.map((p) => p.text).join("\n") +
-        (textParts.length > 0 ? "\n\n" : "") +
-        `📎 ${droppedCount} attachment${droppedCount > 1 ? "s" : ""} not saved in history`;
-      return { ...m, content: text };
-    }),
-  };
+/**
+ * Walk message content parts, store each binary part as a Blob in IDB, and
+ * replace the inline data with an `idb://<key>` sentinel.
+ *
+ * Returns a new snapshot safe for JSON serialisation without large base64 blobs.
+ */
+export async function persistAttachments(
+  entryId: string,
+  snap: ChatHistorySnapshot,
+): Promise<ChatHistorySnapshot> {
+  const store = useChatHistoryStore.getState();
+  const sanitisedMessages = await persistMessageAttachments(entryId, snap.messages, store);
+  return { ...snap, messages: sanitisedMessages };
+}
+
+/**
+ * Reverse `persistAttachments`: for every content-part field that begins with
+ * `idb://`, fetch the Blob, convert back to data URL, and inject into the
+ * current chat store state. Runs asynchronously after the sync restore call.
+ */
+export async function rehydrateChatBlobs(
+  entryId: string,
+  snap: ChatHistorySnapshot,
+): Promise<void> {
+  const store = useChatHistoryStore.getState();
+  const patches = await rehydrateMessageBlobs(entryId, snap.messages, store);
+  if (patches.length === 0) return;
+
+  // Snapshot current non-message state before reset, then apply patches to messages.
+  const chatState = useChatStore.getState();
+  const systemMessage = chatState.systemMessage;
+  const params = chatState.params;
+  const selectedConnectionId = chatState.selectedConnectionId;
+  const msgs = applyBlobPatches(chatState.messages as ChatMessage[], patches);
+
+  // Rebuild the store with patched messages (reset wipes all, then re-apply).
+  chatState.reset();
+  chatState.setSystemMessage(systemMessage);
+  chatState.patchParams(params);
+  chatState.setSelected(selectedConnectionId);
+  for (const m of msgs) chatState.appendMessage(m);
 }
 
 export function ChatPage() {
@@ -51,34 +80,43 @@ export function ChatPage() {
   const canSend = !!conn;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
 
-  const restoreSnap = (snap: ChatHistorySnapshot) => {
-    // Replace store state with the restored snapshot
+  const restoreSnap = (entryId: string, snap: ChatHistorySnapshot) => {
+    // Sync state copy first, then async blob rehydration.
     const s = useChatStore.getState();
     s.reset();
     s.setSystemMessage(snap.systemMessage);
     s.patchParams(snap.params);
     s.setSelected(snap.selectedConnectionId);
     for (const m of snap.messages) s.appendMessage(m);
+    // Kick off async rehydration; errors are non-fatal (blobs may not exist for older entries).
+    rehydrateChatBlobs(entryId, snap).catch((e) =>
+      console.error("[ChatPage] blob rehydration failed", e),
+    );
   };
 
   const historyCurrentId = useChatHistoryStore((h) => h.currentId);
   const historyRestoreVersion = useChatHistoryStore((h) => h.restoreVersion);
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
-    const snap = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
-    if (snap) restoreSnap(snap.snapshot);
+    const entry = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
+    if (entry) restoreSnap(entry.id, entry.snapshot);
   }, [historyCurrentId, historyRestoreVersion]);
 
-  // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
+  // Auto-save chat state into the current history entry (debounced 1500ms inside the store).
+  // persistAttachments runs async before the actual save.
   useEffect(() => {
-    useChatHistoryStore.getState().scheduleAutoSave(
-      sanitizeChatSnapshot({
-        systemMessage: slice.systemMessage,
-        messages: slice.messages,
-        params: slice.params,
-        selectedConnectionId: slice.selectedConnectionId,
-      }),
-    );
+    const currentId = useChatHistoryStore.getState().currentId;
+    const snap: ChatHistorySnapshot = {
+      systemMessage: slice.systemMessage,
+      messages: slice.messages,
+      params: slice.params,
+      selectedConnectionId: slice.selectedConnectionId,
+    };
+    persistAttachments(currentId, snap)
+      .then((serialisable) => {
+        useChatHistoryStore.getState().scheduleAutoSave(serialisable);
+      })
+      .catch((e) => console.error("[ChatPage] persistAttachments failed", e));
   }, [slice.systemMessage, slice.messages, slice.params, slice.selectedConnectionId]);
 
   const snippets =

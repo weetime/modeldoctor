@@ -65,4 +65,22 @@ describe("HistoryDrawer", () => {
     expect(useStore.getState().list).toHaveLength(1);
     expect(useStore.getState().list[0].snapshot.text).toBe("second");
   });
+
+  it("renderRowExtras is called for each non-current entry and its output appears in the row", async () => {
+    useStore.getState().save({ text: "alpha" });
+    useStore.getState().newSession();
+    useStore.getState().save({ text: "beta" });
+    const user = userEvent.setup();
+    render(
+      <HistoryDrawer
+        useHistoryStore={useStore}
+        renderRowExtras={(e) => <span data-testid={`extra-${e.snapshot.text}`}>extra</span>}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /history|历史/i }));
+    // "alpha" is the older entry
+    expect(await screen.findByTestId("extra-alpha")).toBeInTheDocument();
+    // "beta" is the current entry — should NOT appear
+    expect(screen.queryByTestId("extra-beta")).not.toBeInTheDocument();
+  });
 });

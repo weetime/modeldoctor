@@ -71,6 +71,34 @@ describe("ChatComparePage", () => {
     expect(useCompareStore.getState().panels).toHaveLength(4);
   });
 
+  it("panel-count switcher renders buttons for all 5 values: 2, 3, 4, 6, 8", () => {
+    renderPage();
+    for (const n of [2, 3, 4, 6, 8]) {
+      expect(screen.getByRole("button", { name: String(n) })).toBeInTheDocument();
+    }
+  });
+
+  it("switches panel count to 6 and updates the store", async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "6" }));
+    expect(useCompareStore.getState().panelCount).toBe(6);
+    expect(useCompareStore.getState().panels).toHaveLength(6);
+  });
+
+  it("switches panel count to 8 and updates the store", async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole("button", { name: "8" }));
+    expect(useCompareStore.getState().panelCount).toBe(8);
+    expect(useCompareStore.getState().panels).toHaveLength(8);
+  });
+
+  it("grid container uses auto-fit layout (not hard-coded grid-cols-N)", () => {
+    const { container } = renderPage();
+    // The grid div should use inline style with auto-fit minmax
+    const gridDiv = container.querySelector<HTMLElement>("[style*='auto-fit']");
+    expect(gridDiv).not.toBeNull();
+  });
+
   it("send broadcasts to N panels (one fetch call per panel with a connection)", async () => {
     const ids = (globalThis as unknown as { _testConnIds: { a: string; b: string } })._testConnIds;
     useCompareStore.setState((s) => ({
