@@ -22,7 +22,7 @@ export function buildContentParts(
       parts.push({ type: "image_url", image_url: { url: a.dataUrl } });
     } else if (a.kind === "audio") {
       const b64 = a.dataUrl.split(",", 2)[1] ?? "";
-      const format = a.mimeType.split("/")[1]?.split(";")[0] ?? "wav";
+      const format = a.mimeType.split("/")[1]?.split(";")[0] ?? "webm";
       parts.push({ type: "input_audio", input_audio: { data: b64, format } });
     }
     // kind === "file" silently dropped per spec § 4.1 — placeholder only, not sent

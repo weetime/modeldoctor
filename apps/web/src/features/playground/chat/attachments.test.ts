@@ -85,4 +85,22 @@ describe("readFileAsAttachment", () => {
     expect(out.sizeBytes).toBe(1);
     expect("dataUrl" in out).toBe(false);
   });
+
+  it("falls back to image/png when File has empty type and kind=image", async () => {
+    const file = new File([new Uint8Array([1])], "no-type.bin", { type: "" });
+    const out = await readFileAsAttachment(file, "image");
+    expect(out.kind).toBe("image");
+    if (out.kind === "image") {
+      expect(out.mimeType).toBe("image/png");
+    }
+  });
+
+  it("falls back to audio/webm when File has empty type and kind=audio", async () => {
+    const file = new File([new Uint8Array([1])], "no-type.bin", { type: "" });
+    const out = await readFileAsAttachment(file, "audio");
+    expect(out.kind).toBe("audio");
+    if (out.kind === "audio") {
+      expect(out.mimeType).toBe("audio/webm");
+    }
+  });
 });

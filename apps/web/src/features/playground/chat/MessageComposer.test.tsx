@@ -1,10 +1,15 @@
 import "@/lib/i18n";
 import i18n from "@/lib/i18n";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { MessageComposer } from "./MessageComposer";
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
 function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
@@ -100,5 +105,90 @@ describe("MessageComposer attachments", () => {
     const sendBtn = screen.getByRole("button", { name: /^send$|^发送$/i });
     expect(sendBtn).toBeDisabled();
     expect(onSend).not.toHaveBeenCalled();
+  });
+});
+
+describe("MessageComposer attachment validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects 6th attachment with tooManyAttachments toast", async () => {
+    const { container } = renderWithI18n(
+      <MessageComposer {...baseProps} onSend={vi.fn()} />,
+    );
+    const imageInput = container.querySelector(
+      'input[type="file"][accept="image/*"]',
+    ) as HTMLInputElement;
+    expect(imageInput).toBeDefined();
+
+    for (let i = 0; i < 5; i++) {
+      const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], `a${i}.png`, {
+        type: "image/png",
+      });
+      fireEvent.change(imageInput, { target: { files: [file] } });
+      // Brief delay to allow async readFileAsAttachment to resolve
+      await new Promise((r) => setTimeout(r, 10));
+    }
+
+    // 6th pick should trigger toast.error
+    const sixth = new File([new Uint8Array([0x89])], "a6.png", {
+      type: "image/png",
+    });
+    fireEvent.change(imageInput, { target: { files: [sixth] } });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(vi.mocked(toast).error).toHaveBeenCalled();
+  });
+
+  it("rejects oversized attachment with attachmentTooLarge toast", async () => {
+    const { container } = renderWithI18n(
+      <MessageComposer {...baseProps} onSend={vi.fn()} />,
+    );
+    const imageInput = container.querySelector(
+      'input[type="file"][accept="image/*"]',
+    ) as HTMLInputElement;
+    expect(imageInput).toBeDefined();
+
+    const file = new File([new Uint8Array([1])], "large.png", {
+      type: "image/png",
+    });
+    // Mock the file size to exceed 10MB
+    Object.defineProperty(file, "size", { value: 11 * 1024 * 1024 });
+
+    fireEvent.change(imageInput, { target: { files: [file] } });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(vi.mocked(toast).error).toHaveBeenCalled();
+  });
+
+  it("removes attachment when chip X is clicked", async () => {
+    const { container } = renderWithI18n(
+      <MessageComposer {...baseProps} onSend={vi.fn()} />,
+    );
+    const imageInput = container.querySelector(
+      'input[type="file"][accept="image/*"]',
+    ) as HTMLInputElement;
+    expect(imageInput).toBeDefined();
+
+    // Pick 2 files
+    for (let i = 0; i < 2; i++) {
+      const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], `a${i}.png`, {
+        type: "image/png",
+      });
+      fireEvent.change(imageInput, { target: { files: [file] } });
+      await new Promise((r) => setTimeout(r, 10));
+    }
+
+    // Verify 2 chips are rendered
+    const removeButtons = screen.getAllByLabelText(/remove|删除/i);
+    expect(removeButtons.length).toBe(2);
+
+    // Click the first remove button
+    await userEvent.click(removeButtons[0]);
+
+    // Verify only 1 chip remains
+    const remainingButtons = screen.queryAllByLabelText(/remove|删除/i);
+    expect(remainingButtons.length).toBe(1);
   });
 });
