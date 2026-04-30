@@ -165,6 +165,9 @@ export const PlaygroundImagesResponseSchema = z.object({
 export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSchema>;
 
 // ─── Audio TTS ──────────────────────────────────────────────────────────
+// ~2-minute reference clip at average speaking rate (≈150 wpm).
+const REFERENCE_TEXT_MAX_CHARS = 2000;
+
 export const PlaygroundTtsRequestSchema = z.object({
   apiBaseUrl: z.string().min(1),
   apiKey: z.string().min(1),
@@ -184,7 +187,7 @@ export const PlaygroundTtsRequestSchema = z.object({
     )
     .max(20 * 1024 * 1024, "reference_audio_base64 must be ≤ 20 MB")
     .optional(),
-  reference_text: z.string().max(2000).optional(),
+  reference_text: z.string().max(REFERENCE_TEXT_MAX_CHARS).optional(),
 });
 export type PlaygroundTtsRequest = z.infer<typeof PlaygroundTtsRequestSchema>;
 

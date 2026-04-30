@@ -46,6 +46,8 @@ export class AudioController {
   tts(@Body() body: PlaygroundTtsRequest): Promise<PlaygroundTtsResponse> {
     if (body.reference_audio_base64) {
       const b64 = body.reference_audio_base64.split(",")[1] ?? "";
+      // base64 decode ratio: 4 chars → 3 bytes (≈0.75); conservative
+      // decoded-size upper bound used for the 15 MB security guard.
       const bytes = Math.floor(b64.length * 0.75);
       if (bytes > 15 * 1024 * 1024) {
         throw new BadRequestException("reference_audio_base64 exceeds 15 MB decoded");
