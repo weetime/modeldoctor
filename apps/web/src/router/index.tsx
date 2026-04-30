@@ -10,6 +10,7 @@ import { ErrorPage } from "@/features/error/ErrorPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
+import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
@@ -81,11 +82,7 @@ export const routes: RouteObject[] = [
           { path: "settings", element: <SettingsPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
-          {
-            path: "playground/chat/compare",
-            // TODO Task 18 — replace with <ChatComparePage />
-            element: <Navigate to="/playground/chat" replace />,
-          },
+          { path: "playground/chat/compare", element: <ChatComparePage /> },
           { path: "playground/image", element: <ImagePage /> },
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },

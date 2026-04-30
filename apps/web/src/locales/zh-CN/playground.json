@@ -62,6 +62,24 @@
     },
     "errors": {
       "send": "发送失败：{{message}}"
+    },
+    "compare": {
+      "title": "对比",
+      "subtitle": "把同一条消息并行发到最多 4 个 chat 连接。",
+      "panelCount": "面板数",
+      "sendN": "发送到 {{count}} 个",
+      "stopAll": "全部停止",
+      "clearAll": "全部清空",
+      "params": "参数",
+      "stop": "停止",
+      "clear": "清空面板",
+      "errors": {
+        "noConnection": "请为该面板选择连接"
+      },
+      "modeTabs": {
+        "single": "单聊",
+        "compare": "对比"
+      }
     }
   },
   "history": {

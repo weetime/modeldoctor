@@ -62,6 +62,24 @@
     },
     "errors": {
       "send": "Failed to send: {{message}}"
+    },
+    "compare": {
+      "title": "Compare",
+      "subtitle": "Send the same prompt to up to 4 chat connections in parallel.",
+      "panelCount": "Panels",
+      "sendN": "Send to {{count}}",
+      "stopAll": "Stop all",
+      "clearAll": "Clear all",
+      "params": "Params",
+      "stop": "Stop",
+      "clear": "Clear panel",
+      "errors": {
+        "noConnection": "Pick a connection for this panel"
+      },
+      "modeTabs": {
+        "single": "Single",
+        "compare": "Compare"
+      }
     }
   },
   "history": {
