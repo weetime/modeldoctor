@@ -23,10 +23,15 @@ function TtsHistoryPlayButton({ entry }: { entry: HistoryEntry<AudioHistorySnaps
   const [src, setSrc] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const urlRef = useRef<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: stable entry.id
   useEffect(() => {
     return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       if (urlRef.current) {
         URL.revokeObjectURL?.(urlRef.current);
         urlRef.current = null;
@@ -54,8 +59,9 @@ function TtsHistoryPlayButton({ entry }: { entry: HistoryEntry<AudioHistorySnaps
     urlRef.current = url;
     setSrc(url);
     // play via a tiny timeout to let React commit the src attr
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       safePlay(audioRef.current);
+      timerRef.current = null;
     }, 0);
   };
 

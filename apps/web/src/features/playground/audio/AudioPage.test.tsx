@@ -160,4 +160,42 @@ describe("AudioPage – TTS history play button", () => {
     getBlobSpy.mockRestore();
     setResultSpy.mockRestore();
   });
+
+  it("cancels pending play timer on unmount before the tick fires", async () => {
+    const user = userEvent.setup();
+
+    // Seed a history entry so a play button appears in the drawer.
+    useAudioHistoryStore.getState().save({
+      selectedConnectionId: null,
+      tts: { input: "timer leak test", voice: "alloy", format: "mp3", autoPlay: false },
+      stt: { language: "", task: "transcribe", prompt: "", fileName: null, resultText: null },
+      activeTab: "tts",
+    });
+    useAudioHistoryStore.getState().newSession();
+
+    const fakeBlob = new Blob(["x"], { type: "audio/mp3" });
+    const getBlobSpy = vi
+      .spyOn(useAudioHistoryStore.getState(), "getBlob")
+      .mockResolvedValue(fakeBlob);
+
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+
+    const { unmount } = renderAt("/playground/audio");
+
+    // Open the history drawer and click play.
+    await user.click(screen.getByRole("button", { name: /history|历史/i }));
+    const playBtn = await screen.findByRole("button", { name: /play recorded audio|播放录音/i });
+    await user.click(playBtn);
+
+    // Wait for getBlob to resolve (the setTimeout gets scheduled here).
+    await waitFor(() => expect(getBlobSpy).toHaveBeenCalled());
+
+    // Unmount — the useEffect cleanup must call clearTimeout on the pending timer.
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+
+    clearTimeoutSpy.mockRestore();
+    getBlobSpy.mockRestore();
+  });
 });
