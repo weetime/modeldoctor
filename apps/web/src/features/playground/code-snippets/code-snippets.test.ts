@@ -15,13 +15,13 @@ describe("genChatSnippets", () => {
       messages: [{ role: "user", content: "hi" }],
       params: { temperature: 0.5, maxTokens: 100 },
     });
-    expect(snips.curl).toMatchSnapshot();
-    expect(snips.python).toMatchSnapshot();
-    expect(snips.node).toMatchSnapshot();
+    expect(snips.curlReadable).toMatchSnapshot();
+    expect(snips.pythonReadable).toMatchSnapshot();
+    expect(snips.nodeReadable).toMatchSnapshot();
     // API key MUST appear as the placeholder, never blank or omitted
-    expect(snips.curl).toContain("<YOUR_API_KEY>");
-    expect(snips.python).toContain("<YOUR_API_KEY>");
-    expect(snips.node).toContain("<YOUR_API_KEY>");
+    expect(snips.curlReadable).toContain("<YOUR_API_KEY>");
+    expect(snips.pythonReadable).toContain("<YOUR_API_KEY>");
+    expect(snips.nodeReadable).toContain("<YOUR_API_KEY>");
   });
 });
 
@@ -37,8 +37,8 @@ describe("genEmbeddingsSnippets", () => {
       model: "m",
       input: ["a", "b"],
     });
-    expect(single.curl).toMatchSnapshot();
-    expect(arr.python).toMatchSnapshot();
+    expect(single.curlReadable).toMatchSnapshot();
+    expect(arr.pythonReadable).toMatchSnapshot();
   });
 });
 
@@ -52,9 +52,9 @@ describe("genRerankSnippets", () => {
       topN: 2,
       wire: "cohere",
     });
-    expect(snips.curl).toMatchSnapshot();
-    expect(snips.python).toMatchSnapshot();
-    expect(snips.node).toMatchSnapshot();
+    expect(snips.curlReadable).toMatchSnapshot();
+    expect(snips.pythonReadable).toMatchSnapshot();
+    expect(snips.nodeReadable).toMatchSnapshot();
   });
 
   it("renders tei wire (snapshot)", () => {
@@ -65,7 +65,7 @@ describe("genRerankSnippets", () => {
       documents: ["a", "b"],
       wire: "tei",
     });
-    expect(snips.curl).toMatchSnapshot();
+    expect(snips.curlReadable).toMatchSnapshot();
   });
 });
 
@@ -78,8 +78,8 @@ describe("genImagesSnippets", () => {
       size: "512x512",
       n: 1,
     });
-    expect(snips.curl).toMatchSnapshot();
-    expect(snips.python).toMatchSnapshot();
+    expect(snips.curlReadable).toMatchSnapshot();
+    expect(snips.pythonReadable).toMatchSnapshot();
   });
 });
 
@@ -113,11 +113,11 @@ describe("genAudioSnippets — TTS", () => {
       tts,
       stt,
     });
-    expect(out.curl).toContain("/v1/audio/speech");
-    expect(out.curl).toContain("Hello world.");
-    expect(out.curl).toContain("<YOUR_API_KEY>");
-    expect(out.python).toContain("audio.speech");
-    expect(out.node).toContain("audio.speech");
+    expect(out.curlReadable).toContain("/v1/audio/speech");
+    expect(out.curlReadable).toContain("Hello world.");
+    expect(out.curlReadable).toContain("<YOUR_API_KEY>");
+    expect(out.pythonReadable).toContain("audio.speech");
+    expect(out.nodeReadable).toContain("audio.speech");
     expect(out).toMatchSnapshot();
   });
 });
@@ -152,11 +152,11 @@ describe("genAudioSnippets — STT", () => {
       tts,
       stt,
     });
-    expect(out.curl).toContain("/v1/audio/transcriptions");
-    expect(out.curl).toContain('-F "file=@');
-    expect(out.curl).toContain('-F "model=');
-    expect(out.python).toContain("audio.transcriptions.create");
-    expect(out.node).toContain("audio.transcriptions.create");
+    expect(out.curlReadable).toContain("/v1/audio/transcriptions");
+    expect(out.curlReadable).toContain('-F "file=@');
+    expect(out.curlReadable).toContain('-F "model=');
+    expect(out.pythonReadable).toContain("audio.transcriptions.create");
+    expect(out.nodeReadable).toContain("audio.transcriptions.create");
     expect(out).toMatchSnapshot();
   });
 });
@@ -193,8 +193,6 @@ describe("genChatSnippets multimodal truncation (readable / full dual view)", ()
     // full preserves all data
     expect(out.curlFull).toContain("A".repeat(1000));
     expect(out.curlFull).toContain("B".repeat(1000));
-    // legacy .curl === readable
-    expect(out.curl).toBe(out.curlReadable);
     // python and node dual fields
     expect(out.pythonReadable).toMatch(/AAAAAAAA\.\.\.\{\d+ KB truncated\}/);
     expect(out.pythonFull).toContain("A".repeat(1000));
@@ -214,7 +212,7 @@ describe("genChatSnippets multimodal truncation (readable / full dual view)", ()
     expect(out.nodeReadable).toBe(out.nodeFull);
   });
 
-  it("image_url with short base64 (≤ 24 chars) is not truncated", () => {
+  it("image_url with small base64 (≤ 1 KB body) is not truncated", () => {
     const shortData = `data:image/png;base64,${"A".repeat(24)}`;
     const out = genChatSnippets({
       apiBaseUrl: "http://x",
@@ -237,6 +235,7 @@ describe("genChatSnippets multimodal truncation (readable / full dual view)", ()
 });
 
 describe("base64 readable / full split (plan Step 2 tests)", () => {
+  // Payload must be > 1 KB (1024 chars) to trigger truncation per spec § 9.1.
   const reqWithImage = {
     apiBaseUrl: "http://api.example.com",
     model: "gpt-4o",
@@ -244,7 +243,7 @@ describe("base64 readable / full split (plan Step 2 tests)", () => {
       {
         role: "user",
         content: [
-          { type: "image_url", image_url: { url: `data:image/png;base64,${"A".repeat(200)}` } },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${"A".repeat(2000)}` } },
         ],
       },
     ],
@@ -257,17 +256,17 @@ describe("base64 readable / full split (plan Step 2 tests)", () => {
     expect(out).toHaveProperty("curlFull");
     // readable truncates
     expect(out.curlReadable).toMatch(/AAAAAAAA\.\.\.\{\d+ KB truncated\}/);
-    expect(out.curlReadable).not.toContain("A".repeat(200));
+    expect(out.curlReadable).not.toContain("A".repeat(2000));
     // full preserves
-    expect(out.curlFull).toContain("A".repeat(200));
+    expect(out.curlFull).toContain("A".repeat(2000));
   });
 
   it("produces matching python and node duals", () => {
     const out = genChatSnippets(reqWithImage as Parameters<typeof genChatSnippets>[0]);
-    expect(out.pythonReadable).not.toContain("A".repeat(200));
-    expect(out.pythonFull).toContain("A".repeat(200));
-    expect(out.nodeReadable).not.toContain("A".repeat(200));
-    expect(out.nodeFull).toContain("A".repeat(200));
+    expect(out.pythonReadable).not.toContain("A".repeat(2000));
+    expect(out.pythonFull).toContain("A".repeat(2000));
+    expect(out.nodeReadable).not.toContain("A".repeat(2000));
+    expect(out.nodeFull).toContain("A".repeat(2000));
   });
 
   it("when no base64 fields, readable === full", () => {

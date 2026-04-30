@@ -6,9 +6,6 @@ import { ViewCodeDialog } from "./ViewCodeDialog";
 
 /** Snippets with no base64: readable === full */
 const plainSnips = {
-  curl: "curl -X POST http://x",
-  python: "from openai import OpenAI",
-  node: "import OpenAI from 'openai';",
   curlReadable: "curl -X POST http://x",
   curlFull: "curl -X POST http://x",
   pythonReadable: "from openai import OpenAI",
@@ -19,9 +16,6 @@ const plainSnips = {
 
 /** Snippets with base64: readable !== full */
 const base64Snips = {
-  curl: "curl AAAAAAAA...{37 KB truncated}",
-  python: "python AAAAAAAA...{37 KB truncated}",
-  node: "node AAAAAAAA...{37 KB truncated}",
   curlReadable: "curl AAAAAAAA...{37 KB truncated}",
   curlFull: `curl ${"A".repeat(50000)}`,
   pythonReadable: "python AAAAAAAA...{37 KB truncated}",
@@ -36,7 +30,7 @@ describe("ViewCodeDialog — plain snippets (no base64)", () => {
     expect(screen.getByRole("tab", { name: /curl/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /python/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /node/i })).toBeInTheDocument();
-    expect(screen.getByText(plainSnips.curl)).toBeInTheDocument();
+    expect(screen.getByText(plainSnips.curlReadable)).toBeInTheDocument();
   });
 
   it("clicking Copy writes the active tab's snippet to clipboard", async () => {
@@ -49,7 +43,7 @@ describe("ViewCodeDialog — plain snippets (no base64)", () => {
     });
     render(<ViewCodeDialog open={true} onOpenChange={() => {}} snippets={plainSnips} />);
     await user.click(screen.getByRole("button", { name: /copy/i }));
-    expect(writeText).toHaveBeenCalledWith(plainSnips.curl);
+    expect(writeText).toHaveBeenCalledWith(plainSnips.curlReadable);
   });
 
   it("renders the API-key disclaimer", () => {

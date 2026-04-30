@@ -8,9 +8,6 @@ export interface ChatSnippetInput {
 }
 
 export interface CodeSnippets {
-  curl: string;
-  python: string;
-  node: string;
   curlReadable: string;
   curlFull: string;
   pythonReadable: string;
@@ -34,7 +31,10 @@ export function truncateDataUrl(
   if (!m) return { readable: dataUrl, full: dataUrl };
   const head = m[1];
   const body = m[2];
-  if (body.length <= headChars + 16) return { readable: dataUrl, full: dataUrl };
+  // Don't truncate small payloads — keep readable === full so the
+  // "Copy readable" view stays executable. Spec § 9.1: banner only
+  // shown when base64 > 1 KB, so sub-1-KB stays single-Copy.
+  if (body.length <= 1024) return { readable: dataUrl, full: dataUrl };
   const kb = Math.round((body.length * 0.75) / 1024);
   return {
     readable: `${head}${body.slice(0, headChars)}...{${kb} KB truncated}`,
@@ -47,7 +47,10 @@ export function truncateDataUrl(
  * Returns both readable and full variants.
  */
 export function truncateBase64(b64: string, headChars = 8): { readable: string; full: string } {
-  if (b64.length <= headChars + 16) return { readable: b64, full: b64 };
+  // Don't truncate small payloads — keep readable === full so the
+  // "Copy readable" view stays executable. Spec § 9.1: banner only
+  // shown when base64 > 1 KB, so sub-1-KB stays single-Copy.
+  if (b64.length <= 1024) return { readable: b64, full: b64 };
   const kb = Math.round((b64.length * 0.75) / 1024);
   return {
     readable: `${b64.slice(0, headChars)}...{${kb} KB truncated}`,
@@ -130,11 +133,6 @@ export function genChatSnippets(input: ChatSnippetInput): CodeSnippets {
   const readable = buildSnippets(input, "readable");
   const full = buildSnippets(input, "full");
   return {
-    // Legacy fields — keep for callers that haven't been updated yet
-    curl: readable.curl,
-    python: readable.python,
-    node: readable.node,
-    // Dual-view fields
     curlReadable: readable.curl,
     curlFull: full.curl,
     pythonReadable: readable.python,
@@ -156,9 +154,6 @@ function pyKwargs(body: Record<string, unknown>): string {
  */
 export function noBase64Snippets(curl: string, python: string, node: string): CodeSnippets {
   return {
-    curl,
-    python,
-    node,
     curlReadable: curl,
     curlFull: curl,
     pythonReadable: python,

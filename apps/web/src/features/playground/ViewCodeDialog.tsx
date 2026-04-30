@@ -19,6 +19,8 @@ type View = "readable" | "full";
 /** Estimate KB of base64 data from the size difference between full and readable. */
 function estimateBase64Kb(snippets: CodeSnippets): number {
   const diff = snippets.curlFull.length - snippets.curlReadable.length;
+  // base64 decode ratio: 4 chars → 3 bytes (≈0.75); used to estimate
+  // the original binary size from the diff in encoded chars.
   return Math.round((diff * 0.75) / 1024);
 }
 
@@ -33,8 +35,16 @@ export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogP
   const [active, setActive] = useState<Lang>("curl");
   const [view, setView] = useState<View>("readable");
 
-  const hasBase64 = snippets.curlReadable !== snippets.curlFull;
+  const hasBase64 =
+    snippets.curlReadable !== snippets.curlFull ||
+    snippets.pythonReadable !== snippets.pythonFull ||
+    snippets.nodeReadable !== snippets.nodeFull;
   const kb = hasBase64 ? estimateBase64Kb(snippets) : 0;
+  // showBase64Affordances: only show banner/toggle/dual copy when
+  // truncation is substantial (>= 1 KB). For sub-1-KB payloads the
+  // truncation helpers return readable === full, so this is always
+  // consistent — kept explicit for clarity.
+  const showBase64Affordances = hasBase64 && kb >= 1;
 
   const onCopy = async () => {
     const text = getSnippet(snippets, active, view);
@@ -63,14 +73,14 @@ export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogP
           <DialogTitle>{t("viewCode.title")}</DialogTitle>
         </DialogHeader>
 
-        {hasBase64 && (
+        {showBase64Affordances && (
           <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span>{t("viewCode.base64Banner", { kb })}</span>
           </div>
         )}
 
-        {hasBase64 && (
+        {showBase64Affordances && (
           <div className="flex items-center gap-3">
             <label className="flex cursor-pointer items-center gap-1.5 text-sm">
               <input
@@ -104,7 +114,7 @@ export function ViewCodeDialog({ open, onOpenChange, snippets }: ViewCodeDialogP
               <TabsTrigger value="python">Python</TabsTrigger>
               <TabsTrigger value="node">Node.js</TabsTrigger>
             </TabsList>
-            {hasBase64 ? (
+            {showBase64Affordances ? (
               <div className="flex items-center gap-1">
                 <Button size="sm" variant="outline" onClick={onCopyReadable}>
                   <Copy className="mr-1 h-3 w-3" />
