@@ -4,7 +4,7 @@ import { playgroundFetchMultipart } from "@/lib/playground-multipart";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundTranscriptionsResponse } from "@modeldoctor/contracts";
 import { Copy, X } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { RecorderControls } from "./RecorderControls";
@@ -17,6 +17,20 @@ export function SttTab() {
   const conn = useConnectionsStore((s) => (selectedConnectionId ? s.get(selectedConnectionId) : null));
   const blobRef = useRef<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const audioUrl = useMemo(
+    () => (blobRef.current ? URL.createObjectURL(blobRef.current) : null),
+    // biome-ignore lint/correctness/useExhaustiveDependencies: blobRef.current is mutated outside React; we re-create the URL when the file meta (which IS in store state) changes
+    [stt.fileName, stt.fileSize],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
   const adoptBlob = (blob: Blob, name: string) => {
     blobRef.current = blob;
@@ -104,8 +118,8 @@ export function SttTab() {
               </Button>
             </div>
             {/* biome-ignore lint/a11y/useMediaCaption: user-supplied recording */}
-            {blobRef.current ? (
-              <audio controls src={URL.createObjectURL(blobRef.current)} className="w-full" />
+            {blobRef.current && audioUrl ? (
+              <audio controls src={audioUrl} className="w-full" />
             ) : null}
           </div>
         ) : (
