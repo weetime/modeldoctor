@@ -1,3 +1,4 @@
+import { noBase64Snippets } from "./chat";
 import type { CodeSnippets } from "./chat";
 
 const PLACEHOLDER = "<YOUR_API_KEY>";
@@ -30,5 +31,5 @@ print(len(resp.data[0].embedding))`;
 const client = new OpenAI({ baseURL: "${input.apiBaseUrl}", apiKey: "${PLACEHOLDER}" });
 const resp = await client.embeddings.create(${json});
 console.log(resp.data[0].embedding.length);`;
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }

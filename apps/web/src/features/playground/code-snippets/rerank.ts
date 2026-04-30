@@ -1,3 +1,4 @@
+import { noBase64Snippets } from "./chat";
 import type { CodeSnippets } from "./chat";
 
 const PLACEHOLDER = "<YOUR_API_KEY>";
@@ -45,5 +46,5 @@ print(resp.json())`;
   body: JSON.stringify(${json}),
 });
 console.log(await resp.json());`;
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }

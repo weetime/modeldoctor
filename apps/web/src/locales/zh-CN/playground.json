@@ -104,7 +104,14 @@
     "title": "查看代码",
     "copy": "复制",
     "copied": "已复制",
-    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>"
+    "keyPlaceholder": "API 密钥已替换为占位符 <YOUR_API_KEY>",
+    "base64Banner": "代码片段包含 {{kb}} KB 的 base64 数据",
+    "viewReadable": "可读视图（已截断）",
+    "viewFull": "完整数据（可复制执行）",
+    "copyReadable": "复制可读版本",
+    "copyFull": "复制完整数据",
+    "copiedReadable": "已复制可读版本",
+    "copiedFull": "已复制完整版本"
   },
   "embeddings": {
     "title": "嵌入",

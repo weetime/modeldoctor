@@ -1,3 +1,4 @@
+import { noBase64Snippets } from "./chat";
 import type { CodeSnippets } from "./chat";
 
 const PLACEHOLDER = "<YOUR_API_KEY>";
@@ -34,7 +35,7 @@ print(resp.data[0].url or resp.data[0].b64_json[:32])`;
 const client = new OpenAI({ baseURL: "${input.apiBaseUrl}", apiKey: "${PLACEHOLDER}" });
 const resp = await client.images.generate(${json});
 console.log(resp.data[0].url ?? resp.data[0].b64_json?.slice(0, 32));`;
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }
 
 function pyKw(body: Record<string, unknown>): string {

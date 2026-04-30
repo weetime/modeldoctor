@@ -104,7 +104,14 @@
     "title": "View Code",
     "copy": "Copy",
     "copied": "Copied",
-    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>"
+    "keyPlaceholder": "API key replaced with placeholder <YOUR_API_KEY>",
+    "base64Banner": "Snippet contains {{kb}} KB of base64 data",
+    "viewReadable": "Readable view (truncated)",
+    "viewFull": "Full data (copy-ready)",
+    "copyReadable": "Copy readable",
+    "copyFull": "Copy full data",
+    "copiedReadable": "Copied readable snippet",
+    "copiedFull": "Copied full snippet"
   },
   "embeddings": {
     "title": "Embeddings",

@@ -1,4 +1,5 @@
 import type { SttSlice, TtsSlice } from "../audio/store";
+import { noBase64Snippets } from "./chat";
 import type { CodeSnippets } from "./chat";
 
 const KEY = "<YOUR_API_KEY>";
@@ -66,7 +67,7 @@ function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
     `writeFileSync("speech.${tts.format}", Buffer.from(await resp.arrayBuffer()));`,
   ].join("\n");
 
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }
 
 function genStt(apiBaseUrl: string, stt: SttSlice): CodeSnippets {
@@ -118,5 +119,5 @@ function genStt(apiBaseUrl: string, stt: SttSlice): CodeSnippets {
     `console.log(resp.text);`,
   ].join("\n");
 
-  return { curl, python, node };
+  return noBase64Snippets(curl, python, node);
 }

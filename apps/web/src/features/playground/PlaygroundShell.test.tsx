@@ -54,7 +54,17 @@ describe("PlaygroundShell", () => {
       <PlaygroundShell
         category="chat"
         paramsSlot={null}
-        viewCodeSnippets={{ curl: "X", python: "Y", node: "Z" }}
+        viewCodeSnippets={{
+          curl: "X",
+          python: "Y",
+          node: "Z",
+          curlReadable: "X",
+          curlFull: "X",
+          pythonReadable: "Y",
+          pythonFull: "Y",
+          nodeReadable: "Z",
+          nodeFull: "Z",
+        }}
       >
         <div />
       </PlaygroundShell>,
