@@ -3,8 +3,8 @@ import { useConnectionsStore } from "@/stores/connections-store";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ChatPage, sanitizeChatSnapshot } from "./ChatPage";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ChatPage, persistAttachments, rehydrateChatBlobs } from "./ChatPage";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
@@ -232,8 +232,205 @@ describe("ChatPage file attachment upload", () => {
   });
 });
 
-describe("sanitizeChatSnapshot", () => {
-  it("leaves string-content messages alone", () => {
+// ---------------------------------------------------------------------------
+// persistAttachments + rehydrateChatBlobs round-trip tests
+// ---------------------------------------------------------------------------
+
+// Helper: a tiny valid 1x1 transparent PNG as base64.
+const PNG_B64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+const PNG_DATA_URL = `data:image/png;base64,${PNG_B64}`;
+
+describe("persistAttachments + rehydrateChatBlobs", () => {
+  // Stored blobs keyed "entryId:key" → Blob, mimicking IDB behaviour.
+  let blobStore: Map<string, Blob>;
+
+  beforeEach(() => {
+    useChatHistoryStore.getState().reset();
+    useChatStore.getState().reset();
+
+    blobStore = new Map();
+
+    vi.spyOn(useChatHistoryStore.getState(), "putBlob").mockImplementation(
+      async (entryId: string, key: string, blob: Blob) => {
+        blobStore.set(`${entryId}:${key}`, blob);
+      },
+    );
+
+    vi.spyOn(useChatHistoryStore.getState(), "getBlob").mockImplementation(
+      async (entryId: string, key: string) => {
+        return blobStore.get(`${entryId}:${key}`) ?? null;
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("leaves string-content messages unchanged", async () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "sys",
+      messages: [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+      ],
+      params: {},
+      selectedConnectionId: null,
+    };
+    const entryId = useChatHistoryStore.getState().currentId;
+    const out = await persistAttachments(entryId, snap);
+    expect(out).toEqual(snap);
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).not.toHaveBeenCalled();
+  });
+
+  it("leaves text-only multimodal content unchanged", async () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [{ role: "user", content: [{ type: "text", text: "only text" }] }],
+      params: {},
+      selectedConnectionId: null,
+    };
+    const entryId = useChatHistoryStore.getState().currentId;
+    const out = await persistAttachments(entryId, snap);
+    expect(out.messages[0].content).toEqual([{ type: "text", text: "only text" }]);
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).not.toHaveBeenCalled();
+  });
+
+  it("round-trips an image_url attachment: data URL → idb:// sentinel → restored data URL", async () => {
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "describe this" },
+            { type: "image_url", image_url: { url: PNG_DATA_URL } },
+          ],
+        },
+      ],
+      params: {},
+      selectedConnectionId: null,
+    };
+    const entryId = useChatHistoryStore.getState().currentId;
+
+    // Step 1: persist — inline data replaced with sentinel
+    const serialised = await persistAttachments(entryId, snap);
+    const imgPart = (serialised.messages[0].content as Array<{ type: string; image_url?: { url: string } }>)[1];
+    expect(imgPart.image_url?.url).toBe("idb://msg0.part1");
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part1",
+      expect.any(Blob),
+    );
+
+    // Step 2: restore sync state from the serialised snapshot
+    const s = useChatStore.getState();
+    s.reset();
+    s.setSystemMessage(serialised.systemMessage);
+    s.patchParams(serialised.params);
+    s.setSelected(serialised.selectedConnectionId);
+    for (const m of serialised.messages) s.appendMessage(m);
+
+    // Step 3: rehydrate
+    await rehydrateChatBlobs(entryId, serialised);
+
+    // Step 4: the live store should now have the original data URL back
+    expect(vi.mocked(useChatHistoryStore.getState().getBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part1",
+    );
+    const liveMsg = useChatStore.getState().messages[0];
+    expect(Array.isArray(liveMsg.content)).toBe(true);
+    const livePart = (liveMsg.content as Array<{ type: string; image_url?: { url: string } }>)[1];
+    expect(livePart.image_url?.url).toBe(PNG_DATA_URL);
+  });
+
+  it("round-trips an input_audio attachment: raw base64 → idb:// sentinel → restored base64", async () => {
+    const audioB64 = btoa("\x00\x01\x02\x03audio-bytes");
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "input_audio", input_audio: { data: audioB64, format: "webm" } },
+          ],
+        },
+      ],
+      params: {},
+      selectedConnectionId: null,
+    };
+    const entryId = useChatHistoryStore.getState().currentId;
+
+    const serialised = await persistAttachments(entryId, snap);
+    const audioPart = (serialised.messages[0].content as Array<{ type: string; input_audio?: { data: string; format: string } }>)[0];
+    expect(audioPart.input_audio?.data).toBe("idb://msg0.part0");
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part0",
+      expect.any(Blob),
+    );
+
+    // Restore
+    const s = useChatStore.getState();
+    s.reset();
+    for (const m of serialised.messages) s.appendMessage(m);
+
+    await rehydrateChatBlobs(entryId, serialised);
+
+    expect(vi.mocked(useChatHistoryStore.getState().getBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part0",
+    );
+    const livePart = (useChatStore.getState().messages[0].content as Array<{ type: string; input_audio?: { data: string; format: string } }>)[0];
+    expect(livePart.input_audio?.data).toBe(audioB64);
+    expect(livePart.input_audio?.format).toBe("webm");
+  });
+
+  it("round-trips an input_file attachment: data URL → idb:// sentinel → restored data URL", async () => {
+    const fileDataUrl = `data:application/pdf;base64,${btoa("%PDF-1.4 test")}`;
+    const snap: ChatHistorySnapshot = {
+      systemMessage: "",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "input_file", file: { filename: "doc.pdf", file_data: fileDataUrl } },
+          ],
+        },
+      ],
+      params: {},
+      selectedConnectionId: null,
+    };
+    const entryId = useChatHistoryStore.getState().currentId;
+
+    const serialised = await persistAttachments(entryId, snap);
+    const filePart = (serialised.messages[0].content as Array<{ type: string; file?: { filename: string; file_data: string } }>)[0];
+    expect(filePart.file?.file_data).toBe("idb://msg0.part0");
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part0",
+      expect.any(Blob),
+    );
+
+    // Restore
+    const s = useChatStore.getState();
+    s.reset();
+    for (const m of serialised.messages) s.appendMessage(m);
+
+    await rehydrateChatBlobs(entryId, serialised);
+
+    expect(vi.mocked(useChatHistoryStore.getState().getBlob)).toHaveBeenCalledWith(
+      entryId,
+      "msg0.part0",
+    );
+    const livePart = (useChatStore.getState().messages[0].content as Array<{ type: string; file?: { filename: string; file_data: string } }>)[0];
+    expect(livePart.file?.file_data).toBe(fileDataUrl);
+    expect(livePart.file?.filename).toBe("doc.pdf");
+  });
+
+  it("restoring a snapshot without attachments causes no errors and no spurious blob fetches", async () => {
     const snap: ChatHistorySnapshot = {
       systemMessage: "be helpful",
       messages: [
@@ -243,40 +440,24 @@ describe("sanitizeChatSnapshot", () => {
       params: {},
       selectedConnectionId: null,
     };
-    expect(sanitizeChatSnapshot(snap)).toEqual(snap);
-  });
+    const entryId = useChatHistoryStore.getState().currentId;
 
-  it("collapses multimodal user message to text + dropped marker", () => {
-    const snap: ChatHistorySnapshot = {
-      systemMessage: "",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "describe this" },
-            { type: "image_url", image_url: { url: "data:image/png;base64,xxx" } },
-            { type: "input_audio", input_audio: { data: "yyy", format: "webm" } },
-          ],
-        },
-      ],
-      params: {},
-      selectedConnectionId: null,
-    };
-    const out = sanitizeChatSnapshot(snap);
-    expect(out.messages[0].content).toContain("describe this");
-    expect(out.messages[0].content).toContain("📎 2 attachment");
-    expect(typeof out.messages[0].content).toBe("string");
-  });
+    // No blob should be stored
+    const serialised = await persistAttachments(entryId, snap);
+    expect(serialised).toEqual(snap);
+    expect(vi.mocked(useChatHistoryStore.getState().putBlob)).not.toHaveBeenCalled();
 
-  it("preserves a multimodal message that has only text parts (no dropped marker)", () => {
-    const snap: ChatHistorySnapshot = {
-      systemMessage: "",
-      messages: [{ role: "user", content: [{ type: "text", text: "only text" }] }],
-      params: {},
-      selectedConnectionId: null,
-    };
-    const out = sanitizeChatSnapshot(snap);
-    expect(out.messages[0].content).toEqual([{ type: "text", text: "only text" }]);
+    // Restore + rehydrate should succeed without throwing
+    const s = useChatStore.getState();
+    s.reset();
+    for (const m of serialised.messages) s.appendMessage(m);
+
+    await expect(rehydrateChatBlobs(entryId, serialised)).resolves.toBeUndefined();
+    expect(vi.mocked(useChatHistoryStore.getState().getBlob)).not.toHaveBeenCalled();
+
+    // State unchanged
+    expect(useChatStore.getState().messages).toHaveLength(2);
+    expect(useChatStore.getState().messages[0].content).toBe("hi");
   });
 });
 

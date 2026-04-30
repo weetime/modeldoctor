@@ -1,9 +1,11 @@
 import { PageHeader } from "@/components/common/page-header";
 import { ApiError, api } from "@/lib/api-client";
+import { base64ToBlob, blobToDataUrl, dataUrlToBlob } from "@/lib/dataUrl";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   ChatMessage,
+  ChatMessageContentPart,
   PlaygroundChatRequest,
   PlaygroundChatResponse,
 } from "@modeldoctor/contracts";
@@ -11,8 +13,8 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
-import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { PlaygroundShell } from "../PlaygroundShell";
+import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { ChatParams } from "./ChatParams";
@@ -22,23 +24,162 @@ import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
-export function sanitizeChatSnapshot(snap: ChatHistorySnapshot): ChatHistorySnapshot {
-  return {
-    ...snap,
-    messages: snap.messages.map((m) => {
-      if (typeof m.content === "string") return m;
-      const textParts = m.content.filter(
-        (p): p is { type: "text"; text: string } => p.type === "text",
-      );
-      const droppedCount = m.content.length - textParts.length;
-      if (droppedCount === 0) return m;
-      const text =
-        textParts.map((p) => p.text).join("\n") +
-        (textParts.length > 0 ? "\n\n" : "") +
-        `📎 ${droppedCount} attachment${droppedCount > 1 ? "s" : ""} not saved in history`;
-      return { ...m, content: text };
-    }),
-  };
+/** Sentinel prefix used to replace inline binary data in saved snapshots. */
+const IDB_PREFIX = "idb://";
+
+/**
+ * Walk message content parts, store each binary part as a Blob in IDB, and
+ * replace the inline data with an `idb://<key>` sentinel.
+ *
+ * Returns a new snapshot safe for JSON serialisation without large base64 blobs.
+ */
+export async function persistAttachments(
+  entryId: string,
+  snap: ChatHistorySnapshot,
+): Promise<ChatHistorySnapshot> {
+  const out = structuredClone(snap);
+  const store = useChatHistoryStore.getState();
+
+  for (let i = 0; i < out.messages.length; i++) {
+    const m = out.messages[i];
+    if (typeof m.content === "string") continue;
+
+    const promises: Array<Promise<{ j: number; part: ChatMessageContentPart }>> = [];
+
+    for (let j = 0; j < m.content.length; j++) {
+      const p = m.content[j];
+      const key = `msg${i}.part${j}`;
+
+      if (p.type === "image_url" && p.image_url.url.startsWith("data:")) {
+        promises.push(
+          (async () => {
+            const blob = dataUrlToBlob(p.image_url.url);
+            await store.putBlob(entryId, key, blob);
+            return {
+              j,
+              part: { ...p, image_url: { url: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
+            };
+          })(),
+        );
+      } else if (p.type === "input_audio" && p.input_audio.data && !p.input_audio.data.startsWith(IDB_PREFIX)) {
+        promises.push(
+          (async () => {
+            const blob = base64ToBlob(p.input_audio.data, `audio/${p.input_audio.format}`);
+            await store.putBlob(entryId, key, blob);
+            return {
+              j,
+              part: { ...p, input_audio: { ...p.input_audio, data: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
+            };
+          })(),
+        );
+      } else if (p.type === "input_file" && p.file.file_data.startsWith("data:")) {
+        promises.push(
+          (async () => {
+            const blob = dataUrlToBlob(p.file.file_data);
+            await store.putBlob(entryId, key, blob);
+            return {
+              j,
+              part: { ...p, file: { ...p.file, file_data: `${IDB_PREFIX}${key}` } } as ChatMessageContentPart,
+            };
+          })(),
+        );
+      }
+    }
+
+    // Parallel writes — all blobs for this message go concurrently.
+    const results = await Promise.all(promises);
+    for (const { j, part } of results) {
+      (out.messages[i].content as ChatMessageContentPart[])[j] = part;
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Reverse `persistAttachments`: for every content-part field that begins with
+ * `idb://`, fetch the Blob, convert back to data URL, and inject into the
+ * current chat store state. Runs asynchronously after the sync restore call.
+ */
+export async function rehydrateChatBlobs(entryId: string, snap: ChatHistorySnapshot): Promise<void> {
+  const store = useChatHistoryStore.getState();
+
+  type Patch = { msgIdx: number; partIdx: number; field: "url" | "data" | "file_data"; value: string };
+  const patches: Array<Promise<Patch | null>> = [];
+
+  for (let i = 0; i < snap.messages.length; i++) {
+    const m = snap.messages[i];
+    if (typeof m.content === "string") continue;
+
+    for (let j = 0; j < m.content.length; j++) {
+      const p = m.content[j];
+      const key = `msg${i}.part${j}`;
+
+      if (p.type === "image_url" && p.image_url.url === `${IDB_PREFIX}${key}`) {
+        patches.push(
+          (async () => {
+            const blob = await store.getBlob(entryId, key);
+            if (!blob) return null;
+            const dataUrl = await blobToDataUrl(blob);
+            return { msgIdx: i, partIdx: j, field: "url" as const, value: dataUrl };
+          })(),
+        );
+      } else if (p.type === "input_audio" && p.input_audio.data === `${IDB_PREFIX}${key}`) {
+        patches.push(
+          (async () => {
+            const blob = await store.getBlob(entryId, key);
+            if (!blob) return null;
+            const dataUrl = await blobToDataUrl(blob);
+            // Strip the `data:<mime>;base64,` header — input_audio.data is raw base64.
+            const b64 = dataUrl.split(",", 2)[1] ?? "";
+            return { msgIdx: i, partIdx: j, field: "data" as const, value: b64 };
+          })(),
+        );
+      } else if (p.type === "input_file" && p.file.file_data === `${IDB_PREFIX}${key}`) {
+        patches.push(
+          (async () => {
+            const blob = await store.getBlob(entryId, key);
+            if (!blob) return null;
+            const dataUrl = await blobToDataUrl(blob);
+            return { msgIdx: i, partIdx: j, field: "file_data" as const, value: dataUrl };
+          })(),
+        );
+      }
+    }
+  }
+
+  const resolved = await Promise.all(patches);
+  const applied = resolved.filter((p): p is Patch => p !== null);
+  if (applied.length === 0) return;
+
+  // Snapshot current non-message state before reset, then apply patches to messages.
+  const chatState = useChatStore.getState();
+  const systemMessage = chatState.systemMessage;
+  const params = chatState.params;
+  const selectedConnectionId = chatState.selectedConnectionId;
+  const msgs = structuredClone(chatState.messages) as ChatMessage[];
+
+  for (const { msgIdx, partIdx, field, value } of applied) {
+    const m = msgs[msgIdx];
+    if (!m || typeof m.content === "string") continue;
+    const part = m.content[partIdx];
+    if (!part) continue;
+
+    if (field === "url" && part.type === "image_url") {
+      part.image_url = { ...part.image_url, url: value };
+    } else if (field === "data" && part.type === "input_audio") {
+      part.input_audio = { ...part.input_audio, data: value };
+    } else if (field === "file_data" && part.type === "input_file") {
+      part.file = { ...part.file, file_data: value };
+    }
+  }
+
+  // Rebuild the store with patched messages (reset wipes all, then re-apply).
+  chatState.reset();
+  chatState.setSystemMessage(systemMessage);
+  chatState.patchParams(params);
+  chatState.setSelected(selectedConnectionId);
+  for (const m of msgs) chatState.appendMessage(m);
 }
 
 export function ChatPage() {
@@ -51,34 +192,43 @@ export function ChatPage() {
   const canSend = !!conn;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
 
-  const restoreSnap = (snap: ChatHistorySnapshot) => {
-    // Replace store state with the restored snapshot
+  const restoreSnap = (entryId: string, snap: ChatHistorySnapshot) => {
+    // Sync state copy first, then async blob rehydration.
     const s = useChatStore.getState();
     s.reset();
     s.setSystemMessage(snap.systemMessage);
     s.patchParams(snap.params);
     s.setSelected(snap.selectedConnectionId);
     for (const m of snap.messages) s.appendMessage(m);
+    // Kick off async rehydration; errors are non-fatal (blobs may not exist for older entries).
+    rehydrateChatBlobs(entryId, snap).catch((e) =>
+      console.error("[ChatPage] blob rehydration failed", e),
+    );
   };
 
   const historyCurrentId = useChatHistoryStore((h) => h.currentId);
   const historyRestoreVersion = useChatHistoryStore((h) => h.restoreVersion);
   // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
   useEffect(() => {
-    const snap = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
-    if (snap) restoreSnap(snap.snapshot);
+    const entry = useChatHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
+    if (entry) restoreSnap(entry.id, entry.snapshot);
   }, [historyCurrentId, historyRestoreVersion]);
 
-  // Auto-save chat state into the current history entry (debounced 1500ms inside the store)
+  // Auto-save chat state into the current history entry (debounced 1500ms inside the store).
+  // persistAttachments runs async before the actual save.
   useEffect(() => {
-    useChatHistoryStore.getState().scheduleAutoSave(
-      sanitizeChatSnapshot({
-        systemMessage: slice.systemMessage,
-        messages: slice.messages,
-        params: slice.params,
-        selectedConnectionId: slice.selectedConnectionId,
-      }),
-    );
+    const currentId = useChatHistoryStore.getState().currentId;
+    const snap: ChatHistorySnapshot = {
+      systemMessage: slice.systemMessage,
+      messages: slice.messages,
+      params: slice.params,
+      selectedConnectionId: slice.selectedConnectionId,
+    };
+    persistAttachments(currentId, snap)
+      .then((serialisable) => {
+        useChatHistoryStore.getState().scheduleAutoSave(serialisable);
+      })
+      .catch((e) => console.error("[ChatPage] persistAttachments failed", e));
   }, [slice.systemMessage, slice.messages, slice.params, slice.selectedConnectionId]);
 
   const snippets =
