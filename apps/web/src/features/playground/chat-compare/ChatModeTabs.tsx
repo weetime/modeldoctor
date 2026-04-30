@@ -29,13 +29,3 @@ export function useChatModeTabs(): {
       nav(k === "compare" ? "/playground/chat/compare" : "/playground/chat"),
   };
 }
-
-/**
- * @deprecated Use `useChatModeTabs()` and pass the result to PlaygroundShell.
- * Kept until ChatPage and ChatComparePage migrate.
- */
-export function ChatModeTabs(): null {
-  // Renders nothing; remove the JSX usage in ChatPage/ChatComparePage in
-  // Tasks 5 and 6 of plan 2026-04-30-issue-32-layout-fix.md.
-  return null;
-}

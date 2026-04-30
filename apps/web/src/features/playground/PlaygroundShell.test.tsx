@@ -7,7 +7,7 @@ import { PlaygroundShell } from "./PlaygroundShell";
 describe("PlaygroundShell", () => {
   it("renders main content and params slot side by side", () => {
     render(
-      <PlaygroundShell category="chat" paramsSlot={<div>params-here</div>}>
+      <PlaygroundShell category="chat" title="Test" paramsSlot={<div>params-here</div>}>
         <div>main-here</div>
       </PlaygroundShell>,
     );
@@ -21,6 +21,7 @@ describe("PlaygroundShell", () => {
     render(
       <PlaygroundShell
         category="chat"
+        title="Test"
         tabs={[
           { key: "single", label: "Single" },
           { key: "compare", label: "Compare" },
@@ -39,7 +40,7 @@ describe("PlaygroundShell", () => {
   it("collapse button hides the params panel", async () => {
     const user = userEvent.setup();
     render(
-      <PlaygroundShell category="chat" paramsSlot={<div>panel-x</div>}>
+      <PlaygroundShell category="chat" title="Test" paramsSlot={<div>panel-x</div>}>
         <div />
       </PlaygroundShell>,
     );
@@ -53,6 +54,7 @@ describe("PlaygroundShell", () => {
     render(
       <PlaygroundShell
         category="chat"
+        title="Test"
         paramsSlot={null}
         viewCodeSnippets={{
           curlReadable: "X",
@@ -75,7 +77,7 @@ describe("PlaygroundShell", () => {
 
   it("does not render the View Code button when viewCodeSnippets is null", () => {
     render(
-      <PlaygroundShell category="chat" paramsSlot={null} viewCodeSnippets={null}>
+      <PlaygroundShell category="chat" title="Test" paramsSlot={null} viewCodeSnippets={null}>
         <div />
       </PlaygroundShell>,
     );
@@ -86,6 +88,7 @@ describe("PlaygroundShell", () => {
     render(
       <PlaygroundShell
         category="chat"
+        title="Test"
         paramsSlot={null}
         historySlot={<button type="button">history-here</button>}
       >
@@ -105,15 +108,6 @@ describe("PlaygroundShell — PageHeader + sub-toolbar (Issue #32)", () => {
     );
     expect(screen.getByRole("heading", { name: "My Title" })).toBeInTheDocument();
     expect(screen.getByText("An intro")).toBeInTheDocument();
-  });
-
-  it("does NOT render PageHeader when title is omitted (backwards-compat)", () => {
-    render(
-      <PlaygroundShell category="chat" paramsSlot={null}>
-        <div>main</div>
-      </PlaygroundShell>,
-    );
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   });
 
   it("does NOT render the sub-toolbar when paramsSlot is null and no slots are provided", () => {

@@ -10,11 +10,8 @@ import { ViewCodeDialog } from "./ViewCodeDialog";
 import type { CodeSnippets } from "./code-snippets/chat";
 
 export interface PlaygroundShellProps {
-  /**
-   * Page title rendered inside PageHeader (row 1). Optional during the
-   * issue-32 migration; will become required in Task 11.
-   */
-  title?: string;
+  /** Page title rendered inside PageHeader (row 1). */
+  title: string;
   subtitle?: string;
   category: ModalityCategory;
   tabs?: Array<{ key: string; label: string }>;
