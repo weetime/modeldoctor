@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -142,6 +141,8 @@ export function EmbeddingsPage() {
   return (
     <PlaygroundShell
       category="embeddings"
+      title={t("embeddings.title")}
+      subtitle={t("embeddings.subtitle")}
       viewCodeSnippets={snippets}
       historySlot={<HistoryDrawer useHistoryStore={useEmbeddingsHistoryStore} />}
       paramsSlot={
@@ -155,7 +156,6 @@ export function EmbeddingsPage() {
         </div>
       }
     >
-      <PageHeader title={t("embeddings.title")} subtitle={t("embeddings.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         <div>
           <div className="mb-2 flex items-center justify-between">
