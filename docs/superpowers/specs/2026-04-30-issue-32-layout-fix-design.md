@@ -70,14 +70,20 @@ Visual structure (top-to-bottom):
 └──────────────────────────────────────────────┴───────────────────────────┘
 ```
 
-Sub-toolbar render rule (single boolean):
+Sub-toolbar render rule:
 
 ```tsx
+// Panel-collapse is only meaningful when there is a params panel to collapse.
+const showCollapseButton = paramsSlot != null;
 const showToolbar =
-  Boolean(tabs?.length) || Boolean(historySlot) || Boolean(viewCodeSnippets) || Boolean(toolbarRightSlot);
+  showCollapseButton ||
+  Boolean(tabs?.length) ||
+  Boolean(historySlot) ||
+  Boolean(viewCodeSnippets) ||
+  Boolean(toolbarRightSlot);
 ```
 
-The right-panel collapse button (`PanelRightClose` / `PanelRightOpen`) **always** renders inside the sub-toolbar (even when other slots are empty) when `paramsSlot` is non-null, because it is the only way to recover a hidden right panel. If `paramsSlot` is null (e.g. `ChatComparePage` with `rightPanelDefaultOpen={false}`), the collapse button is suppressed and the toolbar follows `showToolbar`.
+In other words: any Playground page with a right params panel always shows the sub-toolbar (because the collapse button must be reachable). A page with `paramsSlot={null}` (e.g. `ChatComparePage`) only shows the toolbar when there is a tab/history/view-code/custom-button to put in it. `ChatComparePage` does have tabs and history, so it will show; an imaginary Shell-using page with no panel and no slots would render zero toolbar rows.
 
 ### Per-page changes
 
@@ -86,7 +92,7 @@ Every Playground page deletes its own `<PageHeader title subtitle />` call and p
 | File | Change |
 |---|---|
 | `apps/web/src/features/playground/chat/ChatPage.tsx` | Remove `<PageHeader />` and `<ChatModeTabs />` from children. Pass `title={t("chat.title")}`, `subtitle={t("chat.subtitle")}` to `PlaygroundShell`. Pass `tabs/activeTab/onTabChange` from `useChatModeTabs()`. |
-| `apps/web/src/features/playground/chat-compare/ChatComparePage.tsx` | Same as above (uses the same `useChatModeTabs()` hook). Move `PanelCountSwitcher` from `historySlot` to new `toolbarRightSlot`. |
+| `apps/web/src/features/playground/chat-compare/ChatComparePage.tsx` | Same as above (uses the same `useChatModeTabs()` hook). `historySlot` keeps `<CompareHistoryControls />` only; move `<PanelCountSwitcher />` out of `historySlot` and into the new `toolbarRightSlot`. |
 | `apps/web/src/features/playground/image/ImagePage.tsx` | Remove `<PageHeader />`. Pass `title`/`subtitle` to Shell. `tabs` prop already in use (no change). |
 | `apps/web/src/features/playground/embeddings/EmbeddingsPage.tsx` | Remove `<PageHeader />`. Pass `title`/`subtitle` to Shell. No `tabs`. |
 | `apps/web/src/features/playground/rerank/RerankPage.tsx` | Same as embeddings. |
@@ -109,7 +115,7 @@ export function useChatModeTabs() {
     tabs: [
       { key: "single",  label: t("chat.compare.modeTabs.single") },
       { key: "compare", label: t("chat.compare.modeTabs.compare") },
-    ],
+    ] satisfies Array<{ key: string; label: string }>,
     active,
     onChange: (k: string) =>
       nav(k === "compare" ? "/playground/chat/compare" : "/playground/chat"),
