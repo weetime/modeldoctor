@@ -74,7 +74,8 @@
       "stop": "停止",
       "clear": "清空面板",
       "errors": {
-        "noConnection": "请为该面板选择连接"
+        "noConnection": "请为该面板选择连接",
+        "allDisconnected": "请先在上面任意面板选一个连接"
       },
       "modeTabs": {
         "single": "单聊",

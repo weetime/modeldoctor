@@ -107,6 +107,10 @@ export function ChatComparePage() {
 
   const onStopAll = () => useCompareStore.getState().abortAll();
 
+  const activePanels = panels.slice(0, panelCount);
+  const allDisconnected = activePanels.every((p) => !p.selectedConnectionId);
+  const anyInFlight = activePanels.some((p) => p.sending || p.streaming);
+
   return (
     <PlaygroundShell
       category="chat"
@@ -147,9 +151,10 @@ export function ChatComparePage() {
           onSystemMessageChange={(s) => useCompareStore.getState().setSharedSystemMessage(s)}
           onSend={onSend}
           onStop={() => {/* per-panel stop is in the panel itself */}}
-          sending={false}
+          sending={anyInFlight}
           streaming={false}
-          disabled={false}
+          disabled={allDisconnected}
+          disabledReason={allDisconnected ? t("chat.compare.errors.allDisconnected") : undefined}
           sendLabelOverride={t("chat.compare.sendN", { count: panelCount })}
         />
         {anyStreaming ? (

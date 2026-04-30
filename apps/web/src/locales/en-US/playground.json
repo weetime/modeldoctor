@@ -74,7 +74,8 @@
       "stop": "Stop",
       "clear": "Clear panel",
       "errors": {
-        "noConnection": "Pick a connection for this panel"
+        "noConnection": "Pick a connection for this panel",
+        "allDisconnected": "Pick at least one connection on the panels above"
       },
       "modeTabs": {
         "single": "Single",
