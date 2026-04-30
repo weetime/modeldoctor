@@ -49,6 +49,7 @@ const resp = await client.audio.speech.create({
   voice: "alloy",
   input: "Hello world.",
   response_format: "mp3",
+  speed: 1,
 });
 writeFileSync("speech.mp3", Buffer.from(await resp.arrayBuffer()));",
   "python": "from openai import OpenAI
@@ -58,6 +59,7 @@ with client.audio.speech.with_streaming_response.create(
     voice="alloy",
     input="Hello world.",
     response_format="mp3",
+    speed=1,
 ) as resp:
     resp.stream_to_file("speech.mp3")",
 }

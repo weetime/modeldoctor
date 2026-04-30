@@ -33,27 +33,35 @@ function genTts(apiBaseUrl: string, tts: TtsSlice): CodeSnippets {
     `  -d '${JSON.stringify(body)}'`,
   ].join("\n");
 
+  const pythonOpts: string[] = [
+    `    model="<YOUR_MODEL>"`,
+    `    voice="${tts.voice}"`,
+    `    input=${JSON.stringify(tts.input || "Hello world.")}`,
+    `    response_format="${tts.format}"`,
+  ];
+  if (tts.speed !== undefined) pythonOpts.push(`    speed=${tts.speed}`);
   const python = [
     "from openai import OpenAI",
     `client = OpenAI(base_url="${apiBaseUrl}", api_key="${KEY}")`,
     "with client.audio.speech.with_streaming_response.create(",
-    `    model="<YOUR_MODEL>",`,
-    `    voice="${tts.voice}",`,
-    `    input=${JSON.stringify(tts.input || "Hello world.")},`,
-    `    response_format="${tts.format}",`,
+    pythonOpts.join(",\n") + ",",
     `) as resp:`,
     `    resp.stream_to_file("speech.${tts.format}")`,
   ].join("\n");
 
+  const nodeOpts: string[] = [
+    `  model: "<YOUR_MODEL>"`,
+    `  voice: "${tts.voice}"`,
+    `  input: ${JSON.stringify(tts.input || "Hello world.")}`,
+    `  response_format: "${tts.format}"`,
+  ];
+  if (tts.speed !== undefined) nodeOpts.push(`  speed: ${tts.speed}`);
   const node = [
     `import OpenAI from "openai";`,
     `import { writeFileSync } from "fs";`,
     `const client = new OpenAI({ baseURL: "${apiBaseUrl}", apiKey: "${KEY}" });`,
     `const resp = await client.audio.speech.create({`,
-    `  model: "<YOUR_MODEL>",`,
-    `  voice: "${tts.voice}",`,
-    `  input: ${JSON.stringify(tts.input || "Hello world.")},`,
-    `  response_format: "${tts.format}",`,
+    nodeOpts.join(",\n") + ",",
     `});`,
     `writeFileSync("speech.${tts.format}", Buffer.from(await resp.arrayBuffer()));`,
   ].join("\n");
