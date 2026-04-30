@@ -1,30 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildTtsBody,
-  parseTtsResponse,
-  buildTranscriptionsFormData,
-  parseTranscriptionsResponse,
+  buildPlaygroundTtsBody,
+  parsePlaygroundTtsResponse,
+  buildPlaygroundTranscriptionsFormData,
+  parsePlaygroundTranscriptionsResponse,
 } from "./audio.js";
 
-describe("buildTtsBody", () => {
+describe("buildPlaygroundTtsBody", () => {
   it("maps fields to OpenAI shape", () => {
     expect(
-      buildTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "mp3", speed: 1.2 }),
+      buildPlaygroundTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "mp3", speed: 1.2 }),
     ).toEqual({ model: "tts-1", input: "hi", voice: "alloy", response_format: "mp3", speed: 1.2 });
   });
 
   it("omits speed when undefined", () => {
-    const body = buildTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "wav" });
+    const body = buildPlaygroundTtsBody({ model: "tts-1", input: "hi", voice: "alloy", format: "wav" });
     expect(body).not.toHaveProperty("speed");
   });
 });
 
-describe("parseTtsResponse", () => {
+describe("parsePlaygroundTtsResponse", () => {
   it("returns base64 + sniffed format for WAV bytes", async () => {
     // Minimal WAV header: 'RIFF' + size + 'WAVE'
     const wav = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45]);
     const res = new Response(wav, { status: 200, headers: { "Content-Type": "audio/wav" } });
-    const out = await parseTtsResponse(res);
+    const out = await parsePlaygroundTtsResponse(res);
     expect(out.format).toBe("wav");
     expect(out.audioBase64.length).toBeGreaterThan(0);
     expect(out.bytes).toBe(12);
@@ -33,14 +33,14 @@ describe("parseTtsResponse", () => {
   it("rejects payloads larger than 20MB", async () => {
     const huge = new Uint8Array(21 * 1024 * 1024);
     const res = new Response(huge, { status: 200, headers: { "Content-Type": "audio/wav" } });
-    await expect(parseTtsResponse(res)).rejects.toThrow(/audio too large/i);
+    await expect(parsePlaygroundTtsResponse(res)).rejects.toThrow(/audio too large/i);
   });
 });
 
-describe("buildTranscriptionsFormData", () => {
+describe("buildPlaygroundTranscriptionsFormData", () => {
   it("appends file + model + optional fields", () => {
     const buf = Buffer.from([1, 2, 3, 4]);
-    const form = buildTranscriptionsFormData({
+    const form = buildPlaygroundTranscriptionsFormData({
       file: { buffer: buf, originalname: "a.wav", mimetype: "audio/wav" },
       model: "whisper-1",
       language: "zh",
@@ -57,7 +57,7 @@ describe("buildTranscriptionsFormData", () => {
   });
 
   it("skips empty language and undefined optional fields", () => {
-    const form = buildTranscriptionsFormData({
+    const form = buildPlaygroundTranscriptionsFormData({
       file: { buffer: Buffer.from([]), originalname: "a.wav", mimetype: "audio/wav" },
       model: "whisper-1",
       language: "",
@@ -69,7 +69,7 @@ describe("buildTranscriptionsFormData", () => {
   });
 
   it("appends temperature as string when provided", () => {
-    const form = buildTranscriptionsFormData({
+    const form = buildPlaygroundTranscriptionsFormData({
       file: { buffer: Buffer.from([0]), originalname: "a.wav", mimetype: "audio/wav" },
       model: "whisper-1",
       temperature: 0.3,
@@ -78,12 +78,12 @@ describe("buildTranscriptionsFormData", () => {
   });
 });
 
-describe("parseTranscriptionsResponse", () => {
+describe("parsePlaygroundTranscriptionsResponse", () => {
   it("extracts text", () => {
-    expect(parseTranscriptionsResponse({ text: "hello" })).toEqual({ text: "hello" });
+    expect(parsePlaygroundTranscriptionsResponse({ text: "hello" })).toEqual({ text: "hello" });
   });
 
   it("returns empty text when missing", () => {
-    expect(parseTranscriptionsResponse({})).toEqual({ text: "" });
+    expect(parsePlaygroundTranscriptionsResponse({})).toEqual({ text: "" });
   });
 });

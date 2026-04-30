@@ -1,8 +1,11 @@
 import { detectAudioFormat } from "../../utils/wav.js";
 
+// Hard cap on raw audio bytes. Base64 inflates ~33%, so a 20MB blob arrives
+// at the browser as ~27MB JSON — beyond that we'd risk OOM on the client and
+// blow up the audio player anyway.
 const MAX_TTS_AUDIO_BYTES = 20 * 1024 * 1024;
 
-export interface BuildTtsBodyInput {
+export interface BuildPlaygroundTtsBodyInput {
   model: string;
   input: string;
   voice: string;
@@ -10,21 +13,21 @@ export interface BuildTtsBodyInput {
   speed?: number;
 }
 
-export function buildTtsBody({
+export function buildPlaygroundTtsBody({
   model, input, voice, format, speed,
-}: BuildTtsBodyInput): Record<string, unknown> {
+}: BuildPlaygroundTtsBodyInput): Record<string, unknown> {
   const body: Record<string, unknown> = { model, input, voice, response_format: format };
   if (speed !== undefined) body.speed = speed;
   return body;
 }
 
-export interface ParsedTtsResponse {
+export interface ParsedPlaygroundTtsResponse {
   audioBase64: string;
   format: string;
   bytes: number;
 }
 
-export async function parseTtsResponse(res: Response): Promise<ParsedTtsResponse> {
+export async function parsePlaygroundTtsResponse(res: Response): Promise<ParsedPlaygroundTtsResponse> {
   const arrayBuf = await res.arrayBuffer();
   const buf = Buffer.from(arrayBuf);
   if (buf.length > MAX_TTS_AUDIO_BYTES) {
@@ -40,7 +43,7 @@ export async function parseTtsResponse(res: Response): Promise<ParsedTtsResponse
   };
 }
 
-export interface BuildTranscriptionsFormDataInput {
+export interface BuildPlaygroundTranscriptionsFormDataInput {
   file: { buffer: Buffer; originalname: string; mimetype: string };
   model: string;
   language?: string;
@@ -49,9 +52,9 @@ export interface BuildTranscriptionsFormDataInput {
   temperature?: number;
 }
 
-export function buildTranscriptionsFormData({
+export function buildPlaygroundTranscriptionsFormData({
   file, model, language, task, prompt, temperature,
-}: BuildTranscriptionsFormDataInput): FormData {
+}: BuildPlaygroundTranscriptionsFormDataInput): FormData {
   const form = new FormData();
   const arrayBuffer = file.buffer.buffer.slice(
     file.buffer.byteOffset,
@@ -67,7 +70,7 @@ export function buildTranscriptionsFormData({
   return form;
 }
 
-export function parseTranscriptionsResponse(json: unknown): { text: string } {
+export function parsePlaygroundTranscriptionsResponse(json: unknown): { text: string } {
   const j = (json ?? {}) as { text?: string };
   return { text: typeof j.text === "string" ? j.text : "" };
 }
