@@ -66,6 +66,12 @@ model Connection {
   category      String   // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
+  // Reserved for #60 Prometheus integration. Nullable on purpose: existing
+  // connections (created before this migration) have no value, and the UI
+  // does not expose these fields yet.
+  prometheusUrl String? @map("prometheus_url")
+  serverKind    String? @map("server_kind") // 'vllm' | 'sglang' | 'tgi' | 'higress' | 'generic'
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
