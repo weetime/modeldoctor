@@ -11,7 +11,7 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import type { ReactNode } from "react";
 import { useThemeStore } from "../../stores/theme-store";
-import { applyTheme } from "./theme";
+import { applyTheme, palette } from "./theme";
 
 echarts.use([
   LineChart,
@@ -89,4 +89,12 @@ export interface DomainChartProps {
   loading?: boolean;
   empty?: boolean | string;
   theme?: ChartTheme;
+}
+
+export function assignRunColors(runIds: readonly string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  runIds.forEach((id, i) => {
+    out[id] = palette[i % palette.length];
+  });
+  return out;
 }
