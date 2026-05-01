@@ -25,7 +25,6 @@ export function useChatModeTabs(): {
       { key: "compare", label: t("chat.compare.modeTabs.compare") },
     ],
     active,
-    onChange: (k: string) =>
-      nav(k === "compare" ? "/playground/chat/compare" : "/playground/chat"),
+    onChange: (k: string) => nav(k === "compare" ? "/playground/chat/compare" : "/playground/chat"),
   };
 }

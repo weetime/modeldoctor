@@ -18,7 +18,7 @@ describe("E2ETestService", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env["DATABASE_URL"];
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
               return undefined;
             },
           },
@@ -52,7 +52,10 @@ describe("E2ETestService", () => {
         details: { content: "hello" },
       },
     ];
-    vi.spyOn(service as unknown as { executeProbes: () => unknown }, "executeProbes").mockResolvedValue(mockResults);
+    vi.spyOn(
+      service as unknown as { executeProbes: () => unknown },
+      "executeProbes",
+    ).mockResolvedValue(mockResults);
 
     const result = await service.run(
       {
@@ -91,7 +94,10 @@ describe("E2ETestService", () => {
         details: { error: "service unavailable" },
       },
     ];
-    vi.spyOn(service as unknown as { executeProbes: () => unknown }, "executeProbes").mockResolvedValue(mockResults);
+    vi.spyOn(
+      service as unknown as { executeProbes: () => unknown },
+      "executeProbes",
+    ).mockResolvedValue(mockResults);
 
     const result = await service.run(
       {
@@ -113,7 +119,10 @@ describe("E2ETestService", () => {
 
   it("transitions run through pending -> running -> completed lifecycle", async () => {
     // We'll observe the final state after the run completes
-    vi.spyOn(service as unknown as { executeProbes: () => unknown }, "executeProbes").mockResolvedValue([
+    vi.spyOn(
+      service as unknown as { executeProbes: () => unknown },
+      "executeProbes",
+    ).mockResolvedValue([
       {
         probe: "chat-text" as const,
         pass: true,

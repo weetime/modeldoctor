@@ -75,13 +75,12 @@ export class RunRepository {
     return this.prisma.run.findUnique({ where: { id } });
   }
 
-  async list(
-    input: ListRunsInput,
-  ): Promise<{ items: PrismaRun[]; nextCursor: string | null }> {
+  async list(input: ListRunsInput): Promise<{ items: PrismaRun[]; nextCursor: string | null }> {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.RunWhereInput = {};
     if (input.kind) where.kind = input.kind;
-    if (input.tool) where.tool = input.tool as "guidellm" | "genai-perf" | "vegeta" | "e2e" | "custom";
+    if (input.tool)
+      where.tool = input.tool as "guidellm" | "genai-perf" | "vegeta" | "e2e" | "custom";
     if (input.status) where.status = input.status;
     if (input.connectionId) where.connectionId = input.connectionId;
     if (input.parentRunId) where.parentRunId = input.parentRunId;

@@ -10,13 +10,17 @@
  */
 
 import "@/lib/i18n";
+import i18n from "@/lib/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
-import { restoreCompareSnapshot, saveCompareSnapshot, useCompareHistoryStore } from "./CompareHistory";
+import {
+  restoreCompareSnapshot,
+  saveCompareSnapshot,
+  useCompareHistoryStore,
+} from "./CompareHistory";
 import { type CompareSnapshot, useCompareStore } from "./store";
 
 // ---------------------------------------------------------------------------
@@ -139,8 +143,8 @@ describe("saveCompareSnapshot + restoreCompareSnapshot — text only", () => {
     const entryId = histStore.currentId;
     const entry = histStore.list.find((e) => e.id === entryId);
     expect(entry).toBeDefined();
-    expect(entry!.snapshot.panelCount).toBe(2);
-    expect(entry!.snapshot.systemMessage).toBe("system prompt");
+    expect(entry?.snapshot.panelCount).toBe(2);
+    expect(entry?.snapshot.systemMessage).toBe("system prompt");
 
     // Restore from that entryId.
     await restoreCompareSnapshot(entryId);
@@ -221,7 +225,7 @@ describe("saveCompareSnapshot + restoreCompareSnapshot — image attachment", ()
     expect(entry).toBeDefined();
 
     // The saved snapshot should have the sentinel, not the raw data URL.
-    const savedImg = entry!.snapshot.panels[0].messages[0].content as Array<{
+    const savedImg = entry?.snapshot.panels[0].messages[0].content as Array<{
       type: string;
       image_url?: { url: string };
     }>;
@@ -270,9 +274,7 @@ describe("useCompareHistoryStore preview", () => {
         {
           connectionId: null,
           params: {},
-          messages: [
-            { role: "user", content: "What is the meaning of life?" },
-          ],
+          messages: [{ role: "user", content: "What is the meaning of life?" }],
         },
         { connectionId: null, params: {}, messages: [] },
         { connectionId: null, params: {}, messages: [] },
@@ -283,8 +285,8 @@ describe("useCompareHistoryStore preview", () => {
     // Re-read state after save (zustand triggers a new state object)
     const afterSave = useCompareHistoryStore.getState();
     const entry = afterSave.list.find((e) => e.id === afterSave.currentId);
-    expect(entry!.preview).toContain("3 panels");
-    expect(entry!.preview).toContain("What is the meaning of life?");
+    expect(entry?.preview).toContain("3 panels");
+    expect(entry?.preview).toContain("What is the meaning of life?");
   });
 });
 
@@ -311,11 +313,14 @@ describe("CompareHistoryControls in ChatComparePage", () => {
   beforeEach(() => {
     resetCompareStore();
     useCompareHistoryStore.getState().reset();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), { status: 200 }),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), { status: 200 })),
+    );
   });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it("renders Save snapshot button and Snapshots dropdown trigger", async () => {
     const { ChatComparePage } = await import("./ChatComparePage");
@@ -326,12 +331,8 @@ describe("CompareHistoryControls in ChatComparePage", () => {
         </MemoryRouter>
       </I18nextProvider>,
     );
-    expect(
-      screen.getByRole("button", { name: /save snapshot|保存快照/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /snapshots|快照/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save snapshot|保存快照/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /snapshots|快照/i })).toBeInTheDocument();
   });
 
   it("clicking Save snapshot shows snapshotSaved toast", async () => {

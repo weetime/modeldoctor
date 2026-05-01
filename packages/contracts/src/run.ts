@@ -3,13 +3,7 @@ import { z } from "zod";
 export const runKindSchema = z.enum(["benchmark", "e2e"]);
 export type RunKind = z.infer<typeof runKindSchema>;
 
-export const runToolSchema = z.enum([
-  "guidellm",
-  "genai-perf",
-  "vegeta",
-  "e2e",
-  "custom",
-]);
+export const runToolSchema = z.enum(["guidellm", "genai-perf", "vegeta", "e2e", "custom"]);
 export type RunTool = z.infer<typeof runToolSchema>;
 
 export const runModeSchema = z.enum([

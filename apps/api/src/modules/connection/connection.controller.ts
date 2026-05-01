@@ -1,4 +1,12 @@
 import {
+  type Connection,
+  type CreateConnection,
+  type ListConnectionsResponse,
+  type UpdateConnection,
+  createConnectionSchema,
+  updateConnectionSchema,
+} from "@modeldoctor/contracts";
+import {
   Body,
   Controller,
   Delete,
@@ -10,14 +18,6 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import {
-  createConnectionSchema,
-  updateConnectionSchema,
-  type Connection,
-  type CreateConnection,
-  type ListConnectionsResponse,
-  type UpdateConnection,
-} from "@modeldoctor/contracts";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
@@ -43,10 +43,7 @@ export class ConnectionController {
   }
 
   @Get(":id")
-  detail(
-    @CurrentUser() user: JwtPayload,
-    @Param("id") id: string,
-  ): Promise<Connection> {
+  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Connection> {
     return this.service.findOwned(user.sub, id);
   }
 
@@ -61,10 +58,7 @@ export class ConnectionController {
 
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @CurrentUser() user: JwtPayload,
-    @Param("id") id: string,
-  ): Promise<void> {
+  async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(user.sub, id);
   }
 }

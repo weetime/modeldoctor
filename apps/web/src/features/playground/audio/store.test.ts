@@ -41,7 +41,9 @@ describe("useAudioStore", () => {
   });
 
   it("setSttFileMeta records filename / size / mimeType", () => {
-    useAudioStore.getState().setSttFileMeta({ name: "rec.webm", size: 1234, mimeType: "audio/webm" });
+    useAudioStore
+      .getState()
+      .setSttFileMeta({ name: "rec.webm", size: 1234, mimeType: "audio/webm" });
     const stt = useAudioStore.getState().stt;
     expect(stt.fileName).toBe("rec.webm");
     expect(stt.fileSize).toBe(1234);

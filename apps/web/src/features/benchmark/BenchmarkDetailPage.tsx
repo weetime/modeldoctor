@@ -58,7 +58,7 @@ export function BenchmarkDetailPage() {
         qc.invalidateQueries({ queryKey: benchmarkKeys.detail(data.id) });
       }
     }
-  }, [data?.state, data?.id, qc]);
+  }, [data, qc]);
 
   const errorToasted = useRef(false);
   useEffect(() => {
@@ -94,6 +94,7 @@ export function BenchmarkDetailPage() {
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no identity
                 key={i}
                 className="h-20 animate-pulse rounded-md border border-border bg-muted/30"
               />

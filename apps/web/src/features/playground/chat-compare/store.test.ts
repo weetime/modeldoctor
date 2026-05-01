@@ -10,8 +10,13 @@ describe("useCompareStore", () => {
       ...s,
       panelCount: 2,
       panels: s.panels.slice(0, 2).map(() => ({
-        selectedConnectionId: null, params: {}, messages: [],
-        sending: false, streaming: false, abortController: null, error: null,
+        selectedConnectionId: null,
+        params: {},
+        messages: [],
+        sending: false,
+        streaming: false,
+        abortController: null,
+        error: null,
       })),
       sharedSystemMessage: "",
     }));
@@ -163,9 +168,7 @@ describe("useCompareStore", () => {
         state: {
           panelCount: 4,
           sharedSystemMessage: "old data",
-          panels: [
-            { selectedConnectionId: "stale", params: {} },
-          ],
+          panels: [{ selectedConnectionId: "stale", params: {} }],
         },
         version: 1,
       }),

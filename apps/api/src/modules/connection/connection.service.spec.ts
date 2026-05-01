@@ -18,7 +18,7 @@ describe("ConnectionService", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env["DATABASE_URL"];
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
               return undefined;
             },
           },

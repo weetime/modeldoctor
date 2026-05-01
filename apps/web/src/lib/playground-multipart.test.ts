@@ -43,11 +43,15 @@ describe("playgroundFetchMultipart", () => {
     fetchMock.mockImplementation(
       (_p: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
-          init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+          init.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
         }),
     );
     const promise = playgroundFetchMultipart({
-      path: "/api/x", form: new FormData(), signal: ac.signal,
+      path: "/api/x",
+      form: new FormData(),
+      signal: ac.signal,
     });
     ac.abort();
     await expect(promise).rejects.toThrow(DOMException);

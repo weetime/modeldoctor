@@ -3,19 +3,21 @@ import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
 import type {
-  ChatMessage, PlaygroundChatRequest, PlaygroundChatResponse,
+  ChatMessage,
+  PlaygroundChatRequest,
+  PlaygroundChatResponse,
 } from "@modeldoctor/contracts";
 import { Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PlaygroundShell } from "../PlaygroundShell";
-import { type AttachedFile, buildContentParts } from "../chat/attachments";
 import { MessageComposer } from "../chat/MessageComposer";
-import { useChatModeTabs } from "./useChatModeTabs";
+import { type AttachedFile, buildContentParts } from "../chat/attachments";
 import { ChatPanel } from "./ChatPanel";
 import { CompareHistoryControls } from "./CompareHistory";
 import { PanelCountSwitcher } from "./PanelCountSwitcher";
 import { useCompareStore } from "./store";
+import { useChatModeTabs } from "./useChatModeTabs";
 
 export function ChatComparePage() {
   const { t } = useTranslation("playground");
@@ -73,13 +75,19 @@ export function ChatComparePage() {
               const evt = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
               const tok = evt.choices?.[0]?.delta?.content;
               if (tok) useCompareStore.getState().appendAssistantTokenToPanel(i, tok);
-            } catch {/* non-JSON SSE comment */}
+            } catch {
+              /* non-JSON SSE comment */
+            }
           },
         })
           .catch((e) => {
             if (!(e instanceof DOMException && e.name === "AbortError")) {
               compare.setPanelError(i, e instanceof Error ? e.message : "stream failed");
-              toast.error(t("chat.errors.send", { message: e instanceof Error ? e.message : "stream failed" }));
+              toast.error(
+                t("chat.errors.send", {
+                  message: e instanceof Error ? e.message : "stream failed",
+                }),
+              );
             }
           })
           .finally(() => {
@@ -89,7 +97,8 @@ export function ChatComparePage() {
             s.setPanelSending(i, false);
           });
       } else {
-        api.post<PlaygroundChatResponse>("/api/playground/chat", body)
+        api
+          .post<PlaygroundChatResponse>("/api/playground/chat", body)
           .then((res) => {
             if (res.success) {
               compare.appendMessageToPanel(i, { role: "assistant", content: res.content ?? "" });
@@ -138,7 +147,9 @@ export function ChatComparePage() {
           systemMessage={sharedSystemMessage}
           onSystemMessageChange={(s) => useCompareStore.getState().setSharedSystemMessage(s)}
           onSend={onSend}
-          onStop={() => {/* per-panel stop is in the panel itself */}}
+          onStop={() => {
+            /* per-panel stop is in the panel itself */
+          }}
           sending={anyInFlight}
           streaming={false}
           disabled={allDisconnected}

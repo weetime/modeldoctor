@@ -30,7 +30,8 @@ export function RecorderControls({ onComplete }: RecorderControlsProps) {
   const startedAtRef = useRef<number>(0);
 
   const hasRecorderApi = typeof MediaRecorder !== "undefined";
-  const enabled = hasRecorderApi && window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
+  const enabled =
+    hasRecorderApi && window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
 
   useEffect(() => {
     if (state !== "recording") return;
@@ -40,7 +41,8 @@ export function RecorderControls({ onComplete }: RecorderControlsProps) {
   }, [state]);
 
   const cleanupStream = () => {
-    streamRef.current?.getTracks().forEach((tr) => tr.stop());
+    const tracks = streamRef.current?.getTracks() ?? [];
+    for (const tr of tracks) tr.stop();
     streamRef.current = null;
   };
 
@@ -78,7 +80,12 @@ export function RecorderControls({ onComplete }: RecorderControlsProps) {
 
   if (!enabled) {
     return (
-      <Button type="button" variant="outline" disabled title={t("audio.stt.recorder.requiresHttps")}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled
+        title={t("audio.stt.recorder.requiresHttps")}
+      >
         <Mic className="h-4 w-4" />
         {t("audio.stt.recorder.start")}
       </Button>

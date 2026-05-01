@@ -18,7 +18,7 @@ describe("RunService", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env["DATABASE_URL"];
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
               return undefined;
             },
           },
@@ -55,9 +55,9 @@ describe("RunService", () => {
 
     const dto = await service.findById(created.id);
     expect(dto).not.toBeNull();
-    expect(typeof dto!.createdAt).toBe("string");
-    expect(dto!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(dto!.tool).toBe("guidellm");
+    expect(typeof dto?.createdAt).toBe("string");
+    expect(dto?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(dto?.tool).toBe("guidellm");
   });
 
   it("throws NotFound when run does not exist", async () => {

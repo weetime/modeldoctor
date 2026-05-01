@@ -1,7 +1,7 @@
+import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it } from "vitest";
-import i18n from "@/lib/i18n";
 import { ChatPanel } from "./ChatPanel";
 import { useCompareStore } from "./store";
 
@@ -32,10 +32,7 @@ describe("ChatPanel", () => {
     useCompareStore.setState((s) => ({
       ...s,
       panelCount: 2,
-      panels: [
-        { ...s.panels[0], streaming: false },
-        ...s.panels.slice(1),
-      ],
+      panels: [{ ...s.panels[0], streaming: false }, ...s.panels.slice(1)],
     }));
     const { rerender } = renderPanel(0);
     expect(screen.queryByRole("button", { name: /stop/i })).not.toBeInTheDocument();

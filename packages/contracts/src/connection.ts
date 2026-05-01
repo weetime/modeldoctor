@@ -10,13 +10,7 @@ export const connectionApiTypeSchema = z.enum([
 ]);
 export type ConnectionApiType = z.infer<typeof connectionApiTypeSchema>;
 
-export const serverKindSchema = z.enum([
-  "vllm",
-  "sglang",
-  "tgi",
-  "higress",
-  "generic",
-]);
+export const serverKindSchema = z.enum(["vllm", "sglang", "tgi", "higress", "generic"]);
 export type ServerKind = z.infer<typeof serverKindSchema>;
 
 export const connectionSchema = z.object({

@@ -154,7 +154,9 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
         });
         await this.runs.update(failedRun.id, {
           status: "failed",
-          rawOutput: { vegetaText: err instanceof Error ? err.message : String(err) } as Prisma.InputJsonValue,
+          rawOutput: {
+            vegetaText: err instanceof Error ? err.message : String(err),
+          } as Prisma.InputJsonValue,
           completedAt: new Date(),
         });
       } catch (dbErr) {

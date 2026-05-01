@@ -36,16 +36,11 @@ export const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
 const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
 /** Map guidellm profile names to the unified Run.mode enum. */
-function mapProfileToMode(
-  profile: string,
-): "fixed" | "ramp-up" | "throughput" | "sla-target" {
+function mapProfileToMode(profile: string): "fixed" | "ramp-up" | "throughput" | "sla-target" {
   switch (profile) {
     case "throughput":
     case "generation_heavy":
       return "throughput";
-    case "latency":
-    case "long_context":
-    case "sharegpt":
     default:
       return "fixed";
   }
@@ -149,9 +144,8 @@ export class BenchmarkService {
     this.maxConcurrency = config.get("BENCHMARK_DEFAULT_MAX_CONCURRENCY", {
       infer: true,
     }) as number;
-    const benchmarkDriver = (
-      config.get("BENCHMARK_DRIVER", { infer: true }) ?? "subprocess"
-    ) as string;
+    const benchmarkDriver = (config.get("BENCHMARK_DRIVER", { infer: true }) ??
+      "subprocess") as string;
     this.driverKind = benchmarkDriver === "k8s" ? "k8s" : "local";
   }
 
@@ -214,7 +208,10 @@ export class BenchmarkService {
     const row = await this.runs.findById(runId);
     if (!row) throw new Error(`BenchmarkService.start: row ${runId} not found`);
 
-    const apiKey = decrypt(row.apiKeyCipher!, this.key);
+    if (!row.apiKeyCipher) {
+      throw new Error(`BenchmarkService.start: row ${runId} missing apiKeyCipher`);
+    }
+    const apiKey = decrypt(row.apiKeyCipher, this.key);
     const callbackToken = signCallbackToken(
       row.id,
       this.callbackSecret,
@@ -227,12 +224,12 @@ export class BenchmarkService {
 
     const ctx: BenchmarkExecutionContext = {
       benchmarkId: row.id,
-      profile: (params.profile as BenchmarkExecutionContext["profile"]),
-      apiType: (scenario.apiType as BenchmarkExecutionContext["apiType"]),
+      profile: params.profile as BenchmarkExecutionContext["profile"],
+      apiType: scenario.apiType as BenchmarkExecutionContext["apiType"],
       apiBaseUrl: scenario.apiBaseUrl as string,
       apiKey,
       model: scenario.model as string,
-      datasetName: (dataset.name as BenchmarkExecutionContext["datasetName"]),
+      datasetName: dataset.name as BenchmarkExecutionContext["datasetName"],
       datasetInputTokens: (dataset.inputTokens as number | undefined) ?? undefined,
       datasetOutputTokens: (dataset.outputTokens as number | undefined) ?? undefined,
       datasetSeed: (dataset.seed as number | undefined) ?? undefined,

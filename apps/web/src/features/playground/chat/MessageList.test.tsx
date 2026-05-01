@@ -63,9 +63,7 @@ describe("MessageList multimodal", () => {
     const messages: ChatMessage[] = [
       {
         role: "user",
-        content: [
-          { type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } },
-        ],
+        content: [{ type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } }],
       },
     ];
     const { container } = renderWithI18n(<MessageList messages={messages} />);

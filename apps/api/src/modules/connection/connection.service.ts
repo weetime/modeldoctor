@@ -1,10 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   Connection,
   CreateConnection,
   ListConnectionsResponse,
   UpdateConnection,
 } from "@modeldoctor/contracts";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Connection as PrismaConnection } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 

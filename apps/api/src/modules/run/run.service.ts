@@ -1,9 +1,5 @@
+import type { ListRunsQuery, ListRunsResponse, Run } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type {
-  Run,
-  ListRunsQuery,
-  ListRunsResponse,
-} from "@modeldoctor/contracts";
 import type { Run as PrismaRun } from "@prisma/client";
 import { RunRepository } from "./run.repository.js";
 

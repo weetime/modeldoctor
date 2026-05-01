@@ -16,7 +16,7 @@ describe("RunRepository", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env["DATABASE_URL"];
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
               return undefined;
             },
           },
@@ -81,10 +81,11 @@ describe("RunRepository", () => {
     expect(page1.items.every((r) => r.kind === "benchmark")).toBe(true);
     expect(page1.nextCursor).toBeDefined();
 
+    if (!page1.nextCursor) throw new Error("expected nextCursor on page1");
     const page2 = await repo.list({
       kind: "benchmark",
       limit: 2,
-      cursor: page1.nextCursor!,
+      cursor: page1.nextCursor,
     });
     expect(page2.items).toHaveLength(1);
     expect(page2.nextCursor).toBeNull();

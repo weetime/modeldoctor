@@ -83,7 +83,10 @@ export const useCompareStore = create<CompareStoreState>()(
           if (n > s.panelCount) {
             return {
               panelCount: n,
-              panels: [...s.panels, ...Array.from({ length: n - s.panelCount }, () => blankPanel())],
+              panels: [
+                ...s.panels,
+                ...Array.from({ length: n - s.panelCount }, () => blankPanel()),
+              ],
             };
           }
           // shrink — abort any panels we're about to drop
@@ -125,7 +128,8 @@ export const useCompareStore = create<CompareStoreState>()(
           }),
         })),
 
-      clearPanelMessages: (i) => set((s) => ({ panels: updatePanel(s.panels, i, { messages: [] }) })),
+      clearPanelMessages: (i) =>
+        set((s) => ({ panels: updatePanel(s.panels, i, { messages: [] }) })),
 
       clearAllMessages: () =>
         set((s) => ({ panels: s.panels.map((p) => ({ ...p, messages: [] })) })),

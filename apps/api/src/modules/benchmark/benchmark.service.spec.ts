@@ -154,9 +154,7 @@ describe("BenchmarkService.create + start", () => {
     );
 
     // runs.findById returns the row with apiKeyCipher set
-    runs.findById.mockImplementation(async (id: string) =>
-      makeRunRow({ id }),
-    );
+    runs.findById.mockImplementation(async (id: string) => makeRunRow({ id }));
 
     // runs.update returns an updated row (simulate submitted after start)
     runs.update.mockImplementation(async (id: string, data: Record<string, unknown>) =>
@@ -181,7 +179,7 @@ describe("BenchmarkService.create + start", () => {
     expect(driverCall.apiKey).toBe("sk-12345");
     expect(driverCall.benchmarkId).toBe("ckxxx1");
     expect(driverCall.callbackUrl).toBe("http://localhost:3001");
-    expect((driverCall.callbackToken as string)).toMatch(/^\d+\.[0-9a-f]{64}$/);
+    expect(driverCall.callbackToken as string).toMatch(/^\d+\.[0-9a-f]{64}$/);
     expect(driverCall.maxDurationSeconds).toBe(1800);
 
     // runs.update was called with submitted + handle.

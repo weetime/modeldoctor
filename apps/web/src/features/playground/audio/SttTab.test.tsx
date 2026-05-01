@@ -1,9 +1,9 @@
+import i18n from "@/lib/i18n";
+import { useConnectionsStore } from "@/stores/connections-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { SttTab } from "./SttTab";
 import { useAudioStore } from "./store";
 
@@ -14,7 +14,13 @@ vi.mock("./RecorderControls", () => ({
     <button
       type="button"
       data-testid="record"
-      onClick={() => onComplete(new Blob([new Uint8Array([1, 2, 3])], { type: "audio/webm" }), "audio/webm", 1000)}
+      onClick={() =>
+        onComplete(
+          new Blob([new Uint8Array([1, 2, 3])], { type: "audio/webm" }),
+          "audio/webm",
+          1000,
+        )
+      }
     >
       record
     </button>
@@ -38,7 +44,9 @@ describe("SttTab", () => {
     vi.stubGlobal("URL", {
       createObjectURL: mockCreateObjectURL,
       revokeObjectURL: mockRevokeObjectURL,
+      // biome-ignore lint/suspicious/noExplicitAny: URL.parse / canParse are not in lib.dom.d.ts at this Node version
       parse: (URL as any).parse,
+      // biome-ignore lint/suspicious/noExplicitAny: URL.parse / canParse are not in lib.dom.d.ts at this Node version
       canParse: (URL as any).canParse,
     });
     useAudioStore.setState((s) => ({
@@ -46,16 +54,26 @@ describe("SttTab", () => {
       selectedConnectionId: "c1",
       stt: {
         ...s.stt,
-        fileName: null, fileSize: null, fileMimeType: null,
-        result: null, error: null, sending: false,
+        fileName: null,
+        fileSize: null,
+        fileMimeType: null,
+        result: null,
+        error: null,
+        sending: false,
       },
     }));
     // Use the real connections-store API (the plan's object-map shape was wrong;
     // we already learned this in Task 11). Reset to empty array, then create.
     useConnectionsStore.setState({ connections: [] } as never);
     useConnectionsStore.getState().create({
-      name: "stt", apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1",
-      customHeaders: "", queryParams: "", category: "audio", tags: [],
+      name: "stt",
+      apiBaseUrl: "http://x",
+      apiKey: "k",
+      model: "whisper-1",
+      customHeaders: "",
+      queryParams: "",
+      category: "audio",
+      tags: [],
     } as never);
     // Set our test connection id to whatever was created
     const created = useConnectionsStore.getState().list()[0];
@@ -76,7 +94,8 @@ describe("SttTab", () => {
   it("uploads recorded blob and stores transcribed text", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response(JSON.stringify({ success: true, text: "hello world", latencyMs: 100 }), {
-        status: 200, headers: { "content-type": "application/json" },
+        status: 200,
+        headers: { "content-type": "application/json" },
       }),
     );
     renderStt();

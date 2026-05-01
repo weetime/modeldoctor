@@ -22,7 +22,7 @@ describe("RunController", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env["DATABASE_URL"];
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
               return undefined;
             },
           },
@@ -46,9 +46,7 @@ describe("RunController", () => {
 
   it("returns 404 for unknown run", async () => {
     const user = { sub: "any-user", email: "x", roles: [] };
-    await expect(
-      controller.detail(user as never, "nope"),
-    ).rejects.toThrow(/not found/i);
+    await expect(controller.detail(user as never, "nope")).rejects.toThrow(/not found/i);
   });
 
   it("lists runs filtered by kind AND scoped to current user", async () => {
@@ -151,8 +149,6 @@ describe("RunController", () => {
       email: stranger.email,
       roles: [],
     };
-    await expect(
-      controller.detail(strangerArg as never, run.id),
-    ).rejects.toThrow(/not found/i);
+    await expect(controller.detail(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
   });
 });

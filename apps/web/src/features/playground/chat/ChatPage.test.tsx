@@ -316,7 +316,9 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
 
     // Step 1: persist — inline data replaced with sentinel
     const serialised = await persistAttachments(entryId, snap);
-    const imgPart = (serialised.messages[0].content as Array<{ type: string; image_url?: { url: string } }>)[1];
+    const imgPart = (
+      serialised.messages[0].content as Array<{ type: string; image_url?: { url: string } }>
+    )[1];
     expect(imgPart.image_url?.url).toBe("idb://msg0.part1");
     expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
       entryId,
@@ -353,9 +355,7 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
       messages: [
         {
           role: "user",
-          content: [
-            { type: "input_audio", input_audio: { data: audioB64, format: "webm" } },
-          ],
+          content: [{ type: "input_audio", input_audio: { data: audioB64, format: "webm" } }],
         },
       ],
       params: {},
@@ -364,7 +364,12 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
     const entryId = useChatHistoryStore.getState().currentId;
 
     const serialised = await persistAttachments(entryId, snap);
-    const audioPart = (serialised.messages[0].content as Array<{ type: string; input_audio?: { data: string; format: string } }>)[0];
+    const audioPart = (
+      serialised.messages[0].content as Array<{
+        type: string;
+        input_audio?: { data: string; format: string };
+      }>
+    )[0];
     expect(audioPart.input_audio?.data).toBe("idb://msg0.part0");
     expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
       entryId,
@@ -383,7 +388,12 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
       entryId,
       "msg0.part0",
     );
-    const livePart = (useChatStore.getState().messages[0].content as Array<{ type: string; input_audio?: { data: string; format: string } }>)[0];
+    const livePart = (
+      useChatStore.getState().messages[0].content as Array<{
+        type: string;
+        input_audio?: { data: string; format: string };
+      }>
+    )[0];
     expect(livePart.input_audio?.data).toBe(audioB64);
     expect(livePart.input_audio?.format).toBe("webm");
   });
@@ -395,9 +405,7 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
       messages: [
         {
           role: "user",
-          content: [
-            { type: "input_file", file: { filename: "doc.pdf", file_data: fileDataUrl } },
-          ],
+          content: [{ type: "input_file", file: { filename: "doc.pdf", file_data: fileDataUrl } }],
         },
       ],
       params: {},
@@ -406,7 +414,12 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
     const entryId = useChatHistoryStore.getState().currentId;
 
     const serialised = await persistAttachments(entryId, snap);
-    const filePart = (serialised.messages[0].content as Array<{ type: string; file?: { filename: string; file_data: string } }>)[0];
+    const filePart = (
+      serialised.messages[0].content as Array<{
+        type: string;
+        file?: { filename: string; file_data: string };
+      }>
+    )[0];
     expect(filePart.file?.file_data).toBe("idb://msg0.part0");
     expect(vi.mocked(useChatHistoryStore.getState().putBlob)).toHaveBeenCalledWith(
       entryId,
@@ -425,7 +438,12 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
       entryId,
       "msg0.part0",
     );
-    const livePart = (useChatStore.getState().messages[0].content as Array<{ type: string; file?: { filename: string; file_data: string } }>)[0];
+    const livePart = (
+      useChatStore.getState().messages[0].content as Array<{
+        type: string;
+        file?: { filename: string; file_data: string };
+      }>
+    )[0];
     expect(livePart.file?.file_data).toBe(fileDataUrl);
     expect(livePart.file?.filename).toBe("doc.pdf");
   });
