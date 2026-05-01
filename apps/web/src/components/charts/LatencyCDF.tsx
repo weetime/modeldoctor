@@ -13,6 +13,7 @@ export interface LatencyCDFSeries {
 export interface LatencyCDFProps extends DomainChartProps {
   series: LatencyCDFSeries[];
   xLabel?: string;
+  colorMap?: Record<string, string>;
 }
 
 function computeCDF(samples: number[]): Array<[number, number]> {
@@ -28,20 +29,28 @@ function resolveCDF(s: LatencyCDFSeries): Array<[number, number]> {
   return [];
 }
 
-function buildOption(series: LatencyCDFSeries[], xLabel: string): EChartsOption {
+function buildOption(
+  series: LatencyCDFSeries[],
+  xLabel: string,
+  colorMap: Record<string, string> | undefined,
+): EChartsOption {
   const ecSeries = series
     .map((s) => ({ raw: s, data: resolveCDF(s) }))
     .filter(({ data }) => data.length > 0)
-    .map(({ raw, data }) => ({
-      name: raw.runLabel ?? raw.runId,
-      type: "line" as const,
-      step: "end" as const,
-      showSymbol: false,
-      sampling: "lttb" as const,
-      progressive: 2000,
-      progressiveThreshold: 5000,
-      data,
-    }));
+    .map(({ raw, data }) => {
+      const color = colorMap?.[raw.runId];
+      return {
+        name: raw.runLabel ?? raw.runId,
+        type: "line" as const,
+        step: "end" as const,
+        showSymbol: false,
+        sampling: "lttb" as const,
+        progressive: 2000,
+        progressiveThreshold: 5000,
+        data,
+        ...(color ? { itemStyle: { color }, lineStyle: { color } } : {}),
+      };
+    });
 
   return {
     tooltip: { trigger: "axis" },
@@ -66,6 +75,7 @@ export function LatencyCDF(props: LatencyCDFProps) {
   const {
     series,
     xLabel = "Latency (ms)",
+    colorMap,
     ariaLabel,
     height = 360,
     loading,
@@ -76,7 +86,10 @@ export function LatencyCDF(props: LatencyCDFProps) {
   const dark = useChartDark(theme);
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => resolveCDF(s).length === 0));
 
-  const option = useMemo(() => themed(buildOption(series, xLabel), dark), [series, xLabel, dark]);
+  const option = useMemo(
+    () => themed(buildOption(series, xLabel, colorMap), dark),
+    [series, xLabel, colorMap, dark],
+  );
 
   return (
     <ChartFrame ariaLabel={ariaLabel} height={height} loading={loading} empty={isEmpty}>
