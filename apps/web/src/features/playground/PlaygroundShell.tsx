@@ -54,7 +54,7 @@ export function PlaygroundShell({
 
   return (
     <div className="flex h-screen min-h-0 flex-col">
-      {title ? <PageHeader title={title} subtitle={subtitle} /> : null}
+      <PageHeader title={title} subtitle={subtitle} />
       {showToolbar ? (
         <header className="flex items-center justify-between border-b border-border px-6 py-2">
           <div className="flex items-center gap-1">
