@@ -84,7 +84,11 @@ export function LatencyCDF(props: LatencyCDFProps) {
   } = props;
 
   const dark = useChartDark(theme);
-  const isEmpty = empty ?? (series.length === 0 || series.every((s) => resolveCDF(s).length === 0));
+  // Cheap predicate: avoid resolveCDF here (it sorts on every render — see PR #66 review).
+  const isEmpty =
+    empty ??
+    (series.length === 0 ||
+      series.every((s) => (s.cdf?.length ?? 0) === 0 && (s.samples?.length ?? 0) === 0));
 
   const option = useMemo(
     () => themed(buildOption(series, xLabel, colorMap), dark),
