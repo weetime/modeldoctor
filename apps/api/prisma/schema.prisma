@@ -14,11 +14,14 @@ model User {
   passwordHash String   @map("password_hash")
   roles        String[] @default([])
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt      @map("updated_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   refreshTokens RefreshToken[]
   loadTestRuns  LoadTestRun[]
   benchmarkRuns BenchmarkRun[]
+  runs          Run[]
+  connections   Connection[]
+  baselines     Baseline[]
 
   @@index([email])
   @@map("users")
@@ -63,8 +66,8 @@ model LoadTestRun {
   duration    Int
   status      String    @default("completed")
   summaryJson Json      @map("summary_json")
-  rawReport   String    @db.Text          @map("raw_report")
-  createdAt   DateTime  @default(now())   @map("created_at")
+  rawReport   String    @map("raw_report") @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -75,8 +78,8 @@ model LoadTestRun {
 }
 
 model BenchmarkRun {
-  id          String  @id @default(cuid())
-  userId      String? @map("user_id")
+  id     String  @id @default(cuid())
+  userId String? @map("user_id")
 
   // Identification
   name        String
@@ -84,7 +87,7 @@ model BenchmarkRun {
   profile     String  @default("custom") // "throughput" | "latency" | "long_context" | "generation_heavy" | "sharegpt" | "custom"
 
   // Target endpoint
-  apiType      String @map("api_type")        // "chat" | "completion"
+  apiType      String @map("api_type") // "chat" | "completion"
   apiBaseUrl   String @map("api_base_url")
   apiKeyCipher String @map("api_key_cipher") // AES-256-GCM ciphertext, see common/crypto
   model        String
@@ -94,27 +97,125 @@ model BenchmarkRun {
   datasetInputTokens  Int?   @map("dataset_input_tokens")
   datasetOutputTokens Int?   @map("dataset_output_tokens")
   datasetSeed         Int?   @map("dataset_seed")
-  requestRate         Int    @default(0)        @map("request_rate")    // 0 = unlimited
-  totalRequests       Int    @default(1000)     @map("total_requests")
+  requestRate         Int    @default(0) @map("request_rate") // 0 = unlimited
+  totalRequests       Int    @default(1000) @map("total_requests")
 
   // Lifecycle
   state        String  @default("pending") // "pending" | "submitted" | "running" | "completed" | "failed" | "canceled"
-  stateMessage String? @db.Text             @map("state_message")
+  stateMessage String? @map("state_message") @db.Text
   progress     Float?
-  jobName      String? @map("job_name")    // K8s Job metadata.name; null until submitted
+  jobName      String? @map("job_name") // K8s Job metadata.name; null until submitted
 
   // Metrics (denormalized summary for list views; full report in rawMetrics)
-  metricsSummary Json?  @map("metrics_summary")
-  rawMetrics     Json?  @map("raw_metrics")
+  metricsSummary Json?   @map("metrics_summary")
+  rawMetrics     Json?   @map("raw_metrics")
   logs           String? @db.Text
 
-  createdAt   DateTime  @default(now())  @map("created_at")
-  startedAt   DateTime?                  @map("started_at")
-  completedAt DateTime?                  @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([state])
   @@map("benchmark_runs")
+}
+
+model Connection {
+  id            String  @id @default(cuid())
+  userId        String  @map("user_id")
+  name          String
+  baseUrl       String  @map("base_url")
+  apiType       String  @map("api_type") // 'chat' | 'embeddings' | 'rerank' | 'images' | 'chat-vision' | 'chat-audio'
+  prometheusUrl String? @map("prometheus_url")
+  serverKind    String? @map("server_kind") // 'vllm' | 'sglang' | 'tgi' | 'higress' | 'generic' — for #60
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs Run[]
+
+  @@index([userId])
+  @@map("connections")
+}
+
+model Run {
+  id           String  @id @default(cuid())
+  userId       String? @map("user_id")
+  connectionId String? @map("connection_id")
+
+  // Discriminator + four-tuple
+  kind       String // 'benchmark' | 'e2e'
+  tool       String // 'guidellm' | 'genai-perf' | 'vegeta' | 'e2e' | 'custom'
+  scenario   Json
+  mode       String // 'fixed' | 'ramp-up' | 'throughput' | 'sla-target' | 'correctness'
+  driverKind String @map("driver_kind") // 'local' | 'k8s'
+
+  // Identification
+  name        String?
+  description String? @db.Text
+
+  // Lifecycle
+  status        String  @default("pending") // 'pending' | 'submitted' | 'running' | 'completed' | 'failed' | 'canceled'
+  statusMessage String? @map("status_message") @db.Text
+  progress      Float?
+
+  // Driver bookkeeping
+  driverHandle String? @map("driver_handle") // 'subprocess:1234' or 'namespace/jobName'
+  apiKeyCipher String? @map("api_key_cipher")
+
+  // Snapshots
+  params          Json
+  canonicalReport Json? @map("canonical_report")
+  rawOutput       Json? @map("raw_output")
+  summaryMetrics  Json? @map("summary_metrics")
+  serverMetrics   Json? @map("server_metrics")
+
+  // Cross-references (FK targets are nullable until #43–#56 wire them up)
+  templateId      String? @map("template_id")
+  templateVersion String? @map("template_version")
+  parentRunId     String? @map("parent_run_id")
+  baselineId      String? @map("baseline_id")
+
+  logs String? @db.Text
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  parent     Run?        @relation("RunParent", fields: [parentRunId], references: [id], onDelete: SetNull)
+  children   Run[]       @relation("RunParent")
+  baseline   Baseline?   @relation(fields: [baselineId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([kind, status])
+  @@index([connectionId])
+  @@index([parentRunId])
+  @@index([baselineId])
+  @@map("runs")
+}
+
+model Baseline {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  runId           String   @unique @map("run_id")
+  name            String
+  description     String?  @db.Text
+  tags            String[] @default([])
+  templateId      String?  @map("template_id")
+  templateVersion String?  @map("template_version")
+  active          Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referencers Run[]
+
+  @@index([userId])
+  @@map("baselines")
 }
