@@ -1,7 +1,6 @@
 import type { ListRunsQuery, ListRunsResponse, Run } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Run as PrismaRun } from "@prisma/client";
-import { RunRepository } from "./run.repository.js";
+import { RunRepository, type RunWithConnection } from "./run.repository.js";
 
 @Injectable()
 export class RunService {
@@ -45,11 +44,12 @@ export class RunService {
  * Returning ciphertext over an authenticated HTTP API would enable offline
  * dictionary attacks on the encryption key.
  */
-function toContract(row: PrismaRun): Run {
+function toContract(row: RunWithConnection): Run {
   return {
     id: row.id,
     userId: row.userId,
     connectionId: row.connectionId,
+    connection: row.connection ? { id: row.connection.id, name: row.connection.name } : null,
     kind: row.kind as Run["kind"],
     tool: row.tool as Run["tool"],
     scenario: row.scenario as Run["scenario"],

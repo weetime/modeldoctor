@@ -33,6 +33,7 @@ function makeRun(
     id,
     userId: "u1",
     connectionId: "c1",
+    connection: { id: "c1", name: "vLLM Local" },
     kind,
     tool,
     scenario: {},

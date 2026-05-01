@@ -27,6 +27,7 @@ function makeRun(overrides: Partial<Run> = {}): Run {
     id: "r1",
     userId: "u1",
     connectionId: "c1",
+    connection: { id: "c1", name: "vLLM Local" },
     kind: "benchmark",
     tool: "guidellm",
     scenario: { model: "qwen2.5" },

@@ -23,7 +23,7 @@ export function HistoryDetailMetadata({ run }: { run: Run }) {
       <Row label={t("detail.metadata.driverKind")}>{run.driverKind}</Row>
       <Row label={t("detail.metadata.status")}>{run.status}</Row>
       <Row label={t("detail.metadata.connection")}>
-        {run.connectionId ?? t("detail.metadata.connectionMissing")}
+        {run.connection?.name ?? t("detail.metadata.connectionMissing")}
       </Row>
       <Row label={t("detail.metadata.createdAt")}>{fmtDate(run.createdAt)}</Row>
       <Row label={t("detail.metadata.startedAt")}>{fmtDate(run.startedAt)}</Row>

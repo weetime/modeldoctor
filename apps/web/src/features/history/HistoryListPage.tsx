@@ -213,7 +213,7 @@ export function HistoryListPage() {
                       <Badge variant="default">{run.tool}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {run.connectionId ?? "—"}
+                      {run.connection?.name ?? "—"}
                     </TableCell>
                     <TableCell>{run.status}</TableCell>
                     <TableCell className="text-right tabular-nums">

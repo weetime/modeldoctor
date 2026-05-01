@@ -2,6 +2,11 @@ import { Injectable } from "@nestjs/common";
 import { Prisma, Run as PrismaRun } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
+const runWithConnection = Prisma.validator<Prisma.RunDefaultArgs>()({
+  include: { connection: { select: { id: true, name: true } } },
+});
+export type RunWithConnection = Prisma.RunGetPayload<typeof runWithConnection>;
+
 export type CreateRunInput = {
   userId?: string | null;
   connectionId?: string | null;
@@ -70,11 +75,16 @@ export class RunRepository {
     return this.prisma.run.create({ data });
   }
 
-  findById(id: string): Promise<PrismaRun | null> {
-    return this.prisma.run.findUnique({ where: { id } });
+  findById(id: string): Promise<RunWithConnection | null> {
+    return this.prisma.run.findUnique({
+      where: { id },
+      include: runWithConnection.include,
+    });
   }
 
-  async list(input: ListRunsInput): Promise<{ items: PrismaRun[]; nextCursor: string | null }> {
+  async list(
+    input: ListRunsInput,
+  ): Promise<{ items: RunWithConnection[]; nextCursor: string | null }> {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.RunWhereInput = {};
     if (input.kind) where.kind = input.kind;
@@ -100,6 +110,7 @@ export class RunRepository {
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: limit + 1,
+      include: runWithConnection.include,
       ...(input.cursor && { cursor: { id: input.cursor }, skip: 1 }),
     });
 
