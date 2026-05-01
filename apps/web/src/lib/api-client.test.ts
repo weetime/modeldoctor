@@ -292,6 +292,30 @@ describe("api-client: concurrent 401s issue only one refresh", () => {
   });
 });
 
+describe("api.patch", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("issues a PATCH with JSON body and parses the response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify({ ok: true })),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const out = await api.patch<{ ok: boolean }>("/api/x", { foo: 1 });
+    expect(out).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/x",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ foo: 1 }),
+      }),
+    );
+  });
+});
+
 describe("api-client.refreshAccessToken: discriminated result", () => {
   beforeEach(() => {
     useAuthStore.setState({ accessToken: null, user: null, accessTokenExpiresAt: null });
