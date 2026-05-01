@@ -59,11 +59,11 @@ model Connection {
   userId        String   @map("user_id")
   name          String
   baseUrl       String   @map("base_url")
-  apiKeyCipher  String   @map("api_key_cipher")
+  apiKeyCipher  String   @map("api_key_cipher")  // AES-256-GCM v1, see common/crypto/aes-gcm.ts
   model         String
   customHeaders String   @default("") @map("custom_headers")
   queryParams   String   @default("") @map("query_params")
-  category      String
+  category      String   // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
   createdAt DateTime @default(now()) @map("created_at")

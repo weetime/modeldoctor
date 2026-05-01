@@ -1,3 +1,9 @@
+-- WARNING: This migration drops 3 columns and adds 5 NOT NULL columns
+-- without backfill defaults. It REQUIRES a clean database (run
+-- `prisma migrate reset` first). Do NOT apply to a database with existing
+-- `connections` rows without a prior backfill strategy. Per project policy
+-- (pre-prod, no-compat-shims), data is wiped on schema-bumping migrations.
+
 -- AlterTable
 ALTER TABLE "connections" DROP COLUMN "api_type",
 DROP COLUMN "prometheus_url",
