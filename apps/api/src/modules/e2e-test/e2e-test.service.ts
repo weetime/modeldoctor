@@ -2,6 +2,7 @@ import type { E2ETestRequest, E2ETestResponse, ProbeName } from "@modeldoctor/co
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PROBES, type ProbeCtx, type ProbeResult } from "../../integrations/probes/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { RunRepository } from "../run/run.repository.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
@@ -20,16 +21,17 @@ export class E2ETestService {
   constructor(private readonly runs: RunRepository) {}
 
   private async executeProbes(
+    conn: DecryptedConnection,
     req: E2ETestRequest,
   ): Promise<Array<ProbeResult & { probe: ProbeName }>> {
-    const extraHeaders = parseHeaderLines(req.customHeaders);
+    const extraHeaders = parseHeaderLines(conn.customHeaders);
 
     return Promise.all(
       req.probes.map(async (name: ProbeName) => {
         const ctx: ProbeCtx = {
-          apiBaseUrl: req.apiBaseUrl,
-          apiKey: req.apiKey,
-          model: req.model,
+          apiBaseUrl: conn.baseUrl,
+          apiKey: conn.apiKey,
+          model: conn.model,
           extraHeaders,
           pathOverride: req.pathOverride?.[name],
         };
@@ -50,7 +52,7 @@ export class E2ETestService {
     );
   }
 
-  async run(req: E2ETestRequest, userId?: string): Promise<E2ETestResponse> {
+  async run(userId: string | undefined, conn: DecryptedConnection, req: E2ETestRequest): Promise<E2ETestResponse> {
     // 1. Create Run row (status: pending)
     const created = await this.runs.create({
       userId: userId ?? null,
@@ -59,8 +61,8 @@ export class E2ETestService {
       scenario: {
         probes: req.probes,
         pathOverride: req.pathOverride ?? {},
-        apiBaseUrl: req.apiBaseUrl,
-        model: req.model,
+        apiBaseUrl: conn.baseUrl,
+        model: conn.model,
       },
       mode: "correctness",
       driverKind: "local",
@@ -72,7 +74,7 @@ export class E2ETestService {
 
     // 3. Execute probes
     try {
-      const results = await this.executeProbes(req);
+      const results = await this.executeProbes(conn, req);
       const allPassed = results.every((r) => r.pass);
 
       // 4. Persist final state
