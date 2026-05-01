@@ -32,6 +32,8 @@ function makeRow(overrides: Partial<PrismaConnection> = {}): PrismaConnection {
     queryParams: "",
     category: "chat",
     tags: [],
+    prometheusUrl: null,
+    serverKind: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
     ...overrides,
@@ -85,6 +87,56 @@ describe("ConnectionService", () => {
       expect(storedCipher).not.toContain(PLAINTEXT);
       expect(out.apiKey).toBe(PLAINTEXT);
       expect(out.apiKeyPreview).toBe("sk-...2345");
+    });
+
+    it("persists prometheusUrl + serverKind when provided", async () => {
+      let storedData: Record<string, unknown> = {};
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          storedData = args.data;
+          return makeRow({
+            apiKeyCipher: args.data.apiKeyCipher as string,
+            prometheusUrl: "http://prom:9090",
+            serverKind: "vllm",
+          });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "vllm-prod",
+        baseUrl: "http://10.x.x.x:30888",
+        apiKey: "sk-abc",
+        model: "qwen2.5",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+        prometheusUrl: "http://prom:9090",
+        serverKind: "vllm",
+      });
+      expect(storedData.prometheusUrl).toBe("http://prom:9090");
+      expect(storedData.serverKind).toBe("vllm");
+      expect(out.prometheusUrl).toBe("http://prom:9090");
+      expect(out.serverKind).toBe("vllm");
+    });
+
+    it("defaults prometheusUrl + serverKind to null when omitted", async () => {
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          return makeRow({ apiKeyCipher: args.data.apiKeyCipher as string });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "x",
+        baseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+      });
+      expect(out.prometheusUrl).toBeNull();
+      expect(out.serverKind).toBeNull();
     });
   });
 
