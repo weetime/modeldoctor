@@ -5,12 +5,25 @@ import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interf
 
 const NOW = new Date("2026-04-26T12:00:00Z");
 
-function buildPrisma() {
+interface PrismaStub {
+  run: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
+}
+function buildPrisma(): PrismaStub {
   return {
-    benchmarkRun: {
+    run: {
       findMany: vi.fn(),
-      update: vi.fn(),
     },
+  };
+}
+
+interface RunsStub {
+  update: ReturnType<typeof vi.fn>;
+}
+function buildRuns(): RunsStub {
+  return {
+    update: vi.fn(),
   };
 }
 
@@ -40,6 +53,17 @@ function buildConfig(over: Record<string, unknown> = {}): ConfigService {
   } as unknown as ConfigService;
 }
 
+function makeRunRow(over: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "r1",
+    status: "running",
+    driverHandle: "subprocess:1",
+    startedAt: new Date(NOW.getTime() - 10_000),
+    createdAt: new Date(NOW.getTime() - 10_000),
+    ...over,
+  };
+}
+
 describe("BenchmarkReconciler", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -52,61 +76,85 @@ describe("BenchmarkReconciler", () => {
 
   it("does nothing when there are no active rows", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([]);
     const drv = buildDriver();
-    const r = new BenchmarkReconciler(prisma as never, drv, buildConfig() as never, null);
+    const r = new BenchmarkReconciler(
+      prisma as never,
+      drv,
+      buildConfig() as never,
+      null,
+      runs as never,
+    );
     await r.reconcile();
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 
   it("subprocess: marks runaway-timeout row failed and calls driver.cancel", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([
-      {
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([
+      makeRunRow({
         id: "r1",
-        state: "running",
-        jobName: "subprocess:1",
+        status: "running",
+        driverHandle: "subprocess:1",
         startedAt: new Date(NOW.getTime() - 120_000), // 2min old, > 60s default
         createdAt: new Date(NOW.getTime() - 120_000),
-      },
+      }),
     ]);
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "failed" }));
     const drv = buildDriver();
-    const r = new BenchmarkReconciler(prisma as never, drv, buildConfig() as never, null);
+    const r = new BenchmarkReconciler(
+      prisma as never,
+      drv,
+      buildConfig() as never,
+      null,
+      runs as never,
+    );
     await r.reconcile();
     expect(drv.cancel).toHaveBeenCalledWith("subprocess:1");
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("failed");
-    expect(upd.data.stateMessage).toMatch(/exceeded max duration/);
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("failed");
+    expect(upd[1].statusMessage).toMatch(/exceeded max duration/);
   });
 
   it("skips rows newer than 5 seconds (race with create)", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([
-      {
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([
+      makeRunRow({
         id: "r1",
-        state: "submitted",
-        jobName: "subprocess:1",
+        status: "submitted",
+        driverHandle: "subprocess:1",
         startedAt: new Date(NOW.getTime() - 1_000),
         createdAt: new Date(NOW.getTime() - 1_000),
-      },
+      }),
     ]);
     const drv = buildDriver();
-    const r = new BenchmarkReconciler(prisma as never, drv, buildConfig() as never, null);
+    const r = new BenchmarkReconciler(
+      prisma as never,
+      drv,
+      buildConfig() as never,
+      null,
+      runs as never,
+    );
     await r.reconcile();
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 
   it("k8s: marks failed when readNamespacedJob 404s", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([
-      {
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([
+      makeRunRow({
         id: "r1",
-        state: "running",
-        jobName: "modeldoctor-benchmarks/benchmark-r1",
+        status: "running",
+        driverHandle: "modeldoctor-benchmarks/benchmark-r1",
         startedAt: new Date(NOW.getTime() - 30_000),
         createdAt: new Date(NOW.getTime() - 30_000),
-      },
+      }),
     ]);
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "failed" }));
     const reader: BenchmarkK8sReader = {
       readJob: vi.fn(async () => {
         const e = new Error("not found") as Error & { statusCode: number };
@@ -121,24 +169,27 @@ describe("BenchmarkReconciler", () => {
       drv,
       buildConfig({ BENCHMARK_DRIVER: "k8s" }) as never,
       reader,
+      runs as never,
     );
     await r.reconcile();
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("failed");
-    expect(upd.data.stateMessage).toMatch(/vanished/i);
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("failed");
+    expect(upd[1].statusMessage).toMatch(/vanished/i);
   });
 
   it("k8s: marks failed with reason when pod terminated nonzero", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([
-      {
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([
+      makeRunRow({
         id: "r1",
-        state: "running",
-        jobName: "modeldoctor-benchmarks/benchmark-r1",
+        status: "running",
+        driverHandle: "modeldoctor-benchmarks/benchmark-r1",
         startedAt: new Date(NOW.getTime() - 30_000),
         createdAt: new Date(NOW.getTime() - 30_000),
-      },
+      }),
     ]);
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "failed" }));
     const reader: BenchmarkK8sReader = {
       readJob: vi.fn(async () => ({ status: { failed: 1 } })),
       listJobPods: vi.fn(async () => [
@@ -159,20 +210,28 @@ describe("BenchmarkReconciler", () => {
       drv,
       buildConfig({ BENCHMARK_DRIVER: "k8s" }) as never,
       reader,
+      runs as never,
     );
     await r.reconcile();
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("failed");
-    expect(upd.data.stateMessage).toMatch(/OOMKilled|exit ?137/);
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("failed");
+    expect(upd[1].statusMessage).toMatch(/OOMKilled|exit ?137/);
   });
 
   it("idempotent: re-running with already-terminal rows does nothing", async () => {
     const prisma = buildPrisma();
-    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    const runs = buildRuns();
+    prisma.run.findMany.mockResolvedValue([]);
     const drv = buildDriver();
-    const r = new BenchmarkReconciler(prisma as never, drv, buildConfig() as never, null);
+    const r = new BenchmarkReconciler(
+      prisma as never,
+      drv,
+      buildConfig() as never,
+      null,
+      runs as never,
+    );
     await r.reconcile();
     await r.reconcile();
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 });
