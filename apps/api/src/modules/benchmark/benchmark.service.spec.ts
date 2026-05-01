@@ -1,19 +1,20 @@
 import type { CreateBenchmarkRequest } from "@modeldoctor/contracts";
 import { ConfigService } from "@nestjs/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encrypt } from "../../common/crypto/aes-gcm.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import type {
+  ConnectionService,
+  DecryptedConnection,
+} from "../connection/connection.service.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
 
-const KEY = Buffer.alloc(32, 7);
 const SECRET = Buffer.from("y".repeat(48), "utf8");
 
 function buildConfig(over: Record<string, unknown> = {}): ConfigService {
   return {
     get: (key: string) => {
       const map: Record<string, unknown> = {
-        BENCHMARK_API_KEY_ENCRYPTION_KEY: KEY.toString("base64"),
         BENCHMARK_CALLBACK_SECRET: SECRET.toString("utf8"),
         BENCHMARK_CALLBACK_URL: "http://localhost:3001",
         BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
@@ -77,15 +78,31 @@ function buildDriver(): BenchmarkExecutionDriver & {
   };
 }
 
+interface ConnectionsStub {
+  getOwnedDecrypted: ReturnType<typeof vi.fn>;
+}
+function buildConnections(): ConnectionsStub {
+  return { getOwnedDecrypted: vi.fn() };
+}
+
 const user: JwtPayload = { sub: "user-1", roles: [] } as unknown as JwtPayload;
 
+const fakeConn: DecryptedConnection = {
+  id: "conn-1",
+  name: "test conn",
+  baseUrl: "https://api.example.com",
+  apiKey: "sk-12345",
+  model: "llama-3-70b",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat",
+};
+
 const validRequest: CreateBenchmarkRequest = {
+  connectionId: "conn-1",
   name: "first run",
   profile: "throughput",
   apiType: "chat",
-  apiBaseUrl: "https://api.example.com",
-  apiKey: "sk-12345",
-  model: "llama-3-70b",
   datasetName: "random",
   datasetInputTokens: 1024,
   datasetOutputTokens: 128,
@@ -111,7 +128,6 @@ function makeRunRow(over: Partial<Record<string, unknown>> = {}) {
     logs: null,
     name: "first run",
     description: null,
-    apiKeyCipher: encrypt("sk-12345", KEY),
     scenario: {
       apiType: "chat",
       apiBaseUrl: "https://api.example.com",
@@ -121,7 +137,7 @@ function makeRunRow(over: Partial<Record<string, unknown>> = {}) {
       totalRequests: 1000,
     },
     params: { profile: "throughput" },
-    connectionId: null,
+    connectionId: "conn-1",
     templateId: null,
     templateVersion: null,
     parentRunId: null,
@@ -137,13 +153,22 @@ describe("BenchmarkService.create + start", () => {
   let prisma: PrismaStub;
   let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
+  let connections: ConnectionsStub;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    connections = buildConnections();
+    connections.getOwnedDecrypted.mockResolvedValue(fakeConn);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      connections as unknown as ConnectionService,
+    );
 
     // count returns 0 (no duplicates)
     prisma.run.count.mockResolvedValue(0);
@@ -153,7 +178,7 @@ describe("BenchmarkService.create + start", () => {
       makeRunRow({ name: input.name as string }),
     );
 
-    // runs.findById returns the row with apiKeyCipher set
+    // runs.findById returns the row (with connectionId set, no apiKeyCipher)
     runs.findById.mockImplementation(async (id: string) => makeRunRow({ id }));
 
     // runs.update returns an updated row (simulate submitted after start)
@@ -164,19 +189,27 @@ describe("BenchmarkService.create + start", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("encrypts the apiKey, persists pending, calls driver.start, returns submitted dto", async () => {
-    const result = await svc.create(validRequest, user);
+  it("persists pending without apiKeyCipher, calls driver.start with conn creds, returns submitted dto", async () => {
+    const result = await svc.create(user.sub, fakeConn, validRequest);
 
-    // runs.create was called with ciphertext, not plaintext.
+    // runs.create no longer writes apiKeyCipher; connectionId is the link.
     const createCall = runs.create.mock.calls[0][0] as Record<string, unknown>;
-    expect(createCall.apiKeyCipher).not.toBe("sk-12345");
-    expect(createCall.apiKeyCipher).toMatch(/^v1:/);
-    // Initial status is set to pending via create (no explicit status field — RunRepository sets via Prisma default).
+    expect(createCall).not.toHaveProperty("apiKeyCipher");
+    expect(createCall.connectionId).toBe("conn-1");
     expect(createCall.kind).toBe("benchmark");
+    // scenario takes baseUrl/model from the Connection, not the request.
+    const scenario = createCall.scenario as Record<string, unknown>;
+    expect(scenario.apiBaseUrl).toBe("https://api.example.com");
+    expect(scenario.model).toBe("llama-3-70b");
 
-    // Driver was called with decrypted ctx.
+    // start re-resolved credentials from ConnectionService (forensic re-fetch).
+    expect(connections.getOwnedDecrypted).toHaveBeenCalledWith(user.sub, "conn-1");
+
+    // Driver was called with the decrypted apiKey from the Connection.
     const driverCall = driver.start.mock.calls[0][0] as Record<string, unknown>;
     expect(driverCall.apiKey).toBe("sk-12345");
+    expect(driverCall.apiBaseUrl).toBe("https://api.example.com");
+    expect(driverCall.model).toBe("llama-3-70b");
     expect(driverCall.benchmarkId).toBe("ckxxx1");
     expect(driverCall.callbackUrl).toBe("http://localhost:3001");
     expect(driverCall.callbackToken as string).toMatch(/^\d+\.[0-9a-f]{64}$/);
@@ -194,7 +227,7 @@ describe("BenchmarkService.create + start", () => {
 
   it("rejects datasetName=sharegpt with BENCHMARK_DATASET_UNSUPPORTED", async () => {
     await expect(
-      svc.create({ ...validRequest, datasetName: "sharegpt" }, user),
+      svc.create(user.sub, fakeConn, { ...validRequest, datasetName: "sharegpt" }),
     ).rejects.toMatchObject({
       response: { code: "BENCHMARK_DATASET_UNSUPPORTED" },
       status: 400,
@@ -204,7 +237,7 @@ describe("BenchmarkService.create + start", () => {
 
   it("rejects duplicate active name with BENCHMARK_NAME_IN_USE", async () => {
     prisma.run.count.mockResolvedValue(1);
-    await expect(svc.create(validRequest, user)).rejects.toMatchObject({
+    await expect(svc.create(user.sub, fakeConn, validRequest)).rejects.toMatchObject({
       response: { code: "BENCHMARK_NAME_IN_USE" },
       status: 409,
     });
@@ -213,10 +246,28 @@ describe("BenchmarkService.create + start", () => {
 
   it("marks the row failed when driver.start throws", async () => {
     driver.start.mockRejectedValue(new Error("rbac denied"));
-    await expect(svc.create(validRequest, user)).rejects.toThrow(/rbac denied/);
+    await expect(svc.create(user.sub, fakeConn, validRequest)).rejects.toThrow(/rbac denied/);
     const updateCall = runs.update.mock.calls[0] as [string, Record<string, unknown>];
     expect(updateCall[1].status).toBe("failed");
     expect(updateCall[1].statusMessage).toMatch(/rbac denied/);
+  });
+
+  it("start throws BadRequest when the source connection was deleted", async () => {
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r-orphan" }));
+    connections.getOwnedDecrypted.mockRejectedValue(new Error("not found"));
+    await expect(svc.start("r-orphan")).rejects.toMatchObject({
+      status: 400,
+      message: "Connection no longer exists",
+    });
+  });
+
+  it("start throws BadRequest when row.connectionId is null", async () => {
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r-null", connectionId: null }));
+    await expect(svc.start("r-null")).rejects.toMatchObject({
+      status: 400,
+      message: "Connection no longer exists",
+    });
+    expect(connections.getOwnedDecrypted).not.toHaveBeenCalled();
   });
 });
 
@@ -230,7 +281,13 @@ describe("BenchmarkService.list + detail", () => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      buildConnections() as unknown as ConnectionService,
+    );
   });
 
   function row(over: Partial<{ id: string; name: string; userId: string }> = {}) {
@@ -315,7 +372,13 @@ describe("BenchmarkService.cancel", () => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      buildConnections() as unknown as ConnectionService,
+    );
     runs.update.mockImplementation(async (id: string, data: Record<string, unknown>) =>
       makeRunRow({ id, status: data.status ?? "running", ...data }),
     );
@@ -380,7 +443,13 @@ describe("BenchmarkService.delete", () => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      buildConnections() as unknown as ConnectionService,
+    );
   });
 
   it.each(["completed", "failed", "canceled"] as const)(
@@ -425,7 +494,13 @@ describe("BenchmarkService.handleStateCallback", () => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      buildConnections() as unknown as ConnectionService,
+    );
   });
 
   it("missing row: returns silently without UPDATE", async () => {
@@ -503,7 +578,13 @@ describe("BenchmarkService.handleMetricsCallback", () => {
     prisma = buildPrisma();
     runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    svc = new BenchmarkService(
+      prisma as never,
+      driver,
+      buildConfig() as never,
+      runs as never,
+      buildConnections() as unknown as ConnectionService,
+    );
   });
 
   it("writes metrics regardless of state (forensic value)", async () => {

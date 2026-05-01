@@ -5,6 +5,10 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import {
+  ConnectionService,
+  type DecryptedConnection,
+} from "../connection/connection.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
@@ -18,6 +22,17 @@ class StubJwtGuard {
   }
 }
 
+const fakeConn: DecryptedConnection = {
+  id: "conn-1",
+  name: "n",
+  baseUrl: "https://x.com",
+  apiKey: "sk-test",
+  model: "m",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat",
+};
+
 describe("BenchmarkController", () => {
   let app: import("@nestjs/common").INestApplication;
   let svc: {
@@ -27,6 +42,7 @@ describe("BenchmarkController", () => {
     cancel: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
   };
+  let connections: { getOwnedDecrypted: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     svc = {
@@ -36,10 +52,14 @@ describe("BenchmarkController", () => {
       cancel: vi.fn(),
       delete: vi.fn(),
     };
+    connections = {
+      getOwnedDecrypted: vi.fn().mockResolvedValue(fakeConn),
+    };
     const module = await Test.createTestingModule({
       controllers: [BenchmarkController],
       providers: [
         { provide: BenchmarkService, useValue: svc },
+        { provide: ConnectionService, useValue: connections },
         { provide: PrismaService, useValue: {} },
         { provide: BENCHMARK_DRIVER, useValue: {} },
         { provide: ConfigService, useValue: { get: () => undefined } },
@@ -60,12 +80,10 @@ describe("BenchmarkController", () => {
   it("POST /benchmarks: 201/200 with the row body", async () => {
     svc.create.mockResolvedValue({ id: "r1", state: "submitted" });
     const body = {
+      connectionId: "conn-1",
       name: "n",
       profile: "throughput",
       apiType: "chat",
-      apiBaseUrl: "https://x.com",
-      apiKey: "sk",
-      model: "m",
       datasetName: "random",
       datasetInputTokens: 1024,
       datasetOutputTokens: 128,
@@ -75,7 +93,12 @@ describe("BenchmarkController", () => {
     const res = await request(app.getHttpServer()).post("/benchmarks").send(body);
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ id: "r1", state: "submitted" });
-    expect(svc.create).toHaveBeenCalledWith(expect.objectContaining(body), fakeUser);
+    expect(connections.getOwnedDecrypted).toHaveBeenCalledWith(fakeUser.sub, "conn-1");
+    expect(svc.create).toHaveBeenCalledWith(
+      fakeUser.sub,
+      fakeConn,
+      expect.objectContaining(body),
+    );
   });
 
   it("POST /benchmarks: 400 on Zod validation failure", async () => {

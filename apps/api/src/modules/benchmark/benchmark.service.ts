@@ -19,10 +19,10 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Prisma, type Run as PrismaRun } from "@prisma/client";
-import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService, type DecryptedConnection } from "../connection/connection.service.js";
 import { RunRepository } from "../run/run.repository.js";
 import { signCallbackToken } from "./callbacks/hmac-token.js";
 import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
@@ -105,7 +105,6 @@ export function runRowToBenchmarkSummary(row: PrismaRun): BenchmarkRunSummary {
 @Injectable()
 export class BenchmarkService {
   protected readonly log = new Logger(BenchmarkService.name);
-  private readonly key: Buffer;
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
   private readonly defaultMaxDuration: number;
@@ -119,8 +118,8 @@ export class BenchmarkService {
     @Inject(BENCHMARK_DRIVER) private readonly driver: BenchmarkExecutionDriver,
     config: ConfigService<Env, true>,
     private readonly runs: RunRepository,
+    private readonly connections: ConnectionService,
   ) {
-    this.key = decodeKey(config.get("BENCHMARK_API_KEY_ENCRYPTION_KEY", { infer: true }) as string);
     this.callbackSecret = Buffer.from(
       config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as string,
       "utf8",
@@ -149,7 +148,11 @@ export class BenchmarkService {
     this.driverKind = benchmarkDriver === "k8s" ? "k8s" : "local";
   }
 
-  async create(req: CreateBenchmarkRequest, user: JwtPayload): Promise<BenchmarkRunDto> {
+  async create(
+    userId: string,
+    conn: DecryptedConnection,
+    req: CreateBenchmarkRequest,
+  ): Promise<BenchmarkRunDto> {
     if (req.datasetName === "sharegpt") {
       throw new BadRequestException({
         code: ErrorCodes.BENCHMARK_DATASET_UNSUPPORTED,
@@ -160,7 +163,7 @@ export class BenchmarkService {
     // Check for duplicate active benchmark names for this user.
     const dupes = await this.prisma.run.count({
       where: {
-        userId: user.sub,
+        userId,
         name: req.name,
         kind: "benchmark",
         status: { in: [...ACTIVE_STATES] },
@@ -173,20 +176,19 @@ export class BenchmarkService {
       });
     }
 
-    const cipher = encrypt(req.apiKey, this.key);
     const created = await this.runs.create({
-      userId: user.sub,
+      userId,
+      connectionId: conn.id,
       kind: "benchmark",
       tool: "guidellm",
       driverKind: this.driverKind,
       mode: mapProfileToMode(req.profile),
       name: req.name,
       description: req.description ?? null,
-      apiKeyCipher: cipher,
       scenario: {
         apiType: req.apiType,
-        apiBaseUrl: req.apiBaseUrl,
-        model: req.model,
+        apiBaseUrl: conn.baseUrl,
+        model: conn.model,
         dataset: {
           name: req.datasetName,
           inputTokens: req.datasetInputTokens ?? null,
@@ -208,10 +210,16 @@ export class BenchmarkService {
     const row = await this.runs.findById(runId);
     if (!row) throw new Error(`BenchmarkService.start: row ${runId} not found`);
 
-    if (!row.apiKeyCipher) {
-      throw new Error(`BenchmarkService.start: row ${runId} missing apiKeyCipher`);
+    if (!row.userId || !row.connectionId) {
+      throw new BadRequestException("Connection no longer exists");
     }
-    const apiKey = decrypt(row.apiKeyCipher, this.key);
+    let conn: DecryptedConnection;
+    try {
+      conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
+    } catch {
+      throw new BadRequestException("Connection no longer exists");
+    }
+
     const callbackToken = signCallbackToken(
       row.id,
       this.callbackSecret,
@@ -226,9 +234,9 @@ export class BenchmarkService {
       benchmarkId: row.id,
       profile: params.profile as BenchmarkExecutionContext["profile"],
       apiType: scenario.apiType as BenchmarkExecutionContext["apiType"],
-      apiBaseUrl: scenario.apiBaseUrl as string,
-      apiKey,
-      model: scenario.model as string,
+      apiBaseUrl: conn.baseUrl,
+      apiKey: conn.apiKey,
+      model: conn.model,
       datasetName: dataset.name as BenchmarkExecutionContext["datasetName"],
       datasetInputTokens: (dataset.inputTokens as number | undefined) ?? undefined,
       datasetOutputTokens: (dataset.outputTokens as number | undefined) ?? undefined,

@@ -24,6 +24,7 @@ import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkService } from "./benchmark.service.js";
 
 class CreateBenchmarkRequestDto extends createZodDto(CreateBenchmarkRequestSchema) {}
@@ -33,18 +34,22 @@ class ListBenchmarksResponseDto extends createZodDto(ListBenchmarksResponseSchem
 @ApiTags("benchmark")
 @Controller("benchmarks")
 export class BenchmarkController {
-  constructor(private readonly svc: BenchmarkService) {}
+  constructor(
+    private readonly svc: BenchmarkService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({ summary: "Create a benchmark run" })
   @ApiBody({ type: CreateBenchmarkRequestDto })
   @ApiOkResponse({ type: BenchmarkRunDto })
   @Post()
-  create(
+  async create(
     @Body(new ZodValidationPipe(CreateBenchmarkRequestSchema))
     body: CreateBenchmarkRequest,
     @CurrentUser() user: JwtPayload,
   ): Promise<BenchmarkRun> {
-    return this.svc.create(body, user);
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+    return this.svc.create(user.sub, conn, body);
   }
 
   @ApiOperation({ summary: "List benchmark runs (cursor-paginated, newest first)" })
