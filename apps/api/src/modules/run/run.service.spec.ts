@@ -29,6 +29,7 @@ describe("RunService", () => {
     service = moduleRef.get(RunService);
     prisma = moduleRef.get(PrismaService);
 
+    await prisma.baseline.deleteMany();
     await prisma.run.deleteMany();
     await prisma.user.deleteMany();
   });

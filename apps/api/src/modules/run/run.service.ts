@@ -1,6 +1,6 @@
 import type { ListRunsQuery, ListRunsResponse, Run } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { RunRepository, type RunWithConnection } from "./run.repository.js";
+import { RunRepository, type RunWithRelations } from "./run.repository.js";
 
 @Injectable()
 export class RunService {
@@ -44,7 +44,7 @@ export class RunService {
  * Returning ciphertext over an authenticated HTTP API would enable offline
  * dictionary attacks on the encryption key.
  */
-function toContract(row: RunWithConnection): Run {
+function toContract(row: RunWithRelations): Run {
   return {
     id: row.id,
     userId: row.userId,
@@ -71,7 +71,11 @@ function toContract(row: RunWithConnection): Run {
     parentRunId: row.parentRunId,
     baselineId: row.baselineId,
     baselineFor: row.baselineFor
-      ? { id: row.baselineFor.id, name: row.baselineFor.name, createdAt: row.baselineFor.createdAt.toISOString() }
+      ? {
+          id: row.baselineFor.id,
+          name: row.baselineFor.name,
+          createdAt: row.baselineFor.createdAt.toISOString(),
+        }
       : null,
     logs: row.logs,
     createdAt: row.createdAt.toISOString(),
