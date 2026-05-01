@@ -103,7 +103,7 @@ describe("RunController", () => {
     expect(result.items[0].userId).toBe(owner.id);
   });
 
-  it("does not leak apiKeyCipher in detail response", async () => {
+  it("does not leak internal fields in detail response", async () => {
     const owner = await prisma.user.create({
       data: { email: "rc-cipher@example.com", passwordHash: "x" },
     });
@@ -116,7 +116,6 @@ describe("RunController", () => {
         mode: "fixed",
         driverKind: "local",
         params: {},
-        apiKeyCipher: "this-must-not-leak",
       },
     });
 

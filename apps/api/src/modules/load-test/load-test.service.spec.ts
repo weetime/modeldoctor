@@ -30,7 +30,7 @@ describe("LoadTestService", () => {
     prisma = moduleRef.get(PrismaService);
 
     await prisma.run.deleteMany({ where: { tool: "vegeta", userId: { not: undefined } } });
-    await prisma.user.deleteMany({ where: { email: { startsWith: "lt-svc-" } } });
+    await prisma.user.deleteMany({ where: { email: { startsWith: "lt-svc" } } });
   });
 
   afterAll(async () => {
