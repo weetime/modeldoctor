@@ -18,11 +18,12 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Run as PrismaRun } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { RunRepository } from "../run/run.repository.js";
 import { signCallbackToken } from "./callbacks/hmac-token.js";
 import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
 import type {
@@ -34,7 +35,77 @@ export const ACTIVE_STATES = ["pending", "submitted", "running"] as const;
 export const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
 const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
-type BenchmarkRow = Awaited<ReturnType<PrismaService["benchmarkRun"]["findUnique"]>>;
+/** Map guidellm profile names to the unified Run.mode enum. */
+function mapProfileToMode(
+  profile: string,
+): "fixed" | "ramp-up" | "throughput" | "sla-target" {
+  switch (profile) {
+    case "throughput":
+    case "generation_heavy":
+      return "throughput";
+    case "latency":
+    case "long_context":
+    case "sharegpt":
+    default:
+      return "fixed";
+  }
+}
+
+/** Translate a Run row back to the legacy BenchmarkRun DTO shape. */
+export function runRowToBenchmark(row: PrismaRun): BenchmarkRunDto {
+  const scenario = (row.scenario ?? {}) as Record<string, unknown>;
+  const dataset = (scenario.dataset ?? {}) as Record<string, unknown>;
+  const params = (row.params ?? {}) as Record<string, unknown>;
+  return {
+    id: row.id,
+    userId: row.userId,
+    name: row.name ?? "",
+    description: row.description,
+    profile: (params.profile as BenchmarkRunDto["profile"] | undefined) ?? "custom",
+    apiType: scenario.apiType as BenchmarkRunDto["apiType"],
+    apiBaseUrl: scenario.apiBaseUrl as string,
+    model: scenario.model as string,
+    datasetName: (dataset.name as BenchmarkRunDto["datasetName"] | undefined) ?? "random",
+    datasetInputTokens: (dataset.inputTokens as number | null | undefined) ?? null,
+    datasetOutputTokens: (dataset.outputTokens as number | null | undefined) ?? null,
+    datasetSeed: (dataset.seed as number | null | undefined) ?? null,
+    requestRate: (scenario.requestRate as number | undefined) ?? 0,
+    totalRequests: (scenario.totalRequests as number | undefined) ?? 1000,
+    state: row.status as BenchmarkRunDto["state"],
+    stateMessage: row.statusMessage,
+    progress: row.progress,
+    jobName: row.driverHandle,
+    metricsSummary: row.summaryMetrics as BenchmarkRunDto["metricsSummary"],
+    rawMetrics: row.rawOutput ?? null,
+    logs: row.logs,
+    createdAt: row.createdAt.toISOString(),
+    startedAt: row.startedAt?.toISOString() ?? null,
+    completedAt: row.completedAt?.toISOString() ?? null,
+  };
+}
+
+/** Translate a Run row to the lightweight BenchmarkRunSummary shape. */
+export function runRowToBenchmarkSummary(row: PrismaRun): BenchmarkRunSummary {
+  const scenario = (row.scenario ?? {}) as Record<string, unknown>;
+  const dataset = (scenario.dataset ?? {}) as Record<string, unknown>;
+  const params = (row.params ?? {}) as Record<string, unknown>;
+  return {
+    id: row.id,
+    userId: row.userId,
+    name: row.name ?? "",
+    profile: (params.profile as BenchmarkRunSummary["profile"] | undefined) ?? "custom",
+    apiType: scenario.apiType as BenchmarkRunSummary["apiType"],
+    apiBaseUrl: scenario.apiBaseUrl as string,
+    model: scenario.model as string,
+    datasetName: (dataset.name as BenchmarkRunSummary["datasetName"] | undefined) ?? "random",
+    state: row.status as BenchmarkState,
+    progress: row.progress,
+    metricsSummary: row.summaryMetrics as BenchmarkRunSummary["metricsSummary"],
+    createdAt: row.createdAt.toISOString(),
+    startedAt: row.startedAt?.toISOString() ?? null,
+    completedAt: row.completedAt?.toISOString() ?? null,
+  };
+}
 
 @Injectable()
 export class BenchmarkService {
@@ -46,11 +117,13 @@ export class BenchmarkService {
   private readonly validateBackend: boolean;
   private readonly processor: string | undefined;
   private readonly maxConcurrency: number;
+  private readonly driverKind: "local" | "k8s";
 
   constructor(
     private readonly prisma: PrismaService,
     @Inject(BENCHMARK_DRIVER) private readonly driver: BenchmarkExecutionDriver,
     config: ConfigService<Env, true>,
+    private readonly runs: RunRepository,
   ) {
     this.key = decodeKey(config.get("BENCHMARK_API_KEY_ENCRYPTION_KEY", { infer: true }) as string);
     this.callbackSecret = Buffer.from(
@@ -76,6 +149,10 @@ export class BenchmarkService {
     this.maxConcurrency = config.get("BENCHMARK_DEFAULT_MAX_CONCURRENCY", {
       infer: true,
     }) as number;
+    const benchmarkDriver = (
+      config.get("BENCHMARK_DRIVER", { infer: true }) ?? "subprocess"
+    ) as string;
+    this.driverKind = benchmarkDriver === "k8s" ? "k8s" : "local";
   }
 
   async create(req: CreateBenchmarkRequest, user: JwtPayload): Promise<BenchmarkRunDto> {
@@ -86,11 +163,13 @@ export class BenchmarkService {
       });
     }
 
-    const dupes = await this.prisma.benchmarkRun.count({
+    // Check for duplicate active benchmark names for this user.
+    const dupes = await this.prisma.run.count({
       where: {
         userId: user.sub,
         name: req.name,
-        state: { in: [...ACTIVE_STATES] },
+        kind: "benchmark",
+        status: { in: [...ACTIVE_STATES] },
       },
     });
     if (dupes > 0) {
@@ -101,23 +180,30 @@ export class BenchmarkService {
     }
 
     const cipher = encrypt(req.apiKey, this.key);
-    const created = await this.prisma.benchmarkRun.create({
-      data: {
-        userId: user.sub,
-        name: req.name,
-        description: req.description ?? null,
-        profile: req.profile,
+    const created = await this.runs.create({
+      userId: user.sub,
+      kind: "benchmark",
+      tool: "guidellm",
+      driverKind: this.driverKind,
+      mode: mapProfileToMode(req.profile),
+      name: req.name,
+      description: req.description ?? null,
+      apiKeyCipher: cipher,
+      scenario: {
         apiType: req.apiType,
         apiBaseUrl: req.apiBaseUrl,
-        apiKeyCipher: cipher,
         model: req.model,
-        datasetName: req.datasetName,
-        datasetInputTokens: req.datasetInputTokens ?? null,
-        datasetOutputTokens: req.datasetOutputTokens ?? null,
-        datasetSeed: req.datasetSeed ?? null,
+        dataset: {
+          name: req.datasetName,
+          inputTokens: req.datasetInputTokens ?? null,
+          outputTokens: req.datasetOutputTokens ?? null,
+          seed: req.datasetSeed ?? null,
+        },
         requestRate: req.requestRate,
         totalRequests: req.totalRequests,
-        state: "pending",
+      },
+      params: {
+        profile: req.profile,
       },
     });
 
@@ -125,29 +211,33 @@ export class BenchmarkService {
   }
 
   async start(runId: string): Promise<BenchmarkRunDto> {
-    const row = await this.prisma.benchmarkRun.findUnique({ where: { id: runId } });
+    const row = await this.runs.findById(runId);
     if (!row) throw new Error(`BenchmarkService.start: row ${runId} not found`);
 
-    const apiKey = decrypt(row.apiKeyCipher, this.key);
+    const apiKey = decrypt(row.apiKeyCipher!, this.key);
     const callbackToken = signCallbackToken(
       row.id,
       this.callbackSecret,
       this.defaultMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
     );
 
+    const scenario = (row.scenario ?? {}) as Record<string, unknown>;
+    const dataset = (scenario.dataset ?? {}) as Record<string, unknown>;
+    const params = (row.params ?? {}) as Record<string, unknown>;
+
     const ctx: BenchmarkExecutionContext = {
       benchmarkId: row.id,
-      profile: row.profile as BenchmarkExecutionContext["profile"],
-      apiType: row.apiType as BenchmarkExecutionContext["apiType"],
-      apiBaseUrl: row.apiBaseUrl,
+      profile: (params.profile as BenchmarkExecutionContext["profile"]),
+      apiType: (scenario.apiType as BenchmarkExecutionContext["apiType"]),
+      apiBaseUrl: scenario.apiBaseUrl as string,
       apiKey,
-      model: row.model,
-      datasetName: row.datasetName as BenchmarkExecutionContext["datasetName"],
-      datasetInputTokens: row.datasetInputTokens ?? undefined,
-      datasetOutputTokens: row.datasetOutputTokens ?? undefined,
-      datasetSeed: row.datasetSeed ?? undefined,
-      requestRate: row.requestRate,
-      totalRequests: row.totalRequests,
+      model: scenario.model as string,
+      datasetName: (dataset.name as BenchmarkExecutionContext["datasetName"]),
+      datasetInputTokens: (dataset.inputTokens as number | undefined) ?? undefined,
+      datasetOutputTokens: (dataset.outputTokens as number | undefined) ?? undefined,
+      datasetSeed: (dataset.seed as number | undefined) ?? undefined,
+      requestRate: scenario.requestRate as number,
+      totalRequests: scenario.totalRequests as number,
       maxDurationSeconds: this.defaultMaxDuration,
       callbackUrl: this.callbackUrl,
       callbackToken,
@@ -162,104 +252,112 @@ export class BenchmarkService {
       handle = result.handle;
     } catch (e) {
       const msg = (e as Error).message ?? String(e);
-      await this.prisma.benchmarkRun.update({
-        where: { id: row.id },
-        data: {
-          state: "failed",
-          stateMessage: msg.slice(0, 2048),
-          completedAt: new Date(),
-        },
+      await this.runs.update(row.id, {
+        status: "failed",
+        statusMessage: msg.slice(0, 2048),
+        completedAt: new Date(),
       });
       throw e;
     }
 
-    const updated = await this.prisma.benchmarkRun.update({
-      where: { id: row.id },
-      data: {
-        state: "submitted",
-        jobName: handle,
-        startedAt: new Date(),
-      },
+    const updated = await this.runs.update(row.id, {
+      status: "submitted",
+      driverHandle: handle,
+      startedAt: new Date(),
     });
-    return toBenchmarkRunDto(updated);
+    return runRowToBenchmark(updated);
   }
 
   async list(query: ListBenchmarksQuery, user: JwtPayload): Promise<ListBenchmarksResponse> {
     const limit = query.limit;
     const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
-    const where: Record<string, unknown> = { ...userScope };
-    if (query.state) where.state = query.state;
-    if (query.profile) where.profile = query.profile;
+
+    // Build raw prisma where for profile filter (stored in params JSON).
+    // RunRepository.list doesn't support profile filter — we do it via prisma.run.findMany.
+    const where: Prisma.RunWhereInput = {
+      kind: "benchmark",
+      ...userScope,
+    };
+    if (query.state) where.status = query.state;
+    if (query.profile) {
+      where.params = { path: ["profile"], equals: query.profile };
+    }
     if (query.search) where.name = { contains: query.search, mode: "insensitive" };
 
-    const rows = await this.prisma.benchmarkRun.findMany({
+    const rows = await this.prisma.run.findMany({
       take: limit + 1,
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
     const pageRows = rows.slice(0, limit);
-    const items = pageRows.map(toBenchmarkRunSummary);
+    const items = pageRows.map(runRowToBenchmarkSummary);
     const nextCursor = rows.length > limit ? pageRows[pageRows.length - 1].id : null;
     return { items, nextCursor };
   }
 
   async detail(id: string, user: JwtPayload): Promise<BenchmarkRunDto> {
     const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
-    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    const row = await this.prisma.run.findFirst({
+      where: { id, kind: "benchmark", ...userScope },
+    });
     if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
-    return toBenchmarkRunDto(row);
+    return runRowToBenchmark(row);
   }
 
   async cancel(id: string, user: JwtPayload): Promise<BenchmarkRunDto> {
     const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
-    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    const row = await this.prisma.run.findFirst({
+      where: { id, kind: "benchmark", ...userScope },
+    });
     if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
 
-    if ((TERMINAL_STATES as readonly string[]).includes(row.state)) {
+    if ((TERMINAL_STATES as readonly string[]).includes(row.status)) {
       throw new BadRequestException({
         code: ErrorCodes.BENCHMARK_ALREADY_TERMINAL,
-        message: `Cannot cancel a benchmark in state '${row.state}'`,
+        message: `Cannot cancel a benchmark in state '${row.status}'`,
       });
     }
 
-    if (row.state !== "pending" && row.jobName) {
+    if (row.status !== "pending" && row.driverHandle) {
       try {
-        await this.driver.cancel(row.jobName);
+        await this.driver.cancel(row.driverHandle);
       } catch (e) {
         this.log.warn(
-          `driver.cancel threw for ${row.id} (handle ${row.jobName}); marking canceled anyway: ${(e as Error).message}`,
+          `driver.cancel threw for ${row.id} (handle ${row.driverHandle}); marking canceled anyway: ${(e as Error).message}`,
         );
       }
     }
 
-    const updated = await this.prisma.benchmarkRun.update({
-      where: { id: row.id },
-      data: { state: "canceled", completedAt: new Date() },
+    const updated = await this.runs.update(row.id, {
+      status: "canceled",
+      completedAt: new Date(),
     });
-    return toBenchmarkRunDto(updated);
+    return runRowToBenchmark(updated);
   }
 
   async delete(id: string, user: JwtPayload): Promise<void> {
     const userScope = user.roles.includes("admin") ? {} : { userId: user.sub };
-    const row = await this.prisma.benchmarkRun.findFirst({ where: { id, ...userScope } });
+    const row = await this.prisma.run.findFirst({
+      where: { id, kind: "benchmark", ...userScope },
+    });
     if (!row) throw new NotFoundException({ code: "NOT_FOUND", message: "benchmark not found" });
-    if (!(TERMINAL_STATES as readonly string[]).includes(row.state)) {
+    if (!(TERMINAL_STATES as readonly string[]).includes(row.status)) {
       throw new ConflictException({
         code: ErrorCodes.BENCHMARK_NOT_TERMINAL,
-        message: `Cannot delete a benchmark in state '${row.state}'. Cancel it first.`,
+        message: `Cannot delete a benchmark in state '${row.status}'. Cancel it first.`,
       });
     }
-    await this.prisma.benchmarkRun.delete({ where: { id: row.id } });
+    await this.runs.delete(row.id);
   }
 
   async handleStateCallback(id: string, body: BenchmarkStateCallback): Promise<void> {
-    const row = await this.prisma.benchmarkRun.findUnique({ where: { id } });
+    const row = await this.runs.findById(id);
     if (!row) {
       this.log.warn(`state callback for missing run ${id}; ignoring`);
       return;
     }
-    const cur = row.state as BenchmarkState;
+    const cur = row.status as BenchmarkState;
     const next = body.state;
 
     // Forward-only: a callback cannot drag a terminal row backwards.
@@ -273,26 +371,20 @@ export class BenchmarkService {
 
     if (next === "running") {
       if (cur === "running") return; // duplicate ok
-      await this.prisma.benchmarkRun.update({
-        where: { id },
-        data: {
-          state: "running",
-          progress: body.progress ?? null,
-          stateMessage: null,
-        },
+      await this.runs.update(id, {
+        status: "running",
+        progress: body.progress ?? null,
+        statusMessage: null,
       });
       return;
     }
 
     if (next === "completed" || next === "failed") {
-      await this.prisma.benchmarkRun.update({
-        where: { id },
-        data: {
-          state: next,
-          stateMessage: body.stateMessage?.slice(0, 2048) ?? null,
-          progress: body.progress ?? null,
-          completedAt: new Date(),
-        },
+      await this.runs.update(id, {
+        status: next,
+        statusMessage: body.stateMessage?.slice(0, 2048) ?? null,
+        progress: body.progress ?? null,
+        completedAt: new Date(),
       });
       return;
     }
@@ -301,70 +393,24 @@ export class BenchmarkService {
   }
 
   async handleMetricsCallback(id: string, body: BenchmarkMetricsCallback): Promise<void> {
-    const row = await this.prisma.benchmarkRun.findUnique({ where: { id } });
+    const row = await this.runs.findById(id);
     if (!row) {
       this.log.warn(`metrics callback for missing run ${id}; ignoring`);
       return;
     }
-    await this.prisma.benchmarkRun.update({
-      where: { id },
-      data: {
-        metricsSummary: body.metricsSummary as Prisma.InputJsonValue,
-        rawMetrics:
-          body.rawMetrics === undefined || body.rawMetrics === null
-            ? Prisma.DbNull
-            : (body.rawMetrics as Prisma.InputJsonValue),
-        logs: body.logs ?? null,
-      },
+    await this.runs.update(id, {
+      summaryMetrics: body.metricsSummary as Prisma.InputJsonValue,
+      rawOutput:
+        body.rawMetrics === undefined || body.rawMetrics === null
+          ? null
+          : (body.rawMetrics as Prisma.InputJsonValue),
+      logs: body.logs ?? null,
     });
   }
 }
 
-export function toBenchmarkRunDto(row: NonNullable<BenchmarkRow>): BenchmarkRunDto {
-  // Strip apiKeyCipher; cast JSON columns; serialize dates.
-  return {
-    id: row.id,
-    userId: row.userId,
-    name: row.name,
-    description: row.description,
-    profile: row.profile as BenchmarkRunDto["profile"],
-    apiType: row.apiType as BenchmarkRunDto["apiType"],
-    apiBaseUrl: row.apiBaseUrl,
-    model: row.model,
-    datasetName: row.datasetName as BenchmarkRunDto["datasetName"],
-    datasetInputTokens: row.datasetInputTokens,
-    datasetOutputTokens: row.datasetOutputTokens,
-    datasetSeed: row.datasetSeed,
-    requestRate: row.requestRate,
-    totalRequests: row.totalRequests,
-    state: row.state as BenchmarkState,
-    stateMessage: row.stateMessage,
-    progress: row.progress,
-    jobName: row.jobName,
-    metricsSummary: row.metricsSummary as BenchmarkRunDto["metricsSummary"],
-    rawMetrics: row.rawMetrics ?? null,
-    logs: row.logs,
-    createdAt: row.createdAt.toISOString(),
-    startedAt: row.startedAt?.toISOString() ?? null,
-    completedAt: row.completedAt?.toISOString() ?? null,
-  };
-}
-
-export function toBenchmarkRunSummary(row: NonNullable<BenchmarkRow>): BenchmarkRunSummary {
-  return {
-    id: row.id,
-    userId: row.userId,
-    name: row.name,
-    profile: row.profile as BenchmarkRunSummary["profile"],
-    apiType: row.apiType as BenchmarkRunSummary["apiType"],
-    apiBaseUrl: row.apiBaseUrl,
-    model: row.model,
-    datasetName: row.datasetName as BenchmarkRunSummary["datasetName"],
-    state: row.state as BenchmarkState,
-    progress: row.progress,
-    metricsSummary: row.metricsSummary as BenchmarkRunSummary["metricsSummary"],
-    createdAt: row.createdAt.toISOString(),
-    startedAt: row.startedAt?.toISOString() ?? null,
-    completedAt: row.completedAt?.toISOString() ?? null,
-  };
-}
+// Legacy adapter functions kept for backward compatibility with tests.
+// These were previously the sole DTO serializers; now runRowToBenchmark/
+// runRowToBenchmarkSummary are the canonical ones.
+export { runRowToBenchmark as toBenchmarkRunDto };
+export { runRowToBenchmarkSummary as toBenchmarkRunSummary };

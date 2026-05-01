@@ -14,11 +14,13 @@ import { DatabaseModule } from "./database/database.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
 import { BenchmarkModule } from "./modules/benchmark/benchmark.module.js";
+import { ConnectionModule } from "./modules/connection/connection.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { LoadTestModule } from "./modules/load-test/load-test.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
+import { RunModule } from "./modules/run/run.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
@@ -66,7 +68,9 @@ import { UsersModule } from "./modules/users/users.module.js";
     E2ETestModule,
     LoadTestModule,
     PlaygroundModule,
+    RunModule,
     BenchmarkModule,
+    ConnectionModule,
     ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
