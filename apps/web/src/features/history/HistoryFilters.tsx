@@ -105,6 +105,7 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
       <Input
         placeholder={t("filters.search")}
         className="w-[220px]"
+        aria-label={t("filters.search")}
         value={query.search ?? ""}
         onChange={(e) => patch({ search: e.target.value || undefined })}
       />
@@ -114,6 +115,7 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
         <Input
           type="datetime-local"
           className="w-[200px]"
+          aria-label={t("filters.createdAfter")}
           value={query.createdAfter?.slice(0, 16) ?? ""}
           onChange={(e) =>
             patch({
@@ -128,6 +130,7 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
         <Input
           type="datetime-local"
           className="w-[200px]"
+          aria-label={t("filters.createdBefore")}
           value={query.createdBefore?.slice(0, 16) ?? ""}
           onChange={(e) =>
             patch({
