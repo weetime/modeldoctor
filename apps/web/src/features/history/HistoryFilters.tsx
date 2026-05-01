@@ -13,7 +13,10 @@ import type {
   RunStatus,
   RunTool,
 } from "@modeldoctor/contracts";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const ALL = "__all__";
 
@@ -39,6 +42,29 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
   function patch(p: Partial<ListRunsQuery>) {
     onChange({ ...query, ...p });
   }
+
+  // Local search state, debounced before pushing into the URL/query. Without
+  // this the input fires a network request on every keystroke (gemini PR #67
+  // review). The query.search → state sync handles "Clear all" + back/forward.
+  const [searchDraft, setSearchDraft] = useState(query.search ?? "");
+  const lastPushed = useRef(query.search ?? "");
+  useEffect(() => {
+    const next = query.search ?? "";
+    if (next !== lastPushed.current) {
+      setSearchDraft(next);
+      lastPushed.current = next;
+    }
+  }, [query.search]);
+  useEffect(() => {
+    const trimmed = searchDraft.trim();
+    if (trimmed === (lastPushed.current || "")) return;
+    const handle = window.setTimeout(() => {
+      lastPushed.current = trimmed;
+      patch({ search: trimmed || undefined });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft]);
 
   const isFiltered =
     query.kind !== undefined ||
@@ -106,8 +132,8 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
         placeholder={t("filters.search")}
         className="w-[220px]"
         aria-label={t("filters.search")}
-        value={query.search ?? ""}
-        onChange={(e) => patch({ search: e.target.value || undefined })}
+        value={searchDraft}
+        onChange={(e) => setSearchDraft(e.target.value)}
       />
 
       <div className="flex items-center gap-1 text-sm">
