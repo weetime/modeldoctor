@@ -12,12 +12,8 @@ export type ApiType = z.infer<typeof ApiTypeSchema>;
 
 export const LoadTestRequestSchema = z
   .object({
+    connectionId: z.string().min(1),
     apiType: ApiTypeSchema.optional(),
-    apiBaseUrl: z.string().min(1),
-    apiKey: z.string().min(1),
-    model: z.string().min(1),
-    customHeaders: z.string().optional(),
-    queryParams: z.string().optional(),
     rate: z.coerce.number().int().min(1).max(10_000),
     duration: z.coerce.number().int().min(1).max(3_600),
   })
