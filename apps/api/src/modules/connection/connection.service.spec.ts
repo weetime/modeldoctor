@@ -198,6 +198,37 @@ describe("ConnectionService", () => {
       expect("apiKey" in out).toBe(false);
       expect(out.name).toBe("renamed");
     });
+
+    it("clears prometheusUrl + serverKind when caller passes null", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({
+          apiKeyCipher: cipher,
+          prometheusUrl: "http://old:9090",
+          serverKind: "vllm",
+        }),
+      );
+      let updateData: Record<string, unknown> = {};
+      prismaMock.connection.update.mockImplementation(
+        async (args: { data: Record<string, unknown> }) => {
+          updateData = args.data;
+          return makeRow({
+            apiKeyCipher: cipher,
+            prometheusUrl: null,
+            serverKind: null,
+          });
+        },
+      );
+      const out = await service.update("u_1", "c_1", {
+        prometheusUrl: null,
+        serverKind: null,
+      });
+      expect(updateData.prometheusUrl).toBeNull();
+      expect(updateData.serverKind).toBeNull();
+      // The DTO returned should reflect the cleared values.
+      expect(out.prometheusUrl).toBeNull();
+      expect(out.serverKind).toBeNull();
+    });
   });
 
   describe("getOwnedDecrypted", () => {
