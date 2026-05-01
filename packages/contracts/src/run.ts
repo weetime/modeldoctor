@@ -78,6 +78,7 @@ export const listRunsQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().positive().max(100).default(20),
   kind: runKindSchema.optional(),
+  tool: runToolSchema.optional(),
   status: runStatusSchema.optional(),
   connectionId: z.string().optional(),
   parentRunId: z.string().optional(),

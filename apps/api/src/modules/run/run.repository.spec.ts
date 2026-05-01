@@ -90,6 +90,34 @@ describe("RunRepository", () => {
     expect(page2.nextCursor).toBeNull();
   });
 
+  it("filters by tool", async () => {
+    const user = await prisma.user.create({
+      data: { email: "lt-tool@example.com", passwordHash: "x" },
+    });
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "vegeta",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+
+    const result = await repo.list({ tool: "vegeta" });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].tool).toBe("vegeta");
+  });
+
   it("updates status + driverHandle", async () => {
     const user = await prisma.user.create({
       data: { email: "u3@example.com", passwordHash: "x" },

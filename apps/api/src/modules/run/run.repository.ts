@@ -35,6 +35,7 @@ export type UpdateRunInput = Partial<{
 
 export type ListRunsInput = {
   kind?: "benchmark" | "e2e";
+  tool?: string;
   status?: string;
   connectionId?: string;
   parentRunId?: string;
@@ -80,6 +81,7 @@ export class RunRepository {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.RunWhereInput = {};
     if (input.kind) where.kind = input.kind;
+    if (input.tool) where.tool = input.tool as "guidellm" | "genai-perf" | "vegeta" | "e2e" | "custom";
     if (input.status) where.status = input.status;
     if (input.connectionId) where.connectionId = input.connectionId;
     if (input.parentRunId) where.parentRunId = input.parentRunId;
