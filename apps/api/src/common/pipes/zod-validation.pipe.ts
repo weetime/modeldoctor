@@ -11,11 +11,12 @@ export class ZodValidationPipe implements PipeTransform {
   constructor(private readonly schema: ZodSchema) {}
 
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
-    // When applied at the method level via @UsePipes, NestJS invokes the
-    // pipe for every parameter (body, params, query, custom decorators
-    // like @CurrentUser). Validate only the request body — other params
-    // (e.g. JwtPayload from @CurrentUser) pass through unchanged.
-    if (metadata.type !== "body") return value;
+    // Skip values produced by custom parameter decorators (e.g. @CurrentUser
+    // returning JwtPayload). Method-level @UsePipes(pipe) would otherwise run
+    // this validator on every parameter, including @CurrentUser, and surface
+    // misleading "Required" errors for fields that don't belong on the user
+    // object. Body / query / param pipes still flow through.
+    if (metadata.type === "custom") return value;
     const result = this.schema.safeParse(value);
     if (result.success) return result.data;
 
