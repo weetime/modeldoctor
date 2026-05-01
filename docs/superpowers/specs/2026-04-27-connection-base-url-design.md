@@ -2,6 +2,14 @@
 
 **Status:** Draft — pending user approval
 **Date:** 2026-04-27
+
+> **Update (2026-05-01):** Credentials moved server-side per #37; see
+> `docs/superpowers/specs/2026-05-01-issue-37-connections-backend-design.md`.
+> Field `apiBaseUrl` is now `Connection.baseUrl` (DB column `base_url`),
+> and the public Connection shape no longer carries plaintext apiKey on
+> the wire — list/detail responses expose `apiKeyPreview` only, and test
+> endpoints accept `connectionId` instead of inline credentials.
+
 **Predecessors:**
 
 - `2026-04-25-benchmark-design.md` — established Benchmark feature; Phase 5 smoke surfaced the URL semantics gap.
