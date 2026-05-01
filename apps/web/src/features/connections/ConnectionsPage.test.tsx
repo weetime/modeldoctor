@@ -19,6 +19,8 @@ const seedList: ConnectionPublic[] = [
     tags: ["vLLM", "production"],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
+    prometheusUrl: null,
+    serverKind: null,
   },
   {
     id: "c2",
@@ -33,6 +35,8 @@ const seedList: ConnectionPublic[] = [
     tags: ["TEI"],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
+    prometheusUrl: null,
+    serverKind: null,
   },
 ];
 

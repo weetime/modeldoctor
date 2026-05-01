@@ -23,6 +23,8 @@ const CONN_A: ConnectionPublic = {
   tags: [],
   createdAt: "2026-04-26T14:22:00Z",
   updatedAt: "2026-04-26T14:22:00Z",
+  prometheusUrl: null,
+  serverKind: null,
 };
 const CONN_B: ConnectionPublic = { ...CONN_A, id: "cb", name: "B", baseUrl: "http://b" };
 
