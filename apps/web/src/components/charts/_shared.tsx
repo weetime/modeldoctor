@@ -91,6 +91,11 @@ export interface DomainChartProps {
   theme?: ChartTheme;
 }
 
+/**
+ * Assigns a stable round-robin color from the chart palette to each run.
+ * Caller must ensure `runIds` contains no duplicates; duplicates silently
+ * retain the color of the last occurrence.
+ */
 export function assignRunColors(runIds: readonly string[]): Record<string, string> {
   const out: Record<string, string> = {};
   runIds.forEach((id, i) => {

@@ -23,4 +23,13 @@ describe("assignRunColors", () => {
     expect(m.r0).toBe(m.r8);
     expect(m.r1).toBe(m.r9);
   });
+
+  it("allocates by position, not by id content", () => {
+    const m1 = assignRunColors(["alice", "bob"]);
+    const m2 = assignRunColors(["charlie", "alice"]);
+    // "alice" is at index 0 in m1 and index 1 in m2 → different colors
+    expect(m1.alice).not.toBe(m2.alice);
+    // "charlie" (index 0 in m2) gets the same color as "alice" (index 0 in m1)
+    expect(m2.charlie).toBe(m1.alice);
+  });
 });
