@@ -48,6 +48,7 @@ function makeRun(overrides: Partial<Run> = {}): Run {
     templateVersion: null,
     parentRunId: null,
     baselineId: null,
+    baselineFor: null,
     logs: "log line 1\nlog line 2",
     createdAt: "2026-04-30T12:00:00.000Z",
     startedAt: "2026-04-30T12:00:01.000Z",

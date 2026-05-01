@@ -54,6 +54,7 @@ function makeRun(
     templateVersion: null,
     parentRunId: null,
     baselineId: null,
+    baselineFor: null,
     logs: null,
     createdAt: "2026-04-30T12:00:00.000Z",
     startedAt: "2026-04-30T12:00:01.000Z",
