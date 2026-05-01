@@ -33,7 +33,8 @@ export class EmbeddingsController {
   @HttpCode(HttpStatus.OK)
   async embeddings(
     @CurrentUser() user: JwtPayload,
-    @Body(new ZodValidationPipe(PlaygroundEmbeddingsRequestSchema)) body: PlaygroundEmbeddingsRequest,
+    @Body(new ZodValidationPipe(PlaygroundEmbeddingsRequestSchema))
+    body: PlaygroundEmbeddingsRequest,
   ): Promise<PlaygroundEmbeddingsResponse> {
     const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
     return this.svc.run(conn, body);

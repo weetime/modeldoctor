@@ -72,14 +72,10 @@ describe("E2ETestService", () => {
       "executeProbes",
     ).mockResolvedValue(mockResults);
 
-    const result = await service.run(
-      u.id,
-      makeConn(),
-      {
-        connectionId: "conn-e2e-1",
-        probes: ["chat-text"],
-      },
-    );
+    const result = await service.run(u.id, makeConn(), {
+      connectionId: "conn-e2e-1",
+      probes: ["chat-text"],
+    });
 
     expect(result.runId).toBeDefined();
     expect(result.success).toBe(true);
@@ -113,14 +109,10 @@ describe("E2ETestService", () => {
       "executeProbes",
     ).mockResolvedValue(mockResults);
 
-    const result = await service.run(
-      u.id,
-      makeConn(),
-      {
-        connectionId: "conn-e2e-1",
-        probes: ["chat-text"],
-      },
-    );
+    const result = await service.run(u.id, makeConn(), {
+      connectionId: "conn-e2e-1",
+      probes: ["chat-text"],
+    });
 
     expect(result.runId).toBeDefined();
     expect(result.success).toBe(false);
@@ -145,14 +137,10 @@ describe("E2ETestService", () => {
       },
     ]);
 
-    const result = await service.run(
-      undefined,
-      makeConn(),
-      {
-        connectionId: "conn-e2e-1",
-        probes: ["chat-text"],
-      },
-    );
+    const result = await service.run(undefined, makeConn(), {
+      connectionId: "conn-e2e-1",
+      probes: ["chat-text"],
+    });
 
     const row = await prisma.run.findUnique({ where: { id: result.runId } });
     expect(row?.status).toBe("completed");

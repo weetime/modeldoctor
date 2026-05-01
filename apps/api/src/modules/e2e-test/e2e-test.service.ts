@@ -52,7 +52,11 @@ export class E2ETestService {
     );
   }
 
-  async run(userId: string | undefined, conn: DecryptedConnection, req: E2ETestRequest): Promise<E2ETestResponse> {
+  async run(
+    userId: string | undefined,
+    conn: DecryptedConnection,
+    req: E2ETestRequest,
+  ): Promise<E2ETestResponse> {
     // 1. Create Run row (status: pending)
     const created = await this.runs.create({
       userId: userId ?? null,

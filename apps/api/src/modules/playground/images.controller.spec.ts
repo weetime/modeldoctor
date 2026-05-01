@@ -62,11 +62,7 @@ describe("ImagesController.edit", () => {
     const { mock: connections, getOwnedDecrypted } = makeConnectionsMock();
     const ctrl = new ImagesController(svc, connections);
     await expect(
-      ctrl.edit(
-        makeUser(),
-        { mask: [makeFile({ originalname: "m.png" })] } as never,
-        validBody,
-      ),
+      ctrl.edit(makeUser(), { mask: [makeFile({ originalname: "m.png" })] } as never, validBody),
     ).rejects.toThrow(BadRequestException);
     expect(svc.runEdit).not.toHaveBeenCalled();
     expect(getOwnedDecrypted).not.toHaveBeenCalled();

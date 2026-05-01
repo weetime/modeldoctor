@@ -5,10 +5,7 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
-import {
-  ConnectionService,
-  type DecryptedConnection,
-} from "../connection/connection.service.js";
+import { ConnectionService, type DecryptedConnection } from "../connection/connection.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
@@ -94,11 +91,7 @@ describe("BenchmarkController", () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ id: "r1", state: "submitted" });
     expect(connections.getOwnedDecrypted).toHaveBeenCalledWith(fakeUser.sub, "conn-1");
-    expect(svc.create).toHaveBeenCalledWith(
-      fakeUser.sub,
-      fakeConn,
-      expect.objectContaining(body),
-    );
+    expect(svc.create).toHaveBeenCalledWith(fakeUser.sub, fakeConn, expect.objectContaining(body));
   });
 
   it("POST /benchmarks: 400 on Zod validation failure", async () => {

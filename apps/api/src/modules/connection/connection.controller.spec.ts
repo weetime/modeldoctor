@@ -1,4 +1,8 @@
-import type { ConnectionPublic, ConnectionWithSecret, ListConnectionsResponse } from "@modeldoctor/contracts";
+import type {
+  ConnectionPublic,
+  ConnectionWithSecret,
+  ListConnectionsResponse,
+} from "@modeldoctor/contracts";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";

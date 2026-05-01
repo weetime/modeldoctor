@@ -62,7 +62,11 @@ export class LoadTestService {
 
   constructor(private readonly runs: RunRepository) {}
 
-  async run(conn: DecryptedConnection, req: LoadTestRequest, user: JwtPayload): Promise<LoadTestResponse> {
+  async run(
+    conn: DecryptedConnection,
+    req: LoadTestRequest,
+    user: JwtPayload,
+  ): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
       : "chat";

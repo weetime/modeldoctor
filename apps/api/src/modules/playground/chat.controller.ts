@@ -4,15 +4,7 @@ import {
   type PlaygroundChatResponse,
   PlaygroundChatResponseSchema,
 } from "@modeldoctor/contracts";
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { createZodDto } from "nestjs-zod";

@@ -2,10 +2,7 @@ import type { CreateBenchmarkRequest } from "@modeldoctor/contracts";
 import { ConfigService } from "@nestjs/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
-import type {
-  ConnectionService,
-  DecryptedConnection,
-} from "../connection/connection.service.js";
+import type { ConnectionService, DecryptedConnection } from "../connection/connection.service.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
 

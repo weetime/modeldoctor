@@ -126,7 +126,7 @@ describe("ConnectionService", () => {
       let newCipher = "";
       prismaMock.connection.update.mockImplementation(
         async (args: { data: { apiKeyCipher?: string } }) => {
-          newCipher = args.data.apiKeyCipher!;
+          newCipher = args.data.apiKeyCipher ?? "";
           return makeRow({ apiKeyCipher: newCipher });
         },
       );

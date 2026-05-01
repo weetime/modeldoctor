@@ -44,10 +44,7 @@ export class ConnectionController {
   }
 
   @Get(":id")
-  detail(
-    @CurrentUser() user: JwtPayload,
-    @Param("id") id: string,
-  ): Promise<ConnectionPublic> {
+  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ConnectionPublic> {
     return this.service.findOwnedPublic(user.sub, id);
   }
 

@@ -8,7 +8,7 @@ import type {
 } from "@modeldoctor/contracts";
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { Connection as PrismaConnection, Prisma } from "@prisma/client";
+import type { Prisma, Connection as PrismaConnection } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -143,10 +143,7 @@ export class ConnectionService {
     };
   }
 
-  private toContractWithSecret(
-    row: PrismaConnection,
-    plaintext: string,
-  ): ConnectionWithSecret {
+  private toContractWithSecret(row: PrismaConnection, plaintext: string): ConnectionWithSecret {
     return {
       ...this.toContractPublic(row),
       apiKey: plaintext,
