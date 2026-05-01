@@ -162,6 +162,29 @@ describe("ConnectionService", () => {
       await expect(service.getOwnedDecrypted("u_1", "c_1")).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe("delete", () => {
+    it("throws ForbiddenException for cross-user access", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ userId: "u_other" }));
+      await expect(service.delete("u_1", "c_1")).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.connection.delete).not.toHaveBeenCalled();
+    });
+
+    it("calls prisma.delete after ownership check passes", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow());
+      prismaMock.connection.delete.mockResolvedValue(makeRow());
+      await service.delete("u_1", "c_1");
+      expect(prismaMock.connection.delete).toHaveBeenCalledWith({ where: { id: "c_1" } });
+    });
+  });
+
+  describe("update RBAC", () => {
+    it("throws ForbiddenException for cross-user access", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ userId: "u_other" }));
+      await expect(service.update("u_1", "c_1", { name: "x" })).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.connection.update).not.toHaveBeenCalled();
+    });
+  });
 });
 
 async function encryptForTest(plaintext: string): Promise<string> {

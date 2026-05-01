@@ -150,6 +150,7 @@ export class ConnectionService {
     return {
       ...this.toContractPublic(row),
       apiKey: plaintext,
+      apiKeyPreview: this.makePreview(plaintext),
     };
   }
 
