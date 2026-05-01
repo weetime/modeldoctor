@@ -66,14 +66,11 @@ export type BenchmarkMetricsSummary = z.infer<typeof BenchmarkMetricsSummarySche
 
 export const CreateBenchmarkRequestSchema = z
   .object({
+    connectionId: z.string().min(1),
     name: z.string().min(1).max(128),
     description: z.string().max(2048).optional(),
     profile: BenchmarkProfileSchema,
     apiType: BenchmarkApiTypeSchema,
-    /** Base URL of the OpenAI-compatible endpoint (no `/v1/...` path tail; guidellm appends it). */
-    apiBaseUrl: z.string().url(),
-    apiKey: z.string().min(1),
-    model: z.string().min(1),
     datasetName: BenchmarkDatasetSchema,
     datasetInputTokens: z.number().int().min(1).optional(),
     datasetOutputTokens: z.number().int().min(1).optional(),
