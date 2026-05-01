@@ -16,14 +16,14 @@ describe("E2ETest (e2e)", () => {
     await ctx.teardown();
   });
 
-  it("rejects missing apiBaseUrl", async () => {
+  it("rejects missing connectionId", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiKey: "k", model: "m", probes: ["chat-text"] })
+      .send({ probes: ["chat-text"] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
-    expect(res.body.error.message).toMatch(/apiBaseUrl/);
+    expect(res.body.error.message).toMatch(/connectionId/);
     expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
@@ -31,7 +31,7 @@ describe("E2ETest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", probes: [] })
+      .send({ connectionId: "fake-connection-id", probes: [] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/probes/);
@@ -42,7 +42,7 @@ describe("E2ETest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", probes: ["bogus"] })
+      .send({ connectionId: "fake-connection-id", probes: ["bogus"] })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/probes/);

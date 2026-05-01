@@ -19,12 +19,32 @@ describe("Run Unification smoke (e2e)", () => {
   let ctx: E2EContext;
   let accessToken: string;
   let userId: string;
+  let connectionId: string;
 
   beforeAll(async () => {
     ctx = await bootE2E();
     const registered = await registerUser(ctx.app, "smoke@example.com", "Password1!");
     accessToken = registered.token;
     userId = registered.user.id;
+
+    // Create a Connection so subsequent test calls can use connectionId
+    const connRes = await request(ctx.app.getHttpServer())
+      .post("/api/connections")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        name: "smoke-test-conn",
+        baseUrl: "http://localhost:11111", // intentionally unreachable
+        apiKey: "test-key",
+        model: "test-model",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+      });
+    if (connRes.status !== 201) {
+      throw new Error(`Failed to create connection: ${connRes.status} ${JSON.stringify(connRes.body)}`);
+    }
+    connectionId = connRes.body.id;
   }, 120_000);
 
   afterAll(async () => {
@@ -55,9 +75,7 @@ describe("Run Unification smoke (e2e)", () => {
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({
-        apiBaseUrl: "http://localhost:11111", // intentionally unreachable
-        apiKey: "test-key",
-        model: "test-model",
+        connectionId, // baseUrl is intentionally unreachable (http://localhost:11111)
         probes: ["chat-text"],
       })
       .expect(200);

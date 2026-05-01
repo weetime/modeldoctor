@@ -16,13 +16,14 @@ describe("LoadTest (e2e)", () => {
     await ctx.teardown();
   });
 
-  it("rejects missing apiBaseUrl", async () => {
+  it("rejects missing connectionId", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiKey: "k", model: "m", rate: 1, duration: 1 })
+      .send({ rate: 1, duration: 1 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body.error.message).toMatch(/connectionId/);
     expect(res.body.error.requestId).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
@@ -30,7 +31,7 @@ describe("LoadTest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", rate: 0, duration: 1 })
+      .send({ connectionId: "fake-connection-id", rate: 0, duration: 1 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/rate/i);
@@ -41,7 +42,7 @@ describe("LoadTest (e2e)", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/load-test")
       .set("Authorization", `Bearer ${accessToken}`)
-      .send({ apiBaseUrl: "x", apiKey: "k", model: "m", rate: 1, duration: 99999 })
+      .send({ connectionId: "fake-connection-id", rate: 1, duration: 99999 })
       .expect(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.message).toMatch(/duration/i);
