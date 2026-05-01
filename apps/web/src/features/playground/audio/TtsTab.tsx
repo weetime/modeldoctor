@@ -1,7 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ApiError, api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundTtsRequest, PlaygroundTtsResponse } from "@modeldoctor/contracts";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,9 +13,6 @@ export function TtsTab() {
   const { t } = useTranslation("playground");
   const tts = useAudioStore((s) => s.tts);
   const selectedConnectionId = useAudioStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) =>
-    selectedConnectionId ? s.get(selectedConnectionId) : null,
-  );
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // autoPlay when result changes
@@ -32,22 +28,16 @@ export function TtsTab() {
     }
   }, [tts.result, tts.autoPlay]);
 
-  const canSend = !!conn && tts.input.trim().length > 0 && !tts.sending;
+  const canSend = !!selectedConnectionId && tts.input.trim().length > 0 && !tts.sending;
 
   const onSend = async () => {
     // Read everything fresh from the store to avoid stale-closure bugs.
     const fresh = useAudioStore.getState();
-    const connNow = fresh.selectedConnectionId
-      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
-      : null;
-    if (!connNow) return;
+    const connectionId = fresh.selectedConnectionId;
+    if (!connectionId) return;
 
     const body: PlaygroundTtsRequest = {
-      apiBaseUrl: connNow.apiBaseUrl,
-      apiKey: connNow.apiKey,
-      model: connNow.model,
-      customHeaders: connNow.customHeaders || undefined,
-      queryParams: connNow.queryParams || undefined,
+      connectionId,
       input: fresh.tts.input,
       voice: fresh.tts.voice,
       format: fresh.tts.format,

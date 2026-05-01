@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundImagesRequest, PlaygroundImagesResponse } from "@modeldoctor/contracts";
 import { Dice5, Download } from "lucide-react";
 import { useEffect } from "react";
@@ -39,10 +39,9 @@ type Mode = "generate" | "edit";
 export function ImagePage() {
   const { t } = useTranslation("playground");
   const slice = useImageStore();
-  const conn = useConnectionsStore((s) =>
-    slice.selectedConnectionId ? s.get(slice.selectedConnectionId) : null,
-  );
-  const canSubmit = !!conn && slice.prompt.trim().length > 0 && !slice.loading;
+  const { data: conn } = useConnection(slice.selectedConnectionId);
+  const canSubmit =
+    !!slice.selectedConnectionId && slice.prompt.trim().length > 0 && !slice.loading;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const mode: Mode = searchParams.get("mode") === "edit" ? "edit" : "generate";
@@ -80,7 +79,8 @@ export function ImagePage() {
   }, []);
 
   const onSubmit = async () => {
-    if (!conn) return;
+    const connectionId = slice.selectedConnectionId;
+    if (!connectionId) return;
     slice.setLoading(true);
     slice.setError(null);
     const seed = slice.params.randomSeedEachRequest
@@ -88,11 +88,7 @@ export function ImagePage() {
       : slice.params.seed;
     try {
       const body: PlaygroundImagesRequest = {
-        apiBaseUrl: conn.apiBaseUrl,
-        apiKey: conn.apiKey,
-        model: conn.model,
-        customHeaders: conn.customHeaders || undefined,
-        queryParams: conn.queryParams || undefined,
+        connectionId,
         prompt: slice.prompt.trim(),
         size: slice.params.size,
         n: slice.params.n,
@@ -128,7 +124,7 @@ export function ImagePage() {
   const snippets =
     conn && mode === "generate"
       ? genImagesSnippets({
-          apiBaseUrl: conn.apiBaseUrl,
+          apiBaseUrl: conn.baseUrl,
           model: conn.model,
           prompt: slice.prompt,
           size: slice.params.size,

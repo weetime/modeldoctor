@@ -25,10 +25,7 @@ export function E2ESmokePage() {
   const endpoint = slice.manualEndpoint;
   const probesInCategory = PROBES_BY_CATEGORY[slice.selectedCategory];
 
-  const canRun =
-    endpoint.apiBaseUrl.trim().length > 0 &&
-    endpoint.apiKey.trim().length > 0 &&
-    endpoint.model.trim().length > 0;
+  const canRun = !!slice.selectedConnectionId;
   const disabledReason = canRun ? undefined : tc("errors.required");
 
   const notifyFailures = (entries: { probe: ProbeName; result: ProbeResult }[]) => {
@@ -43,17 +40,14 @@ export function E2ESmokePage() {
   };
 
   const runProbes = async (probes: ProbeName[]) => {
-    if (!canRun) return;
+    if (!canRun || !slice.selectedConnectionId) return;
     for (const p of probes) slice.setRunning(p, true);
     try {
       const overridesEntries = probes
         .filter((p) => slice.pathOverrides[p] !== undefined)
         .map((p) => [p, slice.pathOverrides[p] as string] as const);
       const data = await api.post<E2ETestResponse>("/api/e2e-test", {
-        apiBaseUrl: endpoint.apiBaseUrl,
-        apiKey: endpoint.apiKey,
-        model: endpoint.model,
-        customHeaders: endpoint.customHeaders,
+        connectionId: slice.selectedConnectionId,
         probes,
         ...(overridesEntries.length > 0
           ? { pathOverride: Object.fromEntries(overridesEntries) }

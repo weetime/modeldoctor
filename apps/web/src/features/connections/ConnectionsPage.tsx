@@ -27,22 +27,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useConnectionsStore } from "@/stores/connections-store";
-import type { Connection } from "@/types/connection";
-import type { ModalityCategory } from "@modeldoctor/contracts";
+import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
 import { format } from "date-fns";
 import { Database, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConnectionDialog } from "./ConnectionDialog";
-import { ConnectionsImportDialog } from "./ConnectionsImportDialog";
+import { ConnectionDialog, type ConnectionDialogMode } from "./ConnectionDialog";
+import { useConnections, useDeleteConnection } from "./queries";
 
 export function ConnectionsPage() {
   const { t } = useTranslation("connections");
   const { t: tc } = useTranslation("common");
-  const list = useConnectionsStore((s) => s.list());
-  const removeConn = useConnectionsStore((s) => s.remove);
-  const exportAll = useConnectionsStore((s) => s.exportAll);
+  const listQuery = useConnections();
+  const deleteMut = useDeleteConnection();
+  const list: ConnectionPublic[] = listQuery.data ?? [];
 
   const [filterCategory, setFilterCategory] = useState<ModalityCategory | "all">("all");
   const [filterTag, setFilterTag] = useState<string | "all">("all");
@@ -61,20 +59,11 @@ export function ConnectionsPage() {
     return true;
   });
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Connection | undefined>(undefined);
-  const [importOpen, setImportOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<Connection | null>(null);
+  const [dialogMode, setDialogMode] = useState<ConnectionDialogMode | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ConnectionPublic | null>(null);
 
-  const onExport = () => {
-    const blob = new Blob([exportAll()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `modeldoctor-connections-${format(new Date(), "yyyy-MM-dd")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const isLoading = listQuery.isLoading;
+  const error = listQuery.error;
 
   return (
     <>
@@ -83,19 +72,7 @@ export function ConnectionsPage() {
         subtitle={t("subtitle")}
         rightSlot={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              {t("actions.import")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={onExport} disabled={list.length === 0}>
-              {t("actions.export")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(undefined);
-                setDialogOpen(true);
-              }}
-            >
+            <Button size="sm" onClick={() => setDialogMode({ kind: "create" })}>
               {t("actions.new")}
             </Button>
           </div>
@@ -103,19 +80,23 @@ export function ConnectionsPage() {
       />
 
       <div className="px-8 py-6">
-        {list.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error instanceof Error ? error.message : tc("errors.unknown")}
+          </div>
+        ) : list.length === 0 ? (
           <EmptyState
             icon={Database}
             title={t("empty.title")}
             body={t("empty.body")}
             actions={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(undefined);
-                  setDialogOpen(true);
-                }}
-              >
+              <Button size="sm" onClick={() => setDialogMode({ kind: "create" })}>
                 {t("empty.create")}
               </Button>
             }
@@ -165,6 +146,7 @@ export function ConnectionsPage() {
                   <TableRow>
                     <TableHead>{t("table.name")}</TableHead>
                     <TableHead>{t("table.apiBaseUrl")}</TableHead>
+                    <TableHead>{t("table.apiKey")}</TableHead>
                     <TableHead>{t("table.model")}</TableHead>
                     <TableHead>{t("table.category")}</TableHead>
                     <TableHead>{t("table.tags")}</TableHead>
@@ -177,7 +159,10 @@ export function ConnectionsPage() {
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{c.apiBaseUrl}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.baseUrl}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {c.apiKeyPreview}
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{c.model}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
@@ -207,10 +192,7 @@ export function ConnectionsPage() {
                           variant="ghost"
                           size="icon"
                           aria-label={t("actions.edit")}
-                          onClick={() => {
-                            setEditing(c);
-                            setDialogOpen(true);
-                          }}
+                          onClick={() => setDialogMode({ kind: "edit", existing: c })}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -232,8 +214,15 @@ export function ConnectionsPage() {
         )}
       </div>
 
-      <ConnectionDialog open={dialogOpen} onOpenChange={setDialogOpen} connection={editing} />
-      <ConnectionsImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      {dialogMode ? (
+        <ConnectionDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setDialogMode(null);
+          }}
+          mode={dialogMode}
+        />
+      ) : null}
 
       <AlertDialog
         open={pendingDelete !== null}
@@ -252,7 +241,9 @@ export function ConnectionsPage() {
             <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingDelete) removeConn(pendingDelete.id);
+                if (pendingDelete) {
+                  deleteMut.mutate(pendingDelete.id);
+                }
                 setPendingDelete(null);
               }}
             >

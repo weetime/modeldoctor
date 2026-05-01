@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   ChatMessage,
   PlaygroundChatRequest,
@@ -33,10 +32,8 @@ export function ChatComparePage() {
     const userMsg: ChatMessage = { role: "user", content };
 
     compare.panels.forEach((panel, i) => {
-      const conn = panel.selectedConnectionId
-        ? useConnectionsStore.getState().get(panel.selectedConnectionId)
-        : null;
-      if (!conn) {
+      const connectionId = panel.selectedConnectionId;
+      if (!connectionId) {
         compare.setPanelError(i, t("chat.compare.errors.noConnection"));
         return;
       }
@@ -52,11 +49,7 @@ export function ChatComparePage() {
       ];
 
       const body: PlaygroundChatRequest = {
-        apiBaseUrl: conn.apiBaseUrl,
-        apiKey: conn.apiKey,
-        model: conn.model,
-        customHeaders: conn.customHeaders || undefined,
-        queryParams: conn.queryParams || undefined,
+        connectionId,
         messages: messagesForRequest,
         params: panel.params,
       };

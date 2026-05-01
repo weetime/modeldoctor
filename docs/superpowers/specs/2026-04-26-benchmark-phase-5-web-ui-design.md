@@ -430,7 +430,7 @@ Phase 5 PR description must include a smoke checklist run against Workflow A (`B
 - Local Postgres (brew-managed) running.
 - `pip install guidellm` in the active conda env.
 - Real OpenAI-compatible target (e.g. `vllm serve facebook/opt-125m --port 8000` — CPU-runnable).
-- `.env.local` with `BENCHMARK_DRIVER=subprocess`, `BENCHMARK_CALLBACK_SECRET`, `BENCHMARK_API_KEY_ENCRYPTION_KEY`.
+- `.env.local` with `BENCHMARK_DRIVER=subprocess`, `BENCHMARK_CALLBACK_SECRET`, `CONNECTION_API_KEY_ENCRYPTION_KEY`.
 - `pnpm dev`.
 
 **Checklist**

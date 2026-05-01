@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
 import { playgroundFetchMultipart } from "@/lib/playground-multipart";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundTranscriptionsResponse } from "@modeldoctor/contracts";
 import { Copy, X } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
@@ -14,9 +13,6 @@ export function SttTab() {
   const { t } = useTranslation("playground");
   const stt = useAudioStore((s) => s.stt);
   const selectedConnectionId = useAudioStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) =>
-    selectedConnectionId ? s.get(selectedConnectionId) : null,
-  );
   const blobRef = useRef<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,23 +55,17 @@ export function SttTab() {
     useAudioStore.getState().setSttResult(null);
   };
 
-  const canTranscribe = !!conn && !!blobRef.current && !stt.sending;
+  const canTranscribe = !!selectedConnectionId && !!blobRef.current && !stt.sending;
 
   const onTranscribe = async () => {
     // Re-read fresh state to avoid stale-closure (matches the de-stale pattern from chat / TtsTab).
     const fresh = useAudioStore.getState();
-    const connNow = fresh.selectedConnectionId
-      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
-      : null;
-    if (!connNow || !blobRef.current) return;
+    const connectionId = fresh.selectedConnectionId;
+    if (!connectionId || !blobRef.current) return;
 
     const form = new FormData();
     form.append("file", blobRef.current, fresh.stt.fileName ?? "audio.webm");
-    form.append("apiBaseUrl", connNow.apiBaseUrl);
-    form.append("apiKey", connNow.apiKey);
-    form.append("model", connNow.model);
-    if (connNow.customHeaders) form.append("customHeaders", connNow.customHeaders);
-    if (connNow.queryParams) form.append("queryParams", connNow.queryParams);
+    form.append("connectionId", connectionId);
     if (fresh.stt.language) form.append("language", fresh.stt.language);
     form.append("task", fresh.stt.task);
     if (fresh.stt.prompt) form.append("prompt", fresh.stt.prompt);

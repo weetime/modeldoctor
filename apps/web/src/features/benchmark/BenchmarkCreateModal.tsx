@@ -41,9 +41,9 @@ function mapDuplicateToDefaults(run: BenchmarkRun): CreateBenchmarkRequest {
     description: run.description ?? undefined,
     profile: run.profile,
     apiType: run.apiType,
-    apiBaseUrl: run.apiBaseUrl,
-    apiKey: "",
-    model: run.model,
+    // Pre-select the original connection (or empty if it was deleted; the form
+    // will surface "savedConnectionMissing" via BenchmarkEndpointFields).
+    connectionId: run.connectionId ?? "",
     datasetName: run.datasetName,
     datasetInputTokens: run.datasetInputTokens ?? undefined,
     datasetOutputTokens: run.datasetOutputTokens ?? undefined,
@@ -57,9 +57,7 @@ const BASIC_FIELDS: (keyof CreateBenchmarkRequest)[] = [
   "name",
   "description",
   "apiType",
-  "apiBaseUrl",
-  "apiKey",
-  "model",
+  "connectionId",
 ];
 
 const CONFIG_FIELDS: (keyof CreateBenchmarkRequest)[] = [
@@ -92,9 +90,7 @@ export function BenchmarkCreateModal() {
       description: "",
       profile: "throughput",
       apiType: "chat",
-      apiBaseUrl: "",
-      apiKey: "",
-      model: "",
+      connectionId: "",
       datasetName: "random",
       datasetInputTokens: 1024,
       datasetOutputTokens: 128,
@@ -193,7 +189,9 @@ export function BenchmarkCreateModal() {
                   <Label htmlFor={descId}>{t("create.fields.description")}</Label>
                   <Textarea id={descId} rows={2} {...form.register("description")} />
                 </div>
-                <BenchmarkEndpointFields requireApiKeyHighlight={!!duplicateId} />
+                <BenchmarkEndpointFields
+                  connectionMissing={!!duplicateId && sourceRun?.connectionId === null}
+                />
               </TabsContent>
 
               <TabsContent value="config" className="space-y-3 pt-2">

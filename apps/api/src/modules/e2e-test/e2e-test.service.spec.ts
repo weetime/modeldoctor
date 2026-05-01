@@ -1,8 +1,23 @@
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { PrismaService } from "../../database/prisma.service.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { RunRepository } from "../run/run.repository.js";
 import { E2ETestService } from "./e2e-test.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-e2e-1",
+    name: "test-conn",
+    baseUrl: "http://localhost:8000",
+    apiKey: "test-key",
+    model: "test-model",
+    customHeaders: "",
+    queryParams: "",
+    category: "chat",
+    ...overrides,
+  };
+}
 
 describe("E2ETestService", () => {
   let service: E2ETestService;
@@ -57,15 +72,10 @@ describe("E2ETestService", () => {
       "executeProbes",
     ).mockResolvedValue(mockResults);
 
-    const result = await service.run(
-      {
-        apiBaseUrl: "http://localhost:8000",
-        apiKey: "test-key",
-        model: "test-model",
-        probes: ["chat-text"],
-      },
-      u.id,
-    );
+    const result = await service.run(u.id, makeConn(), {
+      connectionId: "conn-e2e-1",
+      probes: ["chat-text"],
+    });
 
     expect(result.runId).toBeDefined();
     expect(result.success).toBe(true);
@@ -99,15 +109,10 @@ describe("E2ETestService", () => {
       "executeProbes",
     ).mockResolvedValue(mockResults);
 
-    const result = await service.run(
-      {
-        apiBaseUrl: "http://localhost:8000",
-        apiKey: "test-key",
-        model: "test-model",
-        probes: ["chat-text"],
-      },
-      u.id,
-    );
+    const result = await service.run(u.id, makeConn(), {
+      connectionId: "conn-e2e-1",
+      probes: ["chat-text"],
+    });
 
     expect(result.runId).toBeDefined();
     expect(result.success).toBe(false);
@@ -132,10 +137,8 @@ describe("E2ETestService", () => {
       },
     ]);
 
-    const result = await service.run({
-      apiBaseUrl: "http://localhost:8000",
-      apiKey: "test-key",
-      model: "test-model",
+    const result = await service.run(undefined, makeConn(), {
+      connectionId: "conn-e2e-1",
       probes: ["chat-text"],
     });
 

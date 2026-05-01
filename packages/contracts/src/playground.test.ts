@@ -89,9 +89,7 @@ describe("ChatMessageSchema", () => {
 
 describe("PlaygroundChatRequestSchema", () => {
   const base = {
-    apiBaseUrl: "http://x.test",
-    apiKey: "k",
-    model: "m",
+    connectionId: "conn_test_id",
     messages: [{ role: "user", content: "hi" }],
   };
 
@@ -132,7 +130,7 @@ describe("PlaygroundChatResponseSchema", () => {
 });
 
 describe("PlaygroundEmbeddingsRequestSchema", () => {
-  const base = { apiBaseUrl: "http://x", apiKey: "k", model: "m", input: "one" };
+  const base = { connectionId: "conn_test_id", input: "one" };
   it("accepts string input", () => {
     expect(() => PlaygroundEmbeddingsRequestSchema.parse(base)).not.toThrow();
   });
@@ -168,9 +166,7 @@ describe("PlaygroundEmbeddingsResponseSchema", () => {
 
 describe("PlaygroundRerankRequestSchema", () => {
   const base = {
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "m",
+    connectionId: "conn_test_id",
     query: "q",
     documents: ["a", "b"],
   };
@@ -196,7 +192,7 @@ describe("PlaygroundRerankResponseSchema", () => {
 });
 
 describe("PlaygroundImagesRequestSchema", () => {
-  const base = { apiBaseUrl: "http://x", apiKey: "k", model: "m", prompt: "p" };
+  const base = { connectionId: "conn_test_id", prompt: "p" };
   it("accepts minimal request", () => {
     expect(() => PlaygroundImagesRequestSchema.parse(base)).not.toThrow();
   });
@@ -224,9 +220,7 @@ describe("PlaygroundImagesResponseSchema", () => {
 
 describe("PlaygroundImagesEditMultipartFieldsSchema", () => {
   const base = {
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "m",
+    connectionId: "conn_test_id",
     prompt: "make the dog wear a hat",
   };
   it("accepts a minimal request", () => {
@@ -249,9 +243,7 @@ describe("PlaygroundImagesEditMultipartFieldsSchema", () => {
 describe("PlaygroundTtsRequestSchema", () => {
   it("applies defaults for voice + format", () => {
     const parsed = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+      connectionId: "conn_test_id",
       input: "hi",
     });
     expect(parsed.voice).toBe("alloy");
@@ -261,9 +253,7 @@ describe("PlaygroundTtsRequestSchema", () => {
   it("rejects invalid format", () => {
     expect(() =>
       PlaygroundTtsRequestSchema.parse({
-        apiBaseUrl: "http://x",
-        apiKey: "k",
-        model: "m",
+        connectionId: "conn_test_id",
         input: "hi",
         format: "wav-bogus",
       }),
@@ -273,9 +263,7 @@ describe("PlaygroundTtsRequestSchema", () => {
   it("rejects empty input", () => {
     expect(() =>
       PlaygroundTtsRequestSchema.parse({
-        apiBaseUrl: "http://x",
-        apiKey: "k",
-        model: "m",
+        connectionId: "conn_test_id",
         input: "",
       }),
     ).toThrow();
@@ -285,18 +273,14 @@ describe("PlaygroundTtsRequestSchema", () => {
 describe("PlaygroundTranscriptionsBodySchema", () => {
   it("applies default task=transcribe", () => {
     const parsed = PlaygroundTranscriptionsBodySchema.parse({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "whisper-1",
+      connectionId: "conn_test_id",
     });
     expect(parsed.task).toBe("transcribe");
   });
 
   it("accepts language + prompt + temperature", () => {
     const parsed = PlaygroundTranscriptionsBodySchema.parse({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "whisper-1",
+      connectionId: "conn_test_id",
       language: "zh",
       prompt: "domain terms",
       temperature: 0.2,
@@ -308,9 +292,7 @@ describe("PlaygroundTranscriptionsBodySchema", () => {
   it("rejects invalid task", () => {
     expect(() =>
       PlaygroundTranscriptionsBodySchema.parse({
-        apiBaseUrl: "http://x",
-        apiKey: "k",
-        model: "m",
+        connectionId: "conn_test_id",
         task: "summarize",
       }),
     ).toThrow();
@@ -337,9 +319,7 @@ describe("PlaygroundTtsResponseSchema + PlaygroundTranscriptionsResponseSchema",
 describe("PlaygroundTtsRequestSchema reference fields", () => {
   it("accepts reference_audio_base64 + reference_text", () => {
     const r = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "https://x.example.com",
-      apiKey: "k",
-      model: "m",
+      connectionId: "conn_test_id",
       input: "hello",
       voice: "alloy",
       format: "wav",
@@ -352,9 +332,7 @@ describe("PlaygroundTtsRequestSchema reference fields", () => {
   it("rejects malformed data URL", () => {
     expect(() =>
       PlaygroundTtsRequestSchema.parse({
-        apiBaseUrl: "https://x",
-        apiKey: "k",
-        model: "m",
+        connectionId: "conn_test_id",
         input: "x",
         voice: "alloy",
         format: "wav",
@@ -364,9 +342,7 @@ describe("PlaygroundTtsRequestSchema reference fields", () => {
   });
   it("accepts omitted reference fields (fully optional)", () => {
     const r = PlaygroundTtsRequestSchema.parse({
-      apiBaseUrl: "https://x",
-      apiKey: "k",
-      model: "m",
+      connectionId: "conn_test_id",
       input: "hi",
     });
     expect(r.reference_audio_base64).toBeUndefined();

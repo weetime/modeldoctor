@@ -1,16 +1,42 @@
 import i18n from "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ChatComparePage } from "./ChatComparePage";
-import { useCompareStore } from "./store";
 
 vi.mock("@/lib/playground-stream", () => ({
   playgroundFetchStream: vi.fn().mockResolvedValue(undefined),
 }));
+
+const CONN_A: ConnectionPublic = {
+  id: "ca",
+  userId: "u1",
+  name: "A",
+  baseUrl: "http://a",
+  apiKeyPreview: "sk-...1234",
+  model: "m",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat",
+  tags: [],
+  createdAt: "2026-04-26T14:22:00Z",
+  updatedAt: "2026-04-26T14:22:00Z",
+};
+const CONN_B: ConnectionPublic = { ...CONN_A, id: "cb", name: "B", baseUrl: "http://b" };
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: [CONN_A, CONN_B], isLoading: false, error: null }),
+  useConnection: (id: string | null | undefined) => ({
+    data: id === "ca" ? CONN_A : id === "cb" ? CONN_B : null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+import { ChatComparePage } from "./ChatComparePage";
+import { useCompareStore } from "./store";
 
 const renderPage = () =>
   render(
@@ -23,7 +49,6 @@ const renderPage = () =>
 
 describe("ChatComparePage", () => {
   beforeEach(() => {
-    localStorage.clear();
     useCompareStore.setState((s) => ({
       ...s,
       panelCount: 2,
@@ -49,35 +74,6 @@ describe("ChatComparePage", () => {
       ],
       sharedSystemMessage: "",
     }));
-
-    // Use the array-based connections-store API (we learned this in Task 11/12).
-    useConnectionsStore.setState({ connections: [] } as never);
-    useConnectionsStore.getState().create({
-      name: "A",
-      apiBaseUrl: "http://a",
-      apiKey: "k",
-      model: "m",
-      customHeaders: "",
-      queryParams: "",
-      category: "chat",
-      tags: [],
-    } as never);
-    useConnectionsStore.getState().create({
-      name: "B",
-      apiBaseUrl: "http://b",
-      apiKey: "k",
-      model: "m",
-      customHeaders: "",
-      queryParams: "",
-      category: "chat",
-      tags: [],
-    } as never);
-
-    // Save the ids for use in tests
-    (globalThis as unknown as { _testConnIds: { a: string; b: string } })._testConnIds = {
-      a: useConnectionsStore.getState().list()[0].id,
-      b: useConnectionsStore.getState().list()[1].id,
-    };
 
     vi.stubGlobal(
       "fetch",
@@ -134,12 +130,11 @@ describe("ChatComparePage", () => {
   });
 
   it("send broadcasts to N panels (one fetch call per panel with a connection)", async () => {
-    const ids = (globalThis as unknown as { _testConnIds: { a: string; b: string } })._testConnIds;
     useCompareStore.setState((s) => ({
       ...s,
       panels: s.panels.map((p, i) => ({
         ...p,
-        selectedConnectionId: i === 0 ? ids.a : ids.b,
+        selectedConnectionId: i === 0 ? "ca" : "cb",
         params: { stream: false },
       })),
     }));
@@ -155,12 +150,11 @@ describe("ChatComparePage", () => {
   });
 
   it("panel without a connection is skipped and shown a noConnection error", async () => {
-    const ids = (globalThis as unknown as { _testConnIds: { a: string; b: string } })._testConnIds;
     useCompareStore.setState((s) => ({
       ...s,
       panels: s.panels.map((p, i) => ({
         ...p,
-        selectedConnectionId: i === 0 ? ids.a : null,
+        selectedConnectionId: i === 0 ? "ca" : null,
         params: { stream: false },
       })),
     }));

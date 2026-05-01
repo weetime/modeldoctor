@@ -1,6 +1,6 @@
+import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   ChatMessage,
   PlaygroundChatRequest,
@@ -73,11 +73,9 @@ export function ChatPage() {
   const { t } = useTranslation("playground");
   const chatModeTabs = useChatModeTabs();
   const slice = useChatStore();
-  const conn = useConnectionsStore((s) =>
-    slice.selectedConnectionId ? s.get(slice.selectedConnectionId) : null,
-  );
+  const { data: conn } = useConnection(slice.selectedConnectionId);
 
-  const canSend = !!conn;
+  const canSend = !!slice.selectedConnectionId;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
 
   const restoreSnap = (entryId: string, snap: ChatHistorySnapshot) => {
@@ -122,7 +120,7 @@ export function ChatPage() {
   const snippets =
     conn != null
       ? genChatSnippets({
-          apiBaseUrl: conn.apiBaseUrl,
+          apiBaseUrl: conn.baseUrl,
           model: conn.model,
           messages: [
             ...(slice.systemMessage.trim()
@@ -137,10 +135,8 @@ export function ChatPage() {
   const onSend = async (text: string, attachments: AttachedFile[]) => {
     // Read everything fresh from the store to avoid stale-closure bugs.
     const fresh = useChatStore.getState();
-    const connNow = fresh.selectedConnectionId
-      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
-      : null;
-    if (!connNow) return;
+    const connectionId = fresh.selectedConnectionId;
+    if (!connectionId) return;
 
     const content = buildContentParts(text, attachments);
     fresh.appendMessage({ role: "user", content });
@@ -157,11 +153,7 @@ export function ChatPage() {
     ];
 
     const body: PlaygroundChatRequest = {
-      apiBaseUrl: connNow.apiBaseUrl,
-      apiKey: connNow.apiKey,
-      model: connNow.model,
-      customHeaders: connNow.customHeaders || undefined,
-      queryParams: connNow.queryParams || undefined,
+      connectionId,
       messages,
       params: stateAfterAppend.params,
     };

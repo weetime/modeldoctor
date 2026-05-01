@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { RerankService } from "./rerank.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-1",
+    name: "test",
+    baseUrl: "http://x",
+    apiKey: "k",
+    model: "m",
+    customHeaders: "",
+    queryParams: "",
+    category: "rerank",
+    ...overrides,
+  };
+}
 
 describe("RerankService.run", () => {
   let svc: RerankService;
@@ -25,10 +40,8 @@ describe("RerankService.run", () => {
         { status: 200 },
       ),
     );
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       query: "q",
       documents: ["a", "b"],
       topN: 2,
@@ -55,10 +68,8 @@ describe("RerankService.run", () => {
         { status: 200 },
       ),
     );
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       query: "q",
       documents: ["a", "b"],
       wire: "tei",
@@ -79,10 +90,8 @@ describe("RerankService.run", () => {
 
   it("returns success=false on non-2xx", async () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       query: "q",
       documents: ["a"],
       wire: "cohere",

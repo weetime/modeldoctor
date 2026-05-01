@@ -10,13 +10,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
+import {
+  ConnectionDialog,
+  type ConnectionDialogMode,
+} from "@/features/connections/ConnectionDialog";
+import { useConnection, useConnections } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
-import { type ParsedCurl, parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
-import { useConnectionsStore } from "@/stores/connections-store";
-import { type EndpointValues, emptyEndpointValues } from "@/types/connection";
-import { ClipboardPaste, Eye, EyeOff } from "lucide-react";
-import { useId, useState } from "react";
+import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
+import { type EndpointValues, emptyEndpointValues } from "@/lib/endpoint-values";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
+import { ClipboardPaste } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -24,41 +28,37 @@ const MANUAL = "__manual__";
 const NEW_CONNECTION = "__new__";
 
 export interface EndpointPickerProps {
-  /** Current endpoint values (URL/Key/Model/Headers/Query). */
+  /** Current endpoint values surfaced for display + curl import paths. */
   endpoint: EndpointValues;
-  /** Currently loaded connection id, or null for manual/unsaved. */
+  /** Currently selected connection id (server-side), or null for "manual" / fresh state. */
   selectedConnectionId: string | null;
-  /** Called when the user selects a saved connection or "Manual". */
+  /** Called when the user picks a connection or chooses "Manual". */
   onSelect: (id: string | null) => void;
-  /** Called when the endpoint values change (user typing or curl parse). */
+  /** Called when the endpoint values change (curl parse). After Phase-5 the
+   * fields are read-only when a connection is selected; this still fires when
+   * curl import populates the manual-mode form. */
   onEndpointChange: (values: EndpointValues) => void;
   /**
-   * Optional: consumers that care about curl body (e.g. to populate their
-   * own request-parameter slice) can subscribe. Called after endpoint fields
-   * have been populated from the parsed curl.
+   * Optional: consumers that care about curl body fields (e.g. to populate
+   * their own request slice) can subscribe.
    */
   onCurlParsed?: (parsed: ParsedCurl) => void;
   /**
-   * Optional: when provided, renders a read-only "→ POST <url>" preview line
-   * below the API Base URL input (e.g. LoadTestPage passes the full request URL).
+   * Optional: when provided, renders a `→ POST <url>` preview line below
+   * the API Base URL input (load-test passes the full request URL).
    */
   previewUrl?: string;
 }
 
 /**
- * Full endpoint editor embedded inline in a page card: surface the API URL /
- * Key / Model form, load values from a saved connection, import from cURL, and
- * save current values as a new connection.
+ * Endpoint picker + read-only display embedded in a page card. Once a saved
+ * connection is selected, all fields show in read-only form (apiKey shows
+ * the preview); the user must use "Edit this connection" or "Save as new
+ * connection" to change anything.
  *
- * **When to use:** a feature page that *needs the user to see and edit* the
- * endpoint values as part of its primary flow (E2E Smoke, Load Test).
- *
- * **When NOT to use:** compact pages where the endpoint is incidental and the
- * user just picks a saved connection — use {@link EndpointSelector} in the
- * page header instead.
- *
- * The single source of truth for the endpoint values is the controlled
- * `endpoint` prop; consumers own state (typically a Zustand store).
+ * In manual mode (no connection selected), the user can still paste a cURL
+ * to inspect — but to actually use it for a request flow they must save it
+ * as a new connection first (the `connectionId` is required server-side).
  */
 export function EndpointPicker({
   endpoint,
@@ -69,20 +69,15 @@ export function EndpointPicker({
   previewUrl,
 }: EndpointPickerProps) {
   const { t } = useTranslation("common");
-  const conns = useConnectionsStore();
-  const connectionList = conns.list();
-  const updateConn = useConnectionsStore((s) => s.update);
-  const selectedConn = selectedConnectionId ? conns.get(selectedConnectionId) : null;
+  const { t: tConn } = useTranslation("connections");
+  const listQuery = useConnections();
+  const connectionList: ConnectionPublic[] = listQuery.data ?? [];
+  const detailQuery = useConnection(selectedConnectionId);
+  const selectedConn = detailQuery.data ?? null;
 
-  const [revealKey, setRevealKey] = useState(false);
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
-  /**
-   * `null` = dialog closed.
-   * `"new"` = "+ New connection" flow, start empty.
-   * `"saveAs"` = "Save as…" flow, prefill with current endpoint values.
-   */
-  const [dialogMode, setDialogMode] = useState<"new" | "saveAs" | null>(null);
+  const [dialogState, setDialogState] = useState<ConnectionDialogMode | null>(null);
 
   const apiBaseUrlId = useId();
   const apiKeyId = useId();
@@ -90,22 +85,30 @@ export function EndpointPicker({
   const customHeadersId = useId();
   const queryParamsId = useId();
 
-  const isDirty =
-    !!selectedConn &&
-    (selectedConn.apiBaseUrl !== endpoint.apiBaseUrl ||
-      selectedConn.apiKey !== endpoint.apiKey ||
-      selectedConn.model !== endpoint.model ||
-      selectedConn.customHeaders !== endpoint.customHeaders ||
-      selectedConn.queryParams !== endpoint.queryParams);
+  const hasSelection = !!selectedConn;
 
-  const canSave =
-    endpoint.apiBaseUrl.trim().length > 0 &&
-    endpoint.apiKey.trim().length > 0 &&
-    endpoint.model.trim().length > 0;
-
-  const patchEndpoint = (patch: Partial<EndpointValues>) => {
-    onEndpointChange({ ...endpoint, ...patch });
-  };
+  // When a saved connection is selected, hydrate the readonly endpoint
+  // mirror so the page that owns endpoint state shows the right values
+  // (esp. for the previewUrl base) without the user having to do anything.
+  useEffect(() => {
+    if (!selectedConn) return;
+    const next: EndpointValues = {
+      apiBaseUrl: selectedConn.baseUrl,
+      apiKey: selectedConn.apiKeyPreview,
+      model: selectedConn.model,
+      customHeaders: selectedConn.customHeaders,
+      queryParams: selectedConn.queryParams,
+    };
+    if (
+      next.apiBaseUrl !== endpoint.apiBaseUrl ||
+      next.apiKey !== endpoint.apiKey ||
+      next.model !== endpoint.model ||
+      next.customHeaders !== endpoint.customHeaders ||
+      next.queryParams !== endpoint.queryParams
+    ) {
+      onEndpointChange(next);
+    }
+  }, [selectedConn, endpoint, onEndpointChange]);
 
   const onSelectValue = (value: string) => {
     if (value === MANUAL) {
@@ -114,34 +117,10 @@ export function EndpointPicker({
       return;
     }
     if (value === NEW_CONNECTION) {
-      setDialogMode("new");
+      setDialogState({ kind: "create" });
       return;
     }
-    const c = conns.get(value);
-    if (c) {
-      onSelect(c.id);
-      onEndpointChange({
-        apiBaseUrl: c.apiBaseUrl,
-        apiKey: c.apiKey,
-        model: c.model,
-        customHeaders: c.customHeaders,
-        queryParams: c.queryParams,
-      });
-    }
-  };
-
-  const onSaveClick = () => {
-    if (selectedConn) {
-      try {
-        const sanitized = { ...endpoint, apiBaseUrl: toApiBaseUrl(endpoint.apiBaseUrl) };
-        updateConn(selectedConn.id, sanitized);
-        toast.success(t("endpoint.saved", { name: selectedConn.name }));
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("endpoint.saveFailed"));
-      }
-      return;
-    }
-    setDialogMode("saveAs");
+    onSelect(value);
   };
 
   const onParseCurl = () => {
@@ -153,13 +132,50 @@ export function EndpointPicker({
     const { patch, filledKeys } = applyCurlToEndpoint(parsed);
     // Parsing a curl moves us off any saved connection.
     onSelect(null);
-    onEndpointChange({ ...endpoint, ...patch });
+    onEndpointChange({ ...emptyEndpointValues, ...endpoint, ...patch });
     onCurlParsed?.(parsed);
 
     toast.success(t("endpoint.filled", { fields: filledKeys.join(", ") }));
     setCurlText("");
     setCurlOpen(false);
   };
+
+  const onEditClick = () => {
+    if (!selectedConn) return;
+    setDialogState({ kind: "edit", existing: selectedConn });
+  };
+
+  const onSaveAsClick = () => {
+    if (!selectedConn) {
+      // Manual mode: prefill from current endpoint values minus apiKey.
+      setDialogState({ kind: "create" });
+      return;
+    }
+    setDialogState({ kind: "create" });
+  };
+
+  // Compute prefill for the create dialog. "Save as new" from a saved row
+  // copies all fields except apiKey (we only know the preview); the user
+  // re-enters the secret. Manual mode mirrors the current local form.
+  const dialogInitialValues =
+    dialogState?.kind === "create"
+      ? selectedConn
+        ? {
+            name: `${selectedConn.name}-copy`,
+            apiBaseUrl: selectedConn.baseUrl,
+            model: selectedConn.model,
+            customHeaders: selectedConn.customHeaders,
+            queryParams: selectedConn.queryParams,
+            category: selectedConn.category,
+            tags: selectedConn.tags,
+          }
+        : {
+            apiBaseUrl: endpoint.apiBaseUrl,
+            model: endpoint.model,
+            customHeaders: endpoint.customHeaders,
+            queryParams: endpoint.queryParams,
+          }
+      : undefined;
 
   return (
     <div className="space-y-3">
@@ -179,23 +195,6 @@ export function EndpointPicker({
             <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
           </SelectContent>
         </Select>
-        {isDirty ? (
-          <span
-            className="h-2 w-2 shrink-0 rounded-full bg-warning"
-            title={t("endpoint.modified")}
-            aria-label={t("endpoint.modified")}
-          />
-        ) : null}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onSaveClick}
-          disabled={!canSave}
-          className="shrink-0"
-        >
-          {selectedConn ? t("endpoint.save") : t("endpoint.saveAs")}
-        </Button>
         <Button
           type="button"
           size="sm"
@@ -229,20 +228,14 @@ export function EndpointPicker({
       ) : null}
 
       <ConnectionDialog
-        open={dialogMode !== null}
+        open={dialogState !== null}
         onOpenChange={(o) => {
-          if (!o) setDialogMode(null);
+          if (!o) setDialogState(null);
         }}
-        initialValues={dialogMode === "saveAs" ? endpoint : undefined}
+        mode={dialogState ?? { kind: "create" }}
+        initialValues={dialogInitialValues}
         onSaved={(c) => {
           onSelect(c.id);
-          onEndpointChange({
-            apiBaseUrl: c.apiBaseUrl,
-            apiKey: c.apiKey,
-            model: c.model,
-            customHeaders: c.customHeaders,
-            queryParams: c.queryParams,
-          });
         }}
       />
 
@@ -256,7 +249,12 @@ export function EndpointPicker({
             <Input
               id={apiBaseUrlId}
               value={endpoint.apiBaseUrl}
-              onChange={(e) => patchEndpoint({ apiBaseUrl: e.target.value })}
+              readOnly={hasSelection}
+              onChange={(e) =>
+                hasSelection
+                  ? undefined
+                  : onEndpointChange({ ...endpoint, apiBaseUrl: e.target.value })
+              }
               placeholder="http://host:port or https://api.openai.com"
               className="font-mono text-xs"
             />
@@ -270,31 +268,36 @@ export function EndpointPicker({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <Label htmlFor={apiKeyId}>{t("endpoint.apiKey")}</Label>
-              <div className="relative">
-                <Input
-                  id={apiKeyId}
-                  type={revealKey ? "text" : "password"}
-                  value={endpoint.apiKey}
-                  onChange={(e) => patchEndpoint({ apiKey: e.target.value })}
-                  placeholder="sk-…"
-                  className="font-mono text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setRevealKey((v) => !v)}
-                  className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                  aria-label={revealKey ? "hide" : "show"}
-                >
-                  {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <Input
+                id={apiKeyId}
+                type="text"
+                value={endpoint.apiKey}
+                readOnly={hasSelection}
+                onChange={(e) =>
+                  hasSelection
+                    ? undefined
+                    : onEndpointChange({ ...endpoint, apiKey: e.target.value })
+                }
+                placeholder="sk-…"
+                className="font-mono text-xs"
+              />
+              {hasSelection ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {tConn("dialog.apiKeyEncryptedNotice")}
+                </p>
+              ) : null}
             </div>
             <div>
               <Label htmlFor={modelId}>{t("endpoint.model")}</Label>
               <Input
                 id={modelId}
                 value={endpoint.model}
-                onChange={(e) => patchEndpoint({ model: e.target.value })}
+                readOnly={hasSelection}
+                onChange={(e) =>
+                  hasSelection
+                    ? undefined
+                    : onEndpointChange({ ...endpoint, model: e.target.value })
+                }
                 placeholder="model-name"
                 className="font-mono text-xs"
               />
@@ -311,7 +314,12 @@ export function EndpointPicker({
                   id={customHeadersId}
                   rows={2}
                   value={endpoint.customHeaders}
-                  onChange={(e) => patchEndpoint({ customHeaders: e.target.value })}
+                  readOnly={hasSelection}
+                  onChange={(e) =>
+                    hasSelection
+                      ? undefined
+                      : onEndpointChange({ ...endpoint, customHeaders: e.target.value })
+                  }
                   placeholder="Header-Name: value"
                   className="font-mono text-xs"
                 />
@@ -322,13 +330,29 @@ export function EndpointPicker({
                   id={queryParamsId}
                   rows={2}
                   value={endpoint.queryParams}
-                  onChange={(e) => patchEndpoint({ queryParams: e.target.value })}
+                  readOnly={hasSelection}
+                  onChange={(e) =>
+                    hasSelection
+                      ? undefined
+                      : onEndpointChange({ ...endpoint, queryParams: e.target.value })
+                  }
                   placeholder="key=value"
                   className="font-mono text-xs"
                 />
               </div>
             </div>
           </details>
+
+          {hasSelection ? (
+            <div className="flex items-center gap-2 pt-1">
+              <Button type="button" size="sm" variant="outline" onClick={onEditClick}>
+                {tConn("dialog.editThisConnection")} →
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={onSaveAsClick}>
+                {tConn("dialog.saveAsNewConnection")} →
+              </Button>
+            </div>
+          ) : null}
         </div>
       </section>
     </div>

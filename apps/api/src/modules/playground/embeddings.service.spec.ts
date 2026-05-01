@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { EmbeddingsService } from "./embeddings.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-1",
+    name: "test",
+    baseUrl: "http://x.test",
+    apiKey: "k",
+    model: "m",
+    customHeaders: "",
+    queryParams: "",
+    category: "embeddings",
+    ...overrides,
+  };
+}
 
 describe("EmbeddingsService.run", () => {
   let svc: EmbeddingsService;
@@ -13,17 +28,15 @@ describe("EmbeddingsService.run", () => {
     vi.unstubAllGlobals();
   });
 
-  it("posts to {apiBaseUrl}/v1/embeddings with model+input", async () => {
+  it("posts to {baseUrl}/v1/embeddings with model+input", async () => {
     fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({ data: [{ embedding: [0.1, 0.2, 0.3] }], usage: { prompt_tokens: 1 } }),
         { status: 200 },
       ),
     );
-    const out = await svc.run({
-      apiBaseUrl: "http://x.test",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       input: "hello",
     });
     expect(out.success).toBe(true);
@@ -39,10 +52,8 @@ describe("EmbeddingsService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: [{ embedding: [] }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn({ baseUrl: "http://x" }), {
+      connectionId: "conn-1",
       input: ["a", "b"],
       encodingFormat: "base64",
       dimensions: 256,
@@ -58,10 +69,8 @@ describe("EmbeddingsService.run", () => {
 
   it("honours pathOverride for TEI-style endpoints", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: [] }), { status: 200 }));
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn({ baseUrl: "http://x" }), {
+      connectionId: "conn-1",
       input: "h",
       pathOverride: "/embed",
     });
@@ -70,10 +79,8 @@ describe("EmbeddingsService.run", () => {
 
   it("returns success=false on non-2xx", async () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 503 }));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn({ baseUrl: "http://x" }), {
+      connectionId: "conn-1",
       input: "h",
     });
     expect(out.success).toBe(false);
@@ -82,10 +89,8 @@ describe("EmbeddingsService.run", () => {
 
   it("returns success=false on network error", async () => {
     fetchMock.mockRejectedValue(new Error("kaboom"));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn({ baseUrl: "http://x" }), {
+      connectionId: "conn-1",
       input: "h",
     });
     expect(out.success).toBe(false);

@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundRerankRequest, PlaygroundRerankResponse } from "@modeldoctor/contracts";
 import { Trash2 } from "lucide-react";
 import { useEffect } from "react";
@@ -42,11 +42,13 @@ export const useRerankHistoryStore = createHistoryStore<Snap>({
 export function RerankPage() {
   const { t } = useTranslation("playground");
   const slice = useRerankStore();
-  const conn = useConnectionsStore((s) =>
-    slice.selectedConnectionId ? s.get(slice.selectedConnectionId) : null,
-  );
+  const { data: conn } = useConnection(slice.selectedConnectionId);
   const docs = slice.documents.map((d) => d.trim()).filter((d) => d.length > 0);
-  const canSubmit = !!conn && slice.query.trim().length > 0 && docs.length > 0 && !slice.loading;
+  const canSubmit =
+    !!slice.selectedConnectionId &&
+    slice.query.trim().length > 0 &&
+    docs.length > 0 &&
+    !slice.loading;
 
   const currentId = useRerankHistoryStore((h) => h.currentId);
   const restoreVersion = useRerankHistoryStore((h) => h.restoreVersion);
@@ -98,16 +100,13 @@ export function RerankPage() {
   }, []);
 
   const onSubmit = async () => {
-    if (!conn) return;
+    const connectionId = slice.selectedConnectionId;
+    if (!connectionId) return;
     slice.setLoading(true);
     slice.setError(null);
     try {
       const body: PlaygroundRerankRequest = {
-        apiBaseUrl: conn.apiBaseUrl,
-        apiKey: conn.apiKey,
-        model: conn.model,
-        customHeaders: conn.customHeaders || undefined,
-        queryParams: conn.queryParams || undefined,
+        connectionId,
         query: slice.query.trim(),
         documents: docs,
         topN: slice.params.topN,
@@ -132,7 +131,7 @@ export function RerankPage() {
 
   const snippets = conn
     ? genRerankSnippets({
-        apiBaseUrl: conn.apiBaseUrl,
+        apiBaseUrl: conn.baseUrl,
         model: conn.model,
         query: slice.query,
         documents: docs,

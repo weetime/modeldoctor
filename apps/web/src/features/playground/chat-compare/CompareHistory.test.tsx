@@ -16,6 +16,12 @@ import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: [], isLoading: false, error: null }),
+  useConnection: () => ({ data: null, isLoading: false, error: null }),
+}));
+
 import {
   restoreCompareSnapshot,
   saveCompareSnapshot,

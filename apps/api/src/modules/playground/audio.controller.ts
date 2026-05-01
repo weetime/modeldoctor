@@ -15,13 +15,17 @@ import {
   HttpStatus,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
-  UsePipes,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { AudioService } from "./audio.service.js";
 
 class PlaygroundTtsRequestDto extends createZodDto(PlaygroundTtsRequestSchema) {}
@@ -34,16 +38,22 @@ const TRANSCRIPTIONS_FILE_SIZE_LIMIT = 25 * 1024 * 1024;
 
 @ApiTags("playground")
 @Controller("playground/audio")
+@UseGuards(JwtAuthGuard)
 export class AudioController {
-  constructor(private readonly svc: AudioService) {}
+  constructor(
+    private readonly svc: AudioService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({ summary: "Synthesize speech via the Playground" })
   @ApiBody({ type: PlaygroundTtsRequestDto })
   @ApiOkResponse({ type: PlaygroundTtsResponseDto })
   @Post("tts")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundTtsRequestSchema))
-  tts(@Body() body: PlaygroundTtsRequest): Promise<PlaygroundTtsResponse> {
+  async tts(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(PlaygroundTtsRequestSchema)) body: PlaygroundTtsRequest,
+  ): Promise<PlaygroundTtsResponse> {
     if (body.reference_audio_base64) {
       const b64 = body.reference_audio_base64.split(",")[1] ?? "";
       // base64 decode ratio: 4 chars → 3 bytes (≈0.75); conservative
@@ -53,7 +63,8 @@ export class AudioController {
         throw new BadRequestException("reference_audio_base64 exceeds 15 MB decoded");
       }
     }
-    return this.svc.runTts(body);
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+    return this.svc.runTts(conn, body);
   }
 
   @ApiOperation({ summary: "Transcribe audio via the Playground (multipart upload)" })
@@ -64,6 +75,7 @@ export class AudioController {
     FileInterceptor("file", { limits: { fileSize: TRANSCRIPTIONS_FILE_SIZE_LIMIT } }),
   )
   async transcriptions(
+    @CurrentUser() user: JwtPayload,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() rawBody: unknown,
   ): Promise<PlaygroundTranscriptionsResponse> {
@@ -72,6 +84,7 @@ export class AudioController {
     if (!parsed.success) {
       throw new BadRequestException(parsed.error.flatten());
     }
-    return this.svc.runTranscriptions({ file, body: parsed.data });
+    const conn = await this.connections.getOwnedDecrypted(user.sub, parsed.data.connectionId);
+    return this.svc.runTranscriptions(conn, { file, body: parsed.data });
   }
 }

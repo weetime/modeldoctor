@@ -10,7 +10,13 @@ import type { ZodSchema } from "zod";
 export class ZodValidationPipe implements PipeTransform {
   constructor(private readonly schema: ZodSchema) {}
 
-  transform(value: unknown, _metadata: ArgumentMetadata): unknown {
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
+    // Skip values produced by custom parameter decorators (e.g. @CurrentUser
+    // returning JwtPayload). Method-level @UsePipes(pipe) would otherwise run
+    // this validator on every parameter, including @CurrentUser, and surface
+    // misleading "Required" errors for fields that don't belong on the user
+    // object. Body / query / param pipes still flow through.
+    if (metadata.type === "custom") return value;
     const result = this.schema.safeParse(value);
     if (result.success) return result.data;
 

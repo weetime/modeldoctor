@@ -43,6 +43,7 @@ const ONE_COMPLETED: ListBenchmarksResponse = {
     {
       id: "r1",
       userId: "u1",
+      connectionId: "c1",
       name: "vllm-llama3-tput",
       profile: "throughput",
       apiType: "chat",

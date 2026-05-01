@@ -18,32 +18,47 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
-import { useConnectionsStore } from "@/stores/connections-store";
-import type { Connection } from "@/types/connection";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ModalityCategory } from "@modeldoctor/contracts";
+import type {
+  ConnectionPublic,
+  ConnectionWithSecret,
+  ModalityCategory,
+  UpdateConnection,
+} from "@modeldoctor/contracts";
 import { Eye, EyeOff, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { type ConnectionInput, connectionInputSchema } from "./schema";
+import { useCreateConnection, useUpdateConnection } from "./queries";
+import {
+  type ConnectionInput,
+  connectionInputCreateSchema,
+  connectionInputEditSchema,
+} from "./schema";
+
+/**
+ * Dialog mode — `create` for a brand-new row, `edit` to modify an existing
+ * one. In edit mode, the apiKey field is disabled by default (placeholder
+ * shows the saved key preview); the user toggles "Reset apiKey" to send a
+ * new value. With the toggle off, the PATCH body omits `apiKey` entirely.
+ */
+export type ConnectionDialogMode =
+  | { kind: "create" }
+  | { kind: "edit"; existing: ConnectionPublic };
 
 interface ConnectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** If provided, dialog is in edit mode for this connection. */
-  connection?: Connection;
+  mode: ConnectionDialogMode;
   /**
-   * Create-mode prefill — e.g. "Save as new" from an inline endpoint form.
-   * Ignored when `connection` is set.
+   * Create-mode prefill — e.g. "Save as new connection" from the picker.
+   * Ignored when `mode.kind === "edit"`.
    */
   initialValues?: Partial<ConnectionInput>;
-  onSaved?: (c: Connection) => void;
+  onSaved?: (c: ConnectionPublic | ConnectionWithSecret) => void;
 }
 
-// Defaults for a fresh dialog. Intentionally Partial so `category` can be
-// unset — the user must pick one to satisfy the schema's required enum.
 const empty: Partial<ConnectionInput> = {
   name: "",
   apiBaseUrl: "",
@@ -70,36 +85,67 @@ const PRESET_TAGS = [
   "test",
 ];
 
+/** ConnectionPublic → form-shape default values (note: no apiKey is exposed by the server). */
+function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
+  return {
+    name: c.name,
+    apiBaseUrl: c.baseUrl,
+    apiKey: "", // never sent in PATCH unless reset toggle is on
+    model: c.model,
+    customHeaders: c.customHeaders,
+    queryParams: c.queryParams,
+    category: c.category,
+    tags: c.tags,
+  };
+}
+
 export function ConnectionDialog({
   open,
   onOpenChange,
-  connection,
+  mode,
   initialValues,
   onSaved,
 }: ConnectionDialogProps) {
   const { t } = useTranslation("connections");
   const { t: tc } = useTranslation("common");
-  const create = useConnectionsStore((s) => s.create);
-  const update = useConnectionsStore((s) => s.update);
+  const createMut = useCreateConnection();
+  const updateMut = useUpdateConnection();
+
+  const isEdit = mode.kind === "edit";
+  const existing = mode.kind === "edit" ? mode.existing : null;
+
   const [revealKey, setRevealKey] = useState(false);
+  const [resetApiKey, setResetApiKey] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [curlInput, setCurlInput] = useState("");
   const [tagDraft, setTagDraft] = useState("");
 
   const form = useForm<ConnectionInput>({
-    resolver: zodResolver(connectionInputSchema),
+    resolver: zodResolver(isEdit ? connectionInputEditSchema : connectionInputCreateSchema),
     defaultValues: empty,
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form reference is stable; we intentionally re-reset on mode/initialValues change
   useEffect(() => {
-    if (open) {
-      form.reset(connection ?? { ...empty, ...initialValues });
-      setSubmitError(null);
-      setRevealKey(false);
-      setCurlInput("");
-      setTagDraft("");
+    if (!open) return;
+    if (existing) {
+      form.reset(existingToFormValues(existing));
+    } else {
+      form.reset({ ...empty, ...initialValues });
     }
-  }, [open, connection, initialValues, form]);
+    setSubmitError(null);
+    setRevealKey(false);
+    setResetApiKey(false);
+    setCurlInput("");
+    setTagDraft("");
+  }, [open, existing, initialValues]);
+
+  // Re-validate when toggling the reset-apiKey switch in edit mode.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resetApiKey is the trigger; biome can't see that the body's behaviour depends on the apiKey field's enabled state
+  useEffect(() => {
+    if (!isEdit) return;
+    form.trigger("apiKey").catch(() => {});
+  }, [isEdit, form, resetApiKey]);
 
   const onParseCurl = () => {
     const trimmed = curlInput.trim();
@@ -119,6 +165,10 @@ export function ConnectionDialog({
     for (const key of filledKeys) {
       const value = patch[key];
       if (value === undefined) continue;
+      if (key === "apiKey" && isEdit && !resetApiKey) {
+        // Don't surreptitiously change apiKey from a curl in edit mode.
+        continue;
+      }
       form.setValue(key, value, { shouldValidate: validatedKeys.has(key) });
     }
 
@@ -126,11 +176,42 @@ export function ConnectionDialog({
     toast.success(t("dialog.curl.filled", { fields: localized.join(", ") }));
   };
 
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = form.handleSubmit(async (values) => {
+    setSubmitError(null);
+    const sanitizedBaseUrl = toApiBaseUrl(values.apiBaseUrl);
     try {
-      const sanitized = { ...values, apiBaseUrl: toApiBaseUrl(values.apiBaseUrl) };
-      const saved = connection ? update(connection.id, sanitized) : create(sanitized);
-      onSaved?.(saved);
+      if (existing) {
+        const body: UpdateConnection = {
+          name: values.name,
+          baseUrl: sanitizedBaseUrl,
+          model: values.model,
+          customHeaders: values.customHeaders,
+          queryParams: values.queryParams,
+          category: values.category,
+          tags: values.tags,
+        };
+        if (resetApiKey) {
+          if (values.apiKey.trim().length === 0) {
+            setSubmitError(t("dialog.resetApiKeyRequired"));
+            return;
+          }
+          body.apiKey = values.apiKey;
+        }
+        const saved = await updateMut.mutateAsync({ id: existing.id, body });
+        onSaved?.(saved);
+      } else {
+        const saved = await createMut.mutateAsync({
+          name: values.name,
+          baseUrl: sanitizedBaseUrl,
+          apiKey: values.apiKey,
+          model: values.model,
+          customHeaders: values.customHeaders,
+          queryParams: values.queryParams,
+          category: values.category,
+          tags: values.tags,
+        });
+        onSaved?.(saved);
+      }
       onOpenChange(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : tc("errors.unknown");
@@ -138,16 +219,20 @@ export function ConnectionDialog({
     }
   });
 
+  const apiKeyDisabled = isEdit && !resetApiKey;
+  const apiKeyPlaceholder = isEdit
+    ? (existing?.apiKeyPreview ?? t("dialog.fields.apiKeyPlaceholder"))
+    : t("dialog.fields.apiKeyPlaceholder");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
         <DialogHeader>
-          <DialogTitle>{connection ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
+          <DialogTitle>{isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={onSubmit} autoComplete="off" className="flex min-h-0 flex-1 flex-col gap-4">
-          {/* Honeypots: Chrome ignores autocomplete=off when a password field is present.
-              Hidden text + password inputs absorb the autofill before it reaches our real fields. */}
+          {/* Honeypots: Chrome ignores autocomplete=off when a password field is present. */}
           <input
             type="text"
             name="username"
@@ -199,7 +284,6 @@ export function ConnectionDialog({
 
               <div>
                 <Label htmlFor="category">{t("dialog.fields.category")}</Label>
-                {/* onBlur not wired — RHF default mode is onSubmit; revisit if mode changes to onBlur/all */}
                 <Controller
                   control={form.control}
                   name="category"
@@ -244,24 +328,46 @@ export function ConnectionDialog({
             </div>
 
             <div>
-              <Label htmlFor="apiKey">{t("dialog.fields.apiKey")}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="apiKey">{t("dialog.fields.apiKey")}</Label>
+                {isEdit ? (
+                  <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={resetApiKey}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        setResetApiKey(next);
+                        if (!next) form.setValue("apiKey", "");
+                      }}
+                    />
+                    {t("dialog.resetApiKey")}
+                  </label>
+                ) : null}
+              </div>
               <div className="relative">
                 <Input
                   id="apiKey"
                   autoComplete="new-password"
                   type={revealKey ? "text" : "password"}
-                  placeholder={t("dialog.fields.apiKeyPlaceholder")}
+                  placeholder={apiKeyPlaceholder}
+                  disabled={apiKeyDisabled}
                   {...form.register("apiKey")}
                 />
-                <button
-                  type="button"
-                  onClick={() => setRevealKey((v) => !v)}
-                  className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                  aria-label={revealKey ? "hide" : "show"}
-                >
-                  {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                {!apiKeyDisabled ? (
+                  <button
+                    type="button"
+                    onClick={() => setRevealKey((v) => !v)}
+                    className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                    aria-label={revealKey ? "hide" : "show"}
+                  >
+                    {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                ) : null}
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("dialog.apiKeyEncryptedNotice")}
+              </p>
               {form.formState.errors.apiKey ? (
                 <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
               ) : null}
@@ -385,7 +491,9 @@ export function ConnectionDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {tc("actions.cancel")}
             </Button>
-            <Button type="submit">{tc("actions.save")}</Button>
+            <Button type="submit" disabled={createMut.isPending || updateMut.isPending}>
+              {tc("actions.save")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

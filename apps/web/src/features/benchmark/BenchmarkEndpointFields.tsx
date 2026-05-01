@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -7,58 +6,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnectionsStore } from "@/stores/connections-store";
+import { useConnection, useConnections } from "@/features/connections/queries";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { useId } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { CreateBenchmarkRequest } from "./schemas";
 
+/**
+ * Connection picker + read-only endpoint metadata for the benchmark create
+ * dialog. After Phase 5, the form only carries `connectionId`; the API
+ * resolves baseUrl / apiKey / model server-side. We still display the
+ * connection's metadata read-only as feedback for the user.
+ */
 export function BenchmarkEndpointFields({
-  requireApiKeyHighlight = false,
+  connectionMissing = false,
 }: {
-  requireApiKeyHighlight?: boolean;
+  /** True when duplicating a run whose original connection has been deleted. */
+  connectionMissing?: boolean;
 }) {
   const { t } = useTranslation("benchmark");
-  const { register, setValue, watch, control, formState } =
-    useFormContext<CreateBenchmarkRequest>();
+  const { t: tConn } = useTranslation("connections");
+  const { control, watch, formState } = useFormContext<CreateBenchmarkRequest>();
   const apiTypeId = useId();
-  const apiBaseUrlId = useId();
-  const apiKeyId = useId();
-  const modelId = useId();
   const connId = useId();
 
-  const conns = useConnectionsStore((s) => s.list());
-
-  const onPickConnection = (connectionId: string) => {
-    if (connectionId === "__manual__") return;
-    const conn = conns.find((c) => c.id === connectionId);
-    if (!conn) return;
-    setValue("apiBaseUrl", conn.apiBaseUrl, { shouldValidate: true });
-    setValue("apiKey", conn.apiKey, { shouldValidate: true });
-    setValue("model", conn.model, { shouldValidate: true });
-  };
+  const listQuery = useConnections();
+  const conns: ConnectionPublic[] = listQuery.data ?? [];
+  const selectedId = watch("connectionId");
+  const { data: selectedConn } = useConnection(selectedId || null);
 
   const errors = formState.errors;
-  const apiKey = watch("apiKey");
-  const apiKeyError = !!errors.apiKey || (requireApiKeyHighlight && !apiKey);
 
   return (
     <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t("create.fields.apiBaseUrl")}
-        </span>
-        {conns.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Label htmlFor={connId} className="text-xs text-muted-foreground">
-              {t("create.loadFromConnection")}
-            </Label>
-            <Select onValueChange={onPickConnection}>
-              <SelectTrigger id={connId} className="h-8 w-[180px] text-xs">
+      <div>
+        <Label htmlFor={connId}>{t("create.loadFromConnection")}</Label>
+        <Controller
+          name="connectionId"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+              <SelectTrigger id={connId} aria-invalid={!!errors.connectionId}>
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__manual__">Manual</SelectItem>
                 {conns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -66,8 +58,11 @@ export function BenchmarkEndpointFields({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+        />
+        {connectionMissing ? (
+          <p className="mt-1 text-xs text-destructive">{tConn("dialog.savedConnectionMissing")}</p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -89,26 +84,26 @@ export function BenchmarkEndpointFields({
             )}
           />
         </div>
-        <div className="col-span-2">
-          <Label htmlFor={modelId}>{t("create.fields.model")}</Label>
-          <Input id={modelId} {...register("model")} aria-invalid={!!errors.model} />
-        </div>
       </div>
 
-      <div>
-        <Label htmlFor={apiBaseUrlId}>{t("create.fields.apiBaseUrl")}</Label>
-        <Input id={apiBaseUrlId} {...register("apiBaseUrl")} aria-invalid={!!errors.apiBaseUrl} />
-      </div>
-      <div>
-        <Label htmlFor={apiKeyId}>{t("create.fields.apiKey")}</Label>
-        <Input
-          id={apiKeyId}
-          type="password"
-          {...register("apiKey")}
-          aria-invalid={apiKeyError}
-          className={apiKeyError ? "border-destructive" : undefined}
-        />
-      </div>
+      {selectedConn ? (
+        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+          <div>
+            <div className="font-semibold">{t("create.fields.apiBaseUrl")}</div>
+            <div className="font-mono break-all">{selectedConn.baseUrl}</div>
+          </div>
+          <div>
+            <div className="font-semibold">{t("create.fields.model")}</div>
+            <div className="font-mono break-all">{selectedConn.model}</div>
+          </div>
+          <div>
+            <div className="font-semibold">{t("create.fields.apiKey")}</div>
+            <div className="font-mono">{selectedConn.apiKeyPreview}</div>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("create.pickConnectionHint")}</p>
+      )}
     </div>
   );
 }

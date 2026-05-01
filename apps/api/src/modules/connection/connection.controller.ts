@@ -1,5 +1,6 @@
 import {
-  type Connection,
+  type ConnectionPublic,
+  type ConnectionWithSecret,
   type CreateConnection,
   type ListConnectionsResponse,
   type UpdateConnection,
@@ -38,13 +39,13 @@ export class ConnectionController {
   create(
     @CurrentUser() user: JwtPayload,
     @Body(new ZodValidationPipe(createConnectionSchema)) body: CreateConnection,
-  ): Promise<Connection> {
+  ): Promise<ConnectionWithSecret> {
     return this.service.create(user.sub, body);
   }
 
   @Get(":id")
-  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Connection> {
-    return this.service.findOwned(user.sub, id);
+  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ConnectionPublic> {
+    return this.service.findOwnedPublic(user.sub, id);
   }
 
   @Patch(":id")
@@ -52,7 +53,7 @@ export class ConnectionController {
     @CurrentUser() user: JwtPayload,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(updateConnectionSchema)) body: UpdateConnection,
-  ): Promise<Connection> {
+  ): Promise<ConnectionWithSecret | ConnectionPublic> {
     return this.service.update(user.sub, id, body);
   }
 

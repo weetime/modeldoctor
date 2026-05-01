@@ -18,13 +18,39 @@ vi.mock("@/lib/api-client", () => {
   return { ApiError, api: { get: vi.fn(), post: vi.fn(), del: vi.fn() } };
 });
 
+import type { BenchmarkRun, ConnectionPublic } from "@modeldoctor/contracts";
+
+const SAMPLE_CONN: ConnectionPublic = {
+  id: "conn-src",
+  userId: "u1",
+  name: "bench-A",
+  baseUrl: "https://api.test",
+  apiKeyPreview: "sk-...wxyz",
+  model: "llama-3-8b",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat",
+  tags: [],
+  createdAt: "2026-04-26T14:22:00Z",
+  updatedAt: "2026-04-26T14:22:00Z",
+};
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: [SAMPLE_CONN], isLoading: false, error: null }),
+  useConnection: (id: string | null | undefined) => ({
+    data: id === "conn-src" ? SAMPLE_CONN : null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 import { api } from "@/lib/api-client";
-import type { BenchmarkRun } from "@modeldoctor/contracts";
 import { BenchmarkCreateModal } from "../BenchmarkCreateModal";
 
 const SOURCE_RUN: BenchmarkRun = {
   id: "src1",
   userId: "u1",
+  connectionId: "conn-src",
   name: "vllm-llama3-tput",
   description: "first run",
   profile: "throughput",
@@ -52,6 +78,7 @@ const SOURCE_RUN: BenchmarkRun = {
 const FAKE_RUN: BenchmarkRun = {
   id: "newid",
   userId: "u1",
+  connectionId: "conn-fake",
   name: "smoke",
   description: null,
   profile: "throughput",
@@ -139,7 +166,7 @@ describe("BenchmarkCreateModal — basic tab", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("submitting fills form, calls api.post, navigates to detail", async () => {
+  it("submitting fills form, calls api.post with connectionId, navigates to detail", async () => {
     vi.mocked(api.post).mockResolvedValue(FAKE_RUN);
 
     render(<BenchmarkCreateModal />, {
@@ -149,9 +176,11 @@ describe("BenchmarkCreateModal — basic tab", () => {
     });
 
     await userEvent.type(screen.getByLabelText(/^name$/i), "smoke");
-    await userEvent.type(screen.getByLabelText(/api base url/i), "https://api.test");
-    await userEvent.type(screen.getByLabelText(/api key/i), "k");
-    await userEvent.type(screen.getByLabelText(/^model$/i), "m");
+    // Pick the (only) connection from the picker. The picker is the only
+    // combobox in the basic tab (apiType is the second).
+    const comboboxes = screen.getAllByRole("combobox");
+    await userEvent.click(comboboxes[0]);
+    await userEvent.click(screen.getByRole("option", { name: /bench-A/i }));
 
     const submit = screen.getByRole("button", { name: /run benchmark/i });
     await userEvent.click(submit);
@@ -161,17 +190,18 @@ describe("BenchmarkCreateModal — basic tab", () => {
         "/api/benchmarks",
         expect.objectContaining({
           name: "smoke",
-          apiBaseUrl: "https://api.test",
-          apiKey: "k",
-          model: "m",
+          connectionId: "conn-src",
           profile: "throughput",
         }),
       ),
     );
+    const arg = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty("apiKey");
+    expect(arg).not.toHaveProperty("apiBaseUrl");
     expect(await screen.findByText(/detail page for navigation target/i)).toBeInTheDocument();
   });
 
-  it("?duplicate=src1 prefills form with source values and blanks apiKey", async () => {
+  it("?duplicate=src1 prefills form with source values and pre-selects original connection", async () => {
     vi.mocked(api.get).mockResolvedValue(SOURCE_RUN);
 
     render(<BenchmarkCreateModal />, {
@@ -182,9 +212,9 @@ describe("BenchmarkCreateModal — basic tab", () => {
 
     expect(await screen.findByText(/duplicating from/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^name$/i)).toHaveValue("vllm-llama3-tput-2");
-    expect(screen.getByLabelText(/api base url/i)).toHaveValue("https://api.test");
-    expect(screen.getByLabelText(/^model$/i)).toHaveValue("llama-3-8b");
-    expect(screen.getByLabelText(/api key/i)).toHaveValue("");
-    expect(screen.getByLabelText(/api key/i)).toHaveAttribute("aria-invalid", "true");
+    // Read-only connection metadata is rendered below the picker.
+    expect(await screen.findByText("https://api.test")).toBeInTheDocument();
+    expect(screen.getByText("llama-3-8b")).toBeInTheDocument();
+    expect(screen.getByText("sk-...wxyz")).toBeInTheDocument();
   });
 });

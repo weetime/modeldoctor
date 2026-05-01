@@ -55,13 +55,16 @@ model RefreshToken {
 }
 
 model Connection {
-  id            String  @id @default(cuid())
-  userId        String  @map("user_id")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
   name          String
-  baseUrl       String  @map("base_url")
-  apiType       String  @map("api_type") // 'chat' | 'embeddings' | 'rerank' | 'images' | 'chat-vision' | 'chat-audio'
-  prometheusUrl String? @map("prometheus_url")
-  serverKind    String? @map("server_kind") // 'vllm' | 'sglang' | 'tgi' | 'higress' | 'generic' — for #60
+  baseUrl       String   @map("base_url")
+  apiKeyCipher  String   @map("api_key_cipher")  // AES-256-GCM v1, see common/crypto/aes-gcm.ts
+  model         String
+  customHeaders String   @default("") @map("custom_headers")
+  queryParams   String   @default("") @map("query_params")
+  category      String   // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
+  tags          String[] @default([])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -69,6 +72,7 @@ model Connection {
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   runs Run[]
 
+  @@unique([userId, name])
   @@index([userId])
   @@map("connections")
 }
@@ -96,7 +100,6 @@ model Run {
 
   // Driver bookkeeping
   driverHandle String? @map("driver_handle") // 'subprocess:1234' or 'namespace/jobName'
-  apiKeyCipher String? @map("api_key_cipher") // AES-256-GCM ciphertext, see common/crypto; moved from benchmark_runs (#37 may relocate to Connection)
 
   // Snapshots
   params          Json

@@ -35,7 +35,7 @@ export default defineConfig({
       // same constructor-validation pattern. env.schema.ts treats this as
       // optional in test mode; inject a 32-byte base64 placeholder so the
       // service can boot. (32 zero bytes; never used to encrypt real data.)
-      BENCHMARK_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      CONNECTION_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     },
   },
 });

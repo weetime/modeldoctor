@@ -7,20 +7,16 @@ import {
   buildUrl,
   parseImagesResponse,
 } from "../../integrations/openai-client/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 
 const DEFAULT_PATH = "/v1/images/generations";
 const EDIT_DEFAULT_PATH = "/v1/images/edits";
 const MAX_ERROR_BODY_BYTES = 1024;
 
 export interface RunImagesEditInput {
-  apiBaseUrl: string;
-  apiKey: string;
-  customHeaders?: string;
-  queryParams?: string;
   pathOverride?: string;
   image: { buffer: Buffer; originalname: string; mimetype: string; size: number };
   mask: { buffer: Buffer; originalname: string; mimetype: string; size: number };
-  model: string;
   prompt: string;
   n?: number;
   size?: string;
@@ -28,16 +24,19 @@ export interface RunImagesEditInput {
 
 @Injectable()
 export class ImagesService {
-  async run(req: PlaygroundImagesRequest): Promise<PlaygroundImagesResponse> {
+  async run(
+    conn: DecryptedConnection,
+    req: PlaygroundImagesRequest,
+  ): Promise<PlaygroundImagesResponse> {
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     const body = buildPlaygroundImagesBody({
-      model: req.model,
+      model: conn.model,
       prompt: req.prompt,
       size: req.size,
       n: req.n,
@@ -72,20 +71,23 @@ export class ImagesService {
     }
   }
 
-  async runEdit(input: RunImagesEditInput): Promise<PlaygroundImagesResponse> {
+  async runEdit(
+    conn: DecryptedConnection,
+    input: RunImagesEditInput,
+  ): Promise<PlaygroundImagesResponse> {
     const url = buildUrl({
-      apiBaseUrl: input.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: EDIT_DEFAULT_PATH,
       pathOverride: input.pathOverride,
-      queryParams: input.queryParams,
+      queryParams: conn.queryParams,
     });
     // Multipart upload — strip Content-Type so fetch derives the boundary.
-    const baseHeaders = buildHeaders(input.apiKey, input.customHeaders);
+    const baseHeaders = buildHeaders(conn.apiKey, conn.customHeaders);
     const { "Content-Type": _ct, ...headers } = baseHeaders;
     const form = buildPlaygroundImagesEditFormData({
       image: input.image,
       mask: input.mask,
-      model: input.model,
+      model: conn.model,
       prompt: input.prompt,
       n: input.n,
       size: input.size,

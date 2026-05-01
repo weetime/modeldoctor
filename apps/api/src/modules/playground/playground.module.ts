@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ConnectionModule } from "../connection/connection.module.js";
 import { AudioController } from "./audio.controller.js";
 import { AudioService } from "./audio.service.js";
 import { ChatController } from "./chat.controller.js";
@@ -11,6 +12,7 @@ import { RerankController } from "./rerank.controller.js";
 import { RerankService } from "./rerank.service.js";
 
 @Module({
+  imports: [ConnectionModule],
   controllers: [
     ChatController,
     EmbeddingsController,

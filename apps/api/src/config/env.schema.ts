@@ -41,7 +41,7 @@ export const EnvSchema = z
     // keys at rest. Optional in Phase 1 (the helper is added but no row uses
     // it yet); Phase 4 tightens to required-when-not-test once the
     // BenchmarkController persists encrypted rows.
-    BENCHMARK_API_KEY_ENCRYPTION_KEY: z
+    CONNECTION_API_KEY_ENCRYPTION_KEY: z
       .string()
       .optional()
       .refine(
@@ -103,11 +103,11 @@ export const EnvSchema = z
         message: "JWT_ACCESS_SECRET is required when NODE_ENV is not 'test'",
       });
     }
-    if (env.NODE_ENV !== "test" && !env.BENCHMARK_API_KEY_ENCRYPTION_KEY) {
+    if (env.NODE_ENV !== "test" && !env.CONNECTION_API_KEY_ENCRYPTION_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["BENCHMARK_API_KEY_ENCRYPTION_KEY"],
-        message: "BENCHMARK_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
+        path: ["CONNECTION_API_KEY_ENCRYPTION_KEY"],
+        message: "CONNECTION_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
       });
     }
     if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_SECRET) {

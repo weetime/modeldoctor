@@ -52,12 +52,10 @@ describe("benchmark contracts", () => {
 
   describe("CreateBenchmarkRequestSchema", () => {
     const valid = {
+      connectionId: "conn_test_id",
       name: "throughput-baseline",
       profile: "throughput" as const,
       apiType: "chat" as const,
-      apiBaseUrl: "http://vllm.local:8000",
-      apiKey: "sk-test",
-      model: "facebook/opt-125m",
       datasetName: "random" as const,
       datasetInputTokens: 1024,
       datasetOutputTokens: 128,
@@ -94,12 +92,6 @@ describe("benchmark contracts", () => {
     it("rejects name longer than 128 chars", () => {
       expect(() =>
         CreateBenchmarkRequestSchema.parse({ ...valid, name: "x".repeat(129) }),
-      ).toThrow();
-    });
-
-    it("rejects non-URL apiBaseUrl", () => {
-      expect(() =>
-        CreateBenchmarkRequestSchema.parse({ ...valid, apiBaseUrl: "not-a-url" }),
       ).toThrow();
     });
 
@@ -145,6 +137,7 @@ describe("benchmark contracts", () => {
     const summary = {
       id: "ckxxx",
       userId: "uxxx",
+      connectionId: "conn-1",
       name: "run-1",
       profile: "throughput" as const,
       apiType: "chat" as const,

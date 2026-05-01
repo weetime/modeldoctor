@@ -19,16 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConnectionsImportDialog } from "@/features/connections/ConnectionsImportDialog";
 import { useE2EStore } from "@/features/e2e-smoke/store";
 import { useLoadTestStore } from "@/features/load-test/store";
 import { useDebugStore } from "@/features/request-debug/store";
 import { api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
-import { format } from "date-fns";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -40,15 +37,12 @@ export function SettingsPage() {
   const setTheme = useThemeStore((s) => s.setMode);
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
-  const exportAll = useConnectionsStore((s) => s.exportAll);
-  const resetConnections = useConnectionsStore((s) => s.reset);
   const resetE2E = useE2EStore((s) => s.reset);
   const resetLoadTest = useLoadTestStore((s) => s.reset);
   const resetDebug = useDebugStore((s) => s.reset);
   const resetTheme = useThemeStore((s) => s.reset);
   const resetLocale = useLocaleStore((s) => s.reset);
   const resetSidebar = useSidebarStore((s) => s.reset);
-  const [importOpen, setImportOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
 
@@ -56,16 +50,6 @@ export function SettingsPage() {
     installed: boolean;
     path?: string;
   } | null>(null);
-
-  const onExport = () => {
-    const blob = new Blob([exportAll()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `modeldoctor-connections-${format(new Date(), "yyyy-MM-dd")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const onCheckVegeta = async () => {
     try {
@@ -91,7 +75,6 @@ export function SettingsPage() {
     resetE2E();
     resetLoadTest();
     resetDebug();
-    resetConnections();
     resetTheme();
     resetLocale();
     resetSidebar();
@@ -168,12 +151,6 @@ export function SettingsPage() {
 
         <Section title={t("data.title")}>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={onExport}>
-              {t("data.exportConnections")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              {t("data.importConnections")}
-            </Button>
             <Button variant="outline" size="sm" onClick={() => setClearOpen(true)}>
               {t("data.clearTestData")}
             </Button>
@@ -184,7 +161,6 @@ export function SettingsPage() {
         </Section>
       </div>
 
-      <ConnectionsImportDialog open={importOpen} onOpenChange={setImportOpen} />
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

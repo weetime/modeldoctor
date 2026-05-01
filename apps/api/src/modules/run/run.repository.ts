@@ -13,7 +13,6 @@ export type CreateRunInput = {
   params: Prisma.InputJsonValue;
   name?: string | null;
   description?: string | null;
-  apiKeyCipher?: string | null;
   templateId?: string | null;
   templateVersion?: string | null;
   parentRunId?: string | null;
@@ -50,25 +49,23 @@ export class RunRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(input: CreateRunInput): Promise<PrismaRun> {
-    return this.prisma.run.create({
-      data: {
-        userId: input.userId ?? null,
-        connectionId: input.connectionId ?? null,
-        kind: input.kind,
-        tool: input.tool,
-        scenario: input.scenario,
-        mode: input.mode,
-        driverKind: input.driverKind,
-        params: input.params,
-        name: input.name ?? null,
-        description: input.description ?? null,
-        apiKeyCipher: input.apiKeyCipher ?? null,
-        templateId: input.templateId ?? null,
-        templateVersion: input.templateVersion ?? null,
-        parentRunId: input.parentRunId ?? null,
-        baselineId: input.baselineId ?? null,
-      },
-    });
+    const data: Prisma.RunCreateInput = {
+      kind: input.kind,
+      tool: input.tool,
+      scenario: input.scenario,
+      mode: input.mode,
+      driverKind: input.driverKind,
+      params: input.params,
+      name: input.name ?? null,
+      description: input.description ?? null,
+      templateId: input.templateId ?? null,
+      templateVersion: input.templateVersion ?? null,
+    };
+    if (input.userId) data.user = { connect: { id: input.userId } };
+    if (input.connectionId) data.connection = { connect: { id: input.connectionId } };
+    if (input.parentRunId) data.parent = { connect: { id: input.parentRunId } };
+    if (input.baselineId) data.baseline = { connect: { id: input.baselineId } };
+    return this.prisma.run.create({ data });
   }
 
   findById(id: string): Promise<PrismaRun | null> {

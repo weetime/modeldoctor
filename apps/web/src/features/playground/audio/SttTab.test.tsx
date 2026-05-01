@@ -1,5 +1,4 @@
 import i18n from "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
@@ -62,22 +61,6 @@ describe("SttTab", () => {
         sending: false,
       },
     }));
-    // Use the real connections-store API (the plan's object-map shape was wrong;
-    // we already learned this in Task 11). Reset to empty array, then create.
-    useConnectionsStore.setState({ connections: [] } as never);
-    useConnectionsStore.getState().create({
-      name: "stt",
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "whisper-1",
-      customHeaders: "",
-      queryParams: "",
-      category: "audio",
-      tags: [],
-    } as never);
-    // Set our test connection id to whatever was created
-    const created = useConnectionsStore.getState().list()[0];
-    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: created.id }));
     vi.stubGlobal("fetch", vi.fn());
   });
   afterEach(() => {
@@ -91,7 +74,7 @@ describe("SttTab", () => {
     expect(screen.getByRole("button", { name: /transcribe/i })).toBeDisabled();
   });
 
-  it("uploads recorded blob and stores transcribed text", async () => {
+  it("uploads recorded blob with connectionId and stores transcribed text", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response(JSON.stringify({ success: true, text: "hello world", latencyMs: 100 }), {
         status: 200,
@@ -108,6 +91,7 @@ describe("SttTab", () => {
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/playground/audio/transcriptions");
     expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("connectionId")).toBe("c1");
     expect((init.headers as Headers).get("Content-Type")).toBeNull();
   });
 });

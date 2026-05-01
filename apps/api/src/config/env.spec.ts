@@ -44,7 +44,7 @@ describe("validateEnv", () => {
       NODE_ENV: "production",
       DATABASE_URL: "postgresql://u:p@h:5432/d",
       JWT_ACCESS_SECRET: "a".repeat(32),
-      BENCHMARK_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
     });
@@ -73,7 +73,7 @@ describe("validateEnv", () => {
       NODE_ENV: "production",
       DATABASE_URL: "postgresql://u:p@h:5432/d",
       JWT_ACCESS_SECRET: "a".repeat(32),
-      BENCHMARK_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
     });
@@ -118,30 +118,30 @@ describe("validateEnv", () => {
     }
   });
 
-  // BENCHMARK_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
+  // CONNECTION_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
   // base64 string that decodes to exactly 32 bytes (AES-256 key length).
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY is optional", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY is optional", () => {
     const env = validateEnv({ NODE_ENV: "test" });
-    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBeUndefined();
+    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBeUndefined();
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
     const key = Buffer.alloc(32, 0x42).toString("base64");
-    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: key });
-    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBe(key);
+    const env = validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: key });
+    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBe(key);
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
     const tooShort = Buffer.alloc(16, 0x42).toString("base64");
     expect(() =>
-      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: tooShort }),
-    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: tooShort }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
     expect(() =>
-      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
-    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 
   // BENCHMARK_CALLBACK_SECRET: optional, but if provided must be ≥ 32 chars.
@@ -169,7 +169,7 @@ describe("validateEnv", () => {
       NODE_ENV: "development" as const,
       DATABASE_URL: "postgres://localhost:5432/db",
       JWT_ACCESS_SECRET: "x".repeat(32),
-      BENCHMARK_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
     };
@@ -206,9 +206,9 @@ describe("validateEnv", () => {
       expect(env.BENCHMARK_DEFAULT_MAX_DURATION_SECONDS).toBe(1800);
     });
 
-    it("requires BENCHMARK_API_KEY_ENCRYPTION_KEY outside test mode", () => {
-      const noKey = { ...baseDev, BENCHMARK_API_KEY_ENCRYPTION_KEY: undefined };
-      expect(() => validateEnv(noKey)).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+    it("requires CONNECTION_API_KEY_ENCRYPTION_KEY outside test mode", () => {
+      const noKey = { ...baseDev, CONNECTION_API_KEY_ENCRYPTION_KEY: undefined };
+      expect(() => validateEnv(noKey)).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
     });
 
     it("requires BENCHMARK_CALLBACK_SECRET outside test mode", () => {

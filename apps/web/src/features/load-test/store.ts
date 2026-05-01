@@ -1,4 +1,4 @@
-import type { EndpointValues } from "@/types/connection";
+import type { EndpointValues } from "@/lib/endpoint-values";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ApiType, LoadTestResult } from "./types";

@@ -1,4 +1,4 @@
-import { useConnectionsStore } from "@/stores/connections-store";
+import { useConnection } from "@/features/connections/queries";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -182,13 +182,11 @@ export function AudioPage() {
     stt.result,
   ]);
 
-  const conn = useConnectionsStore((s) =>
-    selectedConnectionId ? s.get(selectedConnectionId) : null,
-  );
+  const { data: conn } = useConnection(selectedConnectionId);
   const snippets = conn
     ? genAudioSnippets({
         activeTab: tab,
-        apiBaseUrl: conn.apiBaseUrl,
+        apiBaseUrl: conn.baseUrl,
         tts,
         stt,
       })

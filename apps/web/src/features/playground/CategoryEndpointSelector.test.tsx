@@ -1,43 +1,49 @@
 import "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CategoryEndpointSelector } from "./CategoryEndpointSelector";
+import { describe, expect, it, vi } from "vitest";
 
-function seed() {
-  const s = useConnectionsStore.getState();
-  s.create({
+const list: ConnectionPublic[] = [
+  {
+    id: "c-chat",
+    userId: "u1",
     name: "chat-A",
-    apiBaseUrl: "http://a",
-    apiKey: "k",
+    baseUrl: "http://a",
+    apiKeyPreview: "sk-...1234",
     model: "m",
     customHeaders: "",
     queryParams: "",
     category: "chat",
     tags: [],
-  });
-  s.create({
+    createdAt: "2026-04-26T14:22:00Z",
+    updatedAt: "2026-04-26T14:22:00Z",
+  },
+  {
+    id: "c-embed",
+    userId: "u1",
     name: "embed-B",
-    apiBaseUrl: "http://b",
-    apiKey: "k",
+    baseUrl: "http://b",
+    apiKeyPreview: "sk-...5678",
     model: "m",
     customHeaders: "",
     queryParams: "",
     category: "embeddings",
     tags: [],
-  });
-}
+    createdAt: "2026-04-26T14:22:00Z",
+    updatedAt: "2026-04-26T14:22:00Z",
+  },
+];
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: list, isLoading: false, error: null }),
+}));
+
+import { CategoryEndpointSelector } from "./CategoryEndpointSelector";
 
 describe("CategoryEndpointSelector", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
-  });
-
   it("only lists connections of the matching category by default", async () => {
     const user = userEvent.setup();
-    seed();
     render(
       <CategoryEndpointSelector category="chat" selectedConnectionId={null} onSelect={vi.fn()} />,
     );
@@ -48,7 +54,6 @@ describe("CategoryEndpointSelector", () => {
 
   it("show-all toggle reveals all connections", async () => {
     const user = userEvent.setup();
-    seed();
     render(
       <CategoryEndpointSelector category="chat" selectedConnectionId={null} onSelect={vi.fn()} />,
     );
@@ -59,16 +64,10 @@ describe("CategoryEndpointSelector", () => {
   });
 
   it("warns when selected connection's category mismatches", () => {
-    seed();
-    const embedId =
-      useConnectionsStore
-        .getState()
-        .list()
-        .find((c) => c.name === "embed-B")?.id ?? null;
     render(
       <CategoryEndpointSelector
         category="chat"
-        selectedConnectionId={embedId}
+        selectedConnectionId="c-embed"
         onSelect={vi.fn()}
       />,
     );
@@ -77,17 +76,12 @@ describe("CategoryEndpointSelector", () => {
 
   it("emits onSelect with the picked connection id", async () => {
     const user = userEvent.setup();
-    seed();
     const onSelect = vi.fn();
     render(
       <CategoryEndpointSelector category="chat" selectedConnectionId={null} onSelect={onSelect} />,
     );
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByRole("option", { name: /chat-A/i }));
-    const expectedId = useConnectionsStore
-      .getState()
-      .list()
-      .find((c) => c.name === "chat-A")?.id;
-    expect(onSelect).toHaveBeenCalledWith(expectedId);
+    expect(onSelect).toHaveBeenCalledWith("c-chat");
   });
 });
