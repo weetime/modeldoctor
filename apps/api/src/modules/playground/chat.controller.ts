@@ -12,7 +12,6 @@ import {
   Post,
   Res,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
@@ -45,10 +44,9 @@ export class ChatController {
   @ApiOkResponse({ type: PlaygroundChatResponseDto })
   @Post("chat")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundChatRequestSchema))
   async chat(
     @CurrentUser() user: JwtPayload,
-    @Body() body: PlaygroundChatRequest,
+    @Body(new ZodValidationPipe(PlaygroundChatRequestSchema)) body: PlaygroundChatRequest,
     @Res({ passthrough: false }) res: Response,
   ): Promise<undefined | PlaygroundChatResponse> {
     const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);

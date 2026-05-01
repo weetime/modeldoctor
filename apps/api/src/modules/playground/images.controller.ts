@@ -15,7 +15,6 @@ import {
   UploadedFiles,
   UseGuards,
   UseInterceptors,
-  UsePipes,
 } from "@nestjs/common";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -47,10 +46,9 @@ export class ImagesController {
   @ApiOkResponse({ type: PlaygroundImagesResponseDto })
   @Post("images")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundImagesRequestSchema))
   async images(
     @CurrentUser() user: JwtPayload,
-    @Body() body: PlaygroundImagesRequest,
+    @Body(new ZodValidationPipe(PlaygroundImagesRequestSchema)) body: PlaygroundImagesRequest,
   ): Promise<PlaygroundImagesResponse> {
     const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
     return this.svc.run(conn, body);

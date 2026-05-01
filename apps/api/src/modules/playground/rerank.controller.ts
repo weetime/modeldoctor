@@ -4,7 +4,7 @@ import {
   type PlaygroundRerankResponse,
   PlaygroundRerankResponseSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
@@ -31,10 +31,9 @@ export class RerankController {
   @ApiOkResponse({ type: PlaygroundRerankResponseDto })
   @Post("rerank")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundRerankRequestSchema))
   async rerank(
     @CurrentUser() user: JwtPayload,
-    @Body() body: PlaygroundRerankRequest,
+    @Body(new ZodValidationPipe(PlaygroundRerankRequestSchema)) body: PlaygroundRerankRequest,
   ): Promise<PlaygroundRerankResponse> {
     const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
     return this.svc.run(conn, body);

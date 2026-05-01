@@ -4,7 +4,7 @@ import {
   type PlaygroundEmbeddingsResponse,
   PlaygroundEmbeddingsResponseSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UsePipes } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
@@ -31,10 +31,9 @@ export class EmbeddingsController {
   @ApiOkResponse({ type: PlaygroundEmbeddingsResponseDto })
   @Post("embeddings")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundEmbeddingsRequestSchema))
   async embeddings(
     @CurrentUser() user: JwtPayload,
-    @Body() body: PlaygroundEmbeddingsRequest,
+    @Body(new ZodValidationPipe(PlaygroundEmbeddingsRequestSchema)) body: PlaygroundEmbeddingsRequest,
   ): Promise<PlaygroundEmbeddingsResponse> {
     const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
     return this.svc.run(conn, body);

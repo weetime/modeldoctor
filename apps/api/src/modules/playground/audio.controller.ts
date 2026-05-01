@@ -17,7 +17,6 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  UsePipes,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -51,10 +50,9 @@ export class AudioController {
   @ApiOkResponse({ type: PlaygroundTtsResponseDto })
   @Post("tts")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(PlaygroundTtsRequestSchema))
   async tts(
     @CurrentUser() user: JwtPayload,
-    @Body() body: PlaygroundTtsRequest,
+    @Body(new ZodValidationPipe(PlaygroundTtsRequestSchema)) body: PlaygroundTtsRequest,
   ): Promise<PlaygroundTtsResponse> {
     if (body.reference_audio_base64) {
       const b64 = body.reference_audio_base64.split(",")[1] ?? "";
