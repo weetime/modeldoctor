@@ -24,7 +24,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ConnectionService } from "./connection.service.js";
 
-@Controller("api/connections")
+@Controller("connections")
 @UseGuards(JwtAuthGuard)
 export class ConnectionController {
   constructor(private readonly service: ConnectionService) {}

@@ -9,7 +9,7 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { RunService } from "./run.service.js";
 
-@Controller("api/runs")
+@Controller("runs")
 @UseGuards(JwtAuthGuard)
 export class RunController {
   constructor(private readonly service: RunService) {}

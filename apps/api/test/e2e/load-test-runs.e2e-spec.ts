@@ -1,11 +1,42 @@
+/**
+ * E2E spec for GET /api/load-test/runs (cursor-paginated list).
+ *
+ * The LoadTestRun table was removed in Task 11; runs are now stored in the
+ * unified Run table (kind=benchmark, tool=vegeta).  Tests seed rows via
+ * RunRepository rather than prisma.loadTestRun.
+ */
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PrismaService } from "../../src/database/prisma.service.js";
+import type { CreateRunInput } from "../../src/modules/run/run.repository.js";
+import { RunRepository } from "../../src/modules/run/run.repository.js";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+
+/** Minimal vegeta-style run row (mirrors what LoadTestService.run() persists). */
+function vegataSeed(
+  userId: string | null,
+  apiBaseUrl = "http://x",
+): CreateRunInput {
+  return {
+    kind: "benchmark",
+    tool: "vegeta",
+    userId,
+    scenario: {
+      apiType: "chat",
+      apiBaseUrl,
+      model: "m",
+      rate: 1,
+      duration: 1,
+    },
+    mode: "fixed",
+    driverKind: "local",
+    params: {},
+  };
+}
 
 describe("LoadTestRuns (e2e)", () => {
   let ctx: E2EContext;
   let adminToken: string;
+  let adminId: string;
 
   beforeAll(async () => {
     ctx = await bootE2E();
@@ -13,6 +44,7 @@ describe("LoadTestRuns (e2e)", () => {
     // Register the first user — first user becomes admin (Task 5.6 logic)
     const registered = await registerUser(ctx.app, "admin@example.com", "Password1!");
     adminToken = registered.token;
+    adminId = registered.user.id;
   }, 120_000);
 
   afterAll(async () => {
@@ -29,24 +61,20 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("inserts a row directly and lists it", async () => {
-    const prisma = ctx.app.get(PrismaService);
-    await prisma.loadTestRun.create({
-      data: {
-        apiType: "chat",
-        apiBaseUrl: "http://x",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {
-          requests: 1,
-          success: 1,
-          throughput: 1,
-          latencies: { mean: "1ms", p50: "1ms", p95: "1ms", p99: "1ms", max: "1ms" },
-        },
-        rawReport: "raw",
+    const repo = ctx.app.get(RunRepository);
+    const row = await repo.create(vegataSeed(adminId));
+    // Mark completed so the summary shape is valid
+    await repo.update(row.id, {
+      status: "completed",
+      completedAt: new Date(),
+      summaryMetrics: {
+        requests: 1,
+        success: 1,
+        throughput: 1,
+        latencies: { mean: "1ms", p50: "1ms", p95: "1ms", p99: "1ms", max: "1ms" },
       },
     });
+
     const res = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -57,21 +85,11 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("paginates with cursor", async () => {
-    const prisma = ctx.app.get(PrismaService);
+    const repo = ctx.app.get(RunRepository);
     // State carries over from the previous test within the same describe; seed 3 more rows
     for (let i = 0; i < 3; i++) {
-      await prisma.loadTestRun.create({
-        data: {
-          apiType: "chat",
-          apiBaseUrl: `http://x/${i}`,
-          model: "m",
-          rate: 1,
-          duration: 1,
-          status: "completed",
-          summaryJson: {},
-          rawReport: "",
-        },
-      });
+      const row = await repo.create(vegataSeed(adminId, `http://x/${i}`));
+      await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
     }
     const first = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs?limit=2")
@@ -95,7 +113,7 @@ describe("LoadTestRuns (e2e)", () => {
   });
 
   it("non-admin users see only their own runs", async () => {
-    const prisma = ctx.app.get(PrismaService);
+    const repo = ctx.app.get(RunRepository);
 
     // Register a second user (role=user, not admin since admin is already taken)
     const user2Res = await request(ctx.app.getHttpServer())
@@ -106,19 +124,8 @@ describe("LoadTestRuns (e2e)", () => {
     const user2Id = user2Res.body.user.id as string;
 
     // Seed a run owned by user2
-    await prisma.loadTestRun.create({
-      data: {
-        userId: user2Id,
-        apiType: "chat",
-        apiBaseUrl: "http://user2-run",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {},
-        rawReport: "user2-raw",
-      },
-    });
+    const row = await repo.create(vegataSeed(user2Id, "http://user2-run"));
+    await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     // user2 lists runs — should see only their own run
     const user2Runs = await request(ctx.app.getHttpServer())
@@ -132,8 +139,8 @@ describe("LoadTestRuns (e2e)", () => {
       .get("/api/load-test/runs")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
-    const adminRunIds = adminRuns.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
-    expect(adminRunIds).toContain("http://user2-run");
+    const adminRunUrls = adminRuns.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
+    expect(adminRunUrls).toContain("http://user2-run");
     // admin sees more rows than user2 alone
     expect(adminRuns.body.items.length).toBeGreaterThan(user2Runs.body.items.length);
   });
@@ -146,20 +153,9 @@ describe("LoadTestRuns (e2e)", () => {
     expect(user3Res.status).toBe(201);
     const user3Id = user3Res.body.user.id as string;
 
-    const prisma = ctx.app.get(PrismaService);
-    await prisma.loadTestRun.create({
-      data: {
-        userId: user3Id,
-        apiType: "completions",
-        apiBaseUrl: "http://user3-run",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {},
-        rawReport: "user3-raw",
-      },
-    });
+    const repo = ctx.app.get(RunRepository);
+    const row = await repo.create(vegataSeed(user3Id, "http://user3-run"));
+    await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     // admin should see this new run
     const adminRuns = await request(ctx.app.getHttpServer())
