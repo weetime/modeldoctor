@@ -4,7 +4,8 @@
     "performance": "性能",
     "correctness": "正确性",
     "observability": "可观测性",
-    "debug": "排障"
+    "debug": "排障",
+    "dev": "开发"
   },
   "status": {
     "comingSoon": "即将推出"
@@ -25,6 +26,7 @@
     "history": "历史记录",
     "requestDebug": "请求调试",
     "connections": "连接库",
-    "settings": "设置"
+    "settings": "设置",
+    "devCharts": "图表 Demo"
   }
 }

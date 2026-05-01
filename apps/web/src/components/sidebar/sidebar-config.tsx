@@ -9,6 +9,7 @@ import {
   HeartPulse,
   History,
   Image as ImageIcon,
+  LineChart,
   ListOrdered,
   type LucideIcon,
   MessageSquare,
@@ -23,6 +24,7 @@ export interface SidebarItem {
   icon: LucideIcon;
   labelKey: string; // sidebar:items.X
   comingSoon?: boolean;
+  devOnly?: boolean;
 }
 
 export interface SidebarGroup {
@@ -97,6 +99,18 @@ export const sidebarGroups: SidebarGroup[] = [
     id: "debug",
     labelKey: "groups.debug",
     items: [{ to: "/debug", icon: Bug, labelKey: "items.requestDebug" }],
+  },
+  {
+    id: "dev",
+    labelKey: "groups.dev",
+    items: [
+      {
+        to: "/dev/charts",
+        icon: LineChart,
+        labelKey: "items.devCharts",
+        devOnly: true,
+      },
+    ],
   },
 ];
 

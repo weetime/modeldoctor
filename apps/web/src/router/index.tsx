@@ -5,6 +5,7 @@ import { BenchmarkDetailPage } from "@/features/benchmark/BenchmarkDetailPage";
 import { BenchmarkListPage } from "@/features/benchmark/BenchmarkListPage";
 import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
+import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
@@ -87,6 +88,7 @@ export const routes: RouteObject[] = [
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
+          { path: "dev/charts", element: <DevChartsPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },
