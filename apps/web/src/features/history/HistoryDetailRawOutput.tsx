@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +19,7 @@ export function HistoryDetailRawOutput({
       {rawOutput && Object.keys(rawOutput).length > 0 && (
         <div>
           <Button variant="ghost" size="sm" onClick={() => setShowRaw((s) => !s)}>
-            {showRaw ? "▼" : "▶"} {t("detail.rawOutput.toggle")}
+            {showRaw ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />} {t("detail.rawOutput.toggle")}
           </Button>
           {showRaw && (
             <pre className="mt-2 max-h-[400px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs">
@@ -30,7 +31,7 @@ export function HistoryDetailRawOutput({
       {logs && (
         <div>
           <Button variant="ghost" size="sm" onClick={() => setShowLogs((s) => !s)}>
-            {showLogs ? "▼" : "▶"} {t("detail.logs.toggle")}
+            {showLogs ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />} {t("detail.logs.toggle")}
           </Button>
           {showLogs && (
             <pre className="mt-2 max-h-[400px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs">
