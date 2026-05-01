@@ -61,11 +61,7 @@ export type ChatParams = z.infer<typeof ChatParamsSchema>;
  * removes a layer of frontend-side message-array rebuilding.
  */
 export const PlaygroundChatRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   /** Override the default `/v1/chat/completions` path tail. */
   pathOverride: z.string().optional(),
   messages: z.array(ChatMessageSchema).min(1),
@@ -95,11 +91,7 @@ export type PlaygroundChatResponse = z.infer<typeof PlaygroundChatResponseSchema
 // ─── Embeddings ───────────────────────────────────────────────────────────
 
 export const PlaygroundEmbeddingsRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   pathOverride: z.string().optional(),
   input: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
   encodingFormat: z.enum(["float", "base64"]).optional(),
@@ -124,11 +116,7 @@ export type PlaygroundEmbeddingsResponse = z.infer<typeof PlaygroundEmbeddingsRe
 // ─── Rerank ──────────────────────────────────────────────────────────────
 
 export const PlaygroundRerankRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   pathOverride: z.string().optional(),
   query: z.string().min(1),
   documents: z.array(z.string().min(1)).min(1),
@@ -149,11 +137,7 @@ export type PlaygroundRerankResponse = z.infer<typeof PlaygroundRerankResponseSc
 // ─── Images ──────────────────────────────────────────────────────────────
 
 export const PlaygroundImagesRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   pathOverride: z.string().optional(),
   prompt: z.string().min(1),
   size: z.string().optional(),
@@ -188,11 +172,7 @@ export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSc
  * `customHeaders` as JSON (when present).
  */
 export const PlaygroundImagesEditMultipartFieldsSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   prompt: z.string().min(1),
   /** Multipart fields are strings; controller coerces to a positive int. */
   n: z.string().regex(/^\d+$/).optional(),
@@ -207,11 +187,7 @@ export type PlaygroundImagesEditMultipartFields = z.infer<
 const REFERENCE_TEXT_MAX_CHARS = 2000;
 
 export const PlaygroundTtsRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   pathOverride: z.string().optional(),
   input: z.string().min(1),
   voice: z.string().min(1).default("alloy"),
@@ -240,11 +216,7 @@ export type PlaygroundTtsResponse = z.infer<typeof PlaygroundTtsResponseSchema>;
 
 // ─── Audio STT (Transcriptions) ─────────────────────────────────────────
 export const PlaygroundTranscriptionsBodySchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
-  queryParams: z.string().optional(),
+  connectionId: z.string().min(1),
   pathOverride: z.string().optional(),
   language: z.string().optional(),
   task: z.enum(["transcribe", "translate"]).default("transcribe"),
