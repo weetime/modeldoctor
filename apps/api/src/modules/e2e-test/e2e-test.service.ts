@@ -79,12 +79,12 @@ export class E2ETestService {
       await this.runs.update(created.id, {
         status: allPassed ? "completed" : "failed",
         completedAt: new Date(),
-        rawOutput: { results } as Prisma.InputJsonValue,
+        rawOutput: { results } as unknown as Prisma.InputJsonValue,
         summaryMetrics: {
           total: results.length,
           passed: results.filter((r) => r.pass).length,
           failed: results.filter((r) => !r.pass).length,
-        } as Prisma.InputJsonValue,
+        } as unknown as Prisma.InputJsonValue,
       });
 
       return { runId: created.id, success: allPassed, results };

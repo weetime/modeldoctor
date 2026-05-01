@@ -56,6 +56,7 @@ describe("E2ESmokePage (default Chat category)", () => {
 
   it("Run posts probes for the chat category and renders Pass cards", async () => {
     const response: E2ETestResponse = {
+      runId: "test-run-id",
       success: true,
       results: [
         {
