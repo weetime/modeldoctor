@@ -145,6 +145,8 @@ export function Sidebar() {
       <nav className={cn("flex-1 overflow-y-auto py-3", railCollapsed ? "px-2" : "px-2")}>
         {sidebarGroups.map((group) => {
           const isCollapsed = collapsed[group.id];
+          const visibleItems = group.items.filter((item) => !item.devOnly || import.meta.env.DEV);
+          if (visibleItems.length === 0) return null;
           return (
             <div key={group.id} className="mb-3">
               {railCollapsed ? (
@@ -164,7 +166,7 @@ export function Sidebar() {
               )}
               {!railCollapsed && isCollapsed ? null : (
                 <div className="mt-1 flex flex-col gap-px">
-                  {group.items.map((item) => (
+                  {visibleItems.map((item) => (
                     <ItemRow
                       key={item.to}
                       item={item}

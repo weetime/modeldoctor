@@ -2,18 +2,18 @@
 // Light + dark variants; `Chart` selects via `theme` prop or DOM theme.
 import type { EChartsOption } from "echarts";
 
-const palette = {
-  primary: "oklch(0.62 0.19 250)",
-  primary2: "oklch(0.74 0.15 165)",
-  primary3: "oklch(0.7 0.16 35)",
-  primary4: "oklch(0.62 0.18 305)",
-  primary5: "oklch(0.7 0.13 95)",
-  primary6: "oklch(0.6 0.14 200)",
-  primary7: "oklch(0.55 0.15 20)",
-  primary8: "oklch(0.65 0.12 130)",
-};
+export const palette: readonly string[] = [
+  "oklch(0.62 0.19 250)",
+  "oklch(0.74 0.15 165)",
+  "oklch(0.7 0.16 35)",
+  "oklch(0.62 0.18 305)",
+  "oklch(0.7 0.13 95)",
+  "oklch(0.6 0.14 200)",
+  "oklch(0.55 0.15 20)",
+  "oklch(0.65 0.12 130)",
+];
 
-const baseColors = Object.values(palette);
+const baseColors = [...palette];
 
 export const lightTheme = {
   color: baseColors,

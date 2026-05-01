@@ -4,7 +4,8 @@
     "performance": "Performance",
     "correctness": "Correctness",
     "observability": "Observability",
-    "debug": "Debug"
+    "debug": "Debug",
+    "dev": "Dev"
   },
   "status": {
     "comingSoon": "Soon"
@@ -25,6 +26,7 @@
     "history": "History",
     "requestDebug": "Request Debug",
     "connections": "Connections",
-    "settings": "Settings"
+    "settings": "Settings",
+    "devCharts": "Charts demo"
   }
 }
