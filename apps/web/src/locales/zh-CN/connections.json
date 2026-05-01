@@ -17,6 +17,7 @@
     "editTitle": "编辑连接",
     "apiKeyEncryptedNotice": "API key 已加密存储于云端",
     "resetApiKey": "重新设置 API key",
+    "resetApiKeyRequired": "已开启重新设置，请输入新的 API key",
     "editThisConnection": "编辑此连接",
     "saveAsNewConnection": "另存为新连接",
     "savedConnectionMissing": "保存的连接已被删除，请选择其他连接",

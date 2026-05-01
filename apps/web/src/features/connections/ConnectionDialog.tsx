@@ -190,7 +190,11 @@ export function ConnectionDialog({
           category: values.category,
           tags: values.tags,
         };
-        if (resetApiKey && values.apiKey.trim().length > 0) {
+        if (resetApiKey) {
+          if (values.apiKey.trim().length === 0) {
+            setSubmitError(t("dialog.resetApiKeyRequired"));
+            return;
+          }
           body.apiKey = values.apiKey;
         }
         const saved = await updateMut.mutateAsync({ id: existing.id, body });

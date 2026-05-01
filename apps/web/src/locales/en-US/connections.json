@@ -17,6 +17,7 @@
     "editTitle": "Edit connection",
     "apiKeyEncryptedNotice": "API key is stored encrypted on the server",
     "resetApiKey": "Reset API key",
+    "resetApiKeyRequired": "Reset toggle is on — enter the new API key",
     "editThisConnection": "Edit this connection",
     "saveAsNewConnection": "Save as new connection",
     "savedConnectionMissing": "Saved connection no longer exists",
