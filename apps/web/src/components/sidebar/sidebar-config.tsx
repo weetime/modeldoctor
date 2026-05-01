@@ -91,7 +91,6 @@ export const sidebarGroups: SidebarGroup[] = [
         to: "/history",
         icon: History,
         labelKey: "items.history",
-        comingSoon: true,
       },
     ],
   },
