@@ -70,6 +70,9 @@ function toContract(row: RunWithConnection): Run {
     templateVersion: row.templateVersion,
     parentRunId: row.parentRunId,
     baselineId: row.baselineId,
+    baselineFor: row.baselineFor
+      ? { id: row.baselineFor.id, name: row.baselineFor.name, createdAt: row.baselineFor.createdAt.toISOString() }
+      : null,
     logs: row.logs,
     createdAt: row.createdAt.toISOString(),
     startedAt: row.startedAt?.toISOString() ?? null,

@@ -3,7 +3,10 @@ import { Prisma, Run as PrismaRun } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
 const runWithConnection = Prisma.validator<Prisma.RunDefaultArgs>()({
-  include: { connection: { select: { id: true, name: true } } },
+  include: {
+    connection: { select: { id: true, name: true } },
+    baselineFor: { select: { id: true, name: true, createdAt: true } },
+  },
 });
 export type RunWithConnection = Prisma.RunGetPayload<typeof runWithConnection>;
 
