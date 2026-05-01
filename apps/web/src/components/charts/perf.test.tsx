@@ -11,6 +11,8 @@ vi.mock("echarts-for-react", () => ({
 }));
 
 const N = 10_000;
+// Regression guard, not a real perf benchmark: jsdom doesn't render canvas.
+// Generous budget catches O(N²) work in buildOption / stripped sampling+progressive knobs.
 const BUDGET_MS = 1000;
 
 function genTimeseries(n: number): Array<[number, number]> {

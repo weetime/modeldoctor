@@ -100,6 +100,7 @@ export const sidebarGroups: SidebarGroup[] = [
     labelKey: "groups.debug",
     items: [{ to: "/debug", icon: Bug, labelKey: "items.requestDebug" }],
   },
+  // Dev-only group; remove entirely in #51 sidebar reorganize.
   {
     id: "dev",
     labelKey: "groups.dev",

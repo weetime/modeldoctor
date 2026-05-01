@@ -88,6 +88,7 @@ export const routes: RouteObject[] = [
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
+          // Dev-only chart QA page; remove in #51 sidebar reorganize.
           { path: "dev/charts", element: <DevChartsPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
