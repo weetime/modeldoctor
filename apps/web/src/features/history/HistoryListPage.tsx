@@ -17,13 +17,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { ListRunsQuery, Run } from "@modeldoctor/contracts";
+import type {
+  ListRunsQuery,
+  Run,
+  RunKind,
+  RunStatus,
+  RunTool,
+} from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { HistoryFilters } from "./HistoryFilters";
 import { historyKeys, useRunsList } from "./queries";
 
 function readP95(metrics: Run["summaryMetrics"]): number | null {
@@ -56,8 +63,37 @@ export function HistoryListPage() {
   const { t } = useTranslation("history");
   const qc = useQueryClient();
 
-  // Filters land in Task 9; for now hold an empty query.
-  const [query] = useState<Partial<ListRunsQuery>>({ limit: 20 });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query: Partial<ListRunsQuery> = useMemo(() => {
+    const q: Partial<ListRunsQuery> = { limit: 20 };
+    const get = (k: string) => searchParams.get(k) ?? undefined;
+    const kind = get("kind");
+    if (kind) q.kind = kind as RunKind;
+    const tool = get("tool");
+    if (tool) q.tool = tool as RunTool;
+    const status = get("status");
+    if (status) q.status = status as RunStatus;
+    const connectionId = get("connectionId");
+    if (connectionId) q.connectionId = connectionId;
+    const search = get("search");
+    if (search) q.search = search;
+    const createdAfter = get("createdAfter");
+    if (createdAfter) q.createdAfter = createdAfter;
+    const createdBefore = get("createdBefore");
+    if (createdBefore) q.createdBefore = createdBefore;
+    const cursor = get("cursor");
+    if (cursor) q.cursor = cursor;
+    return q;
+  }, [searchParams]);
+
+  function patchQuery(next: Partial<ListRunsQuery>) {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(next)) {
+      if (v !== undefined && k !== "limit") sp.set(k, String(v));
+    }
+    setSearchParams(sp);
+  }
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError, error, refetch } = useRunsList(query);
@@ -112,7 +148,7 @@ export function HistoryListPage() {
       />
 
       <div className="space-y-4 px-8 py-6">
-        {/* Filters land in Task 9 */}
+        <HistoryFilters query={query} onChange={patchQuery} />
 
         {isError ? (
           <Alert variant="destructive">
@@ -203,7 +239,11 @@ export function HistoryListPage() {
 
         {data?.nextCursor && (
           <div className="flex justify-center">
-            <Button variant="outline" size="sm" disabled>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => patchQuery({ ...query, cursor: data.nextCursor ?? undefined })}
+            >
               {t("loadMore")}
             </Button>
           </div>
