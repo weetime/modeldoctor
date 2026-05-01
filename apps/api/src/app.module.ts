@@ -13,6 +13,7 @@ import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
+import { BaselineModule } from "./modules/baseline/baseline.module.js";
 import { BenchmarkModule } from "./modules/benchmark/benchmark.module.js";
 import { ConnectionModule } from "./modules/connection/connection.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
@@ -74,6 +75,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
+    BaselineModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
     }),
