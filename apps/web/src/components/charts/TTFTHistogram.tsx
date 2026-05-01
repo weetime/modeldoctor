@@ -19,6 +19,7 @@ export interface TTFTHistogramProps extends DomainChartProps {
   series: TTFTHistogramSeries[];
   xLabel?: string;
   yLabel?: string;
+  colorMap?: Record<string, string>;
 }
 
 function bucketKey(b: { lower: number; upper: number }): string {
@@ -31,7 +32,7 @@ function bucketLabel(b: { lower: number; upper: number }): string {
 
 function alignBuckets(series: TTFTHistogramSeries[]): {
   labels: string[];
-  perRun: Array<{ name: string; data: number[] }>;
+  perRun: Array<{ runId: string; name: string; data: number[] }>;
 } {
   const ordered = new Map<string, { lower: number; upper: number }>();
   for (const s of series) {
@@ -45,6 +46,7 @@ function alignBuckets(series: TTFTHistogramSeries[]): {
   const perRun = series.map((s) => {
     const m = new Map(s.buckets.map((b) => [bucketKey(b), b.count]));
     return {
+      runId: s.runId,
       name: s.runLabel ?? s.runId,
       data: sorted.map((b) => m.get(bucketKey(b)) ?? 0),
     };
@@ -52,7 +54,12 @@ function alignBuckets(series: TTFTHistogramSeries[]): {
   return { labels, perRun };
 }
 
-function buildOption(series: TTFTHistogramSeries[], xLabel: string, yLabel: string): EChartsOption {
+function buildOption(
+  series: TTFTHistogramSeries[],
+  xLabel: string,
+  yLabel: string,
+  colorMap: Record<string, string> | undefined,
+): EChartsOption {
   const { labels, perRun } = alignBuckets(series);
   return {
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
@@ -67,14 +74,18 @@ function buildOption(series: TTFTHistogramSeries[], xLabel: string, yLabel: stri
     },
     yAxis: { type: "value", name: yLabel, nameLocation: "middle", nameGap: 40 },
     grid: { left: 56, right: 24, top: 40, bottom: 56 },
-    series: perRun.map((r) => ({
-      name: r.name,
-      type: "bar" as const,
-      barGap: "10%",
-      data: r.data,
-      large: true,
-      largeThreshold: 2000,
-    })),
+    series: perRun.map((r) => {
+      const color = colorMap?.[r.runId];
+      return {
+        name: r.name,
+        type: "bar" as const,
+        barGap: "10%",
+        data: r.data,
+        large: true,
+        largeThreshold: 2000,
+        ...(color ? { itemStyle: { color } } : {}),
+      };
+    }),
   };
 }
 
@@ -83,6 +94,7 @@ export function TTFTHistogram(props: TTFTHistogramProps) {
     series,
     xLabel = "TTFT (ms)",
     yLabel = "Count",
+    colorMap,
     ariaLabel,
     height = 360,
     loading,
@@ -94,8 +106,8 @@ export function TTFTHistogram(props: TTFTHistogramProps) {
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => s.buckets.length === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, xLabel, yLabel), dark),
-    [series, xLabel, yLabel, dark],
+    () => themed(buildOption(series, xLabel, yLabel, colorMap), dark),
+    [series, xLabel, yLabel, colorMap, dark],
   );
 
   return (
