@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { ModalityCategorySchema } from "./modality.js";
 
+export const serverKindSchema = z.enum([
+  "vllm",
+  "sglang",
+  "tgi",
+  "higress",
+  "generic",
+]);
+export type ServerKind = z.infer<typeof serverKindSchema>;
+
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
 export const connectionPublicSchema = z.object({
   id: z.string(),
@@ -13,6 +22,8 @@ export const connectionPublicSchema = z.object({
   queryParams: z.string(),
   category: ModalityCategorySchema,
   tags: z.array(z.string()),
+  prometheusUrl: z.string().url().nullable(),
+  serverKind: serverKindSchema.nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -33,6 +44,8 @@ export const createConnectionSchema = z.object({
   queryParams: z.string().default(""),
   category: ModalityCategorySchema,
   tags: z.array(z.string()).default([]),
+  prometheusUrl: z.string().url().nullable().optional(),
+  serverKind: serverKindSchema.nullable().optional(),
 });
 export type CreateConnection = z.infer<typeof createConnectionSchema>;
 

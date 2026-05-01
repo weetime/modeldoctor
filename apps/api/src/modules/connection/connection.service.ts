@@ -52,6 +52,8 @@ export class ConnectionService {
         queryParams: input.queryParams,
         category: input.category,
         tags: input.tags,
+        prometheusUrl: input.prometheusUrl ?? null,
+        serverKind: input.serverKind ?? null,
       },
     });
     return this.toContractWithSecret(row, input.apiKey);
@@ -86,6 +88,8 @@ export class ConnectionService {
     if (input.queryParams !== undefined) data.queryParams = input.queryParams;
     if (input.category !== undefined) data.category = input.category;
     if (input.tags !== undefined) data.tags = input.tags;
+    if (input.prometheusUrl !== undefined) data.prometheusUrl = input.prometheusUrl;
+    if (input.serverKind !== undefined) data.serverKind = input.serverKind;
     if (input.apiKey !== undefined) data.apiKeyCipher = encrypt(input.apiKey, this.key);
 
     const row = await this.prisma.connection.update({ where: { id }, data });
@@ -138,6 +142,8 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory,
       tags: row.tags,
+      prometheusUrl: row.prometheusUrl,
+      serverKind: row.serverKind as ConnectionPublic["serverKind"],
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

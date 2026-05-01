@@ -1,0 +1,97 @@
+import { EmptyState } from "@/components/common/empty-state";
+import { PageHeader } from "@/components/common/page-header";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { ArrowLeft, SearchX } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Link, useParams } from "react-router-dom";
+import { HistoryDetailMetadata } from "./HistoryDetailMetadata";
+import { HistoryDetailMetrics } from "./HistoryDetailMetrics";
+import { HistoryDetailRawOutput } from "./HistoryDetailRawOutput";
+import { useRunDetail } from "./queries";
+
+export function HistoryDetailPage() {
+  const { t } = useTranslation("history");
+  const { runId } = useParams<{ runId: string }>();
+  const { data: run, isLoading, isError, error } = useRunDetail(runId ?? "");
+
+  if (isLoading) {
+    return (
+      <>
+        <PageHeader title="…" />
+        <div
+          role="status"
+          aria-label="loading"
+          className="m-8 h-64 animate-pulse rounded-md border border-border bg-muted/30"
+        />
+      </>
+    );
+  }
+
+  if (isError) {
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 404) {
+      return (
+        <>
+          <PageHeader title={runId ?? "—"} />
+          <EmptyState
+            icon={SearchX}
+            title={t("detail.notFound.title")}
+            body={t("detail.notFound.body")}
+          />
+        </>
+      );
+    }
+    return (
+      <>
+        <PageHeader title={runId ?? "—"} />
+        <Alert variant="destructive" className="mx-8 mt-6">
+          <AlertDescription>
+            {(error as Error)?.message ?? t("detail.loadError")}
+          </AlertDescription>
+        </Alert>
+      </>
+    );
+  }
+
+  if (!run) return null;
+
+  const subtitle = t("detail.subtitle", {
+    kind: run.kind,
+    tool: run.tool,
+    when: format(new Date(run.createdAt), "yyyy-MM-dd HH:mm"),
+  });
+
+  return (
+    <>
+      <PageHeader
+        title={run.name ?? run.id}
+        subtitle={subtitle}
+        rightSlot={
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/history">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              {t("detail.back")}
+            </Link>
+          </Button>
+        }
+      />
+      <div className="space-y-8 px-8 py-6">
+        <section>
+          <HistoryDetailMetadata run={run} />
+        </section>
+        <section>
+          <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
+          <HistoryDetailMetrics metrics={run.summaryMetrics} />
+        </section>
+        <section>
+          <HistoryDetailRawOutput
+            rawOutput={run.rawOutput as Record<string, unknown> | null}
+            logs={run.logs}
+          />
+        </section>
+      </div>
+    </>
+  );
+}

@@ -18,6 +18,8 @@ const list: ConnectionPublic[] = [
     tags: [],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
+    prometheusUrl: null,
+    serverKind: null,
   },
   {
     id: "c-embed",
@@ -32,6 +34,8 @@ const list: ConnectionPublic[] = [
     tags: [],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
+    prometheusUrl: null,
+    serverKind: null,
   },
 ];
 

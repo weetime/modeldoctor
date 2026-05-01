@@ -32,6 +32,8 @@ function makeRow(overrides: Partial<PrismaConnection> = {}): PrismaConnection {
     queryParams: "",
     category: "chat",
     tags: [],
+    prometheusUrl: null,
+    serverKind: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
     ...overrides,
@@ -85,6 +87,56 @@ describe("ConnectionService", () => {
       expect(storedCipher).not.toContain(PLAINTEXT);
       expect(out.apiKey).toBe(PLAINTEXT);
       expect(out.apiKeyPreview).toBe("sk-...2345");
+    });
+
+    it("persists prometheusUrl + serverKind when provided", async () => {
+      let storedData: Record<string, unknown> = {};
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          storedData = args.data;
+          return makeRow({
+            apiKeyCipher: args.data.apiKeyCipher as string,
+            prometheusUrl: "http://prom:9090",
+            serverKind: "vllm",
+          });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "vllm-prod",
+        baseUrl: "http://10.x.x.x:30888",
+        apiKey: "sk-abc",
+        model: "qwen2.5",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+        prometheusUrl: "http://prom:9090",
+        serverKind: "vllm",
+      });
+      expect(storedData.prometheusUrl).toBe("http://prom:9090");
+      expect(storedData.serverKind).toBe("vllm");
+      expect(out.prometheusUrl).toBe("http://prom:9090");
+      expect(out.serverKind).toBe("vllm");
+    });
+
+    it("defaults prometheusUrl + serverKind to null when omitted", async () => {
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          return makeRow({ apiKeyCipher: args.data.apiKeyCipher as string });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "x",
+        baseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+      });
+      expect(out.prometheusUrl).toBeNull();
+      expect(out.serverKind).toBeNull();
     });
   });
 
@@ -145,6 +197,37 @@ describe("ConnectionService", () => {
       const out = await service.update("u_1", "c_1", { name: "renamed" });
       expect("apiKey" in out).toBe(false);
       expect(out.name).toBe("renamed");
+    });
+
+    it("clears prometheusUrl + serverKind when caller passes null", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({
+          apiKeyCipher: cipher,
+          prometheusUrl: "http://old:9090",
+          serverKind: "vllm",
+        }),
+      );
+      let updateData: Record<string, unknown> = {};
+      prismaMock.connection.update.mockImplementation(
+        async (args: { data: Record<string, unknown> }) => {
+          updateData = args.data;
+          return makeRow({
+            apiKeyCipher: cipher,
+            prometheusUrl: null,
+            serverKind: null,
+          });
+        },
+      );
+      const out = await service.update("u_1", "c_1", {
+        prometheusUrl: null,
+        serverKind: null,
+      });
+      expect(updateData.prometheusUrl).toBeNull();
+      expect(updateData.serverKind).toBeNull();
+      // The DTO returned should reflect the cleared values.
+      expect(out.prometheusUrl).toBeNull();
+      expect(out.serverKind).toBeNull();
     });
   });
 

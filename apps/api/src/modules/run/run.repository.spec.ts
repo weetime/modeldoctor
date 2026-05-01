@@ -144,4 +144,37 @@ describe("RunRepository", () => {
     expect(updated?.driverHandle).toBe("subprocess:1234");
     expect(updated?.startedAt).toBeInstanceOf(Date);
   });
+
+  it("filters by createdAt range", async () => {
+    const user = await prisma.user.create({
+      data: { email: "time-range@example.com", passwordHash: "x" },
+    });
+    // Create three runs with explicit timestamps (1 hour apart)
+    for (let i = 0; i < 3; i++) {
+      await prisma.run.create({
+        data: {
+          userId: user.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+          createdAt: new Date(`2026-04-30T0${i}:00:00Z`),
+        },
+      });
+    }
+    const between = await repo.list({
+      createdAfter: "2026-04-30T01:00:00Z",
+      createdBefore: "2026-04-30T01:30:00Z",
+    });
+    expect(between.items).toHaveLength(1);
+    expect(between.items[0].createdAt.toISOString()).toBe("2026-04-30T01:00:00.000Z");
+
+    const fromOne = await repo.list({ createdAfter: "2026-04-30T01:00:00Z" });
+    expect(fromOne.items).toHaveLength(2);
+
+    const untilOne = await repo.list({ createdBefore: "2026-04-30T01:00:00Z" });
+    expect(untilOne.items).toHaveLength(2);
+  });
 });

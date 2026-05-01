@@ -8,6 +8,8 @@ import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
+import { HistoryDetailPage } from "@/features/history/HistoryDetailPage";
+import { HistoryListPage } from "@/features/history/HistoryListPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
@@ -23,7 +25,6 @@ import {
   type Activity,
   GitCompare,
   HeartPulse,
-  History as HistoryIcon,
   Timer,
   Zap,
 } from "lucide-react";
@@ -76,7 +77,11 @@ export const routes: RouteObject[] = [
           },
           {
             path: "history",
-            element: <ComingSoonRoute icon={HistoryIcon} itemKey="history" />,
+            element: <HistoryListPage />,
+          },
+          {
+            path: "history/:runId",
+            element: <HistoryDetailPage />,
           },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },

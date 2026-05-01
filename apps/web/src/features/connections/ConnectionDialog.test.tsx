@@ -43,6 +43,8 @@ const EXISTING: ConnectionPublic = {
   tags: ["vLLM"],
   createdAt: "2026-04-26T14:22:00Z",
   updatedAt: "2026-04-26T14:22:00Z",
+  prometheusUrl: null,
+  serverKind: null,
 };
 
 describe("ConnectionDialog (create mode)", () => {

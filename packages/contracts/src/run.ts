@@ -28,10 +28,19 @@ export type RunStatus = z.infer<typeof runStatusSchema>;
 export const runDriverKindSchema = z.enum(["local", "k8s"]);
 export type RunDriverKind = z.infer<typeof runDriverKindSchema>;
 
+export const runConnectionRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type RunConnectionRef = z.infer<typeof runConnectionRefSchema>;
+
 export const runSchema = z.object({
   id: z.string(),
   userId: z.string().nullable(),
   connectionId: z.string().nullable(),
+  // Resolved connection (id + name) when the connection still exists; null if
+  // the row was orphaned by a Connection delete (FK is ON DELETE SET NULL).
+  connection: runConnectionRefSchema.nullable(),
 
   kind: runKindSchema,
   tool: runToolSchema,
@@ -76,6 +85,8 @@ export const listRunsQuerySchema = z.object({
   connectionId: z.string().optional(),
   parentRunId: z.string().optional(),
   search: z.string().optional(),
+  createdAfter: z.string().datetime().optional(),
+  createdBefore: z.string().datetime().optional(),
 });
 export type ListRunsQuery = z.infer<typeof listRunsQuerySchema>;
 
