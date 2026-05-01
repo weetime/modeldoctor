@@ -136,6 +136,7 @@
   "embeddings": {
     "title": "Embeddings",
     "subtitle": "Generate embedding vectors and visualise them in 2D.",
+    "inputs": "Inputs",
     "addInput": "+ Add input",
     "clear": "Clear",
     "batchMode": "Batch input",
@@ -212,6 +213,7 @@
     "queryPlaceholder": "Type the query…",
     "documents": "Documents",
     "addDoc": "+ Doc",
+    "clear": "Clear",
     "batchMode": "Batch input",
     "batchPlaceholder": "One document per line.",
     "send": "Send",

@@ -34,3 +34,32 @@
 - Vitest config files in `apps/api/` must stay `.mts`.
 - `apps/api` uses vitest@2, `apps/web` uses vitest@1 — do not unify.
 - `apps/api/tsconfig.json` `include` must stay narrow (`["src/**/*"]`).
+
+## Page layout convention
+
+All top-level routed pages MUST render `PageHeader` as their first visual row:
+
+- Left:  `title` (required) + `subtitle` (optional)
+- Right: `ThemeToggle` (default-on inside `PageHeader`)
+- `showThemeToggle` (default `true`) — set to `false` on pages that provide their own theme control.
+- `PageHeader`'s `rightSlot` is reserved for page-level toggles (e.g. RequestDebug "show all" checkbox). Mode tabs do NOT belong in `rightSlot` — they go through `PlaygroundShell`'s `tabs` prop instead.
+
+### Non-Playground pages
+
+Render `<PageHeader title=... subtitle=... />` directly at the top of the page, then page body. Reference: `apps/web/src/features/load-test/LoadTestPage.tsx`.
+
+### Playground pages
+
+Do NOT render `<PageHeader />` directly. Pass `title` / `subtitle` as props to `PlaygroundShell`. Shell renders, top-to-bottom:
+
+1. `PageHeader` (row 1, always)
+2. Sub-toolbar (row 2) — rendered when `paramsSlot` is non-null OR any of `tabs` / `historySlot` / `viewCodeSnippets` / `toolbarRightSlot` is non-empty:
+   - Left: mode tabs
+   - Right (left-to-right): `historySlot` · view-code button (`viewCodeSnippets`) · `toolbarRightSlot` · right-panel toggle (only when `paramsSlot` is non-null)
+3. Children (main content) + `ParamsPanel` (right drawer)
+
+Reference: `apps/web/src/features/playground/chat/ChatPage.tsx`.
+
+### Mode tabs
+
+Mode tabs (different modes of the same feature — e.g. image generate/edit, audio TTS/STT, chat single/compare) MUST be passed via `PlaygroundShell`'s `tabs` / `activeTab` / `onTabChange` props. Do NOT render a bespoke tab row.

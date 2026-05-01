@@ -15,7 +15,7 @@ function renderPart(p: ChatMessageContentPart, idx: number) {
         key={idx}
         src={p.image_url.url}
         alt=""
-        className="max-h-64 max-w-full rounded border border-border"
+        className="self-start max-h-64 w-auto max-w-full rounded border border-border object-contain"
       />
     );
   }

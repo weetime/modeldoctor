@@ -1,6 +1,4 @@
-import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -13,7 +11,7 @@ import { toast } from "sonner";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { type AttachedFile, buildContentParts } from "../chat/attachments";
 import { MessageComposer } from "../chat/MessageComposer";
-import { ChatModeTabs } from "./ChatModeTabs";
+import { useChatModeTabs } from "./useChatModeTabs";
 import { ChatPanel } from "./ChatPanel";
 import { CompareHistoryControls } from "./CompareHistory";
 import { PanelCountSwitcher } from "./PanelCountSwitcher";
@@ -21,6 +19,7 @@ import { useCompareStore } from "./store";
 
 export function ChatComparePage() {
   const { t } = useTranslation("playground");
+  const chatModeTabs = useChatModeTabs();
   const panelCount = useCompareStore((s) => s.panelCount);
   const panels = useCompareStore((s) => s.panels);
   const sharedSystemMessage = useCompareStore((s) => s.sharedSystemMessage);
@@ -115,33 +114,18 @@ export function ChatComparePage() {
   return (
     <PlaygroundShell
       category="chat"
+      title={t("chat.compare.title")}
+      subtitle={t("chat.compare.subtitle")}
+      tabs={chatModeTabs.tabs}
+      activeTab={chatModeTabs.active}
+      onTabChange={chatModeTabs.onChange}
       paramsSlot={null}
       rightPanelDefaultOpen={false}
-      historySlot={
-        <>
-          <CompareHistoryControls />
-          <PanelCountSwitcher />
-        </>
-      }
+      historySlot={<CompareHistoryControls />}
+      toolbarRightSlot={<PanelCountSwitcher />}
     >
-      <ChatModeTabs />
-      <PageHeader title={t("chat.compare.title")} subtitle={t("chat.compare.subtitle")} />
-      <div className="px-6 pb-3">
-        <details>
-          <summary className="cursor-pointer text-xs text-muted-foreground">
-            {t("chat.system.label")}
-          </summary>
-          <Textarea
-            rows={2}
-            value={sharedSystemMessage}
-            onChange={(e) => useCompareStore.getState().setSharedSystemMessage(e.target.value)}
-            placeholder={t("chat.system.placeholder")}
-            className="mt-2 font-mono text-xs"
-          />
-        </details>
-      </div>
       <div
-        className="grid min-h-0 flex-1 gap-3 overflow-x-auto px-6"
+        className="grid min-h-0 flex-1 gap-3 overflow-x-auto px-6 pt-3"
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))" }}
       >
         {panels.map((_, i) => (

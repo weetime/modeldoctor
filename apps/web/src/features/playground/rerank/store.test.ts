@@ -19,6 +19,14 @@ describe("useRerankStore", () => {
     expect(useRerankStore.getState().documents).toEqual(["b"]);
   });
 
+  it("clearDocuments resets to a single empty doc", () => {
+    useRerankStore.getState().setDocAt(0, "a");
+    useRerankStore.getState().addDocument();
+    useRerankStore.getState().setDocAt(1, "b");
+    useRerankStore.getState().clearDocuments();
+    expect(useRerankStore.getState().documents).toEqual([""]);
+  });
+
   it("setBatchText splits on newline", () => {
     useRerankStore.getState().setBatchText("a\nb\n\nc");
     expect(useRerankStore.getState().documents).toEqual(["a", "b", "c"]);

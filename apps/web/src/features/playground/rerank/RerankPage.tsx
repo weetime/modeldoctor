@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,6 +147,8 @@ export function RerankPage() {
   return (
     <PlaygroundShell
       category="rerank"
+      title={t("rerank.title")}
+      subtitle={t("rerank.subtitle")}
       viewCodeSnippets={snippets}
       historySlot={<HistoryDrawer useHistoryStore={useRerankHistoryStore} />}
       paramsSlot={
@@ -161,7 +162,6 @@ export function RerankPage() {
         </div>
       }
     >
-      <PageHeader title={t("rerank.title")} subtitle={t("rerank.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         <div>
           <Label className="text-xs text-muted-foreground">{t("rerank.query")}</Label>
@@ -175,7 +175,7 @@ export function RerankPage() {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <Label className="text-xs text-muted-foreground">{t("rerank.documents")}</Label>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
@@ -189,6 +189,9 @@ export function RerankPage() {
                   {t("rerank.addDoc")}
                 </Button>
               ) : null}
+              <Button size="sm" variant="outline" onClick={slice.clearDocuments}>
+                {t("rerank.clear")}
+              </Button>
             </div>
           </div>
           {slice.batchMode ? (
