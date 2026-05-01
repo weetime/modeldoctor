@@ -40,6 +40,8 @@ export type ListRunsInput = {
   parentRunId?: string;
   userId?: string;
   search?: string;
+  createdAfter?: string;
+  createdBefore?: string;
   cursor?: string;
   limit?: number;
 };
@@ -87,6 +89,12 @@ export class RunRepository {
         { name: { contains: input.search, mode: "insensitive" } },
         { description: { contains: input.search, mode: "insensitive" } },
       ];
+    if (input.createdAfter || input.createdBefore) {
+      where.createdAt = {
+        ...(input.createdAfter && { gte: new Date(input.createdAfter) }),
+        ...(input.createdBefore && { lte: new Date(input.createdBefore) }),
+      };
+    }
 
     const items = await this.prisma.run.findMany({
       where,

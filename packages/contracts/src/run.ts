@@ -76,6 +76,8 @@ export const listRunsQuerySchema = z.object({
   connectionId: z.string().optional(),
   parentRunId: z.string().optional(),
   search: z.string().optional(),
+  createdAfter: z.string().datetime().optional(),
+  createdBefore: z.string().datetime().optional(),
 });
 export type ListRunsQuery = z.infer<typeof listRunsQuerySchema>;
 
