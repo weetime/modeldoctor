@@ -237,12 +237,12 @@ describe("PlaygroundImagesEditMultipartFieldsSchema", () => {
     expect(parsed.n).toBe("2");
   });
   it("rejects non-numeric n string", () => {
-    expect(() =>
-      PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, n: "two" }),
-    ).toThrow();
+    expect(() => PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, n: "two" })).toThrow();
   });
   it("rejects empty prompt", () => {
-    expect(() => PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, prompt: "" })).toThrow();
+    expect(() =>
+      PlaygroundImagesEditMultipartFieldsSchema.parse({ ...base, prompt: "" }),
+    ).toThrow();
   });
 });
 

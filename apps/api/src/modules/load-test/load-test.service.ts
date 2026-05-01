@@ -7,10 +7,11 @@ import type {
   LoadTestParsed,
   LoadTestRequest,
   LoadTestResponse,
+  LoadTestRunSummary,
 } from "@modeldoctor/contracts";
 import { loadTestApiTypePath } from "@modeldoctor/contracts";
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
-import { PrismaService } from "../../database/prisma.service.js";
+import { Prisma, type Run as PrismaRun } from "@prisma/client";
 import {
   type ApiType,
   VALID_API_TYPES,
@@ -18,6 +19,7 @@ import {
 } from "../../integrations/builders/index.js";
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { RunRepository } from "../run/run.repository.js";
 
 const TMP_DIR = path.resolve(__dirname, "../../../../..", "tmp");
 
@@ -36,11 +38,28 @@ function narrowParsed(v: VegetaParsed): LoadTestParsed {
   };
 }
 
+function runRowToLoadTestSummary(row: PrismaRun): LoadTestRunSummary {
+  const scenario = (row.scenario ?? {}) as Record<string, unknown>;
+  return {
+    id: row.id,
+    userId: row.userId,
+    apiType: (scenario.apiType as LoadTestRunSummary["apiType"]) ?? "chat",
+    apiBaseUrl: (scenario.apiBaseUrl as string) ?? "",
+    model: (scenario.model as string) ?? "",
+    rate: (scenario.rate as number) ?? 0,
+    duration: (scenario.duration as number) ?? 0,
+    status: row.status as "completed" | "failed",
+    summaryJson: (row.summaryMetrics ?? null) as LoadTestParsed | null,
+    createdAt: row.createdAt.toISOString(),
+    completedAt: row.completedAt?.toISOString() ?? null,
+  };
+}
+
 @Injectable()
 export class LoadTestService {
   private readonly logger = new Logger(LoadTestService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly runs: RunRepository) {}
 
   async run(req: LoadTestRequest, user: JwtPayload): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
@@ -89,7 +108,7 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const cmd = `cat ${txtPath} | vegeta attack -rate=${req.rate} -duration=${req.duration}s | vegeta report`;
     const timeoutMs = (req.duration + 60) * 1000;
 
-    const baseRow = {
+    const scenario = {
       userId: user.sub,
       apiType,
       apiBaseUrl: req.apiBaseUrl,
@@ -124,14 +143,21 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       // Best-effort persistence on failure — swallowing a Prisma error here
       // would hide the original vegeta failure the caller cares about.
       try {
-        await this.prisma.loadTestRun.create({
-          data: {
-            ...baseRow,
-            status: "failed",
-            summaryJson: {},
-            rawReport: err instanceof Error ? err.message : String(err),
-            completedAt: new Date(),
-          },
+        const failedRun = await this.runs.create({
+          userId: user.sub,
+          kind: "benchmark",
+          tool: "vegeta",
+          mode: "fixed",
+          driverKind: "local",
+          scenario: scenario as Prisma.InputJsonValue,
+          params: req as unknown as Prisma.InputJsonValue,
+        });
+        await this.runs.update(failedRun.id, {
+          status: "failed",
+          rawOutput: {
+            vegetaText: err instanceof Error ? err.message : String(err),
+          } as Prisma.InputJsonValue,
+          completedAt: new Date(),
         });
       } catch (dbErr) {
         this.logger.error(
@@ -143,14 +169,22 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     }
 
     const parsed = narrowParsed(parseVegetaReport(stdout));
-    const run = await this.prisma.loadTestRun.create({
-      data: {
-        ...baseRow,
-        status: "completed",
-        summaryJson: parsed as unknown as object,
-        rawReport: stdout,
-        completedAt: new Date(),
-      },
+    const run = await this.runs.create({
+      userId: user.sub,
+      kind: "benchmark",
+      tool: "vegeta",
+      mode: "fixed",
+      driverKind: "local",
+      scenario: scenario as Prisma.InputJsonValue,
+      params: req as unknown as Prisma.InputJsonValue,
+    });
+
+    // Update with results
+    await this.runs.update(run.id, {
+      status: "completed",
+      summaryMetrics: parsed as unknown as Prisma.InputJsonValue,
+      rawOutput: { vegetaText: stdout } as Prisma.InputJsonValue,
+      completedAt: new Date(),
     });
 
     return {
@@ -173,29 +207,17 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     user: JwtPayload,
   ): Promise<ListLoadTestRunsResponse> {
     const limit = query.limit;
-    const whereUser = user.roles.includes("admin") ? {} : { userId: user.sub };
-    const rows = await this.prisma.loadTestRun.findMany({
-      take: limit + 1, // peek one past to detect a next page
-      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-      where: whereUser,
-      // id tiebreaker keeps cursor semantics stable if two rows share createdAt
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    const userId = user.roles.includes("admin") ? undefined : user.sub;
+    const result = await this.runs.list({
+      kind: "benchmark",
+      tool: "vegeta",
+      userId,
+      cursor: query.cursor,
+      limit,
     });
-    const pageRows = rows.slice(0, limit);
-    const items = pageRows.map((r) => ({
-      id: r.id,
-      userId: r.userId,
-      apiType: r.apiType as ApiType,
-      apiBaseUrl: r.apiBaseUrl,
-      model: r.model,
-      rate: r.rate,
-      duration: r.duration,
-      status: r.status as "completed" | "failed",
-      summaryJson: (r.summaryJson ?? null) as LoadTestParsed | null,
-      createdAt: r.createdAt.toISOString(),
-      completedAt: r.completedAt?.toISOString() ?? null,
-    }));
-    const nextCursor = rows.length > limit ? pageRows[pageRows.length - 1].id : null;
-    return { items, nextCursor };
+
+    const pageRows = result.items;
+    const items = pageRows.map(runRowToLoadTestSummary);
+    return { items, nextCursor: result.nextCursor };
   }
 }

@@ -41,9 +41,7 @@ export const useCompareHistoryStore = createHistoryStore<CompareSnapshot>({
     ],
   }),
   preview: (s) => {
-    const firstMsg = s.panels
-      .flatMap((p) => p.messages)
-      .find((m) => m.role === "user");
+    const firstMsg = s.panels.flatMap((p) => p.messages).find((m) => m.role === "user");
     const text =
       firstMsg == null
         ? ""
@@ -85,9 +83,10 @@ export async function saveCompareSnapshot(): Promise<void> {
   // Persist blobs panel-by-panel with a panel-indexed key prefix.
   const sanitisedPanels = await Promise.all(
     snap.panels.map((panel, p) =>
-      persistMessageAttachments(entryId, panel.messages, histStore, `panel${p}.`).then(
-        (msgs) => ({ ...panel, messages: msgs }),
-      ),
+      persistMessageAttachments(entryId, panel.messages, histStore, `panel${p}.`).then((msgs) => ({
+        ...panel,
+        messages: msgs,
+      })),
     ),
   );
 
@@ -134,9 +133,9 @@ export function CompareHistoryControls() {
   const removeEntry = useCompareHistoryStore((s) => s.removeEntry);
 
   // Snapshots that are NOT the current session (those are proper saves).
-  const snapshots = list.filter((e) => e.id !== currentId && e.snapshot.panels.some(
-    (p) => p.messages.length > 0,
-  ));
+  const snapshots = list.filter(
+    (e) => e.id !== currentId && e.snapshot.panels.some((p) => p.messages.length > 0),
+  );
 
   const handleSave = () => {
     saveCompareSnapshot()

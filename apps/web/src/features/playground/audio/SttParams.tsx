@@ -1,7 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import type { SttSlice } from "./store";
@@ -23,10 +27,14 @@ export function SttParams({ value, onChange }: SttParamsProps) {
           value={value.language === "" ? "auto" : value.language}
           onValueChange={(v) => onChange({ language: v === "auto" ? "" : v })}
         >
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {COMMON_LANGUAGES.map((l) => (
-              <SelectItem key={l} value={l}>{l}</SelectItem>
+              <SelectItem key={l} value={l}>
+                {l}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -34,7 +42,9 @@ export function SttParams({ value, onChange }: SttParamsProps) {
       <div>
         <Label className="text-xs">{t("audio.stt.params.task")}</Label>
         <Select value={value.task} onValueChange={(v) => onChange({ task: v as SttSlice["task"] })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="transcribe">transcribe</SelectItem>
             <SelectItem value="translate">translate</SelectItem>
@@ -48,8 +58,12 @@ export function SttParams({ value, onChange }: SttParamsProps) {
       <div>
         <Label className="text-xs">{t("audio.stt.params.temperature")}</Label>
         <Input
-          type="number" min={0} max={1} step={0.05}
-          value={value.temperature ?? ""} placeholder="0"
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={value.temperature ?? ""}
+          placeholder="0"
           onChange={(e) => {
             const v = e.target.value.trim();
             onChange({ temperature: v === "" ? undefined : Number(v) });

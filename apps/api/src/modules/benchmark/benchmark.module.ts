@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 import { DatabaseModule } from "../../database/database.module.js";
+import { RunModule } from "../run/run.module.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BENCHMARK_K8S_READER, BenchmarkReconciler } from "./benchmark.reconciler.js";
 import { BenchmarkService } from "./benchmark.service.js";
@@ -12,7 +13,7 @@ import { createBenchmarkDriver } from "./drivers/driver.factory.js";
 import { createBenchmarkK8sReader } from "./drivers/k8s-reader.factory.js";
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, RunModule],
   controllers: [BenchmarkController, BenchmarkCallbackController],
   providers: [
     BenchmarkService,

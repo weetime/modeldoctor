@@ -21,6 +21,7 @@ export function BenchmarkLogsPanel({
 
   const size = useMemo(() => (logs ? new TextEncoder().encode(logs).length : 0), [logs]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll-to-bottom must re-run on every logs change even though logs isn't read in the body
   useEffect(() => {
     if (preRef.current) {
       preRef.current.scrollTop = preRef.current.scrollHeight;

@@ -52,7 +52,7 @@ export function MaskPainter({
     img.src = imageUrl;
   }, [imageUrl, width, height]);
 
-  // Clear overlay whenever the source changes (new image → fresh mask).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clear overlay only when source image changes; width/height are intentionally tracked
   useEffect(() => {
     const c = overlayRef.current;
     if (!c) return;

@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Cron } from "@nestjs/schedule";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+import { RunRepository } from "../run/run.repository.js";
 import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
 import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
 
@@ -41,6 +42,7 @@ export class BenchmarkReconciler {
     @Optional()
     @Inject(BENCHMARK_K8S_READER)
     private readonly reader: BenchmarkK8sReader | null,
+    private readonly runs: RunRepository,
   ) {
     this.driverKind = (config.get("BENCHMARK_DRIVER", { infer: true }) ?? "subprocess") as string;
     this.maxDuration = config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", {
@@ -62,17 +64,13 @@ export class BenchmarkReconciler {
 
   async reconcile(): Promise<void> {
     const now = Date.now();
-    const rows = (await this.prisma.benchmarkRun.findMany({
-      where: { state: { in: [...ACTIVE_STATES] } },
-    })) as Array<{
-      id: string;
-      state: string;
-      jobName: string | null;
-      startedAt: Date | null;
-      createdAt: Date;
-    }>;
+    // Use prisma.run.findMany directly so we can filter by status IN and avoid
+    // the RunRepository.list pagination cap.
+    const active = await this.prisma.run.findMany({
+      where: { kind: "benchmark", status: { in: [...ACTIVE_STATES] } },
+    });
 
-    for (const row of rows) {
+    for (const row of active) {
       // Race guard: a row created in the last 5s may be mid-`start()`.
       if (now - row.createdAt.getTime() < RACE_GUARD_MS) continue;
 
@@ -82,48 +80,42 @@ export class BenchmarkReconciler {
         continue;
       }
 
-      if (this.driverKind === "k8s" && this.reader && row.jobName) {
+      if (this.driverKind === "k8s" && this.reader && row.driverHandle) {
         await this.checkK8sJob(row);
       }
     }
   }
 
-  private async markRunaway(row: { id: string; jobName: string | null }): Promise<void> {
-    if (row.jobName) {
+  private async markRunaway(row: { id: string; driverHandle: string | null }): Promise<void> {
+    if (row.driverHandle) {
       try {
-        await this.driver.cancel(row.jobName);
+        await this.driver.cancel(row.driverHandle);
       } catch (e) {
         this.log.warn(`cancel during runaway mark for ${row.id} failed: ${(e as Error).message}`);
       }
     }
-    await this.prisma.benchmarkRun.update({
-      where: { id: row.id },
-      data: {
-        state: "failed",
-        stateMessage: "exceeded max duration",
-        completedAt: new Date(),
-      },
+    await this.runs.update(row.id, {
+      status: "failed",
+      statusMessage: "exceeded max duration",
+      completedAt: new Date(),
     });
   }
 
-  private async checkK8sJob(row: { id: string; jobName: string | null }): Promise<void> {
-    if (!this.reader || !row.jobName) return;
-    const slash = row.jobName.indexOf("/");
-    const ns = slash > 0 ? row.jobName.slice(0, slash) : this.namespace;
-    const name = slash > 0 ? row.jobName.slice(slash + 1) : row.jobName;
+  private async checkK8sJob(row: { id: string; driverHandle: string | null }): Promise<void> {
+    if (!this.reader || !row.driverHandle) return;
+    const slash = row.driverHandle.indexOf("/");
+    const ns = slash > 0 ? row.driverHandle.slice(0, slash) : this.namespace;
+    const name = slash > 0 ? row.driverHandle.slice(slash + 1) : row.driverHandle;
     let job: { status?: { failed?: number } } | null = null;
     try {
       job = await this.reader.readJob(name, ns);
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
       if (code === 404) {
-        await this.prisma.benchmarkRun.update({
-          where: { id: row.id },
-          data: {
-            state: "failed",
-            stateMessage: "job vanished",
-            completedAt: new Date(),
-          },
+        await this.runs.update(row.id, {
+          status: "failed",
+          statusMessage: "job vanished",
+          completedAt: new Date(),
         });
         return;
       }
@@ -143,13 +135,10 @@ export class BenchmarkReconciler {
       } catch (e) {
         this.log.warn(`listJobPods failed for ${row.id}: ${(e as Error).message}`);
       }
-      await this.prisma.benchmarkRun.update({
-        where: { id: row.id },
-        data: {
-          state: "failed",
-          stateMessage: reason.slice(0, 2048),
-          completedAt: new Date(),
-        },
+      await this.runs.update(row.id, {
+        status: "failed",
+        statusMessage: reason.slice(0, 2048),
+        completedAt: new Date(),
       });
     }
   }

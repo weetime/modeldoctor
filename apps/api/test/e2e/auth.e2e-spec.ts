@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaService } from "../../src/database/prisma.service.js";
+import { RunRepository } from "../../src/modules/run/run.repository.js";
 import { type E2EContext, bootE2E } from "../helpers/app.js";
 
 describe("Auth (e2e)", () => {
@@ -274,7 +275,7 @@ describe("Auth (e2e)", () => {
 
   // ── 11. Admin sees runs from all users ────────────────────────────────────
   it("GET /api/load-test/runs with admin token → sees all users' runs", async () => {
-    const prisma = ctx.app.get(PrismaService);
+    const repo = ctx.app.get(RunRepository);
 
     // Re-use the admin account registered in test #1
     const adminLoginRes = await request(ctx.app.getHttpServer())
@@ -291,33 +292,28 @@ describe("Auth (e2e)", () => {
       .expect(201);
     const user2Id = user2Res.body.user.id as string;
 
-    // Seed runs for both users directly via Prisma
-    await prisma.loadTestRun.create({
-      data: {
-        userId: adminId,
-        apiType: "chat",
-        apiBaseUrl: "http://admin-run",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {},
-        rawReport: "",
-      },
+    // Seed vegeta runs for both users via RunRepository (unified Run table)
+    const adminRow = await repo.create({
+      userId: adminId,
+      kind: "benchmark",
+      tool: "vegeta",
+      scenario: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
     });
-    await prisma.loadTestRun.create({
-      data: {
-        userId: user2Id,
-        apiType: "chat",
-        apiBaseUrl: "http://user2-run",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {},
-        rawReport: "",
-      },
+    await repo.update(adminRow.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
+
+    const user2Row = await repo.create({
+      userId: user2Id,
+      kind: "benchmark",
+      tool: "vegeta",
+      scenario: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
     });
+    await repo.update(user2Row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     const adminRunsRes = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")
@@ -331,7 +327,7 @@ describe("Auth (e2e)", () => {
 
   // ── 12. User sees only own runs ───────────────────────────────────────────
   it("GET /api/load-test/runs with user token → only own runs", async () => {
-    const prisma = ctx.app.get(PrismaService);
+    const repo = ctx.app.get(RunRepository);
 
     const userRes = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
@@ -340,20 +336,17 @@ describe("Auth (e2e)", () => {
     const userId = userRes.body.user.id as string;
     const userToken = userRes.body.accessToken as string;
 
-    // Seed a run for this user only
-    await prisma.loadTestRun.create({
-      data: {
-        userId,
-        apiType: "chat",
-        apiBaseUrl: "http://own-run",
-        model: "m",
-        rate: 1,
-        duration: 1,
-        status: "completed",
-        summaryJson: {},
-        rawReport: "",
-      },
+    // Seed a vegeta run for this user via RunRepository (unified Run table)
+    const row = await repo.create({
+      userId,
+      kind: "benchmark",
+      tool: "vegeta",
+      scenario: { apiType: "chat", apiBaseUrl: "http://own-run", model: "m", rate: 1, duration: 1 },
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
     });
+    await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     const runsRes = await request(ctx.app.getHttpServer())
       .get("/api/load-test/runs")

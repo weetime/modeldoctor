@@ -27,7 +27,8 @@ export function ChatPanel({ index }: ChatPanelProps) {
           />
         </div>
         <Button
-          variant="ghost" size="icon"
+          variant="ghost"
+          size="icon"
           aria-label={t("chat.compare.clear")}
           onClick={() => useCompareStore.getState().clearPanelMessages(index)}
         >
@@ -58,10 +59,7 @@ export function ChatPanel({ index }: ChatPanelProps) {
       </div>
       {panel.streaming ? (
         <div className="border-t border-border p-2">
-          <Button
-            variant="destructive" size="sm"
-            onClick={() => panel.abortController?.abort()}
-          >
+          <Button variant="destructive" size="sm" onClick={() => panel.abortController?.abort()}>
             <Square className="mr-1 h-4 w-4" />
             {t("chat.compare.stop")}
           </Button>

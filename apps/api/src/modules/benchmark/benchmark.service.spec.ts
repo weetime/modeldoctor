@@ -19,6 +19,7 @@ function buildConfig(over: Record<string, unknown> = {}): ConfigService {
         BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
         BENCHMARK_VALIDATE_BACKEND: true,
         BENCHMARK_DEFAULT_MAX_CONCURRENCY: 100,
+        BENCHMARK_DRIVER: "subprocess",
         ...over,
       };
       return map[key];
@@ -26,28 +27,41 @@ function buildConfig(over: Record<string, unknown> = {}): ConfigService {
   } as unknown as ConfigService;
 }
 
+/**
+ * PrismaStub: only run.* is used directly (for findFirst + count).
+ * RunRepository is mocked separately.
+ */
 interface PrismaStub {
-  benchmarkRun: {
-    create: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
+  run: {
     findFirst: ReturnType<typeof vi.fn>;
-    findUnique: ReturnType<typeof vi.fn>;
-    findMany: ReturnType<typeof vi.fn>;
     count: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
   };
 }
 function buildPrisma(): PrismaStub {
   return {
-    benchmarkRun: {
-      create: vi.fn(),
-      update: vi.fn(),
+    run: {
       findFirst: vi.fn(),
-      findUnique: vi.fn(),
-      findMany: vi.fn(),
       count: vi.fn(),
-      delete: vi.fn(),
+      findMany: vi.fn(),
     },
+  };
+}
+
+interface RunsStub {
+  create: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  findById: ReturnType<typeof vi.fn>;
+  list: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+}
+function buildRuns(): RunsStub {
+  return {
+    create: vi.fn(),
+    update: vi.fn(),
+    findById: vi.fn(),
+    list: vi.fn(),
+    delete: vi.fn(),
   };
 }
 
@@ -79,87 +93,73 @@ const validRequest: CreateBenchmarkRequest = {
   totalRequests: 1000,
 };
 
+/** Build a canonical Run row that mirrors what RunRepository.create/update returns. */
+function makeRunRow(over: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "ckxxx1",
+    userId: user.sub,
+    kind: "benchmark",
+    tool: "guidellm",
+    driverKind: "local",
+    mode: "throughput",
+    status: "pending",
+    statusMessage: null,
+    progress: null,
+    driverHandle: null,
+    summaryMetrics: null,
+    rawOutput: null,
+    logs: null,
+    name: "first run",
+    description: null,
+    apiKeyCipher: encrypt("sk-12345", KEY),
+    scenario: {
+      apiType: "chat",
+      apiBaseUrl: "https://api.example.com",
+      model: "llama-3-70b",
+      dataset: { name: "random", inputTokens: 1024, outputTokens: 128, seed: null },
+      requestRate: 0,
+      totalRequests: 1000,
+    },
+    params: { profile: "throughput" },
+    connectionId: null,
+    templateId: null,
+    templateVersion: null,
+    parentRunId: null,
+    baselineId: null,
+    createdAt: new Date("2026-04-26T00:00:00Z"),
+    startedAt: null,
+    completedAt: null,
+    ...over,
+  };
+}
+
 describe("BenchmarkService.create + start", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
-    prisma.benchmarkRun.count.mockResolvedValue(0);
-    prisma.benchmarkRun.create.mockImplementation(async ({ data }) => ({
-      id: "ckxxx1",
-      userId: user.sub,
-      ...data,
-      createdAt: new Date("2026-04-26T00:00:00Z"),
-      startedAt: null,
-      completedAt: null,
-      state: "pending",
-      stateMessage: null,
-      progress: null,
-      jobName: null,
-      metricsSummary: null,
-      rawMetrics: null,
-      logs: null,
-      datasetSeed: null,
-    }));
-    prisma.benchmarkRun.findUnique.mockImplementation(async ({ where: { id } }) => ({
-      id,
-      userId: user.sub,
-      apiKeyCipher: encrypt("sk-12345", KEY),
-      apiBaseUrl: validRequest.apiBaseUrl,
-      apiType: "chat",
-      model: validRequest.model,
-      profile: "throughput",
-      datasetName: "random",
-      datasetInputTokens: 1024,
-      datasetOutputTokens: 128,
-      datasetSeed: null,
-      requestRate: 0,
-      totalRequests: 1000,
-      name: "first run",
-      description: null,
-      state: "pending",
-      stateMessage: null,
-      progress: null,
-      jobName: null,
-      metricsSummary: null,
-      rawMetrics: null,
-      logs: null,
-      createdAt: new Date("2026-04-26T00:00:00Z"),
-      startedAt: null,
-      completedAt: null,
-    }));
-    prisma.benchmarkRun.update.mockImplementation(async ({ where: { id }, data }) => ({
-      id,
-      userId: user.sub,
-      apiKeyCipher: "<encrypted>",
-      apiBaseUrl: validRequest.apiBaseUrl,
-      apiType: "chat",
-      model: validRequest.model,
-      profile: "throughput",
-      datasetName: "random",
-      datasetInputTokens: 1024,
-      datasetOutputTokens: 128,
-      datasetSeed: null,
-      requestRate: 0,
-      totalRequests: 1000,
-      name: "first run",
-      description: null,
-      state: "submitted",
-      stateMessage: null,
-      progress: null,
-      jobName: data.jobName ?? "subprocess:1234",
-      metricsSummary: null,
-      rawMetrics: null,
-      logs: null,
-      createdAt: new Date("2026-04-26T00:00:00Z"),
-      startedAt: data.startedAt ?? new Date(),
-      completedAt: null,
-      ...data,
-    }));
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+
+    // count returns 0 (no duplicates)
+    prisma.run.count.mockResolvedValue(0);
+
+    // runs.create returns a pending row
+    runs.create.mockImplementation(async (input: Record<string, unknown>) =>
+      makeRunRow({ name: input.name as string }),
+    );
+
+    // runs.findById returns the row with apiKeyCipher set
+    runs.findById.mockImplementation(async (id: string) => makeRunRow({ id }));
+
+    // runs.update returns an updated row (simulate submitted after start)
+    runs.update.mockImplementation(async (id: string, data: Record<string, unknown>) =>
+      makeRunRow({ id, status: "submitted", driverHandle: "subprocess:1234", ...data }),
+    );
   });
 
   afterEach(() => vi.restoreAllMocks());
@@ -167,24 +167,25 @@ describe("BenchmarkService.create + start", () => {
   it("encrypts the apiKey, persists pending, calls driver.start, returns submitted dto", async () => {
     const result = await svc.create(validRequest, user);
 
-    // Persisted row has ciphertext, not plaintext.
-    const createCall = prisma.benchmarkRun.create.mock.calls[0][0];
-    expect(createCall.data.apiKeyCipher).not.toBe("sk-12345");
-    expect(createCall.data.apiKeyCipher).toMatch(/^v1:/);
-    expect(createCall.data.state).toBe("pending");
+    // runs.create was called with ciphertext, not plaintext.
+    const createCall = runs.create.mock.calls[0][0] as Record<string, unknown>;
+    expect(createCall.apiKeyCipher).not.toBe("sk-12345");
+    expect(createCall.apiKeyCipher).toMatch(/^v1:/);
+    // Initial status is set to pending via create (no explicit status field — RunRepository sets via Prisma default).
+    expect(createCall.kind).toBe("benchmark");
 
     // Driver was called with decrypted ctx.
-    const driverCall = driver.start.mock.calls[0][0];
+    const driverCall = driver.start.mock.calls[0][0] as Record<string, unknown>;
     expect(driverCall.apiKey).toBe("sk-12345");
     expect(driverCall.benchmarkId).toBe("ckxxx1");
     expect(driverCall.callbackUrl).toBe("http://localhost:3001");
-    expect(driverCall.callbackToken).toMatch(/^\d+\.[0-9a-f]{64}$/);
+    expect(driverCall.callbackToken as string).toMatch(/^\d+\.[0-9a-f]{64}$/);
     expect(driverCall.maxDurationSeconds).toBe(1800);
 
-    // Row was updated to submitted with the handle.
-    const updateCall = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(updateCall.data.state).toBe("submitted");
-    expect(updateCall.data.jobName).toBe("subprocess:1234");
+    // runs.update was called with submitted + handle.
+    const updateCall = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(updateCall[1].status).toBe("submitted");
+    expect(updateCall[1].driverHandle).toBe("subprocess:1234");
 
     // Returned DTO does NOT carry apiKeyCipher.
     expect(result).not.toHaveProperty("apiKeyCipher");
@@ -198,210 +199,164 @@ describe("BenchmarkService.create + start", () => {
       response: { code: "BENCHMARK_DATASET_UNSUPPORTED" },
       status: 400,
     });
-    expect(prisma.benchmarkRun.create).not.toHaveBeenCalled();
+    expect(runs.create).not.toHaveBeenCalled();
   });
 
   it("rejects duplicate active name with BENCHMARK_NAME_IN_USE", async () => {
-    prisma.benchmarkRun.count.mockResolvedValue(1);
+    prisma.run.count.mockResolvedValue(1);
     await expect(svc.create(validRequest, user)).rejects.toMatchObject({
       response: { code: "BENCHMARK_NAME_IN_USE" },
       status: 409,
     });
-    expect(prisma.benchmarkRun.create).not.toHaveBeenCalled();
+    expect(runs.create).not.toHaveBeenCalled();
   });
 
   it("marks the row failed when driver.start throws", async () => {
     driver.start.mockRejectedValue(new Error("rbac denied"));
     await expect(svc.create(validRequest, user)).rejects.toThrow(/rbac denied/);
-    const updateCall = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(updateCall.data.state).toBe("failed");
-    expect(updateCall.data.stateMessage).toMatch(/rbac denied/);
+    const updateCall = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(updateCall[1].status).toBe("failed");
+    expect(updateCall[1].statusMessage).toMatch(/rbac denied/);
   });
 });
 
 describe("BenchmarkService.list + detail", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
   });
 
   function row(over: Partial<{ id: string; name: string; userId: string }> = {}) {
-    return {
+    return makeRunRow({
       id: over.id ?? "r1",
       userId: over.userId ?? user.sub,
-      apiKeyCipher: "<encrypted>",
-      apiBaseUrl: "https://x",
-      apiType: "chat",
-      model: "m",
-      profile: "throughput",
-      datasetName: "random",
-      datasetInputTokens: 1024,
-      datasetOutputTokens: 128,
-      datasetSeed: null,
-      requestRate: 0,
-      totalRequests: 1000,
       name: over.name ?? "n",
-      description: null,
-      state: "running",
-      stateMessage: null,
+      status: "running",
       progress: 0.4,
-      jobName: "subprocess:1",
-      metricsSummary: null,
-      rawMetrics: null,
-      logs: null,
-      createdAt: new Date("2026-04-26T00:00:00Z"),
+      driverHandle: "subprocess:1",
       startedAt: new Date("2026-04-26T00:00:01Z"),
-      completedAt: null,
-    };
+    });
   }
 
   it("scopes non-admin queries to the caller's userId", async () => {
-    prisma.benchmarkRun.findMany.mockResolvedValue([row({ id: "a" })]);
+    prisma.run.findMany.mockResolvedValue([row({ id: "a" })]);
     await svc.list({ limit: 20 }, user);
-    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
-    expect(args.where.userId).toBe(user.sub);
+    const args = prisma.run.findMany.mock.calls[0][0] as Record<string, unknown>;
+    const where = args.where as Record<string, unknown>;
+    expect(where.userId).toBe(user.sub);
   });
 
   it("admin queries are not scoped by userId", async () => {
-    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    prisma.run.findMany.mockResolvedValue([]);
     await svc.list({ limit: 20 }, { ...user, roles: ["admin"] });
-    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
-    expect(args.where.userId).toBeUndefined();
+    const args = prisma.run.findMany.mock.calls[0][0] as Record<string, unknown>;
+    const where = args.where as Record<string, unknown>;
+    expect(where.userId).toBeUndefined();
   });
 
   it("returns peek+1 next-cursor when there are more rows", async () => {
     const rows = Array.from({ length: 21 }, (_v, i) => row({ id: `r${i}` }));
-    prisma.benchmarkRun.findMany.mockResolvedValue(rows);
+    prisma.run.findMany.mockResolvedValue(rows);
     const out = await svc.list({ limit: 20 }, user);
     expect(out.items).toHaveLength(20);
     expect(out.nextCursor).toBe("r19");
   });
 
   it("nextCursor is null when at the end", async () => {
-    prisma.benchmarkRun.findMany.mockResolvedValue([row({ id: "r0" })]);
+    prisma.run.findMany.mockResolvedValue([row({ id: "r0" })]);
     const out = await svc.list({ limit: 20 }, user);
     expect(out.nextCursor).toBeNull();
   });
 
   it("applies state + profile filters when provided", async () => {
-    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    prisma.run.findMany.mockResolvedValue([]);
     await svc.list({ limit: 20, state: "running", profile: "latency" }, user);
-    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
-    expect(args.where.state).toBe("running");
-    expect(args.where.profile).toBe("latency");
+    const args = prisma.run.findMany.mock.calls[0][0] as Record<string, unknown>;
+    const where = args.where as Record<string, unknown>;
+    expect(where.status).toBe("running");
+    expect(where.params).toEqual({ path: ["profile"], equals: "latency" });
   });
 
   it("applies search as case-insensitive name contains", async () => {
-    prisma.benchmarkRun.findMany.mockResolvedValue([]);
+    prisma.run.findMany.mockResolvedValue([]);
     await svc.list({ limit: 20, search: "Foo" }, user);
-    const args = prisma.benchmarkRun.findMany.mock.calls[0][0];
-    expect(args.where.name).toEqual({ contains: "Foo", mode: "insensitive" });
+    const args = prisma.run.findMany.mock.calls[0][0] as Record<string, unknown>;
+    const where = args.where as Record<string, unknown>;
+    expect(where.name).toEqual({ contains: "Foo", mode: "insensitive" });
   });
 
   it("detail returns the full row sans apiKeyCipher", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue(row({ id: "x" }));
+    prisma.run.findFirst.mockResolvedValue(row({ id: "x" }));
     const dto = await svc.detail("x", user);
     expect(dto.id).toBe("x");
     expect(dto).not.toHaveProperty("apiKeyCipher");
   });
 
   it("detail returns 404 for non-existent / non-owned rows", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    prisma.run.findFirst.mockResolvedValue(null);
     await expect(svc.detail("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
 
 describe("BenchmarkService.cancel", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
-    prisma.benchmarkRun.update.mockImplementation(async ({ where: { id }, data }) => ({
-      id,
-      userId: user.sub,
-      apiKeyCipher: "<encrypted>",
-      apiBaseUrl: "https://x",
-      apiType: "chat",
-      model: "m",
-      profile: "throughput",
-      datasetName: "random",
-      datasetInputTokens: 1024,
-      datasetOutputTokens: 128,
-      datasetSeed: null,
-      requestRate: 0,
-      totalRequests: 1000,
-      name: "n",
-      description: null,
-      state: data.state ?? "running",
-      stateMessage: data.stateMessage ?? null,
-      progress: 0.5,
-      jobName: "subprocess:1",
-      metricsSummary: null,
-      rawMetrics: null,
-      logs: null,
-      createdAt: new Date("2026-04-26T00:00:00Z"),
-      startedAt: new Date("2026-04-26T00:00:01Z"),
-      completedAt: data.completedAt ?? null,
-    }));
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
+    runs.update.mockImplementation(async (id: string, data: Record<string, unknown>) =>
+      makeRunRow({ id, status: data.status ?? "running", ...data }),
+    );
   });
 
   it("cancel of pending: marks canceled without calling driver", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue({
-      id: "r1",
-      userId: user.sub,
-      state: "pending",
-      jobName: null,
-    });
+    prisma.run.findFirst.mockResolvedValue(
+      makeRunRow({ id: "r1", userId: user.sub, status: "pending", driverHandle: null }),
+    );
     await svc.cancel("r1", user);
     expect(driver.cancel).not.toHaveBeenCalled();
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("canceled");
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("canceled");
   });
 
   it("cancel of running: calls driver.cancel and marks canceled", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue({
-      id: "r1",
-      userId: user.sub,
-      state: "running",
-      jobName: "subprocess:1",
-    });
+    prisma.run.findFirst.mockResolvedValue(
+      makeRunRow({ id: "r1", userId: user.sub, status: "running", driverHandle: "subprocess:1" }),
+    );
     await svc.cancel("r1", user);
     expect(driver.cancel).toHaveBeenCalledWith("subprocess:1");
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("canceled");
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("canceled");
   });
 
   it("cancel still marks canceled if driver.cancel throws (best effort)", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue({
-      id: "r1",
-      userId: user.sub,
-      state: "running",
-      jobName: "subprocess:1",
-    });
+    prisma.run.findFirst.mockResolvedValue(
+      makeRunRow({ id: "r1", userId: user.sub, status: "running", driverHandle: "subprocess:1" }),
+    );
     driver.cancel.mockRejectedValue(new Error("k8s glitch"));
     await svc.cancel("r1", user);
-    const upd = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(upd.data.state).toBe("canceled");
+    const upd = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(upd[1].status).toBe("canceled");
   });
 
   it.each(["completed", "failed", "canceled"] as const)(
     "cancel of terminal state %s rejects with BENCHMARK_ALREADY_TERMINAL",
     async (state) => {
-      prisma.benchmarkRun.findFirst.mockResolvedValue({
-        id: "r1",
-        userId: user.sub,
-        state,
-        jobName: null,
-      });
+      prisma.run.findFirst.mockResolvedValue(
+        makeRunRow({ id: "r1", userId: user.sub, status: state, driverHandle: null }),
+      );
       await expect(svc.cancel("r1", user)).rejects.toMatchObject({
         response: { code: "BENCHMARK_ALREADY_TERMINAL" },
         status: 400,
@@ -410,115 +365,125 @@ describe("BenchmarkService.cancel", () => {
   );
 
   it("cancel returns 404 for missing / non-owned", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    prisma.run.findFirst.mockResolvedValue(null);
     await expect(svc.cancel("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
 
 describe("BenchmarkService.delete", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
   });
 
   it.each(["completed", "failed", "canceled"] as const)(
     "deletes terminal-state row %s",
     async (state) => {
-      prisma.benchmarkRun.findFirst.mockResolvedValue({ id: "r1", userId: user.sub, state });
-      prisma.benchmarkRun.delete.mockResolvedValue({});
+      prisma.run.findFirst.mockResolvedValue(
+        makeRunRow({ id: "r1", userId: user.sub, status: state }),
+      );
+      runs.delete.mockResolvedValue(makeRunRow({ id: "r1" }));
       await svc.delete("r1", user);
-      expect(prisma.benchmarkRun.delete).toHaveBeenCalledWith({ where: { id: "r1" } });
+      expect(runs.delete).toHaveBeenCalledWith("r1");
     },
   );
 
   it.each(["pending", "submitted", "running"] as const)(
     "rejects delete of non-terminal state %s with BENCHMARK_NOT_TERMINAL",
     async (state) => {
-      prisma.benchmarkRun.findFirst.mockResolvedValue({ id: "r1", userId: user.sub, state });
+      prisma.run.findFirst.mockResolvedValue(
+        makeRunRow({ id: "r1", userId: user.sub, status: state }),
+      );
       await expect(svc.delete("r1", user)).rejects.toMatchObject({
         response: { code: "BENCHMARK_NOT_TERMINAL" },
         status: 409,
       });
-      expect(prisma.benchmarkRun.delete).not.toHaveBeenCalled();
+      expect(runs.delete).not.toHaveBeenCalled();
     },
   );
 
   it("returns 404 for missing / non-owned", async () => {
-    prisma.benchmarkRun.findFirst.mockResolvedValue(null);
+    prisma.run.findFirst.mockResolvedValue(null);
     await expect(svc.delete("missing", user)).rejects.toMatchObject({ status: 404 });
   });
 });
 
 describe("BenchmarkService.handleStateCallback", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
   });
 
   it("missing row: returns silently without UPDATE", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue(null);
+    runs.findById.mockResolvedValue(null);
     await svc.handleStateCallback("missing", { state: "running" });
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 
-  it("submitted → running: UPDATE state and progress", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "submitted" });
-    prisma.benchmarkRun.update.mockResolvedValue({});
+  it("submitted → running: UPDATE status and progress", async () => {
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: "submitted" }));
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "running" }));
     await svc.handleStateCallback("r1", { state: "running", progress: 0.1 });
-    expect(prisma.benchmarkRun.update).toHaveBeenCalledWith({
-      where: { id: "r1" },
-      data: { state: "running", progress: 0.1, stateMessage: null },
+    expect(runs.update).toHaveBeenCalledWith("r1", {
+      status: "running",
+      progress: 0.1,
+      statusMessage: null,
     });
   });
 
   it("running → running (duplicate): no UPDATE", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: "running" }));
     await svc.handleStateCallback("r1", { state: "running" });
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 
   it("running → completed: UPDATE with completedAt", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
-    prisma.benchmarkRun.update.mockResolvedValue({});
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: "running" }));
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "completed" }));
     await svc.handleStateCallback("r1", { state: "completed", progress: 1 });
-    const args = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(args.data.state).toBe("completed");
-    expect(args.data.completedAt).toBeInstanceOf(Date);
-    expect(args.data.progress).toBe(1);
+    const args = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(args[1].status).toBe("completed");
+    expect(args[1].completedAt).toBeInstanceOf(Date);
+    expect(args[1].progress).toBe(1);
   });
 
   it.each(["completed", "failed", "canceled"] as const)(
     "%s → running: silent warn, no UPDATE (forward-only)",
     async (state) => {
-      prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state });
+      runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: state }));
       await svc.handleStateCallback("r1", { state: "running" });
-      expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+      expect(runs.update).not.toHaveBeenCalled();
     },
   );
 
-  it("running → failed: UPDATE with stateMessage truncated to 2048 chars", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "running" });
-    prisma.benchmarkRun.update.mockResolvedValue({});
+  it("running → failed: UPDATE with statusMessage truncated to 2048 chars", async () => {
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: "running" }));
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1", status: "failed" }));
     const huge = "x".repeat(5000);
     await svc.handleStateCallback("r1", { state: "failed", stateMessage: huge });
-    const args = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(args.data.state).toBe("failed");
-    expect((args.data.stateMessage as string).length).toBeLessThanOrEqual(2048);
+    const args = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(args[1].status).toBe("failed");
+    expect((args[1].statusMessage as string).length).toBeLessThanOrEqual(2048);
   });
 });
 
 describe("BenchmarkService.handleMetricsCallback", () => {
   let prisma: PrismaStub;
+  let runs: RunsStub;
   let driver: ReturnType<typeof buildDriver>;
   let svc: BenchmarkService;
 
@@ -536,32 +501,33 @@ describe("BenchmarkService.handleMetricsCallback", () => {
 
   beforeEach(() => {
     prisma = buildPrisma();
+    runs = buildRuns();
     driver = buildDriver();
-    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never);
+    svc = new BenchmarkService(prisma as never, driver, buildConfig() as never, runs as never);
   });
 
   it("writes metrics regardless of state (forensic value)", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue({ id: "r1", state: "failed" });
-    prisma.benchmarkRun.update.mockResolvedValue({});
+    runs.findById.mockResolvedValue(makeRunRow({ id: "r1", status: "failed" }));
+    runs.update.mockResolvedValue(makeRunRow({ id: "r1" }));
     await svc.handleMetricsCallback("r1", {
       metricsSummary: summary,
       rawMetrics: { foo: 1 },
       logs: "tail",
     });
-    const args = prisma.benchmarkRun.update.mock.calls[0][0];
-    expect(args.data.metricsSummary).toEqual(summary);
-    expect(args.data.rawMetrics).toEqual({ foo: 1 });
-    expect(args.data.logs).toBe("tail");
-    // state was NOT touched
-    expect(args.data.state).toBeUndefined();
+    const args = runs.update.mock.calls[0] as [string, Record<string, unknown>];
+    expect(args[1].summaryMetrics).toEqual(summary);
+    expect(args[1].rawOutput).toEqual({ foo: 1 });
+    expect(args[1].logs).toBe("tail");
+    // status was NOT touched
+    expect(args[1].status).toBeUndefined();
   });
 
   it("missing row: silent ok", async () => {
-    prisma.benchmarkRun.findUnique.mockResolvedValue(null);
+    runs.findById.mockResolvedValue(null);
     await svc.handleMetricsCallback("missing", {
       metricsSummary: summary,
       rawMetrics: null,
     });
-    expect(prisma.benchmarkRun.update).not.toHaveBeenCalled();
+    expect(runs.update).not.toHaveBeenCalled();
   });
 });

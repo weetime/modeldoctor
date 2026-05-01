@@ -20,8 +20,11 @@ export const useAudioHistoryStore = createHistoryStore<AudioHistorySnapshot>({
     selectedConnectionId: null,
     tts: { input: "", voice: "alloy", format: "mp3", autoPlay: true },
     stt: {
-      language: "", task: "transcribe", prompt: "",
-      fileName: null, resultText: null,
+      language: "",
+      task: "transcribe",
+      prompt: "",
+      fileName: null,
+      resultText: null,
     },
     activeTab: "tts",
   }),

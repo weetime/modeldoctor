@@ -14,13 +14,15 @@ export function SttTab() {
   const { t } = useTranslation("playground");
   const stt = useAudioStore((s) => s.stt);
   const selectedConnectionId = useAudioStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) => (selectedConnectionId ? s.get(selectedConnectionId) : null));
+  const conn = useConnectionsStore((s) =>
+    selectedConnectionId ? s.get(selectedConnectionId) : null,
+  );
   const blobRef = useRef<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: blobRef.current is mutated outside React; we re-create the URL when the file meta (which IS in store state) changes
   const audioUrl = useMemo(
     () => (blobRef.current ? URL.createObjectURL(blobRef.current) : null),
-    // biome-ignore lint/correctness/useExhaustiveDependencies: blobRef.current is mutated outside React; we re-create the URL when the file meta (which IS in store state) changes
     [stt.fileName, stt.fileSize],
   );
 
@@ -35,7 +37,9 @@ export function SttTab() {
   const adoptBlob = (blob: Blob, name: string) => {
     blobRef.current = blob;
     useAudioStore.getState().setSttFileMeta({
-      name, size: blob.size, mimeType: blob.type || "audio/webm",
+      name,
+      size: blob.size,
+      mimeType: blob.type || "audio/webm",
     });
   };
 
@@ -75,7 +79,8 @@ export function SttTab() {
     if (fresh.stt.language) form.append("language", fresh.stt.language);
     form.append("task", fresh.stt.task);
     if (fresh.stt.prompt) form.append("prompt", fresh.stt.prompt);
-    if (fresh.stt.temperature !== undefined) form.append("temperature", String(fresh.stt.temperature));
+    if (fresh.stt.temperature !== undefined)
+      form.append("temperature", String(fresh.stt.temperature));
 
     fresh.setSttSending(true);
     fresh.setSttError(null);
@@ -113,12 +118,17 @@ export function SttTab() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-sm">{stt.fileName}</span>
-              <Button variant="ghost" size="icon" onClick={onClearFile} aria-label={t("audio.stt.clearFile")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClearFile}
+                aria-label={t("audio.stt.clearFile")}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            {/* biome-ignore lint/a11y/useMediaCaption: user-supplied recording */}
             {blobRef.current && audioUrl ? (
+              // biome-ignore lint/a11y/useMediaCaption: user-supplied recording playback
               <audio controls src={audioUrl} className="w-full" />
             ) : null}
           </div>
@@ -132,8 +142,14 @@ export function SttTab() {
               <RecorderControls onComplete={onRecorded} />
             </div>
             <input
-              ref={fileInputRef} type="file" accept="audio/*" hidden
-              onChange={(e) => { onPickFile(e.target.files?.[0]); e.target.value = ""; }}
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              hidden
+              onChange={(e) => {
+                onPickFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
             />
           </div>
         )}
@@ -159,7 +175,12 @@ export function SttTab() {
               <Button variant="ghost" size="icon" onClick={onCopy} aria-label={t("audio.stt.copy")}>
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => useAudioStore.getState().setSttResult(null)} aria-label={t("audio.stt.clearResult")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => useAudioStore.getState().setSttResult(null)}
+                aria-label={t("audio.stt.clearResult")}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>

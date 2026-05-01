@@ -1,6 +1,8 @@
 import type { E2ETestRequest, E2ETestResponse, ProbeName } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import { PROBES, type ProbeCtx } from "../../integrations/probes/index.js";
+import { Prisma } from "@prisma/client";
+import { PROBES, type ProbeCtx, type ProbeResult } from "../../integrations/probes/index.js";
+import { RunRepository } from "../run/run.repository.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -15,10 +17,14 @@ function parseHeaderLines(s: string | undefined): Record<string, string> {
 
 @Injectable()
 export class E2ETestService {
-  async run(req: E2ETestRequest): Promise<E2ETestResponse> {
+  constructor(private readonly runs: RunRepository) {}
+
+  private async executeProbes(
+    req: E2ETestRequest,
+  ): Promise<Array<ProbeResult & { probe: ProbeName }>> {
     const extraHeaders = parseHeaderLines(req.customHeaders);
 
-    const results = await Promise.all(
+    return Promise.all(
       req.probes.map(async (name: ProbeName) => {
         const ctx: ProbeCtx = {
           apiBaseUrl: req.apiBaseUrl,
@@ -42,7 +48,53 @@ export class E2ETestService {
         }
       }),
     );
+  }
 
-    return { success: true, results };
+  async run(req: E2ETestRequest, userId?: string): Promise<E2ETestResponse> {
+    // 1. Create Run row (status: pending)
+    const created = await this.runs.create({
+      userId: userId ?? null,
+      kind: "e2e",
+      tool: "e2e",
+      scenario: {
+        probes: req.probes,
+        pathOverride: req.pathOverride ?? {},
+        apiBaseUrl: req.apiBaseUrl,
+        model: req.model,
+      },
+      mode: "correctness",
+      driverKind: "local",
+      params: req as unknown as Prisma.InputJsonValue,
+    });
+
+    // 2. Mark running
+    await this.runs.update(created.id, { status: "running", startedAt: new Date() });
+
+    // 3. Execute probes
+    try {
+      const results = await this.executeProbes(req);
+      const allPassed = results.every((r) => r.pass);
+
+      // 4. Persist final state
+      await this.runs.update(created.id, {
+        status: allPassed ? "completed" : "failed",
+        completedAt: new Date(),
+        rawOutput: { results } as unknown as Prisma.InputJsonValue,
+        summaryMetrics: {
+          total: results.length,
+          passed: results.filter((r) => r.pass).length,
+          failed: results.filter((r) => !r.pass).length,
+        } as unknown as Prisma.InputJsonValue,
+      });
+
+      return { runId: created.id, success: allPassed, results };
+    } catch (err) {
+      await this.runs.update(created.id, {
+        status: "failed",
+        statusMessage: err instanceof Error ? err.message : String(err),
+        completedAt: new Date(),
+      });
+      throw err;
+    }
   }
 }

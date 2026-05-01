@@ -1,7 +1,7 @@
+import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
 import { RecorderControls } from "./RecorderControls";
 
 function setIsSecureContext(v: boolean) {
@@ -14,13 +14,18 @@ class MockMediaRecorder {
   onstop: (() => void) | null = null;
   state: "inactive" | "recording" = "inactive";
   mimeType = "audio/webm";
-  start() { this.state = "recording"; }
+  start() {
+    this.state = "recording";
+  }
   stop() {
     this.ondataavailable?.({ data: new Blob([new Uint8Array([1, 2, 3])], { type: "audio/webm" }) });
     this.onstop?.();
     this.state = "inactive";
   }
-  constructor(public stream: MediaStream, public options?: { mimeType?: string }) {
+  constructor(
+    public stream: MediaStream,
+    public options?: { mimeType?: string },
+  ) {
     if (options?.mimeType) this.mimeType = options.mimeType;
   }
 }
@@ -65,8 +70,8 @@ describe("RecorderControls", () => {
     const onComplete = vi.fn();
     renderRC(onComplete);
     fireEvent.click(screen.getByRole("button"));
-    await new Promise((r) => setTimeout(r, 0));  // flush getUserMedia microtask
-    fireEvent.click(screen.getByRole("button"));  // stop
+    await new Promise((r) => setTimeout(r, 0)); // flush getUserMedia microtask
+    fireEvent.click(screen.getByRole("button")); // stop
     expect(onComplete).toHaveBeenCalledOnce();
     const [blob, mimeType] = onComplete.mock.calls[0];
     expect(blob).toBeInstanceOf(Blob);
@@ -77,7 +82,9 @@ describe("RecorderControls", () => {
     const tracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
     Object.defineProperty(navigator, "mediaDevices", {
       value: {
-        getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => tracks } as unknown as MediaStream),
+        getUserMedia: vi
+          .fn()
+          .mockResolvedValue({ getTracks: () => tracks } as unknown as MediaStream),
       },
       configurable: true,
     });
