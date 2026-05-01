@@ -58,4 +58,21 @@ describe("MessageList multimodal", () => {
     expect(audio).toBeTruthy();
     expect(audio?.getAttribute("src")).toBe("data:audio/webm;base64,Zm9v");
   });
+
+  it("renders <img> with object-contain, w-auto, and self-start to prevent flex stretch (Issue #32)", () => {
+    const messages: ChatMessage[] = [
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } },
+        ],
+      },
+    ];
+    const { container } = renderWithI18n(<MessageList messages={messages} />);
+    const img = container.querySelector("img");
+    expect(img).toBeTruthy();
+    expect(img?.className).toContain("object-contain");
+    expect(img?.className).toContain("w-auto");
+    expect(img?.className).toContain("self-start");
+  });
 });

@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api-client";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -142,6 +141,8 @@ export function ImagePage() {
   return (
     <PlaygroundShell
       category="image"
+      title={t("image.title")}
+      subtitle={t("image.subtitle")}
       tabs={[
         { key: "generate", label: t("image.tabs.generate") },
         { key: "edit", label: t("image.tabs.edit") },
@@ -167,7 +168,6 @@ export function ImagePage() {
         </div>
       }
     >
-      <PageHeader title={t("image.title")} subtitle={t("image.subtitle")} />
       {mode === "generate" ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
           <div className="flex h-[60vh] items-center justify-center rounded-md border border-dashed border-border bg-muted/30">

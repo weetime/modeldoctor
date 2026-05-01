@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,6 +147,8 @@ export function RerankPage() {
   return (
     <PlaygroundShell
       category="rerank"
+      title={t("rerank.title")}
+      subtitle={t("rerank.subtitle")}
       viewCodeSnippets={snippets}
       historySlot={<HistoryDrawer useHistoryStore={useRerankHistoryStore} />}
       paramsSlot={
@@ -161,7 +162,6 @@ export function RerankPage() {
         </div>
       }
     >
-      <PageHeader title={t("rerank.title")} subtitle={t("rerank.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-4">
         <div>
           <Label className="text-xs text-muted-foreground">{t("rerank.query")}</Label>

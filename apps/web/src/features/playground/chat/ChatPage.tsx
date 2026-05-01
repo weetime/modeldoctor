@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/common/page-header";
 import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import { useConnectionsStore } from "@/stores/connections-store";
@@ -12,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
-import { ChatModeTabs } from "../chat-compare/ChatModeTabs";
+import { useChatModeTabs } from "../chat-compare/useChatModeTabs";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import {
@@ -72,6 +71,7 @@ export async function rehydrateChatBlobs(
 
 export function ChatPage() {
   const { t } = useTranslation("playground");
+  const chatModeTabs = useChatModeTabs();
   const slice = useChatStore();
   const conn = useConnectionsStore((s) =>
     slice.selectedConnectionId ? s.get(slice.selectedConnectionId) : null,
@@ -233,6 +233,11 @@ export function ChatPage() {
   return (
     <PlaygroundShell
       category="chat"
+      title={t("chat.title")}
+      subtitle={t("chat.subtitle")}
+      tabs={chatModeTabs.tabs}
+      activeTab={chatModeTabs.active}
+      onTabChange={chatModeTabs.onChange}
       viewCodeSnippets={snippets}
       historySlot={<HistoryDrawer useHistoryStore={useChatHistoryStore} />}
       paramsSlot={
@@ -246,8 +251,6 @@ export function ChatPage() {
         </div>
       }
     >
-      <ChatModeTabs />
-      <PageHeader title={t("chat.title")} subtitle={t("chat.subtitle")} />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 overflow-y-auto">
           <MessageList messages={slice.messages} />
