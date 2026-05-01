@@ -110,6 +110,7 @@ export const E2ETestRequestSchema = z.object({
 export type E2ETestRequest = z.infer<typeof E2ETestRequestSchema>;
 
 export const E2ETestResponseSchema = z.object({
+  runId: z.string(),
   success: z.boolean(),
   results: z.array(ProbeResultSchema.extend({ probe: ProbeNameSchema })),
   error: z.string().optional(),
