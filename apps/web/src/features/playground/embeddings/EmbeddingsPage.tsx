@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, api } from "@/lib/api-client";
@@ -159,15 +160,16 @@ export function EmbeddingsPage() {
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={slice.batchMode}
-                onChange={(e) => slice.setBatchMode(e.target.checked)}
-              />
-              {t("embeddings.batchMode")}
-            </label>
-            <div className="flex gap-2">
+            <Label className="text-xs text-muted-foreground">{t("embeddings.inputs")}</Label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={slice.batchMode}
+                  onChange={(e) => slice.setBatchMode(e.target.checked)}
+                />
+                {t("embeddings.batchMode")}
+              </label>
               {!slice.batchMode ? (
                 <Button size="sm" variant="outline" onClick={slice.addInput}>
                   {t("embeddings.addInput")}

@@ -175,7 +175,7 @@ export function RerankPage() {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <Label className="text-xs text-muted-foreground">{t("rerank.documents")}</Label>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
@@ -189,6 +189,9 @@ export function RerankPage() {
                   {t("rerank.addDoc")}
                 </Button>
               ) : null}
+              <Button size="sm" variant="outline" onClick={slice.clearDocuments}>
+                {t("rerank.clear")}
+              </Button>
             </div>
           </div>
           {slice.batchMode ? (

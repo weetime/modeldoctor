@@ -25,6 +25,7 @@ export interface RerankStoreState {
   addDocument: () => void;
   removeDocument: (i: number) => void;
   setDocAt: (i: number, text: string) => void;
+  clearDocuments: () => void;
   setBatchMode: (b: boolean) => void;
   setBatchText: (s: string) => void;
   patchParams: (p: Partial<RerankParams>) => void;
@@ -61,6 +62,7 @@ export const useRerankStore = create<RerankStoreState>((set) => ({
       next[i] = text;
       return { documents: next };
     }),
+  clearDocuments: () => set({ documents: [""] }),
   setBatchMode: (b) => set({ batchMode: b }),
   setBatchText: (s) =>
     set({
