@@ -92,19 +92,11 @@ export const ProbeResultSchema = z.object({
 });
 export type ProbeResult = z.infer<typeof ProbeResultSchema>;
 
-// Convention: `apiBaseUrl` is the origin (scheme://host[:port][/proxy-prefix]),
-// without `/v1/...` path tail. Each probe constructs its target URL by
-// appending its OpenAI-compatible default path OR an explicit pathOverride
-// supplied per probe.
 export const E2ETestRequestSchema = z.object({
-  apiBaseUrl: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
-  customHeaders: z.string().optional(),
+  connectionId: z.string().min(1),
   probes: z.array(ProbeNameSchema).min(1),
   // Per-probe path override (path tail starting with "/"). Missing keys fall
-  // back to PROBE_DEFAULT_PATHS. Treats the value as opaque — the probe is
-  // responsible for prepending apiBaseUrl.
+  // back to PROBE_DEFAULT_PATHS.
   pathOverride: z.record(ProbeNameSchema, z.string()).optional(),
 });
 export type E2ETestRequest = z.infer<typeof E2ETestRequestSchema>;
