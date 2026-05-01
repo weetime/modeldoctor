@@ -164,7 +164,7 @@ model Run {
 
   // Driver bookkeeping
   driverHandle String? @map("driver_handle") // 'subprocess:1234' or 'namespace/jobName'
-  apiKeyCipher String? @map("api_key_cipher")
+  apiKeyCipher String? @map("api_key_cipher") // AES-256-GCM ciphertext, see common/crypto; moved from benchmark_runs (#37 may relocate to Connection)
 
   // Snapshots
   params          Json
@@ -185,11 +185,12 @@ model Run {
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
 
-  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-  parent     Run?        @relation("RunParent", fields: [parentRunId], references: [id], onDelete: SetNull)
-  children   Run[]       @relation("RunParent")
-  baseline   Baseline?   @relation(fields: [baselineId], references: [id], onDelete: SetNull)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection  Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  parent      Run?        @relation("RunParent", fields: [parentRunId], references: [id], onDelete: SetNull)
+  children    Run[]       @relation("RunParent")
+  baseline    Baseline?   @relation("RunReferencingBaseline", fields: [baselineId], references: [id], onDelete: SetNull)
+  baselineFor Baseline?   @relation("BaselineCanonicalRun")
 
   @@index([userId, createdAt])
   @@index([kind, status])
@@ -214,7 +215,8 @@ model Baseline {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referencers Run[]
+  run         Run   @relation("BaselineCanonicalRun", fields: [runId], references: [id], onDelete: Cascade)
+  referencers Run[] @relation("RunReferencingBaseline")
 
   @@index([userId])
   @@map("baselines")
