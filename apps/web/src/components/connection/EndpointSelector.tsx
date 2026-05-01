@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
-import { useConnectionsStore } from "@/stores/connections-store";
+import { useConnections } from "@/features/connections/queries";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,23 +30,16 @@ export interface EndpointSelectorProps {
 }
 
 /**
- * Compact connection picker intended for a page header / toolbar slot when the
- * endpoint form itself is not visible. Shows the dropdown, a modified dot,
- * a "+" to create a new connection, and a kebab menu with a link to the
- * connections library.
- *
- * **When to use:** pages where the endpoint is incidental (e.g. Request
- * Debug's top-right slot).
- *
- * **When NOT to use:** pages where the user edits API URL / Key / Model
- * inline — use {@link EndpointPicker} embedded in the page body instead.
- * Save / Save-as-new live on the picker because only it has the current
- * form values to persist.
+ * Compact connection picker intended for a page header / toolbar slot when
+ * the endpoint form itself is not visible. Shows the dropdown, a modified
+ * dot, a "+" to create a new connection, and a kebab menu with a link to
+ * the connections library.
  */
 export function EndpointSelector({ selectedId, modified, onSelect }: EndpointSelectorProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
-  const list = useConnectionsStore((s) => s.list());
+  const listQuery = useConnections();
+  const list: ConnectionPublic[] = listQuery.data ?? [];
   const [createOpen, setCreateOpen] = useState(false);
 
   const currentValue = selectedId ?? MANUAL;
@@ -100,6 +94,7 @@ export function EndpointSelector({ selectedId, modified, onSelect }: EndpointSel
       <ConnectionDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        mode={{ kind: "create" }}
         onSaved={(c) => onSelect(c.id)}
       />
     </div>

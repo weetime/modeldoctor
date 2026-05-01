@@ -1,12 +1,9 @@
 import "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ChatPage, persistAttachments, rehydrateChatBlobs } from "./ChatPage";
-import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
-import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -22,25 +19,42 @@ vi.mock("@/lib/api-client", () => {
   };
 });
 
+const SAMPLE_CONN: ConnectionPublic = {
+  id: "c1",
+  userId: "u1",
+  name: "chat-1",
+  baseUrl: "http://x",
+  apiKeyPreview: "sk-...1234",
+  model: "m",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat",
+  tags: [],
+  createdAt: "2026-04-26T14:22:00Z",
+  updatedAt: "2026-04-26T14:22:00Z",
+};
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: [SAMPLE_CONN], isLoading: false, error: null }),
+  useConnection: (id: string | null | undefined) => ({
+    data: id === "c1" ? SAMPLE_CONN : null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 import { api } from "@/lib/api-client";
+import { ChatPage, persistAttachments, rehydrateChatBlobs } from "./ChatPage";
+import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
+import { DEFAULT_CHAT_PARAMS, useChatStore } from "./store";
 
 function seedChatConn() {
-  useConnectionsStore.getState().create({
-    name: "chat-1",
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "m",
-    customHeaders: "",
-    queryParams: "",
-    category: "chat",
-    tags: [],
-  });
+  // No-op now that connections are mocked at the React Query layer; kept for
+  // call-site readability and easy revert if we re-add seeding.
 }
 
 describe("ChatPage", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
     // Reset the module-level history singleton (localStorage.clear() doesn't
     // touch its in-memory state) and prime its current entry with stream:false
@@ -92,12 +106,13 @@ describe("ChatPage", () => {
       expect(api.post).toHaveBeenCalledWith(
         "/api/playground/chat",
         expect.objectContaining({
-          apiBaseUrl: "http://x",
-          apiKey: "k",
-          model: "m",
+          connectionId: "c1",
           messages: [{ role: "user", content: "hi there" }],
         }),
       );
+      const arg = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(arg).not.toHaveProperty("apiKey");
+      expect(arg).not.toHaveProperty("apiBaseUrl");
       expect(screen.getByText("hello back")).toBeInTheDocument();
     });
   });
@@ -169,8 +184,6 @@ describe("ChatPage", () => {
 
 describe("ChatPage file attachment upload", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
     useChatHistoryStore.getState().reset();
     useChatHistoryStore.getState().save({
@@ -481,8 +494,6 @@ describe("persistAttachments + rehydrateChatBlobs", () => {
 
 describe("ChatPage streaming", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
     useChatStore.getState().reset();
     useChatHistoryStore.getState().reset(); // NEW — same singleton-clear concern
     vi.mocked(api.post).mockReset();

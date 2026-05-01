@@ -1,5 +1,5 @@
 import "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -15,33 +15,43 @@ vi.mock("echarts-for-react", () => ({
     <div data-testid="echart" style={style} />
   ),
 }));
+
+const SAMPLE_CONN: ConnectionPublic = {
+  id: "c1",
+  userId: "u1",
+  name: "emb-1",
+  baseUrl: "http://x",
+  apiKeyPreview: "sk-...1234",
+  model: "m",
+  customHeaders: "",
+  queryParams: "",
+  category: "embeddings",
+  tags: [],
+  createdAt: "2026-04-26T14:22:00Z",
+  updatedAt: "2026-04-26T14:22:00Z",
+};
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({ data: [SAMPLE_CONN], isLoading: false, error: null }),
+  useConnection: (id: string | null | undefined) => ({
+    data: id === "c1" ? SAMPLE_CONN : null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 import { api } from "@/lib/api-client";
 import { EmbeddingsPage, useEmbeddingsHistoryStore } from "./EmbeddingsPage";
 import { useEmbeddingsStore } from "./store";
 
-function seedConn() {
-  useConnectionsStore.getState().create({
-    name: "emb-1",
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "m",
-    customHeaders: "",
-    queryParams: "",
-    category: "embeddings",
-    tags: [],
-  });
-}
-
 describe("EmbeddingsPage", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
     useEmbeddingsStore.getState().reset();
     useEmbeddingsHistoryStore.getState().reset();
     vi.mocked(api.post).mockReset();
   });
 
-  it("submits inputs to /api/playground/embeddings and renders chart placeholder until ≥3", async () => {
+  it("submits inputs to /api/playground/embeddings with connectionId", async () => {
     vi.mocked(api.post).mockResolvedValue({
       success: true,
       embeddings: [
@@ -51,15 +61,12 @@ describe("EmbeddingsPage", () => {
       ],
       latencyMs: 12,
     });
-    seedConn();
     const user = userEvent.setup();
     render(
       <MemoryRouter>
         <EmbeddingsPage />
       </MemoryRouter>,
     );
-    // Connection combobox is the first combobox (the params panel also has a
-    // Select for encoding format).
     const comboboxes = screen.getAllByRole("combobox");
     await user.click(comboboxes[0]);
     await user.click(screen.getByRole("option", { name: /emb-1/i }));
@@ -73,9 +80,12 @@ describe("EmbeddingsPage", () => {
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith(
         "/api/playground/embeddings",
-        expect.objectContaining({ input: ["a", "b", "c"] }),
+        expect.objectContaining({ input: ["a", "b", "c"], connectionId: "c1" }),
       );
     });
+    const arg = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty("apiKey");
+    expect(arg).not.toHaveProperty("apiBaseUrl");
     expect(await screen.findByLabelText(/pca scatter/i)).toBeInTheDocument();
   });
 });

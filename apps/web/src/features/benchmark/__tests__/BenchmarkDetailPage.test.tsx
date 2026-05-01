@@ -43,6 +43,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 const BASE: BenchmarkRun = {
   id: "r1",
   userId: "u1",
+  connectionId: "conn-1",
   name: "smoke",
   description: null,
   profile: "throughput",

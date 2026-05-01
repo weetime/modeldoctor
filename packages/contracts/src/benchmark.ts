@@ -105,6 +105,12 @@ export type CreateBenchmarkRequest = z.infer<typeof CreateBenchmarkRequestSchema
 export const BenchmarkRunSummarySchema = z.object({
   id: z.string(),
   userId: z.string().nullable(),
+  /**
+   * Connection that this run was launched against. `null` means the saved
+   * connection was deleted after the run was created — UI flows like
+   * "duplicate run" must surface this and force the user to repick.
+   */
+  connectionId: z.string().nullable(),
   name: z.string(),
   profile: BenchmarkProfileSchema,
   apiType: BenchmarkApiTypeSchema,

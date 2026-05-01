@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
 import { playgroundFetchMultipart } from "@/lib/playground-multipart";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type { PlaygroundImagesResponse } from "@modeldoctor/contracts";
 import { Download, ImageUp, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,9 +22,6 @@ export function InpaintMode() {
   const { t } = useTranslation("playground");
   const inpaint = useImageStore((s) => s.inpaint);
   const selectedConnectionId = useImageStore((s) => s.selectedConnectionId);
-  const conn = useConnectionsStore((s) =>
-    selectedConnectionId ? s.get(selectedConnectionId) : null,
-  );
   const imageBlobRef = useRef<Blob | null>(null);
   const maskBlobRef = useRef<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +81,7 @@ export function InpaintMode() {
   };
 
   const canSubmit =
-    !!conn &&
+    !!selectedConnectionId &&
     !!imageBlobRef.current &&
     inpaint.prompt.trim().length > 0 &&
     hasMask &&
@@ -93,10 +89,8 @@ export function InpaintMode() {
 
   const onSubmit = async () => {
     const fresh = useImageStore.getState();
-    const connNow = fresh.selectedConnectionId
-      ? useConnectionsStore.getState().get(fresh.selectedConnectionId)
-      : null;
-    if (!connNow || !imageBlobRef.current) return;
+    const connectionId = fresh.selectedConnectionId;
+    if (!connectionId || !imageBlobRef.current) return;
     if (!maskBlobRef.current) {
       toast.error(t("image.inpaint.errors.missingMask"));
       return;
@@ -106,11 +100,7 @@ export function InpaintMode() {
     const form = new FormData();
     form.append("image", imageBlobRef.current, fresh.inpaint.imageName ?? "image.png");
     form.append("mask", maskBlobRef.current, "mask.png");
-    form.append("apiBaseUrl", connNow.apiBaseUrl);
-    form.append("apiKey", connNow.apiKey);
-    form.append("model", connNow.model);
-    if (connNow.customHeaders) form.append("customHeaders", connNow.customHeaders);
-    if (connNow.queryParams) form.append("queryParams", connNow.queryParams);
+    form.append("connectionId", connectionId);
     form.append("prompt", fresh.inpaint.prompt.trim());
     form.append("n", String(fresh.params.n));
     if (fresh.params.size) form.append("size", fresh.params.size);

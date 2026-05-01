@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useConnections,
   useConnection,
+  useConnections,
   useCreateConnection,
   useDeleteConnection,
   useUpdateConnection,
@@ -22,9 +22,13 @@ function wrap() {
 }
 
 describe("useConnections", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("fetches list and exposes items", async () => {
-    (api.get as any).mockResolvedValue({ items: [{ id: "c1", name: "n", apiKeyPreview: "sk-...1234" }] });
+    (api.get as any).mockResolvedValue({
+      items: [{ id: "c1", name: "n", apiKeyPreview: "sk-...1234" }],
+    });
     const { result } = renderHook(() => useConnections(), { wrapper: wrap() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([{ id: "c1", name: "n", apiKeyPreview: "sk-...1234" }]);
@@ -33,7 +37,9 @@ describe("useConnections", () => {
 });
 
 describe("useConnection", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("is disabled when id is null", () => {
     const { result } = renderHook(() => useConnection(null), { wrapper: wrap() });
     expect(result.current.fetchStatus).toBe("idle");
@@ -47,17 +53,33 @@ describe("useConnection", () => {
 });
 
 describe("useCreateConnection", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("posts the body and returns ConnectionWithSecret", async () => {
     (api.post as any).mockResolvedValue({ id: "c1", apiKey: "sk-x" });
     const { result } = renderHook(() => useCreateConnection(), { wrapper: wrap() });
-    await result.current.mutateAsync({ name: "n", baseUrl: "http://x", apiKey: "sk-x", model: "m", customHeaders: "", queryParams: "", category: "chat", tags: [] });
-    expect(api.post).toHaveBeenCalledWith("/api/connections", expect.objectContaining({ apiKey: "sk-x" }));
+    await result.current.mutateAsync({
+      name: "n",
+      baseUrl: "http://x",
+      apiKey: "sk-x",
+      model: "m",
+      customHeaders: "",
+      queryParams: "",
+      category: "chat",
+      tags: [],
+    });
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/connections",
+      expect.objectContaining({ apiKey: "sk-x" }),
+    );
   });
 });
 
 describe("useUpdateConnection", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("patches the row by id", async () => {
     (api.patch as any).mockResolvedValue({ id: "c1" });
     const { result } = renderHook(() => useUpdateConnection(), { wrapper: wrap() });
@@ -67,7 +89,9 @@ describe("useUpdateConnection", () => {
 });
 
 describe("useDeleteConnection", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("deletes by id", async () => {
     (api.del as any).mockResolvedValue(undefined);
     const { result } = renderHook(() => useDeleteConnection(), { wrapper: wrap() });

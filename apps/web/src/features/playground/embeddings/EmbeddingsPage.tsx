@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
-import { useConnectionsStore } from "@/stores/connections-store";
 import type {
   PlaygroundEmbeddingsRequest,
   PlaygroundEmbeddingsResponse,
@@ -44,10 +44,9 @@ export const useEmbeddingsHistoryStore = createHistoryStore<Snap>({
 export function EmbeddingsPage() {
   const { t } = useTranslation("playground");
   const slice = useEmbeddingsStore();
-  const conn = useConnectionsStore((s) =>
-    slice.selectedConnectionId ? s.get(slice.selectedConnectionId) : null,
-  );
-  const canSubmit = !!conn && slice.inputs.some((i) => i.trim().length > 0) && !slice.loading;
+  const { data: conn } = useConnection(slice.selectedConnectionId);
+  const canSubmit =
+    !!slice.selectedConnectionId && slice.inputs.some((i) => i.trim().length > 0) && !slice.loading;
 
   // History sync
   const historyCurrentId = useEmbeddingsHistoryStore((h) => h.currentId);
@@ -97,18 +96,15 @@ export function EmbeddingsPage() {
   }, []);
 
   const onSubmit = async () => {
-    if (!conn) return;
+    const connectionId = slice.selectedConnectionId;
+    if (!connectionId) return;
     const inputs = slice.inputs.map((s) => s.trim()).filter((s) => s.length > 0);
     if (inputs.length === 0) return;
     slice.setLoading(true);
     slice.setError(null);
     try {
       const body: PlaygroundEmbeddingsRequest = {
-        apiBaseUrl: conn.apiBaseUrl,
-        apiKey: conn.apiKey,
-        model: conn.model,
-        customHeaders: conn.customHeaders || undefined,
-        queryParams: conn.queryParams || undefined,
+        connectionId,
         input: inputs.length === 1 ? inputs[0] : inputs,
         encodingFormat: slice.params.encodingFormat,
         dimensions: slice.params.dimensions,
@@ -131,7 +127,7 @@ export function EmbeddingsPage() {
 
   const snippets = conn
     ? genEmbeddingsSnippets({
-        apiBaseUrl: conn.apiBaseUrl,
+        apiBaseUrl: conn.baseUrl,
         model: conn.model,
         input: slice.inputs.length === 1 ? slice.inputs[0] : slice.inputs,
         encodingFormat: slice.params.encodingFormat,

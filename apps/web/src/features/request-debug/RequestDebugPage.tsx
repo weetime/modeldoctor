@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
 import { parseCurlCommand } from "@/lib/curl-parser";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { useMutation } from "@tanstack/react-query";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyValueTable } from "./KeyValueTable";
 import { ResponseViewer } from "./ResponseViewer";
@@ -29,32 +29,35 @@ export function RequestDebugPage() {
   const { t } = useTranslation("debug");
   const { t: tc } = useTranslation("common");
   const slice = useDebugStore();
-  const conns = useConnectionsStore();
   const methodId = useId();
   const urlId = useId();
   const bodyId = useId();
+  const { data: pickedConn } = useConnection(slice.selectedConnectionId);
 
   const onSelect = (id: string | null) => {
     slice.setSelected(id);
     slice.resetResults();
-    if (id) {
-      const c = conns.get(id);
-      if (c) {
-        slice.patch("url", c.apiBaseUrl);
-        const apiKeyHeader = {
-          key: "Authorization",
-          value: `Bearer ${c.apiKey}`,
-          enabled: true,
-        };
-        const ctHeader = {
-          key: "Content-Type",
-          value: "application/json",
-          enabled: true,
-        };
-        slice.patch("headers", [apiKeyHeader, ctHeader]);
-      }
-    }
   };
+
+  // When the user picks a connection, prefill the URL field. We cannot
+  // inject the apiKey into the Authorization header anymore (the plaintext
+  // never leaves the server) — the user types it manually if they want
+  // to debug a specific request. The /api/debug/proxy endpoint just
+  // forwards the headers the user provides.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to id changes; we don't want to clobber the user's URL on every pickedConn refetch
+  useEffect(() => {
+    if (!pickedConn) return;
+    if (slice.url !== pickedConn.baseUrl) {
+      slice.patch("url", pickedConn.baseUrl);
+    }
+    const hasContentType = slice.headers.some((h) => h.key === "Content-Type");
+    if (!hasContentType) {
+      slice.patch("headers", [
+        ...slice.headers,
+        { key: "Content-Type", value: "application/json", enabled: true },
+      ]);
+    }
+  }, [pickedConn?.id]);
 
   const onParseCurl = () => {
     const parsed = parseCurlCommand(slice.curlInput);

@@ -6,8 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnectionsStore } from "@/stores/connections-store";
-import type { ModalityCategory } from "@modeldoctor/contracts";
+import { useConnections } from "@/features/connections/queries";
+import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -24,7 +24,8 @@ export function CategoryEndpointSelector({
 }: CategoryEndpointSelectorProps) {
   const { t } = useTranslation("playground");
   const { t: tc } = useTranslation("connections");
-  const list = useConnectionsStore((s) => s.list());
+  const listQuery = useConnections();
+  const list: ConnectionPublic[] = listQuery.data ?? [];
   const [showAll, setShowAll] = useState(false);
 
   const visible = showAll ? list : list.filter((c) => c.category === category);

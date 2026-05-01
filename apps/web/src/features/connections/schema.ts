@@ -1,13 +1,12 @@
 import { ModalityCategorySchema } from "@modeldoctor/contracts";
 import { z } from "zod";
 
-export const connectionInputSchema = z.object({
+const baseShape = {
   name: z
     .string()
     .transform((v) => v.trim())
     .pipe(z.string().min(1, "required")),
   apiBaseUrl: z.string().url("invalid URL"),
-  apiKey: z.string().min(1, "required"),
   model: z.string().min(1, "required"),
   customHeaders: z.string(),
   queryParams: z.string(),
@@ -25,6 +24,27 @@ export const connectionInputSchema = z.object({
       }
       return out;
     }),
+};
+
+/**
+ * Create-mode form schema. apiKey is required because the server has nothing
+ * stored yet.
+ */
+export const connectionInputCreateSchema = z.object({
+  ...baseShape,
+  apiKey: z.string().min(1, "required"),
 });
 
-export type ConnectionInput = z.infer<typeof connectionInputSchema>;
+/**
+ * Edit-mode form schema. apiKey is optional: when the user did NOT toggle
+ * "Reset apiKey", the field is empty and the PATCH body must omit it.
+ */
+export const connectionInputEditSchema = z.object({
+  ...baseShape,
+  apiKey: z.string(),
+});
+
+/** Backwards-compatible alias used by callers that need the create shape. */
+export const connectionInputSchema = connectionInputCreateSchema;
+
+export type ConnectionInput = z.infer<typeof connectionInputCreateSchema>;

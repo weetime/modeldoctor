@@ -1,43 +1,60 @@
 import "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it } from "vitest";
-import { ConnectionsPage } from "./ConnectionsPage";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function seed() {
-  const s = useConnectionsStore.getState();
-  s.create({
+const seedList: ConnectionPublic[] = [
+  {
+    id: "c1",
+    userId: "u1",
     name: "chat-prod",
-    apiBaseUrl: "http://a",
-    apiKey: "k",
+    baseUrl: "http://a",
+    apiKeyPreview: "sk-...1234",
     model: "qwen",
     customHeaders: "",
     queryParams: "",
     category: "chat",
     tags: ["vLLM", "production"],
-  });
-  s.create({
+    createdAt: "2026-04-26T14:22:00Z",
+    updatedAt: "2026-04-26T14:22:00Z",
+  },
+  {
+    id: "c2",
+    userId: "u1",
     name: "embed-test",
-    apiBaseUrl: "http://b",
-    apiKey: "k",
+    baseUrl: "http://b",
+    apiKeyPreview: "sk-...5678",
     model: "bge",
     customHeaders: "",
     queryParams: "",
     category: "embeddings",
     tags: ["TEI"],
-  });
-}
+    createdAt: "2026-04-26T14:22:00Z",
+    updatedAt: "2026-04-26T14:22:00Z",
+  },
+];
+
+const deleteMutate = vi.fn();
+
+vi.mock("./queries", () => ({
+  useConnections: () => ({ data: seedList, isLoading: false, error: null }),
+  useDeleteConnection: () => ({ mutate: deleteMutate, isPending: false }),
+  // ConnectionDialog imports useCreateConnection/useUpdateConnection;
+  // include stubs so the dialog renders if it ever opens.
+  useCreateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+import { ConnectionsPage } from "./ConnectionsPage";
 
 describe("ConnectionsPage (category + tags)", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
+    deleteMutate.mockClear();
   });
 
   it("renders category badge and tag chips for each row", () => {
-    seed();
     render(
       <MemoryRouter>
         <ConnectionsPage />
@@ -49,9 +66,18 @@ describe("ConnectionsPage (category + tags)", () => {
     expect(screen.getByText("TEI")).toBeInTheDocument();
   });
 
+  it("shows apiKeyPreview only", () => {
+    render(
+      <MemoryRouter>
+        <ConnectionsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("sk-...1234")).toBeInTheDocument();
+    expect(screen.getByText("sk-...5678")).toBeInTheDocument();
+  });
+
   it("filtering by category hides non-matching rows", async () => {
     const user = userEvent.setup();
-    seed();
     render(
       <MemoryRouter>
         <ConnectionsPage />

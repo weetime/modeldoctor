@@ -1,5 +1,4 @@
 import i18n from "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
@@ -15,23 +14,8 @@ const renderTts = () =>
     </I18nextProvider>,
   );
 
-function seedConn() {
-  useConnectionsStore.getState().create({
-    name: "audio",
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "tts-1",
-    customHeaders: "",
-    queryParams: "",
-    category: "audio",
-    tags: [],
-  });
-}
-
 describe("TtsTab", () => {
   beforeEach(() => {
-    localStorage.clear();
-    useConnectionsStore.setState({ connections: [] });
     useAudioStore.setState((s) => ({
       ...s,
       selectedConnectionId: null,
@@ -44,23 +28,19 @@ describe("TtsTab", () => {
   });
 
   it("Send button is disabled when input is empty", () => {
-    seedConn();
-    const conn = useConnectionsStore.getState().list()[0];
-    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: conn.id }));
+    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: "c1" }));
     renderTts();
     expect(screen.getByRole("button", { name: /generate|send/i })).toBeDisabled();
   });
 
-  it("posts to /api/playground/audio/tts and stores result", async () => {
+  it("posts to /api/playground/audio/tts with connectionId in body", async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response(
         JSON.stringify({ success: true, audioBase64: "aGVsbG8=", format: "mp3", latencyMs: 50 }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
-    seedConn();
-    const conn = useConnectionsStore.getState().list()[0];
-    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: conn.id }));
+    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: "c1" }));
     renderTts();
     const textarea = screen.getByRole("textbox");
     await userEvent.type(textarea, "hello");
@@ -74,8 +54,12 @@ describe("TtsTab", () => {
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/playground/audio/tts");
     const body = JSON.parse(init.body as string);
+    expect(body.connectionId).toBe("c1");
     expect(body.input).toBe("hello");
     expect(body.voice).toBe("alloy");
+    // Plaintext credentials must never appear in request body.
+    expect(body).not.toHaveProperty("apiKey");
+    expect(body).not.toHaveProperty("apiBaseUrl");
   });
 
   it("renders <audio> after a successful generation", async () => {
@@ -97,9 +81,7 @@ describe("TtsTab", () => {
       .spyOn(useAudioHistoryStore.getState(), "putBlob")
       .mockResolvedValue(undefined);
     const expectedId = useAudioHistoryStore.getState().currentId;
-    seedConn();
-    const conn = useConnectionsStore.getState().list()[0];
-    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: conn.id }));
+    useAudioStore.setState((s) => ({ ...s, selectedConnectionId: "c1" }));
     renderTts();
     const textarea = screen.getByRole("textbox");
     await userEvent.type(textarea, "hello");
@@ -122,11 +104,9 @@ describe("TtsTab", () => {
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
-    seedConn();
-    const conn = useConnectionsStore.getState().list()[0];
     useAudioStore.setState((s) => ({
       ...s,
-      selectedConnectionId: conn.id,
+      selectedConnectionId: "c1",
       tts: {
         ...s.tts,
         referenceAudioBase64: "data:audio/wav;base64,UklGRgAAAA==",

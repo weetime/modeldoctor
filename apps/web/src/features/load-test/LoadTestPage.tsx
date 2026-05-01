@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ApiError, api } from "@/lib/api-client";
 import { type ParsedCurl, detectApiType } from "@/lib/curl-parser";
-import type { EndpointValues } from "@/types/connection";
+import type { EndpointValues } from "@/lib/endpoint-values";
 import { loadTestApiTypePath } from "@modeldoctor/contracts";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -154,10 +154,10 @@ export function LoadTestPage() {
 
   const mutation = useMutation<LoadTestResult, ApiError>({
     mutationFn: async () => {
-      if (!endpoint.apiBaseUrl || !endpoint.apiKey || !endpoint.model) {
+      if (!slice.selectedConnectionId) {
         throw new ApiError(400, tc("errors.required"));
       }
-      const body = buildLoadTestBody(slice, endpoint);
+      const body = buildLoadTestBody(slice, slice.selectedConnectionId);
       return api.post("/api/load-test", body);
     },
     onSuccess: (data) => {
@@ -286,17 +286,10 @@ function Section({
   );
 }
 
-function buildLoadTestBody(
-  s: ReturnType<typeof useLoadTestStore.getState>,
-  endpoint: EndpointValues,
-) {
+function buildLoadTestBody(s: ReturnType<typeof useLoadTestStore.getState>, connectionId: string) {
   const base = {
+    connectionId,
     apiType: s.apiType,
-    apiBaseUrl: endpoint.apiBaseUrl,
-    apiKey: endpoint.apiKey,
-    model: endpoint.model,
-    customHeaders: endpoint.customHeaders,
-    queryParams: endpoint.queryParams,
     rate: s.attack.rate,
     duration: s.attack.duration,
   };

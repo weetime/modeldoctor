@@ -137,6 +137,7 @@ describe("benchmark contracts", () => {
     const summary = {
       id: "ckxxx",
       userId: "uxxx",
+      connectionId: "conn-1",
       name: "run-1",
       profile: "throughput" as const,
       apiType: "chat" as const,

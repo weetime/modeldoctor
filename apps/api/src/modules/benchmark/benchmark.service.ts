@@ -54,6 +54,7 @@ export function runRowToBenchmark(row: PrismaRun): BenchmarkRunDto {
   return {
     id: row.id,
     userId: row.userId,
+    connectionId: row.connectionId,
     name: row.name ?? "",
     description: row.description,
     profile: (params.profile as BenchmarkRunDto["profile"] | undefined) ?? "custom",
@@ -87,6 +88,7 @@ export function runRowToBenchmarkSummary(row: PrismaRun): BenchmarkRunSummary {
   return {
     id: row.id,
     userId: row.userId,
+    connectionId: row.connectionId,
     name: row.name ?? "",
     profile: (params.profile as BenchmarkRunSummary["profile"] | undefined) ?? "custom",
     apiType: scenario.apiType as BenchmarkRunSummary["apiType"],

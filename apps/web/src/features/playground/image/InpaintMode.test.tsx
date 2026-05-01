@@ -1,5 +1,4 @@
 import i18n from "@/lib/i18n";
-import { useConnectionsStore } from "@/stores/connections-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
@@ -47,19 +46,7 @@ const renderInpaint = () =>
   );
 
 const seedConn = () => {
-  useConnectionsStore.setState({ connections: [] } as never);
-  useConnectionsStore.getState().create({
-    name: "img",
-    apiBaseUrl: "http://x",
-    apiKey: "k",
-    model: "gpt-image-1",
-    customHeaders: "",
-    queryParams: "",
-    category: "image",
-    tags: [],
-  } as never);
-  const c = useConnectionsStore.getState().list()[0];
-  useImageStore.setState((s) => ({ ...s, selectedConnectionId: c.id }));
+  useImageStore.setState((s) => ({ ...s, selectedConnectionId: "c1" }));
 };
 
 describe("InpaintMode", () => {
@@ -76,7 +63,6 @@ describe("InpaintMode", () => {
       canParse: (URL as any).canParse,
     });
     useImageStore.getState().reset();
-    useConnectionsStore.setState({ connections: [] } as never);
     vi.stubGlobal("fetch", vi.fn());
   });
 

@@ -1,5 +1,5 @@
-import type { EndpointValues } from "@/types/connection";
 import { type ParsedCurl, toApiBaseUrl } from "./curl-parser";
+import type { EndpointValues } from "./endpoint-values";
 
 export type EndpointKey = keyof EndpointValues;
 

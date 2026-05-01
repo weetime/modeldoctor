@@ -23,6 +23,7 @@ function makeRun(overrides: Partial<BenchmarkRun> = {}): BenchmarkRun {
   return {
     id: "r1",
     userId: "u1",
+    connectionId: "c1",
     name: "x",
     description: null,
     profile: "throughput",
