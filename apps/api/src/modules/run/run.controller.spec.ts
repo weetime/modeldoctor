@@ -45,16 +45,24 @@ describe("RunController", () => {
   });
 
   it("returns 404 for unknown run", async () => {
-    await expect(controller.detail("nope")).rejects.toThrow(/not found/i);
+    const user = { sub: "any-user", email: "x", roles: [] };
+    await expect(
+      controller.detail(user as never, "nope"),
+    ).rejects.toThrow(/not found/i);
   });
 
-  it("lists runs with kind filter", async () => {
-    const u = await prisma.user.create({
-      data: { email: "rc@example.com", passwordHash: "x" },
+  it("lists runs filtered by kind AND scoped to current user", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "rc-owner@example.com", passwordHash: "x" },
     });
+    const stranger = await prisma.user.create({
+      data: { email: "rc-stranger@example.com", passwordHash: "x" },
+    });
+
+    // Owner's runs
     await prisma.run.create({
       data: {
-        userId: u.id,
+        userId: owner.id,
         kind: "benchmark",
         tool: "guidellm",
         scenario: {},
@@ -65,7 +73,7 @@ describe("RunController", () => {
     });
     await prisma.run.create({
       data: {
-        userId: u.id,
+        userId: owner.id,
         kind: "e2e",
         tool: "e2e",
         scenario: {},
@@ -74,9 +82,77 @@ describe("RunController", () => {
         params: {},
       },
     });
+    // Stranger's run — must NOT show up in owner's listing
+    await prisma.run.create({
+      data: {
+        userId: stranger.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+      },
+    });
 
-    const result = await controller.list({ kind: "benchmark", limit: 10 });
+    const ownerArg = { sub: owner.id, email: owner.email, roles: [] };
+    const result = await controller.list(ownerArg as never, {
+      kind: "benchmark",
+      limit: 10,
+    });
     expect(result.items).toHaveLength(1);
     expect(result.items[0].kind).toBe("benchmark");
+    expect(result.items[0].userId).toBe(owner.id);
+  });
+
+  it("does not leak apiKeyCipher in detail response", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "rc-cipher@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: owner.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        apiKeyCipher: "this-must-not-leak",
+      },
+    });
+
+    const ownerArg = { sub: owner.id, email: owner.email, roles: [] };
+    const dto = await controller.detail(ownerArg as never, run.id);
+    expect(dto).not.toHaveProperty("apiKeyCipher");
+  });
+
+  it("returns 404 when reading another user's run", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "rc-iso-owner@example.com", passwordHash: "x" },
+    });
+    const stranger = await prisma.user.create({
+      data: { email: "rc-iso-stranger@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: owner.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+      },
+    });
+
+    const strangerArg = {
+      sub: stranger.id,
+      email: stranger.email,
+      roles: [],
+    };
+    await expect(
+      controller.detail(strangerArg as never, run.id),
+    ).rejects.toThrow(/not found/i);
   });
 });

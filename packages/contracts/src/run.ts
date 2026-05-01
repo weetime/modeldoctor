@@ -53,7 +53,6 @@ export const runSchema = z.object({
   progress: z.number().nullable(),
 
   driverHandle: z.string().nullable(),
-  apiKeyCipher: z.string().nullable(),
 
   params: z.record(z.unknown()),
   canonicalReport: z.record(z.unknown()).nullable(),

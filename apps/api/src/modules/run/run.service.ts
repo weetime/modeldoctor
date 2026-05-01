@@ -16,14 +16,24 @@ export class RunService {
     return row ? toContract(row) : null;
   }
 
-  async findByIdOrFail(id: string): Promise<Run> {
-    const row = await this.findById(id);
+  async findByIdOrFail(id: string, userId?: string): Promise<Run> {
+    const row = await this.repo.findById(id);
     if (!row) throw new NotFoundException(`Run ${id} not found`);
-    return row;
+    // Ownership check: when a userId is supplied (auth'd path), the run must
+    // belong to that user. Runs with null userId (system-initiated) are not
+    // currently exposed to anyone via the auth'd endpoints.
+    if (userId !== undefined && row.userId !== userId) {
+      throw new NotFoundException(`Run ${id} not found`);
+    }
+    return toContract(row);
   }
 
-  async list(query: ListRunsQuery): Promise<ListRunsResponse> {
-    const result = await this.repo.list(query);
+  async list(query: ListRunsQuery, userId?: string): Promise<ListRunsResponse> {
+    const result = await this.repo.list({
+      ...query,
+      // Force scope to current user when an auth'd caller invokes us.
+      ...(userId !== undefined && { userId }),
+    });
     return {
       items: result.items.map(toContract),
       nextCursor: result.nextCursor,
@@ -31,6 +41,14 @@ export class RunService {
   }
 }
 
+/**
+ * Translate a Prisma Run row to the contract Run DTO.
+ *
+ * Drops `apiKeyCipher` — that column holds AES-256-GCM ciphertext for the
+ * benchmark runner's outbound API key and must never leave the server.
+ * Returning ciphertext over an authenticated HTTP API would enable offline
+ * dictionary attacks on the encryption key.
+ */
 function toContract(row: PrismaRun): Run {
   return {
     id: row.id,
@@ -47,7 +65,6 @@ function toContract(row: PrismaRun): Run {
     statusMessage: row.statusMessage,
     progress: row.progress,
     driverHandle: row.driverHandle,
-    apiKeyCipher: row.apiKeyCipher,
     params: row.params as Run["params"],
     canonicalReport: row.canonicalReport as Run["canonicalReport"],
     rawOutput: row.rawOutput as Run["rawOutput"],

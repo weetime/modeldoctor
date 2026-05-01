@@ -46,12 +46,11 @@ describe("Run Unification smoke (e2e)", () => {
     await request(ctx.app.getHttpServer()).get("/api/runs").expect(401);
   });
 
-  // ─── Step 2: POST /api/e2e-test persists a Run row ─────────────────────────
+  // ─── Step 2: POST /api/e2e-test persists a Run row owned by the caller ────
 
   let e2eRunId: string;
 
-  it("POST /api/e2e-test persists a Run row and returns runId", async () => {
-    // The probe will fail (no real server) but the Run row is always persisted.
+  it("POST /api/e2e-test persists a user-scoped Run row and returns runId", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/e2e-test")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -65,10 +64,18 @@ describe("Run Unification smoke (e2e)", () => {
 
     expect(res.body.runId).toBeTruthy();
     expect(typeof res.body.runId).toBe("string");
-    // success may be false (probe hit a dead server), but runId must be present
     expect(res.body).toHaveProperty("success");
     expect(Array.isArray(res.body.results)).toBe(true);
     e2eRunId = res.body.runId as string;
+
+    // Confirm row landed with caller's userId — this is what makes it visible
+    // to the auth'd GET /api/runs queries below.
+    const prisma = ctx.app.get(PrismaService);
+    const row = await prisma.run.findUnique({ where: { id: e2eRunId } });
+    expect(row).not.toBeNull();
+    expect(row!.kind).toBe("e2e");
+    expect(row!.tool).toBe("e2e");
+    expect(row!.userId).toBe(userId);
   }, 60_000);
 
   // ─── Step 3: GET /api/runs shows the e2e run ───────────────────────────────
@@ -80,7 +87,6 @@ describe("Run Unification smoke (e2e)", () => {
       .expect(200);
 
     const runs = res.body.items as Array<{ id: string; kind: string; tool: string }>;
-    expect(runs.length).toBeGreaterThanOrEqual(1);
     const eRun = runs.find((r) => r.id === e2eRunId);
     expect(eRun).toBeDefined();
     expect(eRun!.kind).toBe("e2e");
