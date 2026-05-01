@@ -6,6 +6,7 @@ import enCommon from "@/locales/en-US/common.json";
 import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
 import enE2E from "@/locales/en-US/e2e.json";
+import enHistory from "@/locales/en-US/history.json";
 import enLoadTest from "@/locales/en-US/load-test.json";
 import enPlayground from "@/locales/en-US/playground.json";
 import enSettings from "@/locales/en-US/settings.json";
@@ -15,6 +16,7 @@ import zhCommon from "@/locales/zh-CN/common.json";
 import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
 import zhE2E from "@/locales/zh-CN/e2e.json";
+import zhHistory from "@/locales/zh-CN/history.json";
 import zhLoadTest from "@/locales/zh-CN/load-test.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
@@ -28,6 +30,7 @@ void i18n.use(initReactI18next).init({
       connections: enConnections,
       "load-test": enLoadTest,
       e2e: enE2E,
+      history: enHistory,
       debug: enDebug,
       settings: enSettings,
       benchmark: enBenchmark,
@@ -39,6 +42,7 @@ void i18n.use(initReactI18next).init({
       connections: zhConnections,
       "load-test": zhLoadTest,
       e2e: zhE2E,
+      history: zhHistory,
       debug: zhDebug,
       settings: zhSettings,
       benchmark: zhBenchmark,
@@ -54,6 +58,7 @@ void i18n.use(initReactI18next).init({
     "connections",
     "load-test",
     "e2e",
+    "history",
     "debug",
     "settings",
     "benchmark",

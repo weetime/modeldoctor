@@ -1,0 +1,69 @@
+{
+  "title": "Run History",
+  "subtitle": "All Runs across benchmark and e2e, newest first",
+  "filters": {
+    "kind": "Kind",
+    "tool": "Tool",
+    "status": "Status",
+    "connection": "Connection",
+    "createdAfter": "From",
+    "createdBefore": "Until",
+    "search": "Search by name or description",
+    "any": "Any",
+    "clear": "Clear filters"
+  },
+  "columns": {
+    "selected": "",
+    "createdAt": "Created",
+    "kind": "Kind",
+    "tool": "Tool",
+    "connection": "Connection",
+    "status": "Status",
+    "p95": "p95 (ms)",
+    "errorRate": "Error rate",
+    "open": ""
+  },
+  "compareButton": "Compare ({{n}})",
+  "compareDisabledTooltip": "Enabled once #46 (report page) ships",
+  "empty": {
+    "title": "No runs yet",
+    "filtered": "No runs match these filters",
+    "description": "Trigger a benchmark, load test, or e2e check from the corresponding page."
+  },
+  "loadMore": "Load more",
+  "errorBanner": "Failed to load runs",
+  "retry": "Retry",
+  "detail": {
+    "back": "Back to history",
+    "subtitle": "{{kind}} · {{tool}} · {{when}}",
+    "metadata": {
+      "kind": "Kind",
+      "tool": "Tool",
+      "mode": "Mode",
+      "driverKind": "Driver",
+      "status": "Status",
+      "connection": "Connection",
+      "connectionMissing": "(deleted)",
+      "createdAt": "Created",
+      "startedAt": "Started",
+      "completedAt": "Completed",
+      "duration": "Duration",
+      "notStarted": "—"
+    },
+    "metrics": {
+      "title": "Summary metrics",
+      "empty": "No metrics recorded for this run."
+    },
+    "rawOutput": {
+      "toggle": "Raw output (JSON)"
+    },
+    "logs": {
+      "toggle": "Logs"
+    },
+    "notFound": {
+      "title": "Run not found",
+      "body": "It may have been deleted, or you may not own it."
+    },
+    "loadError": "Failed to load run"
+  }
+}
