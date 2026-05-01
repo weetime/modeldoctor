@@ -19,6 +19,7 @@ import {
 } from "../../integrations/builders/index.js";
 import { type VegetaParsed, parseVegetaReport } from "../../integrations/parsers/vegeta-report.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { RunRepository } from "../run/run.repository.js";
 
 const TMP_DIR = path.resolve(__dirname, "../../../../..", "tmp");
@@ -61,14 +62,14 @@ export class LoadTestService {
 
   constructor(private readonly runs: RunRepository) {}
 
-  async run(req: LoadTestRequest, user: JwtPayload): Promise<LoadTestResponse> {
+  async run(conn: DecryptedConnection, req: LoadTestRequest, user: JwtPayload): Promise<LoadTestResponse> {
     const apiType = (VALID_API_TYPES as readonly string[]).includes(req.apiType ?? "")
       ? (req.apiType as ApiType)
       : "chat";
 
     let requestBody: Record<string, unknown>;
     try {
-      requestBody = buildRequestBody(apiType, { ...req, model: req.model });
+      requestBody = buildRequestBody(apiType, { ...req, model: conn.model });
     } catch (e) {
       throw new InternalServerErrorException(e instanceof Error ? e.message : String(e));
     }
@@ -78,9 +79,9 @@ export class LoadTestService {
     const txtPath = path.join(TMP_DIR, "request.txt");
     await fs.writeFile(jsonPath, JSON.stringify(requestBody, null, 2));
 
-    let finalUrl = req.apiBaseUrl + loadTestApiTypePath(apiType);
-    if (req.queryParams?.trim()) {
-      const params = req.queryParams
+    let finalUrl = conn.baseUrl + loadTestApiTypePath(apiType);
+    if (conn.queryParams?.trim()) {
+      const params = conn.queryParams
         .split("\n")
         .map((p) => p.trim())
         .filter((p) => p.length > 0 && p.includes("="));
@@ -91,8 +92,8 @@ export class LoadTestService {
     }
 
     let extraHeaders = "";
-    if (req.customHeaders?.trim()) {
-      const lines = req.customHeaders
+    if (conn.customHeaders?.trim()) {
+      const lines = conn.customHeaders
         .split("\n")
         .map((h) => h.trim())
         .filter((h) => h.length > 0 && h.includes(":"));
@@ -101,7 +102,7 @@ export class LoadTestService {
 
     const txt = `POST ${finalUrl}
 Content-Type: application/json
-Authorization: Bearer ${req.apiKey}${extraHeaders}
+Authorization: Bearer ${conn.apiKey}${extraHeaders}
 @${jsonPath}`;
     await fs.writeFile(txtPath, txt);
 
@@ -111,8 +112,8 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
     const scenario = {
       userId: user.sub,
       apiType,
-      apiBaseUrl: req.apiBaseUrl,
-      model: req.model,
+      apiBaseUrl: conn.baseUrl,
+      model: conn.model,
       rate: req.rate,
       duration: req.duration,
     };
@@ -194,8 +195,8 @@ Authorization: Bearer ${req.apiKey}${extraHeaders}
       parsed,
       config: {
         apiType,
-        apiBaseUrl: req.apiBaseUrl,
-        model: req.model,
+        apiBaseUrl: conn.baseUrl,
+        model: conn.model,
         rate: req.rate,
         duration: req.duration,
       },

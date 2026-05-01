@@ -14,6 +14,7 @@ import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { LoadTestService } from "./load-test.service.js";
 
 class LoadTestRequestDto extends createZodDto(LoadTestRequestSchema) {}
@@ -23,18 +24,22 @@ class ListLoadTestRunsResponseDto extends createZodDto(ListLoadTestRunsResponseS
 @ApiTags("load-test")
 @Controller()
 export class LoadTestController {
-  constructor(private readonly svc: LoadTestService) {}
+  constructor(
+    private readonly svc: LoadTestService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({ summary: "Run a vegeta load test" })
   @ApiBody({ type: LoadTestRequestDto })
   @ApiOkResponse({ type: LoadTestResponseDto })
   @Post("load-test")
   @HttpCode(HttpStatus.OK)
-  run(
+  async run(
     @Body(new ZodValidationPipe(LoadTestRequestSchema)) body: LoadTestRequest,
     @CurrentUser() user: JwtPayload,
   ): Promise<LoadTestResponse> {
-    return this.svc.run(body, user);
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+    return this.svc.run(conn, body, user);
   }
 
   @ApiOperation({ summary: "List load-test runs (cursor-paginated, newest first)" })
