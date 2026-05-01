@@ -32,26 +32,29 @@ vi.mock("@/features/connections/queries", () => ({
 
 import { BenchmarkEndpointFields } from "../BenchmarkEndpointFields";
 
+const DEFAULT_FORM_VALUES: CreateBenchmarkRequest = {
+  name: "",
+  profile: "throughput",
+  apiType: "chat",
+  connectionId: "",
+  datasetName: "random",
+  requestRate: 0,
+  totalRequests: 1000,
+};
+
 function Harness({
   defaultValues,
+  connectionMissing,
 }: {
   defaultValues?: Partial<CreateBenchmarkRequest>;
+  connectionMissing?: boolean;
 }) {
   const form = useForm<CreateBenchmarkRequest>({
-    defaultValues: {
-      name: "",
-      profile: "throughput",
-      apiType: "chat",
-      connectionId: "",
-      datasetName: "random",
-      requestRate: 0,
-      totalRequests: 1000,
-      ...defaultValues,
-    },
+    defaultValues: { ...DEFAULT_FORM_VALUES, ...defaultValues },
   });
   return (
     <FormProvider {...form}>
-      <BenchmarkEndpointFields {...({} as { connectionMissing?: boolean })} />
+      <BenchmarkEndpointFields connectionMissing={connectionMissing} />
     </FormProvider>
   );
 }
@@ -76,5 +79,10 @@ describe("BenchmarkEndpointFields", () => {
     expect(screen.getByText("http://x.test")).toBeInTheDocument();
     expect(screen.getByText("llama-3-8b")).toBeInTheDocument();
     expect(screen.getByText("sk-...1234")).toBeInTheDocument();
+  });
+
+  it("renders the savedConnectionMissing error when connectionMissing is true", () => {
+    render(<Harness connectionMissing={true} />);
+    expect(screen.getByText(/no longer exists|已被删除/i)).toBeInTheDocument();
   });
 });
