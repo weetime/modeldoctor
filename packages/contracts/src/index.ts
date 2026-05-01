@@ -18,3 +18,4 @@ export * from "./load-test.js";
 export * from "./auth.js";
 export * from "./benchmark.js";
 export * from "./playground.js";
+export * from "./run.js";
