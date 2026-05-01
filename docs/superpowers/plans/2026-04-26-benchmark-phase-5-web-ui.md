@@ -3591,7 +3591,7 @@ node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))'
 #   BENCHMARK_DRIVER=subprocess
 #   BENCHMARK_CALLBACK_URL=http://localhost:3001
 #   BENCHMARK_CALLBACK_SECRET=<generated>
-#   BENCHMARK_API_KEY_ENCRYPTION_KEY=<generated>
+#   CONNECTION_API_KEY_ENCRYPTION_KEY=<generated>
 ```
 
 In a separate terminal, start a small target:

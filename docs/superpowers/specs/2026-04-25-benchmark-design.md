@@ -319,7 +319,7 @@ If guidellm releases a breaking schema change, the runner image is the only plac
 
 ## 6. Security
 
-- **API key encryption**: stored as `apiKeyCipher` (AES-256-GCM, key from `BENCHMARK_API_KEY_ENCRYPTION_KEY` env var, 32 bytes base64). Never returned in any API response (controller-level filter). Decrypted only when materializing the K8s Job env. Added as a Secret on the Job pod (not as plain env in the Job manifest text).
+- **API key encryption**: stored as `apiKeyCipher` (AES-256-GCM, key from `CONNECTION_API_KEY_ENCRYPTION_KEY` env var, 32 bytes base64). Never returned in any API response (controller-level filter). Decrypted only when materializing the K8s Job env. Added as a Secret on the Job pod (not as plain env in the Job manifest text).
 - **HMAC callback**: §2.2 / §4.2.
 - **Network policy** (out of MVP scope but documented): runner pods need egress to (a) the API service (callback), (b) the user-supplied target URL. Cluster-default-deny + targeted egress is recommended but not enforced by this spec.
 - **Resource quotas**: each Job sets `cpu: 500m, memory: 512Mi` requests and `cpu: 2, memory: 2Gi` limits. Configurable via API env vars `BENCHMARK_RUNNER_CPU_*`, `BENCHMARK_RUNNER_MEMORY_*`.
@@ -505,7 +505,7 @@ Run:
 BENCHMARK_DRIVER=subprocess
 BENCHMARK_CALLBACK_URL=http://localhost:3001
 BENCHMARK_CALLBACK_SECRET=<32-bytes-base64>
-BENCHMARK_API_KEY_ENCRYPTION_KEY=<32-bytes-base64>
+CONNECTION_API_KEY_ENCRYPTION_KEY=<32-bytes-base64>
 
 pnpm dev   # web on :5173, api on :3001
 ```

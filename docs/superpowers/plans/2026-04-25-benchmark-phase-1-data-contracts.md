@@ -79,7 +79,7 @@ Expected: `Switched to a new branch 'feat/benchmark-phase-1'`. All Phase 1 commi
 
 ## Phase 1 Tasks
 
-Phase goal (restated): one Prisma migration adds `benchmark_runs`; `packages/contracts/src/benchmark.ts` exports the full Zod surface; `apps/api/src/common/crypto/aes-gcm.ts` exports `encrypt` / `decrypt` / `decodeKey`; `apps/api/src/modules/benchmark/drivers/execution-driver.interface.ts` exports the driver interface; `env.schema.ts` accepts `BENCHMARK_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` as optional, validated fields. After this phase merges nothing changes for end users — Phase 4 wires the contracts into a controller, Phase 3 wires the driver and crypto helper into a service.
+Phase goal (restated): one Prisma migration adds `benchmark_runs`; `packages/contracts/src/benchmark.ts` exports the full Zod surface; `apps/api/src/common/crypto/aes-gcm.ts` exports `encrypt` / `decrypt` / `decodeKey`; `apps/api/src/modules/benchmark/drivers/execution-driver.interface.ts` exports the driver interface; `env.schema.ts` accepts `CONNECTION_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` as optional, validated fields. After this phase merges nothing changes for end users — Phase 4 wires the contracts into a controller, Phase 3 wires the driver and crypto helper into a service.
 
 ---
 
@@ -210,7 +210,7 @@ Expected: one commit landed; `git log -1 --stat` shows `schema.prisma` + the new
 
 ---
 
-### Task 2: Add `BENCHMARK_API_KEY_ENCRYPTION_KEY` env var
+### Task 2: Add `CONNECTION_API_KEY_ENCRYPTION_KEY` env var
 
 **Files:**
 - Modify: `apps/api/src/config/env.schema.ts`
@@ -225,30 +225,30 @@ The validation we *do* enforce now: when the env var is set, it must base64-deco
 Open `apps/api/src/config/env.spec.ts`. Append at the end of the `describe("validateEnv", () => { ... })` block, just before the closing `});`:
 
 ```typescript
-  // BENCHMARK_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
+  // CONNECTION_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
   // base64 string that decodes to exactly 32 bytes (AES-256 key length).
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY is optional", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY is optional", () => {
     const env = validateEnv({ NODE_ENV: "test" });
-    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBeUndefined();
+    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBeUndefined();
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
     const key = Buffer.alloc(32, 0x42).toString("base64");
-    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: key });
-    expect(env.BENCHMARK_API_KEY_ENCRYPTION_KEY).toBe(key);
+    const env = validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: key });
+    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBe(key);
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
     const tooShort = Buffer.alloc(16, 0x42).toString("base64");
     expect(() =>
-      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: tooShort }),
-    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: tooShort }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 
-  it("BENCHMARK_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
+  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
     expect(() =>
-      validateEnv({ NODE_ENV: "test", BENCHMARK_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
-    ).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
+      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 ```
 
@@ -257,7 +257,7 @@ Open `apps/api/src/config/env.spec.ts`. Append at the end of the `describe("vali
 ```bash
 pnpm -F @modeldoctor/api test -- env.spec
 ```
-Expected: 4 new failures, all because `BENCHMARK_API_KEY_ENCRYPTION_KEY` is not in the schema. The pre-existing tests should still pass.
+Expected: 4 new failures, all because `CONNECTION_API_KEY_ENCRYPTION_KEY` is not in the schema. The pre-existing tests should still pass.
 
 - [ ] **Step 2.3: Add the field to the schema**
 
@@ -268,7 +268,7 @@ Open `apps/api/src/config/env.schema.ts`. Inside the `EnvSchema = z.object({ ...
     // keys at rest. Optional in Phase 1 (the helper is added but no row uses
     // it yet); Phase 4 tightens to required-when-not-test once the
     // BenchmarkController persists encrypted rows.
-    BENCHMARK_API_KEY_ENCRYPTION_KEY: z
+    CONNECTION_API_KEY_ENCRYPTION_KEY: z
       .string()
       .optional()
       .refine(
@@ -295,7 +295,7 @@ Expected: all `validateEnv` tests pass, including the 4 new ones.
 ```bash
 git add apps/api/src/config/env.schema.ts apps/api/src/config/env.spec.ts
 git commit -m "$(cat <<'EOF'
-feat(api/config): accept BENCHMARK_API_KEY_ENCRYPTION_KEY env var
+feat(api/config): accept CONNECTION_API_KEY_ENCRYPTION_KEY env var
 
 Optional in Phase 1 since no code path requires it yet; Phase 4 tightens
 to required-when-not-test once encrypted benchmark rows are persisted.
@@ -349,7 +349,7 @@ Expected: 3 new failures.
 
 - [ ] **Step 3.3: Add the field to the schema**
 
-In `apps/api/src/config/env.schema.ts`, immediately after the `BENCHMARK_API_KEY_ENCRYPTION_KEY` field, add:
+In `apps/api/src/config/env.schema.ts`, immediately after the `CONNECTION_API_KEY_ENCRYPTION_KEY` field, add:
 
 ```typescript
     // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
@@ -373,7 +373,7 @@ feat(api/config): accept BENCHMARK_CALLBACK_SECRET env var
 
 Used in Phase 3 to derive per-run HMAC callback tokens the benchmark
 runner presents to /api/internal/benchmarks/:id/{state,metrics}. Same
-optional-in-Phase-1 pattern as BENCHMARK_API_KEY_ENCRYPTION_KEY.
+optional-in-Phase-1 pattern as CONNECTION_API_KEY_ENCRYPTION_KEY.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1254,7 +1254,7 @@ git log --oneline -6
 ```
 Expected: the most recent 6 commits are the Phase 1 commits, in this order, all on `feat/benchmark-phase-1`:
 1. `feat(db): add benchmark_runs table`
-2. `feat(api/config): accept BENCHMARK_API_KEY_ENCRYPTION_KEY env var`
+2. `feat(api/config): accept CONNECTION_API_KEY_ENCRYPTION_KEY env var`
 3. `feat(api/config): accept BENCHMARK_CALLBACK_SECRET env var`
 4. `feat(api/crypto): add AES-256-GCM encrypt/decrypt helper`
 5. `feat(contracts): add benchmark Zod schemas`
@@ -1279,7 +1279,7 @@ gh pr create --base <integration-branch> --title "feat(benchmark): phase 1 — d
 - Full Zod contract surface in `packages/contracts/src/benchmark.ts` (enums, create request, list/detail responses, internal callbacks).
 - AES-256-GCM helper at `apps/api/src/common/crypto/aes-gcm.ts` for at-rest encryption of user-supplied API keys.
 - `BenchmarkExecutionDriver` interface (Phase 3 supplies impls).
-- Two new optional env vars: `BENCHMARK_API_KEY_ENCRYPTION_KEY`, `BENCHMARK_CALLBACK_SECRET`.
+- Two new optional env vars: `CONNECTION_API_KEY_ENCRYPTION_KEY`, `BENCHMARK_CALLBACK_SECRET`.
 
 Nothing is wired up — no controller, no service, no UI. Phase 4 imports the contracts; Phase 3 imports the crypto helper and the driver interface; Phase 5 imports the contracts on the web side.
 
