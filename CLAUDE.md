@@ -41,7 +41,8 @@ All top-level routed pages MUST render `PageHeader` as their first visual row:
 
 - Left:  `title` (required) + `subtitle` (optional)
 - Right: `ThemeToggle` (default-on inside `PageHeader`)
-- `rightSlot` is reserved for page-level toggles (e.g. RequestDebug "show all" checkbox). Mode tabs do NOT belong in `rightSlot`.
+- `showThemeToggle` (default `true`) — set to `false` on pages that provide their own theme control.
+- `PageHeader`'s `rightSlot` is reserved for page-level toggles (e.g. RequestDebug "show all" checkbox). Mode tabs do NOT belong in `rightSlot` — they go through `PlaygroundShell`'s `tabs` prop instead.
 
 ### Non-Playground pages
 
@@ -52,7 +53,9 @@ Render `<PageHeader title=... subtitle=... />` directly at the top of the page, 
 Do NOT render `<PageHeader />` directly. Pass `title` / `subtitle` as props to `PlaygroundShell`. Shell renders, top-to-bottom:
 
 1. `PageHeader` (row 1, always)
-2. Optional sub-toolbar (row 2): mode tabs · history · 查看代码 · `toolbarRightSlot` · right-panel toggle
+2. Optional sub-toolbar (row 2):
+   - Left: mode tabs
+   - Right (left-to-right): `historySlot` · view-code button (`viewCodeSnippets`) · `toolbarRightSlot` · right-panel toggle
 3. Children (main content) + `ParamsPanel` (right drawer)
 
 Reference: `apps/web/src/features/playground/chat/ChatPage.tsx`.
