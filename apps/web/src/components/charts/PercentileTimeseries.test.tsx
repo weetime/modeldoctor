@@ -86,6 +86,13 @@ describe("<PercentileTimeseries>", () => {
       "#ff0000",
     ]);
     expect(opt.series.map((s) => s.lineStyle?.opacity)).toEqual([1, 0.8, 0.6, 0.45]);
+    expect(opt.series.map((s) => s.itemStyle?.color)).toEqual([
+      "#ff0000",
+      "#ff0000",
+      "#ff0000",
+      "#ff0000",
+    ]);
+    expect(opt.series.map((s) => s.itemStyle?.opacity)).toEqual([1, 0.8, 0.6, 0.45]);
   });
 
   it("renders empty state when all percentiles are absent", () => {
