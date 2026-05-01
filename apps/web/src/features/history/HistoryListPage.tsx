@@ -31,15 +31,18 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { HistoryFilters } from "./HistoryFilters";
-import { historyKeys, useRunsList } from "./queries";
+import { historyKeys, useRunsInfiniteList } from "./queries";
 
-function readP95(metrics: Run["summaryMetrics"]): number | null {
+function readP95(metrics: Run["summaryMetrics"], tool: Run["tool"]): number | null {
   if (!metrics) return null;
-  // vegeta: latencies.p95 (ns or ms); guidellm: tokens.ttftMs.p95 etc.
-  // Best-effort surface — if a tool stores p95 elsewhere, the cell shows '—'.
+  // Tool-specific shape: vegeta stores latencies in nanoseconds, guidellm in
+  // milliseconds. Header is "(ms)" so we normalise here. If a tool stores p95
+  // elsewhere the cell shows '—'.
   const m = metrics as Record<string, unknown>;
   const latency = m.latencies as { p95?: number } | undefined;
-  if (latency?.p95 !== undefined) return latency.p95;
+  if (latency?.p95 !== undefined) {
+    return tool === "vegeta" ? latency.p95 / 1_000_000 : latency.p95;
+  }
   const ttft = (m.tokens as { ttftMs?: { p95?: number } } | undefined)?.ttftMs;
   if (ttft?.p95 !== undefined) return ttft.p95;
   return null;
@@ -64,6 +67,9 @@ export function HistoryListPage() {
   const qc = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
+  // Cursor is intentionally NOT stored in the URL — useInfiniteQuery owns
+  // pagination state. Putting cursor in the URL would change the query key on
+  // every "Load more" click and replace the list instead of appending.
   const query: Partial<ListRunsQuery> = useMemo(() => {
     const q: Partial<ListRunsQuery> = { limit: 20 };
     const get = (k: string) => searchParams.get(k) ?? undefined;
@@ -81,22 +87,33 @@ export function HistoryListPage() {
     if (createdAfter) q.createdAfter = createdAfter;
     const createdBefore = get("createdBefore");
     if (createdBefore) q.createdBefore = createdBefore;
-    const cursor = get("cursor");
-    if (cursor) q.cursor = cursor;
     return q;
   }, [searchParams]);
 
   function patchQuery(next: Partial<ListRunsQuery>) {
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
-      if (v !== undefined && k !== "limit") sp.set(k, String(v));
+      if (v !== undefined && k !== "limit" && k !== "cursor") sp.set(k, String(v));
     }
     setSearchParams(sp);
   }
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, isError, error, refetch } = useRunsList(query);
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useRunsInfiniteList(query);
+  const items = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.items),
+    [data],
+  );
 
   const isFiltered = useMemo(
     () =>
@@ -165,7 +182,7 @@ export function HistoryListPage() {
             aria-label="loading"
             className="h-64 animate-pulse rounded-md border border-border bg-muted/30"
           />
-        ) : data && data.items.length === 0 ? (
+        ) : items.length === 0 ? (
           isFiltered ? (
             <Alert>
               <AlertDescription>{t("empty.filtered")}</AlertDescription>
@@ -194,7 +211,7 @@ export function HistoryListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.items.map((run) => (
+                {items.map((run) => (
                   <TableRow key={run.id}>
                     <TableCell>
                       <Checkbox
@@ -217,7 +234,7 @@ export function HistoryListPage() {
                     </TableCell>
                     <TableCell>{run.status}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {fmtNum(readP95(run.summaryMetrics))}
+                      {fmtNum(readP95(run.summaryMetrics, run.tool))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}
@@ -237,12 +254,13 @@ export function HistoryListPage() {
           </div>
         )}
 
-        {data?.nextCursor && (
+        {hasNextPage && (
           <div className="flex justify-center">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => patchQuery({ ...query, cursor: data.nextCursor ?? undefined })}
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
             >
               {t("loadMore")}
             </Button>

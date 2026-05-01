@@ -1,5 +1,5 @@
 import type { ListRunsQuery } from "@modeldoctor/contracts";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { historyApi } from "./api";
 
 export const historyKeys = {
@@ -10,10 +10,14 @@ export const historyKeys = {
   detail: (id: string) => [...historyKeys.details(), id] as const,
 };
 
-export function useRunsList(q: Partial<ListRunsQuery>) {
-  return useQuery({
+// `q` MUST NOT carry `cursor` — useInfiniteQuery owns paging via pageParam.
+export function useRunsInfiniteList(q: Partial<ListRunsQuery>) {
+  return useInfiniteQuery({
     queryKey: historyKeys.list(q),
-    queryFn: () => historyApi.list(q),
+    queryFn: ({ pageParam }) =>
+      historyApi.list({ ...q, cursor: (pageParam as string | undefined) ?? undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     staleTime: 30_000,
   });
 }
