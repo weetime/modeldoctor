@@ -136,6 +136,7 @@
   "embeddings": {
     "title": "嵌入",
     "subtitle": "生成嵌入向量并在 2D 中可视化。",
+    "inputs": "输入",
     "addInput": "+ 添加输入",
     "clear": "清空",
     "batchMode": "批量输入",
@@ -212,6 +213,7 @@
     "queryPlaceholder": "输入查询…",
     "documents": "文档",
     "addDoc": "+ 文档",
+    "clear": "清空",
     "batchMode": "批量输入",
     "batchPlaceholder": "每行一条文档。",
     "send": "发送",
