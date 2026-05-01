@@ -14,11 +14,23 @@ export interface PercentileTimeseriesSeries {
 export interface PercentileTimeseriesProps extends DomainChartProps {
   series: PercentileTimeseriesSeries[];
   yLabel?: string;
+  colorMap?: Record<string, string>;
 }
 
 const PERCENTILE_ORDER: Percentile[] = ["p50", "p90", "p95", "p99"];
 
-function buildOption(series: PercentileTimeseriesSeries[], yLabel: string): EChartsOption {
+const PERCENTILE_OPACITY: Record<Percentile, number> = {
+  p50: 1,
+  p90: 0.8,
+  p95: 0.6,
+  p99: 0.45,
+};
+
+function buildOption(
+  series: PercentileTimeseriesSeries[],
+  yLabel: string,
+  colorMap: Record<string, string> | undefined,
+): EChartsOption {
   const multiRun = series.length > 1;
   const flat = series.flatMap((s) =>
     PERCENTILE_ORDER.flatMap((p) => {
@@ -26,16 +38,20 @@ function buildOption(series: PercentileTimeseriesSeries[], yLabel: string): ECha
       if (!data || data.length === 0) return [];
       const runName = s.runLabel ?? s.runId;
       const name = multiRun ? `${runName} · ${p}` : p;
+      const color = colorMap?.[s.runId];
+      const opacity = PERCENTILE_OPACITY[p];
+      const styled = color ? { color, opacity } : { opacity };
       return [
         {
           name,
           type: "line" as const,
           showSymbol: false,
-          smooth: false,
           sampling: "lttb" as const,
           progressive: 2000,
           progressiveThreshold: 5000,
           data,
+          lineStyle: styled,
+          itemStyle: styled,
         },
       ];
     }),
@@ -55,6 +71,7 @@ export function PercentileTimeseries(props: PercentileTimeseriesProps) {
   const {
     series,
     yLabel = "Latency (ms)",
+    colorMap,
     ariaLabel,
     height = 360,
     loading,
@@ -70,7 +87,10 @@ export function PercentileTimeseries(props: PercentileTimeseriesProps) {
         PERCENTILE_ORDER.every((p) => !s.percentiles[p] || s.percentiles[p]?.length === 0),
       ));
 
-  const option = useMemo(() => themed(buildOption(series, yLabel), dark), [series, yLabel, dark]);
+  const option = useMemo(
+    () => themed(buildOption(series, yLabel, colorMap), dark),
+    [series, yLabel, colorMap, dark],
+  );
 
   return (
     <ChartFrame ariaLabel={ariaLabel} height={height} loading={loading} empty={isEmpty}>
