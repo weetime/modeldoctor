@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { AudioService } from "./audio.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-1",
+    name: "test",
+    baseUrl: "http://x",
+    apiKey: "k",
+    model: "tts-1",
+    customHeaders: "",
+    queryParams: "",
+    category: "audio",
+    ...overrides,
+  };
+}
 
 describe("AudioService.runTts", () => {
   let svc: AudioService;
@@ -16,10 +31,8 @@ describe("AudioService.runTts", () => {
     fetchMock.mockResolvedValue(
       new Response(wav, { status: 200, headers: { "Content-Type": "audio/wav" } }),
     );
-    const out = await svc.runTts({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "tts-1",
+    const out = await svc.runTts(makeConn(), {
+      connectionId: "conn-1",
       input: "hi",
       voice: "alloy",
       format: "wav",
@@ -41,10 +54,8 @@ describe("AudioService.runTts", () => {
 
   it("normalizes upstream non-2xx into success=false with truncated body", async () => {
     fetchMock.mockResolvedValue(new Response("server error xxxxx", { status: 502 }));
-    const out = await svc.runTts({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "tts-1",
+    const out = await svc.runTts(makeConn(), {
+      connectionId: "conn-1",
       input: "hi",
       voice: "alloy",
       format: "mp3",
@@ -58,10 +69,8 @@ describe("AudioService.runTts", () => {
     fetchMock.mockResolvedValue(
       new Response(huge, { status: 200, headers: { "Content-Type": "audio/mpeg" } }),
     );
-    const out = await svc.runTts({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "tts-1",
+    const out = await svc.runTts(makeConn(), {
+      connectionId: "conn-1",
       input: "hi",
       voice: "alloy",
       format: "mp3",
@@ -85,7 +94,7 @@ describe("AudioService.runTranscriptions", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ text: "hello world" }), { status: 200 }),
     );
-    const out = await svc.runTranscriptions({
+    const out = await svc.runTranscriptions(makeConn({ model: "whisper-1" }), {
       file: {
         buffer: Buffer.from([1, 2, 3]),
         originalname: "a.wav",
@@ -93,9 +102,7 @@ describe("AudioService.runTranscriptions", () => {
         size: 3,
       },
       body: {
-        apiBaseUrl: "http://x",
-        apiKey: "k",
-        model: "whisper-1",
+        connectionId: "conn-1",
         task: "transcribe",
         language: "zh",
       },
@@ -114,9 +121,9 @@ describe("AudioService.runTranscriptions", () => {
 
   it("normalizes upstream errors", async () => {
     fetchMock.mockResolvedValue(new Response("bad request", { status: 400 }));
-    const out = await svc.runTranscriptions({
+    const out = await svc.runTranscriptions(makeConn({ model: "whisper-1" }), {
       file: { buffer: Buffer.from([1]), originalname: "a.wav", mimetype: "audio/wav", size: 1 },
-      body: { apiBaseUrl: "http://x", apiKey: "k", model: "whisper-1", task: "transcribe" },
+      body: { connectionId: "conn-1", task: "transcribe" },
     });
     expect(out.success).toBe(false);
     expect(out.error).toMatch(/upstream 400/);

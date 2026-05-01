@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { ImagesService } from "./images.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-1",
+    name: "test",
+    baseUrl: "http://x",
+    apiKey: "k",
+    model: "m",
+    customHeaders: "",
+    queryParams: "",
+    category: "image",
+    ...overrides,
+  };
+}
 
 describe("ImagesService.run", () => {
   let svc: ImagesService;
@@ -13,14 +28,12 @@ describe("ImagesService.run", () => {
     vi.unstubAllGlobals();
   });
 
-  it("posts to {apiBaseUrl}/v1/images/generations with prompt+size+n", async () => {
+  it("posts to {baseUrl}/v1/images/generations with prompt+size+n", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: [{ url: "http://image/0" }] }), { status: 200 }),
     );
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       prompt: "a red apple",
       size: "512x512",
       n: 1,
@@ -37,10 +50,8 @@ describe("ImagesService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: [{ b64_json: "AAA" }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn(), {
+      connectionId: "conn-1",
       prompt: "p",
       responseFormat: "b64_json",
       seed: 42,
@@ -51,10 +62,8 @@ describe("ImagesService.run", () => {
 
   it("returns success=false on non-2xx", async () => {
     fetchMock.mockResolvedValue(new Response("denied", { status: 403 }));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       prompt: "p",
     });
     expect(out.success).toBe(false);
@@ -81,14 +90,11 @@ describe("ImagesService.runEdit", () => {
     size: 4,
   });
 
-  it("posts multipart to {apiBaseUrl}/v1/images/edits with image+mask+prompt+model", async () => {
+  it("posts multipart to {baseUrl}/v1/images/edits with image+mask+prompt+model", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: [{ url: "http://image/edit/0" }] }), { status: 200 }),
     );
-    const out = await svc.runEdit({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.runEdit(makeConn(), {
       prompt: "make it blue",
       image: makeFile("input.png", "image/png"),
       mask: makeFile("mask.png", "image/png"),
@@ -117,20 +123,18 @@ describe("ImagesService.runEdit", () => {
     expect(headers.Authorization).toBe("Bearer k");
   });
 
-  it("forwards customHeaders + queryParams", async () => {
+  it("forwards customHeaders + queryParams from connection", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: [{ b64_json: "AAA" }] }), { status: 200 }),
     );
-    await svc.runEdit({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      customHeaders: "X-Org: my-org",
-      queryParams: "api-version=2024-01",
-      model: "m",
-      prompt: "p",
-      image: makeFile("a.png", "image/png"),
-      mask: makeFile("b.png", "image/png"),
-    });
+    await svc.runEdit(
+      makeConn({ customHeaders: "X-Org: my-org", queryParams: "api-version=2024-01" }),
+      {
+        prompt: "p",
+        image: makeFile("a.png", "image/png"),
+        mask: makeFile("b.png", "image/png"),
+      },
+    );
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://x/v1/images/edits?api-version=2024-01");
     const headers = ((init as RequestInit).headers ?? {}) as Record<string, string>;
@@ -139,10 +143,7 @@ describe("ImagesService.runEdit", () => {
 
   it("returns success=false on non-2xx", async () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 400 }));
-    const out = await svc.runEdit({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.runEdit(makeConn(), {
       prompt: "p",
       image: makeFile("a.png", "image/png"),
       mask: makeFile("b.png", "image/png"),

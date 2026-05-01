@@ -13,6 +13,7 @@ import {
   parsePlaygroundTranscriptionsResponse,
   parsePlaygroundTtsResponse,
 } from "../../integrations/openai-client/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 
 const TTS_DEFAULT_PATH = "/v1/audio/speech";
 const STT_DEFAULT_PATH = "/v1/audio/transcriptions";
@@ -25,16 +26,19 @@ export interface RunTranscriptionsInput {
 
 @Injectable()
 export class AudioService {
-  async runTts(req: PlaygroundTtsRequest): Promise<PlaygroundTtsResponse> {
+  async runTts(
+    conn: DecryptedConnection,
+    req: PlaygroundTtsRequest,
+  ): Promise<PlaygroundTtsResponse> {
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: TTS_DEFAULT_PATH,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     const body = buildPlaygroundTtsBody({
-      model: req.model,
+      model: conn.model,
       input: req.input,
       voice: req.voice,
       format: req.format,
@@ -66,21 +70,22 @@ export class AudioService {
   }
 
   async runTranscriptions(
+    conn: DecryptedConnection,
     input: RunTranscriptionsInput,
   ): Promise<PlaygroundTranscriptionsResponse> {
     const { file, body } = input;
     const url = buildUrl({
-      apiBaseUrl: body.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: STT_DEFAULT_PATH,
       pathOverride: body.pathOverride,
-      queryParams: body.queryParams,
+      queryParams: conn.queryParams,
     });
     // For multipart uploads we MUST NOT set Content-Type — fetch derives the boundary.
-    const baseHeaders = buildHeaders(body.apiKey, body.customHeaders);
+    const baseHeaders = buildHeaders(conn.apiKey, conn.customHeaders);
     const { "Content-Type": _ct, ...headers } = baseHeaders;
     const form = buildPlaygroundTranscriptionsFormData({
       file: { buffer: file.buffer, originalname: file.originalname, mimetype: file.mimetype },
-      model: body.model,
+      model: conn.model,
       language: body.language,
       task: body.task,
       prompt: body.prompt,

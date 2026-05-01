@@ -4,12 +4,25 @@ import {
   type PlaygroundChatResponse,
   PlaygroundChatResponseSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, HttpCode, HttpStatus, Post, Res, UsePipes } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+  UsePipes,
+} from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { pipeUpstreamSseToResponse } from "../../integrations/openai-client/index.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { ChatService } from "./chat.service.js";
 
 class PlaygroundChatRequestDto extends createZodDto(PlaygroundChatRequestSchema) {}
@@ -17,8 +30,12 @@ class PlaygroundChatResponseDto extends createZodDto(PlaygroundChatResponseSchem
 
 @ApiTags("playground")
 @Controller("playground")
+@UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly svc: ChatService) {}
+  constructor(
+    private readonly svc: ChatService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({
     summary:
@@ -30,11 +47,13 @@ export class ChatController {
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(PlaygroundChatRequestSchema))
   async chat(
+    @CurrentUser() user: JwtPayload,
     @Body() body: PlaygroundChatRequest,
     @Res({ passthrough: false }) res: Response,
   ): Promise<undefined | PlaygroundChatResponse> {
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
     if (body.params?.stream) {
-      const result = await this.svc.runStream(body);
+      const result = await this.svc.runStream(conn, body);
       if (result.kind === "error") {
         res.status(result.status).json({ success: false, error: result.error, latencyMs: 0 });
         return;
@@ -52,7 +71,7 @@ export class ChatController {
       await pipeUpstreamSseToResponse(upstreamBody, res, ac);
       return;
     }
-    const out = await this.svc.run(body);
+    const out = await this.svc.run(conn, body);
     res.json(out);
   }
 }

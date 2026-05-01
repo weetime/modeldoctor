@@ -1,5 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 import { ChatService } from "./chat.service.js";
+
+function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
+  return {
+    id: "conn-1",
+    name: "test",
+    baseUrl: "http://upstream.test",
+    apiKey: "sk-1",
+    model: "m1",
+    customHeaders: "",
+    queryParams: "",
+    category: "chat",
+    ...overrides,
+  };
+}
 
 describe("ChatService.run", () => {
   let svc: ChatService;
@@ -15,7 +30,7 @@ describe("ChatService.run", () => {
     vi.unstubAllGlobals();
   });
 
-  it("posts to {apiBaseUrl}/v1/chat/completions with Bearer auth and OpenAI body shape", async () => {
+  it("posts to {baseUrl}/v1/chat/completions with Bearer auth and OpenAI body shape", async () => {
     fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -26,10 +41,8 @@ describe("ChatService.run", () => {
       ),
     );
 
-    const out = await svc.run({
-      apiBaseUrl: "http://upstream.test",
-      apiKey: "sk-1",
-      model: "m1",
+    const out = await svc.run(makeConn(), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "hello" }],
       params: {},
     });
@@ -54,10 +67,8 @@ describe("ChatService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn({ baseUrl: "http://x" }), {
+      connectionId: "conn-1",
       pathOverride: "/custom/chat",
       messages: [{ role: "user", content: "h" }],
       params: {},
@@ -69,10 +80,8 @@ describe("ChatService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn({ baseUrl: "http://x", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: {
         temperature: 0.7,
@@ -98,14 +107,14 @@ describe("ChatService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
-      customHeaders: "X-Foo: bar\nX-Baz: qux",
-      messages: [{ role: "user", content: "h" }],
-      params: {},
-    });
+    await svc.run(
+      makeConn({ baseUrl: "http://x", model: "m", customHeaders: "X-Foo: bar\nX-Baz: qux" }),
+      {
+        connectionId: "conn-1",
+        messages: [{ role: "user", content: "h" }],
+        params: {},
+      },
+    );
     const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
     expect(headers["X-Foo"]).toBe("bar");
     expect(headers["X-Baz"]).toBe("qux");
@@ -113,10 +122,8 @@ describe("ChatService.run", () => {
 
   it("returns success=false with upstream body when status >= 400", async () => {
     fetchMock.mockResolvedValue(new Response("model not found", { status: 404 }));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn({ baseUrl: "http://x", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: {},
     });
@@ -127,10 +134,8 @@ describe("ChatService.run", () => {
 
   it("returns success=false on network error", async () => {
     fetchMock.mockRejectedValue(new Error("network kaboom"));
-    const out = await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const out = await svc.run(makeConn({ baseUrl: "http://x", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: {},
     });
@@ -138,14 +143,12 @@ describe("ChatService.run", () => {
     expect(out.error).toMatch(/network kaboom/);
   });
 
-  it("collapses trailing slash in apiBaseUrl to a single slash", async () => {
+  it("collapses trailing slash in baseUrl to a single slash", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x.test/",
-      apiKey: "k",
-      model: "m",
+    await svc.run(makeConn({ baseUrl: "http://x.test/", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: {},
     });
@@ -156,14 +159,14 @@ describe("ChatService.run", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
     );
-    await svc.run({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
-      queryParams: "api-version=2024-02-01\nfoo=bar",
-      messages: [{ role: "user", content: "h" }],
-      params: {},
-    });
+    await svc.run(
+      makeConn({ baseUrl: "http://x", model: "m", queryParams: "api-version=2024-02-01\nfoo=bar" }),
+      {
+        connectionId: "conn-1",
+        messages: [{ role: "user", content: "h" }],
+        params: {},
+      },
+    );
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain("api-version=2024-02-01");
     expect(url).toContain("foo=bar");
@@ -196,10 +199,8 @@ describe("ChatService.runStream", () => {
     );
     fetchMock.mockResolvedValue(upstream);
 
-    const result = await svc.runStream({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const result = await svc.runStream(makeConn({ baseUrl: "http://x", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: { stream: true },
     });
@@ -214,10 +215,8 @@ describe("ChatService.runStream", () => {
 
   it("returns kind=error with status when upstream non-2xx", async () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 502 }));
-    const result = await svc.runStream({
-      apiBaseUrl: "http://x",
-      apiKey: "k",
-      model: "m",
+    const result = await svc.runStream(makeConn({ baseUrl: "http://x", model: "m" }), {
+      connectionId: "conn-1",
       messages: [{ role: "user", content: "h" }],
       params: { stream: true },
     });

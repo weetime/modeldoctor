@@ -6,24 +6,28 @@ import {
   buildUrl,
   parsePlaygroundChatResponse,
 } from "../../integrations/openai-client/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 
 const DEFAULT_PATH = "/v1/chat/completions";
 const MAX_ERROR_BODY_BYTES = 1024;
 
 @Injectable()
 export class ChatService {
-  async run(req: PlaygroundChatRequest): Promise<PlaygroundChatResponse> {
+  async run(
+    conn: DecryptedConnection,
+    req: PlaygroundChatRequest,
+  ): Promise<PlaygroundChatResponse> {
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     // Phase 1 contract: stream is ignored for this non-streaming path.
     const params = { ...req.params, stream: undefined };
     const body = buildPlaygroundChatBody({
-      model: req.model,
+      model: conn.model,
       messages: req.messages,
       params,
     });
@@ -61,19 +65,20 @@ export class ChatService {
   }
 
   async runStream(
+    conn: DecryptedConnection,
     req: PlaygroundChatRequest,
   ): Promise<
     { kind: "ok"; upstream: Response } | { kind: "error"; status: number; error: string }
   > {
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     const body = buildPlaygroundChatBody({
-      model: req.model,
+      model: conn.model,
       messages: req.messages,
       params: { ...req.params, stream: true },
     });

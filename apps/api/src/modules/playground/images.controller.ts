@@ -13,13 +13,18 @@ import {
   HttpStatus,
   Post,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
   UsePipes,
 } from "@nestjs/common";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { ImagesService } from "./images.service.js";
 
 class PlaygroundImagesRequestDto extends createZodDto(PlaygroundImagesRequestSchema) {}
@@ -30,8 +35,12 @@ const ALLOWED_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 @ApiTags("playground")
 @Controller("playground")
+@UseGuards(JwtAuthGuard)
 export class ImagesController {
-  constructor(private readonly svc: ImagesService) {}
+  constructor(
+    private readonly svc: ImagesService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({ summary: "Generate images via the Playground" })
   @ApiBody({ type: PlaygroundImagesRequestDto })
@@ -39,8 +48,12 @@ export class ImagesController {
   @Post("images")
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(PlaygroundImagesRequestSchema))
-  images(@Body() body: PlaygroundImagesRequest): Promise<PlaygroundImagesResponse> {
-    return this.svc.run(body);
+  async images(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: PlaygroundImagesRequest,
+  ): Promise<PlaygroundImagesResponse> {
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+    return this.svc.run(conn, body);
   }
 
   @ApiOperation({ summary: "Edit (inpaint) an image via the Playground (multipart upload)" })
@@ -57,6 +70,7 @@ export class ImagesController {
     ),
   )
   async edit(
+    @CurrentUser() user: JwtPayload,
     @UploadedFiles()
     files: { image?: Express.Multer.File[]; mask?: Express.Multer.File[] } | undefined,
     @Body() rawBody: unknown,
@@ -80,31 +94,9 @@ export class ImagesController {
     }
     const fields = parsed.data;
 
-    let customHeaders: string | undefined;
-    if (fields.customHeaders?.trim()) {
-      // The frontend may send either a JSON-encoded object (legacy /api spec
-      // pattern) or the raw "Header: value\n…" lines that the rest of the
-      // stack speaks. Accept both — if it parses as JSON object, re-emit as
-      // header lines; otherwise pass through unchanged.
-      try {
-        const obj = JSON.parse(fields.customHeaders);
-        if (obj && typeof obj === "object" && !Array.isArray(obj)) {
-          customHeaders = Object.entries(obj as Record<string, unknown>)
-            .map(([k, v]) => `${k}: ${String(v)}`)
-            .join("\n");
-        } else {
-          customHeaders = fields.customHeaders;
-        }
-      } catch {
-        customHeaders = fields.customHeaders;
-      }
-    }
+    const conn = await this.connections.getOwnedDecrypted(user.sub, fields.connectionId);
 
-    return this.svc.runEdit({
-      apiBaseUrl: fields.apiBaseUrl,
-      apiKey: fields.apiKey,
-      customHeaders,
-      queryParams: fields.queryParams,
+    return this.svc.runEdit(conn, {
       image: {
         buffer: image.buffer,
         originalname: image.originalname,
@@ -117,7 +109,6 @@ export class ImagesController {
         mimetype: mask.mimetype,
         size: mask.size,
       },
-      model: fields.model,
       prompt: fields.prompt,
       n: fields.n !== undefined ? Number(fields.n) : undefined,
       size: fields.size,

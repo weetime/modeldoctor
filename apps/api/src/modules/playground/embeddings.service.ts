@@ -9,22 +9,26 @@ import {
   buildUrl,
   parseEmbeddingsResponse,
 } from "../../integrations/openai-client/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 
 const DEFAULT_PATH = "/v1/embeddings";
 const MAX_ERROR_BODY_BYTES = 1024;
 
 @Injectable()
 export class EmbeddingsService {
-  async run(req: PlaygroundEmbeddingsRequest): Promise<PlaygroundEmbeddingsResponse> {
+  async run(
+    conn: DecryptedConnection,
+    req: PlaygroundEmbeddingsRequest,
+  ): Promise<PlaygroundEmbeddingsResponse> {
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     const body = buildPlaygroundEmbeddingsBody({
-      model: req.model,
+      model: conn.model,
       input: req.input,
       encodingFormat: req.encodingFormat,
       dimensions: req.dimensions,

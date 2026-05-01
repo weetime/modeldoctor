@@ -6,6 +6,7 @@ import {
   buildUrl,
   parseRerankResponse,
 } from "../../integrations/openai-client/index.js";
+import type { DecryptedConnection } from "../connection/connection.service.js";
 
 const DEFAULT_PATH_COHERE = "/v1/rerank";
 const DEFAULT_PATH_TEI = "/rerank";
@@ -13,17 +14,20 @@ const MAX_ERROR_BODY_BYTES = 1024;
 
 @Injectable()
 export class RerankService {
-  async run(req: PlaygroundRerankRequest): Promise<PlaygroundRerankResponse> {
+  async run(
+    conn: DecryptedConnection,
+    req: PlaygroundRerankRequest,
+  ): Promise<PlaygroundRerankResponse> {
     const defaultPath = req.wire === "tei" ? DEFAULT_PATH_TEI : DEFAULT_PATH_COHERE;
     const url = buildUrl({
-      apiBaseUrl: req.apiBaseUrl,
+      apiBaseUrl: conn.baseUrl,
       defaultPath,
       pathOverride: req.pathOverride,
-      queryParams: req.queryParams,
+      queryParams: conn.queryParams,
     });
-    const headers = buildHeaders(req.apiKey, req.customHeaders);
+    const headers = buildHeaders(conn.apiKey, conn.customHeaders);
     const body = buildPlaygroundRerankBody({
-      model: req.model,
+      model: conn.model,
       query: req.query,
       documents: req.documents,
       topN: req.topN,

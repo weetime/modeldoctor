@@ -4,10 +4,14 @@ import {
   type PlaygroundRerankResponse,
   PlaygroundRerankResponseSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, HttpCode, HttpStatus, Post, UsePipes } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UsePipes } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { ConnectionService } from "../connection/connection.service.js";
 import { RerankService } from "./rerank.service.js";
 
 class PlaygroundRerankRequestDto extends createZodDto(PlaygroundRerankRequestSchema) {}
@@ -15,8 +19,12 @@ class PlaygroundRerankResponseDto extends createZodDto(PlaygroundRerankResponseS
 
 @ApiTags("playground")
 @Controller("playground")
+@UseGuards(JwtAuthGuard)
 export class RerankController {
-  constructor(private readonly svc: RerankService) {}
+  constructor(
+    private readonly svc: RerankService,
+    private readonly connections: ConnectionService,
+  ) {}
 
   @ApiOperation({ summary: "Rerank documents via the Playground (cohere or tei wire)" })
   @ApiBody({ type: PlaygroundRerankRequestDto })
@@ -24,7 +32,11 @@ export class RerankController {
   @Post("rerank")
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(PlaygroundRerankRequestSchema))
-  rerank(@Body() body: PlaygroundRerankRequest): Promise<PlaygroundRerankResponse> {
-    return this.svc.run(body);
+  async rerank(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: PlaygroundRerankRequest,
+  ): Promise<PlaygroundRerankResponse> {
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+    return this.svc.run(conn, body);
   }
 }
