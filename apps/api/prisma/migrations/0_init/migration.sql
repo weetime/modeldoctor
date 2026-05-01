@@ -1,21 +1,32 @@
-/*
-  Warnings:
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
-  - You are about to drop the `benchmark_runs` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `load_test_runs` table. If the table is not empty, all the data it contains will be lost.
+-- CreateTable
+CREATE TABLE "users" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "roles" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-*/
--- DropForeignKey
-ALTER TABLE "benchmark_runs" DROP CONSTRAINT "benchmark_runs_user_id_fkey";
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
 
--- DropForeignKey
-ALTER TABLE "load_test_runs" DROP CONSTRAINT "load_test_runs_user_id_fkey";
+-- CreateTable
+CREATE TABLE "refresh_tokens" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "family_id" TEXT NOT NULL,
+    "parent_id" TEXT,
+    "replaced_by_id" TEXT,
+    "token_hash" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "revoked_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
--- DropTable
-DROP TABLE "benchmark_runs";
-
--- DropTable
-DROP TABLE "load_test_runs";
+    CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "connections" (
@@ -23,7 +34,12 @@ CREATE TABLE "connections" (
     "user_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "base_url" TEXT NOT NULL,
-    "api_type" TEXT NOT NULL,
+    "api_key_cipher" TEXT NOT NULL,
+    "model" TEXT NOT NULL,
+    "custom_headers" TEXT NOT NULL DEFAULT '',
+    "query_params" TEXT NOT NULL DEFAULT '',
+    "category" TEXT NOT NULL,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "prometheus_url" TEXT,
     "server_kind" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -48,7 +64,6 @@ CREATE TABLE "runs" (
     "status_message" TEXT,
     "progress" DOUBLE PRECISION,
     "driver_handle" TEXT,
-    "api_key_cipher" TEXT,
     "params" JSONB NOT NULL,
     "canonical_report" JSONB,
     "raw_output" JSONB,
@@ -84,7 +99,31 @@ CREATE TABLE "baselines" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_email_idx" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "refresh_tokens_token_hash_key" ON "refresh_tokens"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_user_id_revoked_at_idx" ON "refresh_tokens"("user_id", "revoked_at");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_token_hash_idx" ON "refresh_tokens"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_family_id_idx" ON "refresh_tokens"("family_id");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_parent_id_idx" ON "refresh_tokens"("parent_id");
+
+-- CreateIndex
 CREATE INDEX "connections_user_id_idx" ON "connections"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "connections_user_id_name_key" ON "connections"("user_id", "name");
 
 -- CreateIndex
 CREATE INDEX "runs_user_id_created_at_idx" ON "runs"("user_id", "created_at");
@@ -108,6 +147,9 @@ CREATE UNIQUE INDEX "baselines_run_id_key" ON "baselines"("run_id");
 CREATE INDEX "baselines_user_id_idx" ON "baselines"("user_id");
 
 -- AddForeignKey
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "connections" ADD CONSTRAINT "connections_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -127,3 +169,14 @@ ALTER TABLE "baselines" ADD CONSTRAINT "baselines_user_id_fkey" FOREIGN KEY ("us
 
 -- AddForeignKey
 ALTER TABLE "baselines" ADD CONSTRAINT "baselines_run_id_fkey" FOREIGN KEY ("run_id") REFERENCES "runs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.3 -> 7.8.0                       │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+
