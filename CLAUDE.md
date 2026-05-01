@@ -53,9 +53,9 @@ Render `<PageHeader title=... subtitle=... />` directly at the top of the page, 
 Do NOT render `<PageHeader />` directly. Pass `title` / `subtitle` as props to `PlaygroundShell`. Shell renders, top-to-bottom:
 
 1. `PageHeader` (row 1, always)
-2. Optional sub-toolbar (row 2):
+2. Sub-toolbar (row 2) — rendered when `paramsSlot` is non-null OR any of `tabs` / `historySlot` / `viewCodeSnippets` / `toolbarRightSlot` is non-empty:
    - Left: mode tabs
-   - Right (left-to-right): `historySlot` · view-code button (`viewCodeSnippets`) · `toolbarRightSlot` · right-panel toggle
+   - Right (left-to-right): `historySlot` · view-code button (`viewCodeSnippets`) · `toolbarRightSlot` · right-panel toggle (only when `paramsSlot` is non-null)
 3. Children (main content) + `ParamsPanel` (right drawer)
 
 Reference: `apps/web/src/features/playground/chat/ChatPage.tsx`.

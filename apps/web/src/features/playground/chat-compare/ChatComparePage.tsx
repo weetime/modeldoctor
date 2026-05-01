@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { type AttachedFile, buildContentParts } from "../chat/attachments";
 import { MessageComposer } from "../chat/MessageComposer";
-import { useChatModeTabs } from "./ChatModeTabs";
+import { useChatModeTabs } from "./useChatModeTabs";
 import { ChatPanel } from "./ChatPanel";
 import { CompareHistoryControls } from "./CompareHistory";
 import { PanelCountSwitcher } from "./PanelCountSwitcher";

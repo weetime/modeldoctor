@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { useChatModeTabs } from "./ChatModeTabs";
+import { useChatModeTabs } from "./useChatModeTabs";
 
 function wrapperFor(initial: string) {
   return ({ children }: { children: ReactNode }) => (
