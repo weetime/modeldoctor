@@ -20,7 +20,7 @@ These augment the spec with concrete implementation-level choices made during br
 4. **SubprocessDriver lifecycle:** `child_process.spawn` attached to API process; in-memory `Map<handle, ChildProcess>`; no PID persistence. API restart kills the subprocess; the orphaned `running` row is reaped by the reconciler's `running > maxDuration → failed` path. Reconciler branches by driver type — only the runaway-timeout check applies in subprocess mode.
 5. **Reconciler cron:** `*/30 * * * * *` (every 30s), short-circuit early when `NODE_ENV === 'test'` (vitest must not start a real timer). Skip rows whose `createdAt` is within the last 5 seconds (avoid racing the create path).
 6. **K8s secret strategy:** per-run `Secret` named `benchmark-<id>`, `stringData = { API_KEY, CALLBACK_TOKEN }`, created **before** the Job; container picks them up via `envFrom.secretRef`; Job's UID is patched into the Secret's `ownerReferences` so K8s GCs the Secret when the Job is deleted (TTL or cancel). On Job-create failure, the Secret is deleted explicitly to avoid orphans.
-7. **Env vars added in this PR:** `BENCHMARK_DRIVER` (default `subprocess`), `BENCHMARK_CALLBACK_URL` (required when `driver=k8s` or `NODE_ENV !== 'test'`), `BENCHMARK_K8S_NAMESPACE` (default `modeldoctor-benchmarks`), `BENCHMARK_RUNNER_IMAGE` (required when `driver=k8s`), `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS` (default `1800`). Resource limits (`cpu/memory request/limit`) are **not** env-tunable — hard-coded in the manifest builder. `CONNECTION_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` are tightened from `optional` to `required when NODE_ENV !== 'test'`.
+7. **Env vars added in this PR:** `BENCHMARK_DRIVER` (default `subprocess`), `BENCHMARK_CALLBACK_URL` (required when `driver=k8s` or `NODE_ENV !== 'test'`), `BENCHMARK_K8S_NAMESPACE` (default `modeldoctor-benchmarks`), `BENCHMARK_RUNNER_IMAGE` (required when `driver=k8s`), `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS` (default `1800`). Resource limits (`cpu/memory request/limit`) are **not** env-tunable — hard-coded in the manifest builder. `BENCHMARK_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` are tightened from `optional` to `required when NODE_ENV !== 'test'`.
 8. **Driver injection = factory provider with dynamic import.** `@kubernetes/client-node` (~30 MB) is loaded only when `driver=k8s`. Subprocess-only dev sessions don't pay the import cost.
 
 ## Testing discipline
@@ -88,10 +88,10 @@ Expected: a `postgresql@<version>` row with status `started`, and `pg_isready` r
 
 - [ ] **Step 0.5: Generate Phase 3 secrets in `.env`**
 
-This phase tightens `CONNECTION_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` from `optional` to required-when-not-test. Generate them now so Step 0.6's `pnpm dev` would still start cleanly later.
+This phase tightens `BENCHMARK_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` from `optional` to required-when-not-test. Generate them now so Step 0.6's `pnpm dev` would still start cleanly later.
 
 ```bash
-echo "CONNECTION_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
+echo "BENCHMARK_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
 echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> apps/api/.env
 echo "BENCHMARK_CALLBACK_URL=http://localhost:3001" >> apps/api/.env
 ```
@@ -1692,7 +1692,7 @@ EOF
 - Modify: `apps/api/src/config/env.schema.ts`
 - Modify: `apps/api/src/config/env.spec.ts`
 
-Adds `BENCHMARK_DRIVER`, `BENCHMARK_CALLBACK_URL`, `BENCHMARK_K8S_NAMESPACE`, `BENCHMARK_RUNNER_IMAGE`, `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS`. Tightens `CONNECTION_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` from `optional` to required-when-not-test.
+Adds `BENCHMARK_DRIVER`, `BENCHMARK_CALLBACK_URL`, `BENCHMARK_K8S_NAMESPACE`, `BENCHMARK_RUNNER_IMAGE`, `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS`. Tightens `BENCHMARK_API_KEY_ENCRYPTION_KEY` and `BENCHMARK_CALLBACK_SECRET` from `optional` to required-when-not-test.
 
 - [ ] **Step 9.1: Write the failing tests**
 
@@ -1707,7 +1707,7 @@ Append to `apps/api/src/config/env.spec.ts` (inside the existing top-level `desc
       NODE_ENV: "development" as const,
       DATABASE_URL: "postgres://localhost:5432/db",
       JWT_ACCESS_SECRET: "x".repeat(32),
-      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+      BENCHMARK_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
     };
@@ -1744,9 +1744,9 @@ Append to `apps/api/src/config/env.spec.ts` (inside the existing top-level `desc
       expect(env.BENCHMARK_DEFAULT_MAX_DURATION_SECONDS).toBe(1800);
     });
 
-    it("requires CONNECTION_API_KEY_ENCRYPTION_KEY outside test mode", () => {
-      const noKey = { ...baseDev, CONNECTION_API_KEY_ENCRYPTION_KEY: undefined };
-      expect(() => validateEnv(noKey)).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
+    it("requires BENCHMARK_API_KEY_ENCRYPTION_KEY outside test mode", () => {
+      const noKey = { ...baseDev, BENCHMARK_API_KEY_ENCRYPTION_KEY: undefined };
+      expect(() => validateEnv(noKey)).toThrow(/BENCHMARK_API_KEY_ENCRYPTION_KEY/);
     });
 
     it("requires BENCHMARK_CALLBACK_SECRET outside test mode", () => {
@@ -1782,7 +1782,7 @@ Replace the existing benchmark-related lines with the tightened versions, and ad
 In `apps/api/src/config/env.schema.ts`, replace the two existing benchmark optional fields with these (place inside the `EnvSchema` `.object({...})` block near where they currently sit):
 
 ```ts
-    CONNECTION_API_KEY_ENCRYPTION_KEY: z
+    BENCHMARK_API_KEY_ENCRYPTION_KEY: z
       .string()
       .optional()
       .refine(
@@ -1823,12 +1823,12 @@ Then extend the `superRefine` block at the bottom of `EnvSchema` to enforce the 
         message: "JWT_ACCESS_SECRET is required when NODE_ENV is not 'test'",
       });
     }
-    if (env.NODE_ENV !== "test" && !env.CONNECTION_API_KEY_ENCRYPTION_KEY) {
+    if (env.NODE_ENV !== "test" && !env.BENCHMARK_API_KEY_ENCRYPTION_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["CONNECTION_API_KEY_ENCRYPTION_KEY"],
+        path: ["BENCHMARK_API_KEY_ENCRYPTION_KEY"],
         message:
-          "CONNECTION_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
+          "BENCHMARK_API_KEY_ENCRYPTION_KEY is required when NODE_ENV is not 'test'",
       });
     }
     if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_SECRET) {
@@ -1876,7 +1876,7 @@ BENCHMARK_CALLBACK_URL (required in non-test), BENCHMARK_K8S_NAMESPACE
 (default modeldoctor-benchmarks), BENCHMARK_RUNNER_IMAGE (required when
 driver=k8s), BENCHMARK_DEFAULT_MAX_DURATION_SECONDS (default 1800).
 
-Tightened: CONNECTION_API_KEY_ENCRYPTION_KEY and BENCHMARK_CALLBACK_SECRET
+Tightened: BENCHMARK_API_KEY_ENCRYPTION_KEY and BENCHMARK_CALLBACK_SECRET
 go from optional → required-when-not-test. Phase 1 left these optional
 deliberately; this phase wires them into runtime use, so a missing key
 now fails loud at boot.
@@ -1929,7 +1929,7 @@ function buildConfig(over: Record<string, unknown> = {}): ConfigService {
   return {
     get: (key: string) => {
       const map: Record<string, unknown> = {
-        CONNECTION_API_KEY_ENCRYPTION_KEY: KEY.toString("base64"),
+        BENCHMARK_API_KEY_ENCRYPTION_KEY: KEY.toString("base64"),
         BENCHMARK_CALLBACK_SECRET: SECRET.toString("utf8"),
         BENCHMARK_CALLBACK_URL: "http://localhost:3001",
         BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
@@ -2192,7 +2192,7 @@ export class BenchmarkService {
     config: ConfigService<Env, true>,
   ) {
     this.key = decodeKey(
-      config.get("CONNECTION_API_KEY_ENCRYPTION_KEY", { infer: true }) as string,
+      config.get("BENCHMARK_API_KEY_ENCRYPTION_KEY", { infer: true }) as string,
     );
     this.callbackSecret = Buffer.from(
       config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as string,
@@ -4259,7 +4259,7 @@ BENCHMARK_CALLBACK_URL=http://localhost:3001
 
 # 32-byte base64-encoded AES-256 key used to encrypt user-supplied API
 # keys at rest. Generate with: openssl rand -base64 32
-CONNECTION_API_KEY_ENCRYPTION_KEY=
+BENCHMARK_API_KEY_ENCRYPTION_KEY=
 
 # >=32 chars. Used to derive per-run HMAC callback tokens.
 # Generate with: openssl rand -base64 48
@@ -4296,7 +4296,7 @@ pip install -e apps/benchmark-runner
 which benchmark-runner
 
 # Generate secrets + run.
-echo "CONNECTION_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
+echo "BENCHMARK_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
 echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> apps/api/.env
 pnpm -F @modeldoctor/api start:dev
 ```

@@ -32,7 +32,7 @@ The Prisma schema for `Run.apiKeyCipher` even has the in-tree comment: `// moved
 - **`apiKeyPreview`** (e.g. `sk-...abcd`) is the only key-related field on the public list/detail responses. Plaintext `apiKey` is returned exactly **once**, in the immediate response of `POST /api/connections` and (when changed) `PATCH /api/connections/:id` — not displayed in any UI in the v1 of this change.
 - **Frontend zustand `useConnectionsStore` is removed entirely.** React Query hooks (matching the existing `apps/web/src/features/benchmark/queries.ts` pattern) replace it.
 - **EndpointPicker becomes read-only after pick.** "Want to tweak a field" routes through "Edit this connection" or "Save as new connection" — never a free-form local override.
-- **Env var renamed** `CONNECTION_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY` to reflect the new home.
+- **Env var renamed** `BENCHMARK_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY` to reflect the new home.
 - **No data migration.** Old localStorage entries are dropped (`zustand persist version` bump, no `migrate` function — same pattern as `2026-04-27`). Old `connections` rows in DB and old `Run.apiKeyCipher` values are wiped via a Prisma migration that DROPs and re-creates affected columns. Pre-prod no-compat-shims rule (memory: `feedback_no_compat_shims`).
 
 ### 1.3 Explicit non-goals
@@ -403,7 +403,7 @@ Each service then uses `conn.baseUrl`, `conn.apiKey`, `conn.model`, `conn.custom
 
 ```ts
 // before
-CONNECTION_API_KEY_ENCRYPTION_KEY: z.string().refine(/* 32-byte base64 */).optional(),
+BENCHMARK_API_KEY_ENCRYPTION_KEY: z.string().refine(/* 32-byte base64 */).optional(),
 // + dev/prod refinement
 
 // after
@@ -411,7 +411,7 @@ CONNECTION_API_KEY_ENCRYPTION_KEY: z.string().refine(/* 32-byte base64 */).optio
 // + dev/prod refinement (required outside `NODE_ENV=test`)
 ```
 
-`.env.example` line `CONNECTION_API_KEY_ENCRYPTION_KEY=` → `CONNECTION_API_KEY_ENCRYPTION_KEY=`.
+`.env.example` line `BENCHMARK_API_KEY_ENCRYPTION_KEY=` → `CONNECTION_API_KEY_ENCRYPTION_KEY=`.
 
 `deploy/` k8s configmaps / docker-compose env vars: same rename. Search-and-replace task in commit 1.
 
@@ -600,7 +600,7 @@ Single PR `feat/connections-backend` cut from `origin/main`. Each commit individ
 
 - `apps/api/prisma/schema.prisma`: rewrite `Connection` model; drop `Run.apiKeyCipher`.
 - `pnpm -F @modeldoctor/api db:migrate:reset --force` then `db:migrate:dev --name connections_credentials_refactor`.
-- `apps/api/src/config/env.schema.ts`: rename `CONNECTION_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`.
+- `apps/api/src/config/env.schema.ts`: rename `BENCHMARK_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`.
 - `.env.example`: same rename.
 - `apps/api/src/modules/connection/connection.service.ts`: rewrite per §4.1.
 - `apps/api/src/modules/connection/connection.controller.ts`: rewrite per §4.2.

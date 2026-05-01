@@ -334,7 +334,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 2.2: Rename env var `CONNECTION_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`
+### Task 2.2: Rename env var `BENCHMARK_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`
 
 **Files:**
 - Modify: `apps/api/src/config/env.schema.ts`
@@ -344,14 +344,14 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Search-and-replace across the repo**
 
-Run: `git grep -l 'CONNECTION_API_KEY_ENCRYPTION_KEY'`
+Run: `git grep -l 'BENCHMARK_API_KEY_ENCRYPTION_KEY'`
 Expected: a list of files (env schema, env spec, `.env.example`, possibly k8s configmaps in `deploy/`).
 
-For each file, replace every occurrence `CONNECTION_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`. Use exact-string replacement, not regex.
+For each file, replace every occurrence `BENCHMARK_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`. Use exact-string replacement, not regex.
 
 - [ ] **Step 2: Verify nothing references the old name**
 
-Run: `git grep 'CONNECTION_API_KEY_ENCRYPTION_KEY'`
+Run: `git grep 'BENCHMARK_API_KEY_ENCRYPTION_KEY'`
 Expected: zero matches.
 
 - [ ] **Step 3: Run env tests**
@@ -1221,7 +1221,7 @@ describe("Connection lifecycle (e2e)", () => {
 - [ ] **Step 2: Run the e2e test against a clean test DB**
 
 Run: `pnpm -F @modeldoctor/api test:e2e test/connection-lifecycle.e2e-spec.ts`
-Expected: PASS. (If env requires a live DB or `CONNECTION_API_KEY_ENCRYPTION_KEY` historically — make sure `CONNECTION_API_KEY_ENCRYPTION_KEY` is set in `.env.test` per Task 2.2.)
+Expected: PASS. (If env requires a live DB or `BENCHMARK_API_KEY_ENCRYPTION_KEY` historically — make sure `CONNECTION_API_KEY_ENCRYPTION_KEY` is set in `.env.test` per Task 2.2.)
 
 - [ ] **Step 3: Commit**
 
@@ -1852,7 +1852,7 @@ plaintext server-side.
 
 ## Breaking changes (acceptable per pre-prod no-compat-shims rule)
 
-- Env var renamed: `CONNECTION_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`. Update before deploy.
+- Env var renamed: `BENCHMARK_API_KEY_ENCRYPTION_KEY` → `CONNECTION_API_KEY_ENCRYPTION_KEY`. Update before deploy.
 - Existing localStorage `modeldoctor-connections` is dropped (zustand persist version bump).
 - Existing `connections` rows + `Run.api_key_cipher` column wiped via Prisma migration.
 - Re-running an old Run uses the **current** Connection's apiKey (no per-run snapshot).
