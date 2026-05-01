@@ -168,8 +168,7 @@ export type PlaygroundImagesResponse = z.infer<typeof PlaygroundImagesResponseSc
  * separate file fields validated by the controller's multer interceptor.
  *
  * Numbers arrive as strings on the wire because multipart fields are
- * always text — the controller coerces `n` with `Number()` and parses
- * `customHeaders` as JSON (when present).
+ * always text — the controller coerces `n` with `Number()`.
  */
 export const PlaygroundImagesEditMultipartFieldsSchema = z.object({
   connectionId: z.string().min(1),
