@@ -11,11 +11,11 @@ export type ProgressEvent =
   | { kind: "progress"; pct: number; currentRequests?: number; message?: string }
   | { kind: "log"; level: "info" | "warn" | "error"; line: string };
 
+import type { GenaiPerfReport } from "../genai-perf/schema.js";
 // ── Forward-declare per-tool report types (filled in Task 1.4 / 1.5 / 1.6) ──
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
-import type { GenaiPerfReport } from "../genai-perf/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
 // ── Discriminated union: report (consumers switch on `tool`) ──────────

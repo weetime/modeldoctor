@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { genaiPerfParamsSchema, genaiPerfReportSchema, genaiPerfParamDefaults } from "./schema.js";
+import { genaiPerfParamDefaults, genaiPerfParamsSchema, genaiPerfReportSchema } from "./schema.js";
 
 describe("genaiPerfParamsSchema", () => {
   it("rejects negative numPrompts", () => {
@@ -34,7 +34,15 @@ describe("genaiPerfReportSchema", () => {
 
   it("accepts a typical genai-perf report shape", () => {
     const dist = {
-      avg: 10, min: 1, max: 50, p50: 9, p90: 18, p95: 22, p99: 40, stddev: 5, unit: "ms",
+      avg: 10,
+      min: 1,
+      max: 50,
+      p50: 9,
+      p90: 18,
+      p95: 22,
+      p99: 40,
+      stddev: 5,
+      unit: "ms",
     };
     const lengthDist = { avg: 100, p50: 100, p99: 200 };
     const r = genaiPerfReportSchema.safeParse({

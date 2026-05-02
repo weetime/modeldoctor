@@ -1,6 +1,6 @@
 import type { ToolAdapter } from "../core/interface.js";
-import { vegetaParamsSchema, vegetaReportSchema, vegetaParamDefaults } from "./schema.js";
 import { buildCommand, parseFinalReport, parseProgress } from "./runtime.js";
+import { vegetaParamDefaults, vegetaParamsSchema, vegetaReportSchema } from "./schema.js";
 
 export const vegetaAdapter: ToolAdapter = {
   name: "vegeta",

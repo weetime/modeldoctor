@@ -1,6 +1,6 @@
 import type { ToolAdapter } from "../core/interface.js";
-import { genaiPerfParamsSchema, genaiPerfReportSchema, genaiPerfParamDefaults } from "./schema.js";
 import { buildCommand, parseFinalReport, parseProgress } from "./runtime.js";
+import { genaiPerfParamDefaults, genaiPerfParamsSchema, genaiPerfReportSchema } from "./schema.js";
 
 export const genaiPerfAdapter: ToolAdapter = {
   name: "genai-perf",

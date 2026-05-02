@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { vegetaParamsSchema, vegetaReportSchema, vegetaParamDefaults } from "./schema.js";
+import { vegetaParamDefaults, vegetaParamsSchema, vegetaReportSchema } from "./schema.js";
 
 describe("vegetaParamsSchema", () => {
   it("rejects rate=0", () => {

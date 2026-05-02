@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guidellmParamsSchema, guidellmReportSchema, guidellmParamDefaults } from "./schema.js";
+import { guidellmParamDefaults, guidellmParamsSchema, guidellmReportSchema } from "./schema.js";
 
 describe("guidellmParamsSchema", () => {
   it("requires datasetInputTokens/Output when datasetName=random", () => {
