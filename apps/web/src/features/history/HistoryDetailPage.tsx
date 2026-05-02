@@ -19,6 +19,7 @@ import { ArrowLeft, SearchX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { HistoryDetailMetadata } from "./HistoryDetailMetadata";
 import { HistoryDetailMetrics } from "./HistoryDetailMetrics";
 import { HistoryDetailRawOutput } from "./HistoryDetailRawOutput";
@@ -146,6 +147,9 @@ export function HistoryDetailPage() {
                     onSuccess: () => {
                       setUnsetOpen(false);
                       qc.invalidateQueries({ queryKey: historyKeys.detail(run.id) });
+                    },
+                    onError: () => {
+                      toast.error(t("detail.baseline.errors.generic"));
                     },
                   });
                 }
