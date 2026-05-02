@@ -17,6 +17,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # The binary is a single statically-linked executable; no extra deps needed.
 ARG VEGETA_VERSION=12.13.0
 RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl ca-certificates; \
+    rm -rf /var/lib/apt/lists/*; \
     ARCH="$(dpkg --print-architecture)"; \
     case "${ARCH}" in \
       amd64)  VEGETA_ARCH="linux_amd64" ;; \
