@@ -30,13 +30,15 @@ the project itself is environment-manager-agnostic; only the dev workflow above 
 
 ## Building the images
 
+Prerequisite: Docker (or Podman with `alias docker=podman`) must be installed and running.
+
 ```bash
 # guidellm (gpustack/benchmark-runner base, ~2.5 GB CPU-only torch)
 docker build -f apps/benchmark-runner/images/guidellm.Dockerfile \
              -t md-runner-guidellm:dev \
              apps/benchmark-runner/
 
-# vegeta (python:3.11-slim + static vegeta binary, ~60 MB)
+# vegeta (python:3.11-slim + static vegeta binary, ~135 MB)
 docker build -f apps/benchmark-runner/images/vegeta.Dockerfile \
              -t md-runner-vegeta:dev \
              apps/benchmark-runner/

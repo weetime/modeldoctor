@@ -14,12 +14,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy the wrapper. Tests are excluded by .dockerignore.
-COPY pyproject.toml ./
 COPY runner runner
 
-# `requests` is the only runtime dep declared in pyproject.toml — install
-# it explicitly to avoid pulling test/dev extras.
-RUN pip install --no-cache-dir requests
+# Pinned to match pyproject.toml's requests>=2.31,<3 declaration. Don't drop
+# the version constraint here — pip install requests is otherwise unconstrained
+# and will silently grab requests 3.x when it ships.
+RUN pip install --no-cache-dir 'requests>=2.31,<3'
 
 # Run as a non-root user.
 RUN useradd --create-home --shell /sbin/nologin runner
