@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tool: [guidellm, vegeta]
+        tool: [guidellm, vegeta, genai-perf]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
