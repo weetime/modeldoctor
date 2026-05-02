@@ -166,6 +166,22 @@ describe("runToBenchmarkRun", () => {
     // p90 must be stripped — legacy contract has no p90.
     expect(out.metricsSummary?.ttft).not.toHaveProperty("p90");
   });
+
+  it("returns null metricsSummary when summaryMetrics is not the {tool, data} envelope", () => {
+    // A raw partial GuidellmReport without the `tool` discriminator is malformed
+    // by contract — only RunCallbackController writes summaryMetrics and it
+    // always wraps in `{ tool, data }`. The mapper must not try to interpret it.
+    const rawShape = {
+      ttft: { mean: 10, p50: 9, p90: 14, p95: 15, p99: 20 },
+      requestsPerSecond: { mean: 2 },
+    };
+    const outRaw = runToBenchmarkRun(makeRun({ summaryMetrics: rawShape }));
+    expect(outRaw.metricsSummary).toBeNull();
+
+    // Completely arbitrary data is also malformed.
+    const outArbitrary = runToBenchmarkRun(makeRun({ summaryMetrics: { random: "data" } }));
+    expect(outArbitrary.metricsSummary).toBeNull();
+  });
 });
 
 describe("runToBenchmarkRunSummary", () => {

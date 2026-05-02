@@ -67,9 +67,12 @@ export class BenchmarkController {
     );
     let items: BenchmarkRunSummary[] = r.items.map(runToBenchmarkRunSummary);
     // Profile is stored in params JSON; RunService.list doesn't filter on it.
-    // Apply post-filter in-memory to preserve legacy semantics. Note: this
-    // can produce a short page when filtering reduces a full page below
-    // `limit`, but #54 retires this code path.
+    // Apply post-filter in-memory to preserve legacy semantics.
+    //
+    // IMPORTANT: this can produce a short page (items.length < limit) when the
+    // filter excludes some items. The FE MUST paginate by `nextCursor !== null`,
+    // NOT by `items.length === limit` — otherwise it will miss pages.
+    // #54 retires this code path entirely.
     if (q.profile) items = items.filter((s) => s.profile === q.profile);
     return { items, nextCursor: r.nextCursor };
   }

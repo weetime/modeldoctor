@@ -149,6 +149,33 @@ describe("BenchmarkController (facade)", () => {
     expect(out.nextCursor).toBe("next");
   });
 
+  it("applies in-memory profile filter and preserves nextCursor on a short page", async () => {
+    // RunService returns 5 items (mixed profiles) with nextCursor still set —
+    // meaning more data exists upstream. Post-filter reduces items to 2.
+    // The FE must see nextCursor === "abc" (not null) so it knows to keep
+    // paginating; items.length < limit is NOT a reliable end-of-list signal.
+    const runs5: Run[] = [
+      makeRun({ id: "r1", params: { profile: "throughput" } }),
+      makeRun({ id: "r2", params: { profile: "throughput" } }),
+      makeRun({ id: "r3", params: { profile: "latency" } }),
+      makeRun({ id: "r4", params: { profile: "throughput" } }),
+      makeRun({ id: "r5", params: { profile: "latency" } }),
+    ];
+    runs.list.mockResolvedValue({ items: runs5, nextCursor: "abc" });
+
+    const out = await controller.list(fakeUser, {
+      limit: 5,
+      profile: "latency",
+    });
+
+    // Only 2 of the 5 items match the profile filter
+    expect(out.items).toHaveLength(2);
+    expect(out.items.map((s) => s.id)).toEqual(["r3", "r5"]);
+    // nextCursor must be preserved — the upstream cursor is independent of
+    // the in-memory filter result
+    expect(out.nextCursor).toBe("abc");
+  });
+
   it("detail: forwards id + userId to findByIdOrFail and maps result", async () => {
     runs.findByIdOrFail.mockResolvedValue(makeRun({ id: "rX" }));
 

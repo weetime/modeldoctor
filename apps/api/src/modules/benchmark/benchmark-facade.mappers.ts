@@ -45,15 +45,23 @@ export function legacyCreateToCreateRun(body: CreateBenchmarkRequest): CreateRun
 export function runToBenchmarkRun(run: Run): BenchmarkRun {
   const params = (run.params ?? {}) as Partial<GuidellmParams>;
   const scenario = (run.scenario ?? {}) as Record<string, unknown>;
+
+  // summaryMetrics is written by RunCallbackController.handleFinish as the
+  // adapter's `{ tool, data }` envelope (see packages/tool-adapters/src/
+  // guidellm/runtime.ts parseFinalReport). Anything else is malformed and
+  // we return null rather than guess.
   const summary = run.summaryMetrics as
-    | { tool?: string; data?: GuidellmReport }
-    | GuidellmReport
+    | { tool: string; data: GuidellmReport }
     | null
     | undefined;
   const report =
-    summary && typeof summary === "object" && "data" in summary && summary.data
+    summary != null &&
+    typeof summary === "object" &&
+    "tool" in summary &&
+    "data" in summary &&
+    summary.data
       ? (summary.data as GuidellmReport)
-      : ((summary as GuidellmReport | null | undefined) ?? null);
+      : null;
 
   return {
     id: run.id,
