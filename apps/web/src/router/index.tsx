@@ -1,8 +1,6 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
-import { BenchmarkDetailPage } from "@/features/benchmark/BenchmarkDetailPage";
-import { BenchmarkListPage } from "@/features/benchmark/BenchmarkListPage";
 import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
@@ -11,7 +9,6 @@ import { ErrorPage } from "@/features/error/ErrorPage";
 import { RunCreatePage } from "@/features/runs/RunCreatePage";
 import { RunDetailPage } from "@/features/runs/RunDetailPage";
 import { RunListPage } from "@/features/runs/RunListPage";
-import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -50,9 +47,6 @@ export const routes: RouteObject[] = [
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="/runs" replace /> },
-          { path: "load-test", element: <LoadTestPage /> },
-          { path: "benchmarks", element: <BenchmarkListPage /> },
-          { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
           {
             path: "soak",
             element: <ComingSoonRoute icon={Timer} itemKey="soak" />,

@@ -64,7 +64,7 @@
   "comingSoon": {
     "title": "Coming soon",
     "body": "This feature is under development.",
-    "backToLoadTest": "Back to Load Test"
+    "backToRuns": "Back to Runs"
   },
   "empty": {
     "noConnections": "No connections yet",
