@@ -22,9 +22,9 @@ const vegetaLatencyDist = z.object({
 
 export const vegetaReportSchema = z.object({
   requests: z.object({
-    total: z.number().int(),
-    rate: z.number(),
-    throughput: z.number(),
+    total: z.number().int().nonnegative(),
+    rate: z.number().nonnegative(),
+    throughput: z.number().nonnegative(),
   }),
   duration: z.object({
     totalSeconds: z.number(),
@@ -35,7 +35,7 @@ export const vegetaReportSchema = z.object({
   bytesIn: z.object({ total: z.number().int(), mean: z.number() }),
   bytesOut: z.object({ total: z.number().int(), mean: z.number() }),
   // Success is a percent in [0, 100], NOT a 0-1 ratio (matches vegeta CLI).
-  success: z.number(),
+  success: z.number().min(0).max(100),
   statusCodes: z.record(z.number().int()),
   errors: z.array(z.string()),
 });
