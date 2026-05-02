@@ -70,7 +70,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         <MemoryRouter initialEntries={["/history/r1"]}>
           <Routes>
             <Route path="/history" element={<div>list</div>} />
-            <Route path="/history/:runId" element={<>{children}</>} />
+            <Route path="/history/:runId" element={children} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -98,9 +98,7 @@ describe("HistoryDetailPage", () => {
   it("renders metrics empty when summaryMetrics is null", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeRun({ summaryMetrics: null }));
     render(<HistoryDetailPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getByText(/No metrics|没有记录指标/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/No metrics|没有记录指标/i)).toBeInTheDocument());
   });
 
   it("shows not-found state on 404", async () => {
@@ -108,9 +106,7 @@ describe("HistoryDetailPage", () => {
     err.status = 404;
     vi.mocked(api.get).mockRejectedValueOnce(err);
     render(<HistoryDetailPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument());
   });
 
   it("renders 'Set as baseline' when run.baselineFor is null", async () => {

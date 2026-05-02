@@ -28,9 +28,7 @@ export function HistoryDetailMetadata({ run }: { run: Run }) {
       <Row label={t("detail.metadata.createdAt")}>{fmtDate(run.createdAt)}</Row>
       <Row label={t("detail.metadata.startedAt")}>{fmtDate(run.startedAt)}</Row>
       <Row label={t("detail.metadata.completedAt")}>{fmtDate(run.completedAt)}</Row>
-      <Row label={t("detail.metadata.duration")}>
-        {fmtDuration(run.startedAt, run.completedAt)}
-      </Row>
+      <Row label={t("detail.metadata.duration")}>{fmtDuration(run.startedAt, run.completedAt)}</Row>
     </dl>
   );
 }

@@ -23,12 +23,7 @@ vi.mock("@/lib/api-client", () => {
 
 import { api } from "@/lib/api-client";
 
-function makeRun(
-  id: string,
-  kind: Run["kind"],
-  tool: Run["tool"],
-  status: Run["status"],
-): Run {
+function makeRun(id: string, kind: Run["kind"], tool: Run["tool"], status: Run["status"]): Run {
   return {
     id,
     userId: "u1",
@@ -74,7 +69,7 @@ function Wrapper({ children }: { children: ReactNode }) {
       <TooltipProvider>
         <MemoryRouter initialEntries={["/history"]}>
           <Routes>
-            <Route path="/history" element={<>{children}</>} />
+            <Route path="/history" element={children} />
             <Route path="/history/:runId" element={<div>detail</div>} />
           </Routes>
         </MemoryRouter>
@@ -137,8 +132,6 @@ describe("HistoryListPage", () => {
   it("renders empty state when there are no runs", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
     render(<HistoryListPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getByText(/No runs yet|暂无 Run/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/No runs yet|暂无 Run/i)).toBeInTheDocument());
   });
 });

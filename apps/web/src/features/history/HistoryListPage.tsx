@@ -12,18 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type {
-  ListRunsQuery,
-  Run,
-  RunKind,
-  RunStatus,
-  RunTool,
-} from "@modeldoctor/contracts";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ListRunsQuery, Run, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";
@@ -119,10 +109,7 @@ export function HistoryListPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useRunsInfiniteList(query);
-  const items = useMemo(
-    () => (data?.pages ?? []).flatMap((p) => p.items),
-    [data],
-  );
+  const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.items), [data]);
 
   const isFiltered = useMemo(
     () =>
@@ -199,11 +186,7 @@ export function HistoryListPage() {
               <AlertDescription>{t("empty.filtered")}</AlertDescription>
             </Alert>
           ) : (
-            <EmptyState
-              icon={HistoryIcon}
-              title={t("empty.title")}
-              body={t("empty.description")}
-            />
+            <EmptyState icon={HistoryIcon} title={t("empty.title")} body={t("empty.description")} />
           )
         ) : (
           <div className="rounded-md border border-border">
@@ -251,10 +234,7 @@ export function HistoryListPage() {
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}
                     </TableCell>
                     <TableCell>
-                      <Link
-                        to={`/history/${run.id}`}
-                        className="text-primary hover:underline"
-                      >
+                      <Link to={`/history/${run.id}`} className="text-primary hover:underline">
                         →
                       </Link>
                     </TableCell>

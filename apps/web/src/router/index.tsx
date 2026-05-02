@@ -21,13 +21,7 @@ import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import {
-  type Activity,
-  GitCompare,
-  HeartPulse,
-  Timer,
-  Zap,
-} from "lucide-react";
+import { type Activity, GitCompare, HeartPulse, Timer, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Navigate, type RouteObject } from "react-router-dom";
 

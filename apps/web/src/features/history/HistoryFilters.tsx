@@ -7,12 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  ListRunsQuery,
-  RunKind,
-  RunStatus,
-  RunTool,
-} from "@modeldoctor/contracts";
+import type { ListRunsQuery, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -131,9 +126,7 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
       </Select>
 
       <Select
-        value={
-          query.isBaseline ? "is" : query.referencesBaseline ? "ref" : ALL
-        }
+        value={query.isBaseline ? "is" : query.referencesBaseline ? "ref" : ALL}
         onValueChange={(v) => {
           if (v === ALL) patch({ isBaseline: undefined, referencesBaseline: undefined });
           else if (v === "is") patch({ isBaseline: true, referencesBaseline: undefined });
