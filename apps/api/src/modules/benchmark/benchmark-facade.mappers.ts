@@ -50,10 +50,7 @@ export function runToBenchmarkRun(run: Run): BenchmarkRun {
   // adapter's `{ tool, data }` envelope (see packages/tool-adapters/src/
   // guidellm/runtime.ts parseFinalReport). Anything else is malformed and
   // we return null rather than guess.
-  const summary = run.summaryMetrics as
-    | { tool: string; data: GuidellmReport }
-    | null
-    | undefined;
+  const summary = run.summaryMetrics as { tool: string; data: GuidellmReport } | null | undefined;
   const report =
     summary != null &&
     typeof summary === "object" &&

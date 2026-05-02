@@ -4,7 +4,7 @@ import type {
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
-import { vegetaReportSchema, type VegetaParams, type VegetaReport } from "./schema.js";
+import { type VegetaParams, type VegetaReport, vegetaReportSchema } from "./schema.js";
 
 const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
   chat: "/v1/chat/completions",
@@ -19,11 +19,9 @@ const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) => strin
   chat: (m) => JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
   "chat-vision": (m) =>
     JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
-  "chat-audio": (m) =>
-    JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
+  "chat-audio": (m) => JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
   embeddings: (m) => JSON.stringify({ model: m, input: "hello" }),
-  rerank: (m) =>
-    JSON.stringify({ model: m, query: "what is 2+2", documents: ["four", "five"] }),
+  rerank: (m) => JSON.stringify({ model: m, query: "what is 2+2", documents: ["four", "five"] }),
   images: (m) => JSON.stringify({ model: m, prompt: "a cat" }),
 };
 
@@ -57,9 +55,7 @@ export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommand
   // vegeta's HTTP-format target file: "METHOD URL\nHeaders\n@bodyfile"
   const targetsTxt = `POST ${url}\nContent-Type: application/json\nAuthorization: Bearer ${connection.apiKey}${extraHeaders}\n@request.json`;
 
-  const cmd =
-    `cat targets.txt | vegeta attack -rate=${params.rate} -duration=${params.duration}s ` +
-    `| tee attack.bin | vegeta report > report.txt`;
+  const cmd = `cat targets.txt | vegeta attack -rate=${params.rate} -duration=${params.duration}s | tee attack.bin | vegeta report > report.txt`;
 
   return {
     argv: ["/bin/sh", "-c", cmd],
@@ -81,10 +77,7 @@ export function parseProgress(_line: string): ProgressEvent | null {
   return null;
 }
 
-export function parseFinalReport(
-  _stdout: string,
-  files: Record<string, Buffer>,
-): ToolReport {
+export function parseFinalReport(_stdout: string, files: Record<string, Buffer>): ToolReport {
   const reportBuf = files.report;
   if (!reportBuf) {
     throw new Error("vegeta.parseFinalReport: missing 'report' output file");
@@ -102,10 +95,14 @@ function parseLatencyToMs(s: string): number {
   if (!m) return Number.NaN;
   const v = Number.parseFloat(m[1]);
   switch (m[2]) {
-    case "µs": return v / 1000;
-    case "ms": return v;
-    case "s":  return v * 1000;
-    default:   return Number.NaN;
+    case "µs":
+      return v / 1000;
+    case "ms":
+      return v;
+    case "s":
+      return v * 1000;
+    default:
+      return Number.NaN;
   }
 }
 function parseDurationToSeconds(s: string): number {
@@ -136,7 +133,9 @@ function parseVegetaReportText(report: string): VegetaReport {
         out.requests.throughput = Number.parseFloat(m[3]);
       }
     } else if (line.includes("Duration") && line.includes("[total")) {
-      const m = line.match(/\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/);
+      const m = line.match(
+        /\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/,
+      );
       if (m) {
         out.duration.totalSeconds = parseDurationToSeconds(m[1]);
         out.duration.attackSeconds = parseDurationToSeconds(m[2]);

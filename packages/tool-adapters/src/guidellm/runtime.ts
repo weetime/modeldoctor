@@ -4,7 +4,7 @@ import type {
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
-import { guidellmReportSchema, type GuidellmParams, type GuidellmReport } from "./schema.js";
+import { type GuidellmParams, type GuidellmReport, guidellmReportSchema } from "./schema.js";
 
 export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildCommandResult {
   const { params, connection } = plan;
@@ -75,10 +75,7 @@ export function parseProgress(_line: string): ProgressEvent | null {
   return null;
 }
 
-export function parseFinalReport(
-  _stdout: string,
-  files: Record<string, Buffer>,
-): ToolReport {
+export function parseFinalReport(_stdout: string, files: Record<string, Buffer>): ToolReport {
   const reportBuf = files.report;
   if (!reportBuf) {
     throw new Error("guidellm.parseFinalReport: missing 'report' output file");
@@ -92,10 +89,17 @@ export function parseFinalReport(
 // ── internal mapper (port of apps/benchmark-runner/runner/metrics.py) ──
 function successful(metrics: Record<string, unknown>, key: string): Record<string, unknown> {
   const sds = (metrics[key] ?? {}) as Record<string, unknown>;
-  return ((sds.successful as Record<string, unknown>) ?? {});
+  return (sds.successful as Record<string, unknown>) ?? {};
 }
-function latency(metrics: Record<string, unknown>, key: string): {
-  mean: number; p50: number; p90: number; p95: number; p99: number;
+function latency(
+  metrics: Record<string, unknown>,
+  key: string,
+): {
+  mean: number;
+  p50: number;
+  p90: number;
+  p95: number;
+  p99: number;
 } {
   const src = successful(metrics, key);
   const pct = (src.percentiles as Record<string, unknown>) ?? {};
@@ -114,10 +118,10 @@ function rate(metrics: Record<string, unknown>, key: string): { mean: number } {
 function mapGuidellmRawToReport(raw: Record<string, unknown>): GuidellmReport {
   const benches = (raw.benchmarks as Array<Record<string, unknown>> | undefined) ?? [];
   const first = benches[0] ?? {};
-  const metrics = ((first.metrics as Record<string, unknown> | undefined) ?? {});
+  const metrics = (first.metrics as Record<string, unknown> | undefined) ?? {};
 
   const concurrencySrc = successful(metrics, "request_concurrency");
-  const totals = ((metrics.request_totals as Record<string, unknown> | undefined) ?? {});
+  const totals = (metrics.request_totals as Record<string, unknown> | undefined) ?? {};
 
   // request_latency in guidellm 0.5.x is in seconds (no _ms suffix in key);
   // convert to milliseconds for the wire shape.

@@ -10,10 +10,10 @@
         },
         "request_latency": {
           "successful": {
-            "mean": 1.800,
-            "median": 1.700,
-            "max": 3.500,
-            "percentiles": { "p50": 1.700, "p95": 2.500, "p99": 3.200 }
+            "mean": 1.8,
+            "median": 1.7,
+            "max": 3.5,
+            "percentiles": { "p50": 1.7, "p95": 2.5, "p99": 3.2 }
           }
         },
         "time_to_first_token_ms": {
