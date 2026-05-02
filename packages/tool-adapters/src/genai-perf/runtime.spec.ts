@@ -229,14 +229,29 @@ describe("genai-perf.getMaxDurationSeconds", () => {
     expect(secs).toBeGreaterThanOrEqual(60);
   });
 
-  it("scales with numPrompts (returns >= numPrompts * 2 for large counts)", () => {
-    const secs = getMaxDurationSeconds({ ...baseParams, numPrompts: 500 });
-    expect(secs).toBeGreaterThanOrEqual(500 * 2);
-  });
-
   it("returns a finite positive number", () => {
     const secs = getMaxDurationSeconds(baseParams);
     expect(Number.isFinite(secs)).toBe(true);
     expect(secs).toBeGreaterThan(0);
+  });
+
+  it("numPrompts=10, concurrency=1 → 100 (ceil(10/1)*10=100, max(60,100)=100)", () => {
+    const secs = getMaxDurationSeconds({ ...baseParams, numPrompts: 10, concurrency: 1 });
+    expect(secs).toBe(100);
+  });
+
+  it("numPrompts=10, concurrency=10 → 60 (ceil(10/10)*10=10, max(60,10)=60)", () => {
+    const secs = getMaxDurationSeconds({ ...baseParams, numPrompts: 10, concurrency: 10 });
+    expect(secs).toBe(60);
+  });
+
+  it("numPrompts=1000, concurrency=100 → 100 (ceil(1000/100)*10=100)", () => {
+    const secs = getMaxDurationSeconds({ ...baseParams, numPrompts: 1000, concurrency: 100 });
+    expect(secs).toBe(100);
+  });
+
+  it("numPrompts=1000, concurrency=1 → 10000 (ceil(1000/1)*10=10000)", () => {
+    const secs = getMaxDurationSeconds({ ...baseParams, numPrompts: 1000, concurrency: 1 });
+    expect(secs).toBe(10000);
   });
 });

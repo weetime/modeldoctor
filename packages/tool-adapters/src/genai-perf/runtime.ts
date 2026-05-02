@@ -138,6 +138,9 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
   if (!profileBuf) {
     throw new Error("genai-perf.parseFinalReport: missing 'profile' output file");
   }
+  // Bounded by apps/benchmark-runner/runner/main.py's OUTPUT_FILE_MAX_BYTES
+  // = 50 MB cap (PR #75) — files over the cap are skipped before reaching
+  // /finish, so this parse is bounded.
   const raw = rawOutputSchema.parse(JSON.parse(profileBuf.toString("utf8")));
   const data = mapGenaiPerfRawToReport(raw);
   genaiPerfReportSchema.parse(data);
@@ -198,8 +201,13 @@ function mapGenaiPerfRawToReport(raw: RawOutput): GenaiPerfReport {
 // ── getMaxDurationSeconds ─────────────────────────────────────────────────────
 // genai-perf runs numPrompts requests with `concurrency` workers and has no
 // duration flag. Without a hard time bound, return a generous estimate that
-// scales with load: at least 60s, then 2s per prompt (conservative for slow
-// endpoints or high concurrency).
+// scales with load.
 export function getMaxDurationSeconds(params: GenaiPerfParams): number {
-  return Math.max(60, params.numPrompts * 2);
+  // Conservative upper bound assuming up to ~10s per request batch:
+  // total runtime ≈ ceil(numPrompts / concurrency) batches × 10s.
+  // Floor at 60s for very small runs against fast targets; this drives
+  // the HMAC TTL on the run callback, so being a little long is fine
+  // (a tighter cap would just risk false 401s on slow targets).
+  const batches = Math.ceil(params.numPrompts / Math.max(1, params.concurrency));
+  return Math.max(60, batches * 10);
 }
