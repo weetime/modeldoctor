@@ -30,6 +30,7 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
       }),
       parseProgress: () => null,
       parseFinalReport: () => ({ tool: "guidellm", data: {} }),
+      getMaxDurationSeconds: () => 1800,
     }),
   };
 });

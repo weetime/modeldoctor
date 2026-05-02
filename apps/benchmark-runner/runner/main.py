@@ -15,12 +15,20 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
 from pathlib import Path
 
 from runner.callback import post_finish, post_log_batch, post_state_running
 
 LOG_BATCH_INTERVAL_SEC = 0.25
 LOG_LINE_MAX_BYTES = 64 * 1024
+# Bounds the /finish POST body and runner RSS for long-running benchmarks.
+# /finish's stdout/stderr role is post-mortem only (/log already streamed
+# everything live), so 64 KB per stream is sufficient for triage.
+LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
+# vegeta attack.bin for a long load test can exceed 100 MB; base64-encoding
+# that entirely in memory would OOM the runner process.
+OUTPUT_FILE_MAX_BYTES = 50 * 1024 * 1024  # per output file
 
 logging.basicConfig(level=logging.INFO, format="[runner] %(message)s")
 log = logging.getLogger("runner")
@@ -36,7 +44,8 @@ class StreamPump:
         self.token = token
         self.run_id = run_id
         self.buffer: list[str] = []
-        self.full: list[str] = []
+        self.full: deque[str] = deque()
+        self.full_bytes: int = 0
         self._stop = threading.Event()
 
     def run(self) -> None:
@@ -51,6 +60,14 @@ class StreamPump:
                 line = repr(line_bytes)
             line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
             self.full.append(line)
+            # +1 accounts for the \n that "\n".join(...) will reinsert on
+            # read — keeps the byte accounting consistent with the output size.
+            self.full_bytes += len(line.encode("utf-8")) + 1
+            # Evict oldest lines until we are within the tail-byte cap so that
+            # a 30-min benchmark's worth of progress output cannot exhaust RSS.
+            while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
+                evicted = self.full.popleft()
+                self.full_bytes -= len(evicted.encode("utf-8")) + 1
             self.buffer.append(line)
             now = time.monotonic()
             if now - last_flush >= LOG_BATCH_INTERVAL_SEC:
@@ -142,12 +159,25 @@ def main() -> int:
     files_b64: dict[str, str] = {}
     for alias, rel_path in output_files.items():
         full = Path.cwd() / rel_path
-        if full.exists():
-            files_b64[alias] = base64.b64encode(full.read_bytes()).decode("ascii")
+        if not full.exists():
+            continue
+        size = full.stat().st_size
+        if size > OUTPUT_FILE_MAX_BYTES:
+            log.warning(
+                "output file %s (%d bytes) exceeds %d byte cap; skipping",
+                alias,
+                size,
+                OUTPUT_FILE_MAX_BYTES,
+            )
+            continue
+        files_b64[alias] = base64.b64encode(full.read_bytes()).decode("ascii")
 
     state = "completed" if proc.returncode == 0 else "failed"
     message = None if state == "completed" else f"tool exited with code {proc.returncode}"
 
+    # Snapshot deques into lists in case a daemon pump thread is still
+    # alive after join(timeout=5) — protects against "deque mutated
+    # during iteration" RuntimeError under unusual EOF behavior.
     try:
         post_finish(
             callback_url=callback_url,
@@ -155,8 +185,8 @@ def main() -> int:
             run_id=run_id,
             state=state,
             exit_code=proc.returncode,
-            stdout="\n".join(out_pump.full),
-            stderr="\n".join(err_pump.full),
+            stdout="\n".join(list(out_pump.full)),
+            stderr="\n".join(list(err_pump.full)),
             files=files_b64,
             message=message,
         )

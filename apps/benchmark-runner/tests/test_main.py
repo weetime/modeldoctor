@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -174,20 +175,22 @@ def test_log_batches_posted_with_correct_kwargs(
     assert "line two" in all_lines
     assert "line three" in all_lines
 
-    # And /finish should include the full uncapped stdout (no _STDOUT_TAIL_BYTES cap).
+    # And /finish should include the tail stdout (within LOG_TAIL_MAX_BYTES).
     finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
     assert finish_kwargs["stdout"] == "line one\nline two\nline three"
 
 
-def test_full_stdout_is_uncapped_on_finish(
+def test_stdout_tail_caps_at_64kb(
     patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
 ) -> None:
-    """The new wrapper does NOT cap stdout/stderr; full buffers ship on /finish."""
+    """StreamPump.full is bounded at LOG_TAIL_MAX_BYTES; /finish receives the tail."""
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    # 100 KB of stdout — well beyond the legacy 16 KB cap.
-    big = (b"x" * 1023 + b"\n") * 100
+    # Build 200 distinguishable lines (~1 KB each) so we can prove FIFO
+    # eviction: the first lines must be dropped, the last must survive.
+    lines_in = [f"line-{i:04d}-" + "x" * (1023 - 11) for i in range(200)]
+    big = ("\n".join(lines_in) + "\n").encode("utf-8")
     proc = _fake_proc(stdout=big, stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
 
@@ -195,10 +198,32 @@ def test_full_stdout_is_uncapped_on_finish(
 
     assert rc == 0
     finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
-    # The pump strips trailing \n per line and joins with \n, so length is
-    # very close to the input but not a perfect equality. Crucially: well
-    # over 16 KB.
-    assert len(finish_kwargs["stdout"].encode("utf-8")) > 16 * 1024
+    captured = finish_kwargs["stdout"]
+    captured_bytes = len(captured.encode("utf-8"))
+    # Upper bound: the join produces N-1 newlines, so the on-the-wire
+    # bytes are always strictly less than the cap. The +1 accounting in
+    # StreamPump charges +1 per line (for the join newline), so once we
+    # evict to fit the cap, the actual bytes are ≤ cap - 1.
+    assert captured_bytes <= main_mod.LOG_TAIL_MAX_BYTES, (
+        f"stdout {captured_bytes} bytes exceeded cap {main_mod.LOG_TAIL_MAX_BYTES}"
+    )
+    # Lower bound: the buffer should actually be near-full — fed 200 KB,
+    # expect the tail to be within 1 KB of the cap (room for the last
+    # partial line eviction).
+    assert captured_bytes >= main_mod.LOG_TAIL_MAX_BYTES - 1024, (
+        f"stdout {captured_bytes} bytes is suspiciously below cap {main_mod.LOG_TAIL_MAX_BYTES}"
+    )
+
+    captured_lines = captured.split("\n")
+
+    # Tail semantics: the very last input line must be present.
+    assert captured_lines[-1] == lines_in[-1], "last input line should be preserved"
+
+    # FIFO eviction: the very first input line must be evicted.
+    assert "line-0000" not in captured, "first input line should have been evicted from tail"
+
+    # Sanity: many lines were dropped overall.
+    assert len(captured_lines) < 200, "tail should have evicted most lines"
 
 
 def test_redaction_in_log_line(
@@ -248,6 +273,40 @@ def test_redacted_helper_redacts_backend_kwargs() -> None:
     out = main_mod._redacted(argv)
     assert out[0] == "guidellm"
     assert out[1] == "--backend-kwargs=***REDACTED***"
+
+
+def test_oversized_output_file_skipped_with_warning(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Output files over OUTPUT_FILE_MAX_BYTES are skipped rather than OOMing."""
+    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"attack": "attack.bin"})
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+
+    # Write a small file but lower the cap to 1 KB so the test stays fast.
+    big_file = tmp_path / "attack.bin"
+    big_file.write_bytes(b"B" * 2048)  # 2 KB — over the patched 1 KB cap
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.OUTPUT_FILE_MAX_BYTES", 1024)
+
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    with caplog.at_level("WARNING", logger="runner"):
+        rc = main_mod.main()
+
+    assert rc == 0
+    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
+    assert "attack" not in files, "oversized file must not appear in /finish files"
+
+    warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("exceeds" in msg and "attack" in msg for msg in warning_messages), (
+        f"expected a warning about 'attack' exceeding cap; got: {warning_messages}"
+    )
 
 
 def test_materialize_input_files_symlinks_into_cwd(
