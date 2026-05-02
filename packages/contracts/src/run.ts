@@ -97,6 +97,7 @@ export const listRunsQuerySchema = z.object({
   referencesBaseline: z
     .preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean())
     .optional(),
+  scope: z.enum(["own", "all"]).default("own"),
 });
 export type ListRunsQuery = z.infer<typeof listRunsQuerySchema>;
 

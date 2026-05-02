@@ -192,10 +192,12 @@ export class RunService {
     return toContract(reloaded);
   }
 
-  async cancel(id: string, userId: string): Promise<Run> {
+  async cancel(id: string, userId?: string): Promise<Run> {
     const row = await this.repo.findById(id);
     if (!row) throw new NotFoundException(`Run ${id} not found`);
-    if (row.userId !== userId) throw new NotFoundException(`Run ${id} not found`);
+    if (userId !== undefined && row.userId !== userId) {
+      throw new NotFoundException(`Run ${id} not found`);
+    }
     if ((TERMINAL_STATES as readonly string[]).includes(row.status)) {
       throw new BadRequestException({
         code: "RUN_ALREADY_TERMINAL",
@@ -216,10 +218,12 @@ export class RunService {
     return toContract(reloaded);
   }
 
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, userId?: string): Promise<void> {
     const row = await this.repo.findById(id);
     if (!row) throw new NotFoundException(`Run ${id} not found`);
-    if (row.userId !== userId) throw new NotFoundException(`Run ${id} not found`);
+    if (userId !== undefined && row.userId !== userId) {
+      throw new NotFoundException(`Run ${id} not found`);
+    }
     if (!(TERMINAL_STATES as readonly string[]).includes(row.status)) {
       throw new ConflictException({
         code: "RUN_NOT_TERMINAL",

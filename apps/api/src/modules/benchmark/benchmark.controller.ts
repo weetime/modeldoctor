@@ -60,6 +60,7 @@ export class BenchmarkController {
         cursor: q.cursor,
         kind: "benchmark",
         tool: "guidellm",
+        scope: "own",
         ...(q.state ? { status: q.state } : {}),
         ...(q.search ? { search: q.search } : {}),
       },

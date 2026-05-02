@@ -10,6 +10,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -29,16 +30,22 @@ export class RunController {
   constructor(private readonly service: RunService) {}
 
   @Get()
-  list(
+  async list(
     @CurrentUser() user: JwtPayload,
     @Query(new ZodValidationPipe(listRunsQuerySchema)) query: ListRunsQuery,
   ): Promise<ListRunsResponse> {
-    return this.service.list(query, user.sub);
+    if (query.scope === "all" && !user.roles.includes("admin")) {
+      throw new ForbiddenException({
+        code: "RUN_SCOPE_FORBIDDEN",
+        message: "admin role required for scope=all",
+      });
+    }
+    return this.service.list(query, query.scope === "all" ? undefined : user.sub);
   }
 
   @Get(":id")
   detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Run> {
-    return this.service.findByIdOrFail(id, user.sub);
+    return this.service.findByIdOrFail(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
   @Post()
@@ -51,12 +58,12 @@ export class RunController {
 
   @Post(":id/cancel")
   cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Run> {
-    return this.service.cancel(id, user.sub);
+    return this.service.cancel(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
   @Delete(":id")
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
-    await this.service.delete(id, user.sub);
+    await this.service.delete(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 }
