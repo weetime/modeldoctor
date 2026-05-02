@@ -40,10 +40,11 @@ import { runKeys } from "./queries";
 import { useRunDetail } from "./queries";
 
 function ReportSection({ metrics }: { metrics: Run["summaryMetrics"] }) {
+  const { t } = useTranslation("runs");
   if (!metrics) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        No metrics yet
+        {t("detail.metrics.empty")}
       </div>
     );
   }
