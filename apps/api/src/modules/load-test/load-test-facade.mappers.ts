@@ -54,6 +54,12 @@ export function legacyToCreateRun(req: LoadTestRequest, name: string): CreateRun
  * 2. `rawOutput.files.report` is base64-encoded by the runner per
  *    runFinishCallbackSchema; decode to UTF-8 text so the FE can show
  *    the legacy `vegeta report` text output.
+ *
+ * Migration boundary (Task 3.6): pre-Task-3.6 rows stored apiType/rate/
+ * duration in `scenario` instead of `params`. After this commit those rows
+ * fall back to defaults (apiType="chat", rate=0, duration=0). New rows from
+ * RunService.create write those fields into `params`. This reconciles when
+ * the dev DB is reset; #54 retires this endpoint anyway.
  */
 export function runToLoadTestResponse(run: Run): LoadTestResponse {
   const sm = run.summaryMetrics as { tool: "vegeta"; data: VegetaReport } | null | undefined;

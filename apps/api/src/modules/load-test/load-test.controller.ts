@@ -128,6 +128,12 @@ async function waitForTerminal(runs: RunService, id: string, timeoutSec: number)
  * legacy LoadTestRunSummary.summaryJson schema is the inner LoadTestParsed
  * shape, so we project the envelope's data → LoadTestParsed. Returns null
  * when the envelope is missing or malformed.
+ *
+ * Strict envelope check: only `{ tool: "vegeta", data: VegetaReport }` is
+ * recognized. Pre-Task-3.6 rows wrote summaryMetrics directly as a raw
+ * LoadTestParsed shape (no envelope) — those rows will show summaryJson:null
+ * here until the dev DB is reset (Task 3.7 reset clears them) or #54 retires
+ * this endpoint. We accept this trade-off over adding a raw-shape recognizer.
  */
 function unwrapSummary(sm: Run["summaryMetrics"]): LoadTestParsed | null {
   if (sm == null || typeof sm !== "object") return null;
