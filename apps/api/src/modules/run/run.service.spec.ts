@@ -2,8 +2,8 @@ import { BadRequestException, ConflictException, NotFoundException } from "@nest
 import type { ConfigService } from "@nestjs/config";
 import type { Run as PrismaRun } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConnectionService } from "../connection/connection.service.js";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
+import type { ConnectionService } from "../connection/connection.service.js";
 import type { RunExecutionDriver } from "./drivers/execution-driver.interface.js";
 import type { RunRepository, RunWithRelations } from "./run.repository.js";
 import { RunService } from "./run.service.js";
@@ -387,11 +387,7 @@ describe("RunService.start — callback TTL", () => {
 
       // adapter returns 7200; CALLBACK_TTL_SLACK_SECONDS = 15 * 60 = 900.
       // Expected ttl = 7200 + 900 = 8100.
-      expect(signSpy).toHaveBeenCalledWith(
-        "r1",
-        expect.any(Buffer),
-        8100,
-      );
+      expect(signSpy).toHaveBeenCalledWith("r1", expect.any(Buffer), 8100);
     } finally {
       signSpy.mockRestore();
       (adapters as { byTool: typeof orig }).byTool = orig;
