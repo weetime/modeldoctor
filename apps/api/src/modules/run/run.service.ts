@@ -10,7 +10,6 @@ import {
   ConflictException,
   Inject,
   Injectable,
-  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -24,11 +23,12 @@ import { RUN_DRIVER } from "./drivers/run-driver.token.js";
 import { RunRepository, type RunWithRelations } from "./run.repository.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
+// 15-minute slack beyond defaultMaxDuration: a final /finish callback
+// shouldn't be rejected if the runner overruns by clock skew or shutdown grace.
 const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
 @Injectable()
 export class RunService {
-  private readonly log = new Logger(RunService.name);
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
   private readonly defaultMaxDuration: number;
@@ -40,11 +40,24 @@ export class RunService {
     private readonly config: ConfigService<Env, true>,
     private readonly connections: ConnectionService,
   ) {
-    this.callbackSecret = Buffer.from(
-      this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as string,
-      "utf8",
-    );
-    this.callbackUrl = this.config.get("BENCHMARK_CALLBACK_URL", { infer: true }) as string;
+    const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
+      | string
+      | undefined;
+    if (!secret) {
+      throw new Error(
+        "RunService: BENCHMARK_CALLBACK_SECRET is required. Env schema must enforce presence outside test mode.",
+      );
+    }
+    this.callbackSecret = Buffer.from(secret, "utf8");
+
+    const url = this.config.get("BENCHMARK_CALLBACK_URL", { infer: true }) as string | undefined;
+    if (!url) {
+      throw new Error(
+        "RunService: BENCHMARK_CALLBACK_URL is required. Env schema must enforce presence outside test mode.",
+      );
+    }
+    this.callbackUrl = url;
+
     this.defaultMaxDuration = this.config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", {
       infer: true,
     }) as number;
@@ -61,6 +74,9 @@ export class RunService {
   async findByIdOrFail(id: string, userId?: string): Promise<Run> {
     const row = await this.repo.findById(id);
     if (!row) throw new NotFoundException(`Run ${id} not found`);
+    // Ownership check: when a userId is supplied (auth'd path), the run must
+    // belong to that user. Runs with null userId (system-initiated) are not
+    // currently exposed to anyone via the auth'd endpoints.
     if (userId !== undefined && row.userId !== userId) {
       throw new NotFoundException(`Run ${id} not found`);
     }
@@ -70,6 +86,7 @@ export class RunService {
   async list(query: ListRunsQuery, userId?: string): Promise<ListRunsResponse> {
     const result = await this.repo.list({
       ...query,
+      // Force scope to current user when an auth'd caller invokes us.
       ...(userId !== undefined && { userId }),
     });
     return { items: result.items.map(toContract), nextCursor: result.nextCursor };
@@ -128,28 +145,27 @@ export class RunService {
       throw new BadRequestException("Connection no longer exists");
     }
 
-    const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
-    const adapter = byTool(row.tool as ToolName);
-    const callbackToken = signCallbackToken(
-      row.id,
-      this.callbackSecret,
-      this.defaultMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
-    );
-    const buildResult = adapter.buildCommand({
-      runId: row.id,
-      params: row.params,
-      connection: {
-        baseUrl: conn.baseUrl,
-        apiKey: conn.apiKey,
-        model: conn.model,
-        customHeaders: conn.customHeaders,
-        queryParams: conn.queryParams,
-      },
-      callback: { url: this.callbackUrl, token: callbackToken },
-    });
-
     let handle: string;
     try {
+      const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
+      const adapter = byTool(row.tool as ToolName);
+      const callbackToken = signCallbackToken(
+        row.id,
+        this.callbackSecret,
+        this.defaultMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
+      );
+      const buildResult = adapter.buildCommand({
+        runId: row.id,
+        params: row.params,
+        connection: {
+          baseUrl: conn.baseUrl,
+          apiKey: conn.apiKey,
+          model: conn.model,
+          customHeaders: conn.customHeaders,
+          queryParams: conn.queryParams,
+        },
+        callback: { url: this.callbackUrl, token: callbackToken },
+      });
       const result = await this.driver.start({
         runId: row.id,
         tool: row.tool as ToolName,
@@ -189,13 +205,9 @@ export class RunService {
       });
     }
     if (row.status !== "pending" && row.driverHandle) {
-      try {
-        await this.driver.cancel(row.driverHandle);
-      } catch (e) {
-        this.log.warn(
-          `driver.cancel threw for ${row.id} (${row.driverHandle}): ${(e as Error).message}`,
-        );
-      }
+      // re-raises non-404 errors per K8sJobDriver contract; let them propagate
+      // so callers see a 5xx instead of a misleading 200 canceled.
+      await this.driver.cancel(row.driverHandle);
     }
     await this.repo.update(row.id, {
       status: "canceled",
@@ -220,6 +232,14 @@ export class RunService {
   }
 }
 
+/**
+ * Translate a Prisma Run row to the contract Run DTO.
+ *
+ * Drops `apiKeyCipher` — that column holds AES-256-GCM ciphertext for the
+ * benchmark runner's outbound API key and must never leave the server.
+ * Returning ciphertext over an authenticated HTTP API would enable offline
+ * dictionary attacks on the encryption key.
+ */
 function toContract(row: RunWithRelations): Run {
   return {
     id: row.id,

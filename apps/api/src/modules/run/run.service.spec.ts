@@ -254,3 +254,89 @@ describe("RunService.delete", () => {
     await expect(svc.delete("r1", "u1")).rejects.toThrow(ConflictException);
   });
 });
+
+describe("RunService.create — failure paths", () => {
+  let repo: MockRepo;
+  let svc: RunService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("throws BadRequestException when paramsSchema.parse rejects", async () => {
+    // Override the global byTool stub for this one test
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const orig = adapters.byTool;
+    (adapters as { byTool: typeof orig }).byTool = (() => ({
+      name: "guidellm",
+      paramsSchema: {
+        parse: () => {
+          throw new Error("bad params");
+        },
+      },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "guidellm" as const, data: {} }),
+    })) as unknown as typeof orig;
+    try {
+      await expect(
+        svc.create("u1", {
+          tool: "guidellm",
+          kind: "benchmark",
+          connectionId: "c1",
+          name: "smoke",
+          params: { bad: true },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(repo.create).not.toHaveBeenCalled();
+    } finally {
+      (adapters as { byTool: typeof orig }).byTool = orig;
+    }
+  });
+});
+
+describe("RunService.start — failure path", () => {
+  let repo: MockRepo;
+  let svc: RunService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("marks run as failed when driver.start throws and re-raises", async () => {
+    repo.setup(makeRunRow({ id: "r1", userId: "u1", connectionId: "c1", status: "pending" }));
+    (mockDriver.start as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    await expect(svc.start("r1")).rejects.toThrow(/boom/);
+    const row = await repo.findById("r1");
+    expect(row?.status).toBe("failed");
+    expect(row?.statusMessage).toContain("boom");
+    expect(row?.completedAt).not.toBeNull();
+  });
+});
+
+describe("RunService.cancel — driver-error path", () => {
+  let repo: MockRepo;
+  let svc: RunService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("re-raises driver errors and leaves row in its prior status", async () => {
+    repo.setup(makeRunRow({ id: "r1", status: "running", driverHandle: "subprocess:1234" }));
+    (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("apiserver flake"),
+    );
+    await expect(svc.cancel("r1", "u1")).rejects.toThrow(/apiserver flake/);
+    const row = await repo.findById("r1");
+    expect(row?.status).toBe("running"); // NOT canceled
+  });
+});
