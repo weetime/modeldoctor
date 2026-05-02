@@ -58,11 +58,6 @@ export class RunService {
     }
     this.callbackUrl = url;
 
-    // Read BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to trigger env-schema
-    // pre-flight validation at startup. The value is no longer stored: RunService
-    // now calls adapter.getMaxDurationSeconds(row.params) per-run so that a
-    // 2h guidellm soak doesn't get a token signed against the global 30min default.
-    void this.config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", { infer: true });
     const driverChoice = (this.config.get("BENCHMARK_DRIVER", { infer: true }) ??
       "subprocess") as string;
     this.driverKind = driverChoice === "k8s" ? "k8s" : "local";
