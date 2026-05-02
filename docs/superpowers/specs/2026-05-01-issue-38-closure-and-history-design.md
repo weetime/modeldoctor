@@ -1,3 +1,5 @@
+> **Status: ✅ Completed · historical record.** 本文是提交时的设计/计划快照；其中字段名、目录路径、env 名、API 路由为当时状态，重构后已演进。**当前实现请以代码与 `CLAUDE.md` 为准；本文正文不再修改，仅作归档。**
+
 # Issue #38 收尾 + #39 /history 列表与详情页 — 设计文档
 
 **Date**: 2026-05-01

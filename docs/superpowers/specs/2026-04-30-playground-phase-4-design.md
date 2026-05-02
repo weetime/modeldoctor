@@ -1,3 +1,5 @@
+> **Status: ✅ Completed · historical record.** 本文是提交时的设计/计划快照；其中字段名、目录路径、env 名、API 路由为当时状态，重构后已演进。**当前实现请以代码与 `CLAUDE.md` 为准；本文正文不再修改，仅作归档。**
+
 # Playground Phase 4 — 100% Completion
 
 **日期**：2026-04-30
