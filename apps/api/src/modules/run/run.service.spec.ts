@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
-import type { Run as PrismaRun } from "@prisma/client";
+import { Prisma, type Run as PrismaRun } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
 import type { ConnectionService } from "../connection/connection.service.js";
@@ -392,5 +392,51 @@ describe("RunService.start — callback TTL", () => {
       signSpy.mockRestore();
       (adapters as { byTool: typeof orig }).byTool = orig;
     }
+  });
+});
+
+describe("admin elevation (userId === undefined)", () => {
+  let repo: MockRepo;
+  let svc: RunService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("cancel succeeds across user boundaries when userId is undefined", async () => {
+    // run owned by "owner" — elevation caller passes undefined
+    repo.setup(
+      makeRunRow({ id: "r-elev-cancel", userId: "owner", status: "running", driverHandle: "subprocess:elev" }),
+    );
+    const dto = await svc.cancel("r-elev-cancel", undefined);
+    expect(dto.status).toBe("canceled");
+  });
+
+  it("delete succeeds across user boundaries when userId is undefined", async () => {
+    repo.setup(makeRunRow({ id: "r-elev-delete", userId: "owner", status: "completed" }));
+    await svc.delete("r-elev-delete", undefined);
+    // Row should be gone from the mock repo
+    const after = await repo.findById("r-elev-delete");
+    expect(after).toBeNull();
+  });
+
+  it("delete still blocked by FK when target run is the canonical run of a baseline", async () => {
+    repo.setup(makeRunRow({ id: "r-elev-baseline", userId: "owner", status: "completed" }));
+    // Simulate the Prisma onDelete: Restrict FK violation (P2003) that the real
+    // repo.delete would raise when a Baseline references this run.
+    const fkErr = new Prisma.PrismaClientKnownRequestError(
+      "Foreign key constraint failed on the field: `baselines_run_id_fkey`",
+      { code: "P2003", clientVersion: "x" },
+    );
+    repo.delete.mockRejectedValueOnce(fkErr);
+
+    // Even with admin elevation (userId=undefined), Baseline.run onDelete:Restrict
+    // surfaces as a Prisma P2003 error (FK violation) — service must not swallow it.
+    await expect(svc.delete("r-elev-baseline", undefined)).rejects.toThrow();
+    // Row is still in the mock repo (delete was rejected)
+    const stillThere = await repo.findById("r-elev-baseline");
+    expect(stillThere).not.toBeNull();
   });
 });
