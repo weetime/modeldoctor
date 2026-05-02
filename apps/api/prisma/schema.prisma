@@ -109,7 +109,6 @@ model Run {
 
   // Snapshots
   params          Json
-  canonicalReport Json? @map("canonical_report")
   rawOutput       Json? @map("raw_output")
   summaryMetrics  Json? @map("summary_metrics")
   serverMetrics   Json? @map("server_metrics")
