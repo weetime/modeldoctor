@@ -136,7 +136,7 @@ function parseVegetaReportText(report: string): VegetaReport {
         out.requests.throughput = Number.parseFloat(m[3]);
       }
     } else if (line.includes("Duration") && line.includes("[total")) {
-      const m = line.match(/\]\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+)/);
+      const m = line.match(/\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/);
       if (m) {
         out.duration.totalSeconds = parseDurationToSeconds(m[1]);
         out.duration.attackSeconds = parseDurationToSeconds(m[2]);
@@ -144,7 +144,7 @@ function parseVegetaReportText(report: string): VegetaReport {
       }
     } else if (line.includes("Latencies") && line.includes("[min")) {
       const m = line.match(
-        /\]\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+),\s+([\d.]+\w+)/,
+        /\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/,
       );
       if (m) {
         out.latencies.min = parseLatencyToMs(m[1]);
@@ -178,11 +178,8 @@ function parseVegetaReportText(report: string): VegetaReport {
           if (code && count) out.statusCodes[code] = Number.parseInt(count, 10);
         }
       }
-    } else if (line.startsWith("Error Set:")) {
-      // following lines until end are error strings
-      continue;
-    } else if (line.trim().length > 0 && /^\d/.test(line.trim())) {
-      // looks like a "500 ..." error line
+    } else if (/^\d/.test(line.trim())) {
+      // looks like a "500 ..." error line (follows "Error Set:" header)
       out.errors.push(line.trim());
     }
   }

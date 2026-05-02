@@ -73,6 +73,8 @@ describe("vegeta.parseFinalReport", () => {
     expect(result.data.success).toBeGreaterThan(0);
     // unit conversion check: "78ms" should land as ~78 (number)
     expect(typeof result.data.latencies.p99).toBe("number");
+    // µs → ms conversion: fixture min = "500µs" should convert to 0.5 ms
+    expect(result.data.latencies.min).toBe(0.5);
   });
 
   it("throws when 'report' file is missing", () => {
