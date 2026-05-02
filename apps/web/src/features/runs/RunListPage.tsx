@@ -158,6 +158,9 @@ export function RunListPage() {
               </TooltipTrigger>
               <TooltipContent>{t("compareDisabledTooltip")}</TooltipContent>
             </Tooltip>
+            <Button asChild size="sm">
+              <Link to="/runs/new">{t("actions.new")}</Link>
+            </Button>
           </div>
         }
       />

@@ -8,6 +8,7 @@ import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
+import { RunCreatePage } from "@/features/runs/RunCreatePage";
 import { RunDetailPage } from "@/features/runs/RunDetailPage";
 import { RunListPage } from "@/features/runs/RunListPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
@@ -48,7 +49,7 @@ export const routes: RouteObject[] = [
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/load-test" replace /> },
+          { index: true, element: <Navigate to="/runs" replace /> },
           { path: "load-test", element: <LoadTestPage /> },
           { path: "benchmarks", element: <BenchmarkListPage /> },
           { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
@@ -73,6 +74,7 @@ export const routes: RouteObject[] = [
             path: "runs",
             element: <RunListPage />,
           },
+          { path: "runs/new", element: <RunCreatePage /> },
           {
             path: "runs/:id",
             element: <RunDetailPage />,

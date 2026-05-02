@@ -1,5 +1,10 @@
 import { api } from "@/lib/api-client";
-import type { ListRunsQuery, ListRunsResponse, Run } from "@modeldoctor/contracts";
+import type {
+  CreateRunRequest,
+  ListRunsQuery,
+  ListRunsResponse,
+  Run,
+} from "@modeldoctor/contracts";
 
 function buildListQuery(q: Partial<ListRunsQuery>): string {
   const usp = new URLSearchParams();
@@ -22,4 +27,7 @@ function buildListQuery(q: Partial<ListRunsQuery>): string {
 export const runApi = {
   list: (q: Partial<ListRunsQuery>) => api.get<ListRunsResponse>(`/api/runs${buildListQuery(q)}`),
   get: (id: string) => api.get<Run>(`/api/runs/${id}`),
+  create: (body: CreateRunRequest) => api.post<Run>("/api/runs", body),
+  cancel: (id: string) => api.post<Run>(`/api/runs/${id}/cancel`, {}),
+  delete: (id: string) => api.del<void>(`/api/runs/${id}`),
 };

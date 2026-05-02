@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { guidellmParamsSchema } from "@modeldoctor/tool-adapters/schemas";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";

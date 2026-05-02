@@ -1,6 +1,35 @@
 {
   "title": "运行历史",
   "subtitle": "所有 Run（benchmark + e2e）按时间倒序",
+  "actions": {
+    "new": "新建运行",
+    "cancel": "取消",
+    "submit": "提交"
+  },
+  "create": {
+    "title": "新建运行",
+    "subtitle": "配置 benchmark 或负载测试参数，然后提交",
+    "sections": {
+      "endpoint": "接入点",
+      "tool": "工具",
+      "metadata": "运行详情",
+      "parameters": "参数"
+    },
+    "fields": {
+      "name": "名称",
+      "description": "备注（可选）",
+      "tool": "工具"
+    },
+    "tools": {
+      "guidellm": "guidellm",
+      "vegeta": "vegeta",
+      "genai-perf": "genai-perf"
+    },
+    "errors": {
+      "submitFailed": "提交运行失败"
+    },
+    "submitted": "运行「{{name}}」已提交"
+  },
   "filters": {
     "kind": "类型",
     "tool": "工具",

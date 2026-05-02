@@ -1,5 +1,5 @@
-import type { ListRunsQuery } from "@modeldoctor/contracts";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { CreateRunRequest, ListRunsQuery } from "@modeldoctor/contracts";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { runApi } from "./api";
 
 export const runKeys = {
@@ -27,5 +27,37 @@ export function useRunDetail(id: string) {
     queryKey: runKeys.detail(id),
     queryFn: () => runApi.get(id),
     enabled: id.length > 0,
+  });
+}
+
+export function useCreateRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateRunRequest) => runApi.create(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: runKeys.lists() });
+    },
+  });
+}
+
+export function useCancelRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => runApi.cancel(id),
+    onSuccess: (_run, id) => {
+      qc.invalidateQueries({ queryKey: runKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: runKeys.lists() });
+    },
+  });
+}
+
+export function useDeleteRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => runApi.delete(id),
+    onSuccess: (_v, id) => {
+      qc.removeQueries({ queryKey: runKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: runKeys.lists() });
+    },
   });
 }
