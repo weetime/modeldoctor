@@ -12,6 +12,8 @@ function buildListQuery(q: Partial<ListRunsQuery>): string {
   if (q.search) usp.set("search", q.search);
   if (q.createdAfter) usp.set("createdAfter", q.createdAfter);
   if (q.createdBefore) usp.set("createdBefore", q.createdBefore);
+  if (q.isBaseline !== undefined) usp.set("isBaseline", String(q.isBaseline));
+  if (q.referencesBaseline !== undefined) usp.set("referencesBaseline", String(q.referencesBaseline));
   const qs = usp.toString();
   return qs ? `?${qs}` : "";
 }
