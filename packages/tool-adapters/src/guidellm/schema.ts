@@ -15,19 +15,29 @@ export const guidellmParamsSchema = z
     datasetInputTokens: z.number().int().positive().optional(),
     datasetOutputTokens: z.number().int().positive().optional(),
     datasetSeed: z.number().int().optional(),
-    requestRate: z.number().int().min(0).default(0),
+    requestRate: z.number().min(0).default(0),
     totalRequests: z.number().int().min(1).max(100_000).default(1000),
     maxDurationSeconds: z.number().int().positive().default(1800),
     maxConcurrency: z.number().int().positive().default(100),
-    processor: z.string().optional(),
+    processor: z.string().min(1).optional(),
     validateBackend: z.boolean().default(true),
   })
   .superRefine((d, ctx) => {
-    if (d.datasetName === "random" && (!d.datasetInputTokens || !d.datasetOutputTokens)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "random dataset requires datasetInputTokens and datasetOutputTokens",
-      });
+    if (d.datasetName === "random") {
+      if (!d.datasetInputTokens) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["datasetInputTokens"],
+          message: "random dataset requires datasetInputTokens",
+        });
+      }
+      if (!d.datasetOutputTokens) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["datasetOutputTokens"],
+          message: "random dataset requires datasetOutputTokens",
+        });
+      }
     }
   });
 export type GuidellmParams = z.infer<typeof guidellmParamsSchema>;
@@ -50,10 +60,10 @@ export const guidellmReportSchema = z.object({
   totalTokensPerSecond: z.object({ mean: z.number() }),
   concurrency: z.object({ mean: z.number(), max: z.number() }),
   requests: z.object({
-    total: z.number().int(),
-    success: z.number().int(),
-    error: z.number().int(),
-    incomplete: z.number().int(),
+    total: z.number().int().nonnegative(),
+    success: z.number().int().nonnegative(),
+    error: z.number().int().nonnegative(),
+    incomplete: z.number().int().nonnegative(),
   }),
 });
 export type GuidellmReport = z.infer<typeof guidellmReportSchema>;

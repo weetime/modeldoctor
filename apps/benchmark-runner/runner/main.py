@@ -1,163 +1,171 @@
-"""Runner entrypoint — reads env, runs guidellm, posts callbacks, exits 0/1."""
+"""Generic tool wrapper. Reads MD_* env, spawns argv, batches /log,
+collects outputFiles, posts /finish.
+
+Phase 3 of #53: replaces the guidellm-specific runner. This file
+contains zero tool-specific knowledge.
+"""
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
 import subprocess
 import sys
+import threading
+import time
+from pathlib import Path
 
-from runner.argv import build_guidellm_argv
-from runner.callback import post_metrics, post_state
-from runner.env import MissingEnvError, parse_env
-from runner.metrics import map_guidellm_report_to_summary
+from runner.callback import post_finish, post_log_batch, post_state_running
 
-# Default location for guidellm's --output-path. Tests patch this.
-_OUTPUT_PATH = "/tmp/report.json"
-
-# Tail size for stderr included in the state=failed callback. Sized to fit
-# inside the API's 2 KB stateMessage cap with room for the "guidellm exited
-# N: " prefix.
-_STDERR_TAIL_BYTES = 1024
-
-# Tail size for stdout shipped as `logs` on the metrics callback. guidellm's
-# progress output for a 30-min / 1k-request run is easily MBs; an uncapped
-# blob would overflow either an API body limit or the DB column. 16 KB is
-# generous for post-mortem debugging without risking either.
-_STDOUT_TAIL_BYTES = 16 * 1024
+LOG_BATCH_INTERVAL_SEC = 0.25
+LOG_LINE_MAX_BYTES = 64 * 1024
 
 logging.basicConfig(level=logging.INFO, format="[runner] %(message)s")
 log = logging.getLogger("runner")
 
 
-def _log_tail(buf: bytes, max_bytes: int) -> str:
-    """Decode the last ``max_bytes`` of a captured stream as UTF-8 (lossy)."""
-    if not buf:
-        return ""
-    tail = buf[-max_bytes:]
-    try:
-        return tail.decode("utf-8", errors="replace")
-    except Exception:  # noqa: BLE001 — defensive
-        return repr(tail)
+class StreamPump:
+    """Drains a file-like stream into a full-buffer + a /log batch sender."""
+
+    def __init__(self, stream, name: str, callback_url: str, token: str, run_id: str):
+        self.stream = stream
+        self.name = name
+        self.callback_url = callback_url
+        self.token = token
+        self.run_id = run_id
+        self.buffer: list[str] = []
+        self.full: list[str] = []
+        self._stop = threading.Event()
+
+    def run(self) -> None:
+        last_flush = time.monotonic()
+        while True:
+            line_bytes = self.stream.readline()
+            if not line_bytes:
+                break
+            try:
+                line = line_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                line = repr(line_bytes)
+            line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
+            self.full.append(line)
+            self.buffer.append(line)
+            now = time.monotonic()
+            if now - last_flush >= LOG_BATCH_INTERVAL_SEC:
+                self._flush()
+                last_flush = now
+        self._flush()
+
+    def _flush(self) -> None:
+        if not self.buffer:
+            return
+        try:
+            post_log_batch(
+                callback_url=self.callback_url,
+                token=self.token,
+                run_id=self.run_id,
+                stream=self.name,
+                lines=self.buffer,
+            )
+        except Exception as e:
+            log.warning("post_log_batch failed: %s", e)
+        self.buffer = []
 
 
-def _redacted_argv(argv: list[str]) -> list[str]:
-    """Return ``argv`` with secret-bearing flags rewritten for safe logging.
+def _materialize_input_files() -> None:
+    """If MD_INPUT_FILE_PATHS is set (K8s mode), symlink mount paths to cwd.
 
-    The orchestrator logs the full benchmark-runner argv on startup and the
-    captured stdout/stderr later flow into the metrics callback's ``logs``
-    field — so the API + DB will end up with whatever appears here. Any flag
-    we know carries a secret must be redacted before that log line emits.
+    Subprocess driver writes inputFiles directly to cwd already, so this is
+    a no-op there.
     """
-    redacted: list[str] = []
+    raw = os.environ.get("MD_INPUT_FILE_PATHS")
+    if not raw:
+        return
+    mapping = json.loads(raw)
+    cwd = Path.cwd()
+    for alias, src_path in mapping.items():
+        dst = cwd / alias
+        try:
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()
+            dst.symlink_to(src_path)
+        except OSError as e:
+            log.warning("failed to symlink input file %s -> %s: %s", dst, src_path, e)
+
+
+def _redacted(argv: list[str]) -> list[str]:
+    """Mask --backend-kwargs= JSON since it can contain api_key."""
+    out: list[str] = []
     for a in argv:
-        # --backend-kwargs JSON contains api_key (see runner.argv).
         if a.startswith("--backend-kwargs="):
-            redacted.append("--backend-kwargs=***REDACTED***")
+            out.append("--backend-kwargs=***REDACTED***")
         else:
-            redacted.append(a)
-    return redacted
+            out.append(a)
+    return out
 
 
 def main() -> int:
-    """Run a single benchmark; return process exit code."""
-    raw_env = dict(os.environ)
-    callback_url = raw_env.get("CALLBACK_URL")
-    callback_token = raw_env.get("CALLBACK_TOKEN")
-    benchmark_id = raw_env.get("BENCHMARK_ID")
+    callback_url = os.environ["MD_CALLBACK_URL"]
+    token = os.environ["MD_CALLBACK_TOKEN"]
+    run_id = os.environ["MD_RUN_ID"]
+    argv = json.loads(os.environ["MD_ARGV"])
+    output_files = json.loads(os.environ["MD_OUTPUT_FILES"])
+
+    _materialize_input_files()
 
     try:
-        cfg = parse_env(raw_env)
-    except (MissingEnvError, ValueError) as e:
-        log.error("env parse failed: %s", e)
-        # Best-effort failure callback if we know enough URL/token/id.
-        if callback_url and callback_token and benchmark_id:
-            try:
-                post_state(
-                    callback_url=callback_url,
-                    token=callback_token,
-                    benchmark_id=benchmark_id,
-                    state="failed",
-                    message=f"env parse: {e}",
-                )
-            except Exception as cb_e:  # noqa: BLE001
-                log.error("failed to post failure callback: %s", cb_e)
+        post_state_running(callback_url=callback_url, token=token, run_id=run_id)
+    except Exception as e:
+        log.warning("post_state_running failed: %s", e)
+
+    log.info("running: %s", " ".join(_redacted(argv)))
+    proc = subprocess.Popen(  # noqa: S603
+        argv,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=os.getcwd(),
+    )
+
+    out_pump = StreamPump(proc.stdout, "stdout", callback_url, token, run_id)
+    err_pump = StreamPump(proc.stderr, "stderr", callback_url, token, run_id)
+    t1 = threading.Thread(target=out_pump.run, daemon=True)
+    t2 = threading.Thread(target=err_pump.run, daemon=True)
+    t1.start()
+    t2.start()
+
+    proc.wait()
+    t1.join(timeout=5)
+    t2.join(timeout=5)
+
+    files_b64: dict[str, str] = {}
+    for alias, rel_path in output_files.items():
+        full = Path.cwd() / rel_path
+        if full.exists():
+            files_b64[alias] = base64.b64encode(full.read_bytes()).decode("ascii")
+
+    state = "completed" if proc.returncode == 0 else "failed"
+    message = None if state == "completed" else f"tool exited with code {proc.returncode}"
+
+    try:
+        post_finish(
+            callback_url=callback_url,
+            token=token,
+            run_id=run_id,
+            state=state,
+            exit_code=proc.returncode,
+            stdout="\n".join(out_pump.full),
+            stderr="\n".join(err_pump.full),
+            files=files_b64,
+            message=message,
+        )
+    except Exception as e:
+        log.error("post_finish failed: %s", e)
         return 1
 
-    # state=running before doing anything heavy.
-    try:
-        post_state(
-            callback_url=cfg.callback_url,
-            token=cfg.callback_token,
-            benchmark_id=cfg.benchmark_id,
-            state="running",
-        )
-    except Exception as e:  # noqa: BLE001
-        log.error("running callback failed: %s — continuing anyway", e)
-
-    argv = build_guidellm_argv(cfg, output_path=_OUTPUT_PATH)
-    log.info("running: %s", " ".join(_redacted_argv(argv)))
-    proc = subprocess.run(argv, capture_output=True, check=False)  # noqa: S603
-
-    if proc.returncode != 0:
-        msg = f"guidellm exited {proc.returncode}: {_log_tail(proc.stderr, _STDERR_TAIL_BYTES)}"
-        log.error(msg)
-        try:
-            post_state(
-                callback_url=cfg.callback_url,
-                token=cfg.callback_token,
-                benchmark_id=cfg.benchmark_id,
-                state="failed",
-                message=msg[:2048],
-            )
-        except Exception as e:  # noqa: BLE001
-            log.error("failed callback also failed: %s", e)
-        return 1
-
-    # Parse the report file produced by guidellm.
-    try:
-        with open(_OUTPUT_PATH) as f:
-            report = json.load(f)
-    except Exception as e:  # noqa: BLE001
-        log.error("failed to read report at %s: %s", _OUTPUT_PATH, e)
-        try:
-            post_state(
-                callback_url=cfg.callback_url,
-                token=cfg.callback_token,
-                benchmark_id=cfg.benchmark_id,
-                state="failed",
-                message=f"report parse: {e}",
-            )
-        except Exception as cb_e:  # noqa: BLE001
-            log.error("failed to post failure callback: %s", cb_e)
-        return 1
-
-    summary = map_guidellm_report_to_summary(report)
-
-    # Final metrics + completed.
-    try:
-        post_metrics(
-            callback_url=cfg.callback_url,
-            token=cfg.callback_token,
-            benchmark_id=cfg.benchmark_id,
-            summary=summary,
-            raw=report,
-            logs=_log_tail(proc.stdout, _STDOUT_TAIL_BYTES) or None,
-        )
-        post_state(
-            callback_url=cfg.callback_url,
-            token=cfg.callback_token,
-            benchmark_id=cfg.benchmark_id,
-            state="completed",
-            progress=1.0,
-        )
-    except Exception as e:  # noqa: BLE001
-        log.error("final callback failed: %s", e)
-        # Don't return 1 — guidellm succeeded, we just couldn't tell anyone.
-        # The reconciler will pick this up.
-        return 0
-
+    # Always exit 0 from the wrapper itself — failure of the inner tool is
+    # already conveyed via /finish state=failed.
     return 0
 
 

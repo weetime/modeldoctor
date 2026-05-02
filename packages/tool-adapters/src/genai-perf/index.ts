@@ -1,5 +1,5 @@
 import type { ToolAdapter } from "../core/interface.js";
-import { buildCommand, parseFinalReport, parseProgress } from "./runtime.js";
+import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import { genaiPerfParamDefaults, genaiPerfParamsSchema, genaiPerfReportSchema } from "./schema.js";
 
 export const genaiPerfAdapter: ToolAdapter = {
@@ -10,6 +10,7 @@ export const genaiPerfAdapter: ToolAdapter = {
   buildCommand,
   parseProgress,
   parseFinalReport,
+  getMaxDurationSeconds,
 };
 
 export type { GenaiPerfParams, GenaiPerfReport } from "./schema.js";

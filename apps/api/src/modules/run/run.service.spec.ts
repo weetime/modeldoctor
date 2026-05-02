@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, NotFoundException } from "@nest
 import type { ConfigService } from "@nestjs/config";
 import type { Run as PrismaRun } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as hmacToken from "../../common/hmac/hmac-token.js";
 import type { ConnectionService } from "../connection/connection.service.js";
 import type { RunExecutionDriver } from "./drivers/execution-driver.interface.js";
 import type { RunRepository, RunWithRelations } from "./run.repository.js";
@@ -26,6 +27,7 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
       }),
       parseProgress: () => null,
       parseFinalReport: () => ({ tool: "guidellm", data: {} }),
+      getMaxDurationSeconds: () => 1800,
     }),
   };
 });
@@ -281,6 +283,7 @@ describe("RunService.create — failure paths", () => {
       buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
       parseProgress: () => null,
       parseFinalReport: () => ({ tool: "guidellm" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
     })) as unknown as typeof orig;
     try {
       await expect(
@@ -338,5 +341,56 @@ describe("RunService.cancel — driver-error path", () => {
     await expect(svc.cancel("r1", "u1")).rejects.toThrow(/apiserver flake/);
     const row = await repo.findById("r1");
     expect(row?.status).toBe("running"); // NOT canceled
+  });
+});
+
+describe("RunService.start — callback TTL", () => {
+  let repo: MockRepo;
+  let svc: RunService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    // Config default is 1800; adapter mock returns 1800 by default too.
+    // For this describe block we override the adapter to return 7200 to confirm
+    // the TTL is sourced from the adapter, not from the config default.
+    svc = build(repo, { BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800 });
+    vi.clearAllMocks();
+  });
+
+  it("signs token with adapter.getMaxDurationSeconds(params), not config default", async () => {
+    // Override the byTool stub so getMaxDurationSeconds returns 7200
+    // (simulating a 2h guidellm soak run).
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const orig = adapters.byTool;
+    (adapters as { byTool: typeof orig }).byTool = (() => ({
+      name: "guidellm",
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({
+        argv: ["echo", "hi"],
+        env: {},
+        secretEnv: {},
+        outputFiles: { report: "report.json" },
+      }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "guidellm" as const, data: {} }),
+      getMaxDurationSeconds: () => 7200,
+    })) as unknown as typeof orig;
+
+    // Spy on signCallbackToken to capture the ttlSeconds argument.
+    const signSpy = vi.spyOn(hmacToken, "signCallbackToken");
+
+    try {
+      repo.setup(makeRunRow({ id: "r1", userId: "u1", connectionId: "c1", status: "pending" }));
+      await svc.start("r1");
+
+      // adapter returns 7200; CALLBACK_TTL_SLACK_SECONDS = 15 * 60 = 900.
+      // Expected ttl = 7200 + 900 = 8100.
+      expect(signSpy).toHaveBeenCalledWith("r1", expect.any(Buffer), 8100);
+    } finally {
+      signSpy.mockRestore();
+      (adapters as { byTool: typeof orig }).byTool = orig;
+    }
   });
 });
