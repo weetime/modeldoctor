@@ -19,5 +19,11 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.spec.ts"],
     exclude: ["node_modules", "dist", "test/**"],
+    // Many repository/service specs share the local Postgres dev DB and
+    // wipe rows in `beforeEach`. Running spec files in parallel races
+    // those wipes against in-flight inserts (FK violations on baselines
+    // → runs). Force file-level serialization; tests within a file still
+    // run in order.
+    fileParallelism: false,
   },
 });
