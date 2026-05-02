@@ -1,10 +1,5 @@
 import type { Baseline, CreateBaseline, ListBaselinesResponse } from "@modeldoctor/contracts";
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, type Baseline as PrismaBaseline } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
@@ -14,8 +9,11 @@ export class BaselineService {
 
   async create(userId: string, input: CreateBaseline): Promise<Baseline> {
     const run = await this.prisma.run.findUnique({ where: { id: input.runId } });
-    if (!run) throw new NotFoundException(`Run ${input.runId} not found`);
-    if (run.userId !== userId) throw new ForbiddenException();
+    // Use NotFoundException for cross-user access too — exposing the
+    // existence of another user's Run leaks enumerable IDs.
+    if (!run || run.userId !== userId) {
+      throw new NotFoundException(`Run ${input.runId} not found`);
+    }
 
     try {
       const row = await this.prisma.baseline.create({
@@ -49,8 +47,10 @@ export class BaselineService {
 
   async delete(userId: string, id: string): Promise<void> {
     const row = await this.prisma.baseline.findUnique({ where: { id } });
-    if (!row) throw new NotFoundException(`Baseline ${id} not found`);
-    if (row.userId !== userId) throw new ForbiddenException();
+    // NotFoundException for cross-user access too (don't leak existence).
+    if (!row || row.userId !== userId) {
+      throw new NotFoundException(`Baseline ${id} not found`);
+    }
     await this.prisma.baseline.delete({ where: { id } });
   }
 }

@@ -1,5 +1,5 @@
 import type { Baseline, ListBaselinesResponse } from "@modeldoctor/contracts";
-import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
@@ -62,16 +62,11 @@ describe("BaselineController", () => {
       expect(out).toBe(FIXTURE);
     });
 
-    it("propagates 404 / 403 / 409 from service", async () => {
+    it("propagates 404 / 409 from service", async () => {
       svc.create.mockRejectedValueOnce(new NotFoundException("r_x"));
       await expect(controller.create(USER, { runId: "r_x", name: "x", tags: [] })).rejects.toThrow(
         NotFoundException,
       );
-
-      svc.create.mockRejectedValueOnce(new ForbiddenException());
-      await expect(
-        controller.create(USER, { runId: "r_other", name: "x", tags: [] }),
-      ).rejects.toThrow(ForbiddenException);
 
       svc.create.mockRejectedValueOnce(new ConflictException("dup"));
       await expect(controller.create(USER, { runId: "r_1", name: "x", tags: [] })).rejects.toThrow(

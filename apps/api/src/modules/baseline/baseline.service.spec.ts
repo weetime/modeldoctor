@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Prisma, type Baseline as PrismaBaseline, type Run as PrismaRun } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -116,10 +116,10 @@ describe("BaselineService", () => {
       );
     });
 
-    it("403 when Run belongs to a different user", async () => {
+    it("404 when Run belongs to a different user (don't leak existence)", async () => {
       prismaMock.run.findUnique.mockResolvedValue(makeRun({ userId: "u_other" }));
       await expect(service.create("u_1", { runId: "r_1", name: "x", tags: [] })).rejects.toThrow(
-        ForbiddenException,
+        NotFoundException,
       );
     });
 
@@ -158,9 +158,9 @@ describe("BaselineService", () => {
       expect(prismaMock.baseline.delete).not.toHaveBeenCalled();
     });
 
-    it("403 when not owned", async () => {
+    it("404 when not owned (don't leak existence)", async () => {
       prismaMock.baseline.findUnique.mockResolvedValue(makeBaseline({ userId: "u_other" }));
-      await expect(service.delete("u_1", "b_1")).rejects.toThrow(ForbiddenException);
+      await expect(service.delete("u_1", "b_1")).rejects.toThrow(NotFoundException);
       expect(prismaMock.baseline.delete).not.toHaveBeenCalled();
     });
 

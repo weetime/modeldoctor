@@ -145,8 +145,9 @@ export function HistoryDetailPage() {
                 if (run.baselineFor) {
                   remove.mutate(run.baselineFor.id, {
                     onSuccess: () => {
+                      // useDeleteBaseline already invalidates ["history","detail"]
+                      // (broader prefix), so we only need to close the dialog.
                       setUnsetOpen(false);
-                      qc.invalidateQueries({ queryKey: historyKeys.detail(run.id) });
                     },
                     onError: () => {
                       toast.error(t("detail.baseline.errors.generic"));
