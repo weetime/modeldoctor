@@ -88,28 +88,40 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
 }
 
 // ── internal: ported from apps/api/src/integrations/parsers/vegeta-report.ts ──
-function parseLatencyToMs(s: string): number {
-  // Accept "1.2µs" (rare), "1.2ms", "1.2s", "1m2.3s" forms. vegeta normally
-  // emits one of µs/ms/s.
-  const m = s.match(/^([0-9.]+)\s*(µs|ms|s)$/);
-  if (!m) return Number.NaN;
-  const v = Number.parseFloat(m[1]);
-  switch (m[2]) {
-    case "µs":
-      return v / 1000;
-    case "ms":
-      return v;
-    case "s":
-      return v * 1000;
-    default:
-      return Number.NaN;
+
+// Walks a Go time.Duration string (e.g. "1h2m3.5s", "500µs", "1m30s")
+// and returns the total in milliseconds.  Returns NaN for empty or malformed input.
+const GO_DURATION_SEGMENT = /([0-9.]+)\s*(µs|ms|s|m|h)/g;
+const UNIT_TO_MS: Record<string, number> = {
+  µs: 0.001,
+  ms: 1,
+  s: 1000,
+  m: 60_000,
+  h: 3_600_000,
+};
+
+function parseGoDurationToMs(s: string): number {
+  let totalMs = 0;
+  let lastEnd = 0;
+  let matched = false;
+  for (const seg of s.matchAll(GO_DURATION_SEGMENT)) {
+    // Reject any non-whitespace gap before this segment (malformed input).
+    if (s.slice(lastEnd, seg.index).trim() !== "") return Number.NaN;
+    totalMs += Number.parseFloat(seg[1]) * (UNIT_TO_MS[seg[2]] ?? Number.NaN);
+    lastEnd = seg.index + seg[0].length;
+    matched = true;
   }
+  // Reject trailing non-whitespace garbage.
+  if (s.slice(lastEnd).trim() !== "") return Number.NaN;
+  return matched ? totalMs : Number.NaN;
 }
+
+function parseLatencyToMs(s: string): number {
+  return parseGoDurationToMs(s.trim());
+}
+
 function parseDurationToSeconds(s: string): number {
-  const m = s.match(/^([0-9.]+)\s*(ms|s)$/);
-  if (!m) return Number.NaN;
-  const v = Number.parseFloat(m[1]);
-  return m[2] === "ms" ? v / 1000 : v;
+  return parseGoDurationToMs(s.trim()) / 1000;
 }
 
 function parseVegetaReportText(report: string): VegetaReport {
@@ -134,7 +146,7 @@ function parseVegetaReportText(report: string): VegetaReport {
       }
     } else if (line.includes("Duration") && line.includes("[total")) {
       const m = line.match(
-        /\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/,
+        /\]\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+)/,
       );
       if (m) {
         out.duration.totalSeconds = parseDurationToSeconds(m[1]);
@@ -143,7 +155,7 @@ function parseVegetaReportText(report: string): VegetaReport {
       }
     } else if (line.includes("Latencies") && line.includes("[min")) {
       const m = line.match(
-        /\]\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h)),\s+([\d.]+(?:µs|ms|s|m|h))/,
+        /\]\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+),\s+((?:[\d.]+(?:µs|ms|s|m|h))+)/,
       );
       if (m) {
         out.latencies.min = parseLatencyToMs(m[1]);
