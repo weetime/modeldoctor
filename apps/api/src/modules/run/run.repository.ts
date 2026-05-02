@@ -2,10 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { Prisma, Run as PrismaRun } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
-const runWithConnection = Prisma.validator<Prisma.RunDefaultArgs>()({
-  include: { connection: { select: { id: true, name: true } } },
+const runWithRelations = Prisma.validator<Prisma.RunDefaultArgs>()({
+  include: {
+    connection: { select: { id: true, name: true } },
+    baselineFor: { select: { id: true, name: true, createdAt: true } },
+  },
 });
-export type RunWithConnection = Prisma.RunGetPayload<typeof runWithConnection>;
+export type RunWithRelations = Prisma.RunGetPayload<typeof runWithRelations>;
 
 export type CreateRunInput = {
   userId?: string | null;
@@ -47,6 +50,8 @@ export type ListRunsInput = {
   search?: string;
   createdAfter?: string;
   createdBefore?: string;
+  isBaseline?: boolean;
+  referencesBaseline?: boolean;
   cursor?: string;
   limit?: number;
 };
@@ -75,16 +80,16 @@ export class RunRepository {
     return this.prisma.run.create({ data });
   }
 
-  findById(id: string): Promise<RunWithConnection | null> {
+  findById(id: string): Promise<RunWithRelations | null> {
     return this.prisma.run.findUnique({
       where: { id },
-      include: runWithConnection.include,
+      include: runWithRelations.include,
     });
   }
 
   async list(
     input: ListRunsInput,
-  ): Promise<{ items: RunWithConnection[]; nextCursor: string | null }> {
+  ): Promise<{ items: RunWithRelations[]; nextCursor: string | null }> {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.RunWhereInput = {};
     if (input.kind) where.kind = input.kind;
@@ -99,6 +104,12 @@ export class RunRepository {
         { name: { contains: input.search, mode: "insensitive" } },
         { description: { contains: input.search, mode: "insensitive" } },
       ];
+    if (input.isBaseline !== undefined) {
+      where.baselineFor = input.isBaseline ? { isNot: null } : { is: null };
+    }
+    if (input.referencesBaseline !== undefined) {
+      where.baselineId = input.referencesBaseline ? { not: null } : null;
+    }
     if (input.createdAfter || input.createdBefore) {
       where.createdAt = {
         ...(input.createdAfter && { gte: new Date(input.createdAfter) }),
@@ -110,7 +121,7 @@ export class RunRepository {
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: limit + 1,
-      include: runWithConnection.include,
+      include: runWithRelations.include,
       ...(input.cursor && { cursor: { id: input.cursor }, skip: 1 }),
     });
 

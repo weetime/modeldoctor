@@ -48,6 +48,7 @@ function makeRun(overrides: Partial<Run> = {}): Run {
     templateVersion: null,
     parentRunId: null,
     baselineId: null,
+    baselineFor: null,
     logs: "log line 1\nlog line 2",
     createdAt: "2026-04-30T12:00:00.000Z",
     startedAt: "2026-04-30T12:00:01.000Z",
@@ -69,7 +70,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         <MemoryRouter initialEntries={["/history/r1"]}>
           <Routes>
             <Route path="/history" element={<div>list</div>} />
-            <Route path="/history/:runId" element={<>{children}</>} />
+            <Route path="/history/:runId" element={children} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -97,9 +98,7 @@ describe("HistoryDetailPage", () => {
   it("renders metrics empty when summaryMetrics is null", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeRun({ summaryMetrics: null }));
     render(<HistoryDetailPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getByText(/No metrics|没有记录指标/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/No metrics|没有记录指标/i)).toBeInTheDocument());
   });
 
   it("shows not-found state on 404", async () => {
@@ -107,8 +106,26 @@ describe("HistoryDetailPage", () => {
     err.status = 404;
     vi.mocked(api.get).mockRejectedValueOnce(err);
     render(<HistoryDetailPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument());
+  });
+
+  it("renders 'Set as baseline' when run.baselineFor is null", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ baselineFor: null }));
+    render(<HistoryDetailPage />, { wrapper: Wrapper });
     await waitFor(() =>
-      expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /Set as baseline|设为基线/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("renders 'Unset' when run.baselineFor is populated", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        baselineFor: { id: "b_1", name: "anchor", createdAt: "2026-05-02T00:00:00.000Z" },
+      }),
+    );
+    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Baseline · Unset|已是基线/ })).toBeInTheDocument(),
     );
   });
 });

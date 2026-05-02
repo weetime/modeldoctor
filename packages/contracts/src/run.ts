@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { baselineSummarySchema } from "./baseline.js";
 
 export const runKindSchema = z.enum(["benchmark", "e2e"]);
 export type RunKind = z.infer<typeof runKindSchema>;
@@ -73,6 +74,10 @@ export const runSchema = z.object({
   createdAt: z.string().datetime(),
   startedAt: z.string().datetime().nullable(),
   completedAt: z.string().datetime().nullable(),
+
+  // Populated by GET /runs/:id when this Run is the canonical Run of a
+  // baseline (Baseline.runId === this.id). Null otherwise.
+  baselineFor: baselineSummarySchema.nullable(),
 });
 export type Run = z.infer<typeof runSchema>;
 
@@ -87,6 +92,12 @@ export const listRunsQuerySchema = z.object({
   search: z.string().optional(),
   createdAfter: z.string().datetime().optional(),
   createdBefore: z.string().datetime().optional(),
+  isBaseline: z
+    .preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean())
+    .optional(),
+  referencesBaseline: z
+    .preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean())
+    .optional(),
 });
 export type ListRunsQuery = z.infer<typeof listRunsQuerySchema>;
 

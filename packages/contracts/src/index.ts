@@ -20,3 +20,4 @@ export * from "./benchmark.js";
 export * from "./connection.js";
 export * from "./playground.js";
 export * from "./run.js";
+export * from "./baseline.js";

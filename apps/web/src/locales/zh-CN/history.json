@@ -6,6 +6,9 @@
     "tool": "工具",
     "status": "状态",
     "connection": "Connection",
+    "baseline": "基线",
+    "baselineIs": "是基线",
+    "baselineRef": "对比某个基线",
     "createdAfter": "起",
     "createdBefore": "止",
     "search": "按名称或备注搜索",
@@ -59,6 +62,27 @@
     },
     "logs": {
       "toggle": "日志"
+    },
+    "baseline": {
+      "setButton": "设为基线",
+      "unsetButton": "✓ 已是基线 · 取消",
+      "unsetConfirmTitle": "取消基线？",
+      "unsetConfirmBody": "只移除基线标记，Run 本身保留。曾经与这个基线对比过的其它 Run 数据保留，其 baselineId 关联会被清空。",
+      "unsetConfirmAction": "取消基线",
+      "dialog": {
+        "title": "设为基线",
+        "body": "把这个 Run 标为参照，后续 regression diff 用它作为锚点。",
+        "nameLabel": "名称",
+        "namePlaceholder": "比如 throughput-baseline-v1",
+        "descriptionLabel": "备注（可选）",
+        "tagsLabel": "标签（逗号分隔，可选）",
+        "submit": "保存",
+        "cancel": "取消"
+      },
+      "errors": {
+        "alreadyExists": "这个 Run 已经是基线了。",
+        "generic": "保存基线失败。"
+      }
     },
     "notFound": {
       "title": "Run 不存在",

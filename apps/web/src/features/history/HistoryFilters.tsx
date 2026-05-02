@@ -7,12 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  ListRunsQuery,
-  RunKind,
-  RunStatus,
-  RunTool,
-} from "@modeldoctor/contracts";
+import type { ListRunsQuery, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -73,7 +68,9 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
     query.connectionId !== undefined ||
     query.search !== undefined ||
     query.createdAfter !== undefined ||
-    query.createdBefore !== undefined;
+    query.createdBefore !== undefined ||
+    query.isBaseline !== undefined ||
+    query.referencesBaseline !== undefined;
 
   return (
     <div className="flex flex-wrap items-end gap-2">
@@ -125,6 +122,24 @@ export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
               {s}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={query.isBaseline ? "is" : query.referencesBaseline ? "ref" : ALL}
+        onValueChange={(v) => {
+          if (v === ALL) patch({ isBaseline: undefined, referencesBaseline: undefined });
+          else if (v === "is") patch({ isBaseline: true, referencesBaseline: undefined });
+          else if (v === "ref") patch({ isBaseline: undefined, referencesBaseline: true });
+        }}
+      >
+        <SelectTrigger className="w-[180px]" aria-label={t("filters.baseline")}>
+          <SelectValue placeholder={t("filters.baseline")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>{t("filters.any")}</SelectItem>
+          <SelectItem value="is">{t("filters.baselineIs")}</SelectItem>
+          <SelectItem value="ref">{t("filters.baselineRef")}</SelectItem>
         </SelectContent>
       </Select>
 

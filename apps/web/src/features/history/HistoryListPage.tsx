@@ -12,18 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type {
-  ListRunsQuery,
-  Run,
-  RunKind,
-  RunStatus,
-  RunTool,
-} from "@modeldoctor/contracts";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ListRunsQuery, Run, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";
@@ -87,14 +77,23 @@ export function HistoryListPage() {
     if (createdAfter) q.createdAfter = createdAfter;
     const createdBefore = get("createdBefore");
     if (createdBefore) q.createdBefore = createdBefore;
+    const baseline = get("baseline");
+    if (baseline === "is") q.isBaseline = true;
+    if (baseline === "ref") q.referencesBaseline = true;
     return q;
   }, [searchParams]);
 
   function patchQuery(next: Partial<ListRunsQuery>) {
     const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries(next)) {
-      if (v !== undefined && k !== "limit" && k !== "cursor") sp.set(k, String(v));
-    }
+    if (next.kind !== undefined) sp.set("kind", next.kind);
+    if (next.tool !== undefined) sp.set("tool", next.tool);
+    if (next.status !== undefined) sp.set("status", next.status);
+    if (next.connectionId !== undefined) sp.set("connectionId", next.connectionId);
+    if (next.search !== undefined) sp.set("search", next.search);
+    if (next.createdAfter !== undefined) sp.set("createdAfter", next.createdAfter);
+    if (next.createdBefore !== undefined) sp.set("createdBefore", next.createdBefore);
+    if (next.isBaseline) sp.set("baseline", "is");
+    else if (next.referencesBaseline) sp.set("baseline", "ref");
     setSearchParams(sp);
   }
 
@@ -110,10 +109,7 @@ export function HistoryListPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useRunsInfiniteList(query);
-  const items = useMemo(
-    () => (data?.pages ?? []).flatMap((p) => p.items),
-    [data],
-  );
+  const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.items), [data]);
 
   const isFiltered = useMemo(
     () =>
@@ -123,7 +119,9 @@ export function HistoryListPage() {
       query.connectionId !== undefined ||
       query.search !== undefined ||
       query.createdAfter !== undefined ||
-      query.createdBefore !== undefined,
+      query.createdBefore !== undefined ||
+      query.isBaseline !== undefined ||
+      query.referencesBaseline !== undefined,
     [query],
   );
 
@@ -188,11 +186,7 @@ export function HistoryListPage() {
               <AlertDescription>{t("empty.filtered")}</AlertDescription>
             </Alert>
           ) : (
-            <EmptyState
-              icon={HistoryIcon}
-              title={t("empty.title")}
-              body={t("empty.description")}
-            />
+            <EmptyState icon={HistoryIcon} title={t("empty.title")} body={t("empty.description")} />
           )
         ) : (
           <div className="rounded-md border border-border">
@@ -240,10 +234,7 @@ export function HistoryListPage() {
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}
                     </TableCell>
                     <TableCell>
-                      <Link
-                        to={`/history/${run.id}`}
-                        className="text-primary hover:underline"
-                      >
+                      <Link to={`/history/${run.id}`} className="text-primary hover:underline">
                         →
                       </Link>
                     </TableCell>

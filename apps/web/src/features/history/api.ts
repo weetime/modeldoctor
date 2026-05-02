@@ -12,12 +12,14 @@ function buildListQuery(q: Partial<ListRunsQuery>): string {
   if (q.search) usp.set("search", q.search);
   if (q.createdAfter) usp.set("createdAfter", q.createdAfter);
   if (q.createdBefore) usp.set("createdBefore", q.createdBefore);
+  if (q.isBaseline !== undefined) usp.set("isBaseline", String(q.isBaseline));
+  if (q.referencesBaseline !== undefined)
+    usp.set("referencesBaseline", String(q.referencesBaseline));
   const qs = usp.toString();
   return qs ? `?${qs}` : "";
 }
 
 export const historyApi = {
-  list: (q: Partial<ListRunsQuery>) =>
-    api.get<ListRunsResponse>(`/api/runs${buildListQuery(q)}`),
+  list: (q: Partial<ListRunsQuery>) => api.get<ListRunsResponse>(`/api/runs${buildListQuery(q)}`),
   get: (id: string) => api.get<Run>(`/api/runs/${id}`),
 };

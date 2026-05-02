@@ -27,6 +27,7 @@ describe("RunRepository", () => {
     repo = moduleRef.get(RunRepository);
     prisma = moduleRef.get(PrismaService);
 
+    await prisma.baseline.deleteMany();
     await prisma.run.deleteMany();
     await prisma.user.deleteMany();
   });
@@ -176,5 +177,98 @@ describe("RunRepository", () => {
 
     const untilOne = await repo.list({ createdBefore: "2026-04-30T01:00:00Z" });
     expect(untilOne.items).toHaveLength(2);
+  });
+
+  it("filters by isBaseline=true (returns only Runs that ARE a baseline)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "is-baseline@example.com", passwordHash: "x" },
+    });
+    const r1 = await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+    await prisma.baseline.create({
+      data: { userId: user.id, runId: r1.id, name: "anchor" },
+    });
+
+    const onlyBaselines = await repo.list({ isBaseline: true });
+    expect(onlyBaselines.items).toHaveLength(1);
+    expect(onlyBaselines.items[0].id).toBe(r1.id);
+  });
+
+  it("filters by referencesBaseline=true (returns only Runs whose baselineId is set)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "ref-baseline@example.com", passwordHash: "x" },
+    });
+    const canonical = await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+    const baseline = await prisma.baseline.create({
+      data: { userId: user.id, runId: canonical.id, name: "anchor" },
+    });
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      baselineId: baseline.id,
+    });
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+
+    const refs = await repo.list({ referencesBaseline: true });
+    expect(refs.items).toHaveLength(1);
+    expect(refs.items[0].baselineId).toBe(baseline.id);
+  });
+
+  it("findById includes baselineFor when the Run is a baseline canonical Run", async () => {
+    const user = await prisma.user.create({
+      data: { email: "find-baseline@example.com", passwordHash: "x" },
+    });
+    const r = await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+    });
+    await prisma.baseline.create({
+      data: { userId: user.id, runId: r.id, name: "anchor" },
+    });
+
+    const fetched = await repo.findById(r.id);
+    expect(fetched?.baselineFor?.name).toBe("anchor");
   });
 });
