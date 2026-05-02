@@ -17,6 +17,34 @@ interface Entry {
 
 const SIGKILL_DELAY_MS = 10_000;
 
+// Allowlist of host env vars passed through to the runner subprocess.
+// Default-deny prevents API secrets (DATABASE_URL, JWT_ACCESS_SECRET,
+// BENCHMARK_CALLBACK_SECRET, CONNECTION_API_KEY_ENCRYPTION_KEY, etc.) from
+// leaking into the runner's environment. The runner needs PATH for the
+// wrapper binary lookup, plus locale/tz for tools like guidellm that
+// format timestamps. Anything else flows in via buildResult.env or
+// buildResult.secretEnv on a per-run basis.
+const HOST_ENV_ALLOWLIST = new Set([
+  "PATH",
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "USER",
+  "LOGNAME",
+  "TMPDIR",
+]);
+
+function filterHostEnv(src: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const key of HOST_ENV_ALLOWLIST) {
+    const v = src[key];
+    if (v !== undefined) out[key] = v;
+  }
+  return out;
+}
+
 export interface SubprocessDriverOpts {
   cwdRoot?: string;
 }
@@ -43,7 +71,7 @@ export class SubprocessDriver implements RunExecutionDriver {
     }
 
     const env: NodeJS.ProcessEnv = {
-      ...process.env,
+      ...filterHostEnv(process.env),
       ...ctx.buildResult.env,
       ...ctx.buildResult.secretEnv,
       MD_RUN_ID: ctx.runId,

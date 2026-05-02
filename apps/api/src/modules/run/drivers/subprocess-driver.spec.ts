@@ -84,6 +84,30 @@ describe("SubprocessDriver", () => {
     expect(written).toBe("hello\nworld\n");
   });
 
+  it("does not leak host secrets into the child env", async () => {
+    process.env.DATABASE_URL = "postgres://leak/this";
+    process.env.JWT_ACCESS_SECRET = "leak-jwt";
+    process.env.BENCHMARK_CALLBACK_SECRET = "leak-hmac";
+    process.env.CONNECTION_API_KEY_ENCRYPTION_KEY = "leak-enc";
+    try {
+      await driver.start(ctx);
+      const { spawn } = await import("node:child_process");
+      const call = (spawn as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+      const [, , opts] = call as [string, string[], { env: Record<string, string> }];
+      expect(opts.env.DATABASE_URL).toBeUndefined();
+      expect(opts.env.JWT_ACCESS_SECRET).toBeUndefined();
+      expect(opts.env.BENCHMARK_CALLBACK_SECRET).toBeUndefined();
+      expect(opts.env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBeUndefined();
+      // PATH still flows through (allowlisted) so the wrapper binary resolves.
+      expect(typeof opts.env.PATH).toBe("string");
+    } finally {
+      process.env.DATABASE_URL = undefined;
+      process.env.JWT_ACCESS_SECRET = undefined;
+      process.env.BENCHMARK_CALLBACK_SECRET = undefined;
+      process.env.CONNECTION_API_KEY_ENCRYPTION_KEY = undefined;
+    }
+  });
+
   it("cancel sends SIGTERM", async () => {
     const { handle } = await driver.start(ctx);
     await driver.cancel(handle);
