@@ -1,12 +1,11 @@
 import {
   type BenchmarkRun,
-  BenchmarkRunSchema,
+  type BenchmarkRunSummary,
   type CreateBenchmarkRequest,
   CreateBenchmarkRequestSchema,
   type ListBenchmarksQuery,
   ListBenchmarksQuerySchema,
   type ListBenchmarksResponse,
-  ListBenchmarksResponseSchema,
 } from "@modeldoctor/contracts";
 import {
   Body,
@@ -18,69 +17,78 @@ import {
   Param,
   Post,
   Query,
+  UseGuards,
 } from "@nestjs/common";
-import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
-import { ConnectionService } from "../connection/connection.service.js";
-import { BenchmarkService } from "./benchmark.service.js";
+import { RunService } from "../run/run.service.js";
+import {
+  legacyCreateToCreateRun,
+  runToBenchmarkRun,
+  runToBenchmarkRunSummary,
+} from "./benchmark-facade.mappers.js";
 
-class CreateBenchmarkRequestDto extends createZodDto(CreateBenchmarkRequestSchema) {}
-class BenchmarkRunDto extends createZodDto(BenchmarkRunSchema) {}
-class ListBenchmarksResponseDto extends createZodDto(ListBenchmarksResponseSchema) {}
-
-@ApiTags("benchmark")
+/**
+ * Phase 3 facade (#53). The /api/benchmarks/* route surface is unchanged
+ * so the FE keeps working until #54 switches it to /api/runs and deletes
+ * this file. Internally everything routes through RunService.
+ */
 @Controller("benchmarks")
+@UseGuards(JwtAuthGuard)
 export class BenchmarkController {
-  constructor(
-    private readonly svc: BenchmarkService,
-    private readonly connections: ConnectionService,
-  ) {}
+  constructor(private readonly runs: RunService) {}
 
-  @ApiOperation({ summary: "Create a benchmark run" })
-  @ApiBody({ type: CreateBenchmarkRequestDto })
-  @ApiOkResponse({ type: BenchmarkRunDto })
   @Post()
   async create(
-    @Body(new ZodValidationPipe(CreateBenchmarkRequestSchema))
-    body: CreateBenchmarkRequest,
     @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(CreateBenchmarkRequestSchema)) body: CreateBenchmarkRequest,
   ): Promise<BenchmarkRun> {
-    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
-    return this.svc.create(user.sub, conn, body);
+    const run = await this.runs.create(user.sub, legacyCreateToCreateRun(body));
+    return runToBenchmarkRun(run);
   }
 
-  @ApiOperation({ summary: "List benchmark runs (cursor-paginated, newest first)" })
-  @ApiOkResponse({ type: ListBenchmarksResponseDto })
   @Get()
-  list(
-    @Query(new ZodValidationPipe(ListBenchmarksQuerySchema))
-    query: ListBenchmarksQuery,
+  async list(
     @CurrentUser() user: JwtPayload,
+    @Query(new ZodValidationPipe(ListBenchmarksQuerySchema)) q: ListBenchmarksQuery,
   ): Promise<ListBenchmarksResponse> {
-    return this.svc.list(query, user);
+    const r = await this.runs.list(
+      {
+        limit: q.limit,
+        cursor: q.cursor,
+        kind: "benchmark",
+        tool: "guidellm",
+        ...(q.state ? { status: q.state } : {}),
+        ...(q.search ? { search: q.search } : {}),
+      },
+      user.sub,
+    );
+    let items: BenchmarkRunSummary[] = r.items.map(runToBenchmarkRunSummary);
+    // Profile is stored in params JSON; RunService.list doesn't filter on it.
+    // Apply post-filter in-memory to preserve legacy semantics. Note: this
+    // can produce a short page when filtering reduces a full page below
+    // `limit`, but #54 retires this code path.
+    if (q.profile) items = items.filter((s) => s.profile === q.profile);
+    return { items, nextCursor: r.nextCursor };
   }
 
-  @ApiOperation({ summary: "Fetch a benchmark run" })
-  @ApiOkResponse({ type: BenchmarkRunDto })
   @Get(":id")
-  detail(@Param("id") id: string, @CurrentUser() user: JwtPayload): Promise<BenchmarkRun> {
-    return this.svc.detail(id, user);
+  async detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<BenchmarkRun> {
+    const run = await this.runs.findByIdOrFail(id, user.sub);
+    return runToBenchmarkRun(run);
   }
 
-  @ApiOperation({ summary: "Cancel an in-flight benchmark run" })
-  @ApiOkResponse({ type: BenchmarkRunDto })
   @Post(":id/cancel")
-  cancel(@Param("id") id: string, @CurrentUser() user: JwtPayload): Promise<BenchmarkRun> {
-    return this.svc.cancel(id, user);
+  async cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<BenchmarkRun> {
+    const run = await this.runs.cancel(id, user.sub);
+    return runToBenchmarkRun(run);
   }
 
-  @ApiOperation({ summary: "Delete a terminal benchmark run" })
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param("id") id: string, @CurrentUser() user: JwtPayload): Promise<void> {
-    return this.svc.delete(id, user);
+  async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
+    await this.runs.delete(id, user.sub);
   }
 }
