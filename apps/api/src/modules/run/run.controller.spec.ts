@@ -1,17 +1,71 @@
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { ConnectionService } from "../connection/connection.service.js";
+import type { RunExecutionDriver } from "./drivers/execution-driver.interface.js";
+import { RUN_DRIVER } from "./drivers/run-driver.token.js";
 import { RunController } from "./run.controller.js";
 import { RunRepository } from "./run.repository.js";
 import { RunService } from "./run.service.js";
+
+// Stub adapter registry to avoid pulling in the real (Phase 1 stubbed) adapters'
+// buildCommand which throws "not implemented". The controller spec only needs
+// to verify wiring; service-level adapter behavior is covered in run.service.spec.
+vi.mock("@modeldoctor/tool-adapters", async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>;
+  return {
+    ...actual,
+    byTool: () => ({
+      name: "guidellm",
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({
+        argv: ["echo", "hi"],
+        env: {},
+        secretEnv: {},
+        outputFiles: { report: "report.json" },
+      }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "guidellm", data: {} }),
+    }),
+  };
+});
+
+const mockDriver: RunExecutionDriver = {
+  start: vi.fn(async () => ({ handle: "subprocess:1234" })),
+  cancel: vi.fn(async () => undefined),
+  cleanup: vi.fn(async () => undefined),
+};
+
+const mockConnections = {
+  getOwnedDecrypted: vi.fn(async (_userId: string, id: string) => ({
+    id,
+    name: "conn",
+    baseUrl: "http://upstream/",
+    apiKey: "k",
+    model: "m",
+    customHeaders: "{}",
+    queryParams: "",
+    category: "text" as const,
+  })),
+};
+
+const ENV_DEFAULTS: Record<string, unknown> = {
+  BENCHMARK_CALLBACK_SECRET: "x".repeat(32),
+  BENCHMARK_CALLBACK_URL: "http://api/",
+  BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
+  BENCHMARK_DRIVER: "subprocess",
+};
 
 describe("RunController", () => {
   let controller: RunController;
   let prisma: PrismaService;
 
   beforeEach(async () => {
+    vi.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
       controllers: [RunController],
       providers: [
@@ -23,10 +77,12 @@ describe("RunController", () => {
           useValue: {
             get: (key: string) => {
               if (key === "DATABASE_URL") return process.env.DATABASE_URL;
-              return undefined;
+              return ENV_DEFAULTS[key];
             },
           },
         },
+        { provide: RUN_DRIVER, useValue: mockDriver },
+        { provide: ConnectionService, useValue: mockConnections },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -58,7 +114,6 @@ describe("RunController", () => {
       data: { email: "rc-stranger@example.com", passwordHash: "x" },
     });
 
-    // Owner's runs
     await prisma.run.create({
       data: {
         userId: owner.id,
@@ -81,7 +136,6 @@ describe("RunController", () => {
         params: {},
       },
     });
-    // Stranger's run — must NOT show up in owner's listing
     await prisma.run.create({
       data: {
         userId: stranger.id,
@@ -150,5 +204,79 @@ describe("RunController", () => {
       roles: [],
     };
     await expect(controller.detail(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
+  });
+
+  it("create writes a row and starts the driver", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rc-create@example.com", passwordHash: "x" },
+    });
+    const conn = await prisma.connection.create({
+      data: {
+        userId: user.id,
+        name: "test-conn",
+        baseUrl: "http://upstream/",
+        apiKeyCipher: "ciphertext",
+        model: "m",
+        customHeaders: "{}",
+        queryParams: "",
+        category: "text",
+      },
+    });
+    const userArg = { sub: user.id, email: user.email, roles: [] };
+    const dto = await controller.create(userArg as never, {
+      tool: "guidellm",
+      kind: "benchmark",
+      connectionId: conn.id,
+      name: "rc-create-smoke",
+      params: {},
+    });
+    expect(dto.status).toBe("submitted");
+    expect(dto.driverHandle).toBe("subprocess:1234");
+    expect(mockDriver.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel transitions a running run to canceled", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rc-cancel@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: user.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        status: "running",
+        driverHandle: "subprocess:9999",
+      },
+    });
+    const userArg = { sub: user.id, email: user.email, roles: [] };
+    const dto = await controller.cancel(userArg as never, run.id);
+    expect(dto.status).toBe("canceled");
+    expect(mockDriver.cancel).toHaveBeenCalledWith("subprocess:9999");
+  });
+
+  it("delete removes a terminal run", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rc-delete@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: user.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        status: "completed",
+      },
+    });
+    const userArg = { sub: user.id, email: user.email, roles: [] };
+    await controller.delete(userArg as never, run.id);
+    const after = await prisma.run.findUnique({ where: { id: run.id } });
+    expect(after).toBeNull();
   });
 });
