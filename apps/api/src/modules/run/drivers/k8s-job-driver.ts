@@ -91,11 +91,24 @@ export class K8sJobDriver implements RunExecutionDriver {
         undefined,
         undefined,
         // propagationPolicy: 'Background' triggers Job → Secret cascade
-        // via ownerReferences set in start()
+        // via ownerReferences set in start().
+        // (Legacy benchmark driver uses 'Foreground' to gate on cascade
+        // completion; the run module doesn't gate on cancel completion,
+        // so 'Background' is fine here.)
         "Background",
       );
     } catch (e) {
+      // K8sError shape: status code lives on .statusCode (and sometimes
+      // .response?.statusCode); 404 means the Job is already gone, which
+      // is an idempotent cancel — return silently. Anything else is a
+      // real failure (e.g. apiserver flake, RBAC) and must propagate so
+      // RunService doesn't mark the cancel as succeeded.
+      const status =
+        (e as { statusCode?: number; response?: { statusCode?: number } }).response
+          ?.statusCode ?? (e as { statusCode?: number }).statusCode;
+      if (status === 404) return;
       this.log.warn(`cancel: deleteNamespacedJob failed: ${(e as Error).message}`);
+      throw e;
     }
   }
 

@@ -39,3 +39,32 @@ describe("createRunDriver", () => {
     expect(d).toBeInstanceOf(SubprocessDriver);
   });
 });
+
+describe("createRunDriver k8s branch", () => {
+  it("builds a K8sJobDriver when BENCHMARK_DRIVER=k8s (via __test_kc_loader__)", async () => {
+    const cfg = mockConfig({ BENCHMARK_DRIVER: "k8s", BENCHMARK_K8S_NAMESPACE: "ns-x" });
+    // Stub the lazy k8s import so the test doesn't pull in the real client.
+    const fakeK8s = {
+      KubeConfig: class {
+        loadFromFile = vi.fn();
+        loadFromDefault = vi.fn();
+        makeApiClient = vi.fn(() => ({}) as never);
+      },
+      BatchV1Api: class {},
+      CoreV1Api: class {},
+    };
+    (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__ = () => fakeK8s;
+    try {
+      const d = await createRunDriver(cfg);
+      const { K8sJobDriver } = await import("./k8s-job-driver.js");
+      expect(d).toBeInstanceOf(K8sJobDriver);
+    } finally {
+      delete (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__;
+    }
+  });
+
+  it("throws on unknown BENCHMARK_DRIVER value", async () => {
+    const cfg = mockConfig({ BENCHMARK_DRIVER: "wat" as never });
+    await expect(createRunDriver(cfg)).rejects.toThrow(/Unknown BENCHMARK_DRIVER/);
+  });
+});

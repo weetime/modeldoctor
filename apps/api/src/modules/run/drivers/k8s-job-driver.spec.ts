@@ -53,4 +53,24 @@ describe("K8sJobDriver", () => {
     await expect(driver.start(ctx)).rejects.toThrow(/simulated/);
     expect(core.deleteNamespacedSecret).toHaveBeenCalled();
   });
+
+  it("cancel returns silently on 404", async () => {
+    const { driver, batch } = mkDriver();
+    batch.deleteNamespacedJob = vi.fn(async () => {
+      const e = new Error("not found") as Error & { statusCode?: number };
+      e.statusCode = 404;
+      throw e;
+    }) as never;
+    await expect(driver.cancel("ns/run-abc")).resolves.toBeUndefined();
+  });
+
+  it("cancel rethrows non-404 errors", async () => {
+    const { driver, batch } = mkDriver();
+    batch.deleteNamespacedJob = vi.fn(async () => {
+      const e = new Error("apiserver flake") as Error & { statusCode?: number };
+      e.statusCode = 500;
+      throw e;
+    }) as never;
+    await expect(driver.cancel("ns/run-abc")).rejects.toThrow(/apiserver flake/);
+  });
 });
