@@ -320,6 +320,15 @@ importers:
         specifier: ^3.23
         version: 3.25.76
 
+  packages/tool-adapters:
+    dependencies:
+      '@modeldoctor/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: ^3.23
+        version: 3.25.76
+
 packages:
 
   '@adobe/css-tools@4.4.4':
