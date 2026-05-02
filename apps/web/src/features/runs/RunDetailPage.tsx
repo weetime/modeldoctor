@@ -145,8 +145,6 @@ export function RunDetailPage() {
                 if (run.baselineFor) {
                   remove.mutate(run.baselineFor.id, {
                     onSuccess: () => {
-                      // useDeleteBaseline already invalidates ["history","detail"]
-                      // (broader prefix), so we only need to close the dialog.
                       setUnsetOpen(false);
                     },
                     onError: () => {
