@@ -6,16 +6,28 @@ import {
   runLogCallbackSchema,
   runStateCallbackSchema,
 } from "@modeldoctor/contracts";
-import { type ProgressEvent, byTool, type ToolName } from "@modeldoctor/tool-adapters";
-import { Body, Controller, Logger, Param, Post, UseGuards } from "@nestjs/common";
+import { type ProgressEvent, type ToolName, byTool } from "@modeldoctor/tool-adapters";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Prisma } from "@prisma/client";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
+import { Public } from "../../../common/decorators/public.decorator.js";
 import { HmacCallbackGuard } from "../../../common/hmac/hmac-callback.guard.js";
+import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import { RunRepository } from "../run.repository.js";
 import { SseHub } from "../sse/sse-hub.service.js";
 
+@ApiTags("run-callback")
 @UseGuards(HmacCallbackGuard)
-@Controller("api/internal/runs/:id")
+@Controller("internal/runs/:id")
 export class RunCallbackController {
   private readonly log = new Logger(RunCallbackController.name);
 
@@ -25,6 +37,9 @@ export class RunCallbackController {
   ) {}
 
   @Post("state")
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "v2 callback: state transition" })
   async handleState(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(runStateCallbackSchema)) body: RunStateCallback,
@@ -43,6 +58,9 @@ export class RunCallbackController {
   }
 
   @Post("log")
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "v2 callback: streaming log lines" })
   async handleLog(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(runLogCallbackSchema)) body: RunLogCallback,
@@ -68,6 +86,9 @@ export class RunCallbackController {
   }
 
   @Post("finish")
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "v2 callback: terminal state + final report" })
   async handleFinish(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(runFinishCallbackSchema)) body: RunFinishCallback,

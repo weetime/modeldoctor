@@ -1,12 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { RunCallbackController } from "./run-callback.controller.js";
-import { SseHub } from "../sse/sse-hub.service.js";
 import type { Run as PrismaRun } from "@prisma/client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SseHub } from "../sse/sse-hub.service.js";
+import { RunCallbackController } from "./run-callback.controller.js";
 
 class MockRunRepo {
   private rows = new Map<string, Partial<PrismaRun>>();
-  setup(id: string, row: Partial<PrismaRun>) { this.rows.set(id, row); }
-  async findById(id: string) { return this.rows.get(id) as PrismaRun | undefined ?? null; }
+  setup(id: string, row: Partial<PrismaRun>) {
+    this.rows.set(id, row);
+  }
+  async findById(id: string) {
+    return (this.rows.get(id) as PrismaRun | undefined) ?? null;
+  }
   async update(id: string, patch: Record<string, unknown>) {
     const cur = this.rows.get(id) ?? {};
     const next = { ...cur, ...patch };
@@ -25,7 +29,9 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
-      buildCommand: () => { throw new Error("not used"); },
+      buildCommand: () => {
+        throw new Error("not used");
+      },
       parseProgress: (line: string) =>
         line.startsWith("PROGRESS:")
           ? { kind: "progress", pct: Number.parseFloat(line.slice("PROGRESS:".length)) }
