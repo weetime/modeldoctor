@@ -75,4 +75,20 @@ export interface ToolAdapter {
   buildCommand(plan: BuildCommandPlan): BuildCommandResult;
   parseProgress(line: string): ProgressEvent | null;
   parseFinalReport(stdout: string, files: Record<string, Buffer>): ToolReport;
+
+  /**
+   * Returns the maximum runtime duration (seconds) for a run with these
+   * params. Drives the HMAC callback token TTL so a long-running guidellm
+   * soak (e.g. params.maxDurationSeconds = 7200) doesn't have its final
+   * /finish call rejected by a token signed against a 30-minute global
+   * default. RunService adds CALLBACK_TTL_SLACK_SECONDS on top.
+   *
+   * `params` arrives from JSON storage (Run.params), so it's typed `unknown`
+   * at the interface level — implementations narrow with their own zod-
+   * inferred types. May throw if called against unparsed/invalid params.
+   *
+   * Added in Phase 3 (PR 53.3) — last interface change before Phase 4 freezes
+   * this file at the acceptance gate above.
+   */
+  getMaxDurationSeconds(params: unknown): number;
 }

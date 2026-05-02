@@ -23,15 +23,15 @@ import { RUN_DRIVER } from "./drivers/run-driver.token.js";
 import { RunRepository, type RunWithRelations } from "./run.repository.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
-// 15-minute slack beyond defaultMaxDuration: a final /finish callback
-// shouldn't be rejected if the runner overruns by clock skew or shutdown grace.
+// 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
+// callback shouldn't be rejected if the runner overruns by clock skew or
+// shutdown grace.
 const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
 @Injectable()
 export class RunService {
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
-  private readonly defaultMaxDuration: number;
   private readonly driverKind: "local" | "k8s";
 
   constructor(
@@ -58,9 +58,11 @@ export class RunService {
     }
     this.callbackUrl = url;
 
-    this.defaultMaxDuration = this.config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", {
-      infer: true,
-    }) as number;
+    // Read BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to trigger env-schema
+    // pre-flight validation at startup. The value is no longer stored: RunService
+    // now calls adapter.getMaxDurationSeconds(row.params) per-run so that a
+    // 2h guidellm soak doesn't get a token signed against the global 30min default.
+    void this.config.get("BENCHMARK_DEFAULT_MAX_DURATION_SECONDS", { infer: true });
     const driverChoice = (this.config.get("BENCHMARK_DRIVER", { infer: true }) ??
       "subprocess") as string;
     this.driverKind = driverChoice === "k8s" ? "k8s" : "local";
@@ -149,10 +151,11 @@ export class RunService {
     try {
       const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
       const adapter = byTool(row.tool as ToolName);
+      const adapterMaxDuration = adapter.getMaxDurationSeconds(row.params);
       const callbackToken = signCallbackToken(
         row.id,
         this.callbackSecret,
-        this.defaultMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
+        adapterMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
       );
       const buildResult = adapter.buildCommand({
         runId: row.id,

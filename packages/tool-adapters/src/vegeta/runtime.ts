@@ -22,3 +22,7 @@ export function parseProgress(_line: string): ProgressEvent | null {
 export function parseFinalReport(_stdout: string, _files: Record<string, Buffer>): ToolReport {
   throw new Error(NOT_IMPLEMENTED);
 }
+
+export function getMaxDurationSeconds(params: VegetaParams): number {
+  return params.duration;
+}

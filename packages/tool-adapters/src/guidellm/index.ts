@@ -1,5 +1,5 @@
 import type { ToolAdapter } from "../core/interface.js";
-import { buildCommand, parseFinalReport, parseProgress } from "./runtime.js";
+import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import { guidellmParamDefaults, guidellmParamsSchema, guidellmReportSchema } from "./schema.js";
 
 export const guidellmAdapter: ToolAdapter = {
@@ -10,6 +10,7 @@ export const guidellmAdapter: ToolAdapter = {
   buildCommand,
   parseProgress,
   parseFinalReport,
+  getMaxDurationSeconds,
 };
 
 export type { GuidellmParams, GuidellmReport } from "./schema.js";
