@@ -71,6 +71,7 @@ describe("vegeta.parseFinalReport", () => {
   it("parses fixture into typed ToolReport with ms-converted latencies", () => {
     const result = parseFinalReport("", { report: fixtureBuf });
     expect(result.tool).toBe("vegeta");
+    if (result.tool !== "vegeta") throw new Error(`expected vegeta, got ${result.tool}`);
     expect(result.data.requests.total).toBeGreaterThan(0);
     expect(result.data.latencies.p99).toBeGreaterThan(0);
     expect(result.data.success).toBeGreaterThan(0);
@@ -89,6 +90,7 @@ describe("vegeta.parseFinalReport — composite Go durations", () => {
   it("parses composite latencies (1m30s, 2m, 1h2m) from fixture", () => {
     const result = parseFinalReport("", { report: compositeFixtureBuf });
     expect(result.tool).toBe("vegeta");
+    if (result.tool !== "vegeta") throw new Error(`expected vegeta, got ${result.tool}`);
     // 100µs → 0.1 ms
     expect(result.data.latencies.min).toBeCloseTo(0.1, 6);
     // 1m30s → 90000 ms
@@ -107,6 +109,7 @@ describe("vegeta.parseFinalReport — composite Go durations", () => {
 
   it("parses composite duration total (5m12.3s) correctly", () => {
     const result = parseFinalReport("", { report: compositeFixtureBuf });
+    if (result.tool !== "vegeta") throw new Error(`expected vegeta, got ${result.tool}`);
     // 5m12.3s = 312.3 s
     expect(result.data.duration.totalSeconds).toBeCloseTo(312.3, 3);
     // 5m10s = 310 s
@@ -130,6 +133,7 @@ describe("vegeta.parseFinalReport — composite Go durations", () => {
     const result = parseFinalReport("", {
       report: Buffer.from(reportWithMicrosecondWait),
     });
+    if (result.tool !== "vegeta") throw new Error(`expected vegeta, got ${result.tool}`);
     // 500µs = 0.0005 s
     expect(result.data.duration.waitSeconds).toBeCloseTo(0.0005, 6);
   });

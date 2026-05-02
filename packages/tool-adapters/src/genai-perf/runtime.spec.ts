@@ -192,21 +192,25 @@ describe("genai-perf.parseFinalReport", () => {
 
   it("round-trip: timeToFirstToken.p99 is 18.81", () => {
     const result = parseFinalReport("", { profile: fixtureBuf });
+    if (result.tool !== "genai-perf") throw new Error(`expected genai-perf, got ${result.tool}`);
     expect(result.data.timeToFirstToken.p99).toBe(18.81);
   });
 
   it("round-trip: requestThroughput.avg is 4.87", () => {
     const result = parseFinalReport("", { profile: fixtureBuf });
+    if (result.tool !== "genai-perf") throw new Error(`expected genai-perf, got ${result.tool}`);
     expect(result.data.requestThroughput.avg).toBe(4.87);
   });
 
   it("round-trip: requestLatency.stddev is 11.23 (proves std → stddev mapping, Deviation 2)", () => {
     const result = parseFinalReport("", { profile: fixtureBuf });
+    if (result.tool !== "genai-perf") throw new Error(`expected genai-perf, got ${result.tool}`);
     expect(result.data.requestLatency.stddev).toBe(11.23);
   });
 
   it("round-trip: requestLatency.unit is 'ms'", () => {
     const result = parseFinalReport("", { profile: fixtureBuf });
+    if (result.tool !== "genai-perf") throw new Error(`expected genai-perf, got ${result.tool}`);
     expect(result.data.requestLatency.unit).toBe("ms");
   });
 
