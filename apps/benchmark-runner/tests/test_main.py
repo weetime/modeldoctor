@@ -157,7 +157,8 @@ def test_log_batches_posted_with_correct_kwargs(
 
     # All stdout-stream calls should target run_id=r-test and stream=stdout.
     stdout_calls = [
-        c for c in patched_callbacks["post_log_batch"].call_args_list
+        c
+        for c in patched_callbacks["post_log_batch"].call_args_list
         if c.kwargs.get("stream") == "stdout"
     ]
     assert len(stdout_calls) >= 1
@@ -206,9 +207,7 @@ def test_redaction_in_log_line(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    md_env_minimal["MD_ARGV"] = json.dumps(
-        ["guidellm", '--backend-kwargs={"api_key":"sk-secret"}']
-    )
+    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", '--backend-kwargs={"api_key":"sk-secret"}'])
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)

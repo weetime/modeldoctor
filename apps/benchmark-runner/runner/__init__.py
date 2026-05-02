@@ -1,1 +1,1 @@
-"""ModelDoctor benchmark runner — thin guidellm wrapper, called once per BenchmarkRun."""
+"""ModelDoctor generic tool-runner wrapper — spawns argv, streams logs, posts /finish."""

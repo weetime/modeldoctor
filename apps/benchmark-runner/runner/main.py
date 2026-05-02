@@ -1,8 +1,8 @@
 """Generic tool wrapper. Reads MD_* env, spawns argv, batches /log,
-   collects outputFiles, posts /finish.
+collects outputFiles, posts /finish.
 
-   Phase 3 of #53: replaces the guidellm-specific runner. This file
-   contains zero tool-specific knowledge.
+Phase 3 of #53: replaces the guidellm-specific runner. This file
+contains zero tool-specific knowledge.
 """
 
 from __future__ import annotations
