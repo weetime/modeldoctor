@@ -1,3 +1,6 @@
+// Note: 'error' event handler in subprocess-driver.ts is exercised via
+// runtime; mock-factory wiring makes a unit test for it disproportionately
+// complex. See PR description for rationale.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import * as fs from "node:fs/promises";

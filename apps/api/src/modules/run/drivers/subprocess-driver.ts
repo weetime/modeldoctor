@@ -63,6 +63,13 @@ export class SubprocessDriver implements RunExecutionDriver {
     if (!child.pid) {
       throw new Error("SubprocessDriver: failed to spawn wrapper (no pid)");
     }
+
+    // Drain stdout/stderr so the child doesn't block on a full pipe
+    // buffer (~16KB). Pipes are kept (Phase 3 wrapper will tail them
+    // via HTTP /log); resume() just discards bytes until then.
+    child.stdout?.resume();
+    child.stderr?.resume();
+
     const handle: RunExecutionHandle = `subprocess:${child.pid}`;
     this.handles.set(handle, { child, cwd });
 
@@ -70,6 +77,13 @@ export class SubprocessDriver implements RunExecutionDriver {
       this.log.log(
         `subprocess ${handle} exited code=${code ?? "null"} signal=${signal ?? "null"}`,
       );
+      const entry = this.handles.get(handle);
+      if (entry?.killTimer) clearTimeout(entry.killTimer);
+      this.handles.delete(handle);
+    });
+
+    child.on("error", (err) => {
+      this.log.error(`subprocess ${handle} error: ${err.message}`);
       const entry = this.handles.get(handle);
       if (entry?.killTimer) clearTimeout(entry.killTimer);
       this.handles.delete(handle);
