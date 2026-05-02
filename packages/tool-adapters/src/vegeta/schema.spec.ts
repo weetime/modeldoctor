@@ -18,8 +18,14 @@ describe("vegetaParamsSchema", () => {
   });
 
   // M3: paramDefaults real roundtrip test
-  it("paramDefaults is parseable as-is (all required fields present in defaults)", () => {
-    const r = vegetaParamsSchema.safeParse(vegetaParamDefaults);
+  it("paramDefaults parses cleanly and preserves default values", () => {
+    // vegeta defaults are intentionally complete: apiType + rate + duration
+    // covers every required field, so no FE-side gap-filling is needed
+    // (unlike guidellm random-dataset which still requires datasetInputTokens
+    // and datasetOutputTokens). Spread is kept for symmetry with the guidellm
+    // spec's roundtrip pattern.
+    const merged = { ...vegetaParamDefaults };
+    const r = vegetaParamsSchema.safeParse(merged);
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.apiType).toBe("chat");

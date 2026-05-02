@@ -41,6 +41,9 @@ export const vegetaReportSchema = z.object({
 });
 export type VegetaReport = z.infer<typeof vegetaReportSchema>;
 
+// All required fields populated; safe to parse as-is. FE form prefill
+// can submit this directly, in contrast to guidellmParamDefaults which
+// requires user-supplied dataset token counts.
 export const vegetaParamDefaults: Partial<VegetaParams> = {
   apiType: "chat",
   rate: 10,
