@@ -35,6 +35,9 @@ importers:
       '@modeldoctor/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@modeldoctor/tool-adapters':
+        specifier: workspace:*
+        version: link:../../packages/tool-adapters
       '@nestjs/common':
         specifier: ^10
         version: 10.4.22(reflect-metadata@0.2.2)(rxjs@7.8.2)
