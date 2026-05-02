@@ -10,7 +10,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@modeldoctor/contracts": ["../../packages/contracts/src"]
+      "@modeldoctor/contracts": ["../../packages/contracts/src"],
+      "@modeldoctor/tool-adapters": ["../../packages/tool-adapters/src"],
+      "@modeldoctor/tool-adapters/schemas": [
+        "../../packages/tool-adapters/src/schemas-entry.ts"
+      ]
     }
   },
   "include": ["src"],
