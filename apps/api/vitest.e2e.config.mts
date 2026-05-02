@@ -31,6 +31,12 @@ export default defineConfig({
       // env.schema.ts treats it as optional under NODE_ENV=test; this
       // injects a placeholder so the guard doesn't throw on construction.
       BENCHMARK_CALLBACK_SECRET: "e2e-test-callback-secret-not-for-production-use-32+chars",
+      // RunService validates BENCHMARK_CALLBACK_URL at constructor time
+      // (#53 PR 53.2 review hardened this so a misconfigured deployment
+      // fails at boot instead of crashing with TypeError on the first
+      // run). env.schema.ts treats it as optional under NODE_ENV=test;
+      // inject a placeholder so the service can boot for AppModule e2e.
+      BENCHMARK_CALLBACK_URL: "http://e2e-test-placeholder.invalid/",
       // BenchmarkService.constructor → decodeKey() runs at module init time,
       // same constructor-validation pattern. env.schema.ts treats this as
       // optional in test mode; inject a 32-byte base64 placeholder so the
