@@ -271,4 +271,72 @@ describe("RunRepository", () => {
     const fetched = await repo.findById(r.id);
     expect(fetched?.baselineFor?.name).toBe("anchor");
   });
+
+  it("countActiveByName excludes terminal rows", async () => {
+    const user = await prisma.user.create({
+      data: { email: "active-by-name@example.com", passwordHash: "x" },
+    });
+    // Active rows
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      name: "shared-name",
+    });
+    const submitted = await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      name: "shared-name",
+    });
+    await repo.update(submitted.id, { status: "submitted" });
+    // Terminal row (should not count)
+    const completed = await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      name: "shared-name",
+    });
+    await repo.update(completed.id, { status: "completed" });
+    // Different-name active row (should not count)
+    await repo.create({
+      userId: user.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      name: "other-name",
+    });
+    // Different-user active row with same name (should not count)
+    const otherUser = await prisma.user.create({
+      data: { email: "active-by-name-2@example.com", passwordHash: "x" },
+    });
+    await repo.create({
+      userId: otherUser.id,
+      kind: "benchmark",
+      tool: "guidellm",
+      scenario: {},
+      mode: "fixed",
+      driverKind: "local",
+      params: {},
+      name: "shared-name",
+    });
+
+    const n = await repo.countActiveByName(user.id, "shared-name");
+    expect(n).toBe(2);
+  });
 });

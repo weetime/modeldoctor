@@ -152,7 +152,6 @@ function minimalRun() {
     progress: null,
     driverHandle: null,
     params: {},
-    canonicalReport: null,
     rawOutput: null,
     summaryMetrics: null,
     serverMetrics: null,

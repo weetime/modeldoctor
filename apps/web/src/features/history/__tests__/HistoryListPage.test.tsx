@@ -41,7 +41,6 @@ function makeRun(id: string, kind: Run["kind"], tool: Run["tool"], status: Run["
     progress: null,
     driverHandle: null,
     params: {},
-    canonicalReport: null,
     rawOutput: null,
     summaryMetrics: { latencies: { p95: 123.4 }, errorRate: 0.001 },
     serverMetrics: null,

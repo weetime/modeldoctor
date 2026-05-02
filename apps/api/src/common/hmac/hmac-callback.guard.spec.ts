@@ -1,7 +1,7 @@
 import { type ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
 import { describe, expect, it } from "vitest";
-import type { Env } from "../../../config/env.schema.js";
+import type { Env } from "../../config/env.schema.js";
 import { HmacCallbackGuard } from "./hmac-callback.guard.js";
 import { signCallbackToken } from "./hmac-token.js";
 

@@ -62,6 +62,11 @@ export const EnvSchema = z
     BENCHMARK_CALLBACK_URL: z.string().url().optional(),
     BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
     BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
+    // #53 Phase 2: per-tool runner images. Old BENCHMARK_RUNNER_IMAGE is
+    // kept for the legacy benchmark module's path until Phase 3 deletes it.
+    RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
+    RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
+    RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
     // When false, the runner skips guidellm's GET /v1/models probe before
     // benchmarking. Set this to false when targeting OpenAI-compatible

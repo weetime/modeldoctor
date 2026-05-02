@@ -10,6 +10,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json biome.js
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/tool-adapters/package.json ./packages/tool-adapters/
 
 RUN pnpm install --frozen-lockfile
 
@@ -22,6 +23,7 @@ COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /repo/packages/contracts/node_modules ./packages/contracts/node_modules
+COPY --from=deps /repo/packages/tool-adapters/node_modules ./packages/tool-adapters/node_modules
 COPY . .
 
 # Generate Prisma client + build everything
@@ -47,6 +49,8 @@ COPY --from=build /repo/apps/web/package.json ./apps/web/
 COPY --from=build /repo/apps/web/dist ./apps/web/dist
 COPY --from=build /repo/packages/contracts/package.json ./packages/contracts/
 COPY --from=build /repo/packages/contracts/dist ./packages/contracts/dist
+COPY --from=build /repo/packages/tool-adapters/package.json ./packages/tool-adapters/
+COPY --from=build /repo/packages/tool-adapters/dist ./packages/tool-adapters/dist
 
 # Install production deps + regenerate Prisma client.
 # - argon2 postinstall needs a C toolchain on musl; install/uninstall in one RUN to keep image lean.

@@ -13,7 +13,8 @@
     "declaration": false,
     "sourceMap": true,
     "paths": {
-      "@modeldoctor/contracts": ["../../packages/contracts/src"]
+      "@modeldoctor/contracts": ["../../packages/contracts/src"],
+      "@modeldoctor/tool-adapters": ["../../packages/tool-adapters/src"]
     }
   },
   "include": ["src/**/*"],
