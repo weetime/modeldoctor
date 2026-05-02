@@ -59,7 +59,6 @@ export const runSchema = z.object({
   driverHandle: z.string().nullable(),
 
   params: z.record(z.unknown()),
-  canonicalReport: z.record(z.unknown()).nullable(),
   rawOutput: z.record(z.unknown()).nullable(),
   summaryMetrics: z.record(z.unknown()).nullable(),
   serverMetrics: z.record(z.unknown()).nullable(),
@@ -106,3 +105,58 @@ export const listRunsResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type ListRunsResponse = z.infer<typeof listRunsResponseSchema>;
+
+// ============================================================
+// New unified create endpoint (POST /api/runs body)
+// Phase 2 (#53). Old POST /api/benchmarks and POST /api/load-test
+// keep their existing bodies and remain in service.
+// ============================================================
+
+export const createRunRequestSchema = z.object({
+  tool: runToolSchema,
+  kind: runKindSchema.default("benchmark"),
+  connectionId: z.string().min(1),
+  name: z.string().min(1).max(128),
+  description: z.string().max(2048).optional(),
+  // adapter.paramsSchema is applied in the service layer; here we
+  // only require the field to be a record so generic transport works.
+  params: z.record(z.unknown()),
+  templateId: z.string().optional(),
+  templateVersion: z.string().optional(),
+  parentRunId: z.string().optional(),
+  baselineId: z.string().optional(),
+});
+export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
+
+// ============================================================
+// Internal callback schemas v2 (runner pod → API)
+// Phase 2 (#53). Old /api/internal/benchmarks/:id/{state,metrics}
+// keep working in parallel during this phase.
+// ============================================================
+
+export const runStateCallbackSchema = z.object({
+  state: z.literal("running"),
+});
+export type RunStateCallback = z.infer<typeof runStateCallbackSchema>;
+
+export const runLogCallbackSchema = z.object({
+  stream: z.enum(["stdout", "stderr"]),
+  lines: z.array(z.string().max(64 * 1024)).max(2000),
+});
+export type RunLogCallback = z.infer<typeof runLogCallbackSchema>;
+
+export const runFinishCallbackSchema = z.object({
+  state: z.enum(["completed", "failed"]),
+  exitCode: z.number().int(),
+  // Full stdout/stderr captured during the run; capped on the runner
+  // side to ~16 KB tail apiece for /log live stream, but /finish ships
+  // the full text. The /finish endpoint raises body-size to 10 MB to
+  // accommodate full reports + outputs.
+  stdout: z.string(),
+  stderr: z.string(),
+  // alias → base64-encoded file bytes. Aliases are stable per-tool and
+  // align with the adapter's BuildCommandResult.outputFiles map.
+  files: z.record(z.string()),
+  message: z.string().max(2048).optional(),
+});
+export type RunFinishCallback = z.infer<typeof runFinishCallbackSchema>;

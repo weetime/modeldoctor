@@ -36,7 +36,6 @@ function makeRun(overrides: Partial<PrismaRun> = {}): PrismaRun {
     progress: null,
     driverHandle: null,
     params: {},
-    canonicalReport: null,
     rawOutput: null,
     summaryMetrics: null,
     serverMetrics: null,

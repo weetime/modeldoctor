@@ -34,7 +34,6 @@ export type UpdateRunInput = Partial<{
   driverHandle: string | null;
   startedAt: Date | null;
   completedAt: Date | null;
-  canonicalReport: Prisma.InputJsonValue | null;
   rawOutput: Prisma.InputJsonValue | null;
   summaryMetrics: Prisma.InputJsonValue | null;
   logs: string | null;

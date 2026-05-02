@@ -40,7 +40,6 @@ function makeRun(overrides: Partial<Run> = {}): Run {
     progress: null,
     driverHandle: null,
     params: { profile: "throughput" },
-    canonicalReport: null,
     rawOutput: { stdout: "ok" },
     summaryMetrics: { latencies: { p95: 100 }, errorRate: 0.0 },
     serverMetrics: null,

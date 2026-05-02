@@ -62,7 +62,6 @@ function toContract(row: RunWithRelations): Run {
     progress: row.progress,
     driverHandle: row.driverHandle,
     params: row.params as Run["params"],
-    canonicalReport: row.canonicalReport as Run["canonicalReport"],
     rawOutput: row.rawOutput as Run["rawOutput"],
     summaryMetrics: row.summaryMetrics as Run["summaryMetrics"],
     serverMetrics: row.serverMetrics as Run["serverMetrics"],
