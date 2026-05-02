@@ -74,7 +74,10 @@ export class LoadTestController {
   ): Promise<ListLoadTestRunsResponse> {
     const r = await this.runs.list(
       { limit: q.limit, cursor: q.cursor, kind: "benchmark", tool: "vegeta" },
-      user.sub,
+      // Admins see across all users; regular users see only their own.
+      // Restored after Phase 3 facade refactor (PR #74) collapsed both
+      // branches to user.sub. Goes away with the facade in #54.
+      user.roles.includes("admin") ? undefined : user.sub,
     );
     return {
       items: r.items.map((run) => {

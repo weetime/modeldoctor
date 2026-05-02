@@ -63,7 +63,10 @@ export class BenchmarkController {
         ...(q.state ? { status: q.state } : {}),
         ...(q.search ? { search: q.search } : {}),
       },
-      user.sub,
+      // Admins see across all users; regular users see only their own.
+      // Restored after Phase 3 facade refactor (PR #74) collapsed both
+      // branches to user.sub. Goes away with the facade in #54.
+      user.roles.includes("admin") ? undefined : user.sub,
     );
     let items: BenchmarkRunSummary[] = r.items.map(runToBenchmarkRunSummary);
     // Profile is stored in params JSON; RunService.list doesn't filter on it.

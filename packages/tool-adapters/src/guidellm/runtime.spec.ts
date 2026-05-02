@@ -120,6 +120,7 @@ describe("guidellm.parseFinalReport", () => {
   it("parses the fixture into a typed ToolReport", () => {
     const result = parseFinalReport("", { report: fixtureBuf });
     expect(result.tool).toBe("guidellm");
+    if (result.tool !== "guidellm") throw new Error(`expected guidellm, got ${result.tool}`);
     expect(result.data.ttft).toBeDefined();
     expect(result.data.ttft.p50).toBeGreaterThan(0);
     expect(result.data.requests.total).toBeGreaterThan(0);
