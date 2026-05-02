@@ -1,7 +1,17 @@
+"""Tests for the generic tool-agnostic wrapper in runner.main.
+
+The wrapper reads MD_* env, spawns the given argv, batches stdout/stderr
+lines into /log POSTs, then POSTs /finish with full buffers + base64-encoded
+output files.
+"""
+
 from __future__ import annotations
 
+import base64
+import io
+import json
+import os
 from pathlib import Path
-from subprocess import CompletedProcess
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,113 +19,258 @@ from pytest_mock import MockerFixture
 
 from runner import main as main_mod
 
-FIXTURE = Path(__file__).parent / "fixtures" / "guidellm_report.json"
+
+def _fake_proc(
+    *,
+    stdout: bytes = b"",
+    stderr: bytes = b"",
+    returncode: int = 0,
+) -> MagicMock:
+    """Build a Popen-like mock whose stdout/stderr are BytesIO and wait()/returncode behave."""
+    proc = MagicMock()
+    proc.stdout = io.BytesIO(stdout)
+    proc.stderr = io.BytesIO(stderr)
+    proc.returncode = returncode
+    proc.wait = MagicMock(return_value=returncode)
+    return proc
 
 
 @pytest.fixture
-def patched(mocker: MockerFixture, tmp_path: Path) -> dict[str, MagicMock]:
-    """Patch every external surface (subprocess, callback HTTP, output file)."""
-
-    # subprocess.run returns success and writes the fixture into the output path.
-    def fake_run(argv: list[str], **_kwargs: object) -> CompletedProcess[bytes]:
-        # Find the --output-path=X arg and copy the fixture there.
-        for a in argv:
-            if a.startswith("--output-path="):
-                out = a.split("=", 1)[1]
-                Path(out).write_text(FIXTURE.read_text())
-        return CompletedProcess(argv, 0, stdout=b"guidellm log\n", stderr=b"")
-
+def patched_callbacks(mocker: MockerFixture) -> dict[str, MagicMock]:
+    """Patch every callback function on runner.main."""
     return {
-        "run": mocker.patch("runner.main.subprocess.run", side_effect=fake_run),
-        "post_state": mocker.patch("runner.main.post_state"),
-        "post_metrics": mocker.patch("runner.main.post_metrics"),
-        "tmp_dir": tmp_path,
+        "post_state_running": mocker.patch("runner.main.post_state_running"),
+        "post_log_batch": mocker.patch("runner.main.post_log_batch"),
+        "post_finish": mocker.patch("runner.main.post_finish"),
     }
 
 
-def test_main_happy_path_posts_running_completed_and_metrics(
-    patched: dict[str, MagicMock], env_minimal: dict[str, str], mocker: MockerFixture
+def test_happy_path_posts_state_running_and_finish_completed(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
 ) -> None:
-    mocker.patch.dict("os.environ", env_minimal, clear=True)
-    # Redirect /tmp/report.json to a tmp_path so tests are isolated.
-    mocker.patch("runner.main._OUTPUT_PATH", str(patched["tmp_dir"] / "report.json"))
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
 
     rc = main_mod.main()
+
     assert rc == 0
+    assert patched_callbacks["post_state_running"].call_count == 1
+    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
+    assert sr_kwargs["run_id"] == "r-test"
+    assert sr_kwargs["token"] == "hmac-test-token"
 
-    # state callbacks: running first, then completed
-    state_calls = patched["post_state"].call_args_list
-    assert state_calls[0].kwargs["state"] == "running"
-    assert state_calls[-1].kwargs["state"] == "completed"
-
-    # metrics call: exactly one
-    assert patched["post_metrics"].call_count == 1
-    metrics_kwargs = patched["post_metrics"].call_args.kwargs
-    assert "metricsSummary" not in metrics_kwargs  # passed as 'summary' kwarg
-    assert metrics_kwargs["summary"]["ttft"]["mean"] == 120
-    assert metrics_kwargs["raw"]["benchmarks"][0]["metrics"]["request_totals"]["total"] == 1000
+    assert patched_callbacks["post_finish"].call_count == 1
+    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
+    assert finish_kwargs["state"] == "completed"
+    assert finish_kwargs["exit_code"] == 0
+    assert finish_kwargs["stdout"] == "hello"
+    assert finish_kwargs["stderr"] == ""
+    assert finish_kwargs["files"] == {}
+    assert finish_kwargs["message"] is None
 
 
-def test_main_failure_posts_failed_with_stderr_tail(
-    mocker: MockerFixture, env_minimal: dict[str, str]
+def test_failure_path_posts_finish_failed_with_message(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
 ) -> None:
-    mocker.patch.dict("os.environ", env_minimal, clear=True)
-    mocker.patch(
-        "runner.main.subprocess.run",
-        return_value=CompletedProcess([], 1, stdout=b"x" * 200, stderr=b"BOOM" * 50),
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"BOOM\n", returncode=1)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    rc = main_mod.main()
+
+    # Wrapper itself always exits 0 — failure is conveyed via /finish state.
+    assert rc == 0
+    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
+    assert finish_kwargs["state"] == "failed"
+    assert finish_kwargs["exit_code"] == 1
+    assert finish_kwargs["stderr"] == "BOOM"
+    assert finish_kwargs["message"] == "tool exited with code 1"
+
+
+def test_output_file_collected_as_base64(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"report": "report.json"})
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+
+    # Place the output file in tmp_path and run the wrapper with cwd=tmp_path.
+    (tmp_path / "report.json").write_bytes(b"REPORT_BYTES")
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    # Path.cwd() is also used to resolve output files.
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+
+    proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
+    assert "report" in files
+    assert files["report"] == base64.b64encode(b"REPORT_BYTES").decode("ascii")
+
+
+def test_missing_output_file_silently_dropped(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"missing": "nope.txt"})
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
+    assert files == {}
+
+
+def test_log_batches_posted_with_correct_kwargs(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    # Several lines so the end-of-stream flush has something to send.
+    stdout_blob = b"line one\nline two\nline three\n"
+    proc = _fake_proc(stdout=stdout_blob, stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    assert patched_callbacks["post_log_batch"].call_count >= 1
+
+    # All stdout-stream calls should target run_id=r-test and stream=stdout.
+    stdout_calls = [
+        c for c in patched_callbacks["post_log_batch"].call_args_list
+        if c.kwargs.get("stream") == "stdout"
+    ]
+    assert len(stdout_calls) >= 1
+    for c in stdout_calls:
+        assert c.kwargs["run_id"] == "r-test"
+        assert isinstance(c.kwargs["lines"], list)
+
+    # Across all stdout batches we should have observed every line at least once.
+    all_lines: list[str] = []
+    for c in stdout_calls:
+        all_lines.extend(c.kwargs["lines"])
+    assert "line one" in all_lines
+    assert "line two" in all_lines
+    assert "line three" in all_lines
+
+    # And /finish should include the full uncapped stdout (no _STDOUT_TAIL_BYTES cap).
+    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
+    assert finish_kwargs["stdout"] == "line one\nline two\nline three"
+
+
+def test_full_stdout_is_uncapped_on_finish(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+) -> None:
+    """The new wrapper does NOT cap stdout/stderr; full buffers ship on /finish."""
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    # 100 KB of stdout — well beyond the legacy 16 KB cap.
+    big = (b"x" * 1023 + b"\n") * 100
+    proc = _fake_proc(stdout=big, stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
+    # The pump strips trailing \n per line and joins with \n, so length is
+    # very close to the input but not a perfect equality. Crucially: well
+    # over 16 KB.
+    assert len(finish_kwargs["stdout"].encode("utf-8")) > 16 * 1024
+
+
+def test_redaction_in_log_line(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    md_env_minimal["MD_ARGV"] = json.dumps(
+        ["guidellm", '--backend-kwargs={"api_key":"sk-secret"}']
     )
-    post_state = mocker.patch("runner.main.post_state")
-    post_metrics = mocker.patch("runner.main.post_metrics")
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
 
-    rc = main_mod.main()
-    assert rc == 1
+    with caplog.at_level("INFO", logger="runner"):
+        rc = main_mod.main()
 
-    # First state call: running. Final state call: failed with stderr tail.
-    assert post_state.call_args_list[0].kwargs["state"] == "running"
-    final = post_state.call_args_list[-1]
-    assert final.kwargs["state"] == "failed"
-    assert "BOOM" in final.kwargs["message"]
-
-    # No metrics callback when guidellm exits non-zero.
-    assert post_metrics.call_count == 0
-
-
-def test_main_caps_stdout_logs_at_stdout_tail_bytes(
-    patched: dict[str, MagicMock], env_minimal: dict[str, str], mocker: MockerFixture
-) -> None:
-    # Override the happy-path fake_run to also produce a 1 MB stdout blob.
-    big = b"x" * (1024 * 1024)
-
-    def fake_run_with_big_stdout(argv: list[str], **_: object) -> CompletedProcess[bytes]:
-        for a in argv:
-            if a.startswith("--output-path="):
-                Path(a.split("=", 1)[1]).write_text(FIXTURE.read_text())
-        return CompletedProcess(argv, 0, stdout=big, stderr=b"")
-
-    patched["run"].side_effect = fake_run_with_big_stdout
-    mocker.patch.dict("os.environ", env_minimal, clear=True)
-    mocker.patch("runner.main._OUTPUT_PATH", str(patched["tmp_dir"] / "report.json"))
-
-    rc = main_mod.main()
     assert rc == 0
-
-    metrics_kwargs = patched["post_metrics"].call_args.kwargs
-    # logs payload is capped at _STDOUT_TAIL_BYTES (16 KB), not the full 1 MB.
-    assert metrics_kwargs["logs"] is not None
-    assert len(metrics_kwargs["logs"].encode("utf-8")) <= main_mod._STDOUT_TAIL_BYTES
+    log_text = "\n".join(r.message for r in caplog.records)
+    assert "***REDACTED***" in log_text
+    assert "sk-secret" not in log_text
 
 
-def test_main_missing_env_exits_with_error(
-    mocker: MockerFixture, env_minimal: dict[str, str]
+def test_missing_required_env_raises_key_error(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
 ) -> None:
-    del env_minimal["TARGET_URL"]
-    mocker.patch.dict("os.environ", env_minimal, clear=True)
-    post_state = mocker.patch("runner.main.post_state")
-    mocker.patch("runner.main.subprocess.run")  # should never be called
+    """Config errors before any callback is possible should propagate as KeyError."""
+    del md_env_minimal["MD_CALLBACK_URL"]
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    # Popen should never be reached.
+    popen = mocker.patch("runner.main.subprocess.Popen")
 
-    rc = main_mod.main()
-    assert rc == 1
-    # Cannot post state without callback URL, but env_minimal still has it.
-    # The runner should have posted state=failed with a useful message.
-    failed = post_state.call_args_list
-    assert any(c.kwargs.get("state") == "failed" for c in failed)
+    with pytest.raises(KeyError):
+        main_mod.main()
+
+    popen.assert_not_called()
+
+
+def test_redacted_helper_passes_through_non_secret_args() -> None:
+    argv = ["guidellm", "--target=http://x", "--rate-type=constant"]
+    assert main_mod._redacted(argv) == argv
+
+
+def test_redacted_helper_redacts_backend_kwargs() -> None:
+    argv = ["guidellm", '--backend-kwargs={"api_key":"sk-zzz"}']
+    out = main_mod._redacted(argv)
+    assert out[0] == "guidellm"
+    assert out[1] == "--backend-kwargs=***REDACTED***"
+
+
+def test_materialize_input_files_symlinks_into_cwd(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """When MD_INPUT_FILE_PATHS is set, the wrapper symlinks mount paths into cwd."""
+    src = tmp_path / "external" / "ds.json"
+    src.parent.mkdir()
+    src.write_text("{}")
+    cwd = tmp_path / "work"
+    cwd.mkdir()
+
+    mocker.patch.dict(
+        "os.environ",
+        {"MD_INPUT_FILE_PATHS": json.dumps({"dataset.json": str(src)})},
+        clear=True,
+    )
+    mocker.patch("runner.main.Path.cwd", return_value=cwd)
+
+    main_mod._materialize_input_files()
+
+    dst = cwd / "dataset.json"
+    assert dst.is_symlink()
+    assert os.readlink(dst) == str(src)

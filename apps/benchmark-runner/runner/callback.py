@@ -1,28 +1,23 @@
-"""Callback HTTP client — runner pod → API."""
+"""HTTP callbacks: runner pod → API. Path layout v2 (#53)."""
 
 from __future__ import annotations
 
-from typing import Any
-
 import requests
 
-# Keep timeouts short — the API service is in-cluster and we don't want to
-# block the runner forever if the network glitches. The reconciler will
-# eventually mark a stuck run as failed.
 _TIMEOUT_SECONDS = 10
 
 
 def _join(callback_url: str, path: str) -> str:
     """Concatenate ``callback_url`` and ``path`` without double slashes.
 
-    Drivers may pass ``CALLBACK_URL=http://api/`` (trailing slash) or
+    Drivers may pass ``MD_CALLBACK_URL=http://api/`` (trailing slash) or
     ``http://api`` (none); both must produce a single ``/api/internal/...``
     path component or NestJS strict routing returns 404.
     """
     return f"{callback_url.rstrip('/')}/{path.lstrip('/')}"
 
 
-def _post(url: str, token: str, body: dict[str, Any]) -> None:
+def _post(url: str, token: str, body: dict) -> None:
     resp = requests.post(
         url,
         json=body,
@@ -33,35 +28,52 @@ def _post(url: str, token: str, body: dict[str, Any]) -> None:
         raise RuntimeError(f"Callback POST {url} returned {resp.status_code}: {resp.text[:200]}")
 
 
-def post_state(
+def post_state_running(*, callback_url: str, token: str, run_id: str) -> None:
+    """POST {state: 'running'} to the v2 /state endpoint."""
+    _post(
+        _join(callback_url, f"api/internal/runs/{run_id}/state"),
+        token,
+        {"state": "running"},
+    )
+
+
+def post_log_batch(
     *,
     callback_url: str,
     token: str,
-    benchmark_id: str,
+    run_id: str,
+    stream: str,
+    lines: list[str],
+) -> None:
+    """POST a batch of stdout/stderr lines to the v2 /log endpoint."""
+    _post(
+        _join(callback_url, f"api/internal/runs/{run_id}/log"),
+        token,
+        {"stream": stream, "lines": lines},
+    )
+
+
+def post_finish(
+    *,
+    callback_url: str,
+    token: str,
+    run_id: str,
     state: str,
-    message: str | None = None,
-    progress: float | None = None,
+    exit_code: int,
+    stdout: str,
+    stderr: str,
+    files: dict[str, str],
+    message: str | None,
 ) -> None:
-    """POST a lifecycle update to the API."""
-    body: dict[str, Any] = {"state": state}
+    """POST the terminal payload (state, exit code, full logs, output files)
+    to the v2 /finish endpoint."""
+    body: dict = {
+        "state": state,
+        "exitCode": exit_code,
+        "stdout": stdout,
+        "stderr": stderr,
+        "files": files,
+    }
     if message is not None:
-        body["stateMessage"] = message
-    if progress is not None:
-        body["progress"] = progress
-    _post(_join(callback_url, f"api/internal/benchmarks/{benchmark_id}/state"), token, body)
-
-
-def post_metrics(
-    *,
-    callback_url: str,
-    token: str,
-    benchmark_id: str,
-    summary: dict[str, Any],
-    raw: dict[str, Any],
-    logs: str | None,
-) -> None:
-    """POST the final metrics payload to the API."""
-    body: dict[str, Any] = {"metricsSummary": summary, "rawMetrics": raw}
-    if logs is not None:
-        body["logs"] = logs
-    _post(_join(callback_url, f"api/internal/benchmarks/{benchmark_id}/metrics"), token, body)
+        body["message"] = message
+    _post(_join(callback_url, f"api/internal/runs/{run_id}/finish"), token, body)
