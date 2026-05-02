@@ -9,8 +9,7 @@
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@modeldoctor/contracts": ["../../packages/contracts/src"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src"],
