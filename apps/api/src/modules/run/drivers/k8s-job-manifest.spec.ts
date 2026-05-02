@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 import type { RunExecutionContext } from "./execution-driver.interface.js";
+import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 
 const ctx: RunExecutionContext = {
   runId: "abc123",
@@ -23,7 +23,9 @@ describe("buildSecretManifest", () => {
     expect(s.stringData?.API_KEY).toBe("secret-value");
     // inputFiles entries are prefixed with INPUT_FILE_<base64alias> to keep the
     // Secret key flat (Secret keys must be DNS-segment-like).
-    const inputFileKeys = Object.keys(s.stringData ?? {}).filter((k) => k.startsWith("INPUT_FILE_"));
+    const inputFileKeys = Object.keys(s.stringData ?? {}).filter((k) =>
+      k.startsWith("INPUT_FILE_"),
+    );
     expect(inputFileKeys).toHaveLength(1);
     expect(s.stringData?.[inputFileKeys[0]]).toBe("POST http://x");
   });

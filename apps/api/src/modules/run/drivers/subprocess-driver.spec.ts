@@ -1,13 +1,13 @@
+import { EventEmitter } from "node:events";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 // Note: 'error' event handler in subprocess-driver.ts is exercised via
 // runtime; mock-factory wiring makes a unit test for it disproportionately
 // complex. See PR description for rationale.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventEmitter } from "node:events";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import * as os from "node:os";
-import { SubprocessDriver } from "./subprocess-driver.js";
 import type { RunExecutionContext } from "./execution-driver.interface.js";
+import { SubprocessDriver } from "./subprocess-driver.js";
 
 vi.mock("node:child_process", () => {
   const proc = new EventEmitter() as EventEmitter & {

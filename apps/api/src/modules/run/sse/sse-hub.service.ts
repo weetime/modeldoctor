@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import type { ProgressEvent } from "@modeldoctor/tool-adapters";
+import { Injectable } from "@nestjs/common";
 import { Observable, Subject } from "rxjs";
 
 @Injectable()

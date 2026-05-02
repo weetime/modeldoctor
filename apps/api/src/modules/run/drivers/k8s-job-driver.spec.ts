@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { K8sJobDriver } from "./k8s-job-driver.js";
 import type { RunExecutionContext } from "./execution-driver.interface.js";
+import { K8sJobDriver } from "./k8s-job-driver.js";
 
 const ctx: RunExecutionContext = {
   runId: "abc",

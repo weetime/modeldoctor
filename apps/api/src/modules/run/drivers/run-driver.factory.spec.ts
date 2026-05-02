@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { ConfigService } from "@nestjs/config";
+import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../config/env.schema.js";
 import { createRunDriver, imageForTool } from "./run-driver.factory.js";
 import { SubprocessDriver } from "./subprocess-driver.js";
@@ -59,7 +59,7 @@ describe("createRunDriver k8s branch", () => {
       const { K8sJobDriver } = await import("./k8s-job-driver.js");
       expect(d).toBeInstanceOf(K8sJobDriver);
     } finally {
-      delete (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__;
+      (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__ = undefined;
     }
   });
 

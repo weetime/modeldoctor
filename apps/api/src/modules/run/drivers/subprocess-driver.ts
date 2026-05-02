@@ -74,9 +74,7 @@ export class SubprocessDriver implements RunExecutionDriver {
     this.handles.set(handle, { child, cwd });
 
     child.on("exit", (code, signal) => {
-      this.log.log(
-        `subprocess ${handle} exited code=${code ?? "null"} signal=${signal ?? "null"}`,
-      );
+      this.log.log(`subprocess ${handle} exited code=${code ?? "null"} signal=${signal ?? "null"}`);
       const entry = this.handles.get(handle);
       if (entry?.killTimer) clearTimeout(entry.killTimer);
       this.handles.delete(handle);

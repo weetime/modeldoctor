@@ -1,6 +1,6 @@
+import type { ProgressEvent } from "@modeldoctor/tool-adapters";
 import { describe, expect, it } from "vitest";
 import { SseHub } from "./sse-hub.service.js";
-import type { ProgressEvent } from "@modeldoctor/tool-adapters";
 
 describe("SseHub", () => {
   it("delivers events to subscribers of the same runId", async () => {

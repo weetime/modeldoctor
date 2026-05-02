@@ -104,8 +104,8 @@ export class K8sJobDriver implements RunExecutionDriver {
       // real failure (e.g. apiserver flake, RBAC) and must propagate so
       // RunService doesn't mark the cancel as succeeded.
       const status =
-        (e as { statusCode?: number; response?: { statusCode?: number } }).response
-          ?.statusCode ?? (e as { statusCode?: number }).statusCode;
+        (e as { statusCode?: number; response?: { statusCode?: number } }).response?.statusCode ??
+        (e as { statusCode?: number }).statusCode;
       if (status === 404) return;
       this.log.warn(`cancel: deleteNamespacedJob failed: ${(e as Error).message}`);
       throw e;
