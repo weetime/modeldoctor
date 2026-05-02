@@ -112,4 +112,24 @@ describe("HistoryDetailPage", () => {
       expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument(),
     );
   });
+
+  it("renders 'Set as baseline' when run.baselineFor is null", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ baselineFor: null }));
+    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Set as baseline|设为基线/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("renders 'Unset' when run.baselineFor is populated", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        baselineFor: { id: "b_1", name: "anchor", createdAt: "2026-05-02T00:00:00.000Z" },
+      }),
+    );
+    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Baseline · Unset|已是基线/ })).toBeInTheDocument(),
+    );
+  });
 });

@@ -60,6 +60,27 @@
     "logs": {
       "toggle": "Logs"
     },
+    "baseline": {
+      "setButton": "Set as baseline",
+      "unsetButton": "✓ Baseline · Unset",
+      "unsetConfirmTitle": "Unset this baseline?",
+      "unsetConfirmBody": "This removes the baseline mark; the Run itself stays. Other Runs that compared against this baseline keep their data; their `baselineId` link is cleared.",
+      "unsetConfirmAction": "Unset baseline",
+      "dialog": {
+        "title": "Set as baseline",
+        "body": "Mark this Run as a reference for future regression diffs.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. throughput-baseline-v1",
+        "descriptionLabel": "Description (optional)",
+        "tagsLabel": "Tags (comma separated, optional)",
+        "submit": "Save",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "alreadyExists": "This Run already has a baseline.",
+        "generic": "Could not save baseline."
+      }
+    },
     "notFound": {
       "title": "Run not found",
       "body": "It may have been deleted, or you may not own it."
