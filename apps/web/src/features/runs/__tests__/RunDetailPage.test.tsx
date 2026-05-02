@@ -127,4 +127,80 @@ describe("RunDetailPage", () => {
       expect(screen.getByRole("button", { name: /Baseline · Unset|已是基线/ })).toBeInTheDocument(),
     );
   });
+
+  it("renders GuidellmReportView when summaryMetrics.tool === 'guidellm'", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        summaryMetrics: {
+          tool: "guidellm",
+          data: {
+            ttft: { mean: 12, p50: 11, p90: 14, p95: 18, p99: 25 },
+            itl: { mean: 5, p50: 5, p90: 6, p95: 7, p99: 8 },
+            e2eLatency: { mean: 100, p50: 95, p90: 130, p95: 150, p99: 200 },
+            requestsPerSecond: { mean: 42 },
+            outputTokensPerSecond: { mean: 1500 },
+            inputTokensPerSecond: { mean: 800 },
+            totalTokensPerSecond: { mean: 2300 },
+            concurrency: { mean: 16, max: 24 },
+            requests: { total: 1000, success: 985, error: 10, incomplete: 5 },
+          },
+        },
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/TTFT/i);
+  });
+
+  it("renders VegetaReportView when summaryMetrics.tool === 'vegeta'", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        summaryMetrics: {
+          tool: "vegeta",
+          data: {
+            requests: { total: 600, rate: 10, throughput: 9.8 },
+            duration: { totalSeconds: 60, attackSeconds: 60, waitSeconds: 0 },
+            latencies: { min: 5, mean: 25, p50: 22, p90: 38, p95: 45, p99: 80, max: 120 },
+            bytesIn: { total: 1000, mean: 16 },
+            bytesOut: { total: 500, mean: 8 },
+            success: 99.5,
+            statusCodes: { "200": 597, "500": 3 },
+            errors: [],
+          },
+        },
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Status codes/i);
+  });
+
+  it("renders GenaiPerfReportView when summaryMetrics.tool === 'genai-perf'", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        summaryMetrics: {
+          tool: "genai-perf",
+          data: {
+            requestThroughput: { avg: 50, unit: "req/s" },
+            requestLatency: { avg: 12, min: 10, max: 30, p50: 12, p90: 18, p95: 22, p99: 28, stddev: 4, unit: "ms" },
+            timeToFirstToken: { avg: 12, min: 10, max: 30, p50: 12, p90: 18, p95: 22, p99: 28, stddev: 4, unit: "ms" },
+            interTokenLatency: { avg: 5, min: 3, max: 10, p50: 5, p90: 7, p95: 8, p99: 9, stddev: 1, unit: "ms" },
+            outputTokenThroughput: { avg: 1200, unit: "tok/s" },
+            outputSequenceLength: { avg: 256, p50: 250, p99: 400 },
+            inputSequenceLength: { avg: 128, p50: 120, p99: 200 },
+          },
+        },
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Sequence length/i);
+  });
+
+  it("renders UnknownReportView for unrecognized envelope", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        summaryMetrics: { tool: "future-tool", data: { something: "else" } },
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Report shape not recognized/i);
+  });
 });

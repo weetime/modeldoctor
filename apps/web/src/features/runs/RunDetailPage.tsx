@@ -20,12 +20,63 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  guidellmReportSchema,
+  vegetaReportSchema,
+  genaiPerfReportSchema,
+  type GuidellmReport,
+  type VegetaReport,
+  type GenaiPerfReport,
+} from "@modeldoctor/tool-adapters/schemas";
+import type { Run } from "@modeldoctor/contracts";
+import { GuidellmReportView } from "./reports/GuidellmReportView";
+import { VegetaReportView } from "./reports/VegetaReportView";
+import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
+import { UnknownReportView } from "./reports/UnknownReportView";
 import { RunDetailMetadata } from "./RunDetailMetadata";
-import { HistoryDetailMetrics } from "./HistoryDetailMetrics";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { runKeys } from "./queries";
 import { useRunDetail } from "./queries";
+
+function ReportSection({ metrics }: { metrics: Run["summaryMetrics"] }) {
+  if (!metrics) {
+    return (
+      <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        No metrics yet
+      </div>
+    );
+  }
+  const tagged = metrics as { tool?: string; data?: unknown };
+  switch (tagged.tool) {
+    case "guidellm": {
+      const parsed = guidellmReportSchema.safeParse(tagged.data);
+      return parsed.success ? (
+        <GuidellmReportView data={parsed.data as GuidellmReport} />
+      ) : (
+        <UnknownReportView raw={metrics} reason={parsed.error.message} />
+      );
+    }
+    case "vegeta": {
+      const parsed = vegetaReportSchema.safeParse(tagged.data);
+      return parsed.success ? (
+        <VegetaReportView data={parsed.data as VegetaReport} />
+      ) : (
+        <UnknownReportView raw={metrics} reason={parsed.error.message} />
+      );
+    }
+    case "genai-perf": {
+      const parsed = genaiPerfReportSchema.safeParse(tagged.data);
+      return parsed.success ? (
+        <GenaiPerfReportView data={parsed.data as GenaiPerfReport} />
+      ) : (
+        <UnknownReportView raw={metrics} reason={parsed.error.message} />
+      );
+    }
+    default:
+      return <UnknownReportView raw={metrics} reason="unknown report envelope" />;
+  }
+}
 
 export function RunDetailPage() {
   const { t } = useTranslation("runs");
@@ -115,7 +166,7 @@ export function RunDetailPage() {
         </section>
         <section>
           <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-          <HistoryDetailMetrics metrics={run.summaryMetrics} />
+          <ReportSection metrics={run.summaryMetrics} />
         </section>
         <section>
           <RunDetailRawOutput
