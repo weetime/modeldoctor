@@ -26,13 +26,13 @@ const STATUSES: RunStatus[] = [
   "canceled",
 ];
 
-export interface HistoryFiltersProps {
+export interface RunListFiltersProps {
   query: Partial<ListRunsQuery>;
   onChange: (next: Partial<ListRunsQuery>) => void;
 }
 
-export function HistoryFilters({ query, onChange }: HistoryFiltersProps) {
-  const { t } = useTranslation("history");
+export function RunListFilters({ query, onChange }: RunListFiltersProps) {
+  const { t } = useTranslation("runs");
 
   function patch(p: Partial<ListRunsQuery>) {
     onChange({ ...query, ...p });

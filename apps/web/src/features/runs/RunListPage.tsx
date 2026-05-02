@@ -20,8 +20,8 @@ import { History as HistoryIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
-import { HistoryFilters } from "./HistoryFilters";
-import { historyKeys, useRunsInfiniteList } from "./queries";
+import { RunListFilters } from "./RunListFilters";
+import { runKeys, useRunList } from "./queries";
 
 function readP95(metrics: Run["summaryMetrics"], tool: Run["tool"]): number | null {
   if (!metrics) return null;
@@ -52,8 +52,8 @@ function fmtNum(n: number | null | undefined, digits = 1): string {
   return n.toFixed(digits);
 }
 
-export function HistoryListPage() {
-  const { t } = useTranslation("history");
+export function RunListPage() {
+  const { t } = useTranslation("runs");
   const qc = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -108,7 +108,7 @@ export function HistoryListPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useRunsInfiniteList(query);
+  } = useRunList(query);
   const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.items), [data]);
 
   const isFiltered = useMemo(
@@ -144,7 +144,7 @@ export function HistoryListPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => qc.invalidateQueries({ queryKey: historyKeys.lists() })}
+              onClick={() => qc.invalidateQueries({ queryKey: runKeys.lists() })}
             >
               {t("retry")}
             </Button>
@@ -163,7 +163,7 @@ export function HistoryListPage() {
       />
 
       <div className="space-y-4 px-8 py-6">
-        <HistoryFilters query={query} onChange={patchQuery} />
+        <RunListFilters query={query} onChange={patchQuery} />
 
         {isError ? (
           <Alert variant="destructive">
@@ -234,7 +234,7 @@ export function HistoryListPage() {
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}
                     </TableCell>
                     <TableCell>
-                      <Link to={`/history/${run.id}`} className="text-primary hover:underline">
+                      <Link to={`/runs/${run.id}`} className="text-primary hover:underline">
                         →
                       </Link>
                     </TableCell>

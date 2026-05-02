@@ -20,17 +20,17 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { HistoryDetailMetadata } from "./HistoryDetailMetadata";
+import { RunDetailMetadata } from "./RunDetailMetadata";
 import { HistoryDetailMetrics } from "./HistoryDetailMetrics";
-import { HistoryDetailRawOutput } from "./HistoryDetailRawOutput";
+import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
-import { historyKeys } from "./queries";
+import { runKeys } from "./queries";
 import { useRunDetail } from "./queries";
 
-export function HistoryDetailPage() {
-  const { t } = useTranslation("history");
-  const { runId } = useParams<{ runId: string }>();
-  const { data: run, isLoading, isError, error } = useRunDetail(runId ?? "");
+export function RunDetailPage() {
+  const { t } = useTranslation("runs");
+  const { id } = useParams<{ id: string }>();
+  const { data: run, isLoading, isError, error } = useRunDetail(id ?? "");
   const qc = useQueryClient();
 
   const [setOpen, setSetOpen] = useState(false);
@@ -55,7 +55,7 @@ export function HistoryDetailPage() {
     if (status === 404) {
       return (
         <>
-          <PageHeader title={runId ?? "—"} />
+          <PageHeader title={id ?? "—"} />
           <EmptyState
             icon={SearchX}
             title={t("detail.notFound.title")}
@@ -66,7 +66,7 @@ export function HistoryDetailPage() {
     }
     return (
       <>
-        <PageHeader title={runId ?? "—"} />
+        <PageHeader title={id ?? "—"} />
         <Alert variant="destructive" className="mx-8 mt-6">
           <AlertDescription>{(error as Error)?.message ?? t("detail.loadError")}</AlertDescription>
         </Alert>
@@ -101,7 +101,7 @@ export function HistoryDetailPage() {
               </Button>
             )}
             <Button asChild variant="ghost" size="sm">
-              <Link to="/history">
+              <Link to="/runs">
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("detail.back")}
               </Link>
@@ -111,14 +111,14 @@ export function HistoryDetailPage() {
       />
       <div className="space-y-8 px-8 py-6">
         <section>
-          <HistoryDetailMetadata run={run} />
+          <RunDetailMetadata run={run} />
         </section>
         <section>
           <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
           <HistoryDetailMetrics metrics={run.summaryMetrics} />
         </section>
         <section>
-          <HistoryDetailRawOutput
+          <RunDetailRawOutput
             rawOutput={run.rawOutput as Record<string, unknown> | null}
             logs={run.logs}
           />
@@ -129,7 +129,7 @@ export function HistoryDetailPage() {
         runId={run.id}
         open={setOpen}
         onOpenChange={setSetOpen}
-        onSuccess={() => qc.invalidateQueries({ queryKey: historyKeys.detail(run.id) })}
+        onSuccess={() => qc.invalidateQueries({ queryKey: runKeys.detail(run.id) })}
       />
 
       <AlertDialog open={unsetOpen} onOpenChange={setUnsetOpen}>

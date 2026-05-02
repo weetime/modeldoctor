@@ -3,14 +3,14 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export function HistoryDetailRawOutput({
+export function RunDetailRawOutput({
   rawOutput,
   logs,
 }: {
   rawOutput: Record<string, unknown> | null;
   logs: string | null;
 }) {
-  const { t } = useTranslation("history");
+  const { t } = useTranslation("runs");
   const [showRaw, setShowRaw] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
 

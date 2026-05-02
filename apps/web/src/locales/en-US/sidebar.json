@@ -23,7 +23,7 @@
     "e2e": "E2E Smoke",
     "regression": "Regression",
     "health": "Health Monitor",
-    "history": "History",
+    "runs": "Runs",
     "requestDebug": "Request Debug",
     "connections": "Connections",
     "settings": "Settings",

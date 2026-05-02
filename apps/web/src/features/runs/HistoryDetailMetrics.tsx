@@ -6,7 +6,7 @@ export function HistoryDetailMetrics({
 }: {
   metrics: Run["summaryMetrics"];
 }) {
-  const { t } = useTranslation("history");
+  const { t } = useTranslation("runs");
   if (!metrics || Object.keys(metrics).length === 0) {
     return <p className="text-sm text-muted-foreground">{t("detail.metrics.empty")}</p>;
   }

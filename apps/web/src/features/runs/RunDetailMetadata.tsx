@@ -13,8 +13,8 @@ function fmtDuration(start: string | null, end: string | null): string {
   return formatDistanceStrict(new Date(end), new Date(start));
 }
 
-export function HistoryDetailMetadata({ run }: { run: Run }) {
-  const { t } = useTranslation("history");
+export function RunDetailMetadata({ run }: { run: Run }) {
+  const { t } = useTranslation("runs");
   return (
     <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
       <Row label={t("detail.metadata.kind")}>{run.kind}</Row>

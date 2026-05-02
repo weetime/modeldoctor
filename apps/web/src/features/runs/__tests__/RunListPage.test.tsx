@@ -7,7 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { HistoryListPage } from "../HistoryListPage";
+import { RunListPage } from "../RunListPage";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -66,10 +66,10 @@ function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={["/history"]}>
+        <MemoryRouter initialEntries={["/runs"]}>
           <Routes>
-            <Route path="/history" element={children} />
-            <Route path="/history/:runId" element={<div>detail</div>} />
+            <Route path="/runs" element={children} />
+            <Route path="/runs/:id" element={<div>detail</div>} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -84,7 +84,7 @@ const ONE_RUN: ListRunsResponse = {
 
 const EMPTY: ListRunsResponse = { items: [], nextCursor: null };
 
-describe("HistoryListPage", () => {
+describe("RunListPage", () => {
   beforeEach(() => {
     vi.mocked(api.get).mockReset();
     vi.mocked(api.post).mockReset();
@@ -93,7 +93,7 @@ describe("HistoryListPage", () => {
 
   it("renders a row with kind / tool / status / p95", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_RUN);
-    render(<HistoryListPage />, { wrapper: Wrapper });
+    render(<RunListPage />, { wrapper: Wrapper });
     expect(await screen.findByText("benchmark")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("HistoryListPage", () => {
 
   it("compare button is disabled by default", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_RUN);
-    render(<HistoryListPage />, { wrapper: Wrapper });
+    render(<RunListPage />, { wrapper: Wrapper });
     await screen.findByText("benchmark"); // wait for load
     const compare = screen.getByRole("button", { name: /compare/i });
     expect(compare).toBeDisabled();
@@ -118,7 +118,7 @@ describe("HistoryListPage", () => {
     };
     vi.mocked(api.get).mockResolvedValue(twoRuns);
     const user = userEvent.setup();
-    render(<HistoryListPage />, { wrapper: Wrapper });
+    render(<RunListPage />, { wrapper: Wrapper });
     await screen.findByText("guidellm");
     const checkboxes = screen.getAllByRole("checkbox");
     await user.click(checkboxes[0]);
@@ -130,7 +130,7 @@ describe("HistoryListPage", () => {
 
   it("renders empty state when there are no runs", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
-    render(<HistoryListPage />, { wrapper: Wrapper });
+    render(<RunListPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText(/No runs yet|暂无 Run/i)).toBeInTheDocument());
   });
 });

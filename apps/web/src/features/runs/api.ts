@@ -19,7 +19,7 @@ function buildListQuery(q: Partial<ListRunsQuery>): string {
   return qs ? `?${qs}` : "";
 }
 
-export const historyApi = {
+export const runApi = {
   list: (q: Partial<ListRunsQuery>) => api.get<ListRunsResponse>(`/api/runs${buildListQuery(q)}`),
   get: (id: string) => api.get<Run>(`/api/runs/${id}`),
 };

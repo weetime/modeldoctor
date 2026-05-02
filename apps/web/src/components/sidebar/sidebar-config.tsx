@@ -88,9 +88,9 @@ export const sidebarGroups: SidebarGroup[] = [
         comingSoon: true,
       },
       {
-        to: "/history",
+        to: "/runs",
         icon: History,
-        labelKey: "items.history",
+        labelKey: "items.runs",
       },
     ],
   },

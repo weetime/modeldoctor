@@ -23,7 +23,7 @@
     "e2e": "E2E Smoke",
     "regression": "回归对比",
     "health": "健康监控",
-    "history": "历史记录",
+    "runs": "运行",
     "requestDebug": "请求调试",
     "connections": "连接库",
     "settings": "设置",

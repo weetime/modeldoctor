@@ -8,8 +8,8 @@ import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
-import { HistoryDetailPage } from "@/features/history/HistoryDetailPage";
-import { HistoryListPage } from "@/features/history/HistoryListPage";
+import { RunDetailPage } from "@/features/runs/RunDetailPage";
+import { RunListPage } from "@/features/runs/RunListPage";
 import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
@@ -70,12 +70,12 @@ export const routes: RouteObject[] = [
             element: <ComingSoonRoute icon={HeartPulse} itemKey="health" />,
           },
           {
-            path: "history",
-            element: <HistoryListPage />,
+            path: "runs",
+            element: <RunListPage />,
           },
           {
-            path: "history/:runId",
-            element: <HistoryDetailPage />,
+            path: "runs/:id",
+            element: <RunDetailPage />,
           },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },

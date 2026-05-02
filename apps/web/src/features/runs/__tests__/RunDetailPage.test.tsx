@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { HistoryDetailPage } from "../HistoryDetailPage";
+import { RunDetailPage } from "../RunDetailPage";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -66,10 +66,10 @@ function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={["/history/r1"]}>
+        <MemoryRouter initialEntries={["/runs/r1"]}>
           <Routes>
-            <Route path="/history" element={<div>list</div>} />
-            <Route path="/history/:runId" element={children} />
+            <Route path="/runs" element={<div>list</div>} />
+            <Route path="/runs/:id" element={children} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -77,7 +77,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe("HistoryDetailPage", () => {
+describe("RunDetailPage", () => {
   beforeEach(() => {
     vi.mocked(api.get).mockReset();
     vi.mocked(api.post).mockReset();
@@ -86,7 +86,7 @@ describe("HistoryDetailPage", () => {
 
   it("renders metadata, metrics, raw output toggle", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeRun());
-    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    render(<RunDetailPage />, { wrapper: Wrapper });
     expect(await screen.findByText("smoke")).toBeInTheDocument();
     expect(screen.getByText("benchmark")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("HistoryDetailPage", () => {
 
   it("renders metrics empty when summaryMetrics is null", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeRun({ summaryMetrics: null }));
-    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    render(<RunDetailPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText(/No metrics|没有记录指标/i)).toBeInTheDocument());
   });
 
@@ -104,13 +104,13 @@ describe("HistoryDetailPage", () => {
     const err = new Error("not found") as Error & { status: number };
     err.status = 404;
     vi.mocked(api.get).mockRejectedValueOnce(err);
-    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    render(<RunDetailPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument());
   });
 
   it("renders 'Set as baseline' when run.baselineFor is null", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeRun({ baselineFor: null }));
-    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    render(<RunDetailPage />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Set as baseline|设为基线/ })).toBeInTheDocument(),
     );
@@ -122,7 +122,7 @@ describe("HistoryDetailPage", () => {
         baselineFor: { id: "b_1", name: "anchor", createdAt: "2026-05-02T00:00:00.000Z" },
       }),
     );
-    render(<HistoryDetailPage />, { wrapper: Wrapper });
+    render(<RunDetailPage />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Baseline · Unset|已是基线/ })).toBeInTheDocument(),
     );
