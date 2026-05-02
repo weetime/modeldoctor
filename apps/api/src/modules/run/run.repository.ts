@@ -142,4 +142,14 @@ export class RunRepository {
   delete(id: string): Promise<PrismaRun> {
     return this.prisma.run.delete({ where: { id } });
   }
+
+  async countActiveByName(userId: string, name: string): Promise<number> {
+    return this.prisma.run.count({
+      where: {
+        userId,
+        name,
+        status: { in: ["pending", "submitted", "running"] },
+      },
+    });
+  }
 }
