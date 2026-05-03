@@ -33,7 +33,18 @@ const baseShape = {
  */
 export const connectionInputCreateSchema = z.object({
   ...baseShape,
-  apiKey: z.string().min(1, "required"),
+  // Reject control chars + leading/trailing whitespace at form level
+  // for parity with server-side contract (prevents accidental paste
+  // of token with trailing newline).
+  apiKey: z
+    .string()
+    .min(1, "required")
+    .refine((v) => !/\p{Cc}/u.test(v), {
+      message: "apiKey must not contain control characters",
+    })
+    .refine((v) => v === v.trim(), {
+      message: "apiKey must not have leading or trailing whitespace",
+    }),
 });
 
 /**

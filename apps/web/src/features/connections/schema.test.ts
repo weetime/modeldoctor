@@ -35,6 +35,29 @@ describe("connectionInputSchema", () => {
     expect(r.success).toBe(false);
   });
 
+  it("rejects apiKey with control characters (e.g. newline from paste)", () => {
+    const r = connectionInputSchema.safeParse({ ...valid, apiKey: "sk-test\nwith-newline" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects apiKey with leading whitespace", () => {
+    const r = connectionInputSchema.safeParse({ ...valid, apiKey: " sk-test" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects apiKey with trailing whitespace", () => {
+    const r = connectionInputSchema.safeParse({ ...valid, apiKey: "sk-test " });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts apiKey with shell metacharacters (POSIX-safe)", () => {
+    const r = connectionInputSchema.safeParse({
+      ...valid,
+      apiKey: 'sk-test$(rm)`backtick`"quote',
+    });
+    expect(r.success).toBe(true);
+  });
+
   it("rejects empty model", () => {
     const r = connectionInputSchema.safeParse({ ...valid, model: "" });
     expect(r.success).toBe(false);
