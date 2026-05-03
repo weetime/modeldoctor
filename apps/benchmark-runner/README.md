@@ -35,12 +35,12 @@ Prerequisite: Docker (or Podman with `alias docker=podman`) must be installed an
 ```bash
 # guidellm (gpustack/benchmark-runner base, ~2.5 GB CPU-only torch)
 docker build -f apps/benchmark-runner/images/guidellm.Dockerfile \
-             -t md-runner-guidellm:dev2 \
+             -t md-runner-guidellm:dev3 \
              apps/benchmark-runner/
 
 # vegeta (python:3.11-slim + static vegeta binary, ~135 MB)
 docker build -f apps/benchmark-runner/images/vegeta.Dockerfile \
-             -t md-runner-vegeta:dev2 \
+             -t md-runner-vegeta:dev3 \
              apps/benchmark-runner/
 ```
 
@@ -85,7 +85,7 @@ docker run --rm \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["echo","hello from runner"]' \
   -e MD_OUTPUT_FILES='{}' \
-  md-runner-vegeta:dev2
+  md-runner-vegeta:dev3
 ```
 
 Expected: the wrapper POSTs `state=running`, execs `echo hello from runner`,
@@ -128,7 +128,7 @@ docker run --rm \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["sh","-c","echo GET https://httpbin.org/get | vegeta attack -rate=1 -duration=3s | vegeta report -type=json -output=result.json"]' \
   -e MD_OUTPUT_FILES='{"result":"result.json"}' \
-  md-runner-vegeta:dev2
+  md-runner-vegeta:dev3
 ```
 
 ### Real guidellm run
@@ -140,5 +140,5 @@ docker run --rm \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["benchmark-runner","benchmark","run","--target","https://your-vllm-host/v1","--model","facebook/opt-125m","--max-requests","10","--output-path","report.json"]' \
   -e MD_OUTPUT_FILES='{"report":"report.json"}' \
-  md-runner-guidellm:dev2
+  md-runner-guidellm:dev3
 ```
