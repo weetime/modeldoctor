@@ -1,16 +1,11 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
-import { BenchmarkDetailPage } from "@/features/benchmark/BenchmarkDetailPage";
-import { BenchmarkListPage } from "@/features/benchmark/BenchmarkListPage";
 import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
 import { ErrorPage } from "@/features/error/ErrorPage";
-import { HistoryDetailPage } from "@/features/history/HistoryDetailPage";
-import { HistoryListPage } from "@/features/history/HistoryListPage";
-import { LoadTestPage } from "@/features/load-test/LoadTestPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -19,6 +14,9 @@ import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage"
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
+import { RunCreatePage } from "@/features/runs/RunCreatePage";
+import { RunDetailPage } from "@/features/runs/RunDetailPage";
+import { RunListPage } from "@/features/runs/RunListPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { type Activity, GitCompare, HeartPulse, Timer, Zap } from "lucide-react";
@@ -48,10 +46,7 @@ export const routes: RouteObject[] = [
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/load-test" replace /> },
-          { path: "load-test", element: <LoadTestPage /> },
-          { path: "benchmarks", element: <BenchmarkListPage /> },
-          { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
+          { index: true, element: <Navigate to="/runs" replace /> },
           {
             path: "soak",
             element: <ComingSoonRoute icon={Timer} itemKey="soak" />,
@@ -70,12 +65,13 @@ export const routes: RouteObject[] = [
             element: <ComingSoonRoute icon={HeartPulse} itemKey="health" />,
           },
           {
-            path: "history",
-            element: <HistoryListPage />,
+            path: "runs",
+            element: <RunListPage />,
           },
+          { path: "runs/new", element: <RunCreatePage /> },
           {
-            path: "history/:runId",
-            element: <HistoryDetailPage />,
+            path: "runs/:id",
+            element: <RunDetailPage />,
           },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },

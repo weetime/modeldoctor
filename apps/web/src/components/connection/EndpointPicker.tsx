@@ -45,7 +45,8 @@ export interface EndpointPickerProps {
   onCurlParsed?: (parsed: ParsedCurl) => void;
   /**
    * Optional: when provided, renders a `→ POST <url>` preview line below
-   * the API Base URL input (load-test passes the full request URL).
+   * the API Base URL input (e.g. the full request URL derived from the
+   * base URL + tool-specific path).
    */
   previewUrl?: string;
 }

@@ -64,7 +64,7 @@
   "comingSoon": {
     "title": "敬请期待",
     "body": "该功能正在开发中。",
-    "backToLoadTest": "返回 Load Test"
+    "backToRuns": "返回 Runs"
   },
   "empty": {
     "noConnections": "尚未创建任何连接",

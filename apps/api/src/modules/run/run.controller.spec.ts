@@ -153,6 +153,7 @@ describe("RunController", () => {
     const result = await controller.list(ownerArg as never, {
       kind: "benchmark",
       limit: 10,
+      scope: "own",
     });
     expect(result.items).toHaveLength(1);
     expect(result.items[0].kind).toBe("benchmark");
@@ -279,5 +280,187 @@ describe("RunController", () => {
     await controller.delete(userArg as never, run.id);
     const after = await prisma.run.findUnique({ where: { id: run.id } });
     expect(after).toBeNull();
+  });
+
+  describe("admin authz", () => {
+    it("rejects scope=all from non-admin caller (403)", async () => {
+      const user = { sub: "u1", email: "u1@x", roles: [] };
+      await expect(
+        controller.list(user as never, { limit: 10, scope: "all" } as never),
+      ).rejects.toThrow(/admin role required/i);
+    });
+
+    it("returns runs across all users when admin requests scope=all", async () => {
+      const a = await prisma.user.create({ data: { email: "azz-1@x", passwordHash: "x" } });
+      const b = await prisma.user.create({ data: { email: "azz-2@x", passwordHash: "x" } });
+      for (const userId of [a.id, b.id]) {
+        await prisma.run.create({
+          data: {
+            userId,
+            kind: "benchmark",
+            tool: "guidellm",
+            scenario: {},
+            mode: "fixed",
+            driverKind: "local",
+            params: {},
+          },
+        });
+      }
+      const admin = { sub: a.id, email: a.email, roles: ["admin"] };
+      const result = await controller.list(
+        admin as never,
+        {
+          limit: 10,
+          scope: "all",
+        } as never,
+      );
+      expect(result.items).toHaveLength(2);
+    });
+
+    it("scopes to own when scope omitted", async () => {
+      const a = await prisma.user.create({ data: { email: "azz-3@x", passwordHash: "x" } });
+      const b = await prisma.user.create({ data: { email: "azz-4@x", passwordHash: "x" } });
+      for (const userId of [a.id, b.id]) {
+        await prisma.run.create({
+          data: {
+            userId,
+            kind: "benchmark",
+            tool: "guidellm",
+            scenario: {},
+            mode: "fixed",
+            driverKind: "local",
+            params: {},
+          },
+        });
+      }
+      const ua = { sub: a.id, email: a.email, roles: [] };
+      const result = await controller.list(ua as never, { limit: 10 } as never);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].userId).toBe(a.id);
+    });
+
+    it("admin can read another user's run by id", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-5@x", passwordHash: "x" } });
+      const admin = await prisma.user.create({ data: { email: "azz-6@x", passwordHash: "x" } });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+        },
+      });
+      const adminArg = { sub: admin.id, email: admin.email, roles: ["admin"] };
+      const dto = await controller.detail(adminArg as never, run.id);
+      expect(dto.id).toBe(run.id);
+      expect(dto.userId).toBe(owner.id);
+    });
+
+    it("non-admin gets 404 reading another user's run", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-7@x", passwordHash: "x" } });
+      const stranger = await prisma.user.create({
+        data: { email: "azz-8@x", passwordHash: "x" },
+      });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+        },
+      });
+      const strangerArg = { sub: stranger.id, email: stranger.email, roles: [] };
+      await expect(controller.detail(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
+    });
+
+    it("admin can cancel another user's running run", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-9@x", passwordHash: "x" } });
+      const admin = await prisma.user.create({ data: { email: "azz-10@x", passwordHash: "x" } });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+          status: "running",
+          driverHandle: "subprocess:cancel-me",
+        },
+      });
+      const adminArg = { sub: admin.id, email: admin.email, roles: ["admin"] };
+      const dto = await controller.cancel(adminArg as never, run.id);
+      expect(dto.status).toBe("canceled");
+    });
+
+    it("non-admin gets 404 cancelling another user's run", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-11@x", passwordHash: "x" } });
+      const stranger = await prisma.user.create({
+        data: { email: "azz-12@x", passwordHash: "x" },
+      });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+          status: "running",
+        },
+      });
+      const strangerArg = { sub: stranger.id, email: stranger.email, roles: [] };
+      await expect(controller.cancel(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
+    });
+
+    it("admin can delete another user's terminal run", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-13@x", passwordHash: "x" } });
+      const admin = await prisma.user.create({ data: { email: "azz-14@x", passwordHash: "x" } });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+          status: "completed",
+        },
+      });
+      const adminArg = { sub: admin.id, email: admin.email, roles: ["admin"] };
+      await controller.delete(adminArg as never, run.id);
+      const after = await prisma.run.findUnique({ where: { id: run.id } });
+      expect(after).toBeNull();
+    });
+
+    it("non-admin gets 404 deleting another user's run", async () => {
+      const owner = await prisma.user.create({ data: { email: "azz-15@x", passwordHash: "x" } });
+      const stranger = await prisma.user.create({
+        data: { email: "azz-16@x", passwordHash: "x" },
+      });
+      const run = await prisma.run.create({
+        data: {
+          userId: owner.id,
+          kind: "benchmark",
+          tool: "guidellm",
+          scenario: {},
+          mode: "fixed",
+          driverKind: "local",
+          params: {},
+          status: "completed",
+        },
+      });
+      const strangerArg = { sub: stranger.id, email: stranger.email, roles: [] };
+      await expect(controller.delete(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
+    });
   });
 });

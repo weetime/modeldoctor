@@ -1,10 +1,8 @@
 import {
-  Activity,
   Boxes,
   Bug,
   CheckCircle2,
   Database,
-  Gauge,
   GitCompare,
   HeartPulse,
   History,
@@ -53,8 +51,6 @@ export const sidebarGroups: SidebarGroup[] = [
     id: "performance",
     labelKey: "groups.performance",
     items: [
-      { to: "/load-test", icon: Activity, labelKey: "items.loadTest" },
-      { to: "/benchmarks", icon: Gauge, labelKey: "items.benchmark" },
       { to: "/soak", icon: Timer, labelKey: "items.soak", comingSoon: true },
       {
         to: "/streaming",
@@ -88,9 +84,9 @@ export const sidebarGroups: SidebarGroup[] = [
         comingSoon: true,
       },
       {
-        to: "/history",
+        to: "/runs",
         icon: History,
-        labelKey: "items.history",
+        labelKey: "items.runs",
       },
     ],
   },

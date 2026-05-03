@@ -24,9 +24,9 @@ export function ComingSoonPage({ icon, title }: ComingSoonPageProps) {
         body={t("comingSoon.body")}
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link to="/load-test">
+            <Link to="/runs">
               <ArrowLeft className="h-4 w-4" />
-              {t("comingSoon.backToLoadTest")}
+              {t("comingSoon.backToRuns")}
             </Link>
           </Button>
         }

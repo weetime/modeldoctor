@@ -132,7 +132,7 @@ describe("Run Unification smoke (e2e)", () => {
     const repo = ctx.app.get(RunRepository);
     const prisma = ctx.app.get(PrismaService);
 
-    // Seed a benchmark Run row directly (mimicking what BenchmarkService does)
+    // Seed a benchmark Run row directly (mimicking what RunService.create does)
     const row = await repo.create({
       userId,
       kind: "benchmark",

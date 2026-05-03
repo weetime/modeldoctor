@@ -22,8 +22,8 @@ export function useCreateBaseline() {
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: baselineKeys.all });
       // The Run that just became a baseline now has baselineFor set; refetch.
-      qc.invalidateQueries({ queryKey: ["history", "detail", created.runId] });
-      qc.invalidateQueries({ queryKey: ["history", "list"] });
+      qc.invalidateQueries({ queryKey: ["runs", "detail", created.runId] });
+      qc.invalidateQueries({ queryKey: ["runs", "list"] });
     },
   });
 }
@@ -34,8 +34,8 @@ export function useDeleteBaseline() {
     mutationFn: (id) => baselineApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: baselineKeys.all });
-      qc.invalidateQueries({ queryKey: ["history", "detail"] });
-      qc.invalidateQueries({ queryKey: ["history", "list"] });
+      qc.invalidateQueries({ queryKey: ["runs", "detail"] });
+      qc.invalidateQueries({ queryKey: ["runs", "list"] });
     },
   });
 }

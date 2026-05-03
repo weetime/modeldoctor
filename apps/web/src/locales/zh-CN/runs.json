@@ -1,0 +1,125 @@
+{
+  "title": "运行历史",
+  "subtitle": "所有 Run（benchmark + e2e）按时间倒序",
+  "actions": {
+    "new": "新建运行",
+    "cancel": "取消",
+    "submit": "提交"
+  },
+  "create": {
+    "title": "新建运行",
+    "subtitle": "配置 benchmark 或负载测试参数，然后提交",
+    "sections": {
+      "endpoint": "接入点",
+      "tool": "工具",
+      "metadata": "运行详情",
+      "parameters": "参数"
+    },
+    "fields": {
+      "name": "名称",
+      "description": "备注（可选）",
+      "tool": "工具"
+    },
+    "tools": {
+      "guidellm": "guidellm",
+      "vegeta": "vegeta",
+      "genai-perf": "genai-perf"
+    },
+    "errors": {
+      "submitFailed": "提交运行失败"
+    },
+    "submitted": "运行「{{name}}」已提交"
+  },
+  "filters": {
+    "kind": "类型",
+    "tool": "工具",
+    "status": "状态",
+    "connection": "Connection",
+    "baseline": "基线",
+    "baselineIs": "是基线",
+    "baselineRef": "对比某个基线",
+    "createdAfter": "起",
+    "createdBefore": "止",
+    "search": "按名称或备注搜索",
+    "any": "全部",
+    "clear": "清除筛选"
+  },
+  "columns": {
+    "selected": "",
+    "createdAt": "创建时间",
+    "kind": "类型",
+    "tool": "工具",
+    "connection": "Connection",
+    "status": "状态",
+    "p95": "p95 (ms)",
+    "errorRate": "错误率",
+    "open": ""
+  },
+  "compareButton": "对比 ({{n}})",
+  "compareDisabledTooltip": "等 #46 报告页上线后启用",
+  "empty": {
+    "title": "暂无 Run",
+    "filtered": "没有符合筛选条件的 Run",
+    "description": "去对应页面触发一次 benchmark、负载测试或 e2e 检查。"
+  },
+  "loadMore": "加载更多",
+  "errorBanner": "加载 Run 失败",
+  "retry": "重试",
+  "detail": {
+    "back": "返回运行列表",
+    "subtitle": "{{kind}} · {{tool}} · {{when}}",
+    "metadata": {
+      "kind": "类型",
+      "tool": "工具",
+      "mode": "模式",
+      "driverKind": "Driver",
+      "status": "状态",
+      "connection": "Connection",
+      "connectionMissing": "(已删除)",
+      "createdAt": "创建于",
+      "startedAt": "开始于",
+      "completedAt": "结束于",
+      "duration": "时长",
+      "notStarted": "—"
+    },
+    "statusMessage": {
+      "title": "失败原因"
+    },
+    "metrics": {
+      "title": "汇总指标",
+      "empty": "本次 Run 没有记录指标。"
+    },
+    "rawOutput": {
+      "toggle": "原始输出（JSON）"
+    },
+    "logs": {
+      "toggle": "日志"
+    },
+    "baseline": {
+      "setButton": "设为基线",
+      "unsetButton": "✓ 已是基线 · 取消",
+      "unsetConfirmTitle": "取消基线？",
+      "unsetConfirmBody": "只移除基线标记，Run 本身保留。曾经与这个基线对比过的其它 Run 数据保留，其 baselineId 关联会被清空。",
+      "unsetConfirmAction": "取消基线",
+      "dialog": {
+        "title": "设为基线",
+        "body": "把这个 Run 标为参照，后续 regression diff 用它作为锚点。",
+        "nameLabel": "名称",
+        "namePlaceholder": "比如 throughput-baseline-v1",
+        "descriptionLabel": "备注（可选）",
+        "tagsLabel": "标签（逗号分隔，可选）",
+        "submit": "保存",
+        "cancel": "取消"
+      },
+      "errors": {
+        "alreadyExists": "这个 Run 已经是基线了。",
+        "generic": "保存基线失败。"
+      }
+    },
+    "notFound": {
+      "title": "Run 不存在",
+      "body": "可能已被删除，或不属于你的账户。"
+    },
+    "loadError": "加载 Run 失败"
+  }
+}

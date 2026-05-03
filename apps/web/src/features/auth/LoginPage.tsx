@@ -23,7 +23,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const rawFrom = (location.state as { from?: string } | null)?.from;
-  const from = rawFrom && !AUTH_PATHS.has(rawFrom) ? rawFrom : "/load-test";
+  const from = rawFrom && !AUTH_PATHS.has(rawFrom) ? rawFrom : "/runs";
   const setAuth = useAuthStore((s) => s.setAuth);
   const [submitError, setSubmitError] = useState<string | null>(null);
 

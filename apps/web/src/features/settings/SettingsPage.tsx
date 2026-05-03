@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useE2EStore } from "@/features/e2e-smoke/store";
-import { useLoadTestStore } from "@/features/load-test/store";
 import { useDebugStore } from "@/features/request-debug/store";
 import { api } from "@/lib/api-client";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
@@ -38,7 +37,6 @@ export function SettingsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const resetE2E = useE2EStore((s) => s.reset);
-  const resetLoadTest = useLoadTestStore((s) => s.reset);
   const resetDebug = useDebugStore((s) => s.reset);
   const resetTheme = useThemeStore((s) => s.reset);
   const resetLocale = useLocaleStore((s) => s.reset);
@@ -62,7 +60,6 @@ export function SettingsPage() {
 
   const onClearTestData = () => {
     resetE2E();
-    resetLoadTest();
     resetDebug();
     setClearOpen(false);
     toast.success(t("data.clearTestDataSuccess"));
@@ -73,7 +70,6 @@ export function SettingsPage() {
     // INITIAL state for each. Reload gives a fresh React tree and resets
     // route + any non-store component-local state.
     resetE2E();
-    resetLoadTest();
     resetDebug();
     resetTheme();
     resetLocale();

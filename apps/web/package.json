@@ -16,6 +16,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3",
     "@modeldoctor/contracts": "workspace:*",
+    "@modeldoctor/tool-adapters": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1",
