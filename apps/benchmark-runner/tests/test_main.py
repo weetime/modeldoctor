@@ -36,6 +36,71 @@ def _fake_proc(
     return proc
 
 
+class TestInjectApiKeyIntoBackendKwargs:
+    """The wrapper merges OPENAI_API_KEY into any --backend-kwargs= JSON
+    so guidellm receives api_key. genai-perf and vegeta don't use this
+    flag and so are unaffected.
+    """
+
+    def test_no_op_when_no_backend_kwargs_flag(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "benchmark", "run", "--target=http://x"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out == argv
+
+    def test_no_op_when_env_unset(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {}, clear=True)
+        argv = ["guidellm", "--backend-kwargs={}"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out == argv
+
+    def test_merges_into_existing_empty_object(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "--backend-kwargs={}"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out[0] == "guidellm"
+        assert out[1].startswith("--backend-kwargs=")
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        assert merged == {"api_key": "sk-secret"}
+
+    def test_merges_into_existing_non_empty_object(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", '--backend-kwargs={"validate_backend": false}']
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        assert merged == {"validate_backend": False, "api_key": "sk-secret"}
+
+    def test_does_not_overwrite_existing_api_key(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-from-env"}, clear=False)
+        argv = ["guidellm", '--backend-kwargs={"api_key": "sk-explicit"}']
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        # If the adapter already supplied api_key, keep it (env is fallback only).
+        assert merged == {"api_key": "sk-explicit"}
+
+    def test_handles_multiple_backend_kwargs_by_merging_each(
+        self, mocker: MockerFixture
+    ) -> None:
+        # Defensive: guidellm CLI accepts repeats; we merge into each occurrence.
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = [
+            "guidellm",
+            "--backend-kwargs={}",
+            "--backend-kwargs={\"validate_backend\": false}",
+        ]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        first = json.loads(out[1].removeprefix("--backend-kwargs="))
+        second = json.loads(out[2].removeprefix("--backend-kwargs="))
+        assert first == {"api_key": "sk-secret"}
+        assert second == {"validate_backend": False, "api_key": "sk-secret"}
+
+    def test_raises_on_malformed_json(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "--backend-kwargs={not valid json"]
+        with pytest.raises(json.JSONDecodeError):
+            main_mod._inject_api_key_into_backend_kwargs(argv)
+
+
 @pytest.fixture
 def patched_callbacks(mocker: MockerFixture) -> dict[str, MagicMock]:
     """Patch every callback function on runner.main."""

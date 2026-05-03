@@ -123,6 +123,40 @@ def _redacted(argv: list[str]) -> list[str]:
     return out
 
 
+def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
+    """Merge OPENAI_API_KEY env into any --backend-kwargs= JSON in argv.
+
+    guidellm's openai_http backend reads api_key only from --backend-kwargs.
+    The api side passes the apiKey via the OPENAI_API_KEY env var (as
+    secretEnv) to keep it out of argv (which would leak into ps listings
+    and process trees). This wrapper bridges the two: at exec time, before
+    spawning guidellm, we merge the env value into the JSON.
+
+    Behavior contract:
+    - If OPENAI_API_KEY is unset, return argv unchanged.
+    - If no `--backend-kwargs=` is present, return argv unchanged. (genai-perf
+      and vegeta don't use this flag.)
+    - For each `--backend-kwargs=` entry: parse JSON, set api_key only if
+      the key is absent (don't overwrite an explicit adapter-supplied value),
+      reserialize back into the same argv slot.
+    - Malformed JSON is a programmer error and raises rather than swallowing.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return argv
+    out: list[str] = []
+    for a in argv:
+        if a.startswith("--backend-kwargs="):
+            payload = a[len("--backend-kwargs="):]
+            data = json.loads(payload)
+            if "api_key" not in data:
+                data["api_key"] = api_key
+            out.append("--backend-kwargs=" + json.dumps(data))
+        else:
+            out.append(a)
+    return out
+
+
 def main() -> int:
     callback_url = os.environ["MD_CALLBACK_URL"]
     token = os.environ["MD_CALLBACK_TOKEN"]
@@ -137,6 +171,7 @@ def main() -> int:
     except Exception as e:
         log.warning("post_state_running failed: %s", e)
 
+    argv = _inject_api_key_into_backend_kwargs(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
     proc = subprocess.Popen(  # noqa: S603
         argv,

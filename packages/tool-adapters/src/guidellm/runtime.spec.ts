@@ -108,6 +108,52 @@ describe("guidellm.buildCommand", () => {
     expect(r.argv).toContain("--rate-type=throughput");
     expect(r.argv).toContain("--rate=75");
   });
+
+  it("always emits --backend-kwargs= so the runner can merge OPENAI_API_KEY", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: {
+        profile: "throughput",
+        apiType: "chat",
+        datasetName: "random",
+        datasetInputTokens: 256,
+        datasetOutputTokens: 128,
+        requestRate: 0,
+        totalRequests: 100,
+        maxDurationSeconds: 300,
+        maxConcurrency: 50,
+        validateBackend: true,
+      },
+      connection: { baseUrl: "http://x", apiKey: "sk", model: "m", customHeaders: "", queryParams: "" },
+      callback: { url: "http://cb", token: "t" },
+    });
+    expect(result.argv.some((a) => a.startsWith("--backend-kwargs="))).toBe(true);
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="))!;
+    const kwargs = JSON.parse(flag.replace("--backend-kwargs=", ""));
+    expect(kwargs).toEqual({}); // empty when validateBackend stays true; runner adds api_key
+  });
+
+  it("emits --backend-kwargs={validate_backend:false} when validateBackend=false", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: {
+        profile: "throughput",
+        apiType: "chat",
+        datasetName: "random",
+        datasetInputTokens: 256,
+        datasetOutputTokens: 128,
+        requestRate: 0,
+        totalRequests: 100,
+        maxDurationSeconds: 300,
+        maxConcurrency: 50,
+        validateBackend: false,
+      },
+      connection: { baseUrl: "http://x", apiKey: "sk", model: "m", customHeaders: "", queryParams: "" },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="))!;
+    expect(JSON.parse(flag.replace("--backend-kwargs=", ""))).toEqual({ validate_backend: false });
+  });
 });
 
 describe("guidellm.parseProgress", () => {

@@ -13,10 +13,11 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
     throw new Error("sharegpt dataset is not yet supported");
   }
 
-  // backend-kwargs carries optional validate_backend; api_key is passed via
-  // secretEnv (OPENAI_API_KEY) so it never appears in argv / ps listings.
-  // The container wrapper (Task 3.3) injects $OPENAI_API_KEY into backend-kwargs
-  // at runtime before invoking guidellm.
+  // --backend-kwargs is guidellm's only channel for api_key. We always emit
+  // this flag (even with an empty object) so the runner wrapper can merge
+  // {"api_key": $OPENAI_API_KEY} into it at exec time. Keeping api_key out
+  // of argv prevents leaks via `ps` / process listings.
+  // Contract: see runner/main.py::_inject_api_key_into_backend_kwargs.
   const backendKwargs: Record<string, unknown> = {};
   if (!params.validateBackend) {
     backendKwargs.validate_backend = false;
@@ -35,9 +36,8 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
     "--disable-console",
   ];
 
-  if (Object.keys(backendKwargs).length > 0) {
-    argv.push(`--backend-kwargs=${JSON.stringify(backendKwargs)}`);
-  }
+  // Always emit --backend-kwargs= (even {}) — the runner merges api_key into it.
+  argv.push(`--backend-kwargs=${JSON.stringify(backendKwargs)}`);
 
   if (params.requestRate > 0) {
     argv.push("--rate-type=constant", `--rate=${params.requestRate}`);
