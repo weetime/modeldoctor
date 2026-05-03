@@ -109,10 +109,7 @@ describe("ConnectionDialog (create mode)", () => {
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
     await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
 
-    await user.type(
-      screen.getByLabelText(/tokenizer/i),
-      "Qwen/Qwen2.5-0.5B-Instruct",
-    );
+    await user.type(screen.getByLabelText(/tokenizer/i), "Qwen/Qwen2.5-0.5B-Instruct");
 
     await user.click(screen.getByRole("button", { name: /save|保存/i }));
 

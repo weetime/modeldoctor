@@ -138,11 +138,19 @@ describe("guidellm.buildCommand", () => {
         maxConcurrency: 50,
         validateBackend: true,
       },
-      connection: { baseUrl: "http://x", apiKey: "sk", model: "m", customHeaders: "", queryParams: "", tokenizerHfId: null },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
       callback: { url: "http://cb", token: "t" },
     });
     expect(result.argv.some((a) => a.startsWith("--backend-kwargs="))).toBe(true);
-    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="))!;
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
+    if (!flag) throw new Error("--backend-kwargs= not found in argv");
     const kwargs = JSON.parse(flag.replace("--backend-kwargs=", ""));
     expect(kwargs).toEqual({}); // validateBackend=true → no validate_backend key in --backend-kwargs; runner injects api_key
   });
@@ -162,10 +170,18 @@ describe("guidellm.buildCommand", () => {
         maxConcurrency: 50,
         validateBackend: false,
       },
-      connection: { baseUrl: "http://x", apiKey: "sk", model: "m", customHeaders: "", queryParams: "", tokenizerHfId: null },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
       callback: { url: "http://cb", token: "t" },
     });
-    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="))!;
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
+    if (!flag) throw new Error("--backend-kwargs= not found in argv");
     expect(JSON.parse(flag.replace("--backend-kwargs=", ""))).toEqual({ validate_backend: false });
   });
 
@@ -174,8 +190,12 @@ describe("guidellm.buildCommand", () => {
       runId: "r1",
       params: { ...defaultParams, processor: "Qwen/Per-Run" },
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: "Qwen/Connection",
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -187,8 +207,12 @@ describe("guidellm.buildCommand", () => {
       runId: "r1",
       params: { ...defaultParams, processor: undefined },
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: "Qwen/Connection",
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -200,8 +224,12 @@ describe("guidellm.buildCommand", () => {
       runId: "r1",
       params: { ...defaultParams, processor: undefined },
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: null,
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
