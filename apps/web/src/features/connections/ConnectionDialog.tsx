@@ -486,6 +486,7 @@ export function ConnectionDialog({
               <Label htmlFor="tokenizerHfId">{t("dialog.fields.tokenizerHfId")}</Label>
               <Input
                 id="tokenizerHfId"
+                autoComplete="off"
                 placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
                 {...form.register("tokenizerHfId")}
               />
