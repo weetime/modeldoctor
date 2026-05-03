@@ -60,9 +60,7 @@ export const EnvSchema = z
     BENCHMARK_DRIVER: z.enum(["subprocess", "k8s"]).default("subprocess"),
     BENCHMARK_CALLBACK_URL: z.string().url().optional(),
     BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
-    BENCHMARK_RUNNER_IMAGE: z.string().min(1).optional(),
-    // #53 Phase 2: per-tool runner images. Old BENCHMARK_RUNNER_IMAGE is
-    // kept for the legacy benchmark module's path until Phase 3 deletes it.
+    // #53 Phase 2 (#78): per-tool runner images, required when k8s driver.
     RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
     RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
@@ -128,12 +126,21 @@ export const EnvSchema = z
         message: "BENCHMARK_CALLBACK_URL is required when NODE_ENV is not 'test'",
       });
     }
-    if (env.BENCHMARK_DRIVER === "k8s" && !env.BENCHMARK_RUNNER_IMAGE) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["BENCHMARK_RUNNER_IMAGE"],
-        message: "BENCHMARK_RUNNER_IMAGE is required when BENCHMARK_DRIVER='k8s'",
-      });
+    if (env.BENCHMARK_DRIVER === "k8s") {
+      const perToolImages = [
+        "RUNNER_IMAGE_GUIDELLM",
+        "RUNNER_IMAGE_VEGETA",
+        "RUNNER_IMAGE_GENAI_PERF",
+      ] as const;
+      for (const key of perToolImages) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required when BENCHMARK_DRIVER='k8s'`,
+          });
+        }
+      }
     }
   });
 
