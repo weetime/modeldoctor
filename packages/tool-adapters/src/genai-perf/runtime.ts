@@ -82,8 +82,20 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
     nextPos++;
   }
 
+  // Tokenizer: per-run override, then connection-level fallback. Omit flag
+  // when neither is set (tool default is to derive from `-m`).
+  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? undefined;
+  if (resolvedTokenizer) {
+    optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
+    optionalArgv.push(resolvedTokenizer);
+    nextPos++;
+  }
+
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
+  // Authorization header is constructed at shell time so $OPENAI_API_KEY
+  // (provided via secretEnv) never enters argv. Same pattern vegeta uses
+  // for its targets.txt.
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
@@ -91,6 +103,7 @@ genai-perf profile \\
     -m "$1" -u "$2" \\
     --endpoint-type "$3" \\
     --num-prompts "$4" --concurrency "$5" \\
+    --header "Authorization: Bearer $OPENAI_API_KEY" \\
     $STREAMING${optionalTokenFlags} \\
     --profile-export-file profile_export.json
 find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\; && [ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure

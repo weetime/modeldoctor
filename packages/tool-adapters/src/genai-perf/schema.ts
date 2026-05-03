@@ -9,6 +9,7 @@ export const genaiPerfParamsSchema = z.object({
   outputTokensMean: z.number().int().positive().optional(),
   outputTokensStddev: z.number().int().min(0).default(0),
   streaming: z.boolean().default(true),
+  tokenizer: z.string().min(1).optional(),
 });
 export type GenaiPerfParams = z.infer<typeof genaiPerfParamsSchema>;
 

@@ -51,8 +51,12 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
   if (params.datasetSeed !== undefined) {
     argv.push(`--random-seed=${params.datasetSeed}`);
   }
-  if (params.processor) {
-    argv.push(`--processor=${params.processor}`);
+  // Per-run `processor` overrides; otherwise fall back to the connection-
+  // level tokenizer; otherwise omit the flag (tool defaults to using
+  // connection.model which fails for non-HF model names).
+  const processor = params.processor || connection.tokenizerHfId || undefined;
+  if (processor) {
+    argv.push(`--processor=${processor}`);
   }
 
   return {

@@ -34,6 +34,13 @@ export interface BuildCommandPlan<TParams = unknown> {
     model: string;
     customHeaders: string;
     queryParams: string;
+    /**
+     * HuggingFace tokenizer repo id, set on the Connection. Adapters that
+     * need a tokenizer (guidellm, genai-perf) fall back to this when the
+     * per-run override is not set. Null/undefined when the user hasn't set
+     * one (typical for connections whose `model` IS a valid HF id).
+     */
+    tokenizerHfId: string | null;
   };
   callback: { url: string; token: string };
 }
@@ -64,8 +71,11 @@ export interface BuildCommandResult {
 }
 
 // ── ToolAdapter interface ─────────────────────────────────────────────
-// ⚠ ACCEPTANCE GATE: in Phase 4 (PR 53.4), `git diff main -- this file`
-// MUST be empty. Adding genai-perf must not require any change here.
+// This file is the stable interface between the api/driver layer and tool
+// adapters. Adding a new TOOL must not require any change here (#53 Phase 4
+// acceptance gate). Adding a new CONNECTION-LEVEL capability that all tools
+// consume identically (e.g. `tokenizerHfId` added in #78 follow-up) is a
+// deliberate interface evolution and must be documented in the changelog.
 export interface ToolAdapter {
   readonly name: ToolName;
   readonly paramsSchema: z.ZodTypeAny;

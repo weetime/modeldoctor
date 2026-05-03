@@ -16,6 +16,7 @@ const baseConn = {
   model: "Qwen2.5-0.5B-Instruct",
   customHeaders: "",
   queryParams: "",
+  tokenizerHfId: null,
 };
 
 describe("vegeta.buildCommand", () => {
