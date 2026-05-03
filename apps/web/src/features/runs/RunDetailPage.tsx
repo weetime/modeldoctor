@@ -13,6 +13,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useDeleteBaseline } from "@/features/baseline/queries";
+import type { Run } from "@modeldoctor/contracts";
+import {
+  type GenaiPerfReport,
+  type GuidellmReport,
+  type VegetaReport,
+  genaiPerfReportSchema,
+  guidellmReportSchema,
+  vegetaReportSchema,
+} from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, SearchX } from "lucide-react";
@@ -20,24 +29,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  guidellmReportSchema,
-  vegetaReportSchema,
-  genaiPerfReportSchema,
-  type GuidellmReport,
-  type VegetaReport,
-  type GenaiPerfReport,
-} from "@modeldoctor/tool-adapters/schemas";
-import type { Run } from "@modeldoctor/contracts";
-import { GuidellmReportView } from "./reports/GuidellmReportView";
-import { VegetaReportView } from "./reports/VegetaReportView";
-import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
-import { UnknownReportView } from "./reports/UnknownReportView";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { runKeys } from "./queries";
 import { useRunDetail } from "./queries";
+import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
+import { GuidellmReportView } from "./reports/GuidellmReportView";
+import { UnknownReportView } from "./reports/UnknownReportView";
+import { VegetaReportView } from "./reports/VegetaReportView";
 
 function ReportSection({ metrics }: { metrics: Run["summaryMetrics"] }) {
   const { t } = useTranslation("runs");

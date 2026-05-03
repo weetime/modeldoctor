@@ -1,5 +1,5 @@
-import type { VegetaReport } from "@modeldoctor/tool-adapters/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { VegetaReport } from "@modeldoctor/tool-adapters/schemas";
 import { MetricCard } from "../components/MetricCard";
 
 export interface VegetaReportViewProps {
