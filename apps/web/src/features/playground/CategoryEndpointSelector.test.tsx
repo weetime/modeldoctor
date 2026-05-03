@@ -20,6 +20,7 @@ const list: ConnectionPublic[] = [
     updatedAt: "2026-04-26T14:22:00Z",
     prometheusUrl: null,
     serverKind: null,
+    tokenizerHfId: null,
   },
   {
     id: "c-embed",
@@ -36,6 +37,7 @@ const list: ConnectionPublic[] = [
     updatedAt: "2026-04-26T14:22:00Z",
     prometheusUrl: null,
     serverKind: null,
+    tokenizerHfId: null,
   },
 ];
 
