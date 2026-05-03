@@ -51,7 +51,8 @@ COPY runner runner
 RUN pip install --no-cache-dir 'requests>=2.31,<3'
 
 # Run as a non-root user (matches guidellm.Dockerfile).
-RUN useradd --create-home --shell /sbin/nologin runner
+RUN useradd --create-home --shell /sbin/nologin runner \
+    && chown -R runner:runner /app
 USER runner
 
 # Generic wrapper (#53 Phase 3); vegeta is invoked via /bin/sh -c '<pipeline>'
