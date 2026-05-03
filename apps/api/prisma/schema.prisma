@@ -72,6 +72,12 @@ model Connection {
   prometheusUrl String? @map("prometheus_url")
   serverKind    String? @map("server_kind") // 'vllm' | 'sglang' | 'tgi' | 'higress' | 'generic'
 
+  // HuggingFace tokenizer repo id used by benchmarks (guidellm/genai-perf)
+  // when the served `model` name isn't a real HF id. Nullable: existing
+  // connections + connections targeting backends with HF-resolvable model
+  // names need not set it.
+  tokenizerHfId String? @map("tokenizer_hf_id")
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 

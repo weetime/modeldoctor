@@ -22,6 +22,7 @@ export interface DecryptedConnection {
   customHeaders: string;
   queryParams: string;
   category: ModalityCategory;
+  tokenizerHfId: string | null;
 }
 
 @Injectable()
@@ -54,6 +55,7 @@ export class ConnectionService {
         tags: input.tags,
         prometheusUrl: input.prometheusUrl ?? null,
         serverKind: input.serverKind ?? null,
+        tokenizerHfId: input.tokenizerHfId ?? null,
       },
     });
     return this.toContractWithSecret(row, input.apiKey);
@@ -90,6 +92,7 @@ export class ConnectionService {
     if (input.tags !== undefined) data.tags = input.tags;
     if (input.prometheusUrl !== undefined) data.prometheusUrl = input.prometheusUrl;
     if (input.serverKind !== undefined) data.serverKind = input.serverKind;
+    if (input.tokenizerHfId !== undefined) data.tokenizerHfId = input.tokenizerHfId;
     if (input.apiKey !== undefined) data.apiKeyCipher = encrypt(input.apiKey, this.key);
 
     const row = await this.prisma.connection.update({ where: { id }, data });
@@ -120,6 +123,7 @@ export class ConnectionService {
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
       category: row.category as ModalityCategory,
+      tokenizerHfId: row.tokenizerHfId,
     };
   }
 
@@ -144,6 +148,7 @@ export class ConnectionService {
       tags: row.tags,
       prometheusUrl: row.prometheusUrl,
       serverKind: row.serverKind as ConnectionPublic["serverKind"],
+      tokenizerHfId: row.tokenizerHfId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

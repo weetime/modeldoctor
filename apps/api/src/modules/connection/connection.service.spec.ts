@@ -34,6 +34,7 @@ function makeRow(overrides: Partial<PrismaConnection> = {}): PrismaConnection {
     tags: [],
     prometheusUrl: null,
     serverKind: null,
+    tokenizerHfId: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
     ...overrides,
@@ -266,6 +267,109 @@ describe("ConnectionService", () => {
       prismaMock.connection.findUnique.mockResolvedValue(makeRow({ userId: "u_other" }));
       await expect(service.update("u_1", "c_1", { name: "x" })).rejects.toThrow(ForbiddenException);
       expect(prismaMock.connection.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("tokenizerHfId", () => {
+    it("persists tokenizerHfId when provided on create", async () => {
+      let storedData: Record<string, unknown> = {};
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          storedData = args.data;
+          return makeRow({
+            apiKeyCipher: args.data.apiKeyCipher as string,
+            tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+          });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "vllm-prod",
+        baseUrl: "http://10.x.x.x:30888",
+        apiKey: "sk-abc",
+        model: "qwen2.5",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+        tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+      });
+      expect(storedData.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+      expect(out.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+    });
+
+    it("defaults tokenizerHfId to null when omitted on create", async () => {
+      let storedData: Record<string, unknown> = {};
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
+          storedData = args.data;
+          return makeRow({ apiKeyCipher: args.data.apiKeyCipher as string });
+        },
+      );
+      const out = await service.create("u_1", {
+        name: "x",
+        baseUrl: "http://x",
+        apiKey: "k",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat",
+        tags: [],
+      });
+      expect(storedData.tokenizerHfId).toBeNull();
+      expect(out.tokenizerHfId).toBeNull();
+    });
+
+    it("updates tokenizerHfId via service.update", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      let updateData: Record<string, unknown> = {};
+      prismaMock.connection.update.mockImplementation(
+        async (args: { data: Record<string, unknown> }) => {
+          updateData = args.data;
+          return makeRow({
+            apiKeyCipher: cipher,
+            tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+          });
+        },
+      );
+      const out = await service.update("u_1", "c_1", {
+        tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+      });
+      expect(updateData.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+      expect(out.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+    });
+
+    it("clears tokenizerHfId when caller passes null", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({ apiKeyCipher: cipher, tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct" }),
+      );
+      let updateData: Record<string, unknown> = {};
+      prismaMock.connection.update.mockImplementation(
+        async (args: { data: Record<string, unknown> }) => {
+          updateData = args.data;
+          return makeRow({ apiKeyCipher: cipher, tokenizerHfId: null });
+        },
+      );
+      const out = await service.update("u_1", "c_1", { tokenizerHfId: null });
+      expect(updateData.tokenizerHfId).toBeNull();
+      expect(out.tokenizerHfId).toBeNull();
+    });
+
+    it("returns tokenizerHfId in DecryptedConnection from getOwnedDecrypted", async () => {
+      const cipher = await encryptForTest("sk-decrypt-test");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({ apiKeyCipher: cipher, tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct" }),
+      );
+      const out = await service.getOwnedDecrypted("u_1", "c_1");
+      expect(out.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+    });
+
+    it("returns tokenizerHfId: null in DecryptedConnection when not set", async () => {
+      const cipher = await encryptForTest("sk-decrypt-test");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      const out = await service.getOwnedDecrypted("u_1", "c_1");
+      expect(out.tokenizerHfId).toBeNull();
     });
   });
 });
