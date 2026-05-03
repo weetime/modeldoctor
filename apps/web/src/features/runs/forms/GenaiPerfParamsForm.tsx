@@ -77,10 +77,7 @@ export function GenaiPerfParamsForm() {
         </div>
         <div>
           <Label>Input tokens stddev</Label>
-          <Input
-            type="number"
-            {...register("params.inputTokensStddev", { valueAsNumber: true })}
-          />
+          <Input type="number" {...register("params.inputTokensStddev", { valueAsNumber: true })} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -104,9 +101,7 @@ export function GenaiPerfParamsForm() {
       <div className="flex items-center gap-3">
         <Switch
           checked={streaming === true}
-          onCheckedChange={(v) =>
-            setValue("params.streaming", v, { shouldValidate: true })
-          }
+          onCheckedChange={(v) => setValue("params.streaming", v, { shouldValidate: true })}
           aria-label="Streaming"
         />
         <Label>Streaming</Label>

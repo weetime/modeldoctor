@@ -44,16 +44,7 @@ void i18n.use(initReactI18next).init({
   // `lng` is set by main.tsx from the locale store before first render.
   fallbackLng: "en-US",
   defaultNS: "common",
-  ns: [
-    "common",
-    "sidebar",
-    "connections",
-    "e2e",
-    "runs",
-    "debug",
-    "settings",
-    "playground",
-  ],
+  ns: ["common", "sidebar", "connections", "e2e", "runs", "debug", "settings", "playground"],
   interpolation: { escapeValue: false },
   returnNull: false,
 });

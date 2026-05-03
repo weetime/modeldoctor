@@ -408,7 +408,12 @@ describe("admin elevation (userId === undefined)", () => {
   it("cancel succeeds across user boundaries when userId is undefined", async () => {
     // run owned by "owner" — elevation caller passes undefined
     repo.setup(
-      makeRunRow({ id: "r-elev-cancel", userId: "owner", status: "running", driverHandle: "subprocess:elev" }),
+      makeRunRow({
+        id: "r-elev-cancel",
+        userId: "owner",
+        status: "running",
+        driverHandle: "subprocess:elev",
+      }),
     );
     const dto = await svc.cancel("r-elev-cancel", undefined);
     expect(dto.status).toBe("canceled");

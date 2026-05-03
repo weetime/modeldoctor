@@ -182,9 +182,7 @@ export function GuidellmParamsForm() {
       <div className="flex items-center gap-3">
         <Switch
           checked={validateBackend === true}
-          onCheckedChange={(v) =>
-            setValue("params.validateBackend", v, { shouldValidate: true })
-          }
+          onCheckedChange={(v) => setValue("params.validateBackend", v, { shouldValidate: true })}
           aria-label="Validate backend"
         />
         <Label>Validate backend before run</Label>

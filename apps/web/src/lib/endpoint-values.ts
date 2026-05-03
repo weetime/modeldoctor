@@ -1,6 +1,6 @@
 /**
  * UI-only shape used by feature pages that show inline endpoint fields
- * (load-test / e2e-smoke). The credentials never leave the browser:
+ * (e.g. e2e-smoke). The credentials never leave the browser:
  * after a connection is picked, these values are populated for display
  * and the request still travels by `connectionId`.
  *

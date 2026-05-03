@@ -307,10 +307,13 @@ describe("RunController", () => {
         });
       }
       const admin = { sub: a.id, email: a.email, roles: ["admin"] };
-      const result = await controller.list(admin as never, {
-        limit: 10,
-        scope: "all",
-      } as never);
+      const result = await controller.list(
+        admin as never,
+        {
+          limit: 10,
+          scope: "all",
+        } as never,
+      );
       expect(result.items).toHaveLength(2);
     });
 

@@ -56,7 +56,13 @@ function SavedConnectionPicker({
   return (
     <Select value={value || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? "" : v)}>
       <SelectTrigger aria-label="Connection">
-        <SelectValue placeholder={isLoading ? "Loading…" : t("picker.placeholder", { defaultValue: "Select a connection" })} />
+        <SelectValue
+          placeholder={
+            isLoading
+              ? "Loading…"
+              : t("picker.placeholder", { defaultValue: "Select a connection" })
+          }
+        />
       </SelectTrigger>
       <SelectContent>
         {(connections ?? []).map((conn) => (
