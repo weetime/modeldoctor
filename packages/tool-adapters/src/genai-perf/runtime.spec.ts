@@ -180,8 +180,12 @@ describe("genai-perf.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: {
-        baseUrl: "http://x", apiKey: "sk-test-secret-12345", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: null,
+        baseUrl: "http://x",
+        apiKey: "sk-test-secret-12345",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -196,8 +200,12 @@ describe("genai-perf.buildCommand", () => {
       runId: "r1",
       params: { ...baseParams, tokenizer: "Qwen/Per-Run" },
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: "Qwen/Connection",
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -212,8 +220,12 @@ describe("genai-perf.buildCommand", () => {
       runId: "r1",
       params: { ...baseParams, tokenizer: undefined },
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: "Qwen/Connection",
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -227,8 +239,12 @@ describe("genai-perf.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
-        customHeaders: "", queryParams: "", tokenizerHfId: null,
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
