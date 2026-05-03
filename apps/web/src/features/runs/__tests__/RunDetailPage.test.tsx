@@ -224,6 +224,34 @@ describe("RunDetailPage", () => {
     await screen.findByText(/Sequence length/i);
   });
 
+  it("renders statusMessage Alert when status=failed and statusMessage is set", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        status: "failed",
+        statusMessage: "SubprocessDriver: failed to spawn wrapper (no pid)",
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText(/Failure reason|失败原因/i)).toBeInTheDocument());
+    expect(screen.getByText(/SubprocessDriver: failed to spawn wrapper/)).toBeInTheDocument();
+  });
+
+  it("does not render statusMessage Alert when status=failed but statusMessage is null", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "failed", statusMessage: null }));
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText("smoke");
+    expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
+  });
+
+  it("does not render statusMessage Alert when status is not failed (even if statusMessage set)", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({ status: "completed", statusMessage: "stale message from earlier attempt" }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText("smoke");
+    expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
+  });
+
   it("renders UnknownReportView for unrecognized envelope", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeRun({

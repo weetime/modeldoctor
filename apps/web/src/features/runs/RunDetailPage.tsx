@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -165,6 +165,16 @@ export function RunDetailPage() {
         <section>
           <RunDetailMetadata run={run} />
         </section>
+        {run.status === "failed" && run.statusMessage && (
+          <Alert variant="destructive">
+            <AlertTitle>{t("detail.statusMessage.title")}</AlertTitle>
+            <AlertDescription>
+              <pre className="whitespace-pre-wrap break-words font-mono text-xs">
+                {run.statusMessage}
+              </pre>
+            </AlertDescription>
+          </Alert>
+        )}
         <section>
           <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
           <ReportSection metrics={run.summaryMetrics} />

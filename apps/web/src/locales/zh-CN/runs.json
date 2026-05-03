@@ -82,6 +82,9 @@
       "duration": "时长",
       "notStarted": "—"
     },
+    "statusMessage": {
+      "title": "失败原因"
+    },
     "metrics": {
       "title": "汇总指标",
       "empty": "本次 Run 没有记录指标。"

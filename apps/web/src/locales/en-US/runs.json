@@ -82,6 +82,9 @@
       "duration": "Duration",
       "notStarted": "—"
     },
+    "statusMessage": {
+      "title": "Failure reason"
+    },
     "metrics": {
       "title": "Summary metrics",
       "empty": "No metrics recorded for this run."
