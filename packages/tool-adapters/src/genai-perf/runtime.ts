@@ -94,8 +94,12 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
   // Authorization header is built into the shell script with literal
-  // `$OPENAI_API_KEY`, so the secret is expanded by the shell at exec
-  // time and never enters argv (no leak via `ps` or process trees).
+  // `$OPENAI_API_KEY`, so the secret is expanded by `sh` at exec time
+  // rather than being baked into the K8s pod spec / wrapper argv. The
+  // expanded value WILL appear in the inner genai-perf process argv
+  // (and therefore in /proc/<pid>/cmdline / ps for that process); what
+  // is protected is the wrapper-level argv, the runner log lines
+  // (masked by _redacted), and the K8s Job spec.
   //
   // Threat-model note: the value is expanded inside a double-quoted
   // shell string. If the stored apiKey contained shell metacharacters

@@ -147,7 +147,7 @@ def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
     out: list[str] = []
     for a in argv:
         if a.startswith("--backend-kwargs="):
-            payload = a[len("--backend-kwargs="):]
+            payload = a[len("--backend-kwargs=") :]
             data = json.loads(payload)
             if "api_key" not in data:
                 data["api_key"] = api_key

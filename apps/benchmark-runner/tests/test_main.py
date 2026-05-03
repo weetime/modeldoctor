@@ -78,15 +78,13 @@ class TestInjectApiKeyIntoBackendKwargs:
         # If the adapter already supplied api_key, keep it (env is fallback only).
         assert merged == {"api_key": "sk-explicit"}
 
-    def test_handles_multiple_backend_kwargs_by_merging_each(
-        self, mocker: MockerFixture
-    ) -> None:
+    def test_handles_multiple_backend_kwargs_by_merging_each(self, mocker: MockerFixture) -> None:
         # Defensive: guidellm CLI accepts repeats; we merge into each occurrence.
         mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
         argv = [
             "guidellm",
             "--backend-kwargs={}",
-            "--backend-kwargs={\"validate_backend\": false}",
+            '--backend-kwargs={"validate_backend": false}',
         ]
         out = main_mod._inject_api_key_into_backend_kwargs(argv)
         first = json.loads(out[1].removeprefix("--backend-kwargs="))

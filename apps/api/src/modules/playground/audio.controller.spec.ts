@@ -36,6 +36,7 @@ function makeConn(): DecryptedConnection {
     customHeaders: "",
     queryParams: "",
     category: "audio",
+    tokenizerHfId: null,
   };
 }
 

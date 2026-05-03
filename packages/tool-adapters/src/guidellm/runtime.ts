@@ -15,8 +15,14 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
 
   // --backend-kwargs is guidellm's only channel for api_key. We always emit
   // this flag (even with an empty object) so the runner wrapper can merge
-  // {"api_key": $OPENAI_API_KEY} into it at exec time. Keeping api_key out
-  // of argv prevents leaks via `ps` / process listings.
+  // {"api_key": $OPENAI_API_KEY} into it at exec time. The api_key reaches
+  // the inner guidellm subprocess via argv (so it WILL appear in
+  // /proc/<pid>/cmdline / ps for that process); keeping it out of OUR argv
+  // prevents the secret from being captured by the K8s pod spec, the
+  // runner's "running:" log line (masked by _redacted), and any tooling
+  // that inspects the wrapper process. The argv-level exposure inside the
+  // guidellm process is currently accepted; tightening it would require a
+  // genai-perf-style file or pipe pattern.
   // Contract: see runner/main.py::_inject_api_key_into_backend_kwargs.
   const backendKwargs: Record<string, unknown> = {};
   if (!params.validateBackend) {
