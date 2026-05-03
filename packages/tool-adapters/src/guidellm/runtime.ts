@@ -59,10 +59,10 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
     argv,
     env: {},
     secretEnv: {
-      // api_key is passed via OPENAI_API_KEY env var. The Task 3.3 container
-      // wrapper reads $OPENAI_API_KEY and injects it into --backend-kwargs
-      // before invoking guidellm (which reads api_key only from --backend-kwargs,
-      // not from the OPENAI_API_KEY env var directly).
+      // api_key is injected into --backend-kwargs by the runner wrapper at exec
+      // time (runner/main.py::_inject_api_key_into_backend_kwargs). Passing it
+      // via secretEnv keeps it out of argv and ps listings until the wrapper
+      // merges it immediately before Popen.
       OPENAI_API_KEY: connection.apiKey,
     },
     outputFiles: { report: "report.json" },

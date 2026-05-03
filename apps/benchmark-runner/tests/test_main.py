@@ -311,6 +311,27 @@ def test_redaction_in_log_line(
     assert "sk-secret" not in log_text
 
 
+def test_injected_api_key_is_redacted_in_log(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    caplog,
+) -> None:
+    """End-to-end: env-set OPENAI_API_KEY merges into --backend-kwargs at
+    exec time, but the resulting argv is still masked in the runner log
+    line so the secret never appears in stdout/captured pod logs."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "--backend-kwargs={}"])
+    md_env_minimal["OPENAI_API_KEY"] = "sk-from-env-secret"
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    with caplog.at_level("INFO", logger="runner"):
+        main_mod.main()
+    log_text = "\n".join(r.message for r in caplog.records)
+    assert "***REDACTED***" in log_text
+    assert "sk-from-env-secret" not in log_text
+
+
 def test_missing_required_env_raises_key_error(
     patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
