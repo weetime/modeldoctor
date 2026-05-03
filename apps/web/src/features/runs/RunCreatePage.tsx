@@ -19,8 +19,8 @@ import {
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
-import { useEffect, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useId } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -44,9 +44,11 @@ const TOOLS: ToolName[] = ["guidellm", "vegeta", "genai-perf"];
  * flows) because RunCreatePage only needs a saved-connection ID.
  */
 function SavedConnectionPicker({
+  id,
   value,
   onChange,
 }: {
+  id: string;
   value: string;
   onChange: (id: string) => void;
 }) {
@@ -55,7 +57,7 @@ function SavedConnectionPicker({
 
   return (
     <Select value={value || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? "" : v)}>
-      <SelectTrigger aria-label="Connection">
+      <SelectTrigger id={id} aria-label="Connection">
         <SelectValue
           placeholder={
             isLoading
@@ -79,8 +81,11 @@ export function RunCreatePage() {
   const { t } = useTranslation("runs");
   const navigate = useNavigate();
   const createMut = useCreateRun();
-  const [tool, setTool] = useState<ToolName>("guidellm");
-  const [connectionId, setConnectionId] = useState<string>("");
+  const idPrefix = useId();
+  const connectionFieldId = `${idPrefix}-connection`;
+  const toolFieldId = `${idPrefix}-tool`;
+  const nameFieldId = `${idPrefix}-name`;
+  const descFieldId = `${idPrefix}-desc`;
 
   const form = useForm<CreateRunRequest>({
     resolver: zodResolver(createRunRequestSchema),
@@ -95,21 +100,22 @@ export function RunCreatePage() {
     },
   });
 
-  // When tool changes, reset params to that tool's defaults while preserving
-  // user-entered name / description / connectionId.
-  useEffect(() => {
-    const cur = form.getValues();
-    form.reset({
-      ...cur,
-      tool,
-      params: TOOL_DEFAULTS[tool] as Record<string, unknown>,
-    });
-  }, [tool, form]);
+  // Single source of truth: form state. useWatch keeps the section render +
+  // tool-specific subform in sync without a duplicate useState/useEffect pair.
+  const tool = (useWatch({ control: form.control, name: "tool" }) ?? "guidellm") as ToolName;
+  const connectionId = useWatch({ control: form.control, name: "connectionId" }) ?? "";
 
-  // Keep connectionId in form state in sync with the picker selection.
-  useEffect(() => {
-    form.setValue("connectionId", connectionId, { shouldValidate: true });
-  }, [connectionId, form]);
+  function handleToolChange(next: ToolName) {
+    form.reset({
+      ...form.getValues(),
+      tool: next,
+      params: TOOL_DEFAULTS[next] as Record<string, unknown>,
+    });
+  }
+
+  function handleConnectionChange(next: string) {
+    form.setValue("connectionId", next, { shouldValidate: true });
+  }
 
   const ParamsForm =
     tool === "guidellm"
@@ -142,7 +148,14 @@ export function RunCreatePage() {
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("create.sections.endpoint")}
               </h2>
-              <SavedConnectionPicker value={connectionId} onChange={setConnectionId} />
+              <Label htmlFor={connectionFieldId} className="sr-only">
+                {t("create.fields.connection", { defaultValue: "Connection" })}
+              </Label>
+              <SavedConnectionPicker
+                id={connectionFieldId}
+                value={connectionId}
+                onChange={handleConnectionChange}
+              />
             </section>
 
             {/* Tool section */}
@@ -151,9 +164,9 @@ export function RunCreatePage() {
                 {t("create.sections.tool")}
               </h2>
               <div className="max-w-xs">
-                <Label>{t("create.fields.tool")}</Label>
-                <Select value={tool} onValueChange={(v) => setTool(v as ToolName)}>
-                  <SelectTrigger aria-label="Tool">
+                <Label htmlFor={toolFieldId}>{t("create.fields.tool")}</Label>
+                <Select value={tool} onValueChange={(v) => handleToolChange(v as ToolName)}>
+                  <SelectTrigger id={toolFieldId} aria-label="Tool">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -173,13 +186,13 @@ export function RunCreatePage() {
                 {t("create.sections.metadata")}
               </h2>
               <div>
-                <Label htmlFor="run-name">{t("create.fields.name")}</Label>
-                <Input id="run-name" {...form.register("name")} />
+                <Label htmlFor={nameFieldId}>{t("create.fields.name")}</Label>
+                <Input id={nameFieldId} {...form.register("name")} />
               </div>
               <div>
-                <Label htmlFor="run-desc">{t("create.fields.description")}</Label>
+                <Label htmlFor={descFieldId}>{t("create.fields.description")}</Label>
                 <Textarea
-                  id="run-desc"
+                  id={descFieldId}
                   rows={2}
                   {...form.register("description", {
                     setValueAs: (v) => (v === "" || v === undefined ? undefined : v),

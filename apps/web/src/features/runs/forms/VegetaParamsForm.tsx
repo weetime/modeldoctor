@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VegetaParams } from "@modeldoctor/tool-adapters/schemas";
+import { useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 const API_TYPES: VegetaParams["apiType"][] = [
@@ -23,10 +24,17 @@ export function VegetaParamsForm() {
   const { register, setValue, control } = useFormContext();
   const apiType = useWatch({ control, name: "params.apiType" });
 
+  const idPrefix = useId();
+  const ids = {
+    apiType: `${idPrefix}-apiType`,
+    rate: `${idPrefix}-rate`,
+    duration: `${idPrefix}-duration`,
+  };
+
   return (
     <div className="space-y-4">
       <div>
-        <Label>API type</Label>
+        <Label htmlFor={ids.apiType}>API type</Label>
         <Select
           value={apiType ?? ""}
           onValueChange={(v) =>
@@ -35,7 +43,7 @@ export function VegetaParamsForm() {
             })
           }
         >
-          <SelectTrigger aria-label="API type">
+          <SelectTrigger id={ids.apiType}>
             <SelectValue placeholder="Select API type" />
           </SelectTrigger>
           <SelectContent>
@@ -49,18 +57,18 @@ export function VegetaParamsForm() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Rate (req/s)</Label>
+          <Label htmlFor={ids.rate}>Rate (req/s)</Label>
           <Input
+            id={ids.rate}
             type="number"
-            aria-label="Rate (req/s)"
             {...register("params.rate", { valueAsNumber: true })}
           />
         </div>
         <div>
-          <Label>Duration (s)</Label>
+          <Label htmlFor={ids.duration}>Duration (s)</Label>
           <Input
+            id={ids.duration}
             type="number"
-            aria-label="Duration (s)"
             {...register("params.duration", { valueAsNumber: true })}
           />
         </div>

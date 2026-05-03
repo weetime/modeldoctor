@@ -69,8 +69,9 @@ export function VegetaReportView({ data }: VegetaReportViewProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 pt-0 text-sm">
-            {data.errors.map((err) => (
-              <div key={err} className="font-mono text-xs text-destructive">
+            {data.errors.map((err, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: errors is a static frozen list from a parsed report; identical messages are valid (e.g. "timeout" repeating)
+              <div key={i} className="font-mono text-xs text-destructive">
                 {err}
               </div>
             ))}

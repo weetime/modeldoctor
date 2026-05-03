@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { GenaiPerfParams } from "@modeldoctor/tool-adapters/schemas";
+import { useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 const ENDPOINT_TYPES: GenaiPerfParams["endpointType"][] = [
@@ -23,10 +24,22 @@ export function GenaiPerfParamsForm() {
   const endpointType = useWatch({ control, name: "params.endpointType" });
   const streaming = useWatch({ control, name: "params.streaming" });
 
+  const idPrefix = useId();
+  const ids = {
+    endpointType: `${idPrefix}-endpointType`,
+    numPrompts: `${idPrefix}-numPrompts`,
+    concurrency: `${idPrefix}-concurrency`,
+    inputTokensMean: `${idPrefix}-inputTokensMean`,
+    inputTokensStddev: `${idPrefix}-inputTokensStddev`,
+    outputTokensMean: `${idPrefix}-outputTokensMean`,
+    outputTokensStddev: `${idPrefix}-outputTokensStddev`,
+    streaming: `${idPrefix}-streaming`,
+  };
+
   return (
     <div className="space-y-4">
       <div>
-        <Label>Endpoint type</Label>
+        <Label htmlFor={ids.endpointType}>Endpoint type</Label>
         <Select
           value={endpointType ?? ""}
           onValueChange={(v) =>
@@ -35,7 +48,7 @@ export function GenaiPerfParamsForm() {
             })
           }
         >
-          <SelectTrigger aria-label="Endpoint type">
+          <SelectTrigger id={ids.endpointType}>
             <SelectValue placeholder="Select endpoint type" />
           </SelectTrigger>
           <SelectContent>
@@ -49,26 +62,27 @@ export function GenaiPerfParamsForm() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Num prompts</Label>
+          <Label htmlFor={ids.numPrompts}>Num prompts</Label>
           <Input
+            id={ids.numPrompts}
             type="number"
-            aria-label="Num prompts"
             {...register("params.numPrompts", { valueAsNumber: true })}
           />
         </div>
         <div>
-          <Label>Concurrency</Label>
+          <Label htmlFor={ids.concurrency}>Concurrency</Label>
           <Input
+            id={ids.concurrency}
             type="number"
-            aria-label="Concurrency"
             {...register("params.concurrency", { valueAsNumber: true })}
           />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Input tokens mean (optional)</Label>
+          <Label htmlFor={ids.inputTokensMean}>Input tokens mean (optional)</Label>
           <Input
+            id={ids.inputTokensMean}
             type="number"
             {...register("params.inputTokensMean", {
               setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
@@ -76,14 +90,19 @@ export function GenaiPerfParamsForm() {
           />
         </div>
         <div>
-          <Label>Input tokens stddev</Label>
-          <Input type="number" {...register("params.inputTokensStddev", { valueAsNumber: true })} />
+          <Label htmlFor={ids.inputTokensStddev}>Input tokens stddev</Label>
+          <Input
+            id={ids.inputTokensStddev}
+            type="number"
+            {...register("params.inputTokensStddev", { valueAsNumber: true })}
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Output tokens mean (optional)</Label>
+          <Label htmlFor={ids.outputTokensMean}>Output tokens mean (optional)</Label>
           <Input
+            id={ids.outputTokensMean}
             type="number"
             {...register("params.outputTokensMean", {
               setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
@@ -91,8 +110,9 @@ export function GenaiPerfParamsForm() {
           />
         </div>
         <div>
-          <Label>Output tokens stddev</Label>
+          <Label htmlFor={ids.outputTokensStddev}>Output tokens stddev</Label>
           <Input
+            id={ids.outputTokensStddev}
             type="number"
             {...register("params.outputTokensStddev", { valueAsNumber: true })}
           />
@@ -100,11 +120,11 @@ export function GenaiPerfParamsForm() {
       </div>
       <div className="flex items-center gap-3">
         <Switch
+          id={ids.streaming}
           checked={streaming === true}
           onCheckedChange={(v) => setValue("params.streaming", v, { shouldValidate: true })}
-          aria-label="Streaming"
         />
-        <Label>Streaming</Label>
+        <Label htmlFor={ids.streaming}>Streaming</Label>
       </div>
     </div>
   );
