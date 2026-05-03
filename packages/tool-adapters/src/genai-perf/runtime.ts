@@ -95,20 +95,29 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
   // Authorization header is built into the shell script with literal
   // `$OPENAI_API_KEY`, so the secret is expanded by `sh` at exec time
-  // rather than being baked into the K8s pod spec / wrapper argv. The
-  // expanded value WILL appear in the inner genai-perf process argv
-  // (and therefore in /proc/<pid>/cmdline / ps for that process); what
-  // is protected is the wrapper-level argv, the runner log lines
-  // (masked by _redacted), and the K8s Job spec.
+  // rather than being baked into the K8s pod spec / wrapper argv.
   //
-  // Threat-model note: the value is expanded inside a double-quoted
-  // shell string. If the stored apiKey contained shell metacharacters
-  // (`$(...)`, backticks, etc.), the shell would interpret them. This
-  // is accepted because the user controls their own connection's apiKey
-  // — self-injection has no privilege gain over the pod they already own.
-  // Future hardening: route the header through a runner-side argv
-  // substitution (analogous to runner/main.py::_inject_api_key_into_backend_kwargs)
-  // so no shell expansion is involved. Track as follow-up if needed.
+  // Shell-injection safety: POSIX 2.6.5 guarantees that the result of
+  // parameter expansion is NOT subject to further word expansion. So
+  // even if the apiKey contained `$()` or backticks, sh would treat
+  // them as literal characters in the expanded `$OPENAI_API_KEY`. This
+  // has been live-verified — passing apiKey="sk$(touch /tmp/PWN)" via
+  // env to `sh -c '... "$VAR" ...'` does NOT execute the touch.
+  //
+  // The expanded value WILL appear in the inner genai-perf process
+  // argv (visible in /proc/<pid>/cmdline / ps for that process). What
+  // is protected: the wrapper-level argv, the runner log lines (masked
+  // by _redacted), and the K8s Job spec.
+  //
+  // Architectural note: guidellm uses runner-side Python injection
+  // (runner/main.py::_inject_api_key_into_backend_kwargs) instead of
+  // shell expansion. genai-perf uses shell expansion because its
+  // adapter already emits a `sh -c` script (for the STREAMING
+  // conditional + multi-line layout); folding api_key into that
+  // script via `$VAR` is the simplest path. Both routes are POSIX-
+  // safe; the inconsistency is stylistic, not security-relevant.
+  // Defense-in-depth: connection.apiKey is zod-refined to reject
+  // control characters at input boundary (see contracts/connection.ts).
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
