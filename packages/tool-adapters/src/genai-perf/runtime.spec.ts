@@ -180,7 +180,7 @@ describe("genai-perf.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: {
-        baseUrl: "http://x", apiKey: "sk", model: "m",
+        baseUrl: "http://x", apiKey: "sk-test-secret-12345", model: "m",
         customHeaders: "", queryParams: "", tokenizerHfId: null,
       },
       callback: { url: "http://cb", token: "t" },
@@ -188,7 +188,7 @@ describe("genai-perf.buildCommand", () => {
     const script = result.argv[2]; // sh -c <script>
     expect(script).toContain('--header "Authorization: Bearer $OPENAI_API_KEY"');
     // Sanity: api_key is NOT in argv anywhere (it'd leak into ps).
-    expect(result.argv.join(" ")).not.toContain("sk");
+    expect(result.argv.join(" ")).not.toContain("sk-test-secret-12345");
   });
 
   it("uses params.tokenizer when provided (per-run override)", () => {

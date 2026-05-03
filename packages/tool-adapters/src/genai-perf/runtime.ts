@@ -93,9 +93,18 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
 
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
-  // Authorization header is constructed at shell time so $OPENAI_API_KEY
-  // (provided via secretEnv) never enters argv. Same pattern vegeta uses
-  // for its targets.txt.
+  // Authorization header is built into the shell script with literal
+  // `$OPENAI_API_KEY`, so the secret is expanded by the shell at exec
+  // time and never enters argv (no leak via `ps` or process trees).
+  //
+  // Threat-model note: the value is expanded inside a double-quoted
+  // shell string. If the stored apiKey contained shell metacharacters
+  // (`$(...)`, backticks, etc.), the shell would interpret them. This
+  // is accepted because the user controls their own connection's apiKey
+  // — self-injection has no privilege gain over the pod they already own.
+  // Future hardening: route the header through a runner-side argv
+  // substitution (analogous to runner/main.py::_inject_api_key_into_backend_kwargs)
+  // so no shell expansion is involved. Track as follow-up if needed.
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
