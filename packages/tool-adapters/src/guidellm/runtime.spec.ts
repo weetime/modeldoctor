@@ -130,7 +130,7 @@ describe("guidellm.buildCommand", () => {
     expect(result.argv.some((a) => a.startsWith("--backend-kwargs="))).toBe(true);
     const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="))!;
     const kwargs = JSON.parse(flag.replace("--backend-kwargs=", ""));
-    expect(kwargs).toEqual({}); // empty when validateBackend stays true; runner adds api_key
+    expect(kwargs).toEqual({}); // validateBackend=true → no validate_backend key in --backend-kwargs; runner injects api_key
   });
 
   it("emits --backend-kwargs={validate_backend:false} when validateBackend=false", () => {

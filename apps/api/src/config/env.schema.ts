@@ -65,11 +65,6 @@ export const EnvSchema = z
     RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
-    // Default false because most OpenAI-compatible gateways do not expose
-    // guidellm's probe path (gen-studio, vLLM behind some routers, etc.)
-    // and the probe failure aborts the run. Flip to true when targeting
-    // a backend that does expose the probe and you want pre-flight checking.
-    BENCHMARK_VALIDATE_BACKEND: envBoolean.default(false),
     // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
     // counting (passed as --processor). Set this when the target gateway
     // exposes a local model name (e.g. "gen-studio_…") that doesn't resolve

@@ -244,11 +244,6 @@ describe("validateEnv", () => {
       expect(env.BENCHMARK_DEFAULT_MAX_DURATION_SECONDS).toBe(1800);
     });
 
-    it("BENCHMARK_VALIDATE_BACKEND defaults to false", () => {
-      const env = validateEnv({ NODE_ENV: "test" });
-      expect(env.BENCHMARK_VALIDATE_BACKEND).toBe(false);
-    });
-
     it("requires CONNECTION_API_KEY_ENCRYPTION_KEY outside test mode", () => {
       const noKey = { ...baseDev, CONNECTION_API_KEY_ENCRYPTION_KEY: undefined };
       expect(() => validateEnv(noKey)).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
