@@ -24,6 +24,19 @@ describe("genaiPerfParamsSchema", () => {
   it("paramDefaults is a parseable starter", () => {
     expect(typeof genaiPerfParamDefaults).toBe("object");
   });
+
+  it("accepts an optional tokenizer field", () => {
+    const result = genaiPerfParamsSchema.parse({
+      endpointType: "chat",
+      tokenizer: "Qwen/Qwen2.5-0.5B-Instruct",
+    });
+    expect(result.tokenizer).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+  });
+
+  it("treats tokenizer as undefined when omitted", () => {
+    const result = genaiPerfParamsSchema.parse({ endpointType: "chat" });
+    expect(result.tokenizer).toBeUndefined();
+  });
 });
 
 describe("genaiPerfReportSchema", () => {

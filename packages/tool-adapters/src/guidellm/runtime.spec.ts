@@ -13,6 +13,20 @@ const baseConn = {
   model: "Qwen2.5-0.5B-Instruct",
   customHeaders: "",
   queryParams: "",
+  tokenizerHfId: null,
+};
+
+const defaultParams = {
+  profile: "throughput" as const,
+  apiType: "chat" as const,
+  datasetName: "random" as const,
+  datasetInputTokens: 256,
+  datasetOutputTokens: 128,
+  requestRate: 0,
+  totalRequests: 100,
+  maxDurationSeconds: 300,
+  maxConcurrency: 50,
+  validateBackend: true,
 };
 
 describe("guidellm.buildCommand", () => {
@@ -107,6 +121,119 @@ describe("guidellm.buildCommand", () => {
     });
     expect(r.argv).toContain("--rate-type=throughput");
     expect(r.argv).toContain("--rate=75");
+  });
+
+  it("always emits --backend-kwargs= so the runner can merge OPENAI_API_KEY", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: {
+        profile: "throughput",
+        apiType: "chat",
+        datasetName: "random",
+        datasetInputTokens: 256,
+        datasetOutputTokens: 128,
+        requestRate: 0,
+        totalRequests: 100,
+        maxDurationSeconds: 300,
+        maxConcurrency: 50,
+        validateBackend: true,
+      },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    expect(result.argv.some((a) => a.startsWith("--backend-kwargs="))).toBe(true);
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
+    if (!flag) throw new Error("--backend-kwargs= not found in argv");
+    const kwargs = JSON.parse(flag.replace("--backend-kwargs=", ""));
+    expect(kwargs).toEqual({}); // validateBackend=true → no validate_backend key in --backend-kwargs; runner injects api_key
+  });
+
+  it("emits --backend-kwargs={validate_backend:false} when validateBackend=false", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: {
+        profile: "throughput",
+        apiType: "chat",
+        datasetName: "random",
+        datasetInputTokens: 256,
+        datasetOutputTokens: 128,
+        requestRate: 0,
+        totalRequests: 100,
+        maxDurationSeconds: 300,
+        maxConcurrency: 50,
+        validateBackend: false,
+      },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
+    if (!flag) throw new Error("--backend-kwargs= not found in argv");
+    expect(JSON.parse(flag.replace("--backend-kwargs=", ""))).toEqual({ validate_backend: false });
+  });
+
+  it("uses params.processor when provided (per-run override)", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: { ...defaultParams, processor: "Qwen/Per-Run" },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    expect(result.argv).toContain("--processor=Qwen/Per-Run");
+  });
+
+  it("falls back to connection.tokenizerHfId when no params.processor", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: { ...defaultParams, processor: undefined },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    expect(result.argv).toContain("--processor=Qwen/Connection");
+  });
+
+  it("omits --processor when neither is set", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: { ...defaultParams, processor: undefined },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    expect(result.argv.find((a) => a.startsWith("--processor="))).toBeUndefined();
   });
 });
 

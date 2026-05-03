@@ -126,6 +126,7 @@ const mockConnections: ConnectionService = {
     model: "m",
     customHeaders: "{}",
     queryParams: "",
+    tokenizerHfId: null,
     category: "text" as const,
   })),
 } as unknown as ConnectionService;

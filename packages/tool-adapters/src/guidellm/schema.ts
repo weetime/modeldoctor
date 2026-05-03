@@ -20,7 +20,7 @@ export const guidellmParamsSchema = z
     maxDurationSeconds: z.number().int().positive().default(1800),
     maxConcurrency: z.number().int().positive().default(100),
     processor: z.string().min(1).optional(),
-    validateBackend: z.boolean().default(true),
+    validateBackend: z.boolean().default(false),
   })
   .superRefine((d, ctx) => {
     if (d.datasetName === "random") {
@@ -79,5 +79,5 @@ export const guidellmParamDefaults: Partial<GuidellmParams> = {
   totalRequests: 1000,
   maxDurationSeconds: 1800,
   maxConcurrency: 100,
-  validateBackend: true,
+  validateBackend: false,
 };

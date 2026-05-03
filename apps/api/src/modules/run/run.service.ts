@@ -161,6 +161,7 @@ export class RunService {
           model: conn.model,
           customHeaders: conn.customHeaders,
           queryParams: conn.queryParams,
+          tokenizerHfId: conn.tokenizerHfId,
         },
         callback: { url: this.callbackUrl, token: callbackToken },
       });

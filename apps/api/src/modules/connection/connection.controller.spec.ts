@@ -30,6 +30,7 @@ const PUBLIC_FIXTURE: ConnectionPublic = {
   tags: [],
   prometheusUrl: null,
   serverKind: null,
+  tokenizerHfId: null,
   createdAt: "2026-05-01T00:00:00.000Z",
   updatedAt: "2026-05-01T00:00:00.000Z",
 };
@@ -152,6 +153,60 @@ describe("ConnectionController", () => {
       const result = await controller.update(USER, "c_1", body);
       expect(svc.update).toHaveBeenCalledWith("u_1", "c_1", body);
       expect(result).toBe(PUBLIC_FIXTURE);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // tokenizerHfId field
+  // -------------------------------------------------------------------------
+  describe("tokenizerHfId field", () => {
+    it("create: response includes tokenizerHfId: null when not supplied", async () => {
+      svc.create.mockResolvedValue(SECRET_FIXTURE);
+      const body = {
+        name: "vllm-prod",
+        baseUrl: "http://10.0.0.1:8000",
+        apiKey: "sk-secret-12345",
+        model: "qwen2.5",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat" as const,
+        tags: [],
+      };
+      const result = await controller.create(USER, body);
+      expect(result.tokenizerHfId).toBeNull();
+    });
+
+    it("create: response includes tokenizerHfId when supplied", async () => {
+      const fixtureWithTokenizer: ConnectionWithSecret = {
+        ...SECRET_FIXTURE,
+        tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+      };
+      svc.create.mockResolvedValue(fixtureWithTokenizer);
+      const body = {
+        name: "vllm-prod",
+        baseUrl: "http://10.0.0.1:8000",
+        apiKey: "sk-secret-12345",
+        model: "qwen2.5",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat" as const,
+        tags: [],
+        tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+      };
+      const result = await controller.create(USER, body);
+      expect(result.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+    });
+
+    it("update: response includes tokenizerHfId when updated", async () => {
+      const fixtureWithTokenizer: ConnectionPublic = {
+        ...PUBLIC_FIXTURE,
+        tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct",
+      };
+      svc.update.mockResolvedValue(fixtureWithTokenizer);
+      const body = { tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct" };
+      const result = await controller.update(USER, "c_1", body);
+      expect(svc.update).toHaveBeenCalledWith("u_1", "c_1", body);
+      expect(result.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
     });
   });
 

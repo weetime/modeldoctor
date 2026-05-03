@@ -66,6 +66,7 @@ const empty: Partial<ConnectionInput> = {
   model: "",
   customHeaders: "",
   queryParams: "",
+  tokenizerHfId: "",
   tags: [],
 };
 
@@ -94,6 +95,7 @@ function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
     model: c.model,
     customHeaders: c.customHeaders,
     queryParams: c.queryParams,
+    tokenizerHfId: c.tokenizerHfId ?? "",
     category: c.category,
     tags: c.tags,
   };
@@ -187,6 +189,7 @@ export function ConnectionDialog({
           model: values.model,
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
+          tokenizerHfId: values.tokenizerHfId.trim() || null,
           category: values.category,
           tags: values.tags,
         };
@@ -207,6 +210,7 @@ export function ConnectionDialog({
           model: values.model,
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
+          tokenizerHfId: values.tokenizerHfId.trim() || null,
           category: values.category,
           tags: values.tags,
         });
@@ -476,6 +480,19 @@ export function ConnectionDialog({
                 placeholder={t("dialog.fields.queryParamsPlaceholder")}
                 {...form.register("queryParams")}
               />
+            </div>
+
+            <div>
+              <Label htmlFor="tokenizerHfId">{t("dialog.fields.tokenizerHfId")}</Label>
+              <Input
+                id="tokenizerHfId"
+                autoComplete="off"
+                placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
+                {...form.register("tokenizerHfId")}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("dialog.fields.tokenizerHfIdHelp")}
+              </p>
             </div>
 
             {submitError ? (

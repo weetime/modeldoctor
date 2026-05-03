@@ -15,6 +15,7 @@ const baseConn = {
   model: "Qwen2.5-0.5B-Instruct",
   customHeaders: "",
   queryParams: "",
+  tokenizerHfId: null,
 };
 
 const baseParams = {
@@ -172,6 +173,83 @@ describe("genai-perf.buildCommand", () => {
     });
     const argvStr = r.argv.join(" ");
     expect(argvStr).toContain("512");
+  });
+
+  it("emits Authorization header in the shell script", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: baseParams,
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk-test-secret-12345",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const script = result.argv[2]; // sh -c <script>
+    expect(script).toContain('--header "Authorization: Bearer $OPENAI_API_KEY"');
+    // Sanity: api_key is NOT in argv anywhere (it'd leak into ps).
+    expect(result.argv.join(" ")).not.toContain("sk-test-secret-12345");
+  });
+
+  it("uses params.tokenizer when provided (per-run override)", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: { ...baseParams, tokenizer: "Qwen/Per-Run" },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const script = result.argv[2];
+    expect(script).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(result.argv).toContain("Qwen/Per-Run");
+    expect(result.argv).not.toContain("Qwen/Connection");
+  });
+
+  it("falls back to connection.tokenizerHfId when no params.tokenizer", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: { ...baseParams, tokenizer: undefined },
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: "Qwen/Connection",
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const script = result.argv[2];
+    expect(script).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(result.argv).toContain("Qwen/Connection");
+  });
+
+  it("omits --tokenizer when neither is set", () => {
+    const result = buildCommand({
+      runId: "r1",
+      params: baseParams,
+      connection: {
+        baseUrl: "http://x",
+        apiKey: "sk",
+        model: "m",
+        customHeaders: "",
+        queryParams: "",
+        tokenizerHfId: null,
+      },
+      callback: { url: "http://cb", token: "t" },
+    });
+    const script = result.argv[2];
+    expect(script).not.toContain("--tokenizer");
   });
 });
 

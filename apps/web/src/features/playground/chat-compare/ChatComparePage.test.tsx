@@ -25,6 +25,7 @@ const CONN_A: ConnectionPublic = {
   updatedAt: "2026-04-26T14:22:00Z",
   prometheusUrl: null,
   serverKind: null,
+  tokenizerHfId: null,
 };
 const CONN_B: ConnectionPublic = { ...CONN_A, id: "cb", name: "B", baseUrl: "http://b" };
 

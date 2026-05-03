@@ -22,7 +22,7 @@ function Wrapper({ children, defaults }: { children: React.ReactNode; defaults?:
         totalRequests: 1000,
         maxDurationSeconds: 1800,
         maxConcurrency: 100,
-        validateBackend: true,
+        validateBackend: false,
       },
     },
   });

@@ -36,6 +36,69 @@ def _fake_proc(
     return proc
 
 
+class TestInjectApiKeyIntoBackendKwargs:
+    """The wrapper merges OPENAI_API_KEY into any --backend-kwargs= JSON
+    so guidellm receives api_key. genai-perf and vegeta don't use this
+    flag and so are unaffected.
+    """
+
+    def test_no_op_when_no_backend_kwargs_flag(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "benchmark", "run", "--target=http://x"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out == argv
+
+    def test_no_op_when_env_unset(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {}, clear=True)
+        argv = ["guidellm", "--backend-kwargs={}"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out == argv
+
+    def test_merges_into_existing_empty_object(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "--backend-kwargs={}"]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        assert out[0] == "guidellm"
+        assert out[1].startswith("--backend-kwargs=")
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        assert merged == {"api_key": "sk-secret"}
+
+    def test_merges_into_existing_non_empty_object(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", '--backend-kwargs={"validate_backend": false}']
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        assert merged == {"validate_backend": False, "api_key": "sk-secret"}
+
+    def test_does_not_overwrite_existing_api_key(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-from-env"}, clear=False)
+        argv = ["guidellm", '--backend-kwargs={"api_key": "sk-explicit"}']
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        merged = json.loads(out[1].removeprefix("--backend-kwargs="))
+        # If the adapter already supplied api_key, keep it (env is fallback only).
+        assert merged == {"api_key": "sk-explicit"}
+
+    def test_handles_multiple_backend_kwargs_by_merging_each(self, mocker: MockerFixture) -> None:
+        # Defensive: guidellm CLI accepts repeats; we merge into each occurrence.
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = [
+            "guidellm",
+            "--backend-kwargs={}",
+            '--backend-kwargs={"validate_backend": false}',
+        ]
+        out = main_mod._inject_api_key_into_backend_kwargs(argv)
+        first = json.loads(out[1].removeprefix("--backend-kwargs="))
+        second = json.loads(out[2].removeprefix("--backend-kwargs="))
+        assert first == {"api_key": "sk-secret"}
+        assert second == {"validate_backend": False, "api_key": "sk-secret"}
+
+    def test_raises_on_malformed_json(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["guidellm", "--backend-kwargs={not valid json"]
+        with pytest.raises(json.JSONDecodeError):
+            main_mod._inject_api_key_into_backend_kwargs(argv)
+
+
 @pytest.fixture
 def patched_callbacks(mocker: MockerFixture) -> dict[str, MagicMock]:
     """Patch every callback function on runner.main."""
@@ -244,6 +307,27 @@ def test_redaction_in_log_line(
     log_text = "\n".join(r.message for r in caplog.records)
     assert "***REDACTED***" in log_text
     assert "sk-secret" not in log_text
+
+
+def test_injected_api_key_is_redacted_in_log(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    caplog,
+) -> None:
+    """End-to-end: env-set OPENAI_API_KEY merges into --backend-kwargs at
+    exec time, but the resulting argv is still masked in the runner log
+    line so the secret never appears in stdout/captured pod logs."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "--backend-kwargs={}"])
+    md_env_minimal["OPENAI_API_KEY"] = "sk-from-env-secret"
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    with caplog.at_level("INFO", logger="runner"):
+        main_mod.main()
+    log_text = "\n".join(r.message for r in caplog.records)
+    assert "***REDACTED***" in log_text
+    assert "sk-from-env-secret" not in log_text
 
 
 def test_missing_required_env_raises_key_error(

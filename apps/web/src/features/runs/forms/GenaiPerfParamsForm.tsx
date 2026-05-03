@@ -34,6 +34,7 @@ export function GenaiPerfParamsForm() {
     outputTokensMean: `${idPrefix}-outputTokensMean`,
     outputTokensStddev: `${idPrefix}-outputTokensStddev`,
     streaming: `${idPrefix}-streaming`,
+    tokenizer: `${idPrefix}-tokenizer`,
   };
 
   return (
@@ -125,6 +126,16 @@ export function GenaiPerfParamsForm() {
           onCheckedChange={(v) => setValue("params.streaming", v, { shouldValidate: true })}
         />
         <Label htmlFor={ids.streaming}>Streaming</Label>
+      </div>
+      <div>
+        <Label htmlFor={ids.tokenizer}>Tokenizer (HuggingFace id, optional)</Label>
+        <Input
+          id={ids.tokenizer}
+          {...register("params.tokenizer", {
+            setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
+          })}
+          placeholder="Overrides connection-level default; leave empty to use it."
+        />
       </div>
     </div>
   );

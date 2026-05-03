@@ -18,6 +18,7 @@ export const connectionPublicSchema = z.object({
   tags: z.array(z.string()),
   prometheusUrl: z.string().url().nullable(),
   serverKind: serverKindSchema.nullable(),
+  tokenizerHfId: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -40,6 +41,7 @@ export const createConnectionSchema = z.object({
   tags: z.array(z.string()).default([]),
   prometheusUrl: z.string().url().nullable().optional(),
   serverKind: serverKindSchema.nullable().optional(),
+  tokenizerHfId: z.string().nullable().optional(),
 });
 export type CreateConnection = z.infer<typeof createConnectionSchema>;
 

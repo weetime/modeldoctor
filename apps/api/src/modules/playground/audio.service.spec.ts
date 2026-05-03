@@ -12,6 +12,7 @@ function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnec
     customHeaders: "",
     queryParams: "",
     category: "audio",
+    tokenizerHfId: null,
     ...overrides,
   };
 }

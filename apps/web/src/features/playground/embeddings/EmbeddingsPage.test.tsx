@@ -31,6 +31,7 @@ const SAMPLE_CONN: ConnectionPublic = {
   updatedAt: "2026-04-26T14:22:00Z",
   prometheusUrl: null,
   serverKind: null,
+  tokenizerHfId: null,
 };
 
 vi.mock("@/features/connections/queries", () => ({

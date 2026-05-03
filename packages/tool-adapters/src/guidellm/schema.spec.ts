@@ -106,8 +106,19 @@ describe("guidellmParamsSchema", () => {
       expect(r.data.profile).toBe("throughput");
       expect(r.data.requestRate).toBe(0);
       expect(r.data.totalRequests).toBe(1000);
-      expect(r.data.validateBackend).toBe(true);
+      expect(r.data.validateBackend).toBe(false);
     }
+  });
+
+  it("defaults validateBackend to false", () => {
+    const result = guidellmParamsSchema.parse({
+      profile: "throughput",
+      apiType: "chat",
+      datasetName: "random",
+      datasetInputTokens: 128,
+      datasetOutputTokens: 64,
+    });
+    expect(result.validateBackend).toBe(false);
   });
 });
 

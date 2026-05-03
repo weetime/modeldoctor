@@ -82,8 +82,33 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
     nextPos++;
   }
 
+  // Tokenizer: per-run override, then connection-level fallback. Omit flag
+  // when neither is set (tool default is to derive from `-m`).
+  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? undefined;
+  if (resolvedTokenizer) {
+    optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
+    optionalArgv.push(resolvedTokenizer);
+    nextPos++;
+  }
+
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
+  // Authorization header is built into the shell script with literal
+  // `$OPENAI_API_KEY`, so the secret is expanded by `sh` at exec time
+  // rather than being baked into the K8s pod spec / wrapper argv. The
+  // expanded value WILL appear in the inner genai-perf process argv
+  // (and therefore in /proc/<pid>/cmdline / ps for that process); what
+  // is protected is the wrapper-level argv, the runner log lines
+  // (masked by _redacted), and the K8s Job spec.
+  //
+  // Threat-model note: the value is expanded inside a double-quoted
+  // shell string. If the stored apiKey contained shell metacharacters
+  // (`$(...)`, backticks, etc.), the shell would interpret them. This
+  // is accepted because the user controls their own connection's apiKey
+  // — self-injection has no privilege gain over the pod they already own.
+  // Future hardening: route the header through a runner-side argv
+  // substitution (analogous to runner/main.py::_inject_api_key_into_backend_kwargs)
+  // so no shell expansion is involved. Track as follow-up if needed.
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
@@ -91,6 +116,7 @@ genai-perf profile \\
     -m "$1" -u "$2" \\
     --endpoint-type "$3" \\
     --num-prompts "$4" --concurrency "$5" \\
+    --header "Authorization: Bearer $OPENAI_API_KEY" \\
     $STREAMING${optionalTokenFlags} \\
     --profile-export-file profile_export.json
 find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\; && [ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure

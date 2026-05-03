@@ -10,6 +10,7 @@ const baseShape = {
   model: z.string().min(1, "required"),
   customHeaders: z.string(),
   queryParams: z.string(),
+  tokenizerHfId: z.string(),
   category: ModalityCategorySchema,
   tags: z
     .array(z.string().trim())

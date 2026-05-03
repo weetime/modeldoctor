@@ -15,6 +15,7 @@ function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnec
     customHeaders: "",
     queryParams: "",
     category: "chat",
+    tokenizerHfId: null,
     ...overrides,
   };
 }
