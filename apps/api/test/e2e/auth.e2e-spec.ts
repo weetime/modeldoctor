@@ -274,7 +274,7 @@ describe("Auth (e2e)", () => {
   });
 
   // ── 11. Admin sees runs from all users ────────────────────────────────────
-  it("GET /api/load-test/runs with admin token → sees all users' runs", async () => {
+  it("GET /api/runs?scope=all with admin token → sees all users' runs", async () => {
     const repo = ctx.app.get(RunRepository);
 
     // Re-use the admin account registered in test #1
@@ -316,17 +316,19 @@ describe("Auth (e2e)", () => {
     await repo.update(user2Row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     const adminRunsRes = await request(ctx.app.getHttpServer())
-      .get("/api/load-test/runs")
+      .get("/api/runs?scope=all")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
 
-    const urls = adminRunsRes.body.items.map((r: { apiBaseUrl: string }) => r.apiBaseUrl);
+    const urls = adminRunsRes.body.items.map(
+      (r: { scenario: { apiBaseUrl?: string } }) => r.scenario?.apiBaseUrl,
+    );
     expect(urls).toContain("http://admin-run");
     expect(urls).toContain("http://user2-run");
   });
 
-  // ── 12. User sees only own runs ───────────────────────────────────────────
-  it("GET /api/load-test/runs with user token → only own runs", async () => {
+  // ── 12. User sees only own runs (default scope=own) ──────────────────────
+  it("GET /api/runs (no scope) with user token → only own runs", async () => {
     const repo = ctx.app.get(RunRepository);
 
     const userRes = await request(ctx.app.getHttpServer())
@@ -349,15 +351,35 @@ describe("Auth (e2e)", () => {
     await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     const runsRes = await request(ctx.app.getHttpServer())
-      .get("/api/load-test/runs")
+      .get("/api/runs")
       .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
 
     // All returned runs must belong to this user
     expect(runsRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(true);
-    expect(runsRes.body.items.some((r: { apiBaseUrl: string }) => r.apiBaseUrl === "http://own-run")).toBe(
-      true,
-    );
+    expect(
+      runsRes.body.items.some(
+        (r: { scenario: { apiBaseUrl?: string } }) => r.scenario?.apiBaseUrl === "http://own-run",
+      ),
+    ).toBe(true);
+  });
+
+  // ── 13. Non-admin user requesting scope=all → 403 ─────────────────────────
+  it("GET /api/runs?scope=all with non-admin token → 403 + admin-role message", async () => {
+    const userRes = await request(ctx.app.getHttpServer())
+      .post("/api/auth/register")
+      .send({ email: "scope-forbidden-user@example.com", password: "Password1!" })
+      .expect(201);
+    const userToken = userRes.body.accessToken as string;
+
+    const res = await request(ctx.app.getHttpServer())
+      .get("/api/runs?scope=all")
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(403);
+    // AllExceptionsFilter normalizes the http status → "FORBIDDEN" (the controller's
+    // exception body `code: "RUN_SCOPE_FORBIDDEN"` is preserved in the message instead).
+    expect(res.body.error.code).toBe("FORBIDDEN");
+    expect(res.body.error.message).toMatch(/admin role required/i);
   });
 
   // ── Grace window: concurrent refresh ──────────────────────────────────────
