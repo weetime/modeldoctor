@@ -9,6 +9,7 @@ describe("connectionInputSchema", () => {
     model: "qwen-2.5-7b",
     customHeaders: "",
     queryParams: "",
+    tokenizerHfId: "",
     category: "chat" as const,
   };
 
@@ -57,6 +58,7 @@ describe("connectionInputSchema (category + tags)", () => {
     model: "m",
     customHeaders: "",
     queryParams: "",
+    tokenizerHfId: "",
   };
 
   it("requires a category", () => {

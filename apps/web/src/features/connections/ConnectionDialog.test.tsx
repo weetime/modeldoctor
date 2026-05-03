@@ -39,6 +39,7 @@ const EXISTING: ConnectionPublic = {
   model: "old-model",
   customHeaders: "",
   queryParams: "",
+  tokenizerHfId: null,
   category: "chat",
   tags: ["vLLM"],
   createdAt: "2026-04-26T14:22:00Z",
@@ -98,6 +99,42 @@ describe("ConnectionDialog (create mode)", () => {
 
     expect(screen.queryByText("x")).not.toBeInTheDocument();
     expect(screen.getByText("y")).toBeInTheDocument();
+  });
+
+  it("submits tokenizerHfId when filled", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await fillBaseFields(user);
+
+    await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
+    await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
+
+    await user.type(
+      screen.getByLabelText(/tokenizer/i),
+      "Qwen/Qwen2.5-0.5B-Instruct",
+    );
+
+    await user.click(screen.getByRole("button", { name: /save|保存/i }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+    const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.tokenizerHfId).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+  });
+
+  it("submits null when tokenizerHfId left empty", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await fillBaseFields(user);
+
+    await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
+    await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
+
+    // Leave tokenizer field blank (default is "")
+    await user.click(screen.getByRole("button", { name: /save|保存/i }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+    const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.tokenizerHfId).toBeNull();
   });
 });
 
