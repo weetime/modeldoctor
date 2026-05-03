@@ -38,9 +38,8 @@ export const EnvSchema = z
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
     // 32-byte base64-encoded AES-256 key used to encrypt user-supplied API
-    // keys at rest. Optional in Phase 1 (the helper is added but no row uses
-    // it yet); Phase 4 tightens to required-when-not-test once the
-    // BenchmarkController persists encrypted rows.
+    // keys at rest. Optional in dev/test; required in production once the
+    // run callback path persists encrypted connection rows.
     CONNECTION_API_KEY_ENCRYPTION_KEY: z
       .string()
       .optional()

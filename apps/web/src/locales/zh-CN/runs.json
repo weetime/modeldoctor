@@ -66,7 +66,7 @@
   "errorBanner": "加载 Run 失败",
   "retry": "重试",
   "detail": {
-    "back": "返回 history",
+    "back": "返回运行列表",
     "subtitle": "{{kind}} · {{tool}} · {{when}}",
     "metadata": {
       "kind": "类型",

@@ -25,6 +25,8 @@ const DATASETS: GuidellmParams["datasetName"][] = ["random", "sharegpt"];
 
 export function GuidellmParamsForm() {
   const { register, setValue, control } = useFormContext();
+  const profile = useWatch({ control, name: "params.profile" });
+  const apiType = useWatch({ control, name: "params.apiType" });
   const datasetName = useWatch({ control, name: "params.datasetName" });
   const validateBackend = useWatch({ control, name: "params.validateBackend" });
 
@@ -39,7 +41,7 @@ export function GuidellmParamsForm() {
                 shouldValidate: true,
               })
             }
-            defaultValue={undefined}
+            value={profile ?? ""}
           >
             <SelectTrigger aria-label="Profile">
               <SelectValue placeholder="Select profile" />
@@ -61,7 +63,7 @@ export function GuidellmParamsForm() {
                 shouldValidate: true,
               })
             }
-            defaultValue={undefined}
+            value={apiType ?? ""}
           >
             <SelectTrigger aria-label="API type">
               <SelectValue placeholder="Select API type" />
@@ -86,7 +88,7 @@ export function GuidellmParamsForm() {
                 shouldValidate: true,
               })
             }
-            defaultValue={undefined}
+            value={datasetName ?? ""}
           >
             <SelectTrigger aria-label="Dataset">
               <SelectValue placeholder="Select dataset" />
