@@ -185,20 +185,58 @@ describe("validateEnv", () => {
       );
     });
 
-    it("requires BENCHMARK_RUNNER_IMAGE when BENCHMARK_DRIVER=k8s", () => {
-      expect(() => validateEnv({ ...baseDev, BENCHMARK_DRIVER: "k8s" })).toThrow(
-        /BENCHMARK_RUNNER_IMAGE/,
-      );
+    it("requires RUNNER_IMAGE_GUIDELLM when BENCHMARK_DRIVER=k8s", () => {
+      expect(() =>
+        validateEnv({
+          ...baseDev,
+          BENCHMARK_DRIVER: "k8s",
+          RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
+          RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
+        }),
+      ).toThrow(/RUNNER_IMAGE_GUIDELLM/);
     });
 
-    it("accepts BENCHMARK_DRIVER=k8s when image + namespace are set", () => {
+    it("requires RUNNER_IMAGE_VEGETA when BENCHMARK_DRIVER=k8s", () => {
+      expect(() =>
+        validateEnv({
+          ...baseDev,
+          BENCHMARK_DRIVER: "k8s",
+          RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
+          RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
+        }),
+      ).toThrow(/RUNNER_IMAGE_VEGETA/);
+    });
+
+    it("requires RUNNER_IMAGE_GENAI_PERF when BENCHMARK_DRIVER=k8s", () => {
+      expect(() =>
+        validateEnv({
+          ...baseDev,
+          BENCHMARK_DRIVER: "k8s",
+          RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
+          RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
+        }),
+      ).toThrow(/RUNNER_IMAGE_GENAI_PERF/);
+    });
+
+    it("accepts BENCHMARK_DRIVER=k8s when all three RUNNER_IMAGE_* are set", () => {
       const env = validateEnv({
         ...baseDev,
         BENCHMARK_DRIVER: "k8s",
-        BENCHMARK_RUNNER_IMAGE: "modeldoctor/benchmark-runner:dev",
+        RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
+        RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
+        RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
       });
       expect(env.BENCHMARK_DRIVER).toBe("k8s");
       expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
+      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:dev2");
+      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:dev2");
+      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:dev2");
+    });
+
+    it("does NOT require RUNNER_IMAGE_* when BENCHMARK_DRIVER=subprocess", () => {
+      const env = validateEnv({ ...baseDev, BENCHMARK_DRIVER: "subprocess" });
+      expect(env.BENCHMARK_DRIVER).toBe("subprocess");
+      expect(env.RUNNER_IMAGE_GUIDELLM).toBeUndefined();
     });
 
     it("defaults BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to 1800", () => {
