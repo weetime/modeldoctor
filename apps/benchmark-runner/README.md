@@ -28,7 +28,19 @@ ruff format --check .   # CI runs this too — `ruff format .` to auto-apply
 (Non-conda contributors can substitute `python3.11 -m venv .venv && source .venv/bin/activate` —
 the project itself is environment-manager-agnostic; only the dev workflow above prefers conda.)
 
-## Building the images
+## Quick build + import
+
+The standard workflow is the helper script at the repo root:
+
+```bash
+./tools/build-runner-images.sh
+```
+
+This computes a content-addressed tag from the runner source's git SHA, builds all three images, and imports them into the local k3d cluster. The script prints the tag and the matching `RUNNER_IMAGE_*` lines for `.env`.
+
+Manual build commands (below) are kept for reference but the script is preferred.
+
+## Building the images (manual, advanced)
 
 Prerequisite: Docker (or Podman with `alias docker=podman`) must be installed and running.
 
