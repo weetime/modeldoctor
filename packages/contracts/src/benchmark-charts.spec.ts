@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { runChartsResponseSchema } from "./run.js";
+import { benchmarkChartsResponseSchema } from "./benchmark.js";
 
-describe("runChartsResponseSchema", () => {
+describe("benchmarkChartsResponseSchema", () => {
   it("accepts both fields populated", () => {
-    const ok = runChartsResponseSchema.safeParse({
+    const ok = benchmarkChartsResponseSchema.safeParse({
       latencyCdf: { samples: [10, 20, 30] },
       ttftHistogram: {
         buckets: [
@@ -16,7 +16,7 @@ describe("runChartsResponseSchema", () => {
   });
 
   it("accepts both fields null (degraded shape)", () => {
-    const ok = runChartsResponseSchema.safeParse({
+    const ok = benchmarkChartsResponseSchema.safeParse({
       latencyCdf: null,
       ttftHistogram: null,
     });
@@ -24,7 +24,7 @@ describe("runChartsResponseSchema", () => {
   });
 
   it("accepts ttftHistogram null while latencyCdf populated (vegeta shape)", () => {
-    const ok = runChartsResponseSchema.safeParse({
+    const ok = benchmarkChartsResponseSchema.safeParse({
       latencyCdf: { samples: [1, 2, 3] },
       ttftHistogram: null,
     });
@@ -32,7 +32,7 @@ describe("runChartsResponseSchema", () => {
   });
 
   it("rejects negative bucket counts", () => {
-    const bad = runChartsResponseSchema.safeParse({
+    const bad = benchmarkChartsResponseSchema.safeParse({
       latencyCdf: null,
       ttftHistogram: { buckets: [{ lower: 0, upper: 1, count: -1 }] },
     });
@@ -40,7 +40,7 @@ describe("runChartsResponseSchema", () => {
   });
 
   it("rejects samples that are not numbers", () => {
-    const bad = runChartsResponseSchema.safeParse({
+    const bad = benchmarkChartsResponseSchema.safeParse({
       latencyCdf: { samples: ["10" as unknown as number] },
       ttftHistogram: null,
     });
