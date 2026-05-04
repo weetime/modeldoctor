@@ -1,6 +1,14 @@
-import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 import swc from "unplugin-swc";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { defineConfig } from "vitest/config";
+import { pickTestDatabaseUrl } from "./test/setup/pick-test-db-url.js";
+
+// Spec processes must connect to a `_test` database. A developer shell
+// typically exports DATABASE_URL pointing at the dev DB so `pnpm start:dev`
+// works; if that leaked into the test worker, `deleteMany()` would wipe
+// real data. `pickTestDatabaseUrl` ignores a non-`_test` DATABASE_URL and
+// falls back to `modeldoctor_test`; see that file for the full order.
+const TEST_DATABASE_URL = pickTestDatabaseUrl();
 
 export default defineConfig({
   plugins: [
@@ -19,11 +27,15 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.spec.ts"],
     exclude: ["node_modules", "dist", "test/**"],
-    // Many repository/service specs share the local Postgres dev DB and
-    // wipe rows in `beforeEach`. Running spec files in parallel races
-    // those wipes against in-flight inserts (FK violations on baselines
-    // → runs). Force file-level serialization; tests within a file still
-    // run in order.
+    // Repository / service specs share one Postgres DB and clear rows in
+    // beforeEach; running spec files in parallel races those wipes against
+    // in-flight inserts (FK violations on baselines → runs). Force file
+    // serialization; tests within a single file still run in order.
     fileParallelism: false,
+    globalSetup: ["./test/setup/global-setup.mts"],
+    setupFiles: ["./test/setup/db-guard.ts"],
+    env: {
+      DATABASE_URL: TEST_DATABASE_URL,
+    },
   },
 });
