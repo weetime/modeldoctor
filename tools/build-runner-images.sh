@@ -23,6 +23,15 @@ if [[ -z "${TAG:-}" ]]; then
   TAG="$(git rev-parse --short HEAD)"
 fi
 
+# If there are uncommitted changes in the runner subtree, append a
+# dirty-marker plus a timestamp. Plain `-dirty` would not distinguish
+# two consecutive iterative builds (same tag → docker/k8s cache hits,
+# stale image). Timestamp guarantees each iterative build gets a
+# unique tag so k3d image import + pod restart picks it up.
+if [[ -n "$(git status --porcelain apps/benchmark-runner/)" ]]; then
+  TAG="${TAG}-dirty-$(date +%s)"
+fi
+
 K3D_CLUSTER="${K3D_CLUSTER:-modeldoctor}"
 IMPORT=true
 if [[ "${1:-}" == "--no-import" ]]; then
