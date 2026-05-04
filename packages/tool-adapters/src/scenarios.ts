@@ -53,6 +53,17 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
  * `ZodEffects<ZodObject>`), so we cannot call `.merge(...)` on it directly.
  * `merge()` is only defined on `ZodObject`. We unwrap recursively in case
  * future schemas chain multiple effects.
+ *
+ * IMPORTANT — refinement is dropped:
+ * Unwrapping discards every `superRefine` / `refine` chained onto the inner
+ * `ZodObject`. The returned schema validates field shapes only; cross-field
+ * rules (e.g. guidellm's "random dataset requires datasetInputTokens and
+ * datasetOutputTokens") are NOT enforced on the unwrapped result.
+ *
+ * Callers that need full validation MUST also parse the input through the
+ * original (non-unwrapped) `adapter.paramsSchema`. See the matching warning
+ * on `applyScenarioConstraints` and the regression test in
+ * `scenarios.spec.ts`.
  */
 function unwrapToZodObject(schema: z.ZodTypeAny): z.AnyZodObject {
   let cur: z.ZodTypeAny = schema;
@@ -63,6 +74,28 @@ function unwrapToZodObject(schema: z.ZodTypeAny): z.AnyZodObject {
   return cur as z.AnyZodObject;
 }
 
+/**
+ * Return a `ZodObject` that layers scenario-specific narrowing (e.g.
+ * `rateType=sweep` for capacity) on top of the adapter's base param shape.
+ *
+ * IMPORTANT — refinement is dropped:
+ * The returned schema is built by unwrapping the adapter's `paramsSchema`
+ * (see `unwrapToZodObject`) and `.merge(...)`-ing the constraint shape onto
+ * it. Any `superRefine` / `refine` chained onto the original
+ * `adapter.paramsSchema` is **lost** in this process — most notably
+ * guidellm's cross-field check that "random dataset requires
+ * `datasetInputTokens` and `datasetOutputTokens`".
+ *
+ * Callers that need full validation (the typical caller is
+ * `BenchmarkService.create` in Phase 5) MUST also run
+ * `adapter.paramsSchema.parse(input)` against the ORIGINAL, non-merged
+ * schema. Treat the schema returned here as "shape + scenario narrowing
+ * only", not as a complete validator.
+ *
+ * The drop is pinned by a regression test in `scenarios.spec.ts`; if you
+ * change this function to preserve the refinement, that contract change
+ * must propagate into Phase 5 (BenchmarkService) as well.
+ */
 export function applyScenarioConstraints(scenario: ScenarioId, tool: ToolName): z.AnyZodObject {
   const cfg = SCENARIOS[scenario];
   if (!cfg.tools.includes(tool)) {
