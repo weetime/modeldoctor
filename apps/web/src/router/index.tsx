@@ -16,6 +16,7 @@ import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { RunCreatePage } from "@/features/runs/RunCreatePage";
 import { RunDetailPage } from "@/features/runs/RunDetailPage";
 import { RunListPage } from "@/features/runs/RunListPage";
+import { RunComparePage } from "@/features/runs/compare/RunComparePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { Navigate, type RouteObject } from "react-router-dom";
@@ -39,6 +40,7 @@ export const routes: RouteObject[] = [
             element: <RunListPage />,
           },
           { path: "runs/new", element: <RunCreatePage /> },
+          { path: "runs/compare", element: <RunComparePage /> },
           {
             path: "runs/:id",
             element: <RunDetailPage />,
