@@ -9,7 +9,7 @@ import { runApi } from "./api";
  */
 const POLL_INTERVAL_MS = 2_000;
 
-function isTerminal(status: Run["status"] | undefined): boolean {
+export function isTerminalStatus(status: Run["status"] | undefined): boolean {
   return status === "completed" || status === "failed" || status === "canceled";
 }
 
@@ -38,7 +38,8 @@ export function useRunDetail(id: string) {
     queryKey: runKeys.detail(id),
     queryFn: () => runApi.get(id),
     enabled: id.length > 0,
-    refetchInterval: (query) => (isTerminal(query.state.data?.status) ? false : POLL_INTERVAL_MS),
+    refetchInterval: (query) =>
+      isTerminalStatus(query.state.data?.status) ? false : POLL_INTERVAL_MS,
   });
 }
 

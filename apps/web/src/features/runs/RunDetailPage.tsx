@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
-import { runKeys, useDeleteRun } from "./queries";
+import { isTerminalStatus, runKeys, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
 import { GuidellmReportView } from "./reports/GuidellmReportView";
@@ -58,8 +58,7 @@ function RunningSection({ run }: { run: Run }) {
   const isPending = run.status === "pending" || run.status === "submitted";
 
   return (
-    <div
-      role="status"
+    <output
       aria-live="polite"
       className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
     >
@@ -70,7 +69,7 @@ function RunningSection({ run }: { run: Run }) {
       <div className="text-xs text-muted-foreground tabular-nums">
         {t("detail.running.elapsed", { sec: elapsedSec })}
       </div>
-    </div>
+    </output>
   );
 }
 
@@ -173,8 +172,7 @@ export function RunDetailPage() {
   });
 
   const isBaseline = run.baselineFor !== null;
-  const isTerminal =
-    run.status === "completed" || run.status === "failed" || run.status === "canceled";
+  const isTerminal = isTerminalStatus(run.status);
 
   return (
     <>

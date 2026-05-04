@@ -300,9 +300,7 @@ describe("RunDetailPage", () => {
       }),
     );
     render(<RunDetailPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getByText(/Running…|运行中…/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Running…|运行中…/)).toBeInTheDocument());
     expect(screen.queryByText(/Raw output|原始输出/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Summary metrics|汇总指标/i)).not.toBeInTheDocument();
   });
@@ -334,8 +332,12 @@ describe("RunDetailPage", () => {
     try {
       const get = vi.mocked(api.get);
       get
-        .mockResolvedValueOnce(makeRun({ status: "running", summaryMetrics: null, rawOutput: null }))
-        .mockResolvedValueOnce(makeRun({ status: "running", summaryMetrics: null, rawOutput: null }))
+        .mockResolvedValueOnce(
+          makeRun({ status: "running", summaryMetrics: null, rawOutput: null }),
+        )
+        .mockResolvedValueOnce(
+          makeRun({ status: "running", summaryMetrics: null, rawOutput: null }),
+        )
         .mockResolvedValueOnce(makeRun({ status: "completed" }));
       render(<RunDetailPage />, { wrapper: Wrapper });
       // Initial fetch
