@@ -1,3 +1,5 @@
+import type { VerdictKind } from "./metrics";
+
 /**
  * Verdict thresholds + pure comparison functions for the Run compare grid (F2 of #88).
  *
@@ -47,4 +49,19 @@ export function verdictForThroughput(baseline: number, current: number): Verdict
   if (pct <= -VERDICT_THRESHOLDS.throughputPct) return "regressed";
   if (pct >= VERDICT_THRESHOLDS.throughputPct) return "improved";
   return "unchanged";
+}
+
+// Dispatcher used by both MetricRow (compare grid) and DetailVerdictRow
+// (Run detail page). Keeps the per-kind verdict mapping in one place so
+// adding a fourth VerdictKind requires touching only this file (plus
+// metrics.ts where the kind is declared).
+export function verdictFor(kind: VerdictKind, baseline: number, current: number): Verdict {
+  switch (kind) {
+    case "latency":
+      return verdictForLatency(baseline, current);
+    case "errorRate":
+      return verdictForErrorRate(baseline, current);
+    case "throughput":
+      return verdictForThroughput(baseline, current);
+  }
 }

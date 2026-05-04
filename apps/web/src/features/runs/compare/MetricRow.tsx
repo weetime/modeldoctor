@@ -3,13 +3,8 @@ import { cn } from "@/lib/utils";
 import type { Run } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 import { VerdictBadge } from "./VerdictBadge";
-import type { MetricRowDescriptor, VerdictKind } from "./metrics";
-import {
-  type Verdict,
-  verdictForErrorRate,
-  verdictForLatency,
-  verdictForThroughput,
-} from "./verdict";
+import { type MetricRowDescriptor, deltaText } from "./metrics";
+import { verdictFor } from "./verdict";
 
 export interface MetricRowProps {
   descriptor: MetricRowDescriptor;
@@ -22,32 +17,12 @@ function fmtNum(n: number | null, digits: number, suffix?: string): string {
   return `${n.toFixed(digits)}${suffix ? ` ${suffix}` : ""}`;
 }
 
-function computeVerdict(kind: VerdictKind, baselineValue: number, currentValue: number): Verdict {
-  switch (kind) {
-    case "latency":
-      return verdictForLatency(baselineValue, currentValue);
-    case "errorRate":
-      return verdictForErrorRate(baselineValue, currentValue);
-    case "throughput":
-      return verdictForThroughput(baselineValue, currentValue);
-  }
-}
-
-function deltaText(kind: VerdictKind, baselineValue: number, currentValue: number): string {
-  if (kind === "errorRate") {
-    const pp = (currentValue - baselineValue) * 100;
-    return `${pp >= 0 ? "+" : ""}${pp.toFixed(2)}pp`;
-  }
-  if (baselineValue === 0) return "—";
-  const pct = ((currentValue - baselineValue) / baselineValue) * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
-}
-
 export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
   const { t } = useTranslation("runs");
   const digits = descriptor.digits ?? 1;
   const baseline = baselineId ? runs.find((r) => r.id === baselineId) : null;
   const baselineValue = baseline ? descriptor.read(baseline.summaryMetrics) : null;
+  const verdictKind = descriptor.verdictKind;
 
   return (
     <TableRow>
@@ -57,9 +32,6 @@ export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
       {runs.map((run) => {
         const v = descriptor.read(run.summaryMetrics);
         const isBaseline = run.id === baselineId;
-        const verdictKind = descriptor.verdictKind;
-        const showBadge =
-          verdictKind !== undefined && !isBaseline && baselineValue !== null && v !== null;
 
         return (
           <TableCell
@@ -71,9 +43,11 @@ export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
           >
             <div className="flex flex-col items-end gap-0.5">
               <span>{fmtNum(v, digits, descriptor.unitSuffix)}</span>
-              {showBadge && verdictKind !== undefined && baselineValue !== null && v !== null && (
+              {/* Inline predicate so TS narrows verdictKind / baselineValue / v
+                  through the && chain — see PR review on Task 5. */}
+              {verdictKind !== undefined && !isBaseline && baselineValue !== null && v !== null && (
                 <VerdictBadge
-                  verdict={computeVerdict(verdictKind, baselineValue, v)}
+                  verdict={verdictFor(verdictKind, baselineValue, v)}
                   verdictKind={verdictKind}
                   deltaText={deltaText(verdictKind, baselineValue, v)}
                 />

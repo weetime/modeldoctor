@@ -164,6 +164,21 @@ const genaiPerfRows: MetricRowDescriptor[] = [
   { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
 ];
 
+// Formats a baseline-to-current delta as a signed string for display in
+// VerdictBadge. errorRate uses percentage points (×100, "pp" suffix);
+// latency/throughput use percent change with 1 decimal. Returns "—" when
+// baseline is 0 to avoid divide-by-zero, matching verdict.ts's same-baseline
+// guard.
+export function deltaText(kind: VerdictKind, baseline: number, current: number): string {
+  if (kind === "errorRate") {
+    const pp = (current - baseline) * 100;
+    return `${pp >= 0 ? "+" : ""}${pp.toFixed(2)}pp`;
+  }
+  if (baseline === 0) return "—";
+  const pct = ((current - baseline) / baseline) * 100;
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+}
+
 export function rowDescriptorsForTool(tool: RunTool): MetricRowDescriptor[] {
   switch (tool) {
     case "guidellm":
