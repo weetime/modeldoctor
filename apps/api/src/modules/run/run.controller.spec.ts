@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import type { RunExecutionDriver } from "./drivers/execution-driver.interface.js";
 import { RUN_DRIVER } from "./drivers/run-driver.token.js";
+import { RunChartsService } from "./run-charts.service.js";
 import { RunController } from "./run.controller.js";
 import { RunRepository } from "./run.repository.js";
 import { RunService } from "./run.service.js";
@@ -72,6 +73,7 @@ describe("RunController", () => {
       providers: [
         RunService,
         RunRepository,
+        RunChartsService,
         PrismaService,
         {
           provide: ConfigService,
@@ -462,5 +464,128 @@ describe("RunController", () => {
       const strangerArg = { sub: stranger.id, email: stranger.email, roles: [] };
       await expect(controller.delete(strangerArg as never, run.id)).rejects.toThrow(/not found/i);
     });
+  });
+});
+
+describe("RunController.getCharts (F3 #88)", () => {
+  let controller: RunController;
+  let prisma: PrismaService;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const moduleRef = await Test.createTestingModule({
+      controllers: [RunController],
+      providers: [
+        RunService,
+        RunRepository,
+        RunChartsService,
+        PrismaService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: (key: string) => {
+              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
+              return ENV_DEFAULTS[key];
+            },
+          },
+        },
+        { provide: RUN_DRIVER, useValue: mockDriver },
+        { provide: ConnectionService, useValue: mockConnections },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+
+    controller = moduleRef.get(RunController);
+    prisma = moduleRef.get(PrismaService);
+
+    await prisma.baseline.deleteMany();
+    await prisma.run.deleteMany();
+    await prisma.user.deleteMany();
+  });
+
+  afterAll(async () => {
+    if (prisma) await prisma.$disconnect();
+  });
+
+  it("returns 200 with both nulls when Run has no rawOutput.files", async () => {
+    const user = await prisma.user.create({
+      data: { email: "f3@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: user.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        status: "completed",
+      },
+    });
+    const result = await controller.getCharts({ sub: user.id, roles: [] } as never, run.id);
+    expect(result).toEqual({ latencyCdf: null, ttftHistogram: null });
+  });
+
+  it("returns 200 with extracted samples for a vegeta Run with attack.ndjson", async () => {
+    const user = await prisma.user.create({
+      data: { email: "f3v@example.com", passwordHash: "x" },
+    });
+    const ndjson = '{"latency":5000000}\n{"latency":10000000}\n';
+    const run = await prisma.run.create({
+      data: {
+        userId: user.id,
+        kind: "benchmark",
+        tool: "vegeta",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        status: "completed",
+        rawOutput: {
+          stdout: "",
+          stderr: "",
+          files: { latencies: Buffer.from(ndjson).toString("base64") },
+        },
+      },
+    });
+    const result = await controller.getCharts({ sub: user.id, roles: [] } as never, run.id);
+    expect(result.latencyCdf?.samples).toEqual([5, 10]);
+    expect(result.ttftHistogram).toBeNull();
+  });
+
+  it("404s when the Run belongs to a different user", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "owner@example.com", passwordHash: "x" },
+    });
+    const other = await prisma.user.create({
+      data: { email: "other@example.com", passwordHash: "x" },
+    });
+    const run = await prisma.run.create({
+      data: {
+        userId: owner.id,
+        kind: "benchmark",
+        tool: "guidellm",
+        scenario: {},
+        mode: "fixed",
+        driverKind: "local",
+        params: {},
+        status: "completed",
+      },
+    });
+    await expect(
+      controller.getCharts({ sub: other.id, roles: [] } as never, run.id),
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it("404s when Run does not exist", async () => {
+    const user = await prisma.user.create({
+      data: { email: "f3404@example.com", passwordHash: "x" },
+    });
+    await expect(
+      controller.getCharts({ sub: user.id, roles: [] } as never, "nonexistent-id"),
+    ).rejects.toThrow(/not found/i);
   });
 });
