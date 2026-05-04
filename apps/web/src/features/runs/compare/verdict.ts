@@ -1,3 +1,20 @@
+/**
+ * Verdict thresholds + pure comparison functions for the Run compare grid (F2 of #88).
+ *
+ * Direction asymmetry:
+ *   - latency / errorRate: higher = worse (regressed when current > baseline by ≥ threshold)
+ *   - throughput:          higher = better (regressed when current < baseline by ≥ threshold)
+ *
+ * `baseline === 0` guard (latency / throughput): returns "unchanged" rather
+ * than "+∞% regressed". A baseline of 0 latency or 0 throughput indicates a
+ * degenerate or failed run — surfacing it as a red verdict badge would be
+ * misleading; the user should re-run the baseline instead. Error rate is
+ * plain subtraction (percentage-points) so it has no division and no guard.
+ *
+ * Callers must pass finite numbers (or null at the reader layer); NaN/Infinity
+ * input is undefined behavior — the metrics.ts readers are responsible for
+ * normalizing to `null` when source data is missing.
+ */
 export const VERDICT_THRESHOLDS = {
   // higher is worse (latency)
   latencyPct: 0.1,
