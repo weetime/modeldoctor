@@ -290,4 +290,67 @@ describe("RunDetailPage", () => {
     await waitFor(() => expect(api.del).toHaveBeenCalledWith("/api/runs/r1"));
     await waitFor(() => expect(screen.getByText("list")).toBeInTheDocument());
   });
+
+  it("shows the running placeholder while status=running and hides metrics", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        status: "running",
+        summaryMetrics: null,
+        rawOutput: null,
+      }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText(/Running…|运行中…/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Raw output|原始输出/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Summary metrics|汇总指标/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the pending label while status=submitted", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({ status: "submitted", startedAt: null, summaryMetrics: null, rawOutput: null }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText(/Waiting to start…|等待启动…/)).toBeInTheDocument(),
+    );
+  });
+
+  it("hides Set-as-baseline / Delete buttons while non-terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({ status: "running", summaryMetrics: null, rawOutput: null }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Running…|运行中…/);
+    expect(
+      screen.queryByRole("button", { name: /Set as baseline|设为基线/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Delete$|^删除$/ })).not.toBeInTheDocument();
+  });
+
+  it("polls every 2s while non-terminal and stops on terminal", async () => {
+    vi.useFakeTimers();
+    try {
+      const get = vi.mocked(api.get);
+      get
+        .mockResolvedValueOnce(makeRun({ status: "running", summaryMetrics: null, rawOutput: null }))
+        .mockResolvedValueOnce(makeRun({ status: "running", summaryMetrics: null, rawOutput: null }))
+        .mockResolvedValueOnce(makeRun({ status: "completed" }));
+      render(<RunDetailPage />, { wrapper: Wrapper });
+      // Initial fetch
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+      // Advance 2s — should fetch again (still running)
+      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+      // Advance 2s more — third fetch returns terminal
+      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(3));
+      // After terminal, advancing 4s must NOT trigger another fetch
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(get).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

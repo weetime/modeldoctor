@@ -130,6 +130,11 @@
       "errors": {
         "generic": "Failed to delete"
       }
+    },
+    "running": {
+      "pending": "Waiting to start…",
+      "title": "Running…",
+      "elapsed": "{{sec}}s elapsed"
     }
   }
 }

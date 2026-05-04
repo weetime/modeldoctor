@@ -1,6 +1,17 @@
-import type { CreateRunRequest, ListRunsQuery } from "@modeldoctor/contracts";
+import type { CreateRunRequest, ListRunsQuery, Run } from "@modeldoctor/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { runApi } from "./api";
+
+/**
+ * Polling cadence for non-terminal runs. Backend already pushes `status`
+ * updates to DB via the callback v2 channel (#53), so 2 s is enough latency
+ * for the user to see "running → completed" without spamming requests.
+ */
+const POLL_INTERVAL_MS = 2_000;
+
+function isTerminal(status: Run["status"] | undefined): boolean {
+  return status === "completed" || status === "failed" || status === "canceled";
+}
 
 export const runKeys = {
   all: ["runs"] as const,
@@ -27,6 +38,7 @@ export function useRunDetail(id: string) {
     queryKey: runKeys.detail(id),
     queryFn: () => runApi.get(id),
     enabled: id.length > 0,
+    refetchInterval: (query) => (isTerminal(query.state.data?.status) ? false : POLL_INTERVAL_MS),
   });
 }
 
