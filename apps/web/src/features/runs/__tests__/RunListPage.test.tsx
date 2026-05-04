@@ -199,26 +199,6 @@ describe("RunListPage", () => {
     expect(compare).toBeDisabled();
   });
 
-  it("selecting two rows keeps compare button disabled (placeholder for #88)", async () => {
-    const twoRuns: ListRunsResponse = {
-      items: [
-        makeRun("r1", "benchmark", "guidellm", "completed"),
-        makeRun("r2", "benchmark", "vegeta", "completed"),
-      ],
-      nextCursor: null,
-    };
-    vi.mocked(api.get).mockResolvedValue(twoRuns);
-    const user = userEvent.setup();
-    render(<RunListPage />, { wrapper: Wrapper });
-    await screen.findByText("guidellm");
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[0]);
-    await user.click(checkboxes[1]);
-    const compare = screen.getByRole("button", { name: /compare/i });
-    // Disabled by spec until multi-run compare mode lands; see #88.
-    expect(compare).toBeDisabled();
-  });
-
   it("renders empty state when there are no runs", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
     render(<RunListPage />, { wrapper: Wrapper });
