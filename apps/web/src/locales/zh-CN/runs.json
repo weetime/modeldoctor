@@ -56,7 +56,7 @@
     "open": ""
   },
   "compareButton": "对比 ({{n}})",
-  "compareDisabledTooltip": "等 #46 报告页上线后启用",
+  "compareDisabledTooltip": "多 Run 对比模式与 Diff 引擎尚未实现（见 #88）",
   "empty": {
     "title": "暂无基准测试",
     "filtered": "没有符合筛选条件的记录",
