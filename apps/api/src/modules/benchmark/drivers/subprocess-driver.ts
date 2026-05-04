@@ -4,9 +4,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
 import type {
-  RunExecutionContext,
+  BenchmarkExecutionContext,
   BenchmarkExecutionDriver,
-  RunExecutionHandle,
+  BenchmarkExecutionHandle,
 } from "./execution-driver.interface.js";
 
 interface Entry {
@@ -52,14 +52,14 @@ export interface SubprocessDriverOpts {
 @Injectable()
 export class SubprocessDriver implements BenchmarkExecutionDriver {
   private readonly log = new Logger(SubprocessDriver.name);
-  private readonly handles = new Map<RunExecutionHandle, Entry>();
+  private readonly handles = new Map<BenchmarkExecutionHandle, Entry>();
   private readonly cwdRoot: string;
 
   constructor(opts: SubprocessDriverOpts = {}) {
     this.cwdRoot = opts.cwdRoot ?? path.join(os.tmpdir(), "modeldoctor-runs");
   }
 
-  async start(ctx: RunExecutionContext): Promise<{ handle: RunExecutionHandle }> {
+  async start(ctx: BenchmarkExecutionContext): Promise<{ handle: BenchmarkExecutionHandle }> {
     const cwd = path.join(this.cwdRoot, `run-${ctx.runId}`);
     await fs.mkdir(cwd, { recursive: true });
 
@@ -98,7 +98,7 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
     child.stdout?.resume();
     child.stderr?.resume();
 
-    const handle: RunExecutionHandle = `subprocess:${child.pid}`;
+    const handle: BenchmarkExecutionHandle = `subprocess:${child.pid}`;
     this.handles.set(handle, { child, cwd });
 
     child.on("exit", (code, signal) => {
@@ -118,7 +118,7 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
     return { handle };
   }
 
-  async cancel(handle: RunExecutionHandle): Promise<void> {
+  async cancel(handle: BenchmarkExecutionHandle): Promise<void> {
     const entry = this.handles.get(handle);
     if (!entry) return;
     entry.child.kill("SIGTERM");
@@ -127,7 +127,7 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
     }, SIGKILL_DELAY_MS);
   }
 
-  async cleanup(handle: RunExecutionHandle): Promise<void> {
+  async cleanup(handle: BenchmarkExecutionHandle): Promise<void> {
     const entry = this.handles.get(handle);
     if (!entry) return;
     if (entry.killTimer) clearTimeout(entry.killTimer);

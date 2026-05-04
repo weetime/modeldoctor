@@ -6,7 +6,7 @@ import * as path from "node:path";
 // runtime; mock-factory wiring makes a unit test for it disproportionately
 // complex. See PR description for rationale.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RunExecutionContext } from "./execution-driver.interface.js";
+import type { BenchmarkExecutionContext } from "./execution-driver.interface.js";
 import { SubprocessDriver } from "./subprocess-driver.js";
 
 vi.mock("node:child_process", () => {
@@ -24,7 +24,7 @@ vi.mock("node:child_process", () => {
   };
 });
 
-const ctx: RunExecutionContext = {
+const ctx: BenchmarkExecutionContext = {
   runId: "abc123",
   tool: "guidellm",
   buildResult: {
@@ -75,7 +75,7 @@ describe("SubprocessDriver", () => {
   });
 
   it("writes inputFiles before spawn", async () => {
-    const ctxWithInput: RunExecutionContext = {
+    const ctxWithInput: BenchmarkExecutionContext = {
       ...ctx,
       buildResult: { ...ctx.buildResult, inputFiles: { "targets.txt": "hello\nworld\n" } },
     };

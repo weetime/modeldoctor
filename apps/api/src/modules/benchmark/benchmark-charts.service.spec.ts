@@ -70,7 +70,7 @@ describe("BenchmarkChartsService", () => {
       expect(result.latencyCdf?.samples).toEqual([1, 2]);
     });
 
-    it("returns null latencyCdf when attack.ndjson is absent (old Run)", () => {
+    it("returns null latencyCdf when attack.ndjson is absent (old Benchmark)", () => {
       const result = svc.extract(makeRow("vegeta", {}));
       expect(result.latencyCdf).toBeNull();
       expect(result.ttftHistogram).toBeNull();
@@ -91,7 +91,7 @@ describe("BenchmarkChartsService", () => {
     });
   });
 
-  describe("non-terminal Run", () => {
+  describe("non-terminal Benchmark", () => {
     it("returns both nulls when status is not terminal", () => {
       const row = { ...makeRow("guidellm", { report: guidellmFile }), status: "running" };
       const result = svc.extract(row);

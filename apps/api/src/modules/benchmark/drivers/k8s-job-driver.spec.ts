@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { RunExecutionContext } from "./execution-driver.interface.js";
+import type { BenchmarkExecutionContext } from "./execution-driver.interface.js";
 import { K8sJobDriver } from "./k8s-job-driver.js";
 
-const ctx: RunExecutionContext = {
+const ctx: BenchmarkExecutionContext = {
   runId: "abc",
   tool: "guidellm",
   buildResult: {

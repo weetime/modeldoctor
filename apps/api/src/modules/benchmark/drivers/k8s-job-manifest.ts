@@ -1,5 +1,5 @@
 import type { V1Job, V1Secret } from "@kubernetes/client-node";
-import type { RunExecutionContext } from "./execution-driver.interface.js";
+import type { BenchmarkExecutionContext } from "./execution-driver.interface.js";
 
 export function jobName(runId: string): string {
   return `run-${runId}`;
@@ -29,7 +29,7 @@ export const __testing = { encodeAlias, decodeAlias };
 const INPUTS_VOLUME = "input-files";
 const INPUTS_MOUNT_PATH = "/workdir/inputs";
 
-export function buildSecretManifest(ctx: RunExecutionContext, namespace: string): V1Secret {
+export function buildSecretManifest(ctx: BenchmarkExecutionContext, namespace: string): V1Secret {
   const stringData: Record<string, string> = {
     ...ctx.buildResult.secretEnv,
     MD_CALLBACK_TOKEN: ctx.callback.token,
@@ -54,7 +54,7 @@ export interface JobManifestOptions {
   namespace: string;
 }
 
-export function buildJobManifest(ctx: RunExecutionContext, opts: JobManifestOptions): V1Job {
+export function buildJobManifest(ctx: BenchmarkExecutionContext, opts: JobManifestOptions): V1Job {
   const env: { name: string; value: string }[] = [
     { name: "MD_RUN_ID", value: ctx.runId },
     { name: "MD_CALLBACK_URL", value: ctx.callback.url },

@@ -11,7 +11,7 @@ import type { BuildCommandResult, ToolName } from "@modeldoctor/tool-adapters";
  * NOT part of the adapter's responsibility — adapters are deployment-
  * mode-agnostic.
  */
-export interface RunExecutionContext {
+export interface BenchmarkExecutionContext {
   runId: string;
   tool: ToolName;
   buildResult: BuildCommandResult;
@@ -20,7 +20,7 @@ export interface RunExecutionContext {
 }
 
 /** Opaque handle to an in-flight execution. */
-export type RunExecutionHandle = string;
+export type BenchmarkExecutionHandle = string;
 
 export interface BenchmarkExecutionDriver {
   /**
@@ -28,14 +28,14 @@ export interface BenchmarkExecutionDriver {
    * spawned or Job created), NOT when the inner tool finishes.
    * Lifecycle progression after start() flows through HTTP callbacks.
    */
-  start(ctx: RunExecutionContext): Promise<{ handle: RunExecutionHandle }>;
+  start(ctx: BenchmarkExecutionContext): Promise<{ handle: BenchmarkExecutionHandle }>;
 
   /** Stop an in-flight execution. Idempotent. */
-  cancel(handle: RunExecutionHandle): Promise<void>;
+  cancel(handle: BenchmarkExecutionHandle): Promise<void>;
 
   /**
    * Release driver-side resources (subprocess wait, K8s Job delete) after
    * a run reaches a terminal state. Idempotent.
    */
-  cleanup(handle: RunExecutionHandle): Promise<void>;
+  cleanup(handle: BenchmarkExecutionHandle): Promise<void>;
 }

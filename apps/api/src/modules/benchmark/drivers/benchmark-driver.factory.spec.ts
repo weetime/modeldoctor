@@ -7,7 +7,7 @@ import { SubprocessDriver } from "./subprocess-driver.js";
 function mockConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
   const defaults: Partial<Env> = {
     BENCHMARK_DRIVER: "subprocess",
-    BENCHMARK_K8S_NAMESPACE: "modeldoctor-runs",
+    BENCHMARK_K8S_NAMESPACE: "modeldoctor-benchmarks",
     RUNNER_IMAGE_GUIDELLM: "img-guidellm:latest",
     RUNNER_IMAGE_VEGETA: "img-vegeta:latest",
     RUNNER_IMAGE_GENAI_PERF: "img-genai-perf:latest",

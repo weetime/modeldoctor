@@ -37,7 +37,7 @@ export async function createBenchmarkDriver(
   }
   if (choice === "k8s") {
     const ns = (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) ??
-      "modeldoctor-runs") as string;
+      "modeldoctor-benchmarks") as string;
     const k8s = await loadK8sClient();
     const kc = new k8s.KubeConfig();
     const explicitKubeconfig = config.get("KUBECONFIG", { infer: true }) as string | undefined;

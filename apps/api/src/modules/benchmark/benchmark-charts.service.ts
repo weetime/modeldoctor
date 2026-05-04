@@ -16,7 +16,7 @@ export class BenchmarkChartsService {
   private readonly log = new Logger(BenchmarkChartsService.name);
 
   /**
-   * Pure derivation: takes a Run row, returns chart data. Errors in any one
+   * Pure derivation: takes a Benchmark row, returns chart data. Errors in any one
    * extraction step degrade that field to null; the other field is unaffected.
    * No DB or HTTP side-effects.
    */
@@ -32,7 +32,10 @@ export class BenchmarkChartsService {
     return empty;
   }
 
-  private extractGuidellm(runId: string, files: Record<string, string>): BenchmarkChartsResponse {
+  private extractGuidellm(
+    benchmarkId: string,
+    files: Record<string, string>,
+  ): BenchmarkChartsResponse {
     const reportB64 = files.report;
     if (!reportB64) return { latencyCdf: null, ttftHistogram: null };
 
@@ -40,11 +43,13 @@ export class BenchmarkChartsService {
     try {
       parsed = JSON.parse(Buffer.from(reportB64, "base64").toString("utf8"));
     } catch (e) {
-      this.log.warn(`run ${runId}: guidellm report parse failed: ${(e as Error).message}`);
+      this.log.warn(
+        `benchmark ${benchmarkId}: guidellm report parse failed: ${(e as Error).message}`,
+      );
       return { latencyCdf: null, ttftHistogram: null };
     }
 
-    // Verified path (Task 3 Step 3.1 against real run cmophc6pa001f5xerhu3lzvlx):
+    // Verified path (Task 3 Step 3.1 against real benchmark cmophc6pa001f5xerhu3lzvlx):
     //   benchmarks[0].requests.successful[] = {
     //     request_latency: <seconds>,
     //     time_to_first_token_ms: <ms>,
@@ -82,7 +87,10 @@ export class BenchmarkChartsService {
     };
   }
 
-  private extractVegeta(runId: string, files: Record<string, string>): BenchmarkChartsResponse {
+  private extractVegeta(
+    benchmarkId: string,
+    files: Record<string, string>,
+  ): BenchmarkChartsResponse {
     const ndjsonB64 = files.latencies;
     if (!ndjsonB64) return { latencyCdf: null, ttftHistogram: null };
 
@@ -103,7 +111,7 @@ export class BenchmarkChartsService {
     }
 
     if (samplesMs.length === 0) {
-      this.log.warn(`run ${runId}: vegeta NDJSON yielded zero samples`);
+      this.log.warn(`benchmark ${benchmarkId}: vegeta NDJSON yielded zero samples`);
       return { latencyCdf: null, ttftHistogram: null };
     }
 

@@ -49,6 +49,14 @@ export class BenchmarkCallbackController {
       this.log.warn(`/state callback for unknown benchmark ${id}; ignoring`);
       return;
     }
+    // Assumption: the runner emits a single, idempotent toolVersion value
+    // per benchmark, captured once during runner-startup version detection.
+    // The read-modify-write below (findById → compare in memory → update)
+    // is therefore not atomic — two concurrent /state callbacks landing in
+    // the same millisecond could both decide an update is needed — but
+    // since the runner serializes the version-detection step, no real
+    // contention is expected. If a future runner change makes /state
+    // emission concurrent, swap this for a conditional UPDATE in SQL.
     if (body.state === "running" && row.status !== "running") {
       await this.benchmarks.update(id, {
         status: "running",

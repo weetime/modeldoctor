@@ -5,6 +5,7 @@ import { BenchmarkCallbackController } from "./benchmark-callback.controller.js"
 
 class MockBenchmarkRepo {
   private rows = new Map<string, Partial<PrismaBenchmark>>();
+  updateCalls: Array<{ id: string; patch: Record<string, unknown> }> = [];
   setup(id: string, row: Partial<PrismaBenchmark>) {
     this.rows.set(id, row);
   }
@@ -12,6 +13,7 @@ class MockBenchmarkRepo {
     return (this.rows.get(id) as PrismaBenchmark | undefined) ?? null;
   }
   async update(id: string, patch: Record<string, unknown>) {
+    this.updateCalls.push({ id, patch });
     const cur = this.rows.get(id) ?? {};
     const next = { ...cur, ...patch };
     this.rows.set(id, next);
@@ -59,6 +61,57 @@ describe("BenchmarkCallbackController", () => {
     repo.setup("r1", { id: "r1", tool: "guidellm", status: "submitted" });
     await ctrl.handleState("r1", { state: "running" });
     const row = await repo.findById("r1");
+    expect(row?.status).toBe("running");
+  });
+
+  it("/state running with toolVersion sets both status and toolVersion on a pending row", async () => {
+    repo.setup("r1", { id: "r1", tool: "guidellm", status: "submitted", toolVersion: null });
+    await ctrl.handleState("r1", { state: "running", toolVersion: "guidellm 0.5.2" });
+    const row = await repo.findById("r1");
+    expect(row?.status).toBe("running");
+    expect(row?.toolVersion).toBe("guidellm 0.5.2");
+  });
+
+  it("/state running without toolVersion preserves null toolVersion on a pending row", async () => {
+    repo.setup("r1", { id: "r1", tool: "guidellm", status: "submitted", toolVersion: null });
+    await ctrl.handleState("r1", { state: "running" });
+    const row = await repo.findById("r1");
+    expect(row?.status).toBe("running");
+    expect(row?.toolVersion).toBeNull();
+    // Verify the update patch did not include toolVersion (i.e. did not
+    // overwrite an existing value with null).
+    const lastPatch = repo.updateCalls.at(-1)?.patch;
+    expect(lastPatch).toBeDefined();
+    expect(Object.hasOwn(lastPatch as object, "toolVersion")).toBe(false);
+  });
+
+  it("/state with only toolVersion updates toolVersion on an already-running row", async () => {
+    repo.setup("r1", {
+      id: "r1",
+      tool: "guidellm",
+      status: "running",
+      toolVersion: "guidellm 0.5.2",
+    });
+    await ctrl.handleState("r1", { toolVersion: "guidellm 0.5.3" } as never);
+    const row = await repo.findById("r1");
+    expect(row?.status).toBe("running");
+    expect(row?.toolVersion).toBe("guidellm 0.5.3");
+    const lastPatch = repo.updateCalls.at(-1)?.patch;
+    expect(lastPatch).toEqual({ toolVersion: "guidellm 0.5.3" });
+  });
+
+  it("/state with identical toolVersion is a no-op (no extra update call)", async () => {
+    repo.setup("r1", {
+      id: "r1",
+      tool: "guidellm",
+      status: "running",
+      toolVersion: "guidellm 0.5.2",
+    });
+    const before = repo.updateCalls.length;
+    await ctrl.handleState("r1", { toolVersion: "guidellm 0.5.2" } as never);
+    expect(repo.updateCalls.length).toBe(before);
+    const row = await repo.findById("r1");
+    expect(row?.toolVersion).toBe("guidellm 0.5.2");
     expect(row?.status).toBe("running");
   });
 

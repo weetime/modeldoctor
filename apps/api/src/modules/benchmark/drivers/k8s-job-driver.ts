@@ -1,9 +1,9 @@
 import type { BatchV1Api, CoreV1Api } from "@kubernetes/client-node";
 import { Logger } from "@nestjs/common";
 import type {
-  RunExecutionContext,
+  BenchmarkExecutionContext,
   BenchmarkExecutionDriver,
-  RunExecutionHandle,
+  BenchmarkExecutionHandle,
 } from "./execution-driver.interface.js";
 import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 
@@ -24,7 +24,7 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
     this.core = opts.apis.core;
   }
 
-  async start(ctx: RunExecutionContext): Promise<{ handle: RunExecutionHandle }> {
+  async start(ctx: BenchmarkExecutionContext): Promise<{ handle: BenchmarkExecutionHandle }> {
     const ns = this.namespace;
     const secret = buildSecretManifest(ctx, ns);
     await this.core.createNamespacedSecret(ns, secret);
@@ -79,7 +79,7 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
     return { handle: `${ns}/${jobName(ctx.runId)}` };
   }
 
-  async cancel(handle: RunExecutionHandle): Promise<void> {
+  async cancel(handle: BenchmarkExecutionHandle): Promise<void> {
     const [ns, name] = handle.split("/");
     if (!ns || !name) return;
     try {
@@ -93,8 +93,8 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
         // propagationPolicy: 'Background' triggers Job → Secret cascade
         // via ownerReferences set in start().
         // (Legacy benchmark driver uses 'Foreground' to gate on cascade
-        // completion; the run module doesn't gate on cancel completion,
-        // so 'Background' is fine here.)
+        // completion; the benchmark module doesn't gate on cancel
+        // completion, so 'Background' is fine here.)
         "Background",
       );
     } catch (e) {
@@ -112,7 +112,7 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
     }
   }
 
-  async cleanup(handle: RunExecutionHandle): Promise<void> {
+  async cleanup(handle: BenchmarkExecutionHandle): Promise<void> {
     // K8s Job has TTL via spec.ttlSecondsAfterFinished; no explicit cleanup needed.
     // Method exists for interface symmetry.
     void handle;
