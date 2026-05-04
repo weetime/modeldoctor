@@ -135,6 +135,13 @@
       "pending": "等待启动…",
       "title": "运行中…",
       "elapsed": "已耗时 {{sec}}s"
+    },
+    "charts": {
+      "title": "分布图",
+      "latencyCdfTitle": "延迟分布 (CDF)",
+      "ttftHistogramTitle": "首 token 延迟分布",
+      "empty": "暂无图表数据",
+      "loadError": "图表加载失败"
     }
   }
 }
