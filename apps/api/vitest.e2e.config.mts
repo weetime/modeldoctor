@@ -1,6 +1,10 @@
 import swc from "unplugin-swc";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+import { pickTestDatabaseUrl } from "./test/setup/pick-test-db-url.js";
+
+// Same test DB resolution as vitest.config.mts. See that file for rationale.
+const TEST_DATABASE_URL = pickTestDatabaseUrl();
 
 export default defineConfig({
   plugins: [
@@ -21,7 +25,10 @@ export default defineConfig({
     exclude: ["node_modules", "dist"],
     testTimeout: 30_000,
     hookTimeout: 120_000,
+    globalSetup: ["./test/setup/global-setup.mts"],
+    setupFiles: ["./test/setup/db-guard.ts"],
     env: {
+      DATABASE_URL: TEST_DATABASE_URL,
       // passport-jwt validates secretOrKey at strategy-construction time,
       // so AppModule boot needs a non-empty JWT secret even in test mode.
       JWT_ACCESS_SECRET: "e2e-test-jwt-secret-not-for-production-use-only-32+chars",
