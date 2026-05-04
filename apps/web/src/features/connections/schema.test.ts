@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectionInputSchema } from "./schema";
+import { connectionInputEditSchema, connectionInputSchema } from "./schema";
 
 describe("connectionInputSchema", () => {
   const valid = {
@@ -106,5 +106,50 @@ describe("connectionInputSchema (category + tags)", () => {
   it("defaults tags to an empty array when omitted", () => {
     const out = connectionInputSchema.parse({ ...baseInput, category: "chat" });
     expect(out.tags).toEqual([]);
+  });
+});
+
+describe("connectionInputEditSchema apiKey refine (edit-mode)", () => {
+  const validBaseInput = {
+    name: "prod-vllm",
+    apiBaseUrl: "http://10.0.0.1:8000",
+    apiKey: "sk-abc",
+    model: "qwen-2.5-7b",
+    customHeaders: "",
+    queryParams: "",
+    tokenizerHfId: "",
+    category: "chat" as const,
+  };
+
+  it("accepts empty apiKey (no-reset signal)", () => {
+    const result = connectionInputEditSchema.safeParse({
+      ...validBaseInput,
+      apiKey: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects edit-mode apiKey with control characters when non-empty", () => {
+    const result = connectionInputEditSchema.safeParse({
+      ...validBaseInput,
+      apiKey: "sk-test\nwith-newline",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects edit-mode apiKey with leading whitespace when non-empty", () => {
+    const result = connectionInputEditSchema.safeParse({
+      ...validBaseInput,
+      apiKey: " sk-test",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts edit-mode apiKey with shell metacharacters (POSIX expansion is safe)", () => {
+    const result = connectionInputEditSchema.safeParse({
+      ...validBaseInput,
+      apiKey: 'sk-test$(rm)`backtick`"quote',
+    });
+    expect(result.success).toBe(true);
   });
 });

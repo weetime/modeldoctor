@@ -50,10 +50,19 @@ export const connectionInputCreateSchema = z.object({
 /**
  * Edit-mode form schema. apiKey is optional: when the user did NOT toggle
  * "Reset apiKey", the field is empty and the PATCH body must omit it.
+ * Empty string is the "no-reset" signal and must pass; non-empty values
+ * get the same control-char + edge-whitespace refines as create-mode.
  */
 export const connectionInputEditSchema = z.object({
   ...baseShape,
-  apiKey: z.string(),
+  apiKey: z
+    .string()
+    .refine((v) => v === "" || !/\p{Cc}/u.test(v), {
+      message: "apiKey must not contain control characters",
+    })
+    .refine((v) => v === "" || v === v.trim(), {
+      message: "apiKey must not have leading or trailing whitespace",
+    }),
 });
 
 /** Backwards-compatible alias used by callers that need the create shape. */
