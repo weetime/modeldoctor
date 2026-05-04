@@ -33,16 +33,36 @@ const baseShape = {
  */
 export const connectionInputCreateSchema = z.object({
   ...baseShape,
-  apiKey: z.string().min(1, "required"),
+  // Reject control chars + leading/trailing whitespace at form level
+  // for parity with server-side contract (prevents accidental paste
+  // of token with trailing newline).
+  apiKey: z
+    .string()
+    .min(1, "required")
+    .refine((v) => !/\p{Cc}/u.test(v), {
+      message: "apiKey must not contain control characters",
+    })
+    .refine((v) => v === v.trim(), {
+      message: "apiKey must not have leading or trailing whitespace",
+    }),
 });
 
 /**
  * Edit-mode form schema. apiKey is optional: when the user did NOT toggle
  * "Reset apiKey", the field is empty and the PATCH body must omit it.
+ * Empty string is the "no-reset" signal and must pass; non-empty values
+ * get the same control-char + edge-whitespace refines as create-mode.
  */
 export const connectionInputEditSchema = z.object({
   ...baseShape,
-  apiKey: z.string(),
+  apiKey: z
+    .string()
+    .refine((v) => v === "" || !/\p{Cc}/u.test(v), {
+      message: "apiKey must not contain control characters",
+    })
+    .refine((v) => v === "" || v === v.trim(), {
+      message: "apiKey must not have leading or trailing whitespace",
+    }),
 });
 
 /** Backwards-compatible alias used by callers that need the create shape. */

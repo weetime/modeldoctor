@@ -33,7 +33,15 @@ export type ConnectionWithSecret = z.infer<typeof connectionWithSecretSchema>;
 export const createConnectionSchema = z.object({
   name: z.string().min(1).max(120),
   baseUrl: z.string().url(),
-  apiKey: z.string().min(1),
+  apiKey: z
+    .string()
+    .min(1)
+    .refine((v) => !/\p{Cc}/u.test(v), {
+      message: "apiKey must not contain control characters",
+    })
+    .refine((v) => v === v.trim(), {
+      message: "apiKey must not have leading or trailing whitespace",
+    }),
   model: z.string().min(1),
   customHeaders: z.string().default(""),
   queryParams: z.string().default(""),
