@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
+import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import { isTerminalStatus, runKeys, useCreateRun, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
@@ -274,6 +275,11 @@ export function RunDetailPage() {
         )}
         {isTerminal ? (
           <>
+            {run.baselineId && (
+              <section>
+                <DetailVerdictRow run={run} baselineId={run.baselineId} />
+              </section>
+            )}
             <section>
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
               <ReportSection metrics={run.summaryMetrics} />

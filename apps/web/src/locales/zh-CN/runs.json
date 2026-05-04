@@ -151,6 +151,11 @@
       "ttftHistogramTitle": "首 token 延迟分布",
       "empty": "暂无图表数据",
       "loadError": "图表加载失败"
+    },
+    "verdict": {
+      "title": "vs 基准",
+      "loading": "加载基准中…",
+      "loadError": "无法加载基准用于对比"
     }
   },
   "compare": {

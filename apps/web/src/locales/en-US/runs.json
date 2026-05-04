@@ -151,6 +151,11 @@
       "ttftHistogramTitle": "TTFT Histogram",
       "empty": "No chart data",
       "loadError": "Failed to load charts"
+    },
+    "verdict": {
+      "title": "vs baseline",
+      "loading": "Loading baseline…",
+      "loadError": "Could not load baseline for comparison"
     }
   },
   "compare": {

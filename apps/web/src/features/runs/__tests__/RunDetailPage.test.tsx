@@ -495,4 +495,51 @@ describe("RunDetailPage", () => {
     await screen.findByText(/Running…|运行中…/i);
     expect(screen.queryByText(/Distributions|分布图/i)).not.toBeInTheDocument();
   });
+
+  it("mounts DetailVerdictRow when run.baselineId is set", async () => {
+    const baseline = makeRun({
+      id: "br",
+      summaryMetrics: {
+        tool: "guidellm",
+        data: { e2eLatency: { p95: 200 } },
+      } as unknown as Run["summaryMetrics"],
+    });
+    const current = makeRun({
+      baselineId: "b_1",
+      summaryMetrics: {
+        tool: "guidellm",
+        data: { e2eLatency: { p95: 240 } },
+      } as unknown as Run["summaryMetrics"],
+    });
+    // Route by URL because DetailVerdictRow + RunChartsSection mount as siblings
+    // and their queryFns fire in non-deterministic order; a `mockResolvedValueOnce`
+    // chain is brittle here.
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path === "/api/runs/r1") return Promise.resolve(current);
+      if (path === "/api/runs/r1/charts")
+        return Promise.resolve({ latencyCdf: null, ttftHistogram: null });
+      if (path === "/api/baselines")
+        return Promise.resolve({
+          items: [
+            {
+              id: "b_1",
+              userId: "u",
+              runId: "br",
+              name: "anchor",
+              description: null,
+              tags: [],
+              templateId: null,
+              templateVersion: null,
+              active: true,
+              createdAt: "2026-05-01T00:00:00.000Z",
+              updatedAt: "2026-05-01T00:00:00.000Z",
+            },
+          ],
+        });
+      if (path === "/api/runs/br") return Promise.resolve(baseline);
+      return Promise.reject(new Error(`unmocked path ${path}`));
+    });
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText(/vs baseline|vs 基准/i)).toBeInTheDocument());
+  });
 });
