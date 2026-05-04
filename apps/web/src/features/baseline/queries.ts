@@ -39,3 +39,19 @@ export function useDeleteBaseline() {
     },
   });
 }
+
+/**
+ * Selects one baseline from the cached list by id. Avoids adding a
+ * `GET /api/baselines/:id` endpoint since the full list is already
+ * fetched on demand and cached for 30s.
+ */
+export function useBaselineById(id: string | null | undefined) {
+  return useQuery({
+    queryKey: baselineKeys.lists(),
+    queryFn: () => baselineApi.list(),
+    staleTime: 30_000,
+    select: (resp: ListBaselinesResponse): Baseline | undefined =>
+      id ? resp.items.find((b) => b.id === id) : undefined,
+    enabled: !!id,
+  });
+}
