@@ -25,6 +25,7 @@ export default defineConfig({
     exclude: ["node_modules", "dist"],
     testTimeout: 30_000,
     hookTimeout: 120_000,
+    globalSetup: ["./test/setup/global-setup.mts"],
     setupFiles: ["./test/setup/db-guard.ts"],
     env: {
       DATABASE_URL: TEST_DATABASE_URL,

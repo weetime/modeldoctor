@@ -1,3 +1,5 @@
+import { isTestDatabase } from "./pick-test-db-url.js";
+
 /**
  * Vitest setupFiles guard: fail-fast assertion that the DATABASE_URL the
  * test worker sees points at a `_test` database, before any spec runs.
@@ -11,9 +13,8 @@
  * is intentionally narrow to `src/**` (see project CLAUDE.md).
  */
 const url = process.env.DATABASE_URL ?? "";
-const dbName = url.split("/").pop()?.split("?")[0] ?? "";
-if (!/_test(\W|$)/.test(dbName)) {
+if (!isTestDatabase(url)) {
   throw new Error(
-    `db-guard: refusing to run tests against DATABASE_URL='${url}'. Expected database name ending with '_test' (got '${dbName}'). This prevents spec-level deleteMany() from wiping your dev DB.`,
+    `db-guard: refusing to run tests against DATABASE_URL='${url}'. Expected the database name to end with '_test'. This prevents spec-level deleteMany() from wiping your dev DB.`,
   );
 }
