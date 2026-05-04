@@ -24,20 +24,54 @@ import {
 } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, SearchX } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Loader2, SearchX } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
-import { runKeys, useDeleteRun } from "./queries";
+import { isTerminalStatus, runKeys, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
 import { GuidellmReportView } from "./reports/GuidellmReportView";
 import { UnknownReportView } from "./reports/UnknownReportView";
 import { VegetaReportView } from "./reports/VegetaReportView";
+
+/**
+ * Pre-terminal placeholder rendered while the run is still in flight.
+ * Polls via `useRunDetail`; once the backend writes a terminal status the
+ * parent flips to the metrics + raw-output report layout.
+ */
+function RunningSection({ run }: { run: Run }) {
+  const { t } = useTranslation("runs");
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const handle = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(handle);
+  }, []);
+
+  const startedAt = run.startedAt ?? run.createdAt;
+  const elapsedSec = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
+  const isPending = run.status === "pending" || run.status === "submitted";
+
+  return (
+    <output
+      aria-live="polite"
+      className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
+    >
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
+      <div className="text-sm font-medium">
+        {isPending ? t("detail.running.pending") : t("detail.running.title")}
+      </div>
+      <div className="text-xs text-muted-foreground tabular-nums">
+        {t("detail.running.elapsed", { sec: elapsedSec })}
+      </div>
+    </output>
+  );
+}
 
 function ReportSection({ metrics }: { metrics: Run["summaryMetrics"] }) {
   const { t } = useTranslation("runs");
@@ -138,8 +172,7 @@ export function RunDetailPage() {
   });
 
   const isBaseline = run.baselineFor !== null;
-  const isTerminal =
-    run.status === "completed" || run.status === "failed" || run.status === "canceled";
+  const isTerminal = isTerminalStatus(run.status);
 
   return (
     <>
@@ -148,15 +181,16 @@ export function RunDetailPage() {
         subtitle={subtitle}
         rightSlot={
           <div className="flex items-center gap-2">
-            {isBaseline ? (
-              <Button variant="secondary" size="sm" onClick={() => setUnsetOpen(true)}>
-                {t("detail.baseline.unsetButton")}
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setSetOpen(true)}>
-                {t("detail.baseline.setButton")}
-              </Button>
-            )}
+            {isTerminal &&
+              (isBaseline ? (
+                <Button variant="secondary" size="sm" onClick={() => setUnsetOpen(true)}>
+                  {t("detail.baseline.unsetButton")}
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setSetOpen(true)}>
+                  {t("detail.baseline.setButton")}
+                </Button>
+              ))}
             {isTerminal && (
               <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
                 {t("detail.delete.button")}
@@ -185,16 +219,22 @@ export function RunDetailPage() {
             </AlertDescription>
           </Alert>
         )}
-        <section>
-          <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-          <ReportSection metrics={run.summaryMetrics} />
-        </section>
-        <section>
-          <RunDetailRawOutput
-            rawOutput={run.rawOutput as Record<string, unknown> | null}
-            logs={run.logs}
-          />
-        </section>
+        {isTerminal ? (
+          <>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
+              <ReportSection metrics={run.summaryMetrics} />
+            </section>
+            <section>
+              <RunDetailRawOutput
+                rawOutput={run.rawOutput as Record<string, unknown> | null}
+                logs={run.logs}
+              />
+            </section>
+          </>
+        ) : (
+          <RunningSection run={run} />
+        )}
       </div>
 
       <SetBaselineDialog

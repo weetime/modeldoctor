@@ -130,6 +130,11 @@
       "errors": {
         "generic": "删除失败"
       }
+    },
+    "running": {
+      "pending": "等待启动…",
+      "title": "运行中…",
+      "elapsed": "已耗时 {{sec}}s"
     }
   }
 }
