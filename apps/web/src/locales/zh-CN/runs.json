@@ -131,6 +131,14 @@
         "generic": "删除失败"
       }
     },
+    "rerun": {
+      "button": "重跑",
+      "connectionMissingTooltip": "原 Connection 已删除，请到「新建基准测试」里重新选一个。",
+      "success": "已提交重跑「{{name}}」",
+      "errors": {
+        "generic": "重跑提交失败"
+      }
+    },
     "running": {
       "pending": "等待启动…",
       "title": "运行中…",

@@ -327,6 +327,102 @@ describe("RunDetailPage", () => {
     expect(screen.queryByRole("button", { name: /^Delete$|^删除$/ })).not.toBeInTheDocument();
   });
 
+  // ---- F4: Re-run button (one-click clone-and-submit, see #88) ----
+
+  it("renders the Re-run button when terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed" }));
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Re-run$|^重跑$/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("hides the Re-run button while non-terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({ status: "running", summaryMetrics: null, rawOutput: null }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Running…|运行中…/);
+    expect(screen.queryByRole("button", { name: /^Re-run$|^重跑$/ })).not.toBeInTheDocument();
+  });
+
+  it("disables the Re-run button when the source connection has been deleted", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({ status: "completed", connectionId: null, connection: null }),
+    );
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
+    expect(btn).toBeDisabled();
+  });
+
+  it("clones tool / connectionId / kind / params on click and POSTs to /api/runs", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeRun({
+        status: "completed",
+        tool: "guidellm",
+        kind: "benchmark",
+        connectionId: "c1",
+        params: { profile: "throughput", totalRequests: 500 },
+        name: "smoke",
+      }),
+    );
+    vi.mocked(api.post).mockResolvedValueOnce(makeRun({ id: "r2", name: "smoke (rerun)" }));
+    const user = userEvent.setup();
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
+    await user.click(btn);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const [path, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
+    expect(path).toBe("/api/runs");
+    expect(body.tool).toBe("guidellm");
+    expect(body.kind).toBe("benchmark");
+    expect(body.connectionId).toBe("c1");
+    expect(body.params).toEqual({ profile: "throughput", totalRequests: 500 });
+    // Name suffix: original name + " (rerun)"
+    expect(body.name).toBe("smoke (rerun)");
+  });
+
+  it("falls back to a synthetic name when the source Run has no name", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed", name: null }));
+    vi.mocked(api.post).mockResolvedValueOnce(makeRun({ id: "r2" }));
+    const user = userEvent.setup();
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
+    await user.click(btn);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const [, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
+    // Schema requires name to be 1..128; synthesized payload must satisfy that.
+    expect(typeof body.name).toBe("string");
+    expect((body.name as string).length).toBeGreaterThan(0);
+    expect((body.name as string).length).toBeLessThanOrEqual(128);
+  });
+
+  it("truncates the source name so the ' (rerun)' suffix fits within the 128-char limit", async () => {
+    const longName = "x".repeat(125); // 125 + " (rerun)" (8) = 133 > 128
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed", name: longName }));
+    vi.mocked(api.post).mockResolvedValueOnce(makeRun({ id: "r2" }));
+    const user = userEvent.setup();
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
+    await user.click(btn);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const [, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
+    expect((body.name as string).length).toBeLessThanOrEqual(128);
+    expect((body.name as string).endsWith(" (rerun)")).toBe(true);
+  });
+
+  it("navigates to the new Run detail page on success", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed" }));
+    // Second api.get is for the new Run detail page after navigation.
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ id: "r2", name: "smoke (rerun)" }));
+    vi.mocked(api.post).mockResolvedValueOnce(makeRun({ id: "r2", name: "smoke (rerun)" }));
+    const user = userEvent.setup();
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
+    await user.click(btn);
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith("/api/runs/r2"));
+  });
+
   it("polls every 2s while non-terminal and stops on terminal", async () => {
     vi.useFakeTimers();
     try {
