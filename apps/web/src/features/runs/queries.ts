@@ -81,8 +81,8 @@ export function useRunCharts(runId: string) {
     queryKey: runKeys.charts(runId),
     queryFn: () => runApi.getCharts(runId),
     enabled: runId.length > 0,
-    // Server returns Cache-Control: immutable for terminal Runs. Mirror that
-    // here so the cached result is reused across remounts.
+    // Charts are derived from a terminal Run's rawOutput, which never changes
+    // once the Run finishes. Cache for the page's lifetime.
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 5 * 60 * 1000,
   });
