@@ -151,5 +151,40 @@
       "empty": "No chart data",
       "loadError": "Failed to load charts"
     }
+  },
+  "compare": {
+    "title": "Compare Runs",
+    "subtitle": "{{n}} runs · {{tool}}",
+    "back": "Back to list",
+    "baselineLabel": "Baseline",
+    "baselineNone": "None (no verdict)",
+    "baselineMissing": "1 Run no longer accessible — comparing the remaining {{n}}",
+    "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
+    "needTwoEmpty": "Select 2+ Runs from the list to compare",
+    "metricColumnLabel": "Metric",
+    "verdict": {
+      "regressed": "regressed",
+      "improved": "improved",
+      "unchanged": "unchanged"
+    },
+    "metricRowLabel": {
+      "ttftMean": "TTFT mean (ms)",
+      "ttftP50": "TTFT p50 (ms)",
+      "ttftP95": "TTFT p95 (ms)",
+      "ttftP99": "TTFT p99 (ms)",
+      "itlMean": "ITL mean (ms)",
+      "itlP95": "ITL p95 (ms)",
+      "e2eLatencyP50": "E2E latency p50 (ms)",
+      "latencyP95": "Latency p95 (ms)",
+      "e2eLatencyP99": "E2E latency p99 (ms)",
+      "latencyMin": "Latency min (ms)",
+      "latencyMean": "Latency mean (ms)",
+      "latencyP50": "Latency p50 (ms)",
+      "latencyP90": "Latency p90 (ms)",
+      "latencyP99": "Latency p99 (ms)",
+      "latencyMax": "Latency max (ms)",
+      "errorRate": "Error rate",
+      "throughput": "Throughput (req/s)"
+    }
   }
 }
