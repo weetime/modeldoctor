@@ -131,6 +131,14 @@
         "generic": "Failed to delete"
       }
     },
+    "rerun": {
+      "button": "Re-run",
+      "connectionMissingTooltip": "The original connection has been deleted; pick a new one from \"New Benchmark\" instead.",
+      "success": "Submitted re-run \"{{name}}\"",
+      "errors": {
+        "generic": "Failed to submit re-run"
+      }
+    },
     "running": {
       "pending": "Waiting to start…",
       "title": "Running…",

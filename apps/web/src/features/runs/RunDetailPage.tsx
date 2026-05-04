@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import type { Run } from "@modeldoctor/contracts";
 import {
@@ -24,7 +25,7 @@ import {
 } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, SearchX } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -32,7 +33,7 @@ import { toast } from "sonner";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
-import { isTerminalStatus, runKeys, useDeleteRun } from "./queries";
+import { isTerminalStatus, runKeys, useCreateRun, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
 import { GuidellmReportView } from "./reports/GuidellmReportView";
@@ -124,6 +125,7 @@ export function RunDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const remove = useDeleteBaseline();
   const deleteRun = useDeleteRun();
+  const createRun = useCreateRun();
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -173,6 +175,32 @@ export function RunDetailPage() {
 
   const isBaseline = run.baselineFor !== null;
   const isTerminal = isTerminalStatus(run.status);
+  // CreateRunRequest requires non-null connectionId; orphaned Runs (FK SET NULL
+  // after Connection delete) cannot be cloned without picking a new connection,
+  // and the spec is one-click rerun without an edit step. Disable instead.
+  const canRerun = run.connectionId !== null;
+
+  async function handleRerun() {
+    if (!run || !run.connectionId) return;
+    // Schema caps name at 128. " (rerun)" is 8 chars; reserve 120 for the source.
+    const sourceName = run.name?.trim() || `run-${run.id.slice(0, 8)}`;
+    const trimmed = sourceName.length > 120 ? sourceName.slice(0, 120) : sourceName;
+    const newName = `${trimmed} (rerun)`;
+    try {
+      const next = await createRun.mutateAsync({
+        tool: run.tool,
+        kind: run.kind,
+        connectionId: run.connectionId,
+        name: newName,
+        description: run.description ?? undefined,
+        params: run.params,
+      });
+      toast.success(t("detail.rerun.success", { name: next.name ?? next.id }));
+      navigate(`/runs/${next.id}`);
+    } catch (e) {
+      toast.error((e as Error).message || t("detail.rerun.errors.generic"));
+    }
+  }
 
   return (
     <>
@@ -190,6 +218,30 @@ export function RunDetailPage() {
                 <Button variant="outline" size="sm" onClick={() => setSetOpen(true)}>
                   {t("detail.baseline.setButton")}
                 </Button>
+              ))}
+            {isTerminal &&
+              (canRerun ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRerun}
+                  disabled={createRun.isPending}
+                >
+                  <RefreshCw className="mr-1 h-4 w-4" />
+                  {t("detail.rerun.button")}
+                </Button>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button variant="outline" size="sm" disabled={true}>
+                        <RefreshCw className="mr-1 h-4 w-4" />
+                        {t("detail.rerun.button")}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("detail.rerun.connectionMissingTooltip")}</TooltipContent>
+                </Tooltip>
               ))}
             {isTerminal && (
               <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
