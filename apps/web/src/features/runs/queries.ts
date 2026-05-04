@@ -19,6 +19,7 @@ export const runKeys = {
   list: (q: Partial<ListRunsQuery>) => [...runKeys.lists(), q] as const,
   details: () => [...runKeys.all, "detail"] as const,
   detail: (id: string) => [...runKeys.details(), id] as const,
+  charts: (id: string) => [...runKeys.detail(id), "charts"] as const,
 };
 
 // `q` MUST NOT carry `cursor` — useInfiniteQuery owns paging via pageParam.
@@ -72,5 +73,17 @@ export function useDeleteRun() {
       qc.removeQueries({ queryKey: runKeys.detail(id) });
       qc.invalidateQueries({ queryKey: runKeys.lists() });
     },
+  });
+}
+
+export function useRunCharts(runId: string) {
+  return useQuery({
+    queryKey: runKeys.charts(runId),
+    queryFn: () => runApi.getCharts(runId),
+    enabled: runId.length > 0,
+    // Server returns Cache-Control: immutable for terminal Runs. Mirror that
+    // here so the cached result is reused across remounts.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 5 * 60 * 1000,
   });
 }
