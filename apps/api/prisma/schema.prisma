@@ -16,10 +16,12 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  refreshTokens RefreshToken[]
-  runs          Run[]
-  connections   Connection[]
-  baselines     Baseline[]
+  refreshTokens    RefreshToken[]
+  benchmarks       Benchmark[]
+  connections      Connection[]
+  baselines        Baseline[]
+  diagnosticsRuns  DiagnosticsRun[]
+  createdTemplates BenchmarkTemplate[] @relation("UserCreatedTemplates")
 
   @@index([email])
   @@map("users")
@@ -81,49 +83,42 @@ model Connection {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  runs Run[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmarks      Benchmark[]
+  diagnosticsRuns DiagnosticsRun[]
 
   @@unique([userId, name])
   @@index([userId])
   @@map("connections")
 }
 
-model Run {
+model Benchmark {
   id           String  @id @default(cuid())
   userId       String? @map("user_id")
   connectionId String? @map("connection_id")
 
-  // Discriminator + four-tuple
-  kind       String // 'benchmark' | 'e2e'
-  tool       String // 'guidellm' | 'genai-perf' | 'vegeta' | 'e2e' | 'custom'
-  scenario   Json
-  mode       String // 'fixed' | 'ramp-up' | 'throughput' | 'sla-target' | 'correctness'
-  driverKind String @map("driver_kind") // 'local' | 'k8s'
+  scenario    String  // 'inference' | 'capacity' | 'gateway'
+  tool        String  // 'guidellm' | 'vegeta' | 'genai-perf'
+  toolVersion String? @map("tool_version")
+  driverKind  String  @map("driver_kind") // 'local' | 'k8s'
 
-  // Identification
   name        String?
   description String? @db.Text
 
-  // Lifecycle
-  status        String  @default("pending") // 'pending' | 'submitted' | 'running' | 'completed' | 'failed' | 'canceled'
+  status        String  @default("pending")
   statusMessage String? @map("status_message") @db.Text
   progress      Float?
 
-  // Driver bookkeeping
-  driverHandle String? @map("driver_handle") // 'subprocess:1234' or 'namespace/jobName'
+  driverHandle String? @map("driver_handle")
 
-  // Snapshots
-  params          Json
-  rawOutput       Json? @map("raw_output")
-  summaryMetrics  Json? @map("summary_metrics")
-  serverMetrics   Json? @map("server_metrics")
+  params         Json
+  rawOutput      Json? @map("raw_output")
+  summaryMetrics Json? @map("summary_metrics")
+  serverMetrics  Json? @map("server_metrics")
 
-  // Cross-references (FK targets are nullable until #43–#56 wire them up)
-  templateId      String? @map("template_id")
-  templateVersion String? @map("template_version")
-  parentRunId     String? @map("parent_run_id")
-  baselineId      String? @map("baseline_id")
+  templateId          String? @map("template_id")
+  parentBenchmarkId   String? @map("parent_benchmark_id")
+  baselineId          String? @map("baseline_id")
 
   logs String? @db.Text
 
@@ -131,38 +126,88 @@ model Run {
   startedAt   DateTime? @map("started_at") @db.Timestamptz(3)
   completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
 
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  connection  Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-  parent      Run?        @relation("RunParent", fields: [parentRunId], references: [id], onDelete: SetNull)
-  children    Run[]       @relation("RunParent")
-  baseline    Baseline?   @relation("RunReferencingBaseline", fields: [baselineId], references: [id], onDelete: SetNull)
-  baselineFor Baseline?   @relation("BaselineCanonicalRun")
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection  Connection?        @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  template    BenchmarkTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  parent      Benchmark?         @relation("BenchmarkParent", fields: [parentBenchmarkId], references: [id], onDelete: SetNull)
+  children    Benchmark[]        @relation("BenchmarkParent")
+  baseline    Baseline?          @relation("BenchmarkReferencingBaseline", fields: [baselineId], references: [id], onDelete: SetNull)
+  baselineFor Baseline?          @relation("BaselineCanonicalBenchmark")
 
   @@index([userId, createdAt])
-  @@index([kind, status])
+  @@index([scenario, status])
+  @@index([tool, createdAt])
   @@index([connectionId])
-  @@index([parentRunId])
+  @@index([parentBenchmarkId])
   @@index([baselineId])
-  @@map("runs")
+  @@index([templateId])
+  @@map("benchmarks")
+}
+
+model BenchmarkTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  scenario    String
+  tool        String
+  config      Json
+  isOfficial  Boolean  @default(false) @map("is_official")
+  createdBy   String?  @map("created_by")
+  tags        String[] @default([])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  benchmarks Benchmark[]
+  creator    User?       @relation("UserCreatedTemplates", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([scenario])
+  @@index([tool])
+  @@index([isOfficial])
+  @@index([createdBy])
+  @@map("benchmark_templates")
+}
+
+model DiagnosticsRun {
+  id            String  @id @default(cuid())
+  userId        String? @map("user_id")
+  connectionId  String? @map("connection_id")
+
+  status        String
+  statusMessage String? @map("status_message") @db.Text
+  probes        String[]
+  pathOverride  Json    @default("{}") @map("path_override")
+  results       Json
+  summary       Json
+
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(3)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([connectionId])
+  @@map("diagnostics_runs")
 }
 
 model Baseline {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
-  runId           String   @unique @map("run_id")
+  benchmarkId     String   @unique @map("benchmark_id")
   name            String
   description     String?  @db.Text
   tags            String[] @default([])
   templateId      String?  @map("template_id")
-  templateVersion String?  @map("template_version")
   active          Boolean  @default(true)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  run         Run   @relation("BaselineCanonicalRun", fields: [runId], references: [id], onDelete: Restrict)
-  referencers Run[] @relation("RunReferencingBaseline")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmark   Benchmark   @relation("BaselineCanonicalBenchmark", fields: [benchmarkId], references: [id], onDelete: Restrict)
+  referencers Benchmark[] @relation("BenchmarkReferencingBaseline")
 
   @@index([userId])
   @@map("baselines")
