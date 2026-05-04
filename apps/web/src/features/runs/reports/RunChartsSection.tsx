@@ -1,11 +1,12 @@
 import { LatencyCDF, TTFTHistogram } from "@/components/charts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { RunTool } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 import { useRunCharts } from "../queries";
 
 export interface RunChartsSectionProps {
   runId: string;
-  tool: string;
+  tool: RunTool;
 }
 
 export function RunChartsSection({ runId, tool }: RunChartsSectionProps) {
