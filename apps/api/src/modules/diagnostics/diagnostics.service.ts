@@ -1,9 +1,14 @@
-import type { E2ETestRequest, E2ETestResponse, ProbeName } from "@modeldoctor/contracts";
+import type {
+  DiagnosticsRunRequest,
+  DiagnosticsRunResponse,
+  ProbeName,
+  ProbeResult,
+} from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
-import { PROBES, type ProbeCtx, type ProbeResult } from "../../integrations/probes/index.js";
+import type { Prisma } from "@prisma/client";
+import { PROBES, type ProbeCtx } from "../../integrations/probes/index.js";
 import type { DecryptedConnection } from "../connection/connection.service.js";
-import { RunRepository } from "../run/run.repository.js";
+import { DiagnosticsRepository } from "./diagnostics.repository.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -17,15 +22,14 @@ function parseHeaderLines(s: string | undefined): Record<string, string> {
 }
 
 @Injectable()
-export class E2ETestService {
-  constructor(private readonly runs: RunRepository) {}
+export class DiagnosticsService {
+  constructor(private readonly repo: DiagnosticsRepository) {}
 
   private async executeProbes(
     conn: DecryptedConnection,
-    req: E2ETestRequest,
-  ): Promise<Array<ProbeResult & { probe: ProbeName }>> {
+    req: DiagnosticsRunRequest,
+  ): Promise<ProbeResult[]> {
     const extraHeaders = parseHeaderLines(conn.customHeaders);
-
     return Promise.all(
       req.probes.map(async (name: ProbeName) => {
         const ctx: ProbeCtx = {
@@ -55,47 +59,31 @@ export class E2ETestService {
   async run(
     userId: string | undefined,
     conn: DecryptedConnection,
-    req: E2ETestRequest,
-  ): Promise<E2ETestResponse> {
-    // 1. Create Run row (status: pending)
-    const created = await this.runs.create({
+    req: DiagnosticsRunRequest,
+  ): Promise<DiagnosticsRunResponse> {
+    const created = await this.repo.create({
       userId: userId ?? null,
-      kind: "e2e",
-      tool: "e2e",
-      scenario: {
-        probes: req.probes,
-        pathOverride: req.pathOverride ?? {},
-        apiBaseUrl: conn.baseUrl,
-        model: conn.model,
-      },
-      mode: "correctness",
-      driverKind: "local",
-      params: req as unknown as Prisma.InputJsonValue,
+      connectionId: conn.id,
+      probes: req.probes,
+      pathOverride: (req.pathOverride ?? {}) as Prisma.InputJsonValue,
     });
 
-    // 2. Mark running
-    await this.runs.update(created.id, { status: "running", startedAt: new Date() });
-
-    // 3. Execute probes
     try {
       const results = await this.executeProbes(conn, req);
       const allPassed = results.every((r) => r.pass);
-
-      // 4. Persist final state
-      await this.runs.update(created.id, {
+      await this.repo.update(created.id, {
         status: allPassed ? "completed" : "failed",
         completedAt: new Date(),
-        rawOutput: { results } as unknown as Prisma.InputJsonValue,
-        summaryMetrics: {
+        results: results as unknown as Prisma.InputJsonValue,
+        summary: {
           total: results.length,
           passed: results.filter((r) => r.pass).length,
           failed: results.filter((r) => !r.pass).length,
-        } as unknown as Prisma.InputJsonValue,
+        } as Prisma.InputJsonValue,
       });
-
-      return { runId: created.id, success: allPassed, results };
+      return { diagnosticsRunId: created.id, success: allPassed, results };
     } catch (err) {
-      await this.runs.update(created.id, {
+      await this.repo.update(created.id, {
         status: "failed",
         statusMessage: err instanceof Error ? err.message : String(err),
         completedAt: new Date(),

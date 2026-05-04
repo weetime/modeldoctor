@@ -18,7 +18,7 @@ import { BenchmarkModule } from "./modules/benchmark/benchmark.module.js";
 import { BenchmarkTemplateModule } from "./modules/benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "./modules/connection/connection.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
-import { E2ETestModule } from "./modules/e2e-test/e2e-test.module.js";
+import { DiagnosticsModule } from "./modules/diagnostics/diagnostics.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
@@ -65,7 +65,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     }),
     HealthModule,
     DebugProxyModule,
-    E2ETestModule,
+    DiagnosticsModule,
     PlaygroundModule,
     BenchmarkModule,
     BenchmarkTemplateModule,
