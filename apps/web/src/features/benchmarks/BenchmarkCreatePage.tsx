@@ -44,7 +44,7 @@ const TOOLS: ToolName[] = ["guidellm", "vegeta", "genai-perf"];
  * Thin inline connection picker — lists the user's saved connections in a
  * <Select>. Used instead of the full EndpointPicker (which requires
  * endpoint: EndpointValues + onEndpointChange, designed for manual-entry
- * flows) because RunCreatePage only needs a saved-connection ID.
+ * flows) because BenchmarkCreatePage only needs a saved-connection ID.
  */
 function SavedConnectionPicker({
   id,

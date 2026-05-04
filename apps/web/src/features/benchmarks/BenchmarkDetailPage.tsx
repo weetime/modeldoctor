@@ -175,6 +175,8 @@ export function BenchmarkDetailPage() {
   if (!benchmark) return null;
 
   const subtitle = t("detail.subtitle", {
+    // TODO(Phase 14): rename i18n placeholder kind→scenario; the value
+    // is benchmark.scenario but the i18n template still says {{kind}}.
     kind: benchmark.scenario,
     tool: benchmark.tool,
     when: format(new Date(benchmark.createdAt), "yyyy-MM-dd HH:mm"),

@@ -15,7 +15,7 @@ export function CompareGrid({ runs, baselineId }: CompareGridProps) {
   const { t } = useTranslation("runs");
 
   // All runs share one tool by the time CompareGrid mounts (validated upstream).
-  // If the array is empty just render nothing — RunComparePage shows EmptyState.
+  // If the array is empty just render nothing — BenchmarkComparePage shows EmptyState.
   const tool = runs[0]?.tool;
   const descriptors = useMemo(() => (tool ? rowDescriptorsForTool(tool) : []), [tool]);
 
