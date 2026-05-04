@@ -1,4 +1,4 @@
-import type { HistogramBucket, RunChartsResponse } from "@modeldoctor/contracts";
+import type { BenchmarkChartsResponse, HistogramBucket } from "@modeldoctor/contracts";
 import { Injectable, Logger } from "@nestjs/common";
 
 const HISTOGRAM_BIN_COUNT = 30;
@@ -12,16 +12,16 @@ interface ExtractInput {
 }
 
 @Injectable()
-export class RunChartsService {
-  private readonly log = new Logger(RunChartsService.name);
+export class BenchmarkChartsService {
+  private readonly log = new Logger(BenchmarkChartsService.name);
 
   /**
    * Pure derivation: takes a Run row, returns chart data. Errors in any one
    * extraction step degrade that field to null; the other field is unaffected.
    * No DB or HTTP side-effects.
    */
-  extract(row: ExtractInput): RunChartsResponse {
-    const empty: RunChartsResponse = { latencyCdf: null, ttftHistogram: null };
+  extract(row: ExtractInput): BenchmarkChartsResponse {
+    const empty: BenchmarkChartsResponse = { latencyCdf: null, ttftHistogram: null };
 
     if (!TERMINAL_STATES.has(row.status)) return empty;
     const files = (row.rawOutput?.files ?? null) as Record<string, string> | null;
@@ -32,7 +32,7 @@ export class RunChartsService {
     return empty;
   }
 
-  private extractGuidellm(runId: string, files: Record<string, string>): RunChartsResponse {
+  private extractGuidellm(runId: string, files: Record<string, string>): BenchmarkChartsResponse {
     const reportB64 = files.report;
     if (!reportB64) return { latencyCdf: null, ttftHistogram: null };
 
@@ -82,7 +82,7 @@ export class RunChartsService {
     };
   }
 
-  private extractVegeta(runId: string, files: Record<string, string>): RunChartsResponse {
+  private extractVegeta(runId: string, files: Record<string, string>): BenchmarkChartsResponse {
     const ndjsonB64 = files.latencies;
     if (!ndjsonB64) return { latencyCdf: null, ttftHistogram: null };
 

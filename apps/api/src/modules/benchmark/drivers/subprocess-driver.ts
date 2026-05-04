@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
 import type {
   RunExecutionContext,
-  RunExecutionDriver,
+  BenchmarkExecutionDriver,
   RunExecutionHandle,
 } from "./execution-driver.interface.js";
 
@@ -50,7 +50,7 @@ export interface SubprocessDriverOpts {
 }
 
 @Injectable()
-export class SubprocessDriver implements RunExecutionDriver {
+export class SubprocessDriver implements BenchmarkExecutionDriver {
   private readonly log = new Logger(SubprocessDriver.name);
   private readonly handles = new Map<RunExecutionHandle, Entry>();
   private readonly cwdRoot: string;

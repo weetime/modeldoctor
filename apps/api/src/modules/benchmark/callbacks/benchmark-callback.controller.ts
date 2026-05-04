@@ -1,10 +1,10 @@
 import {
-  type RunFinishCallback,
-  type RunLogCallback,
-  type RunStateCallback,
-  runFinishCallbackSchema,
-  runLogCallbackSchema,
-  runStateCallbackSchema,
+  type BenchmarkFinishCallback,
+  type BenchmarkLogCallback,
+  type BenchmarkStateCallback,
+  benchmarkFinishCallbackSchema,
+  benchmarkLogCallbackSchema,
+  benchmarkStateCallbackSchema,
 } from "@modeldoctor/contracts";
 import { type ProgressEvent, type ToolName, byTool } from "@modeldoctor/tool-adapters";
 import {
@@ -22,17 +22,17 @@ import type { Prisma } from "@prisma/client";
 import { Public } from "../../../common/decorators/public.decorator.js";
 import { HmacCallbackGuard } from "../../../common/hmac/hmac-callback.guard.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
-import { RunRepository } from "../run.repository.js";
+import { BenchmarkRepository } from "../benchmark.repository.js";
 import { SseHub } from "../sse/sse-hub.service.js";
 
-@ApiTags("run-callback")
+@ApiTags("benchmark-callback")
 @UseGuards(HmacCallbackGuard)
-@Controller("internal/runs/:id")
-export class RunCallbackController {
-  private readonly log = new Logger(RunCallbackController.name);
+@Controller("internal/benchmarks/:id")
+export class BenchmarkCallbackController {
+  private readonly log = new Logger(BenchmarkCallbackController.name);
 
   constructor(
-    private readonly runs: RunRepository,
+    private readonly benchmarks: BenchmarkRepository,
     private readonly sse: SseHub,
   ) {}
 
@@ -42,18 +42,22 @@ export class RunCallbackController {
   @ApiOperation({ summary: "v2 callback: state transition" })
   async handleState(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(runStateCallbackSchema)) body: RunStateCallback,
+    @Body(new ZodValidationPipe(benchmarkStateCallbackSchema)) body: BenchmarkStateCallback,
   ): Promise<void> {
-    const row = await this.runs.findById(id);
+    const row = await this.benchmarks.findById(id);
     if (!row) {
-      this.log.warn(`/state callback for unknown run ${id}; ignoring`);
+      this.log.warn(`/state callback for unknown benchmark ${id}; ignoring`);
       return;
     }
     if (body.state === "running" && row.status !== "running") {
-      await this.runs.update(id, {
+      await this.benchmarks.update(id, {
         status: "running",
         startedAt: row.startedAt ?? new Date(),
+        ...(body.toolVersion ? { toolVersion: body.toolVersion } : {}),
       });
+    } else if (body.toolVersion && row.toolVersion !== body.toolVersion) {
+      // record toolVersion even if we already transitioned to running
+      await this.benchmarks.update(id, { toolVersion: body.toolVersion });
     }
   }
 
@@ -63,9 +67,9 @@ export class RunCallbackController {
   @ApiOperation({ summary: "v2 callback: streaming log lines" })
   async handleLog(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(runLogCallbackSchema)) body: RunLogCallback,
+    @Body(new ZodValidationPipe(benchmarkLogCallbackSchema)) body: BenchmarkLogCallback,
   ): Promise<void> {
-    const row = await this.runs.findById(id);
+    const row = await this.benchmarks.findById(id);
     if (!row) return;
     const adapter = byTool(row.tool as ToolName);
     let lastProgress: number | null = null;
@@ -81,7 +85,7 @@ export class RunCallbackController {
       if (evt.kind === "progress") lastProgress = evt.pct;
     }
     if (lastProgress !== null) {
-      await this.runs.update(id, { progress: lastProgress });
+      await this.benchmarks.update(id, { progress: lastProgress });
     }
   }
 
@@ -91,11 +95,11 @@ export class RunCallbackController {
   @ApiOperation({ summary: "v2 callback: terminal state + final report" })
   async handleFinish(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(runFinishCallbackSchema)) body: RunFinishCallback,
+    @Body(new ZodValidationPipe(benchmarkFinishCallbackSchema)) body: BenchmarkFinishCallback,
   ): Promise<void> {
-    const row = await this.runs.findById(id);
+    const row = await this.benchmarks.findById(id);
     if (!row) {
-      this.log.warn(`/finish callback for unknown run ${id}; ignoring`);
+      this.log.warn(`/finish callback for unknown benchmark ${id}; ignoring`);
       return;
     }
     const adapter = byTool(row.tool as ToolName);
@@ -114,7 +118,7 @@ export class RunCallbackController {
       summary = null;
     }
 
-    await this.runs.update(id, {
+    await this.benchmarks.update(id, {
       status: finalState,
       completedAt: new Date(),
       statusMessage: message ?? null,

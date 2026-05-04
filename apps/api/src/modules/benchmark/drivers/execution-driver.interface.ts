@@ -22,7 +22,7 @@ export interface RunExecutionContext {
 /** Opaque handle to an in-flight execution. */
 export type RunExecutionHandle = string;
 
-export interface RunExecutionDriver {
+export interface BenchmarkExecutionDriver {
   /**
    * Start the runner. Resolves once the runner is launched (subprocess
    * spawned or Job created), NOT when the inner tool finishes.

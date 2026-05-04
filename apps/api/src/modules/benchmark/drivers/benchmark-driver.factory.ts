@@ -1,7 +1,7 @@
 import type { ToolName } from "@modeldoctor/tool-adapters";
 import type { ConfigService } from "@nestjs/config";
 import type { Env } from "../../../config/env.schema.js";
-import type { RunExecutionDriver } from "./execution-driver.interface.js";
+import type { BenchmarkExecutionDriver } from "./execution-driver.interface.js";
 import { K8sJobDriver } from "./k8s-job-driver.js";
 import { SubprocessDriver } from "./subprocess-driver.js";
 
@@ -28,9 +28,9 @@ async function loadK8sClient(): Promise<typeof import("@kubernetes/client-node")
   return await import("@kubernetes/client-node");
 }
 
-export async function createRunDriver(
+export async function createBenchmarkDriver(
   config: ConfigService<Env, true>,
-): Promise<RunExecutionDriver> {
+): Promise<BenchmarkExecutionDriver> {
   const choice = (config.get("BENCHMARK_DRIVER", { infer: true }) ?? "subprocess") as string;
   if (choice === "subprocess") {
     return new SubprocessDriver();

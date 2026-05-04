@@ -1,16 +1,17 @@
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
-import { RunRepository } from "./run.repository.js";
+import { BenchmarkRepository } from "./benchmark.repository.js";
 
-describe("RunRepository", () => {
-  let repo: RunRepository;
+describe("BenchmarkRepository", () => {
+  let repo: BenchmarkRepository;
   let prisma: PrismaService;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
-        RunRepository,
+        BenchmarkRepository,
         PrismaService,
         {
           provide: ConfigService,
@@ -24,11 +25,11 @@ describe("RunRepository", () => {
       ],
     }).compile();
 
-    repo = moduleRef.get(RunRepository);
+    repo = moduleRef.get(BenchmarkRepository);
     prisma = moduleRef.get(PrismaService);
 
     await prisma.baseline.deleteMany();
-    await prisma.run.deleteMany();
+    await prisma.benchmark.deleteMany();
     await prisma.user.deleteMany();
   });
 
@@ -36,17 +37,15 @@ describe("RunRepository", () => {
     await prisma.$disconnect();
   });
 
-  it("creates a benchmark run and reads it back", async () => {
+  it("creates a benchmark and reads it back", async () => {
     const user = await prisma.user.create({
       data: { email: "u1@example.com", passwordHash: "x" },
     });
 
     const created = await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: { model: "llama-3-8b" },
-      mode: "fixed",
       driverKind: "local",
       params: { rate: 10 },
       name: "smoke",
@@ -58,9 +57,10 @@ describe("RunRepository", () => {
     const fetched = await repo.findById(created.id);
     expect(fetched?.id).toBe(created.id);
     expect(fetched?.tool).toBe("guidellm");
+    expect(fetched?.scenario).toBe("inference");
   });
 
-  it("lists runs with kind filter and cursor pagination", async () => {
+  it("lists benchmarks with scenario filter and cursor pagination", async () => {
     const user = await prisma.user.create({
       data: { email: "u2@example.com", passwordHash: "x" },
     });
@@ -68,23 +68,21 @@ describe("RunRepository", () => {
     for (let i = 0; i < 5; i++) {
       await repo.create({
         userId: user.id,
-        kind: i % 2 === 0 ? "benchmark" : "e2e",
-        tool: i % 2 === 0 ? "guidellm" : "e2e",
-        scenario: {},
-        mode: i % 2 === 0 ? "fixed" : "correctness",
+        scenario: i % 2 === 0 ? "inference" : "capacity",
+        tool: "guidellm",
         driverKind: "local",
         params: {},
       });
     }
 
-    const page1 = await repo.list({ kind: "benchmark", limit: 2 });
+    const page1 = await repo.list({ scenario: "inference", limit: 2 });
     expect(page1.items).toHaveLength(2);
-    expect(page1.items.every((r) => r.kind === "benchmark")).toBe(true);
+    expect(page1.items.every((r) => r.scenario === "inference")).toBe(true);
     expect(page1.nextCursor).toBeDefined();
 
     if (!page1.nextCursor) throw new Error("expected nextCursor on page1");
     const page2 = await repo.list({
-      kind: "benchmark",
+      scenario: "inference",
       limit: 2,
       cursor: page1.nextCursor,
     });
@@ -98,19 +96,15 @@ describe("RunRepository", () => {
     });
     await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
     });
     await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "vegeta",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
     });
@@ -124,23 +118,21 @@ describe("RunRepository", () => {
     const user = await prisma.user.create({
       data: { email: "u3@example.com", passwordHash: "x" },
     });
-    const run = await repo.create({
+    const benchmark = await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
     });
 
-    await repo.update(run.id, {
+    await repo.update(benchmark.id, {
       status: "running",
       driverHandle: "subprocess:1234",
       startedAt: new Date(),
     });
 
-    const updated = await repo.findById(run.id);
+    const updated = await repo.findById(benchmark.id);
     expect(updated?.status).toBe("running");
     expect(updated?.driverHandle).toBe("subprocess:1234");
     expect(updated?.startedAt).toBeInstanceOf(Date);
@@ -150,15 +142,13 @@ describe("RunRepository", () => {
     const user = await prisma.user.create({
       data: { email: "time-range@example.com", passwordHash: "x" },
     });
-    // Create three runs with explicit timestamps (1 hour apart)
+    // Create three benchmarks with explicit timestamps (1 hour apart)
     for (let i = 0; i < 3; i++) {
-      await prisma.run.create({
+      await prisma.benchmark.create({
         data: {
           userId: user.id,
-          kind: "benchmark",
+          scenario: "inference",
           tool: "guidellm",
-          scenario: {},
-          mode: "fixed",
           driverKind: "local",
           params: {},
           createdAt: new Date(`2026-04-30T0${i}:00:00Z`),
@@ -179,99 +169,6 @@ describe("RunRepository", () => {
     expect(untilOne.items).toHaveLength(2);
   });
 
-  it("filters by isBaseline=true (returns only Runs that ARE a baseline)", async () => {
-    const user = await prisma.user.create({
-      data: { email: "is-baseline@example.com", passwordHash: "x" },
-    });
-    const r1 = await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-    });
-    await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-    });
-    await prisma.baseline.create({
-      data: { userId: user.id, runId: r1.id, name: "anchor" },
-    });
-
-    const onlyBaselines = await repo.list({ isBaseline: true });
-    expect(onlyBaselines.items).toHaveLength(1);
-    expect(onlyBaselines.items[0].id).toBe(r1.id);
-  });
-
-  it("filters by referencesBaseline=true (returns only Runs whose baselineId is set)", async () => {
-    const user = await prisma.user.create({
-      data: { email: "ref-baseline@example.com", passwordHash: "x" },
-    });
-    const canonical = await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-    });
-    const baseline = await prisma.baseline.create({
-      data: { userId: user.id, runId: canonical.id, name: "anchor" },
-    });
-    await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-      baselineId: baseline.id,
-    });
-    await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-    });
-
-    const refs = await repo.list({ referencesBaseline: true });
-    expect(refs.items).toHaveLength(1);
-    expect(refs.items[0].baselineId).toBe(baseline.id);
-  });
-
-  it("findById includes baselineFor when the Run is a baseline canonical Run", async () => {
-    const user = await prisma.user.create({
-      data: { email: "find-baseline@example.com", passwordHash: "x" },
-    });
-    const r = await repo.create({
-      userId: user.id,
-      kind: "benchmark",
-      tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
-      driverKind: "local",
-      params: {},
-    });
-    await prisma.baseline.create({
-      data: { userId: user.id, runId: r.id, name: "anchor" },
-    });
-
-    const fetched = await repo.findById(r.id);
-    expect(fetched?.baselineFor?.name).toBe("anchor");
-  });
-
   it("countActiveByName excludes terminal rows", async () => {
     const user = await prisma.user.create({
       data: { email: "active-by-name@example.com", passwordHash: "x" },
@@ -279,20 +176,16 @@ describe("RunRepository", () => {
     // Active rows
     await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
       name: "shared-name",
     });
     const submitted = await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
       name: "shared-name",
@@ -301,10 +194,8 @@ describe("RunRepository", () => {
     // Terminal row (should not count)
     const completed = await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
       name: "shared-name",
@@ -313,10 +204,8 @@ describe("RunRepository", () => {
     // Different-name active row (should not count)
     await repo.create({
       userId: user.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
       name: "other-name",
@@ -327,10 +216,8 @@ describe("RunRepository", () => {
     });
     await repo.create({
       userId: otherUser.id,
-      kind: "benchmark",
+      scenario: "inference",
       tool: "guidellm",
-      scenario: {},
-      mode: "fixed",
       driverKind: "local",
       params: {},
       name: "shared-name",

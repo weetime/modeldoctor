@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
-import { Prisma, type Run as PrismaRun } from "@prisma/client";
+import { type Benchmark as PrismaBenchmark, Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
 import type { ConnectionService } from "../connection/connection.service.js";
-import type { RunExecutionDriver } from "./drivers/execution-driver.interface.js";
-import type { RunRepository, RunWithRelations } from "./run.repository.js";
-import { RunService } from "./run.service.js";
+import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
+import { BenchmarkService } from "./benchmark.service.js";
+import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
 
 // Stub adapter registry to avoid pulling in the real (stubbed) adapters'
 // buildCommand / paramsSchema implementations.
@@ -44,16 +44,15 @@ function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
   return { get: vi.fn((k: string) => merged[k]) } as unknown as ConfigService;
 }
 
-function makeRunRow(over: Partial<RunWithRelations> = {}): RunWithRelations {
-  const base: Partial<RunWithRelations> = {
-    id: "r1",
+function makeBenchmarkRow(over: Partial<BenchmarkWithRelations> = {}): BenchmarkWithRelations {
+  const base: Partial<BenchmarkWithRelations> = {
+    id: "b1",
     userId: "u1",
     connectionId: "c1",
     connection: { id: "c1", name: "conn" },
-    kind: "benchmark",
+    scenario: "inference",
     tool: "guidellm",
-    scenario: {},
-    mode: "fixed",
+    toolVersion: null,
     driverKind: "local",
     name: "smoke",
     description: null,
@@ -66,8 +65,7 @@ function makeRunRow(over: Partial<RunWithRelations> = {}): RunWithRelations {
     summaryMetrics: null,
     serverMetrics: null,
     templateId: null,
-    templateVersion: null,
-    parentRunId: null,
+    parentBenchmarkId: null,
     baselineId: null,
     baselineFor: null,
     logs: null,
@@ -75,43 +73,43 @@ function makeRunRow(over: Partial<RunWithRelations> = {}): RunWithRelations {
     startedAt: null,
     completedAt: null,
   };
-  return { ...base, ...over } as RunWithRelations;
+  return { ...base, ...over } as BenchmarkWithRelations;
 }
 
 class MockRepo {
-  rows = new Map<string, RunWithRelations>();
+  rows = new Map<string, BenchmarkWithRelations>();
   countResult = 0;
-  setup(row: RunWithRelations) {
+  setup(row: BenchmarkWithRelations) {
     this.rows.set(row.id, row);
   }
   findById = vi.fn(async (id: string) => this.rows.get(id) ?? null);
   list = vi.fn(async () => ({ items: [...this.rows.values()], nextCursor: null }));
   create = vi.fn(async (input: { userId: string; name: string; tool: string }) => {
-    const row = makeRunRow({
+    const row = makeBenchmarkRow({
       id: `gen-${this.rows.size + 1}`,
       userId: input.userId,
       name: input.name,
-      tool: input.tool as RunWithRelations["tool"],
+      tool: input.tool as BenchmarkWithRelations["tool"],
     });
     this.rows.set(row.id, row);
-    return row as unknown as PrismaRun;
+    return row as unknown as PrismaBenchmark;
   });
   update = vi.fn(async (id: string, patch: Record<string, unknown>) => {
-    const cur = this.rows.get(id) as RunWithRelations | undefined;
+    const cur = this.rows.get(id) as BenchmarkWithRelations | undefined;
     if (!cur) throw new Error("not found");
-    const next = { ...cur, ...patch } as RunWithRelations;
+    const next = { ...cur, ...patch } as BenchmarkWithRelations;
     this.rows.set(id, next);
-    return next as unknown as PrismaRun;
+    return next as unknown as PrismaBenchmark;
   });
   delete = vi.fn(async (id: string) => {
     const cur = this.rows.get(id);
     this.rows.delete(id);
-    return cur as unknown as PrismaRun;
+    return cur as unknown as PrismaBenchmark;
   });
   countActiveByName = vi.fn(async (_u: string, _n: string) => this.countResult);
 }
 
-const mockDriver: RunExecutionDriver = {
+const mockDriver: BenchmarkExecutionDriver = {
   start: vi.fn(async () => ({ handle: "subprocess:1234" })),
   cancel: vi.fn(async () => undefined),
   cleanup: vi.fn(async () => undefined),
@@ -132,17 +130,17 @@ const mockConnections: ConnectionService = {
 } as unknown as ConnectionService;
 
 function build(repo: MockRepo, configOverrides?: Record<string, unknown>) {
-  return new RunService(
-    repo as unknown as RunRepository,
+  return new BenchmarkService(
+    repo as unknown as BenchmarkRepository,
     mockDriver,
     mockConfig(configOverrides) as unknown as ConfigService<typeof ENV_DEFAULTS, true>,
     mockConnections,
   );
 }
 
-describe("RunService.findById / list", () => {
+describe("BenchmarkService.findById / list", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -151,10 +149,10 @@ describe("RunService.findById / list", () => {
   });
 
   it("findById returns ISO-stringified row", async () => {
-    repo.setup(makeRunRow({ id: "r1" }));
-    const dto = await svc.findById("r1");
+    repo.setup(makeBenchmarkRow({ id: "b1" }));
+    const dto = await svc.findById("b1");
     expect(typeof dto?.createdAt).toBe("string");
-    expect(dto?.id).toBe("r1");
+    expect(dto?.id).toBe("b1");
   });
 
   it("findByIdOrFail throws when missing", async () => {
@@ -162,14 +160,14 @@ describe("RunService.findById / list", () => {
   });
 
   it("findByIdOrFail throws when user mismatch", async () => {
-    repo.setup(makeRunRow({ id: "r1", userId: "u1" }));
-    await expect(svc.findByIdOrFail("r1", "other")).rejects.toThrow(NotFoundException);
+    repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1" }));
+    await expect(svc.findByIdOrFail("b1", "other")).rejects.toThrow(NotFoundException);
   });
 });
 
-describe("RunService.create", () => {
+describe("BenchmarkService.create", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -177,10 +175,10 @@ describe("RunService.create", () => {
     vi.clearAllMocks();
   });
 
-  it("creates → starts and returns the started Run", async () => {
+  it("creates → starts and returns the started Benchmark", async () => {
     const dto = await svc.create("u1", {
       tool: "guidellm",
-      kind: "benchmark",
+      scenario: "inference",
       connectionId: "c1",
       name: "smoke",
       params: {},
@@ -191,12 +189,12 @@ describe("RunService.create", () => {
     expect(dto.driverHandle).toBe("subprocess:1234");
   });
 
-  it("throws ConflictException when an active run with the same name exists", async () => {
+  it("throws ConflictException when an active benchmark with the same name exists", async () => {
     repo.countResult = 1;
     await expect(
       svc.create("u1", {
         tool: "guidellm",
-        kind: "benchmark",
+        scenario: "inference",
         connectionId: "c1",
         name: "smoke",
         params: {},
@@ -206,9 +204,9 @@ describe("RunService.create", () => {
   });
 });
 
-describe("RunService.cancel", () => {
+describe("BenchmarkService.cancel", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -216,29 +214,31 @@ describe("RunService.cancel", () => {
     vi.clearAllMocks();
   });
 
-  it("marks run as canceled and calls driver.cancel when handle exists", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "running", driverHandle: "subprocess:1234" }));
-    const dto = await svc.cancel("r1", "u1");
+  it("marks benchmark as canceled and calls driver.cancel when handle exists", async () => {
+    repo.setup(
+      makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }),
+    );
+    const dto = await svc.cancel("b1", "u1");
     expect(mockDriver.cancel).toHaveBeenCalledWith("subprocess:1234");
     expect(dto.status).toBe("canceled");
     expect(dto.completedAt).not.toBeNull();
   });
 
   it("does NOT call driver.cancel when status is pending", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "pending", driverHandle: null }));
-    await svc.cancel("r1", "u1");
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "pending", driverHandle: null }));
+    await svc.cancel("b1", "u1");
     expect(mockDriver.cancel).not.toHaveBeenCalled();
   });
 
-  it("throws BadRequestException when run is already terminal", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "completed" }));
-    await expect(svc.cancel("r1", "u1")).rejects.toThrow(BadRequestException);
+  it("throws BadRequestException when benchmark is already terminal", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed" }));
+    await expect(svc.cancel("b1", "u1")).rejects.toThrow(BadRequestException);
   });
 });
 
-describe("RunService.delete", () => {
+describe("BenchmarkService.delete", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -246,21 +246,21 @@ describe("RunService.delete", () => {
     vi.clearAllMocks();
   });
 
-  it("deletes a terminal run", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "completed" }));
-    await svc.delete("r1", "u1");
-    expect(repo.delete).toHaveBeenCalledWith("r1");
+  it("deletes a terminal benchmark", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed" }));
+    await svc.delete("b1", "u1");
+    expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 
-  it("throws ConflictException when run is not terminal", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "running" }));
-    await expect(svc.delete("r1", "u1")).rejects.toThrow(ConflictException);
+  it("throws ConflictException when benchmark is not terminal", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "running" }));
+    await expect(svc.delete("b1", "u1")).rejects.toThrow(ConflictException);
   });
 });
 
-describe("RunService.create — failure paths", () => {
+describe("BenchmarkService.create — failure paths", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -290,7 +290,7 @@ describe("RunService.create — failure paths", () => {
       await expect(
         svc.create("u1", {
           tool: "guidellm",
-          kind: "benchmark",
+          scenario: "inference",
           connectionId: "c1",
           name: "smoke",
           params: { bad: true },
@@ -303,9 +303,9 @@ describe("RunService.create — failure paths", () => {
   });
 });
 
-describe("RunService.start — failure path", () => {
+describe("BenchmarkService.start — failure path", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -313,20 +313,22 @@ describe("RunService.start — failure path", () => {
     vi.clearAllMocks();
   });
 
-  it("marks run as failed when driver.start throws and re-raises", async () => {
-    repo.setup(makeRunRow({ id: "r1", userId: "u1", connectionId: "c1", status: "pending" }));
+  it("marks benchmark as failed when driver.start throws and re-raises", async () => {
+    repo.setup(
+      makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }),
+    );
     (mockDriver.start as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
-    await expect(svc.start("r1")).rejects.toThrow(/boom/);
-    const row = await repo.findById("r1");
+    await expect(svc.start("b1")).rejects.toThrow(/boom/);
+    const row = await repo.findById("b1");
     expect(row?.status).toBe("failed");
     expect(row?.statusMessage).toContain("boom");
     expect(row?.completedAt).not.toBeNull();
   });
 });
 
-describe("RunService.cancel — driver-error path", () => {
+describe("BenchmarkService.cancel — driver-error path", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -335,19 +337,21 @@ describe("RunService.cancel — driver-error path", () => {
   });
 
   it("re-raises driver errors and leaves row in its prior status", async () => {
-    repo.setup(makeRunRow({ id: "r1", status: "running", driverHandle: "subprocess:1234" }));
+    repo.setup(
+      makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }),
+    );
     (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("apiserver flake"),
     );
-    await expect(svc.cancel("r1", "u1")).rejects.toThrow(/apiserver flake/);
-    const row = await repo.findById("r1");
+    await expect(svc.cancel("b1", "u1")).rejects.toThrow(/apiserver flake/);
+    const row = await repo.findById("b1");
     expect(row?.status).toBe("running"); // NOT canceled
   });
 });
 
-describe("RunService.start — callback TTL", () => {
+describe("BenchmarkService.start — callback TTL", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -383,12 +387,14 @@ describe("RunService.start — callback TTL", () => {
     const signSpy = vi.spyOn(hmacToken, "signCallbackToken");
 
     try {
-      repo.setup(makeRunRow({ id: "r1", userId: "u1", connectionId: "c1", status: "pending" }));
-      await svc.start("r1");
+      repo.setup(
+        makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }),
+      );
+      await svc.start("b1");
 
       // adapter returns 7200; CALLBACK_TTL_SLACK_SECONDS = 15 * 60 = 900.
       // Expected ttl = 7200 + 900 = 8100.
-      expect(signSpy).toHaveBeenCalledWith("r1", expect.any(Buffer), 8100);
+      expect(signSpy).toHaveBeenCalledWith("b1", expect.any(Buffer), 8100);
     } finally {
       signSpy.mockRestore();
       (adapters as { byTool: typeof orig }).byTool = orig;
@@ -398,7 +404,7 @@ describe("RunService.start — callback TTL", () => {
 
 describe("admin elevation (userId === undefined)", () => {
   let repo: MockRepo;
-  let svc: RunService;
+  let svc: BenchmarkService;
 
   beforeEach(() => {
     repo = new MockRepo();
@@ -407,42 +413,43 @@ describe("admin elevation (userId === undefined)", () => {
   });
 
   it("cancel succeeds across user boundaries when userId is undefined", async () => {
-    // run owned by "owner" — elevation caller passes undefined
+    // benchmark owned by "owner" — elevation caller passes undefined
     repo.setup(
-      makeRunRow({
-        id: "r-elev-cancel",
+      makeBenchmarkRow({
+        id: "b-elev-cancel",
         userId: "owner",
         status: "running",
         driverHandle: "subprocess:elev",
       }),
     );
-    const dto = await svc.cancel("r-elev-cancel", undefined);
+    const dto = await svc.cancel("b-elev-cancel", undefined);
     expect(dto.status).toBe("canceled");
   });
 
   it("delete succeeds across user boundaries when userId is undefined", async () => {
-    repo.setup(makeRunRow({ id: "r-elev-delete", userId: "owner", status: "completed" }));
-    await svc.delete("r-elev-delete", undefined);
+    repo.setup(makeBenchmarkRow({ id: "b-elev-delete", userId: "owner", status: "completed" }));
+    await svc.delete("b-elev-delete", undefined);
     // Row should be gone from the mock repo
-    const after = await repo.findById("r-elev-delete");
+    const after = await repo.findById("b-elev-delete");
     expect(after).toBeNull();
   });
 
-  it("delete still blocked by FK when target run is the canonical run of a baseline", async () => {
-    repo.setup(makeRunRow({ id: "r-elev-baseline", userId: "owner", status: "completed" }));
+  it("delete still blocked by FK when target benchmark is the canonical benchmark of a baseline", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b-elev-baseline", userId: "owner", status: "completed" }));
     // Simulate the Prisma onDelete: Restrict FK violation (P2003) that the real
-    // repo.delete would raise when a Baseline references this run.
+    // repo.delete would raise when a Baseline references this benchmark.
     const fkErr = new Prisma.PrismaClientKnownRequestError(
-      "Foreign key constraint failed on the field: `baselines_run_id_fkey`",
+      "Foreign key constraint failed on the field: `baselines_benchmark_id_fkey`",
       { code: "P2003", clientVersion: "x" },
     );
     repo.delete.mockRejectedValueOnce(fkErr);
 
-    // Even with admin elevation (userId=undefined), Baseline.run onDelete:Restrict
-    // surfaces as a Prisma P2003 error (FK violation) — service must not swallow it.
-    await expect(svc.delete("r-elev-baseline", undefined)).rejects.toThrow();
+    // Even with admin elevation (userId=undefined), Baseline.benchmark
+    // onDelete:Restrict surfaces as a Prisma P2003 error (FK violation) — the
+    // service must not swallow it.
+    await expect(svc.delete("b-elev-baseline", undefined)).rejects.toThrow();
     // Row is still in the mock repo (delete was rejected)
-    const stillThere = await repo.findById("r-elev-baseline");
+    const stillThere = await repo.findById("b-elev-baseline");
     expect(stillThere).not.toBeNull();
   });
 });

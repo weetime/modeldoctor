@@ -2,7 +2,7 @@ import type { BatchV1Api, CoreV1Api } from "@kubernetes/client-node";
 import { Logger } from "@nestjs/common";
 import type {
   RunExecutionContext,
-  RunExecutionDriver,
+  BenchmarkExecutionDriver,
   RunExecutionHandle,
 } from "./execution-driver.interface.js";
 import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
@@ -12,7 +12,7 @@ export interface K8sJobDriverOpts {
   apis: { batch: BatchV1Api; core: CoreV1Api };
 }
 
-export class K8sJobDriver implements RunExecutionDriver {
+export class K8sJobDriver implements BenchmarkExecutionDriver {
   private readonly log = new Logger(K8sJobDriver.name);
   private readonly namespace: string;
   private readonly batch: BatchV1Api;
@@ -102,7 +102,7 @@ export class K8sJobDriver implements RunExecutionDriver {
       // .response?.statusCode); 404 means the Job is already gone, which
       // is an idempotent cancel — return silently. Anything else is a
       // real failure (e.g. apiserver flake, RBAC) and must propagate so
-      // RunService doesn't mark the cancel as succeeded.
+      // BenchmarkService doesn't mark the cancel as succeeded.
       const status =
         (e as { statusCode?: number; response?: { statusCode?: number } }).response?.statusCode ??
         (e as { statusCode?: number }).statusCode;

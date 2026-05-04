@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
-import { RunChartsService } from "./run-charts.service.js";
+import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 
 // Project convention: use CJS __dirname (apps/api uses module: commonjs).
 // See apps/api/src/integrations/probes/asr.ts for the same pattern.
@@ -21,15 +21,17 @@ function makeRow(tool: string, files: Record<string, string> | null) {
   } as const;
 }
 
-describe("RunChartsService", () => {
-  const svc = new RunChartsService();
+describe("BenchmarkChartsService", () => {
+  const svc = new BenchmarkChartsService();
 
   describe("guidellm", () => {
     it("extracts CDF samples in milliseconds + 30-bucket TTFT histogram", () => {
       const result = svc.extract(makeRow("guidellm", { report: guidellmFile }));
       expect(result.latencyCdf?.samples).toEqual([12, 15, 18, 20, 25]);
       expect(result.ttftHistogram?.buckets).toHaveLength(30);
-      const totalCount = result.ttftHistogram?.buckets.reduce((s, b) => s + b.count, 0) ?? 0;
+      const totalCount =
+        result.ttftHistogram?.buckets.reduce((s: number, b: { count: number }) => s + b.count, 0) ??
+        0;
       expect(totalCount).toBe(5);
       // Buckets should span min..max of TTFT samples (100..200)
       const first = result.ttftHistogram?.buckets[0];

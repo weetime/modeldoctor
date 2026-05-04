@@ -1,7 +1,7 @@
 import type { ConfigService } from "@nestjs/config";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../config/env.schema.js";
-import { createRunDriver, imageForTool } from "./run-driver.factory.js";
+import { createBenchmarkDriver, imageForTool } from "./benchmark-driver.factory.js";
 import { SubprocessDriver } from "./subprocess-driver.js";
 
 function mockConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
@@ -32,15 +32,15 @@ describe("imageForTool", () => {
   });
 });
 
-describe("createRunDriver", () => {
+describe("createBenchmarkDriver", () => {
   it("builds a SubprocessDriver when BENCHMARK_DRIVER=subprocess", async () => {
     const cfg = mockConfig({ BENCHMARK_DRIVER: "subprocess" });
-    const d = await createRunDriver(cfg);
+    const d = await createBenchmarkDriver(cfg);
     expect(d).toBeInstanceOf(SubprocessDriver);
   });
 });
 
-describe("createRunDriver k8s branch", () => {
+describe("createBenchmarkDriver k8s branch", () => {
   it("builds a K8sJobDriver when BENCHMARK_DRIVER=k8s (via __test_kc_loader__)", async () => {
     const cfg = mockConfig({ BENCHMARK_DRIVER: "k8s", BENCHMARK_K8S_NAMESPACE: "ns-x" });
     // Stub the lazy k8s import so the test doesn't pull in the real client.
@@ -55,7 +55,7 @@ describe("createRunDriver k8s branch", () => {
     };
     (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__ = () => fakeK8s;
     try {
-      const d = await createRunDriver(cfg);
+      const d = await createBenchmarkDriver(cfg);
       const { K8sJobDriver } = await import("./k8s-job-driver.js");
       expect(d).toBeInstanceOf(K8sJobDriver);
     } finally {
@@ -65,6 +65,6 @@ describe("createRunDriver k8s branch", () => {
 
   it("throws on unknown BENCHMARK_DRIVER value", async () => {
     const cfg = mockConfig({ BENCHMARK_DRIVER: "wat" as never });
-    await expect(createRunDriver(cfg)).rejects.toThrow(/Unknown BENCHMARK_DRIVER/);
+    await expect(createBenchmarkDriver(cfg)).rejects.toThrow(/Unknown BENCHMARK_DRIVER/);
   });
 });

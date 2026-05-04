@@ -1,11 +1,11 @@
 import {
-  type CreateRunRequest,
-  type ListRunsQuery,
-  type ListRunsResponse,
-  type Run,
-  type RunChartsResponse,
-  createRunRequestSchema,
-  listRunsQuerySchema,
+  type Benchmark,
+  type BenchmarkChartsResponse,
+  type CreateBenchmarkRequest,
+  type ListBenchmarksQuery,
+  type ListBenchmarksResponse,
+  createBenchmarkRequestSchema,
+  listBenchmarksQuerySchema,
 } from "@modeldoctor/contracts";
 import {
   Body,
@@ -24,25 +24,25 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
-import { RunChartsService } from "./run-charts.service.js";
-import { RunService } from "./run.service.js";
+import { BenchmarkChartsService } from "./benchmark-charts.service.js";
+import { BenchmarkService } from "./benchmark.service.js";
 
-@Controller("runs")
+@Controller("benchmarks")
 @UseGuards(JwtAuthGuard)
-export class RunController {
+export class BenchmarkController {
   constructor(
-    private readonly service: RunService,
-    private readonly charts: RunChartsService,
+    private readonly service: BenchmarkService,
+    private readonly charts: BenchmarkChartsService,
   ) {}
 
   @Get()
   async list(
     @CurrentUser() user: JwtPayload,
-    @Query(new ZodValidationPipe(listRunsQuerySchema)) query: ListRunsQuery,
-  ): Promise<ListRunsResponse> {
+    @Query(new ZodValidationPipe(listBenchmarksQuerySchema)) query: ListBenchmarksQuery,
+  ): Promise<ListBenchmarksResponse> {
     if (query.scope === "all" && !user.roles.includes("admin")) {
       throw new ForbiddenException({
-        code: "RUN_SCOPE_FORBIDDEN",
+        code: "BENCHMARK_SCOPE_FORBIDDEN",
         message: "admin role required for scope=all",
       });
     }
@@ -50,20 +50,20 @@ export class RunController {
   }
 
   @Get(":id")
-  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Run> {
+  detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
     return this.service.findByIdOrFail(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
-    @Body(new ZodValidationPipe(createRunRequestSchema)) body: CreateRunRequest,
-  ): Promise<Run> {
+    @Body(new ZodValidationPipe(createBenchmarkRequestSchema)) body: CreateBenchmarkRequest,
+  ): Promise<Benchmark> {
     return this.service.create(user.sub, body);
   }
 
   @Post(":id/cancel")
-  cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Run> {
+  cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
     return this.service.cancel(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
@@ -78,17 +78,17 @@ export class RunController {
   async getCharts(
     @CurrentUser() user: JwtPayload,
     @Param("id") id: string,
-  ): Promise<RunChartsResponse> {
+  ): Promise<BenchmarkChartsResponse> {
     // findByIdOrFail enforces ownership + throws 404 on missing.
-    const run = await this.service.findByIdOrFail(
+    const benchmark = await this.service.findByIdOrFail(
       id,
       user.roles.includes("admin") ? undefined : user.sub,
     );
     return this.charts.extract({
-      id: run.id,
-      tool: run.tool,
-      status: run.status,
-      rawOutput: run.rawOutput,
+      id: benchmark.id,
+      tool: benchmark.tool,
+      status: benchmark.status,
+      rawOutput: benchmark.rawOutput,
     });
   }
 }

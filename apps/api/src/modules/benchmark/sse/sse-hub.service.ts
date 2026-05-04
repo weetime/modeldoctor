@@ -19,7 +19,7 @@ export class SseHub {
     return s.asObservable();
   }
 
-  /** Drop a runId's stream (called from RunService on terminal state). */
+  /** Drop a runId's stream (called from BenchmarkService on terminal state). */
   close(runId: string): void {
     const s = this.streams.get(runId);
     if (!s) return;

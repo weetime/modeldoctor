@@ -1,21 +1,21 @@
-import type { Run as PrismaRun } from "@prisma/client";
+import type { Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SseHub } from "../sse/sse-hub.service.js";
-import { RunCallbackController } from "./run-callback.controller.js";
+import { BenchmarkCallbackController } from "./benchmark-callback.controller.js";
 
-class MockRunRepo {
-  private rows = new Map<string, Partial<PrismaRun>>();
-  setup(id: string, row: Partial<PrismaRun>) {
+class MockBenchmarkRepo {
+  private rows = new Map<string, Partial<PrismaBenchmark>>();
+  setup(id: string, row: Partial<PrismaBenchmark>) {
     this.rows.set(id, row);
   }
   async findById(id: string) {
-    return (this.rows.get(id) as PrismaRun | undefined) ?? null;
+    return (this.rows.get(id) as PrismaBenchmark | undefined) ?? null;
   }
   async update(id: string, patch: Record<string, unknown>) {
     const cur = this.rows.get(id) ?? {};
     const next = { ...cur, ...patch };
     this.rows.set(id, next);
-    return next as PrismaRun;
+    return next as PrismaBenchmark;
   }
 }
 
@@ -44,15 +44,15 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
   };
 });
 
-describe("RunCallbackController", () => {
-  let repo: MockRunRepo;
+describe("BenchmarkCallbackController", () => {
+  let repo: MockBenchmarkRepo;
   let sse: SseHub;
-  let ctrl: RunCallbackController;
+  let ctrl: BenchmarkCallbackController;
 
   beforeEach(() => {
-    repo = new MockRunRepo();
+    repo = new MockBenchmarkRepo();
     sse = new SseHub();
-    ctrl = new RunCallbackController(repo as never, sse);
+    ctrl = new BenchmarkCallbackController(repo as never, sse);
   });
 
   it("/state running marks the row as running", async () => {
