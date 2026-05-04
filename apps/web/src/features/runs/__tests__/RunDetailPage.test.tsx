@@ -21,6 +21,26 @@ vi.mock("@/lib/api-client", () => {
   return { ApiError, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn() } };
 });
 
+// ECharts uses canvas APIs not present in jsdom; stub the chart components
+// so the new RunChartsSection can render in this page test.
+vi.mock("@/components/charts", () => ({
+  LatencyCDF: (props: { ariaLabel?: string; series: unknown[] }) => (
+    <div
+      data-testid="latency-cdf"
+      data-aria={props.ariaLabel}
+      data-series-count={props.series.length}
+    />
+  ),
+  TTFTHistogram: (props: { ariaLabel?: string; series: unknown[] }) => (
+    <div
+      data-testid="ttft-histogram"
+      data-aria={props.ariaLabel}
+      data-series-count={props.series.length}
+    />
+  ),
+  assignRunColors: () => ({}),
+}));
+
 import { api } from "@/lib/api-client";
 
 function makeRun(overrides: Partial<Run> = {}): Run {
@@ -338,21 +358,45 @@ describe("RunDetailPage", () => {
         .mockResolvedValueOnce(
           makeRun({ status: "running", summaryMetrics: null, rawOutput: null }),
         )
-        .mockResolvedValueOnce(makeRun({ status: "completed" }));
+        .mockResolvedValueOnce(makeRun({ status: "completed" }))
+        // Once the run flips to terminal, RunChartsSection mounts and fires a
+        // single GET /api/runs/:id/charts request.
+        .mockResolvedValueOnce({ latencyCdf: null, ttftHistogram: null });
       render(<RunDetailPage />, { wrapper: Wrapper });
       // Initial fetch
       await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(1));
       // Advance 2s — should fetch again (still running)
       await vi.advanceTimersByTimeAsync(2_000);
       await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(2));
-      // Advance 2s more — third fetch returns terminal
+      // Advance 2s more — third fetch returns terminal, then RunChartsSection
+      // fires a fourth call (the /charts endpoint).
       await vi.advanceTimersByTimeAsync(2_000);
-      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(3));
-      // After terminal, advancing 4s must NOT trigger another fetch
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(4));
+      // After terminal, advancing 4s must NOT trigger another run-detail poll
+      // (the /charts response is cached by react-query).
       await vi.advanceTimersByTimeAsync(4_000);
-      expect(get).toHaveBeenCalledTimes(3);
+      expect(get).toHaveBeenCalledTimes(4);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("mounts RunChartsSection when status is terminal", async () => {
+    // First call: GET /api/runs/:id (run detail). Second: GET /api/runs/:id/charts.
+    vi.mocked(api.get)
+      .mockResolvedValueOnce(makeRun({ status: "completed" }))
+      .mockResolvedValueOnce({
+        latencyCdf: { samples: [10, 20] },
+        ttftHistogram: { buckets: [{ lower: 0, upper: 10, count: 2 }] },
+      });
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText(/Distributions|分布图/i)).toBeInTheDocument());
+  });
+
+  it("does NOT mount RunChartsSection when status is non-terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "running" }));
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Running…|运行中…/i);
+    expect(screen.queryByText(/Distributions|分布图/i)).not.toBeInTheDocument();
   });
 });

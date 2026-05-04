@@ -36,6 +36,7 @@ import { isTerminalStatus, runKeys, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
 import { GuidellmReportView } from "./reports/GuidellmReportView";
+import { RunChartsSection } from "./reports/RunChartsSection";
 import { UnknownReportView } from "./reports/UnknownReportView";
 import { VegetaReportView } from "./reports/VegetaReportView";
 
@@ -224,6 +225,10 @@ export function RunDetailPage() {
             <section>
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
               <ReportSection metrics={run.summaryMetrics} />
+            </section>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
+              <RunChartsSection runId={run.id} tool={run.tool} />
             </section>
             <section>
               <RunDetailRawOutput
