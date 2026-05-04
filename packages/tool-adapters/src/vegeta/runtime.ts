@@ -55,7 +55,7 @@ export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommand
   // vegeta's HTTP-format target file: "METHOD URL\nHeaders\n@bodyfile"
   const targetsTxt = `POST ${url}\nContent-Type: application/json\nAuthorization: Bearer ${connection.apiKey}${extraHeaders}\n@request.json`;
 
-  const cmd = `cat targets.txt | vegeta attack -rate=${params.rate} -duration=${params.duration}s | tee attack.bin | vegeta report > report.txt`;
+  const cmd = `cat targets.txt | vegeta attack -rate=${params.rate} -duration=${params.duration}s | tee attack.bin | vegeta report > report.txt && vegeta encode -to=json < attack.bin > attack.ndjson`;
 
   return {
     argv: ["/bin/sh", "-c", cmd],
@@ -68,6 +68,7 @@ export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommand
     outputFiles: {
       report: "report.txt",
       attack: "attack.bin",
+      latencies: "attack.ndjson",
     },
   };
 }

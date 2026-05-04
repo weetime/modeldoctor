@@ -4,6 +4,7 @@ import type {
   ListRunsQuery,
   ListRunsResponse,
   Run,
+  RunChartsResponse,
 } from "@modeldoctor/contracts";
 
 function buildListQuery(q: Partial<ListRunsQuery>): string {
@@ -30,4 +31,5 @@ export const runApi = {
   create: (body: CreateRunRequest) => api.post<Run>("/api/runs", body),
   cancel: (id: string) => api.post<Run>(`/api/runs/${id}/cancel`, {}),
   delete: (id: string) => api.del<void>(`/api/runs/${id}`),
+  getCharts: (id: string) => api.get<RunChartsResponse>(`/api/runs/${id}/charts`),
 };

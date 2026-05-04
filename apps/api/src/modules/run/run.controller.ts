@@ -3,6 +3,7 @@ import {
   type ListRunsQuery,
   type ListRunsResponse,
   type Run,
+  type RunChartsResponse,
   createRunRequestSchema,
   listRunsQuerySchema,
 } from "@modeldoctor/contracts";
@@ -12,6 +13,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Header,
   HttpCode,
   Param,
   Post,
@@ -22,12 +24,16 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { RunChartsService } from "./run-charts.service.js";
 import { RunService } from "./run.service.js";
 
 @Controller("runs")
 @UseGuards(JwtAuthGuard)
 export class RunController {
-  constructor(private readonly service: RunService) {}
+  constructor(
+    private readonly service: RunService,
+    private readonly charts: RunChartsService,
+  ) {}
 
   @Get()
   async list(
@@ -65,5 +71,24 @@ export class RunController {
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
+  @Get(":id/charts")
+  @Header("Cache-Control", "private, max-age=86400")
+  async getCharts(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<RunChartsResponse> {
+    // findByIdOrFail enforces ownership + throws 404 on missing.
+    const run = await this.service.findByIdOrFail(
+      id,
+      user.roles.includes("admin") ? undefined : user.sub,
+    );
+    return this.charts.extract({
+      id: run.id,
+      tool: run.tool,
+      status: run.status,
+      rawOutput: run.rawOutput,
+    });
   }
 }

@@ -1,0 +1,5 @@
+{"attack":"","seq":0,"code":200,"timestamp":"2026-05-04T00:00:00Z","latency":12000000,"bytes_out":50,"bytes_in":120,"error":"","body":""}
+{"attack":"","seq":1,"code":200,"timestamp":"2026-05-04T00:00:00.1Z","latency":15000000,"bytes_out":50,"bytes_in":120,"error":"","body":""}
+{"attack":"","seq":2,"code":200,"timestamp":"2026-05-04T00:00:00.2Z","latency":18500000,"bytes_out":50,"bytes_in":120,"error":"","body":""}
+{"attack":"","seq":3,"code":500,"timestamp":"2026-05-04T00:00:00.3Z","latency":42000000,"bytes_out":50,"bytes_in":80,"error":"500","body":""}
+{"attack":"","seq":4,"code":200,"timestamp":"2026-05-04T00:00:00.4Z","latency":11000000,"bytes_out":50,"bytes_in":120,"error":"","body":""}

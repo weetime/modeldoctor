@@ -143,6 +143,13 @@
       "pending": "Waiting to start…",
       "title": "Running…",
       "elapsed": "{{sec}}s elapsed"
+    },
+    "charts": {
+      "title": "Distributions",
+      "latencyCdfTitle": "Latency CDF",
+      "ttftHistogramTitle": "TTFT Histogram",
+      "empty": "No chart data",
+      "loadError": "Failed to load charts"
     }
   }
 }

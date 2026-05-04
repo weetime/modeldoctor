@@ -161,3 +161,26 @@ export const runFinishCallbackSchema = z.object({
   message: z.string().max(2048).optional(),
 });
 export type RunFinishCallback = z.infer<typeof runFinishCallbackSchema>;
+
+// ============================================================
+// Chart data response (F3 of #88)
+// Returned by GET /api/runs/:id/charts. Server derives these from
+// rawOutput.files.* on demand; not persisted.
+// ============================================================
+
+export const histogramBucketSchema = z.object({
+  lower: z.number(),
+  upper: z.number(),
+  count: z.number().int().nonnegative(),
+});
+export type HistogramBucket = z.infer<typeof histogramBucketSchema>;
+
+export const runChartsResponseSchema = z.object({
+  // Latency samples in milliseconds. Null when the source file is missing,
+  // unparseable, or the tool has no per-request latency concept.
+  latencyCdf: z.object({ samples: z.array(z.number()) }).nullable(),
+  // TTFT bucket counts, equal-width bins in milliseconds. Null for tools
+  // without a TTFT concept (vegeta) or when extraction fails.
+  ttftHistogram: z.object({ buckets: z.array(histogramBucketSchema) }).nullable(),
+});
+export type RunChartsResponse = z.infer<typeof runChartsResponseSchema>;

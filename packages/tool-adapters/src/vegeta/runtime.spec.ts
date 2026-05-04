@@ -60,6 +60,26 @@ describe("vegeta.buildCommand", () => {
     expect(r.outputFiles.report).toBe("report.txt");
     expect(r.outputFiles.attack).toBe("attack.bin");
   });
+
+  it("declares an attack.ndjson output file for per-request latencies (F3 #88)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: { apiType: "chat", rate: 10, duration: 30 },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.outputFiles.latencies).toBe("attack.ndjson");
+  });
+
+  it("appends 'vegeta encode -to=json' to the shell pipeline (F3 #88)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: { apiType: "chat", rate: 10, duration: 30 },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.argv[2]).toContain("vegeta encode -to=json < attack.bin > attack.ndjson");
+  });
 });
 
 describe("vegeta.parseProgress", () => {
