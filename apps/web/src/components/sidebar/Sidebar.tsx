@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -44,19 +43,7 @@ function ItemRow({ item, t, railCollapsed }: ItemRowProps) {
             />
           ) : null}
           <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-          {railCollapsed ? (
-            item.comingSoon ? (
-              <span
-                aria-hidden
-                className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-warning"
-              />
-            ) : null
-          ) : (
-            <>
-              <span className="flex-1">{label}</span>
-              {item.comingSoon ? <Badge variant="outline">{t("status.comingSoon")}</Badge> : null}
-            </>
-          )}
+          {railCollapsed ? null : <span className="flex-1">{label}</span>}
         </>
       )}
     </NavLink>

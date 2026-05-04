@@ -19,14 +19,14 @@
     "manageConnections": "管理连接",
     "copy": "复制",
     "copied": "已复制",
-    "format": "格式化为 JSON"
+    "format": "格式化为 JSON",
+    "backToBenchmarks": "返回基准测试"
   },
   "status": {
     "idle": "待运行",
     "running": "运行中",
     "pass": "通过",
-    "fail": "失败",
-    "comingSoon": "即将推出"
+    "fail": "失败"
   },
   "theme": {
     "toggle": "切换主题",
@@ -60,11 +60,6 @@
     "newConnection": "+ 新建连接",
     "saved": "已保存到连接「{{name}}」",
     "saveFailed": "保存失败"
-  },
-  "comingSoon": {
-    "title": "敬请期待",
-    "body": "该功能正在开发中。",
-    "backToRuns": "返回 Runs"
   },
   "empty": {
     "noConnections": "尚未创建任何连接",

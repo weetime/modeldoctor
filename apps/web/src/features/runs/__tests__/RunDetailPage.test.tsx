@@ -1,6 +1,7 @@
 import type { Run } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -105,7 +106,7 @@ describe("RunDetailPage", () => {
     err.status = 404;
     vi.mocked(api.get).mockRejectedValueOnce(err);
     render(<RunDetailPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Not found|记录不存在/i)).toBeInTheDocument());
   });
 
   it("renders 'Set as baseline' when run.baselineFor is null", async () => {
@@ -260,5 +261,33 @@ describe("RunDetailPage", () => {
     );
     render(<RunDetailPage />, { wrapper: Wrapper });
     await screen.findByText(/Report shape not recognized/i);
+  });
+
+  it("shows the delete button when the run is terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed" }));
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Delete$|^删除$/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("hides the delete button while the run is still running", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "running" }));
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    await screen.findByText("smoke");
+    expect(screen.queryByRole("button", { name: /^Delete$|^删除$/ })).not.toBeInTheDocument();
+  });
+
+  it("calls DELETE and navigates back to list after confirm", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeRun({ status: "completed" }));
+    vi.mocked(api.del).mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+    render(<RunDetailPage />, { wrapper: Wrapper });
+    const deleteBtn = await screen.findByRole("button", { name: /^Delete$|^删除$/ });
+    await user.click(deleteBtn);
+    const confirm = await screen.findByRole("button", { name: /^Delete$|^确认删除$/ });
+    await user.click(confirm);
+    await waitFor(() => expect(api.del).toHaveBeenCalledWith("/api/runs/r1"));
+    await waitFor(() => expect(screen.getByText("list")).toBeInTheDocument());
   });
 });

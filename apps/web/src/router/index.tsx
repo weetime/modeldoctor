@@ -1,7 +1,6 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
-import { ComingSoonPage } from "@/features/coming-soon/ComingSoonPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
@@ -19,20 +18,7 @@ import { RunDetailPage } from "@/features/runs/RunDetailPage";
 import { RunListPage } from "@/features/runs/RunListPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import { type Activity, GitCompare, HeartPulse, Timer, Zap } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Navigate, type RouteObject } from "react-router-dom";
-
-function ComingSoonRoute({
-  icon,
-  itemKey,
-}: {
-  icon: typeof Activity;
-  itemKey: string;
-}) {
-  const { t } = useTranslation("sidebar");
-  return <ComingSoonPage icon={icon} title={t(`items.${itemKey}`)} />;
-}
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
@@ -47,23 +33,7 @@ export const routes: RouteObject[] = [
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="/runs" replace /> },
-          {
-            path: "soak",
-            element: <ComingSoonRoute icon={Timer} itemKey="soak" />,
-          },
-          {
-            path: "streaming",
-            element: <ComingSoonRoute icon={Zap} itemKey="streaming" />,
-          },
           { path: "e2e", element: <E2ESmokePage /> },
-          {
-            path: "regression",
-            element: <ComingSoonRoute icon={GitCompare} itemKey="regression" />,
-          },
-          {
-            path: "health",
-            element: <ComingSoonRoute icon={HeartPulse} itemKey="health" />,
-          },
           {
             path: "runs",
             element: <RunListPage />,
@@ -83,7 +53,6 @@ export const routes: RouteObject[] = [
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
-          // Dev-only chart QA page; remove in #51 sidebar reorganize.
           { path: "dev/charts", element: <DevChartsPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
