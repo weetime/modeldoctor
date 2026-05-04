@@ -56,7 +56,8 @@
     "open": ""
   },
   "compareButton": "对比 ({{n}})",
-  "compareDisabledTooltip": "多 Run 对比模式与 Diff 引擎尚未实现（见 #88）",
+  "compareDisabledNeedTwo": "至少选 2 个 Run 才能对比",
+  "compareDisabledMixedTools": "对比需要相同 tool（{{summary}}）",
   "empty": {
     "title": "暂无基准测试",
     "filtered": "没有符合筛选条件的记录",
@@ -150,6 +151,46 @@
       "ttftHistogramTitle": "首 token 延迟分布",
       "empty": "暂无图表数据",
       "loadError": "图表加载失败"
+    },
+    "verdict": {
+      "title": "vs 基准",
+      "loading": "加载基准中…",
+      "loadError": "无法加载基准用于对比"
+    }
+  },
+  "compare": {
+    "title": "对比 Run",
+    "subtitle": "{{n}} 个 run · {{tool}}",
+    "back": "返回列表",
+    "baselineLabel": "基准",
+    "baselineNone": "无（不显示徽标）",
+    "baselineMissing": "{{failed}} 个 Run 已无法访问，仅对比剩余 {{n}} 个",
+    "mixedToolsAlert": "对比需要相同 tool。当前选中：{{summary}}",
+    "needTwoEmpty": "从列表选 2 个以上 Run 才能对比",
+    "metricColumnLabel": "指标",
+    "verdict": {
+      "regressed": "退化",
+      "improved": "改善",
+      "unchanged": "不变"
+    },
+    "metricRowLabel": {
+      "ttftMean": "TTFT 平均 (ms)",
+      "ttftP50": "TTFT p50 (ms)",
+      "ttftP95": "TTFT p95 (ms)",
+      "ttftP99": "TTFT p99 (ms)",
+      "itlMean": "ITL 平均 (ms)",
+      "itlP95": "ITL p95 (ms)",
+      "e2eLatencyP50": "E2E 延迟 p50 (ms)",
+      "latencyP95": "延迟 p95 (ms)",
+      "e2eLatencyP99": "E2E 延迟 p99 (ms)",
+      "latencyMin": "延迟最小 (ms)",
+      "latencyMean": "延迟平均 (ms)",
+      "latencyP50": "延迟 p50 (ms)",
+      "latencyP90": "延迟 p90 (ms)",
+      "latencyP99": "延迟 p99 (ms)",
+      "latencyMax": "延迟最大 (ms)",
+      "errorRate": "错误率",
+      "throughput": "吞吐 (req/s)"
     }
   }
 }

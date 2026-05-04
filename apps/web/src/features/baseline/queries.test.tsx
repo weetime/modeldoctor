@@ -16,7 +16,7 @@ vi.mock("@/lib/api-client", () => {
 });
 
 import { ApiError, api } from "@/lib/api-client";
-import { useBaselines, useCreateBaseline, useDeleteBaseline } from "./queries";
+import { useBaselineById, useBaselines, useCreateBaseline, useDeleteBaseline } from "./queries";
 
 function makeWrapper() {
   return ({ children }: { children: ReactNode }) => {
@@ -91,5 +91,42 @@ describe("baseline queries", () => {
       await result.current.mutateAsync("b_1");
     });
     expect(api.del).toHaveBeenCalledWith("/api/baselines/b_1");
+  });
+});
+
+describe("useBaselineById", () => {
+  beforeEach(() => {
+    vi.mocked(api.get).mockReset();
+  });
+
+  it("returns the matching baseline when present in list", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      items: [
+        {
+          id: "b_1",
+          userId: "u",
+          runId: "r_1",
+          name: "anchor",
+          description: null,
+          tags: [],
+          templateId: null,
+          templateVersion: null,
+          active: true,
+          createdAt: "2026-05-01T00:00:00.000Z",
+          updatedAt: "2026-05-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useBaselineById("b_1"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.data?.id).toBe("b_1"));
+    expect(result.current.data?.runId).toBe("r_1");
+  });
+
+  it("returns undefined when id not in list", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({ items: [] });
+    const { result } = renderHook(() => useBaselineById("b_missing"), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 });

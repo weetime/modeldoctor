@@ -13,63 +13,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ListRunsQuery, Run, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
+import type { ListRunsQuery, RunKind, RunStatus, RunTool } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { RunListFilters } from "./RunListFilters";
+import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { runKeys, useRunList } from "./queries";
-
-// `summaryMetrics` is the discriminated union written by tool-adapter
-// `parseFinalReport`: `{ tool, data }` (see
-// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts).
-// vegeta latencies are already normalized to ms by the adapter (NOT ns).
-function readP95(metrics: Run["summaryMetrics"]): number | null {
-  if (!metrics) return null;
-  const m = metrics as { tool?: string; data?: Record<string, unknown> };
-  const data = m.data;
-  if (!data) return null;
-  const fromDist = (key: string): number | null => {
-    const dist = data[key] as { p95?: number } | undefined;
-    return typeof dist?.p95 === "number" ? dist.p95 : null;
-  };
-  switch (m.tool) {
-    case "guidellm":
-      return fromDist("e2eLatency");
-    case "vegeta":
-      return fromDist("latencies");
-    case "genai-perf":
-      return fromDist("requestLatency");
-    default:
-      return null;
-  }
-}
-
-function readErrorRate(metrics: Run["summaryMetrics"]): number | null {
-  if (!metrics) return null;
-  const m = metrics as { tool?: string; data?: Record<string, unknown> };
-  const data = m.data;
-  if (!data) return null;
-  switch (m.tool) {
-    case "guidellm": {
-      const r = data.requests as { total?: number; error?: number } | undefined;
-      if (typeof r?.total !== "number" || typeof r.error !== "number") return null;
-      if (r.total === 0) return null;
-      return r.error / r.total;
-    }
-    case "vegeta": {
-      // success is a percent in [0, 100], not a 0-1 ratio (matches vegeta CLI).
-      const s = data.success;
-      return typeof s === "number" ? 1 - s / 100 : null;
-    }
-    default:
-      // genai-perf schema carries no error/success counts; fall through to —.
-      return null;
-  }
-}
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
   if (n == null) return "—";
@@ -122,6 +75,7 @@ export function RunListPage() {
   }
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   const {
     data,
@@ -134,6 +88,23 @@ export function RunListPage() {
     isFetchingNextPage,
   } = useRunList(query);
   const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.items), [data]);
+
+  // Derive selected-Run tools to gate the Compare button:
+  // - selection size 0 or 1 → disabled (need 2)
+  // - selection ≥2 same tool → enabled
+  // - selection ≥2 mixed tools → disabled (mixed tools tooltip)
+  const selectedTools = useMemo(() => {
+    const tools = new Map<string, number>();
+    for (const id of selected) {
+      const run = items.find((r) => r.id === id);
+      if (!run) continue;
+      tools.set(run.tool, (tools.get(run.tool) ?? 0) + 1);
+    }
+    return tools;
+  }, [selected, items]);
+
+  const compareDisabledReason: "needTwo" | "mixedTools" | null =
+    selected.size < 2 ? "needTwo" : selectedTools.size > 1 ? "mixedTools" : null;
 
   const isFiltered = useMemo(
     () =>
@@ -175,12 +146,29 @@ export function RunListPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" disabled={true}>
+                  <Button
+                    size="sm"
+                    disabled={compareDisabledReason !== null}
+                    onClick={() => {
+                      if (compareDisabledReason !== null) return;
+                      navigate(`/runs/compare?ids=${[...selected].join(",")}`);
+                    }}
+                  >
                     {t("compareButton", { n: selected.size })}
                   </Button>
                 </span>
               </TooltipTrigger>
-              <TooltipContent>{t("compareDisabledTooltip")}</TooltipContent>
+              {compareDisabledReason !== null && (
+                <TooltipContent>
+                  {compareDisabledReason === "needTwo"
+                    ? t("compareDisabledNeedTwo")
+                    : t("compareDisabledMixedTools", {
+                        summary: [...selectedTools.entries()]
+                          .map(([tool, n]) => `${tool} × ${n}`)
+                          .join(" + "),
+                      })}
+                </TooltipContent>
+              )}
             </Tooltip>
             <Button asChild size="sm">
               <Link to="/runs/new">{t("actions.new")}</Link>
@@ -255,7 +243,7 @@ export function RunListPage() {
                     </TableCell>
                     <TableCell>{run.status}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {fmtNum(readP95(run.summaryMetrics))}
+                      {fmtNum(readP95Latency(run.summaryMetrics))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}

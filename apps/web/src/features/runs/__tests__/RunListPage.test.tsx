@@ -110,6 +110,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         <MemoryRouter initialEntries={["/runs"]}>
           <Routes>
             <Route path="/runs" element={children} />
+            <Route path="/runs/compare" element={<div>compare-stub</div>} />
             <Route path="/runs/:id" element={<div>detail</div>} />
           </Routes>
         </MemoryRouter>
@@ -198,31 +199,63 @@ describe("RunListPage", () => {
     expect(compare).toBeDisabled();
   });
 
-  it("selecting two rows keeps compare button disabled (placeholder for #88)", async () => {
-    const twoRuns: ListRunsResponse = {
-      items: [
-        makeRun("r1", "benchmark", "guidellm", "completed"),
-        makeRun("r2", "benchmark", "vegeta", "completed"),
-      ],
-      nextCursor: null,
-    };
-    vi.mocked(api.get).mockResolvedValue(twoRuns);
-    const user = userEvent.setup();
-    render(<RunListPage />, { wrapper: Wrapper });
-    await screen.findByText("guidellm");
-    const checkboxes = screen.getAllByRole("checkbox");
-    await user.click(checkboxes[0]);
-    await user.click(checkboxes[1]);
-    const compare = screen.getByRole("button", { name: /compare/i });
-    // Disabled by spec until multi-run compare mode lands; see #88.
-    expect(compare).toBeDisabled();
-  });
-
   it("renders empty state when there are no runs", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
     render(<RunListPage />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(screen.getByText(/No benchmarks yet|暂无基准测试/i)).toBeInTheDocument(),
     );
+  });
+
+  it("Compare button is disabled with 'need 2' tooltip when fewer than 2 selected", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      items: [makeRun("a", "benchmark", "guidellm", "completed", guidellmMetrics)],
+      nextCursor: null,
+    } satisfies ListRunsResponse);
+    render(<RunListPage />, { wrapper: Wrapper });
+    // Page does not render run.name — wait on the row's checkbox instead.
+    await screen.findByRole("checkbox", { name: /select a/i });
+    const compareBtn = screen.getByRole("button", { name: /Compare \(0\)|对比 \(0\)/i });
+    expect(compareBtn).toBeDisabled();
+  });
+
+  it("Compare button enabled with 2 same-tool selected; click navigates to /runs/compare?ids=", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      items: [
+        makeRun("a", "benchmark", "guidellm", "completed", guidellmMetrics),
+        makeRun("b", "benchmark", "guidellm", "completed", guidellmMetrics),
+      ],
+      nextCursor: null,
+    } satisfies ListRunsResponse);
+    render(<RunListPage />, { wrapper: Wrapper });
+    const checkboxA = await screen.findByRole("checkbox", { name: /select a/i });
+    const checkboxB = screen.getByRole("checkbox", { name: /select b/i });
+    await userEvent.click(checkboxA);
+    await userEvent.click(checkboxB);
+
+    const compareBtn = screen.getByRole("button", { name: /Compare \(2\)|对比 \(2\)/i });
+    expect(compareBtn).not.toBeDisabled();
+    await userEvent.click(compareBtn);
+    // Wrapper has a stub /runs/compare route; assert navigation fired by
+    // verifying we landed there. Full happy-path is covered by
+    // RunComparePage's own tests.
+    await waitFor(() => expect(screen.getByText("compare-stub")).toBeInTheDocument());
+  });
+
+  it("Compare button disabled with mixed-tools tooltip when selection mixes tools", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      items: [
+        makeRun("a", "benchmark", "guidellm", "completed", guidellmMetrics),
+        makeRun("b", "benchmark", "vegeta", "completed", vegetaMetrics),
+      ],
+      nextCursor: null,
+    } satisfies ListRunsResponse);
+    render(<RunListPage />, { wrapper: Wrapper });
+    const checkboxA = await screen.findByRole("checkbox", { name: /select a/i });
+    await userEvent.click(checkboxA);
+    await userEvent.click(screen.getByRole("checkbox", { name: /select b/i }));
+
+    const compareBtn = screen.getByRole("button", { name: /Compare \(2\)|对比 \(2\)/i });
+    expect(compareBtn).toBeDisabled();
   });
 });
