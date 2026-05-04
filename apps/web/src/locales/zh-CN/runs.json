@@ -158,7 +158,7 @@
     "back": "返回列表",
     "baselineLabel": "基准",
     "baselineNone": "无（不显示徽标）",
-    "baselineMissing": "1 个 Run 已无法访问，仅对比剩余 {{n}} 个",
+    "baselineMissing": "{{failed}} 个 Run 已无法访问，仅对比剩余 {{n}} 个",
     "mixedToolsAlert": "对比需要相同 tool。当前选中：{{summary}}",
     "needTwoEmpty": "从列表选 2 个以上 Run 才能对比",
     "metricColumnLabel": "指标",

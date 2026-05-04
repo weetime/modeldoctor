@@ -158,7 +158,7 @@
     "back": "Back to list",
     "baselineLabel": "Baseline",
     "baselineNone": "None (no verdict)",
-    "baselineMissing": "1 Run no longer accessible — comparing the remaining {{n}}",
+    "baselineMissing": "{{failed}} Run(s) no longer accessible — comparing the remaining {{n}}",
     "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
     "needTwoEmpty": "Select 2+ Runs from the list to compare",
     "metricColumnLabel": "Metric",

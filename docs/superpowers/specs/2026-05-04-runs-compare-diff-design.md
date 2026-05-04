@@ -92,7 +92,7 @@ Placed before the `:id` route's children so the literal `compare` segment is mat
 |---|---|
 | `?ids` missing or has 0 elements | `<EmptyState>` "Select 2+ Runs from the list to compare" + Back to list link |
 | `?ids` has exactly 1 element | Same EmptyState, "At least 2 Runs are required" |
-| One of the ids 404s (deleted / cross-user) | Top-of-page Alert "1 Run no longer accessible — comparing the remaining N" + grid renders the rest |
+| One of the ids 404s (deleted / cross-user) | Top-of-page Alert "{{failed}} Run(s) no longer accessible — comparing the remaining N". Grid renders only when ≥2 Runs survive — a single-Run grid carries no comparison value, so when only 1 survives the alert is shown but the grid is hidden (user can use the back link to return to list and re-select) |
 | All Runs are different tools | Top-of-page Alert "Compare requires the same tool. Selected: guidellm × 2 + vegeta × 1." + no grid |
 | `baseline` is not in `ids` | Silently treat as `None` (no Alert; minor edge case from URL editing) |
 
@@ -232,7 +232,7 @@ docs/superpowers/specs/2026-05-04-runs-compare-diff-design.md   # this file
   "back": "Back to list",
   "baselineLabel": "Baseline",
   "baselineNone": "None (no verdict)",
-  "baselineMissing": "1 Run no longer accessible — comparing the remaining {{n}}",
+  "baselineMissing": "{{failed}} Run(s) no longer accessible — comparing the remaining {{n}}",
   "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
   "needTwoEmpty": "Select 2+ Runs from the list to compare",
   "metricRowLabel": {

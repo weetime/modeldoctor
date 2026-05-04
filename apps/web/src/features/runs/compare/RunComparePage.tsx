@@ -27,11 +27,17 @@ export function RunComparePage() {
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   const baselineId = searchParams.get("baseline");
 
+  // Gate fetches at the array level: if the user lands on /runs/compare with
+  // 0 or 1 ids (manual URL edit / shared half-baked link), the empty state
+  // renders below — but useQueries runs unconditionally at the hook level, so
+  // the query.enabled flag must also be false to avoid firing a real GET
+  // before the early-return is reached. See PR review on Task 7.
+  const canFetch = ids.length >= 2;
   const queries = useQueries({
     queries: ids.map((id) => ({
       queryKey: runKeys.detail(id),
       queryFn: () => runApi.get(id),
-      enabled: id.length > 0,
+      enabled: canFetch && id.length > 0,
       retry: false,
     })),
   });
@@ -79,8 +85,11 @@ export function RunComparePage() {
     );
   }
 
+  // Hide the tool name in the subtitle when the selection mixes tools — the
+  // mixed-tools alert below already explains the situation; including a single
+  // tool name in the subtitle would lie about the second-Run tool.
   const subtitle =
-    successfulRuns.length > 0
+    successfulRuns.length > 0 && !isMixed
       ? t("compare.subtitle", { n: successfulRuns.length, tool: successfulRuns[0].tool })
       : "";
 
@@ -102,7 +111,10 @@ export function RunComparePage() {
         {failedCount > 0 && (
           <Alert>
             <AlertDescription>
-              {t("compare.baselineMissing", { n: successfulRuns.length })}
+              {t("compare.baselineMissing", {
+                failed: failedCount,
+                n: successfulRuns.length,
+              })}
             </AlertDescription>
           </Alert>
         )}
