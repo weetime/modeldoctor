@@ -19,7 +19,7 @@ import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { RunListFilters } from "./RunListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { runKeys, useRunList } from "./queries";
@@ -75,6 +75,7 @@ export function RunListPage() {
   }
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   const {
     data,
@@ -87,6 +88,23 @@ export function RunListPage() {
     isFetchingNextPage,
   } = useRunList(query);
   const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.items), [data]);
+
+  // Derive selected-Run tools to gate the Compare button:
+  // - selection size 0 or 1 → disabled (need 2)
+  // - selection ≥2 same tool → enabled
+  // - selection ≥2 mixed tools → disabled (mixed tools tooltip)
+  const selectedTools = useMemo(() => {
+    const tools = new Map<string, number>();
+    for (const id of selected) {
+      const run = items.find((r) => r.id === id);
+      if (!run) continue;
+      tools.set(run.tool, (tools.get(run.tool) ?? 0) + 1);
+    }
+    return tools;
+  }, [selected, items]);
+
+  const compareDisabledReason: "needTwo" | "mixedTools" | null =
+    selected.size < 2 ? "needTwo" : selectedTools.size > 1 ? "mixedTools" : null;
 
   const isFiltered = useMemo(
     () =>
@@ -128,12 +146,29 @@ export function RunListPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" disabled={true}>
+                  <Button
+                    size="sm"
+                    disabled={compareDisabledReason !== null}
+                    onClick={() => {
+                      if (compareDisabledReason !== null) return;
+                      navigate(`/runs/compare?ids=${[...selected].join(",")}`);
+                    }}
+                  >
                     {t("compareButton", { n: selected.size })}
                   </Button>
                 </span>
               </TooltipTrigger>
-              <TooltipContent>{t("compareDisabledTooltip")}</TooltipContent>
+              {compareDisabledReason !== null && (
+                <TooltipContent>
+                  {compareDisabledReason === "needTwo"
+                    ? t("compareDisabledNeedTwo")
+                    : t("compareDisabledMixedTools", {
+                        summary: [...selectedTools.entries()]
+                          .map(([tool, n]) => `${tool} × ${n}`)
+                          .join(" + "),
+                      })}
+                </TooltipContent>
+              )}
             </Tooltip>
             <Button asChild size="sm">
               <Link to="/runs/new">{t("actions.new")}</Link>

@@ -56,7 +56,8 @@
     "open": ""
   },
   "compareButton": "Compare ({{n}})",
-  "compareDisabledTooltip": "Multi-run compare mode and diff engine are not yet implemented (see #88)",
+  "compareDisabledNeedTwo": "Select at least 2 Runs to compare",
+  "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
   "empty": {
     "title": "No benchmarks yet",
     "filtered": "No benchmarks match these filters",

@@ -56,7 +56,8 @@
     "open": ""
   },
   "compareButton": "对比 ({{n}})",
-  "compareDisabledTooltip": "多 Run 对比模式与 Diff 引擎尚未实现（见 #88）",
+  "compareDisabledNeedTwo": "至少选 2 个 Run 才能对比",
+  "compareDisabledMixedTools": "对比需要相同 tool（{{summary}}）",
   "empty": {
     "title": "暂无基准测试",
     "filtered": "没有符合筛选条件的记录",
