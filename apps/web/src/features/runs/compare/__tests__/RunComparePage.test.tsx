@@ -139,4 +139,19 @@ describe("RunComparePage", () => {
       expect(screen.getByText(/no longer accessible|无法访问/i)).toBeInTheDocument(),
     );
   });
+
+  it("?baseline=none keeps None even when a Run has baselineFor !== null", async () => {
+    // Without the "none" sentinel, defaultBaseline would infer the
+    // baselineFor-non-null Run and override the user's None choice.
+    const runA = makeRun("a", "guidellm");
+    runA.baselineFor = { id: "b_1", name: "anchor", createdAt: "2026-05-01T00:00:00.000Z" };
+    vi.mocked(api.get).mockResolvedValueOnce(runA).mockResolvedValueOnce(makeRun("b"));
+    renderPage("/runs/compare?ids=a,b&baseline=none");
+    // Toolbar dropdown is the visible signal: with None selected the
+    // <select> value is "" so its first <option> ("None (no verdict)" /
+    // "无（不显示徽标）") is the displayed text.
+    await waitFor(() =>
+      expect(screen.getByText(/None \(no verdict\)|无（不显示徽标）/)).toBeInTheDocument(),
+    );
+  });
 });

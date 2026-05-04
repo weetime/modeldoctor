@@ -25,7 +25,14 @@ export function RunComparePage() {
   const { t } = useTranslation("runs");
   const [searchParams, setSearchParams] = useSearchParams();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
-  const baselineId = searchParams.get("baseline");
+  // URL baseline param has three possible meanings:
+  //   - missing            → "user hasn't chosen yet, fall back to inferred default"
+  //   - "none"             → "user explicitly chose None — do not infer"
+  //   - <a cuid in `ids`>  → "user chose this Run as baseline"
+  // The "none" sentinel is needed because without it, the inferred default
+  // (first Run with baselineFor !== null) would silently override a user's
+  // None selection on the next render.
+  const baselineParam = searchParams.get("baseline");
 
   // Gate fetches at the array level: if the user lands on /runs/compare with
   // 0 or 1 ids (manual URL edit / shared half-baked link), the empty state
@@ -49,19 +56,25 @@ export function RunComparePage() {
   const tools = new Set(successfulRuns.map((r) => r.tool));
   const isMixed = tools.size > 1;
 
-  // Default baseline: first selected Run that is itself a baseline (baselineFor !== null);
-  // otherwise null. URL ?baseline= takes precedence when present and valid.
+  // Default baseline:
+  //   - URL "none" sentinel → user explicitly chose None
+  //   - URL has a cuid that matches one of the runs → that Run is baseline
+  //   - URL has a cuid that doesn't match → null (URL went stale)
+  //   - URL missing → infer from first Run with baselineFor !== null
   const defaultBaseline = useMemo(() => {
-    if (baselineId && successfulRuns.some((r) => r.id === baselineId)) return baselineId;
-    if (baselineId) return null; // URL had a value but no matching run
+    if (baselineParam === "none") return null;
+    if (baselineParam && successfulRuns.some((r) => r.id === baselineParam)) return baselineParam;
+    if (baselineParam) return null;
     const inferred = successfulRuns.find((r) => r.baselineFor !== null);
     return inferred?.id ?? null;
-  }, [baselineId, successfulRuns]);
+  }, [baselineParam, successfulRuns]);
 
   function handleBaselineChange(next: string | null) {
     const sp = new URLSearchParams();
     if (ids.length > 0) sp.set("ids", ids.join(","));
-    if (next) sp.set("baseline", next);
+    // Always write a baseline param so user-explicit None survives across
+    // re-renders. "none" is the sentinel for explicit None selection.
+    sp.set("baseline", next ?? "none");
     setSearchParams(sp);
   }
 
