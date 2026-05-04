@@ -1,4 +1,5 @@
-import { Module } from "@nestjs/common";
+import { assertScenariosInvariant } from "@modeldoctor/tool-adapters";
+import { Module, type OnModuleInit } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -30,4 +31,8 @@ import { SseHub } from "./sse/sse-hub.service.js";
   ],
   exports: [BenchmarkRepository, BenchmarkService, BenchmarkChartsService, SseHub],
 })
-export class BenchmarkModule {}
+export class BenchmarkModule implements OnModuleInit {
+  onModuleInit() {
+    assertScenariosInvariant();
+  }
+}

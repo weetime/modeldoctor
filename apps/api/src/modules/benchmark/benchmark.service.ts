@@ -124,6 +124,7 @@ export class BenchmarkService {
       });
     }
 
+    // 3. Reject duplicate active name (per-user uniqueness).
     const dupes = await this.repo.countActiveByName(userId, req.name);
     if (dupes > 0) {
       throw new ConflictException({
@@ -144,7 +145,7 @@ export class BenchmarkService {
       if (tpl.scenario !== req.scenario || tpl.tool !== req.tool) {
         throw new BadRequestException({
           code: "BENCHMARK_TEMPLATE_MISMATCH",
-          message: `template scenario/tool does not match requested benchmark`,
+          message: `template (scenario='${tpl.scenario}', tool='${tpl.tool}') does not match request (scenario='${req.scenario}', tool='${req.tool}')`,
         });
       }
     }
