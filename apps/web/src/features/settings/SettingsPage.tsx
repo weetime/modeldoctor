@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useE2EStore } from "@/features/e2e-smoke/store";
+import { useE2EStore } from "@/features/diagnostics/store";
 import { useDebugStore } from "@/features/request-debug/store";
 import { api } from "@/lib/api-client";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";

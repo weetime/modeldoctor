@@ -3,7 +3,11 @@ import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
-import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
+import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
+import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
+import { BenchmarkListShell } from "@/features/benchmarks/BenchmarkListShell";
+import { BenchmarkComparePage } from "@/features/benchmarks/compare/BenchmarkComparePage";
+import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
@@ -13,10 +17,6 @@ import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage"
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
-import { RunCreatePage } from "@/features/runs/RunCreatePage";
-import { RunDetailPage } from "@/features/runs/RunDetailPage";
-import { RunListPage } from "@/features/runs/RunListPage";
-import { RunComparePage } from "@/features/runs/compare/RunComparePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { Navigate, type RouteObject } from "react-router-dom";
@@ -34,16 +34,16 @@ export const routes: RouteObject[] = [
         errorElement: <ErrorPage />,
         children: [
           { index: true, element: <Navigate to="/runs" replace /> },
-          { path: "e2e", element: <E2ESmokePage /> },
+          { path: "e2e", element: <DiagnosticsPage /> },
           {
             path: "runs",
-            element: <RunListPage />,
+            element: <BenchmarkListShell />,
           },
-          { path: "runs/new", element: <RunCreatePage /> },
-          { path: "runs/compare", element: <RunComparePage /> },
+          { path: "runs/new", element: <BenchmarkCreatePage /> },
+          { path: "runs/compare", element: <BenchmarkComparePage /> },
           {
             path: "runs/:id",
-            element: <RunDetailPage />,
+            element: <BenchmarkDetailPage />,
           },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
