@@ -32,3 +32,10 @@ export {
 
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
+
+export {
+  SCENARIOS,
+  scenarioIdSchema,
+  type ScenarioId,
+  type ScenarioConfig,
+} from "./scenarios.js";

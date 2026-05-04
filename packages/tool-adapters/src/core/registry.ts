@@ -1,6 +1,7 @@
 import { genaiPerfAdapter } from "../genai-perf/index.js";
 import { guidellmAdapter } from "../guidellm/index.js";
 import { vegetaAdapter } from "../vegeta/index.js";
+import type { ScenarioId } from "../scenarios.js";
 import type { ToolAdapter, ToolName } from "./interface.js";
 
 const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
@@ -17,4 +18,8 @@ export function byTool(tool: ToolName): ToolAdapter {
 
 export function allAdapters(): readonly ToolAdapter[] {
   return Object.values(ADAPTERS);
+}
+
+export function byScenario(scenario: ScenarioId): ToolAdapter[] {
+  return allAdapters().filter((a) => a.scenarios.includes(scenario));
 }

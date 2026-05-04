@@ -4,6 +4,7 @@ import { guidellmParamDefaults, guidellmParamsSchema, guidellmReportSchema } fro
 
 export const guidellmAdapter: ToolAdapter = {
   name: "guidellm",
+  scenarios: ["inference", "capacity"] as const,
   paramsSchema: guidellmParamsSchema,
   reportSchema: guidellmReportSchema,
   paramDefaults: guidellmParamDefaults,

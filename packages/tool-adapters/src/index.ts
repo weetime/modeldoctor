@@ -11,3 +11,5 @@ export { genaiPerfAdapter } from "./genai-perf/index.js";
 // Re-export schemas + types for convenience (so `apps/api` doesn't need to
 // reach into subpaths to validate `req.params`).
 export * from "./schemas-entry.js";
+
+export * from "./scenarios.js";

@@ -4,6 +4,7 @@ import { vegetaParamDefaults, vegetaParamsSchema, vegetaReportSchema } from "./s
 
 export const vegetaAdapter: ToolAdapter = {
   name: "vegeta",
+  scenarios: ["gateway"] as const,
   paramsSchema: vegetaParamsSchema,
   reportSchema: vegetaReportSchema,
   paramDefaults: vegetaParamDefaults,
