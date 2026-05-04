@@ -28,6 +28,14 @@
 
 **Commit / PR conventions.** Conventional-commit prefixes (`feat:`, `build:`, `refactor:`, `test:`, `fix:`, `docs:`, `chore:`), one logical change per commit, explicit `git add <files>` (never `git add -A`), commit bodies end with `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`. One phase of the NestJS refactor = one PR from a `feat/nestjs-phase-<N>` branch cut from `main`; do not mix commits across phases.
 
+**PR follow-through.** A PR is not "done" at `gh pr create`. After opening a PR — and after every subsequent `git push` to the same branch — verify the signals before handing back to the user:
+
+- `gh pr view <N> --json comments,reviews,statusCheckRollup,mergeStateStatus`
+- `gh api repos/weetime/modeldoctor/pulls/<N>/comments` for inline review comments (top-level reviews don't include them)
+- `gh pr checks <N>` for CI conclusions; if pending, `gh run watch <run-id> --exit-status` until it resolves
+
+Surface reviewer feedback and any red checks back to the user, then either fix in a follow-up commit (with reply on the inline comment thread) or pause for direction. Do not declare "PR is open" without these signals confirmed. CI catches things that local `pnpm lint` misses when biome's cache is stale, so treat a CI failure as authoritative even if local was clean.
+
 **Project-specific constraints (do not violate):**
 
 - `apps/api/tsconfig.json` must not set `incremental: true` (conflicts with `nest-cli.json` `deleteOutDir`).
