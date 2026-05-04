@@ -1,0 +1,21 @@
+{
+  "benchmarks": [
+    {
+      "metrics": {
+        "request_totals": { "successful": 5, "errored": 0, "incomplete": 0, "total": 5 }
+      },
+      "requests": {
+        "successful": [
+          { "request_latency": 0.012, "time_to_first_token_ms": 100 },
+          { "request_latency": 0.015, "time_to_first_token_ms": 110 },
+          { "request_latency": 0.018, "time_to_first_token_ms": 120 },
+          { "request_latency": 0.020, "time_to_first_token_ms": 130 },
+          { "request_latency": 0.025, "time_to_first_token_ms": 200 }
+        ],
+        "errored": [],
+        "incomplete": [],
+        "total": null
+      }
+    }
+  ]
+}
