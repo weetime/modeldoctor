@@ -56,7 +56,7 @@
     "open": ""
   },
   "compareButton": "Compare ({{n}})",
-  "compareDisabledTooltip": "Enabled once #46 (report page) ships",
+  "compareDisabledTooltip": "Multi-run compare mode and diff engine are not yet implemented (see #88)",
   "empty": {
     "title": "No benchmarks yet",
     "filtered": "No benchmarks match these filters",

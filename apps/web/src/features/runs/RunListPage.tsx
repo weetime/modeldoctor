@@ -23,28 +23,52 @@ import { Link, useSearchParams } from "react-router-dom";
 import { RunListFilters } from "./RunListFilters";
 import { runKeys, useRunList } from "./queries";
 
-function readP95(metrics: Run["summaryMetrics"], tool: Run["tool"]): number | null {
+// `summaryMetrics` is the discriminated union written by tool-adapter
+// `parseFinalReport`: `{ tool, data }` (see
+// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts).
+// vegeta latencies are already normalized to ms by the adapter (NOT ns).
+function readP95(metrics: Run["summaryMetrics"]): number | null {
   if (!metrics) return null;
-  // Tool-specific shape: vegeta stores latencies in nanoseconds, guidellm in
-  // milliseconds. Header is "(ms)" so we normalise here. If a tool stores p95
-  // elsewhere the cell shows '—'.
-  const m = metrics as Record<string, unknown>;
-  const latency = m.latencies as { p95?: number } | undefined;
-  if (latency?.p95 !== undefined) {
-    return tool === "vegeta" ? latency.p95 / 1_000_000 : latency.p95;
+  const m = metrics as { tool?: string; data?: Record<string, unknown> };
+  const data = m.data;
+  if (!data) return null;
+  const fromDist = (key: string): number | null => {
+    const dist = data[key] as { p95?: number } | undefined;
+    return typeof dist?.p95 === "number" ? dist.p95 : null;
+  };
+  switch (m.tool) {
+    case "guidellm":
+      return fromDist("e2eLatency");
+    case "vegeta":
+      return fromDist("latencies");
+    case "genai-perf":
+      return fromDist("requestLatency");
+    default:
+      return null;
   }
-  const ttft = (m.tokens as { ttftMs?: { p95?: number } } | undefined)?.ttftMs;
-  if (ttft?.p95 !== undefined) return ttft.p95;
-  return null;
 }
 
 function readErrorRate(metrics: Run["summaryMetrics"]): number | null {
   if (!metrics) return null;
-  const m = metrics as Record<string, unknown>;
-  if (typeof m.errorRate === "number") return m.errorRate;
-  const success = m.success as { rate?: number } | undefined;
-  if (typeof success?.rate === "number") return 1 - success.rate;
-  return null;
+  const m = metrics as { tool?: string; data?: Record<string, unknown> };
+  const data = m.data;
+  if (!data) return null;
+  switch (m.tool) {
+    case "guidellm": {
+      const r = data.requests as { total?: number; error?: number } | undefined;
+      if (typeof r?.total !== "number" || typeof r.error !== "number") return null;
+      if (r.total === 0) return null;
+      return r.error / r.total;
+    }
+    case "vegeta": {
+      // success is a percent in [0, 100], not a 0-1 ratio (matches vegeta CLI).
+      const s = data.success;
+      return typeof s === "number" ? 1 - s / 100 : null;
+    }
+    default:
+      // genai-perf schema carries no error/success counts; fall through to —.
+      return null;
+  }
 }
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
@@ -231,7 +255,7 @@ export function RunListPage() {
                     </TableCell>
                     <TableCell>{run.status}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {fmtNum(readP95(run.summaryMetrics, run.tool))}
+                      {fmtNum(readP95(run.summaryMetrics))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {fmtNum(readErrorRate(run.summaryMetrics), 4)}

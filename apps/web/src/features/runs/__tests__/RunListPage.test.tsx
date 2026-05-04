@@ -23,7 +23,48 @@ vi.mock("@/lib/api-client", () => {
 
 import { api } from "@/lib/api-client";
 
-function makeRun(id: string, kind: Run["kind"], tool: Run["tool"], status: Run["status"]): Run {
+// Real adapter-emitted shapes. `summaryMetrics` is the discriminated union
+// `{ tool, data }` written by tool-adapter `parseFinalReport` — see
+// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts. The
+// list-page readers must switch on `tool` and reach into `data.*`.
+//
+// Fixtures only carry the fields readP95 / readErrorRate consume; the wider
+// schema has many more required fields but Run.summaryMetrics is typed as
+// `Record<string, unknown> | null` at the contracts boundary.
+const guidellmMetrics = {
+  tool: "guidellm",
+  data: {
+    e2eLatency: { p95: 491.2 },
+    requests: { total: 10, success: 9, error: 1, incomplete: 0 },
+  },
+};
+
+const vegetaMetrics = {
+  tool: "vegeta",
+  data: {
+    // schema comment notes: vegeta latencies are normalized to ms BEFORE
+    // validation; readers must NOT divide by 1e6 again.
+    latencies: { p95: 250.5 },
+    // success is a percent in [0, 100], not a 0-1 ratio.
+    success: 98.5,
+    requests: { total: 1000 },
+  },
+};
+
+const genaiPerfMetrics = {
+  tool: "genai-perf",
+  data: {
+    requestLatency: { p95: 333.3, unit: "ms" },
+  },
+};
+
+function makeRun(
+  id: string,
+  kind: Run["kind"],
+  tool: Run["tool"],
+  status: Run["status"],
+  summaryMetrics: Run["summaryMetrics"] = null,
+): Run {
   return {
     id,
     userId: "u1",
@@ -42,7 +83,7 @@ function makeRun(id: string, kind: Run["kind"], tool: Run["tool"], status: Run["
     driverHandle: null,
     params: {},
     rawOutput: null,
-    summaryMetrics: { latencies: { p95: 123.4 }, errorRate: 0.001 },
+    summaryMetrics,
     serverMetrics: null,
     templateId: null,
     templateVersion: null,
@@ -78,7 +119,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 const ONE_RUN: ListRunsResponse = {
-  items: [makeRun("r1", "benchmark", "guidellm", "completed")],
+  items: [makeRun("r1", "benchmark", "guidellm", "completed", guidellmMetrics)],
   nextCursor: null,
 };
 
@@ -91,13 +132,62 @@ describe("RunListPage", () => {
     vi.mocked(api.del).mockReset();
   });
 
-  it("renders a row with kind / tool / status / p95", async () => {
+  it("renders a guidellm row with kind / tool / status / p95 / errorRate", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_RUN);
     render(<RunListPage />, { wrapper: Wrapper });
     expect(await screen.findByText("benchmark")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
-    expect(screen.getByText("123.4")).toBeInTheDocument();
+    // guidellm: data.e2eLatency.p95 (already ms)
+    expect(screen.getByText("491.2")).toBeInTheDocument();
+    // guidellm: data.requests.error / data.requests.total = 1/10 = 0.1000
+    expect(screen.getByText("0.1000")).toBeInTheDocument();
+  });
+
+  it("renders a vegeta row with p95 in ms (no extra ns→ms conversion) and error rate from success%", async () => {
+    const resp: ListRunsResponse = {
+      items: [makeRun("r1", "benchmark", "vegeta", "completed", vegetaMetrics)],
+      nextCursor: null,
+    };
+    vi.mocked(api.get).mockResolvedValue(resp);
+    render(<RunListPage />, { wrapper: Wrapper });
+    expect(await screen.findByText("vegeta")).toBeInTheDocument();
+    // vegeta latencies are already in ms after schema normalization.
+    expect(screen.getByText("250.5")).toBeInTheDocument();
+    // 1 - 98.5/100 = 0.015 → "0.0150"
+    expect(screen.getByText("0.0150")).toBeInTheDocument();
+  });
+
+  it("renders a genai-perf row with p95 from requestLatency, error rate '—' (schema lacks error counts)", async () => {
+    const resp: ListRunsResponse = {
+      items: [makeRun("r1", "benchmark", "genai-perf", "completed", genaiPerfMetrics)],
+      nextCursor: null,
+    };
+    vi.mocked(api.get).mockResolvedValue(resp);
+    render(<RunListPage />, { wrapper: Wrapper });
+    expect(await screen.findByText("genai-perf")).toBeInTheDocument();
+    expect(screen.getByText("333.3")).toBeInTheDocument();
+    // genai-perf schema has no error/success counts → error rate column is "—".
+    // We can't naively `getByText("—")` (the connection column also uses it
+    // as a fallback). Instead, find the row's cells and check the last
+    // numeric cell.
+    const cells = screen.getAllByRole("cell");
+    const errorRateCell = cells[cells.length - 2]; // last cell is the "→" link
+    expect(errorRateCell.textContent).toBe("—");
+  });
+
+  it("shows '—' for both metric columns when summaryMetrics is null", async () => {
+    const resp: ListRunsResponse = {
+      items: [makeRun("r1", "benchmark", "guidellm", "running", null)],
+      nextCursor: null,
+    };
+    vi.mocked(api.get).mockResolvedValue(resp);
+    render(<RunListPage />, { wrapper: Wrapper });
+    expect(await screen.findByText("running")).toBeInTheDocument();
+    const cells = screen.getAllByRole("cell");
+    // last cell is the "→" link; -2 = errorRate, -3 = p95
+    expect(cells[cells.length - 2].textContent).toBe("—");
+    expect(cells[cells.length - 3].textContent).toBe("—");
   });
 
   it("compare button is disabled by default", async () => {
@@ -108,7 +198,7 @@ describe("RunListPage", () => {
     expect(compare).toBeDisabled();
   });
 
-  it("selecting two rows keeps compare button disabled (placeholder for #46)", async () => {
+  it("selecting two rows keeps compare button disabled (placeholder for #88)", async () => {
     const twoRuns: ListRunsResponse = {
       items: [
         makeRun("r1", "benchmark", "guidellm", "completed"),
@@ -124,7 +214,7 @@ describe("RunListPage", () => {
     await user.click(checkboxes[0]);
     await user.click(checkboxes[1]);
     const compare = screen.getByRole("button", { name: /compare/i });
-    // Disabled by spec: this is the placeholder for #46.
+    // Disabled by spec until multi-run compare mode lands; see #88.
     expect(compare).toBeDisabled();
   });
 
