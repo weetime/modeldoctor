@@ -120,6 +120,16 @@
       "title": "Not found",
       "body": "It may have been deleted, or you may not own it."
     },
-    "loadError": "Failed to load"
+    "loadError": "Failed to load",
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Delete this benchmark?",
+      "confirmBody": "It will be removed from history along with its raw output. This cannot be undone.",
+      "confirmAction": "Delete",
+      "success": "Deleted",
+      "errors": {
+        "generic": "Failed to delete"
+      }
+    }
   }
 }

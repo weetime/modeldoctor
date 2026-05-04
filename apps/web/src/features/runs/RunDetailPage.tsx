@@ -27,12 +27,12 @@ import { format } from "date-fns";
 import { ArrowLeft, SearchX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { RunDetailMetadata } from "./RunDetailMetadata";
 import { RunDetailRawOutput } from "./RunDetailRawOutput";
 import { SetBaselineDialog } from "./SetBaselineDialog";
-import { runKeys } from "./queries";
+import { runKeys, useDeleteRun } from "./queries";
 import { useRunDetail } from "./queries";
 import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
 import { GuidellmReportView } from "./reports/GuidellmReportView";
@@ -87,7 +87,10 @@ export function RunDetailPage() {
 
   const [setOpen, setSetOpen] = useState(false);
   const [unsetOpen, setUnsetOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const remove = useDeleteBaseline();
+  const deleteRun = useDeleteRun();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -135,6 +138,8 @@ export function RunDetailPage() {
   });
 
   const isBaseline = run.baselineFor !== null;
+  const isTerminal =
+    run.status === "completed" || run.status === "failed" || run.status === "canceled";
 
   return (
     <>
@@ -150,6 +155,11 @@ export function RunDetailPage() {
             ) : (
               <Button variant="outline" size="sm" onClick={() => setSetOpen(true)}>
                 {t("detail.baseline.setButton")}
+              </Button>
+            )}
+            {isTerminal && (
+              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+                {t("detail.delete.button")}
               </Button>
             )}
             <Button asChild variant="ghost" size="sm">
@@ -218,6 +228,35 @@ export function RunDetailPage() {
               disabled={remove.isPending}
             >
               {t("detail.baseline.unsetConfirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("detail.delete.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("detail.delete.confirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("detail.baseline.dialog.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteRun.mutate(run.id, {
+                  onSuccess: () => {
+                    setDeleteOpen(false);
+                    toast.success(t("detail.delete.success"));
+                    navigate("/runs");
+                  },
+                  onError: () => {
+                    toast.error(t("detail.delete.errors.generic"));
+                  },
+                });
+              }}
+              disabled={deleteRun.isPending}
+            >
+              {t("detail.delete.confirmAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
