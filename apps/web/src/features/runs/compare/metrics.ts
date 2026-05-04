@@ -14,10 +14,17 @@ function asTagged(metrics: SummaryMetrics): Tagged | null {
   return m.data ? m : null;
 }
 
+// Number.isFinite filters NaN and ±Infinity. The verdict.ts contract requires
+// finite numbers; routing every reader through this guard means upstream
+// adapter regressions (e.g. a future tool emitting `0/0 = NaN`) degrade to
+// `null` here instead of poisoning delta math downstream.
+function asFiniteNumber(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
 function fromDist(data: Record<string, unknown>, key: string, field: string): number | null {
   const dist = data[key] as Record<string, unknown> | undefined;
-  const v = dist?.[field];
-  return typeof v === "number" ? v : null;
+  return asFiniteNumber(dist?.[field]);
 }
 
 // ─── Verdict-eligible readers ────────────────────────────────────────────────
@@ -43,13 +50,14 @@ export function readErrorRate(metrics: SummaryMetrics): number | null {
   switch (m.tool) {
     case "guidellm": {
       const r = m.data.requests as { total?: number; error?: number } | undefined;
-      if (typeof r?.total !== "number" || typeof r.error !== "number") return null;
-      if (r.total === 0) return null;
-      return r.error / r.total;
+      const total = asFiniteNumber(r?.total);
+      const error = asFiniteNumber(r?.error);
+      if (total === null || error === null || total === 0) return null;
+      return error / total;
     }
     case "vegeta": {
-      const s = m.data.success;
-      return typeof s === "number" ? 1 - s / 100 : null;
+      const s = asFiniteNumber(m.data.success);
+      return s === null ? null : 1 - s / 100;
     }
     default:
       // genai-perf carries no error/success counts.
@@ -63,15 +71,15 @@ export function readThroughput(metrics: SummaryMetrics): number | null {
   switch (m.tool) {
     case "guidellm": {
       const r = m.data.requestsPerSecond as { mean?: number } | undefined;
-      return typeof r?.mean === "number" ? r.mean : null;
+      return asFiniteNumber(r?.mean);
     }
     case "vegeta": {
       const r = m.data.requests as { throughput?: number } | undefined;
-      return typeof r?.throughput === "number" ? r.throughput : null;
+      return asFiniteNumber(r?.throughput);
     }
     case "genai-perf": {
       const r = m.data.requestThroughput as { avg?: number } | undefined;
-      return typeof r?.avg === "number" ? r.avg : null;
+      return asFiniteNumber(r?.avg);
     }
     default:
       return null;
