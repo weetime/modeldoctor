@@ -1,6 +1,10 @@
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { Prisma, type Baseline as PrismaBaseline, type Run as PrismaRun } from "@prisma/client";
+import {
+  Prisma,
+  type Baseline as PrismaBaseline,
+  type Benchmark as PrismaBenchmark,
+} from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineService } from "./baseline.service.js";
@@ -13,21 +17,20 @@ function makePrismaMock() {
       findUnique: vi.fn(),
       delete: vi.fn(),
     },
-    run: {
+    benchmark: {
       findUnique: vi.fn(),
     },
   };
 }
 
-function makeRun(overrides: Partial<PrismaRun> = {}): PrismaRun {
+function makeBenchmark(overrides: Partial<PrismaBenchmark> = {}): PrismaBenchmark {
   return {
     id: "r_1",
     userId: "u_1",
     connectionId: null,
-    kind: "benchmark",
+    scenario: "inference",
     tool: "guidellm",
-    scenario: {},
-    mode: "fixed",
+    toolVersion: null,
     driverKind: "local",
     name: null,
     description: null,
@@ -40,8 +43,7 @@ function makeRun(overrides: Partial<PrismaRun> = {}): PrismaRun {
     summaryMetrics: null,
     serverMetrics: null,
     templateId: null,
-    templateVersion: null,
-    parentRunId: null,
+    parentBenchmarkId: null,
     baselineId: null,
     logs: null,
     createdAt: new Date("2026-05-02T00:00:00Z"),
@@ -55,12 +57,11 @@ function makeBaseline(overrides: Partial<PrismaBaseline> = {}): PrismaBaseline {
   return {
     id: "b_1",
     userId: "u_1",
-    runId: "r_1",
+    benchmarkId: "r_1",
     name: "throughput-anchor",
     description: null,
     tags: [],
     templateId: null,
-    templateVersion: null,
     active: true,
     createdAt: new Date("2026-05-02T00:00:00Z"),
     updatedAt: new Date("2026-05-02T00:00:00Z"),
@@ -85,10 +86,8 @@ describe("BaselineService", () => {
   });
 
   describe("create", () => {
-    it("creates with userId from caller, copies templateId/version from Run", async () => {
-      prismaMock.run.findUnique.mockResolvedValue(
-        makeRun({ templateId: null, templateVersion: null }),
-      );
+    it("creates with userId from caller, copies templateId from Benchmark", async () => {
+      prismaMock.benchmark.findUnique.mockResolvedValue(makeBenchmark({ templateId: null }));
       let created: Record<string, unknown> = {};
       prismaMock.baseline.create.mockImplementation(
         async (args: { data: Record<string, unknown> }) => {
@@ -97,41 +96,40 @@ describe("BaselineService", () => {
         },
       );
       const out = await service.create("u_1", {
-        runId: "r_1",
+        benchmarkId: "r_1",
         name: "throughput-anchor",
         tags: [],
       });
       expect(created.userId).toBe("u_1");
-      expect(created.runId).toBe("r_1");
+      expect(created.benchmarkId).toBe("r_1");
       expect(created.templateId).toBeNull();
-      expect(created.templateVersion).toBeNull();
       expect(out.id).toBe("b_1");
     });
 
-    it("404 when Run does not exist", async () => {
-      prismaMock.run.findUnique.mockResolvedValue(null);
-      await expect(service.create("u_1", { runId: "r_x", name: "x", tags: [] })).rejects.toThrow(
-        NotFoundException,
-      );
+    it("404 when Benchmark does not exist", async () => {
+      prismaMock.benchmark.findUnique.mockResolvedValue(null);
+      await expect(
+        service.create("u_1", { benchmarkId: "r_x", name: "x", tags: [] }),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("404 when Run belongs to a different user (don't leak existence)", async () => {
-      prismaMock.run.findUnique.mockResolvedValue(makeRun({ userId: "u_other" }));
-      await expect(service.create("u_1", { runId: "r_1", name: "x", tags: [] })).rejects.toThrow(
-        NotFoundException,
-      );
+    it("404 when Benchmark belongs to a different user (don't leak existence)", async () => {
+      prismaMock.benchmark.findUnique.mockResolvedValue(makeBenchmark({ userId: "u_other" }));
+      await expect(
+        service.create("u_1", { benchmarkId: "r_1", name: "x", tags: [] }),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("409 when the Run already has a baseline (P2002 on runId)", async () => {
-      prismaMock.run.findUnique.mockResolvedValue(makeRun());
+    it("409 when the Benchmark already has a baseline (P2002 on benchmarkId)", async () => {
+      prismaMock.benchmark.findUnique.mockResolvedValue(makeBenchmark());
       const dup = new Prisma.PrismaClientKnownRequestError("dup", {
         code: "P2002",
         clientVersion: "x",
       });
       prismaMock.baseline.create.mockRejectedValue(dup);
-      await expect(service.create("u_1", { runId: "r_1", name: "x", tags: [] })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.create("u_1", { benchmarkId: "r_1", name: "x", tags: [] }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

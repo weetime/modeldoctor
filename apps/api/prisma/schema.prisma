@@ -159,6 +159,7 @@ model BenchmarkTemplate {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   benchmarks Benchmark[]
+  baselines  Baseline[]
   creator    User?       @relation("UserCreatedTemplates", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([scenario])
@@ -205,10 +206,12 @@ model Baseline {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  benchmark   Benchmark   @relation("BaselineCanonicalBenchmark", fields: [benchmarkId], references: [id], onDelete: Restrict)
-  referencers Benchmark[] @relation("BenchmarkReferencingBaseline")
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmark   Benchmark          @relation("BaselineCanonicalBenchmark", fields: [benchmarkId], references: [id], onDelete: Restrict)
+  template    BenchmarkTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  referencers Benchmark[]        @relation("BenchmarkReferencingBaseline")
 
   @@index([userId])
+  @@index([templateId])
   @@map("baselines")
 }

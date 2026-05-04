@@ -8,30 +8,31 @@ export class BaselineService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, input: CreateBaseline): Promise<Baseline> {
-    const run = await this.prisma.run.findUnique({ where: { id: input.runId } });
+    const benchmark = await this.prisma.benchmark.findUnique({
+      where: { id: input.benchmarkId },
+    });
     // Use NotFoundException for cross-user access too — exposing the
-    // existence of another user's Run leaks enumerable IDs.
-    if (!run || run.userId !== userId) {
-      throw new NotFoundException(`Run ${input.runId} not found`);
+    // existence of another user's Benchmark leaks enumerable IDs.
+    if (!benchmark || benchmark.userId !== userId) {
+      throw new NotFoundException(`Benchmark ${input.benchmarkId} not found`);
     }
 
     try {
       const row = await this.prisma.baseline.create({
         data: {
           userId,
-          runId: input.runId,
+          benchmarkId: input.benchmarkId,
           name: input.name,
           description: input.description ?? null,
           tags: input.tags ?? [],
-          // Copied from Run; both are NULL pre-#56.
-          templateId: run.templateId,
-          templateVersion: run.templateVersion,
+          // Copied from Benchmark; NULL when the Benchmark wasn't started from a template.
+          templateId: benchmark.templateId,
         },
       });
       return toContract(row);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw new ConflictException(`Run ${input.runId} already has a baseline`);
+        throw new ConflictException(`Benchmark ${input.benchmarkId} already has a baseline`);
       }
       throw err;
     }
@@ -59,12 +60,11 @@ function toContract(row: PrismaBaseline): Baseline {
   return {
     id: row.id,
     userId: row.userId,
-    runId: row.runId,
+    benchmarkId: row.benchmarkId,
     name: row.name,
     description: row.description,
     tags: row.tags,
     templateId: row.templateId,
-    templateVersion: row.templateVersion,
     active: row.active,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
