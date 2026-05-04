@@ -74,7 +74,7 @@ export class RunController {
   }
 
   @Get(":id/charts")
-  @Header("Cache-Control", "private, max-age=86400, immutable")
+  @Header("Cache-Control", "private, max-age=86400")
   async getCharts(
     @CurrentUser() user: JwtPayload,
     @Param("id") id: string,
@@ -88,7 +88,7 @@ export class RunController {
       id: run.id,
       tool: run.tool,
       status: run.status,
-      rawOutput: run.rawOutput as { files?: Record<string, string> } | null,
+      rawOutput: run.rawOutput,
     });
   }
 }

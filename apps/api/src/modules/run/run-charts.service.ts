@@ -8,7 +8,7 @@ interface ExtractInput {
   id: string;
   tool: string;
   status: string;
-  rawOutput: { files?: Record<string, string> } | null;
+  rawOutput: Record<string, unknown> | null;
 }
 
 @Injectable()
@@ -24,7 +24,7 @@ export class RunChartsService {
     const empty: RunChartsResponse = { latencyCdf: null, ttftHistogram: null };
 
     if (!TERMINAL_STATES.has(row.status)) return empty;
-    const files = row.rawOutput?.files;
+    const files = (row.rawOutput?.files ?? null) as Record<string, string> | null;
     if (!files) return empty;
 
     if (row.tool === "guidellm") return this.extractGuidellm(row.id, files);
