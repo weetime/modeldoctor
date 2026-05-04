@@ -19,14 +19,14 @@
     "manageConnections": "Manage connections",
     "copy": "Copy",
     "copied": "Copied",
-    "format": "Format as JSON"
+    "format": "Format as JSON",
+    "backToBenchmarks": "Back to Benchmarks"
   },
   "status": {
     "idle": "Idle",
     "running": "Running",
     "pass": "Pass",
-    "fail": "Fail",
-    "comingSoon": "Soon"
+    "fail": "Fail"
   },
   "theme": {
     "toggle": "Toggle theme",
@@ -60,11 +60,6 @@
     "newConnection": "+ New connection",
     "saved": "Saved to connection \"{{name}}\"",
     "saveFailed": "Failed to save"
-  },
-  "comingSoon": {
-    "title": "Coming soon",
-    "body": "This feature is under development.",
-    "backToRuns": "Back to Runs"
   },
   "empty": {
     "noConnections": "No connections yet",

@@ -131,6 +131,8 @@ describe("RunListPage", () => {
   it("renders empty state when there are no runs", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
     render(<RunListPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText(/No runs yet|暂无 Run/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/No benchmarks yet|暂无基准测试/i)).toBeInTheDocument(),
+    );
   });
 });

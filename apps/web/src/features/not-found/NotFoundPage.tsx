@@ -9,7 +9,7 @@ export function NotFoundPage() {
       <h1 className="text-3xl font-semibold tracking-tight">404</h1>
       <p className="text-sm text-muted-foreground">Page not found.</p>
       <Button asChild variant="outline" size="sm">
-        <Link to="/runs">{t("comingSoon.backToRuns")}</Link>
+        <Link to="/runs">{t("actions.backToBenchmarks")}</Link>
       </Button>
     </div>
   );

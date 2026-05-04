@@ -105,7 +105,7 @@ describe("RunDetailPage", () => {
     err.status = 404;
     vi.mocked(api.get).mockRejectedValueOnce(err);
     render(<RunDetailPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText(/Run not found|Run 不存在/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Not found|记录不存在/i)).toBeInTheDocument());
   });
 
   it("renders 'Set as baseline' when run.baselineFor is null", async () => {

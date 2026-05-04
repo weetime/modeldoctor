@@ -2,13 +2,8 @@
   "groups": {
     "playground": "Playground",
     "performance": "Performance",
-    "correctness": "Correctness",
-    "observability": "Observability",
     "debug": "Debug",
     "dev": "Dev"
-  },
-  "status": {
-    "comingSoon": "Soon"
   },
   "items": {
     "playgroundChat": "Chat",
@@ -16,12 +11,8 @@
     "playgroundAudio": "Audio",
     "playgroundEmbeddings": "Embeddings",
     "playgroundRerank": "Rerank",
-    "soak": "Soak / Stability",
-    "streaming": "Streaming TTFT",
     "e2e": "E2E Smoke",
-    "regression": "Regression",
-    "health": "Health Monitor",
-    "runs": "Runs",
+    "runs": "Benchmarks",
     "requestDebug": "Request Debug",
     "connections": "Connections",
     "settings": "Settings",

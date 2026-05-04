@@ -3,8 +3,6 @@ import {
   Bug,
   CheckCircle2,
   Database,
-  GitCompare,
-  HeartPulse,
   History,
   Image as ImageIcon,
   LineChart,
@@ -13,15 +11,12 @@ import {
   MessageSquare,
   Mic,
   Settings,
-  Timer,
-  Zap,
 } from "lucide-react";
 
 export interface SidebarItem {
   to: string;
   icon: LucideIcon;
   labelKey: string; // sidebar:items.X
-  comingSoon?: boolean;
   devOnly?: boolean;
 }
 
@@ -50,52 +45,16 @@ export const sidebarGroups: SidebarGroup[] = [
   {
     id: "performance",
     labelKey: "groups.performance",
-    items: [
-      { to: "/soak", icon: Timer, labelKey: "items.soak", comingSoon: true },
-      {
-        to: "/streaming",
-        icon: Zap,
-        labelKey: "items.streaming",
-        comingSoon: true,
-      },
-    ],
-  },
-  {
-    id: "correctness",
-    labelKey: "groups.correctness",
-    items: [
-      { to: "/e2e", icon: CheckCircle2, labelKey: "items.e2e" },
-      {
-        to: "/regression",
-        icon: GitCompare,
-        labelKey: "items.regression",
-        comingSoon: true,
-      },
-    ],
-  },
-  {
-    id: "observability",
-    labelKey: "groups.observability",
-    items: [
-      {
-        to: "/health",
-        icon: HeartPulse,
-        labelKey: "items.health",
-        comingSoon: true,
-      },
-      {
-        to: "/runs",
-        icon: History,
-        labelKey: "items.runs",
-      },
-    ],
+    items: [{ to: "/runs", icon: History, labelKey: "items.runs" }],
   },
   {
     id: "debug",
     labelKey: "groups.debug",
-    items: [{ to: "/debug", icon: Bug, labelKey: "items.requestDebug" }],
+    items: [
+      { to: "/debug", icon: Bug, labelKey: "items.requestDebug" },
+      { to: "/e2e", icon: CheckCircle2, labelKey: "items.e2e" },
+    ],
   },
-  // Dev-only group; remove entirely in #51 sidebar reorganize.
   {
     id: "dev",
     labelKey: "groups.dev",

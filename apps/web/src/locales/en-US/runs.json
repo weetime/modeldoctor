@@ -1,13 +1,13 @@
 {
-  "title": "Run History",
-  "subtitle": "All Runs across benchmark and e2e, newest first",
+  "title": "Benchmark History",
+  "subtitle": "Past benchmark runs, newest first",
   "actions": {
-    "new": "New Run",
+    "new": "New Benchmark",
     "cancel": "Cancel",
     "submit": "Submit"
   },
   "create": {
-    "title": "New Run",
+    "title": "New Benchmark",
     "subtitle": "Configure a benchmark or load test, then submit",
     "sections": {
       "endpoint": "Endpoint",
@@ -26,9 +26,9 @@
       "genai-perf": "genai-perf"
     },
     "errors": {
-      "submitFailed": "Failed to submit run"
+      "submitFailed": "Failed to submit benchmark"
     },
-    "submitted": "Run \"{{name}}\" submitted"
+    "submitted": "Benchmark \"{{name}}\" submitted"
   },
   "filters": {
     "kind": "Kind",
@@ -58,15 +58,15 @@
   "compareButton": "Compare ({{n}})",
   "compareDisabledTooltip": "Enabled once #46 (report page) ships",
   "empty": {
-    "title": "No runs yet",
-    "filtered": "No runs match these filters",
-    "description": "Trigger a benchmark, load test, or e2e check from the corresponding page."
+    "title": "No benchmarks yet",
+    "filtered": "No benchmarks match these filters",
+    "description": "Click \"New Benchmark\" in the top-right to trigger one."
   },
   "loadMore": "Load more",
-  "errorBanner": "Failed to load runs",
+  "errorBanner": "Failed to load benchmarks",
   "retry": "Retry",
   "detail": {
-    "back": "Back to runs",
+    "back": "Back to list",
     "subtitle": "{{kind}} · {{tool}} · {{when}}",
     "metadata": {
       "kind": "Kind",
@@ -87,7 +87,7 @@
     },
     "metrics": {
       "title": "Summary metrics",
-      "empty": "No metrics recorded for this run."
+      "empty": "No metrics recorded for this benchmark."
     },
     "rawOutput": {
       "toggle": "Raw output (JSON)"
@@ -99,11 +99,11 @@
       "setButton": "Set as baseline",
       "unsetButton": "✓ Baseline · Unset",
       "unsetConfirmTitle": "Unset this baseline?",
-      "unsetConfirmBody": "This removes the baseline mark; the Run itself stays. Other Runs that compared against this baseline keep their data; their `baselineId` link is cleared.",
+      "unsetConfirmBody": "This removes the baseline mark; the benchmark itself stays. Other benchmarks that compared against this baseline keep their data; their `baselineId` link is cleared.",
       "unsetConfirmAction": "Unset baseline",
       "dialog": {
         "title": "Set as baseline",
-        "body": "Mark this Run as a reference for future regression diffs.",
+        "body": "Mark this benchmark as a reference for future regression diffs.",
         "nameLabel": "Name",
         "namePlaceholder": "e.g. throughput-baseline-v1",
         "descriptionLabel": "Description (optional)",
@@ -112,14 +112,14 @@
         "cancel": "Cancel"
       },
       "errors": {
-        "alreadyExists": "This Run already has a baseline.",
+        "alreadyExists": "This benchmark already has a baseline.",
         "generic": "Could not save baseline."
       }
     },
     "notFound": {
-      "title": "Run not found",
+      "title": "Not found",
       "body": "It may have been deleted, or you may not own it."
     },
-    "loadError": "Failed to load run"
+    "loadError": "Failed to load"
   }
 }
