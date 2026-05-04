@@ -9,7 +9,7 @@
           { "request_latency": 0.012, "time_to_first_token_ms": 100 },
           { "request_latency": 0.015, "time_to_first_token_ms": 110 },
           { "request_latency": 0.018, "time_to_first_token_ms": 120 },
-          { "request_latency": 0.020, "time_to_first_token_ms": 130 },
+          { "request_latency": 0.02, "time_to_first_token_ms": 130 },
           { "request_latency": 0.025, "time_to_first_token_ms": 200 }
         ],
         "errored": [],

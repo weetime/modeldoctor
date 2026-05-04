@@ -78,8 +78,7 @@ export class RunChartsService {
 
     return {
       latencyCdf: latencyMs.length > 0 ? { samples: latencyMs } : null,
-      ttftHistogram:
-        ttftMs.length > 0 ? { buckets: bucketize(ttftMs, HISTOGRAM_BIN_COUNT) } : null,
+      ttftHistogram: ttftMs.length > 0 ? { buckets: bucketize(ttftMs, HISTOGRAM_BIN_COUNT) } : null,
     };
   }
 
