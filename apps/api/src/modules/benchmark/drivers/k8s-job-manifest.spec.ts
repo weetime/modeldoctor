@@ -45,7 +45,7 @@ describe("buildJobManifest", () => {
     const env = j.spec?.template.spec?.containers[0].env ?? [];
     expect(env).toContainEqual({ name: "FOO", value: "bar" });
     expect(env).toContainEqual({ name: "BAZ", value: "qux" });
-    expect(env).toContainEqual({ name: "MD_RUN_ID", value: "abc123" });
+    expect(env).toContainEqual({ name: "MD_BENCHMARK_ID", value: "abc123" });
     expect(env).toContainEqual({ name: "MD_CALLBACK_URL", value: "http://api/" });
     expect(env).toContainEqual({ name: "MD_ARGV", value: JSON.stringify(ctx.buildResult.argv) });
     expect(env).toContainEqual({

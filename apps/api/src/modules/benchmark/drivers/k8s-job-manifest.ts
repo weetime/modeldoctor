@@ -56,7 +56,7 @@ export interface JobManifestOptions {
 
 export function buildJobManifest(ctx: BenchmarkExecutionContext, opts: JobManifestOptions): V1Job {
   const env: { name: string; value: string }[] = [
-    { name: "MD_RUN_ID", value: ctx.runId },
+    { name: "MD_BENCHMARK_ID", value: ctx.runId },
     { name: "MD_CALLBACK_URL", value: ctx.callback.url },
     { name: "MD_ARGV", value: JSON.stringify(ctx.buildResult.argv) },
     { name: "MD_OUTPUT_FILES", value: JSON.stringify(ctx.buildResult.outputFiles) },

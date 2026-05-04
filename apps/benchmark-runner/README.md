@@ -67,7 +67,7 @@ Pod env) and `SubprocessDriver` (as process env) before launching the container:
 
 | Variable | Required | Description |
 |---|---|---|
-| `MD_RUN_ID` | yes | Opaque run identifier (UUID). Used as the path segment in callback URLs. |
+| `MD_BENCHMARK_ID` | yes | Opaque benchmark identifier (UUID). Used as the path segment in callback URLs. |
 | `MD_CALLBACK_URL` | yes | Base URL of the ModelDoctor API (e.g. `http://api:3000`). Trailing slash is tolerated. |
 | `MD_CALLBACK_TOKEN` | yes | Bearer token included in every callback POST (`Authorization: Bearer <token>`). |
 | `MD_ARGV` | yes | JSON array — the full argv to exec (e.g. `["vegeta","attack",...]`). The wrapper execs this verbatim. |
@@ -80,9 +80,9 @@ All callbacks are relative to `MD_CALLBACK_URL`:
 
 | Event | Method + path |
 |---|---|
-| Tool started | `POST api/internal/runs/<run_id>/state` — `{"state":"running"}` |
-| Log lines (streaming, every 250 ms) | `POST api/internal/runs/<run_id>/log` — `{"stream":"stdout"\|"stderr","lines":[...]}` |
-| Tool finished (terminal) | `POST api/internal/runs/<run_id>/finish` — `{"state":"completed"\|"failed","exitCode":N,"stdout":"...","stderr":"...","files":{...},"message":"..."}` |
+| Tool started | `POST api/internal/benchmarks/<benchmark_id>/state` — `{"state":"running","toolVersion":"<tool> <version>"?}` (toolVersion captured at boot via `<tool> --version`, optional) |
+| Log lines (streaming, every 250 ms) | `POST api/internal/benchmarks/<benchmark_id>/log` — `{"stream":"stdout"\|"stderr","lines":[...]}` |
+| Tool finished (terminal) | `POST api/internal/benchmarks/<benchmark_id>/finish` — `{"state":"completed"\|"failed","exitCode":N,"stdout":"...","stderr":"...","files":{...},"message":"..."}` |
 
 The wrapper always exits 0 itself; tool failure is conveyed via `state: "failed"` in `/finish`.
 
@@ -92,7 +92,7 @@ The wrapper always exits 0 itself; tool failure is conveyed via `state: "failed"
 
 ```bash
 docker run --rm \
-  -e MD_RUN_ID=smoke-01 \
+  -e MD_BENCHMARK_ID=smoke-01 \
   -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["echo","hello from runner"]' \
@@ -124,9 +124,9 @@ python stub_callback.py   # terminal 2 — listens on :3001
 ```
 
 Expected output in stub terminal:
-1. `POST /api/internal/runs/smoke-01/state <- {'state': 'running'}`
-2. `POST /api/internal/runs/smoke-01/log <- {'stream': 'stdout', 'lines': ['hello from runner']}`
-3. `POST /api/internal/runs/smoke-01/finish <- {'state': 'completed', 'exitCode': 0, ...}`
+1. `POST /api/internal/benchmarks/smoke-01/state <- {'state': 'running', 'toolVersion': '...'}`  (toolVersion is included only when `<argv[0]> --version` succeeds)
+2. `POST /api/internal/benchmarks/smoke-01/log <- {'stream': 'stdout', 'lines': ['hello from runner']}`
+3. `POST /api/internal/benchmarks/smoke-01/finish <- {'state': 'completed', 'exitCode': 0, ...}`
 
 (Linux Docker without Desktop: replace `host.docker.internal` with
 `172.17.0.1`, or pass `--add-host=host.docker.internal:host-gateway`.)
@@ -135,7 +135,7 @@ Expected output in stub terminal:
 
 ```bash
 docker run --rm \
-  -e MD_RUN_ID=dev-$(date +%s) \
+  -e MD_BENCHMARK_ID=dev-$(date +%s) \
   -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["sh","-c","echo GET https://httpbin.org/get | vegeta attack -rate=1 -duration=3s | vegeta report -type=json -output=result.json"]' \
@@ -147,7 +147,7 @@ docker run --rm \
 
 ```bash
 docker run --rm \
-  -e MD_RUN_ID=dev-$(date +%s) \
+  -e MD_BENCHMARK_ID=dev-$(date +%s) \
   -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
   -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["benchmark-runner","benchmark","run","--target","https://your-vllm-host/v1","--model","facebook/opt-125m","--max-requests","10","--output-path","report.json"]' \

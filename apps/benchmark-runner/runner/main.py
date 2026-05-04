@@ -29,20 +29,60 @@ LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
 # vegeta attack.bin for a long load test can exceed 100 MB; base64-encoding
 # that entirely in memory would OOM the runner process.
 OUTPUT_FILE_MAX_BYTES = 50 * 1024 * 1024  # per output file
+# Cap version string length sent in the /state callback body. The contract
+# (`benchmarkStateCallbackSchema.toolVersion`) hard-caps at 50; truncating
+# here mirrors that so a tool with a verbose `--version` banner doesn't
+# flunk validation.
+TOOL_VERSION_MAX_CHARS = 50
+TOOL_VERSION_TIMEOUT_SEC = 10
 
 logging.basicConfig(level=logging.INFO, format="[runner] %(message)s")
 log = logging.getLogger("runner")
 
 
+def detect_tool_version(tool: str) -> str | None:
+    """Run ``<tool> --version`` and return the first stdout line stripped.
+
+    Returns None if the tool is missing, the call times out, or it exits
+    non-zero. Truncates to ``TOOL_VERSION_MAX_CHARS`` so a verbose banner
+    can never violate the contract's ``z.string().max(50)``.
+    """
+    try:
+        result = subprocess.run(  # noqa: S603 - argv is internal, not user-supplied
+            [tool, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=TOOL_VERSION_TIMEOUT_SEC,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    raw = (result.stdout or result.stderr).strip()
+    if not raw:
+        return None
+    line = raw.split("\n", 1)[0].strip()
+    if not line:
+        return None
+    return line[:TOOL_VERSION_MAX_CHARS]
+
+
 class StreamPump:
     """Drains a file-like stream into a full-buffer + a /log batch sender."""
 
-    def __init__(self, stream, name: str, callback_url: str, token: str, run_id: str):
+    def __init__(
+        self,
+        stream,
+        name: str,
+        callback_url: str,
+        token: str,
+        benchmark_id: str,
+    ):
         self.stream = stream
         self.name = name
         self.callback_url = callback_url
         self.token = token
-        self.run_id = run_id
+        self.benchmark_id = benchmark_id
         self.buffer: list[str] = []
         self.full: deque[str] = deque()
         self.full_bytes: int = 0
@@ -82,7 +122,7 @@ class StreamPump:
             post_log_batch(
                 callback_url=self.callback_url,
                 token=self.token,
-                run_id=self.run_id,
+                benchmark_id=self.benchmark_id,
                 stream=self.name,
                 lines=self.buffer,
             )
@@ -160,14 +200,27 @@ def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
 def main() -> int:
     callback_url = os.environ["MD_CALLBACK_URL"]
     token = os.environ["MD_CALLBACK_TOKEN"]
-    run_id = os.environ["MD_RUN_ID"]
+    benchmark_id = os.environ["MD_BENCHMARK_ID"]
     argv = json.loads(os.environ["MD_ARGV"])
     output_files = json.loads(os.environ["MD_OUTPUT_FILES"])
 
     _materialize_input_files()
 
+    # argv[0] is the tool binary (e.g. "guidellm", "vegeta", "genai-perf").
+    # We sniff its --version *before* the api-key injection step so that
+    # `vegeta --version` and friends never see an unrelated --backend-kwargs.
+    tool_name = argv[0] if argv else None
+    tool_version = detect_tool_version(tool_name) if tool_name else None
+    if tool_version is None and tool_name:
+        log.warning("detect_tool_version(%s) returned None", tool_name)
+
     try:
-        post_state_running(callback_url=callback_url, token=token, run_id=run_id)
+        post_state_running(
+            callback_url=callback_url,
+            token=token,
+            benchmark_id=benchmark_id,
+            tool_version=tool_version,
+        )
     except Exception as e:
         log.warning("post_state_running failed: %s", e)
 
@@ -180,8 +233,8 @@ def main() -> int:
         cwd=os.getcwd(),
     )
 
-    out_pump = StreamPump(proc.stdout, "stdout", callback_url, token, run_id)
-    err_pump = StreamPump(proc.stderr, "stderr", callback_url, token, run_id)
+    out_pump = StreamPump(proc.stdout, "stdout", callback_url, token, benchmark_id)
+    err_pump = StreamPump(proc.stderr, "stderr", callback_url, token, benchmark_id)
     t1 = threading.Thread(target=out_pump.run, daemon=True)
     t2 = threading.Thread(target=err_pump.run, daemon=True)
     t1.start()
@@ -217,7 +270,7 @@ def main() -> int:
         post_finish(
             callback_url=callback_url,
             token=token,
-            run_id=run_id,
+            benchmark_id=benchmark_id,
             state=state,
             exit_code=proc.returncode,
             stdout="\n".join(list(out_pump.full)),

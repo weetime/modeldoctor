@@ -74,7 +74,7 @@ export class SubprocessDriver implements BenchmarkExecutionDriver {
       ...filterHostEnv(process.env),
       ...ctx.buildResult.env,
       ...ctx.buildResult.secretEnv,
-      MD_RUN_ID: ctx.runId,
+      MD_BENCHMARK_ID: ctx.runId,
       MD_CALLBACK_URL: ctx.callback.url,
       MD_CALLBACK_TOKEN: ctx.callback.token,
       MD_ARGV: JSON.stringify(ctx.buildResult.argv),

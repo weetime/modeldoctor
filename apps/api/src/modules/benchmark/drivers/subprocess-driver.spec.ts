@@ -65,7 +65,7 @@ describe("SubprocessDriver", () => {
     const [cmd, , opts] = call as [string, string[], { env: Record<string, string>; cwd: string }];
     expect(cmd).toBe("benchmark-runner-wrapper");
     expect(opts.cwd).toBe(cwd);
-    expect(opts.env.MD_RUN_ID).toBe("abc123");
+    expect(opts.env.MD_BENCHMARK_ID).toBe("abc123");
     expect(opts.env.MD_CALLBACK_URL).toBe("http://localhost:3001");
     expect(opts.env.MD_CALLBACK_TOKEN).toBe("tk");
     expect(JSON.parse(opts.env.MD_ARGV)).toEqual(["echo", "hello"]);

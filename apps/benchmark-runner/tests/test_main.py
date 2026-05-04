@@ -117,13 +117,16 @@ def test_happy_path_posts_state_running_and_finish_completed(
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    # detect_tool_version invokes subprocess.run; stub it out so the test
+    # is hermetic (no dependency on a host `echo --version`).
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
     assert rc == 0
     assert patched_callbacks["post_state_running"].call_count == 1
     sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
-    assert sr_kwargs["run_id"] == "r-test"
+    assert sr_kwargs["benchmark_id"] == "b-test"
     assert sr_kwargs["token"] == "hmac-test-token"
 
     assert patched_callbacks["post_finish"].call_count == 1
@@ -144,6 +147,7 @@ def test_failure_path_posts_finish_failed_with_message(
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     proc = _fake_proc(stdout=b"", stderr=b"BOOM\n", returncode=1)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
@@ -173,6 +177,7 @@ def test_output_file_collected_as_base64(
 
     proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
@@ -195,6 +200,7 @@ def test_missing_output_file_silently_dropped(
 
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
@@ -213,13 +219,14 @@ def test_log_batches_posted_with_correct_kwargs(
     stdout_blob = b"line one\nline two\nline three\n"
     proc = _fake_proc(stdout=stdout_blob, stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
     assert rc == 0
     assert patched_callbacks["post_log_batch"].call_count >= 1
 
-    # All stdout-stream calls should target run_id=r-test and stream=stdout.
+    # All stdout-stream calls should target benchmark_id=b-test and stream=stdout.
     stdout_calls = [
         c
         for c in patched_callbacks["post_log_batch"].call_args_list
@@ -227,7 +234,7 @@ def test_log_batches_posted_with_correct_kwargs(
     ]
     assert len(stdout_calls) >= 1
     for c in stdout_calls:
-        assert c.kwargs["run_id"] == "r-test"
+        assert c.kwargs["benchmark_id"] == "b-test"
         assert isinstance(c.kwargs["lines"], list)
 
     # Across all stdout batches we should have observed every line at least once.
@@ -256,6 +263,7 @@ def test_stdout_tail_caps_at_64kb(
     big = ("\n".join(lines_in) + "\n").encode("utf-8")
     proc = _fake_proc(stdout=big, stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     rc = main_mod.main()
 
@@ -299,6 +307,7 @@ def test_redaction_in_log_line(
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     with caplog.at_level("INFO", logger="runner"):
         rc = main_mod.main()
@@ -323,6 +332,7 @@ def test_injected_api_key_is_redacted_in_log(
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
     with caplog.at_level("INFO", logger="runner"):
         main_mod.main()
     log_text = "\n".join(r.message for r in caplog.records)
@@ -379,6 +389,7 @@ def test_oversized_output_file_skipped_with_warning(
 
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
     with caplog.at_level("WARNING", logger="runner"):
         rc = main_mod.main()
@@ -416,3 +427,112 @@ def test_materialize_input_files_symlinks_into_cwd(
     dst = cwd / "dataset.json"
     assert dst.is_symlink()
     assert os.readlink(dst) == str(src)
+
+
+# ── detect_tool_version ─────────────────────────────────────────────────
+
+
+def _fake_completed(*, stdout: str = "", stderr: str = "", returncode: int = 0) -> MagicMock:
+    cp = MagicMock()
+    cp.stdout = stdout
+    cp.stderr = stderr
+    cp.returncode = returncode
+    return cp
+
+
+class TestDetectToolVersion:
+    def test_returns_first_stripped_line_of_stdout(self, mocker: MockerFixture) -> None:
+        mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="guidellm 0.5.2\n(c) gpustack\n"),
+        )
+        assert main_mod.detect_tool_version("guidellm") == "guidellm 0.5.2"
+
+    def test_falls_back_to_stderr_when_stdout_empty(self, mocker: MockerFixture) -> None:
+        # vegeta prints --version to stderr in some builds.
+        mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="", stderr="vegeta 12.10.0\n"),
+        )
+        assert main_mod.detect_tool_version("vegeta") == "vegeta 12.10.0"
+
+    def test_returns_none_when_binary_missing(self, mocker: MockerFixture) -> None:
+        mocker.patch("runner.main.subprocess.run", side_effect=FileNotFoundError())
+        assert main_mod.detect_tool_version("nonexistent-tool") is None
+
+    def test_returns_none_on_timeout(self, mocker: MockerFixture) -> None:
+        import subprocess as _sp
+
+        mocker.patch(
+            "runner.main.subprocess.run",
+            side_effect=_sp.TimeoutExpired(cmd=["foo"], timeout=10),
+        )
+        assert main_mod.detect_tool_version("foo") is None
+
+    def test_returns_none_on_nonzero_returncode(self, mocker: MockerFixture) -> None:
+        mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="usage: foo [...]\n", returncode=2),
+        )
+        assert main_mod.detect_tool_version("foo") is None
+
+    def test_returns_none_on_blank_output(self, mocker: MockerFixture) -> None:
+        mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="   \n", returncode=0),
+        )
+        assert main_mod.detect_tool_version("foo") is None
+
+    def test_truncates_to_50_chars(self, mocker: MockerFixture) -> None:
+        # Contract caps toolVersion at 50; the helper must truncate so
+        # validation doesn't reject a verbose banner.
+        long = "guidellm " + "x" * 200
+        mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout=long + "\n"),
+        )
+        out = main_mod.detect_tool_version("guidellm")
+        assert out is not None
+        assert len(out) == main_mod.TOOL_VERSION_MAX_CHARS
+
+
+def test_state_running_callback_includes_detected_tool_version(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+) -> None:
+    """End-to-end: main() detects argv[0]'s --version and forwards it as
+    tool_version on the /state callback so the BFF can persist it on the
+    benchmark row."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "benchmark", "run"])
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value="guidellm 0.5.2")
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
+    assert sr_kwargs["tool_version"] == "guidellm 0.5.2"
+    assert sr_kwargs["benchmark_id"] == "b-test"
+
+
+def test_state_running_callback_passes_none_when_version_undetectable(
+    patched_callbacks: dict[str, MagicMock],
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+) -> None:
+    """When the tool isn't on PATH, main() still posts /state — just with
+    tool_version=None — so the benchmark transitions to running."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["nonexistent-tool"])
+    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
+    assert sr_kwargs["tool_version"] is None
