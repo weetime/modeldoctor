@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
@@ -19,8 +20,15 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
   const actual = (await orig()) as Record<string, unknown>;
   return {
     ...actual,
+    // Stub applyScenarioConstraints so the controller spec can pass minimal
+    // params without satisfying real per-scenario zod narrowings; service-
+    // level scenario behavior is covered in benchmark.service.spec.
+    applyScenarioConstraints: () => ({ parse: (x: unknown) => x }),
     byTool: () => ({
       name: "guidellm",
+      // Default stub claims to support inference + capacity so the upfront
+      // scenario-tool guard in BenchmarkService.create doesn't reject.
+      scenarios: ["inference", "capacity"],
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
@@ -87,6 +95,10 @@ describe("BenchmarkController", () => {
         },
         { provide: BENCHMARK_DRIVER, useValue: mockDriver },
         { provide: ConnectionService, useValue: mockConnections },
+        {
+          provide: BenchmarkTemplateRepository,
+          useValue: { findByIdOrNull: vi.fn(async () => null) },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -470,6 +482,10 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         },
         { provide: BENCHMARK_DRIVER, useValue: mockDriver },
         { provide: ConnectionService, useValue: mockConnections },
+        {
+          provide: BenchmarkTemplateRepository,
+          useValue: { findByIdOrNull: vi.fn(async () => null) },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
 import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.controller.js";
 import { createBenchmarkDriver } from "./drivers/benchmark-driver.factory.js";
@@ -13,7 +14,7 @@ import { BenchmarkService } from "./benchmark.service.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 
 @Module({
-  imports: [ConfigModule, ConnectionModule],
+  imports: [ConfigModule, ConnectionModule, BenchmarkTemplateModule],
   controllers: [BenchmarkController, BenchmarkCallbackController],
   providers: [
     PrismaService,

@@ -3,19 +3,33 @@ import type { ConfigService } from "@nestjs/config";
 import { type Benchmark as PrismaBenchmark, Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
+import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import type { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
 
 // Stub adapter registry to avoid pulling in the real (stubbed) adapters'
-// buildCommand / paramsSchema implementations.
+// buildCommand / paramsSchema implementations. We also stub
+// applyScenarioConstraints by default so existing happy-path tests can
+// pass `params: {}`; tests that need the real scenario narrowing (the
+// "scenario validation" describe block) restore the real implementation
+// per-test via a saved reference.
 vi.mock("@modeldoctor/tool-adapters", async (orig) => {
   const actual = (await orig()) as Record<string, unknown>;
+  // Preserve real applyScenarioConstraints under a different name so the
+  // scenario-validation tests can opt into the actual zod merging logic.
   return {
     ...actual,
+    __realApplyScenarioConstraints: actual.applyScenarioConstraints,
+    applyScenarioConstraints: () => ({ parse: (x: unknown) => x }),
     byTool: () => ({
       name: "guidellm",
+      // Default stub claims to support both inference and capacity so the
+      // standard create-path tests don't hit the scenario-tool mismatch
+      // guard in BenchmarkService.create. Tests that need to assert the
+      // mismatch (e.g. vegeta+capacity) override `byTool` per-test.
+      scenarios: ["inference", "capacity"],
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
@@ -129,12 +143,25 @@ const mockConnections: ConnectionService = {
   })),
 } as unknown as ConnectionService;
 
-function build(repo: MockRepo, configOverrides?: Record<string, unknown>) {
+class MockTemplateRepo {
+  rows = new Map<string, { id: string; scenario: string; tool: string }>();
+  setup(row: { id: string; scenario: string; tool: string }) {
+    this.rows.set(row.id, row);
+  }
+  findByIdOrNull = vi.fn(async (id: string) => this.rows.get(id) ?? null);
+}
+
+function build(
+  repo: MockRepo,
+  configOverrides?: Record<string, unknown>,
+  templateRepo?: MockTemplateRepo,
+) {
   return new BenchmarkService(
     repo as unknown as BenchmarkRepository,
     mockDriver,
     mockConfig(configOverrides) as unknown as ConfigService<typeof ENV_DEFAULTS, true>,
     mockConnections,
+    (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
   );
 }
 
@@ -274,6 +301,7 @@ describe("BenchmarkService.create — failure paths", () => {
     const orig = adapters.byTool;
     (adapters as { byTool: typeof orig }).byTool = (() => ({
       name: "guidellm",
+      scenarios: ["inference", "capacity"],
       paramsSchema: {
         parse: () => {
           throw new Error("bad params");
@@ -369,6 +397,7 @@ describe("BenchmarkService.start — callback TTL", () => {
     const orig = adapters.byTool;
     (adapters as { byTool: typeof orig }).byTool = (() => ({
       name: "guidellm",
+      scenarios: ["inference", "capacity"],
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
@@ -451,5 +480,133 @@ describe("admin elevation (userId === undefined)", () => {
     // Row is still in the mock repo (delete was rejected)
     const stillThere = await repo.findById("b-elev-baseline");
     expect(stillThere).not.toBeNull();
+  });
+});
+
+describe("BenchmarkService.create — scenario validation", () => {
+  let repo: MockRepo;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("rejects (scenario='capacity', tool='vegeta') — vegeta does not serve capacity", async () => {
+    // Override the byTool stub for this test to return a vegeta-shaped
+    // adapter whose `scenarios` does NOT include 'capacity'. The service's
+    // upfront scenario-tool compatibility guard fires before any zod parse.
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const orig = adapters.byTool;
+    (adapters as { byTool: typeof orig }).byTool = (() => ({
+      name: "vegeta",
+      scenarios: ["gateway"],
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "vegeta" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
+    })) as unknown as typeof orig;
+    try {
+      await expect(
+        svc.create("u1", {
+          scenario: "capacity",
+          tool: "vegeta",
+          connectionId: "c1",
+          name: "should-fail",
+          params: {},
+        }),
+      ).rejects.toThrow(/scenario .* does not support tool/);
+      expect(repo.create).not.toHaveBeenCalled();
+    } finally {
+      (adapters as { byTool: typeof orig }).byTool = orig;
+    }
+  });
+
+  it("rejects guidellm with rateType=sweep under inference scenario", async () => {
+    // Restore the real guidellm adapter + real applyScenarioConstraints for
+    // this test so the actual zod merging logic narrows rateType.
+    const adapters = (await import("@modeldoctor/tool-adapters")) as unknown as {
+      byTool: (t: string) => unknown;
+      guidellmAdapter: unknown;
+      applyScenarioConstraints: (...args: unknown[]) => unknown;
+      __realApplyScenarioConstraints: (...args: unknown[]) => unknown;
+    };
+    const origByTool = adapters.byTool;
+    const origApply = adapters.applyScenarioConstraints;
+    adapters.byTool = (tool: string) => {
+      if (tool === "guidellm") return adapters.guidellmAdapter;
+      throw new Error(`unexpected tool ${tool} in test`);
+    };
+    adapters.applyScenarioConstraints = adapters.__realApplyScenarioConstraints;
+    try {
+      await expect(
+        svc.create("u1", {
+          scenario: "inference",
+          tool: "guidellm",
+          connectionId: "c1",
+          name: "no-sweep-here",
+          params: {
+            profile: "throughput",
+            apiType: "chat",
+            datasetName: "random",
+            datasetInputTokens: 256,
+            datasetOutputTokens: 64,
+            // 'sweep' is allowed by the base schema but EXCLUDED by the
+            // inference-scenario rateType narrowing.
+            rateType: "sweep",
+          },
+        }),
+      ).rejects.toThrow(/rateType/i);
+      expect(repo.create).not.toHaveBeenCalled();
+    } finally {
+      adapters.byTool = origByTool;
+      adapters.applyScenarioConstraints = origApply;
+    }
+  });
+
+  it("rejects guidellm without rateType=sweep under capacity scenario", async () => {
+    // Real guidellm adapter — capacity narrows rateType to z.literal('sweep').
+    const adapters = (await import("@modeldoctor/tool-adapters")) as unknown as {
+      byTool: (t: string) => unknown;
+      guidellmAdapter: unknown;
+      applyScenarioConstraints: (...args: unknown[]) => unknown;
+      __realApplyScenarioConstraints: (...args: unknown[]) => unknown;
+    };
+    const origByTool = adapters.byTool;
+    const origApply = adapters.applyScenarioConstraints;
+    adapters.byTool = (tool: string) => {
+      if (tool === "guidellm") return adapters.guidellmAdapter;
+      throw new Error(`unexpected tool ${tool} in test`);
+    };
+    adapters.applyScenarioConstraints = adapters.__realApplyScenarioConstraints;
+    try {
+      await expect(
+        svc.create("u1", {
+          scenario: "capacity",
+          tool: "guidellm",
+          connectionId: "c1",
+          name: "must-be-sweep",
+          params: {
+            profile: "throughput",
+            apiType: "chat",
+            // sharegpt avoids the cross-field requirement that random imposes
+            // (datasetInputTokens / datasetOutputTokens) — keeps the assertion
+            // focused on the rateType narrowing, not unrelated zod issues.
+            datasetName: "sharegpt",
+            // 'constant' is in the base enum but rejected by the capacity
+            // scenario overlay (which forces rateType = literal 'sweep').
+            rateType: "constant",
+          },
+        }),
+      ).rejects.toThrow(/rateType/i);
+      expect(repo.create).not.toHaveBeenCalled();
+    } finally {
+      adapters.byTool = origByTool;
+      adapters.applyScenarioConstraints = origApply;
+    }
   });
 });

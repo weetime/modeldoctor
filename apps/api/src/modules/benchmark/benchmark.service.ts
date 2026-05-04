@@ -4,7 +4,7 @@ import {
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
-import { type ToolName, byTool } from "@modeldoctor/tool-adapters";
+import { type ToolName, applyScenarioConstraints, byTool } from "@modeldoctor/tool-adapters";
 import {
   BadRequestException,
   ConflictException,
@@ -16,6 +16,7 @@ import { ConfigService } from "@nestjs/config";
 import type { Prisma } from "@prisma/client";
 import { signCallbackToken } from "../../common/hmac/hmac-token.js";
 import type { Env } from "../../config/env.schema.js";
+import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { imageForTool } from "./drivers/benchmark-driver.factory.js";
@@ -39,6 +40,7 @@ export class BenchmarkService {
     @Inject(BENCHMARK_DRIVER) private readonly driver: BenchmarkExecutionDriver,
     private readonly config: ConfigService<Env, true>,
     private readonly connections: ConnectionService,
+    private readonly templates: BenchmarkTemplateRepository,
   ) {
     const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
       | string
@@ -92,8 +94,28 @@ export class BenchmarkService {
   async create(userId: string, req: CreateBenchmarkRequest): Promise<Benchmark> {
     const conn = await this.connections.getOwnedDecrypted(userId, req.connectionId);
     const adapter = byTool(req.tool as ToolName);
+
+    // 1. Validate scenario × tool compatibility before zod parse — gives a
+    //    crisper error than "rateType not allowed".
+    if (!adapter.scenarios.includes(req.scenario)) {
+      throw new BadRequestException({
+        code: "BENCHMARK_SCENARIO_TOOL_MISMATCH",
+        message: `scenario '${req.scenario}' does not support tool '${req.tool}'`,
+      });
+    }
+
+    // 2. Apply scenario-specific overlays (e.g. force rateType=sweep for
+    //    capacity). NOTE: applyScenarioConstraints unwraps ZodEffects, so any
+    //    superRefine on adapter.paramsSchema is DROPPED by the merge. We MUST
+    //    also run the original schema afterward to retain cross-field rules
+    //    (e.g. guidellm's "random dataset requires datasetInputTokens /
+    //    datasetOutputTokens"). See JSDoc on applyScenarioConstraints.
     let params: unknown;
     try {
+      const merged = applyScenarioConstraints(req.scenario, req.tool as ToolName);
+      // First: scenario-narrowed shape (rateType narrowing).
+      merged.parse(req.params);
+      // Second: full base schema including superRefine cross-field checks.
       params = adapter.paramsSchema.parse(req.params);
     } catch (e) {
       throw new BadRequestException({
@@ -108,6 +130,23 @@ export class BenchmarkService {
         code: "BENCHMARK_NAME_IN_USE",
         message: `An active benchmark named '${req.name}' already exists`,
       });
+    }
+
+    // 4. Validate templateId reference + scenario/tool match (if provided).
+    if (req.templateId) {
+      const tpl = await this.templates.findByIdOrNull(req.templateId);
+      if (!tpl) {
+        throw new BadRequestException({
+          code: "BENCHMARK_TEMPLATE_NOT_FOUND",
+          message: `templateId '${req.templateId}' does not exist`,
+        });
+      }
+      if (tpl.scenario !== req.scenario || tpl.tool !== req.tool) {
+        throw new BadRequestException({
+          code: "BENCHMARK_TEMPLATE_MISMATCH",
+          message: `template scenario/tool does not match requested benchmark`,
+        });
+      }
     }
 
     const created = await this.repo.create({
