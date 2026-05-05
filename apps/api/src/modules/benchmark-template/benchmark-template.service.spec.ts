@@ -141,6 +141,27 @@ describe("BenchmarkTemplateService", () => {
       expect(out.name).toBe("renamed");
     });
 
+    it("re-validates config against the existing row's (scenario, tool) when patch.config is supplied", async () => {
+      // The existing row is inference + guidellm. We patch with a NEW config.
+      // The mocked applyScenarioConstraints / paramsSchema accept anything,
+      // so this should succeed — what matters is verifying repo.update
+      // received the new config (i.e. validateConfig didn't reject it).
+      (repo.findByIdOrNull as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeRow({ createdBy: "owner-1", scenario: "inference", tool: "guidellm" }),
+      );
+      (repo.update as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeRow({ config: { rateType: "constant", rate: 99 } }),
+      );
+      const out = await svc.update({ sub: "owner-1", isAdmin: false }, "tpl-1", {
+        config: { rateType: "constant", rate: 99 },
+      });
+      expect(repo.update).toHaveBeenCalledWith(
+        "tpl-1",
+        expect.objectContaining({ config: { rateType: "constant", rate: 99 } }),
+      );
+      expect(out.config).toEqual({ rateType: "constant", rate: 99 });
+    });
+
     it("allows admin to patch any template", async () => {
       (repo.findByIdOrNull as ReturnType<typeof vi.fn>).mockResolvedValue(
         makeRow({ createdBy: "owner-1" }),
