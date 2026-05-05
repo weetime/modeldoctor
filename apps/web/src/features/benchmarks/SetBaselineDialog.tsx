@@ -1,4 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/common/form-actions";
+import { FormSection } from "@/components/common/form-section";
 import {
   Dialog,
   DialogContent,
@@ -7,14 +8,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateBaseline } from "@/features/baseline/queries";
 import { ApiError } from "@/lib/api-client";
-import { type FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const baselineFormSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2048).optional(),
+  tagsInput: z.string().optional(),
+});
+
+type BaselineFormValues = z.infer<typeof baselineFormSchema>;
 
 export interface SetBaselineDialogProps {
   benchmarkId: string;
@@ -31,33 +50,35 @@ export function SetBaselineDialog({
 }: SetBaselineDialogProps) {
   const { t } = useTranslation("benchmarks");
   const create = useCreateBaseline();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (trimmed.length === 0) return;
-    const tags = tagsInput
+  const form = useForm<BaselineFormValues>({
+    resolver: zodResolver(baselineFormSchema),
+    mode: "onTouched",
+    defaultValues: { name: "", description: undefined, tagsInput: "" },
+  });
+
+  // Reset whenever the dialog re-opens.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form is stable (useForm returns a stable ref)
+  useEffect(() => {
+    if (open) form.reset({ name: "", description: undefined, tagsInput: "" });
+  }, [open]);
+
+  const onSubmit = form.handleSubmit((values) => {
+    const tags = (values.tagsInput ?? "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
     create.mutate(
       {
         benchmarkId,
-        name: trimmed,
-        ...(description.trim() ? { description: description.trim() } : {}),
+        name: values.name,
+        ...(values.description ? { description: values.description } : {}),
         tags,
       },
       {
         onSuccess: () => {
           onSuccess?.();
           onOpenChange(false);
-          // Reset for next open.
-          setName("");
-          setDescription("");
-          setTagsInput("");
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
@@ -68,60 +89,81 @@ export function SetBaselineDialog({
         },
       },
     );
-  }
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <DialogHeader>
-            <DialogTitle>{t("detail.baseline.dialog.title")}</DialogTitle>
-            <DialogDescription>{t("detail.baseline.dialog.body")}</DialogDescription>
-          </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{t("detail.baseline.dialog.title")}</DialogTitle>
+              <DialogDescription>{t("detail.baseline.dialog.body")}</DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="baseline-name">{t("detail.baseline.dialog.nameLabel")}</Label>
-            <Input
-              id="baseline-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("detail.baseline.dialog.namePlaceholder")}
-              maxLength={200}
-              required
-            />
-          </div>
+            <FormSection>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>{t("detail.baseline.dialog.nameLabel")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t("detail.baseline.dialog.namePlaceholder")}
+                        maxLength={200}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("detail.baseline.dialog.descriptionLabel")}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(e.target.value === "" ? undefined : e.target.value)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tagsInput"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("detail.baseline.dialog.tagsLabel")}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="qwen, throughput" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </FormSection>
 
-          <div className="space-y-2">
-            <Label htmlFor="baseline-description">
-              {t("detail.baseline.dialog.descriptionLabel")}
-            </Label>
-            <Textarea
-              id="baseline-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="baseline-tags">{t("detail.baseline.dialog.tagsLabel")}</Label>
-            <Input
-              id="baseline-tags"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="qwen, throughput"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              {t("detail.baseline.dialog.cancel")}
-            </Button>
-            <Button type="submit" disabled={create.isPending || name.trim().length === 0}>
-              {t("detail.baseline.dialog.submit")}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <FormActions
+                onCancel={() => onOpenChange(false)}
+                cancelLabel={t("detail.baseline.dialog.cancel")}
+                submitLabel={t("detail.baseline.dialog.submit")}
+                disabled={!form.formState.isValid}
+                pending={create.isPending}
+              />
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -1,90 +1,88 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import "@/lib/i18n";
-
-vi.mock("@/lib/api-client", () => {
-  class ApiError extends Error {
-    constructor(
-      public status: number,
-      message: string,
-    ) {
-      super(message);
-    }
-  }
-  return { ApiError, api: { get: vi.fn(), post: vi.fn(), del: vi.fn() } };
-});
-
-import { api } from "@/lib/api-client";
 import { SetBaselineDialog } from "../SetBaselineDialog";
 
-function Wrapper({ children }: { children: ReactNode }) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
-  });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+const mockMutate = vi.fn();
+vi.mock("@/features/baseline/queries", () => ({
+  useCreateBaseline: () => ({ mutate: mockMutate, isPending: false }),
+}));
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 describe("SetBaselineDialog", () => {
-  beforeEach(() => {
-    vi.mocked(api.post).mockReset();
+  beforeEach(() => mockMutate.mockReset());
+
+  it("renders required asterisk on Name", () => {
+    render(<SetBaselineDialog benchmarkId="b1" open onOpenChange={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    const stars = screen.getAllByText("*", { selector: "span" });
+    expect(stars.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("submits {benchmarkId, name, description, tags} and calls onSuccess", async () => {
-    vi.mocked(api.post).mockResolvedValueOnce({
-      id: "b_1",
-      userId: "u_1",
-      benchmarkId: "r_1",
-      name: "anchor",
-      description: "desc",
-      tags: ["a", "b"],
-      templateId: null,
-      active: true,
-      createdAt: "2026-05-02T00:00:00.000Z",
-      updatedAt: "2026-05-02T00:00:00.000Z",
-    });
-    const onSuccess = vi.fn();
-    render(
-      <SetBaselineDialog
-        benchmarkId="r_1"
-        open={true}
-        onOpenChange={() => {}}
-        onSuccess={onSuccess}
-      />,
-      { wrapper: Wrapper },
-    );
-
+  it("submit button is disabled until name has a value", async () => {
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/Name|名称/), "anchor");
-    await user.type(screen.getByLabelText(/Description|备注/), "desc");
-    await user.type(screen.getByLabelText(/Tags|标签/), "a, b");
-    await act(async () => {
-      await user.click(screen.getByRole("button", { name: /Save|保存/ }));
+    render(<SetBaselineDialog benchmarkId="b1" open onOpenChange={() => {}} />, {
+      wrapper: Wrapper,
     });
-    await waitFor(() => expect(api.post).toHaveBeenCalled());
-    expect(api.post).toHaveBeenCalledWith("/api/baselines", {
-      benchmarkId: "r_1",
-      name: "anchor",
-      description: "desc",
-      tags: ["a", "b"],
+    // The submit label comes from i18n; en-US falls back. Match by being the
+    // form's submit button (disabled by default).
+    const buttons = screen.getAllByRole("button");
+    const submit = buttons.find((b) => (b as HTMLButtonElement).type === "submit");
+    expect(submit).toBeDefined();
+    expect(submit).toBeDisabled();
+    await user.type(screen.getByLabelText(/Name/i), "v1");
+    expect(submit).not.toBeDisabled();
+  });
+
+  it("shows required error when name is blurred while empty", async () => {
+    const user = userEvent.setup();
+    render(<SetBaselineDialog benchmarkId="b1" open onOpenChange={() => {}} />, {
+      wrapper: Wrapper,
     });
-    expect(onSuccess).toHaveBeenCalled();
+    const nameInput = screen.getByLabelText(/Name/i);
+    await user.click(nameInput);
+    await user.tab();
+    expect(await screen.findByText(/required/i)).toBeInTheDocument();
+  });
+
+  it("calls createBaseline with {benchmarkId, name, description, tags} on submit", async () => {
+    const user = userEvent.setup();
+    render(<SetBaselineDialog benchmarkId="r_1" open onOpenChange={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    await user.type(screen.getByLabelText(/Name/i), "anchor");
+    await user.type(screen.getByLabelText(/Description/i), "desc");
+    await user.type(screen.getByLabelText(/Tags/i), "a, b");
+    const submit = screen
+      .getAllByRole("button")
+      .find((b) => (b as HTMLButtonElement).type === "submit") as HTMLButtonElement;
+    await user.click(submit);
+    expect(mockMutate).toHaveBeenCalledWith(
+      { benchmarkId: "r_1", name: "anchor", description: "desc", tags: ["a", "b"] },
+      expect.any(Object),
+    );
   });
 
   it("does not submit when name is empty", async () => {
-    render(
-      <SetBaselineDialog
-        benchmarkId="r_1"
-        open={true}
-        onOpenChange={() => {}}
-        onSuccess={() => {}}
-      />,
-      { wrapper: Wrapper },
-    );
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Save|保存/ }));
-    expect(api.post).not.toHaveBeenCalled();
+    render(<SetBaselineDialog benchmarkId="r_1" open onOpenChange={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    const submit = screen
+      .getAllByRole("button")
+      .find((b) => (b as HTMLButtonElement).type === "submit") as HTMLButtonElement;
+    await user.click(submit);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 });
