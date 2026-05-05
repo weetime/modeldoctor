@@ -370,9 +370,8 @@ describe("Auth (e2e)", () => {
       .get("/api/benchmarks?scope=all")
       .set("Authorization", `Bearer ${userToken}`)
       .expect(403);
-    // AllExceptionsFilter normalizes the http status → "FORBIDDEN" (the controller's
-    // exception body `code: "BENCHMARK_SCOPE_FORBIDDEN"` is preserved in the message instead).
-    expect(res.body.error.code).toBe("FORBIDDEN");
+    // AllExceptionsFilter preserves the domain-specific code from the exception body.
+    expect(res.body.error.code).toBe("BENCHMARK_SCOPE_FORBIDDEN");
     expect(res.body.error.message).toMatch(/admin role required/i);
   });
 

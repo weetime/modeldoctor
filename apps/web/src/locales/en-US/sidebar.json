@@ -15,6 +15,7 @@
     "benchmarkCapacity": "Capacity Planning",
     "benchmarkGateway": "Gateway Load Test",
     "benchmarkCompare": "Compare",
+    "benchmarkTemplates": "Test Templates",
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",
     "connections": "Connections",

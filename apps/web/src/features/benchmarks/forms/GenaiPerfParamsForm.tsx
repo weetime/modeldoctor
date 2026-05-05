@@ -19,10 +19,14 @@ const ENDPOINT_TYPES: GenaiPerfParams["endpointType"][] = [
   "rankings",
 ];
 
-export function GenaiPerfParamsForm() {
+interface GenaiPerfParamsFormProps {
+  fieldPrefix?: "params" | "config";
+}
+
+export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsFormProps = {}) {
   const { register, setValue, control } = useFormContext();
-  const endpointType = useWatch({ control, name: "params.endpointType" });
-  const streaming = useWatch({ control, name: "params.streaming" });
+  const endpointType = useWatch({ control, name: `${fieldPrefix}.endpointType` });
+  const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` });
 
   const idPrefix = useId();
   const ids = {
@@ -44,7 +48,7 @@ export function GenaiPerfParamsForm() {
         <Select
           value={endpointType ?? ""}
           onValueChange={(v) =>
-            setValue("params.endpointType", v as GenaiPerfParams["endpointType"], {
+            setValue(`${fieldPrefix}.endpointType`, v as GenaiPerfParams["endpointType"], {
               shouldValidate: true,
             })
           }
@@ -67,7 +71,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.numPrompts}
             type="number"
-            {...register("params.numPrompts", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.numPrompts`, { valueAsNumber: true })}
           />
         </div>
         <div>
@@ -75,7 +79,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.concurrency}
             type="number"
-            {...register("params.concurrency", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.concurrency`, { valueAsNumber: true })}
           />
         </div>
       </div>
@@ -85,7 +89,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.inputTokensMean}
             type="number"
-            {...register("params.inputTokensMean", {
+            {...register(`${fieldPrefix}.inputTokensMean`, {
               setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
             })}
           />
@@ -95,7 +99,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.inputTokensStddev}
             type="number"
-            {...register("params.inputTokensStddev", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.inputTokensStddev`, { valueAsNumber: true })}
           />
         </div>
       </div>
@@ -105,7 +109,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.outputTokensMean}
             type="number"
-            {...register("params.outputTokensMean", {
+            {...register(`${fieldPrefix}.outputTokensMean`, {
               setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
             })}
           />
@@ -115,7 +119,7 @@ export function GenaiPerfParamsForm() {
           <Input
             id={ids.outputTokensStddev}
             type="number"
-            {...register("params.outputTokensStddev", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.outputTokensStddev`, { valueAsNumber: true })}
           />
         </div>
       </div>
@@ -123,7 +127,7 @@ export function GenaiPerfParamsForm() {
         <Switch
           id={ids.streaming}
           checked={streaming === true}
-          onCheckedChange={(v) => setValue("params.streaming", v, { shouldValidate: true })}
+          onCheckedChange={(v) => setValue(`${fieldPrefix}.streaming`, v, { shouldValidate: true })}
         />
         <Label htmlFor={ids.streaming}>Streaming</Label>
       </div>
@@ -131,7 +135,7 @@ export function GenaiPerfParamsForm() {
         <Label htmlFor={ids.tokenizer}>Tokenizer (HuggingFace id, optional)</Label>
         <Input
           id={ids.tokenizer}
-          {...register("params.tokenizer", {
+          {...register(`${fieldPrefix}.tokenizer`, {
             setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
           })}
           placeholder="Overrides connection-level default; leave empty to use it."

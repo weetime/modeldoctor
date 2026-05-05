@@ -1,0 +1,71 @@
+{
+  "title": "Test Templates",
+  "subtitle": "Manage reusable benchmark configurations across connections",
+  "actions": {
+    "new": "New template",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back to list"
+  },
+  "list": {
+    "tabs": {
+      "inference": "Inference benchmark",
+      "capacity": "Capacity planning",
+      "gateway": "Gateway load test"
+    },
+    "filters": {
+      "search": "Search name or description…",
+      "officialOnly": "Official only"
+    },
+    "official": "Official",
+    "createdAt": "Created {{when}}",
+    "updatedAt": "Updated {{when}}",
+    "by": "by {{name}}",
+    "empty": {
+      "title": "No templates yet",
+      "subtitle": "Create the first template for this scenario"
+    }
+  },
+  "create": {
+    "title": "New template",
+    "subtitle": "Save a reusable benchmark configuration",
+    "sections": {
+      "basic": "Basic info",
+      "scenario": "Scenario",
+      "official": "Visibility"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Inference baseline (short text)",
+      "description": "Description",
+      "tags": "Tags",
+      "tagsPlaceholder": "Press Enter to add",
+      "scenario": "Scenario",
+      "isOfficial": "Mark as official template"
+    },
+    "officialHint": "Admin only. The isOfficial field is immutable after creation.",
+    "submitted": "Template '{{name}}' created",
+    "errors": {
+      "submitFailed": "Failed to create template"
+    }
+  },
+  "edit": {
+    "title": "Edit template",
+    "subtitle": "name / description / config / tags are editable; scenario / tool / official flag are not",
+    "readonlyBanner": "You are not the owner of this template — read-only view",
+    "saved": "Saved",
+    "deleteConfirm": {
+      "title": "Delete template '{{name}}'?",
+      "body": "Irreversible. Benchmarks already referencing this template are unaffected; their templateId will be set to NULL.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "deleted": "Template deleted",
+    "errors": {
+      "saveFailed": "Failed to save",
+      "deleteFailed": "Failed to delete"
+    }
+  }
+}

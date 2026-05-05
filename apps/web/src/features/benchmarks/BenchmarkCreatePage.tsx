@@ -18,28 +18,14 @@ import {
   createBenchmarkRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import {
-  genaiPerfParamDefaults,
-  guidellmParamDefaults,
-  vegetaParamDefaults,
-} from "@modeldoctor/tool-adapters/schemas";
-import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { GenaiPerfParamsForm } from "./forms/GenaiPerfParamsForm";
-import { GuidellmParamsForm } from "./forms/GuidellmParamsForm";
-import { VegetaParamsForm } from "./forms/VegetaParamsForm";
+import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
-
-const TOOL_DEFAULTS: Record<ToolName, unknown> = {
-  guidellm: guidellmParamDefaults,
-  vegeta: vegetaParamDefaults,
-  "genai-perf": genaiPerfParamDefaults,
-};
 
 /**
  * Thin inline connection picker — lists the user's saved connections in a
@@ -87,7 +73,6 @@ export function BenchmarkCreatePage() {
   const createMut = useCreateBenchmark();
   const idPrefix = useId();
   const connectionFieldId = `${idPrefix}-connection`;
-  const toolFieldId = `${idPrefix}-tool`;
   const nameFieldId = `${idPrefix}-name`;
   const descFieldId = `${idPrefix}-desc`;
 
@@ -99,8 +84,7 @@ export function BenchmarkCreatePage() {
   const scenarioParam = params.get("scenario");
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
-  const availableTools = SCENARIOS[scenario].tools;
-  const defaultTool = availableTools[0];
+  const defaultTool = SCENARIOS[scenario].tools[0];
 
   const form = useForm<CreateBenchmarkRequest>({
     resolver: zodResolver(createBenchmarkRequestSchema),
@@ -135,29 +119,11 @@ export function BenchmarkCreatePage() {
     });
   }, [scenario]);
 
-  // Single source of truth: form state. useWatch keeps the section render +
-  // tool-specific subform in sync without a duplicate useState/useEffect pair.
-  const tool = (useWatch({ control: form.control, name: "tool" }) ?? defaultTool) as ToolName;
   const connectionId = useWatch({ control: form.control, name: "connectionId" }) ?? "";
-
-  function handleToolChange(next: ToolName) {
-    form.reset({
-      ...form.getValues(),
-      tool: next,
-      params: TOOL_DEFAULTS[next] as Record<string, unknown>,
-    });
-  }
 
   function handleConnectionChange(next: string) {
     form.setValue("connectionId", next, { shouldValidate: true });
   }
-
-  const ParamsForm =
-    tool === "guidellm"
-      ? GuidellmParamsForm
-      : tool === "vegeta"
-        ? VegetaParamsForm
-        : GenaiPerfParamsForm;
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -196,38 +162,7 @@ export function BenchmarkCreatePage() {
               />
             </section>
 
-            {/* Tool section — single-tool scenarios (capacity, gateway) skip
-                the dropdown and just label the auto-selected tool. */}
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("create.sections.tool")}
-              </h2>
-              <div className="max-w-xs">
-                <Label htmlFor={toolFieldId}>{t("create.fields.tool")}</Label>
-                {availableTools.length > 1 ? (
-                  <Select value={tool} onValueChange={(v) => handleToolChange(v as ToolName)}>
-                    <SelectTrigger id={toolFieldId} aria-label="Tool">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTools.map((tn) => (
-                        <SelectItem key={tn} value={tn}>
-                          {t(`create.tools.${tn}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div
-                    id={toolFieldId}
-                    aria-label="Tool"
-                    className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm"
-                  >
-                    {t(`create.tools.${tool}`)}
-                  </div>
-                )}
-              </div>
-            </section>
+            <ToolParamsEditor scenario={scenario} />
 
             {/* Run metadata section */}
             <section className="rounded-lg border border-border bg-card p-4 space-y-3">
@@ -248,14 +183,6 @@ export function BenchmarkCreatePage() {
                   })}
                 />
               </div>
-            </section>
-
-            {/* Parameters section */}
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("create.sections.parameters")}
-              </h2>
-              <ParamsForm />
             </section>
 
             <div className="flex justify-end gap-2">

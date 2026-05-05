@@ -20,9 +20,13 @@ const API_TYPES: VegetaParams["apiType"][] = [
   "chat-audio",
 ];
 
-export function VegetaParamsForm() {
+interface VegetaParamsFormProps {
+  fieldPrefix?: "params" | "config";
+}
+
+export function VegetaParamsForm({ fieldPrefix = "params" }: VegetaParamsFormProps = {}) {
   const { register, setValue, control } = useFormContext();
-  const apiType = useWatch({ control, name: "params.apiType" });
+  const apiType = useWatch({ control, name: `${fieldPrefix}.apiType` });
 
   const idPrefix = useId();
   const ids = {
@@ -38,7 +42,7 @@ export function VegetaParamsForm() {
         <Select
           value={apiType ?? ""}
           onValueChange={(v) =>
-            setValue("params.apiType", v as VegetaParams["apiType"], {
+            setValue(`${fieldPrefix}.apiType`, v as VegetaParams["apiType"], {
               shouldValidate: true,
             })
           }
@@ -61,7 +65,7 @@ export function VegetaParamsForm() {
           <Input
             id={ids.rate}
             type="number"
-            {...register("params.rate", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.rate`, { valueAsNumber: true })}
           />
         </div>
         <div>
@@ -69,7 +73,7 @@ export function VegetaParamsForm() {
           <Input
             id={ids.duration}
             type="number"
-            {...register("params.duration", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.duration`, { valueAsNumber: true })}
           />
         </div>
       </div>

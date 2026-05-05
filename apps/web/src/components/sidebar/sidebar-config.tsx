@@ -7,6 +7,7 @@ import {
   Gauge,
   GitCompare,
   Image as ImageIcon,
+  Layers,
   LineChart,
   ListOrdered,
   type LucideIcon,
@@ -53,7 +54,7 @@ export const sidebarGroups: SidebarGroup[] = [
       { to: "/benchmarks/capacity", icon: Activity, labelKey: "items.benchmarkCapacity" },
       { to: "/benchmarks/gateway", icon: Network, labelKey: "items.benchmarkGateway" },
       { to: "/benchmarks/compare", icon: GitCompare, labelKey: "items.benchmarkCompare" },
-      // benchmark-templates entry omitted in PR1; lands in PR2.
+      { to: "/benchmark-templates", icon: Layers, labelKey: "items.benchmarkTemplates" },
     ],
   },
   {
