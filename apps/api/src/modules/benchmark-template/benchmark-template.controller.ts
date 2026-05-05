@@ -29,7 +29,7 @@ import { BenchmarkTemplateService, type TemplateActor } from "./benchmark-templa
 // PATCH body schema: drop isOfficial (immutable post-create) + scenario/tool
 // (changing these would invalidate the stored config). Anything the client
 // sends in these fields is stripped here, never reaches the service.
-const patchSchema = updateBenchmarkTemplateRequestSchema.omit({
+export const patchSchema = updateBenchmarkTemplateRequestSchema.omit({
   isOfficial: true,
   scenario: true,
   tool: true,

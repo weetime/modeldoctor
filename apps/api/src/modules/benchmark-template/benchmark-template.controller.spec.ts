@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
-import { BenchmarkTemplateController } from "./benchmark-template.controller.js";
+import { BenchmarkTemplateController, patchSchema } from "./benchmark-template.controller.js";
 import { BenchmarkTemplateService } from "./benchmark-template.service.js";
 
 const mockService = {
@@ -91,5 +91,23 @@ describe("BenchmarkTemplateController", () => {
     mockService.delete.mockResolvedValue(undefined);
     await controller.delete({ sub: "owner-1", email: "o@x", roles: ["user"] }, "t1");
     expect(mockService.delete).toHaveBeenCalledWith({ sub: "owner-1", isAdmin: false }, "t1");
+  });
+});
+
+describe("patchSchema", () => {
+  it("silently strips isOfficial / scenario / tool from input (defense in depth)", () => {
+    const raw = {
+      name: "renamed",
+      description: "d",
+      // These three fields should be stripped by the .omit() in patchSchema
+      isOfficial: true,
+      scenario: "capacity",
+      tool: "vegeta",
+    };
+    const parsed = patchSchema.parse(raw);
+    expect(parsed).not.toHaveProperty("isOfficial");
+    expect(parsed).not.toHaveProperty("scenario");
+    expect(parsed).not.toHaveProperty("tool");
+    expect(parsed).toEqual({ name: "renamed", description: "d" });
   });
 });
