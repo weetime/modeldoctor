@@ -61,6 +61,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if ("details" in rec) {
           details = rec.details;
         }
+        // Domain-specific code override: if the exception body carries an explicit
+        // `code` string (e.g. "BENCHMARK_TEMPLATE_OFFICIAL_FORBIDDEN"), use it
+        // instead of the generic HTTP-status-derived code so client UIs can switch on it.
+        if (typeof rec.code === "string") {
+          code = rec.code as ErrorCode;
+        }
       } else {
         message = exception.message;
       }
