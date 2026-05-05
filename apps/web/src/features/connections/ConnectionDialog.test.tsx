@@ -2,7 +2,12 @@ import "@/lib/i18n";
 import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
 
 const createMutate = vi.fn(async (body: unknown) => ({ id: "new", ...(body as object) }));
 const updateMutate = vi.fn(async (vars: { id: string; body: unknown }) => ({
@@ -24,10 +29,10 @@ vi.mock("./queries", () => ({
 import { ConnectionDialog } from "./ConnectionDialog";
 
 async function fillBaseFields(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText(/^name$/i), "n1");
+  await user.type(screen.getByLabelText(/^name\b/i), "n1");
   await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
   await user.type(screen.getByLabelText(/api key/i), "sk-1");
-  await user.type(screen.getByLabelText(/^model$/i), "m1");
+  await user.type(screen.getByLabelText(/^model\b/i), "m1");
 }
 
 const EXISTING: ConnectionPublic = {
@@ -173,7 +178,7 @@ describe("ConnectionDialog (edit mode)", () => {
     const checkbox = screen.getByRole("checkbox", { name: /reset api key|重新设置/i });
     await user.click(checkbox);
 
-    const apiKeyInput = screen.getByLabelText(/^api key$/i) as HTMLInputElement;
+    const apiKeyInput = screen.getByLabelText(/^api key\b/i) as HTMLInputElement;
     expect(apiKeyInput).not.toBeDisabled();
     await user.type(apiKeyInput, "sk-NEW");
 
@@ -182,5 +187,32 @@ describe("ConnectionDialog (edit mode)", () => {
     await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
     const { body } = updateMutate.mock.calls[0][0] as { body: Record<string, unknown> };
     expect(body.apiKey).toBe("sk-NEW");
+  });
+});
+
+describe("ConnectionDialog (unified form stack)", () => {
+  beforeEach(() => {
+    createMutate.mockClear();
+    updateMutate.mockClear();
+  });
+
+  it("renders red asterisks on required fields (Name / API Base URL / API Key / Model / Category)", () => {
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    const stars = screen.getAllByText("*", { selector: "span" });
+    expect(stars.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("shows required error under Name when blurred while empty", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    const nameInput = screen.getByLabelText(/^Name/i);
+    await user.click(nameInput);
+    await user.tab();
+    expect(await screen.findByText(/required/i)).toBeInTheDocument();
   });
 });

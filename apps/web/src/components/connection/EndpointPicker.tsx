@@ -1,31 +1,18 @@
+import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConnectionDialog,
   type ConnectionDialogMode,
 } from "@/features/connections/ConnectionDialog";
-import { useConnection, useConnections } from "@/features/connections/queries";
+import { useConnection } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
-import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
+import type { ParsedCurl } from "@/lib/curl-parser";
 import { type EndpointValues, emptyEndpointValues } from "@/lib/endpoint-values";
-import type { ConnectionPublic } from "@modeldoctor/contracts";
-import { ClipboardPaste } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-
-const MANUAL = "__manual__";
-const NEW_CONNECTION = "__new__";
 
 export interface EndpointPickerProps {
   /** Current endpoint values surfaced for display + curl import paths. */
@@ -60,6 +47,10 @@ export interface EndpointPickerProps {
  * In manual mode (no connection selected), the user can still paste a cURL
  * to inspect — but to actually use it for a request flow they must save it
  * as a new connection first (the `connectionId` is required server-side).
+ *
+ * The top-row picker chrome (saved-connection dropdown + Manual + + 新建连接
+ * + 粘贴 cURL) is shared with `<ConnectionPicker>` so creation pages get the
+ * same UX.
  */
 export function EndpointPicker({
   endpoint,
@@ -71,13 +62,9 @@ export function EndpointPicker({
 }: EndpointPickerProps) {
   const { t } = useTranslation("common");
   const { t: tConn } = useTranslation("connections");
-  const listQuery = useConnections();
-  const connectionList: ConnectionPublic[] = listQuery.data ?? [];
   const detailQuery = useConnection(selectedConnectionId);
   const selectedConn = detailQuery.data ?? null;
 
-  const [curlOpen, setCurlOpen] = useState(false);
-  const [curlText, setCurlText] = useState("");
   const [dialogState, setDialogState] = useState<ConnectionDialogMode | null>(null);
 
   const apiBaseUrlId = useId();
@@ -111,34 +98,20 @@ export function EndpointPicker({
     }
   }, [selectedConn, endpoint, onEndpointChange]);
 
-  const onSelectValue = (value: string) => {
-    if (value === MANUAL) {
-      onSelect(null);
+  const handleManualSelect = (id: string | null) => {
+    onSelect(id);
+    if (id === null) {
+      // Going back to manual mode — clear the readonly mirror.
       onEndpointChange(emptyEndpointValues);
-      return;
     }
-    if (value === NEW_CONNECTION) {
-      setDialogState({ kind: "create" });
-      return;
-    }
-    onSelect(value);
   };
 
-  const onParseCurl = () => {
-    const parsed = parseCurlCommand(curlText);
-    if (!parsed.url && !parsed.body) {
-      toast.error(t("endpoint.curlInvalid"));
-      return;
-    }
-    const { patch, filledKeys } = applyCurlToEndpoint(parsed);
-    // Parsing a curl moves us off any saved connection.
+  const handleCurlParsed = (parsed: ParsedCurl) => {
+    const { patch } = applyCurlToEndpoint(parsed);
+    // Parsing a curl moves us off any saved connection AND fills manual fields.
     onSelect(null);
     onEndpointChange({ ...emptyEndpointValues, ...endpoint, ...patch });
     onCurlParsed?.(parsed);
-
-    toast.success(t("endpoint.filled", { fields: filledKeys.join(", ") }));
-    setCurlText("");
-    setCurlOpen(false);
   };
 
   const onEditClick = () => {
@@ -147,16 +120,11 @@ export function EndpointPicker({
   };
 
   const onSaveAsClick = () => {
-    if (!selectedConn) {
-      // Manual mode: prefill from current endpoint values minus apiKey.
-      setDialogState({ kind: "create" });
-      return;
-    }
     setDialogState({ kind: "create" });
   };
 
-  // Compute prefill for the create dialog. "Save as new" from a saved row
-  // copies all fields except apiKey (we only know the preview); the user
+  // Compute prefill for the Edit/Save-as dialog. "Save as new" from a saved
+  // row copies all fields except apiKey (we only know the preview); the user
   // re-enters the secret. Manual mode mirrors the current local form.
   const dialogInitialValues =
     dialogState?.kind === "create"
@@ -180,53 +148,14 @@ export function EndpointPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-nowrap items-center justify-end gap-2 overflow-x-auto">
-        <Select value={selectedConnectionId ?? MANUAL} onValueChange={onSelectValue}>
-          <SelectTrigger className="h-9 min-w-[200px] text-xs">
-            <SelectValue placeholder={t("endpoint.loadFromSaved")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem>
-            {connectionList.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-            <SelectSeparator />
-            <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setCurlOpen((v) => !v)}
-          className="shrink-0"
-        >
-          <ClipboardPaste className="h-3.5 w-3.5" />
-          <span className="ml-1">{t("endpoint.pasteCurl")}</span>
-        </Button>
-      </div>
-
-      {curlOpen ? (
-        <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-          <Textarea
-            rows={5}
-            value={curlText}
-            onChange={(e) => setCurlText(e.target.value)}
-            placeholder={t("endpoint.curlPlaceholder")}
-            className="font-mono text-xs"
-          />
-          <div className="flex items-center gap-2">
-            <Button type="button" size="sm" onClick={onParseCurl} disabled={!curlText.trim()}>
-              {t("endpoint.parseCurl")}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setCurlOpen(false)}>
-              {t("actions.cancel")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <ConnectionPicker
+        selectedConnectionId={selectedConnectionId}
+        onSelect={handleManualSelect}
+        allowManual
+        onCurlParsed={handleCurlParsed}
+        className="flex justify-end"
+        triggerClassName="h-9 min-w-[200px] text-xs"
+      />
 
       <ConnectionDialog
         open={dialogState !== null}

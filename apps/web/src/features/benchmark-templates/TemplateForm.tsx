@@ -1,3 +1,5 @@
+import { FormSection } from "@/components/common/form-section";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -8,7 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { TOOL_DEFAULTS, ToolParamsEditor } from "@/features/benchmarks/forms/ToolParamsEditor";
+import {
+  TOOL_DEFAULTS,
+  ToolParamsForm,
+  ToolSelectorField,
+} from "@/features/benchmarks/forms/ToolParamsEditor";
 import { SCENARIOS, type ScenarioId } from "@/features/benchmarks/scenarios";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
@@ -16,23 +22,16 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 export interface TemplateFormProps {
-  /** "create" exposes scenario/tool selectors + admin-only isOfficial.
-   *  "edit-owner" disables scenario/tool/isOfficial; rest editable.
-   *  "edit-readonly" disables everything (used when viewer is not owner+not admin). */
   mode: "create" | "edit-owner" | "edit-readonly";
   isAdmin: boolean;
-  /** Display-only values for the disabled scenario/tool selectors, supplied by
-   * the edit page. Create page passes these via the form (mode === "create"). */
   displayScenario?: ScenarioId;
   displayTool?: ToolName;
 }
 
 export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: TemplateFormProps) {
   const { t } = useTranslation("benchmark-templates");
-  const { register, control, reset, getValues } = useFormContext();
+  const { control, reset, getValues, register } = useFormContext();
   const id = useId();
-  const nameId = `${id}-name`;
-  const descId = `${id}-desc`;
   const tagsId = `${id}-tags`;
   const scenarioId = `${id}-scenario`;
   const officialId = `${id}-official`;
@@ -56,93 +55,111 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("create.sections.basic")}
-        </h2>
-        <div>
-          <Label htmlFor={nameId}>{t("create.fields.name")}</Label>
-          <Input
-            id={nameId}
-            {...register("name")}
-            placeholder={t("create.fields.namePlaceholder")}
-            disabled={disableAll}
+    <div className="space-y-8">
+      <FormSection title={t("create.sections.basic")}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("create.fields.name")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t("create.fields.namePlaceholder")}
+                    disabled={disableAll}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
+          <div className="space-y-2">
+            <Label htmlFor={tagsId}>{t("create.fields.tags")}</Label>
+            <Input
+              id={tagsId}
+              placeholder={t("create.fields.tagsPlaceholder")}
+              disabled={disableAll}
+              {...register("tags", {
+                setValueAs: (v) =>
+                  typeof v === "string"
+                    ? v
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    : (v ?? []),
+              })}
+            />
+          </div>
         </div>
-        <div>
-          <Label htmlFor={descId}>{t("create.fields.description")}</Label>
-          <Textarea
-            id={descId}
-            rows={2}
-            {...register("description", {
-              // Schema is `z.string().max(2048).optional()` — accepts `string`
-              // or `undefined`, NOT `null`. Mapping empty input to `null` (the
-              // previous behavior) made every freshly-mounted create form
-              // invalid (Save permanently disabled) until the user typed
-              // something into description. Map back to undefined instead.
-              setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
-            })}
-            disabled={disableAll}
-          />
-        </div>
-        <div>
-          <Label htmlFor={tagsId}>{t("create.fields.tags")}</Label>
-          <Input
-            id={tagsId}
-            placeholder={t("create.fields.tagsPlaceholder")}
-            disabled={disableAll}
-            {...register("tags", {
-              setValueAs: (v) =>
-                typeof v === "string"
-                  ? v
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                  : (v ?? []),
-            })}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("create.sections.scenario")}
-        </h2>
-        <div className="max-w-xs">
-          <Label htmlFor={scenarioId}>{t("create.fields.scenario")}</Label>
-          {disableScenarioTool ? (
-            <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm">
-              {t(`list.tabs.${scenario}`)}
-            </div>
-          ) : (
-            <Select value={scenario} onValueChange={(v) => handleScenarioChange(v as ScenarioId)}>
-              <SelectTrigger id={scenarioId} aria-label="Scenario">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(["inference", "capacity", "gateway"] as ScenarioId[]).map((sid) => (
-                  <SelectItem key={sid} value={sid}>
-                    {t(`list.tabs.${sid}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <FormField
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("create.fields.description")}</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={2}
+                  disabled={disableAll}
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : e.target.value)
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
-      </section>
+        />
+      </FormSection>
 
-      <ToolParamsEditor
-        scenario={scenario}
-        paramsFieldName="config"
-        displayTool={mode !== "create" ? displayTool : undefined}
-      />
+      <FormSection title={t("create.sections.scenario")}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={scenarioId}>{t("create.fields.scenario")}</Label>
+            {disableScenarioTool ? (
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm">
+                {t(`list.tabs.${scenario}`)}
+              </div>
+            ) : (
+              <Select value={scenario} onValueChange={(v) => handleScenarioChange(v as ScenarioId)}>
+                <SelectTrigger id={scenarioId} aria-label="Scenario">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["inference", "capacity", "gateway"] as ScenarioId[]).map((sid) => (
+                    <SelectItem key={sid} value={sid}>
+                      {t(`list.tabs.${sid}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <ToolSelectorField
+            scenario={scenario}
+            paramsFieldName="config"
+            displayTool={mode !== "create" ? displayTool : undefined}
+          />
+        </div>
+      </FormSection>
+
+      <FormSection
+        title={t("benchmarks:create.sections.parameters", { defaultValue: "Parameters" })}
+      >
+        <ToolParamsForm
+          scenario={scenario}
+          paramsFieldName="config"
+          displayTool={mode !== "create" ? displayTool : undefined}
+        />
+      </FormSection>
 
       {mode === "create" && isAdmin && (
-        <section className="rounded-lg border border-border bg-card p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("create.sections.official")}
-          </h2>
+        <FormSection title={t("create.sections.official")}>
           <label htmlFor={officialId} className="flex items-center gap-2 text-sm">
             <input
               id={officialId}
@@ -153,7 +170,7 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
             {t("create.fields.isOfficial")}
           </label>
           <p className="mt-1 text-xs text-muted-foreground">{t("create.officialHint")}</p>
-        </section>
+        </FormSection>
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+import { FormActions } from "@/components/common/form-actions";
+import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -6,6 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -124,6 +134,7 @@ export function ConnectionDialog({
 
   const form = useForm<ConnectionInput>({
     resolver: zodResolver(isEdit ? connectionInputEditSchema : connectionInputCreateSchema),
+    mode: "onTouched",
     defaultValues: empty,
   });
 
@@ -235,284 +246,358 @@ export function ConnectionDialog({
           <DialogTitle>{isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} autoComplete="off" className="flex min-h-0 flex-1 flex-col gap-4">
-          {/* Honeypots: Chrome ignores autocomplete=off when a password field is present. */}
-          <input
-            type="text"
-            name="username"
-            autoComplete="username"
-            tabIndex={-1}
-            aria-hidden="true"
-            style={{ position: "absolute", opacity: 0, height: 0, width: 0, pointerEvents: "none" }}
-          />
-          <input
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            tabIndex={-1}
-            aria-hidden="true"
-            style={{ position: "absolute", opacity: 0, height: 0, width: 0, pointerEvents: "none" }}
-          />
-          <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-            <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
-              <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-                {t("dialog.curl.import")}
-              </summary>
-              <div className="mt-2 space-y-2">
-                <Textarea
-                  rows={5}
-                  value={curlInput}
-                  onChange={(e) => setCurlInput(e.target.value)}
-                  placeholder={t("dialog.curl.placeholder")}
-                  className="font-mono text-xs"
-                />
-                <Button type="button" size="sm" variant="outline" onClick={onParseCurl}>
-                  {t("dialog.curl.parse")}
-                </Button>
-              </div>
-            </details>
+        <Form {...form}>
+          <form
+            onSubmit={onSubmit}
+            autoComplete="off"
+            className="flex min-h-0 flex-1 flex-col gap-4"
+          >
+            {/* Honeypots: Chrome ignores autocomplete=off when a password field is present. */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                opacity: 0,
+                height: 0,
+                width: 0,
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                opacity: 0,
+                height: 0,
+                width: 0,
+                pointerEvents: "none",
+              }}
+            />
+            <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+              <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                  {t("dialog.curl.import")}
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    rows={5}
+                    value={curlInput}
+                    onChange={(e) => setCurlInput(e.target.value)}
+                    placeholder={t("dialog.curl.placeholder")}
+                    className="font-mono text-xs"
+                  />
+                  <Button type="button" size="sm" variant="outline" onClick={onParseCurl}>
+                    {t("dialog.curl.parse")}
+                  </Button>
+                </div>
+              </details>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="name">{t("dialog.fields.name")}</Label>
-                <Input
-                  id="name"
-                  autoComplete="off"
-                  placeholder={t("dialog.fields.namePlaceholder")}
-                  {...form.register("name")}
-                />
-                {form.formState.errors.name ? (
-                  <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-                ) : null}
-              </div>
+              <FormSection>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.name")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.namePlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div>
-                <Label htmlFor="category">{t("dialog.fields.category")}</Label>
-                <Controller
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.category")}</FormLabel>
+                        <FormControl>
+                          <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                            <SelectTrigger aria-label={t("dialog.fields.category")}>
+                              <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CATEGORIES.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {t(`dialog.categoryOptions.${c}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.categoryHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="apiBaseUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.apiBaseUrlHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.model")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.modelPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
                   control={form.control}
-                  name="category"
+                  name="apiKey"
                   render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                      <SelectTrigger id="category" aria-label={t("dialog.fields.category")}>
-                        <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {t(`dialog.categoryOptions.${c}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel required={!apiKeyDisabled}>
+                          {t("dialog.fields.apiKey")}
+                        </FormLabel>
+                        {isEdit ? (
+                          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={resetApiKey}
+                              onChange={(e) => {
+                                const next = e.target.checked;
+                                setResetApiKey(next);
+                                if (!next) form.setValue("apiKey", "");
+                              }}
+                            />
+                            {t("dialog.resetApiKey")}
+                          </label>
+                        ) : null}
+                      </div>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            autoComplete="new-password"
+                            type={revealKey ? "text" : "password"}
+                            placeholder={apiKeyPlaceholder}
+                            disabled={apiKeyDisabled}
+                            {...field}
+                          />
+                        </FormControl>
+                        {!apiKeyDisabled ? (
+                          <button
+                            type="button"
+                            onClick={() => setRevealKey((v) => !v)}
+                            className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                            aria-label={revealKey ? "hide" : "show"}
+                          >
+                            {revealKey ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("dialog.apiKeyEncryptedNotice")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("dialog.fields.categoryHelp")}
-                </p>
-                {form.formState.errors.category ? (
-                  <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-                ) : null}
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="apiBaseUrl">{t("dialog.fields.apiBaseUrl")}</Label>
-              <Input
-                id="apiBaseUrl"
-                autoComplete="off"
-                placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
-                {...form.register("apiBaseUrl")}
-              />
-              {form.formState.errors.apiBaseUrl ? (
-                <p className="mt-1 text-xs text-destructive">{t("dialog.errors.invalidUrl")}</p>
-              ) : null}
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("dialog.fields.apiBaseUrlHelp")}
-              </p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="apiKey">{t("dialog.fields.apiKey")}</Label>
-                {isEdit ? (
-                  <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={resetApiKey}
-                      onChange={(e) => {
-                        const next = e.target.checked;
-                        setResetApiKey(next);
-                        if (!next) form.setValue("apiKey", "");
-                      }}
-                    />
-                    {t("dialog.resetApiKey")}
-                  </label>
-                ) : null}
-              </div>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  autoComplete="new-password"
-                  type={revealKey ? "text" : "password"}
-                  placeholder={apiKeyPlaceholder}
-                  disabled={apiKeyDisabled}
-                  {...form.register("apiKey")}
-                />
-                {!apiKeyDisabled ? (
-                  <button
-                    type="button"
-                    onClick={() => setRevealKey((v) => !v)}
-                    className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                    aria-label={revealKey ? "hide" : "show"}
-                  >
-                    {revealKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                ) : null}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("dialog.apiKeyEncryptedNotice")}
-              </p>
-              {form.formState.errors.apiKey ? (
-                <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-              ) : null}
-            </div>
-
-            <div>
-              <Label htmlFor="model">{t("dialog.fields.model")}</Label>
-              <Input
-                id="model"
-                autoComplete="off"
-                placeholder={t("dialog.fields.modelPlaceholder")}
-                {...form.register("model")}
-              />
-              {form.formState.errors.model ? (
-                <p className="mt-1 text-xs text-destructive">{tc("errors.required")}</p>
-              ) : null}
-            </div>
-
-            <div>
-              <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
-              <Controller
-                control={form.control}
-                name="tags"
-                render={({ field }) => {
-                  const current = field.value ?? [];
-                  const tryAdd = (raw: string) => {
-                    const trimmed = raw.trim();
-                    if (!trimmed) return;
-                    if (current.includes(trimmed)) return;
-                    field.onChange([...current, trimmed]);
-                  };
-                  const remove = (tag: string) =>
-                    field.onChange(current.filter((item: string) => item !== tag));
-                  const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
-                  return (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1">
-                        {current.map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
-                          >
-                            {tag}
-                            <button
-                              type="button"
-                              aria-label={t("dialog.fields.tagsRemove", {
-                                tag,
-                                defaultValue: `Remove tag ${tag}`,
-                              })}
-                              onClick={() => remove(tag)}
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <Input
-                        id="tags"
-                        value={tagDraft}
-                        onChange={(e) => setTagDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            tryAdd(tagDraft);
-                            setTagDraft("");
-                          }
-                        }}
-                        placeholder={t("dialog.fields.tagsPlaceholder")}
-                      />
-                      {suggestions.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
-                            <button
-                              type="button"
-                              key={s}
-                              onClick={() => tryAdd(s)}
-                              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
-                            >
-                              + {s}
-                            </button>
-                          ))}
+                <div>
+                  <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
+                  <Controller
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => {
+                      const current = field.value ?? [];
+                      const tryAdd = (raw: string) => {
+                        const trimmed = raw.trim();
+                        if (!trimmed) return;
+                        if (current.includes(trimmed)) return;
+                        field.onChange([...current, trimmed]);
+                      };
+                      const remove = (tag: string) =>
+                        field.onChange(current.filter((item: string) => item !== tag));
+                      const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {current.map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                              >
+                                {tag}
+                                <button
+                                  type="button"
+                                  aria-label={t("dialog.fields.tagsRemove", {
+                                    tag,
+                                    defaultValue: `Remove tag ${tag}`,
+                                  })}
+                                  onClick={() => remove(tag)}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <Input
+                            id="tags"
+                            value={tagDraft}
+                            onChange={(e) => setTagDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                tryAdd(tagDraft);
+                                setTagDraft("");
+                              }
+                            }}
+                            placeholder={t("dialog.fields.tagsPlaceholder")}
+                          />
+                          {suggestions.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
+                                <button
+                                  type="button"
+                                  key={s}
+                                  onClick={() => tryAdd(s)}
+                                  className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
+                                >
+                                  + {s}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
-                  );
-                }}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">{t("dialog.fields.tagsHelp")}</p>
+                      );
+                    }}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("dialog.fields.tagsHelp")}
+                  </p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="customHeaders"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.customHeaders")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder={t("dialog.fields.customHeadersPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="queryParams"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.queryParams")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder={t("dialog.fields.queryParamsPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tokenizerHfId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          autoComplete="off"
+                          placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("dialog.fields.tokenizerHfIdHelp")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {submitError ? (
+                  <p className="text-sm text-destructive">
+                    {submitError.toLowerCase().includes("exists")
+                      ? t("dialog.errors.duplicateName")
+                      : submitError}
+                  </p>
+                ) : null}
+              </FormSection>
             </div>
 
-            <div>
-              <Label htmlFor="customHeaders">{t("dialog.fields.customHeaders")}</Label>
-              <Textarea
-                id="customHeaders"
-                rows={3}
-                placeholder={t("dialog.fields.customHeadersPlaceholder")}
-                {...form.register("customHeaders")}
+            <DialogFooter className="border-t border-border pt-3">
+              <FormActions
+                onCancel={() => onOpenChange(false)}
+                cancelLabel={tc("actions.cancel")}
+                submitLabel={tc("actions.save")}
+                pending={createMut.isPending || updateMut.isPending}
               />
-            </div>
-
-            <div>
-              <Label htmlFor="queryParams">{t("dialog.fields.queryParams")}</Label>
-              <Textarea
-                id="queryParams"
-                rows={2}
-                placeholder={t("dialog.fields.queryParamsPlaceholder")}
-                {...form.register("queryParams")}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="tokenizerHfId">{t("dialog.fields.tokenizerHfId")}</Label>
-              <Input
-                id="tokenizerHfId"
-                autoComplete="off"
-                placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
-                {...form.register("tokenizerHfId")}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("dialog.fields.tokenizerHfIdHelp")}
-              </p>
-            </div>
-
-            {submitError ? (
-              <p className="text-sm text-destructive">
-                {submitError.toLowerCase().includes("exists")
-                  ? t("dialog.errors.duplicateName")
-                  : submitError}
-              </p>
-            ) : null}
-          </div>
-
-          <DialogFooter className="border-t border-border pt-3">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              {tc("actions.cancel")}
-            </Button>
-            <Button type="submit" disabled={createMut.isPending || updateMut.isPending}>
-              {tc("actions.save")}
-            </Button>
-          </DialogFooter>
-        </form>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
