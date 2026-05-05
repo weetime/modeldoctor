@@ -21,13 +21,18 @@ vi.mock("@/lib/api-client", () => {
 import { api } from "@/lib/api-client";
 import { BenchmarkComparePage } from "../BenchmarkComparePage";
 
-function makeBenchmark(id: string, tool: Benchmark["tool"] = "guidellm", p95 = 200): Benchmark {
+function makeBenchmark(
+  id: string,
+  tool: Benchmark["tool"] = "guidellm",
+  p95 = 200,
+  scenario: Benchmark["scenario"] = "inference",
+): Benchmark {
   return {
     id,
     userId: null,
     connectionId: null,
     connection: null,
-    scenario: "inference",
+    scenario,
     tool,
     toolVersion: null,
     driverKind: "local",
@@ -84,11 +89,6 @@ describe("BenchmarkComparePage", () => {
     vi.mocked(api.get).mockReset();
   });
 
-  it("renders empty state when ids missing", () => {
-    renderPage("/runs/compare");
-    expect(screen.getByText(/Select 2\+ Runs|2 个以上/i)).toBeInTheDocument();
-  });
-
   it("renders empty state when only one id", () => {
     renderPage("/runs/compare?ids=a");
     expect(screen.getByText(/Select 2\+ Runs|2 个以上/i)).toBeInTheDocument();
@@ -126,6 +126,39 @@ describe("BenchmarkComparePage", () => {
         screen.getByText(/Compare requires the same tool|对比需要相同 tool/i),
       ).toBeInTheDocument(),
     );
+  });
+
+  it("shows mixed-scenarios alert and no grid when scenarios differ", async () => {
+    // inference + gateway is the canonical cross-scenario case (each uses a
+    // different tool, but the scenario gate fires first regardless).
+    vi.mocked(api.get)
+      .mockResolvedValueOnce(makeBenchmark("a", "guidellm", 200, "inference"))
+      .mockResolvedValueOnce(makeBenchmark("b", "vegeta", 200, "gateway"));
+    renderPage("/runs/compare?ids=a,b");
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Compare requires the same scenario|对比需要相同 scenario/i),
+      ).toBeInTheDocument(),
+    );
+    // Grid headers (the run name "a" / "b") would appear ≥1 time inside
+    // the table when rendered. Toolbar is also suppressed on mixed scenarios,
+    // so neither "a" nor "b" should appear anywhere on the page.
+    expect(screen.queryByText("a")).not.toBeInTheDocument();
+    expect(screen.queryByText("b")).not.toBeInTheDocument();
+  });
+
+  it("renders empty-state picker when no ids param", () => {
+    renderPage("/runs/compare");
+    // The empty state renders the scenario <select> with all 3 SCENARIOS
+    // as <option>s. The inference scenario label "推理性能基准" comes from
+    // SCENARIOS["inference"].label and is unique on the page.
+    expect(screen.getByText(/推理性能基准/)).toBeInTheDocument();
+    expect(screen.getByText(/网关压测/)).toBeInTheDocument();
+    // The "Pick a scenario, then select benchmarks" subtitle anchors the
+    // picker UI in either locale (EN / ZH).
+    expect(
+      screen.getByText(/Pick a scenario, then select benchmarks|选择场景后再挑选基准测试/i),
+    ).toBeInTheDocument();
   });
 
   it("shows partial alert when one of the benchmarks 404s", async () => {

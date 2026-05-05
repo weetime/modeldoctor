@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { useQueries } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
+import { BenchmarkCompareEmpty } from "./BenchmarkCompareEmpty";
 import { CompareGrid } from "./CompareGrid";
 import { CompareToolbar } from "./CompareToolbar";
 
@@ -58,6 +59,13 @@ export function BenchmarkComparePage() {
   const tools = new Set(successfulBenchmarks.map((r) => r.tool));
   const isMixed = tools.size > 1;
 
+  // Mixed-scenario gate. Mirrors the mixed-tools gate one line up: if the
+  // user crafted a URL with `?ids=` spanning >1 scenario (e.g. an inference
+  // run + a gateway run), the metric grid would compare metrics that don't
+  // share a definition — block rendering with a destructive alert instead.
+  const scenarios = new Set(successfulBenchmarks.map((r) => r.scenario));
+  const isMixedScenarios = scenarios.size > 1;
+
   // Default baseline:
   //   - URL "none" sentinel → user explicitly chose None
   //   - URL has a cuid that matches one of the benchmarks → that one is baseline
@@ -81,6 +89,13 @@ export function BenchmarkComparePage() {
     setSearchParams(sp);
   }
 
+  // No `?ids=` at all → user navigated directly via the top-level menu.
+  // Show the picker (scenario + benchmark list) so the menu entry is
+  // functional. With ≥1 id we keep the legacy "Select 2+" empty state to
+  // catch shared half-baked links / manual URL edits.
+  if (ids.length === 0) {
+    return <BenchmarkCompareEmpty />;
+  }
   if (ids.length < 2) {
     return (
       <>
@@ -101,11 +116,11 @@ export function BenchmarkComparePage() {
     );
   }
 
-  // Hide the tool name in the subtitle when the selection mixes tools — the
-  // mixed-tools alert below already explains the situation; including a single
-  // tool name in the subtitle would lie about the second-Benchmark tool.
+  // Hide the tool name in the subtitle when the selection mixes tools or
+  // scenarios — the alert below already explains the situation; including a
+  // single tool name in the subtitle would lie about the other Benchmark(s).
   const subtitle =
-    successfulBenchmarks.length > 0 && !isMixed
+    successfulBenchmarks.length > 0 && !isMixed && !isMixedScenarios
       ? t("compare.subtitle", {
           n: successfulBenchmarks.length,
           tool: successfulBenchmarks[0].tool,
@@ -144,7 +159,17 @@ export function BenchmarkComparePage() {
             </AlertDescription>
           </Alert>
         )}
-        {!isLoading && !isMixed && successfulBenchmarks.length >= 2 && (
+        {isMixedScenarios && (
+          <Alert variant="destructive">
+            <AlertTitle>{t("compare.mixedScenariosTitle")}</AlertTitle>
+            <AlertDescription>
+              {t("compare.mixedScenariosBody", {
+                scenarios: [...scenarios].join(", "),
+              })}
+            </AlertDescription>
+          </Alert>
+        )}
+        {!isLoading && !isMixed && !isMixedScenarios && successfulBenchmarks.length >= 2 && (
           <>
             <CompareToolbar
               runs={successfulBenchmarks.map((r) => ({ id: r.id, name: r.name, tool: r.tool }))}

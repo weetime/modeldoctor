@@ -166,7 +166,18 @@
     "baselineNone": "None (no verdict)",
     "baselineMissing": "{{failed}} Run(s) no longer accessible — comparing the remaining {{n}}",
     "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
+    "mixedScenariosTitle": "Mixed scenarios",
+    "mixedScenariosBody": "Compare requires the same scenario. Selected: {{scenarios}}",
     "needTwoEmpty": "Select 2+ Runs from the list to compare",
+    "empty": {
+      "title": "Pick a scenario, then select benchmarks",
+      "scenarioLabel": "Scenario",
+      "scenarioPlaceholder": "Pick a scenario",
+      "listTitle": "Recent benchmarks",
+      "listEmpty": "No completed benchmarks for this scenario yet.",
+      "submit": "Start comparison",
+      "needTwo": "Select 2+ benchmarks to compare"
+    },
     "metricColumnLabel": "Metric",
     "verdict": {
       "regressed": "regressed",
