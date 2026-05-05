@@ -3,6 +3,7 @@ import type { ConfigService } from "@nestjs/config";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
+import type { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import type { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
@@ -121,6 +122,17 @@ class MockRepo {
     return cur as unknown as PrismaBenchmark;
   });
   countActiveByName = vi.fn(async (_u: string, _n: string) => this.countResult);
+  // Existence probe used by BenchmarkService.create when validating
+  // `parentBenchmarkId`. Tests that need a miss override this to false.
+  existsById = vi.fn(async (id: string) => this.rows.has(id));
+}
+
+class MockBaselineService {
+  ids = new Set<string>();
+  setup(id: string) {
+    this.ids.add(id);
+  }
+  existsById = vi.fn(async (id: string) => this.ids.has(id));
 }
 
 const mockDriver: BenchmarkExecutionDriver = {
@@ -155,6 +167,7 @@ function build(
   repo: MockRepo,
   configOverrides?: Record<string, unknown>,
   templateRepo?: MockTemplateRepo,
+  baselineSvc?: MockBaselineService,
 ) {
   return new BenchmarkService(
     repo as unknown as BenchmarkRepository,
@@ -162,6 +175,7 @@ function build(
     mockConfig(configOverrides) as unknown as ConfigService<typeof ENV_DEFAULTS, true>,
     mockConnections,
     (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
+    (baselineSvc ?? new MockBaselineService()) as unknown as BaselineService,
   );
 }
 
@@ -602,5 +616,83 @@ describe("BenchmarkService.create — scenario validation", () => {
       adapters.byTool = origByTool;
       adapters.applyScenarioConstraints = origApply;
     }
+  });
+});
+
+describe("BenchmarkService.create — FK reference validation", () => {
+  // These tests guard against a P2003 FK-violation from Prisma that would
+  // otherwise surface as HTTP 500. Each reference (templateId,
+  // parentBenchmarkId, baselineId) routes through a single
+  // assertReferenceExists helper; we cover all three so the helper's branches
+  // stay green and the error codes don't drift.
+  let repo: MockRepo;
+  let templateRepo: MockTemplateRepo;
+  let baselineSvc: MockBaselineService;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    templateRepo = new MockTemplateRepo();
+    baselineSvc = new MockBaselineService();
+    svc = build(repo, undefined, templateRepo, baselineSvc);
+    vi.clearAllMocks();
+  });
+
+  // Helper: capture the BadRequestException, return its response body so
+  // tests can assert on the `code` field (the public contract surfaced via
+  // getResponse()) instead of relying on Nest's private `response` field.
+  async function captureCreateError(req: Parameters<BenchmarkService["create"]>[1]) {
+    try {
+      await svc.create("u1", req);
+    } catch (e) {
+      return e as BadRequestException;
+    }
+    throw new Error("expected create() to throw, but it resolved");
+  }
+
+  it("throws BadRequestException with BENCHMARK_TEMPLATE_NOT_FOUND when templateId is unknown", async () => {
+    // Empty templateRepo → findByIdOrNull returns null → assertReferenceExists
+    // throws before repo.create is reached.
+    const err = await captureCreateError({
+      tool: "guidellm",
+      scenario: "inference",
+      connectionId: "c1",
+      name: "with-bogus-template",
+      params: {},
+      templateId: "tpl-nonexistent",
+    });
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect(err.getResponse()).toMatchObject({ code: "BENCHMARK_TEMPLATE_NOT_FOUND" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("throws BadRequestException with BENCHMARK_PARENT_NOT_FOUND when parentBenchmarkId is unknown", async () => {
+    // MockRepo.existsById returns false for anything not in `rows`.
+    const err = await captureCreateError({
+      tool: "guidellm",
+      scenario: "inference",
+      connectionId: "c1",
+      name: "with-bogus-parent",
+      params: {},
+      parentBenchmarkId: "bm-nonexistent",
+    });
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect(err.getResponse()).toMatchObject({ code: "BENCHMARK_PARENT_NOT_FOUND" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("throws BadRequestException with BENCHMARK_BASELINE_NOT_FOUND when baselineId is unknown", async () => {
+    // MockBaselineService starts empty → existsById returns false.
+    const err = await captureCreateError({
+      tool: "guidellm",
+      scenario: "inference",
+      connectionId: "c1",
+      name: "with-bogus-baseline",
+      params: {},
+      baselineId: "bl-nonexistent",
+    });
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect(err.getResponse()).toMatchObject({ code: "BENCHMARK_BASELINE_NOT_FOUND" });
+    expect(repo.create).not.toHaveBeenCalled();
   });
 });

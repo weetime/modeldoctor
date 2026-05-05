@@ -3,6 +3,7 @@ import { Module, type OnModuleInit } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+import { BaselineModule } from "../baseline/baseline.module.js";
 import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
@@ -15,7 +16,7 @@ import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 
 @Module({
-  imports: [ConfigModule, ConnectionModule, BenchmarkTemplateModule],
+  imports: [ConfigModule, ConnectionModule, BenchmarkTemplateModule, BaselineModule],
   controllers: [BenchmarkController, BenchmarkCallbackController],
   providers: [
     PrismaService,

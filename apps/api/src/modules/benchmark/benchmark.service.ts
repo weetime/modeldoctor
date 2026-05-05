@@ -16,6 +16,7 @@ import { ConfigService } from "@nestjs/config";
 import type { Prisma } from "@prisma/client";
 import { signCallbackToken } from "../../common/hmac/hmac-token.js";
 import type { Env } from "../../config/env.schema.js";
+import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
@@ -41,6 +42,7 @@ export class BenchmarkService {
     private readonly config: ConfigService<Env, true>,
     private readonly connections: ConnectionService,
     private readonly templates: BenchmarkTemplateRepository,
+    private readonly baselines: BaselineService,
   ) {
     const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
       | string
@@ -133,21 +135,36 @@ export class BenchmarkService {
       });
     }
 
-    // 4. Validate templateId reference + scenario/tool match (if provided).
+    // 4. Validate FK references against existing rows BEFORE handing off to
+    //    Prisma. Without these probes, a bogus id would raise P2003 inside
+    //    repo.create and bubble up as a 500 — bad UX, and indistinguishable
+    //    from real DB outages in monitoring. Each probe is a single
+    //    findUnique({ select: { id: true } }) so the cost is negligible.
+    //
+    //    Existence checks here are PURE existence — no ownership check on
+    //    parentBenchmarkId or baselineId because users may reference
+    //    benchmarks/baselines they don't own (e.g. cloning a template-built
+    //    benchmark, or comparing against a shared baseline).
     if (req.templateId) {
-      const tpl = await this.templates.findByIdOrNull(req.templateId);
-      if (!tpl) {
-        throw new BadRequestException({
-          code: "BENCHMARK_TEMPLATE_NOT_FOUND",
-          message: `templateId '${req.templateId}' does not exist`,
-        });
-      }
+      const tpl = await this.assertReferenceExists("template", req.templateId, (id) =>
+        this.templates.findByIdOrNull(id),
+      );
       if (tpl.scenario !== req.scenario || tpl.tool !== req.tool) {
         throw new BadRequestException({
           code: "BENCHMARK_TEMPLATE_MISMATCH",
           message: `template (scenario='${tpl.scenario}', tool='${tpl.tool}') does not match request (scenario='${req.scenario}', tool='${req.tool}')`,
         });
       }
+    }
+    if (req.parentBenchmarkId) {
+      await this.assertReferenceExists("parent", req.parentBenchmarkId, async (id) =>
+        (await this.repo.existsById(id)) ? { id } : null,
+      );
+    }
+    if (req.baselineId) {
+      await this.assertReferenceExists("baseline", req.baselineId, async (id) =>
+        (await this.baselines.existsById(id)) ? { id } : null,
+      );
     }
 
     const created = await this.repo.create({
@@ -264,6 +281,36 @@ export class BenchmarkService {
       });
     }
     await this.repo.delete(row.id);
+  }
+
+  /**
+   * Verify that a foreign-key reference (templateId / parentBenchmarkId /
+   * baselineId) points at an existing row. Throws BadRequestException with a
+   * stable, kind-specific error code on miss so clients can render a
+   * field-level message instead of "internal server error".
+   *
+   * The lookup callback returns `null` on miss and the row on hit; existence-
+   * only checks can pass `(id) => exists ? { id } : null`. Returning the row
+   * lets callers do additional invariants (e.g. template scenario/tool match)
+   * without a second round-trip.
+   */
+  private async assertReferenceExists<T extends object>(
+    kind: "template" | "parent" | "baseline",
+    id: string,
+    lookup: (id: string) => Promise<T | null>,
+  ): Promise<T> {
+    const row = await lookup(id);
+    if (row) return row;
+    const errorMap = {
+      template: { code: "BENCHMARK_TEMPLATE_NOT_FOUND", field: "templateId" },
+      parent: { code: "BENCHMARK_PARENT_NOT_FOUND", field: "parentBenchmarkId" },
+      baseline: { code: "BENCHMARK_BASELINE_NOT_FOUND", field: "baselineId" },
+    } as const;
+    const { code, field } = errorMap[kind];
+    throw new BadRequestException({
+      code,
+      message: `${field} '${id}' does not exist`,
+    });
   }
 }
 

@@ -46,6 +46,21 @@ export class BaselineService {
     return { items: rows.map(toContract) };
   }
 
+  /**
+   * Existence probe used by BenchmarkService to validate `baselineId` on
+   * benchmark creation before reaching Prisma. Without this check the FK
+   * constraint would raise a P2003 and surface as HTTP 500 rather than a
+   * clean 400. Existence-only — no ownership check, since baselines may be
+   * referenced cross-user (mirror of `parentBenchmarkId` semantics).
+   */
+  async existsById(id: string): Promise<boolean> {
+    const row = await this.prisma.baseline.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   async delete(userId: string, id: string): Promise<void> {
     const row = await this.prisma.baseline.findUnique({ where: { id } });
     // NotFoundException for cross-user access too (don't leak existence).

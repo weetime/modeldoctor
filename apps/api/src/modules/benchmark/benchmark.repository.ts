@@ -149,4 +149,19 @@ export class BenchmarkRepository {
       },
     });
   }
+
+  /**
+   * Lightweight existence probe used by BenchmarkService to validate
+   * `parentBenchmarkId` before issuing a `repo.create` that would otherwise
+   * raise a Prisma P2003 FK-constraint error and surface as HTTP 500. Selecting
+   * only `id` keeps the round-trip cheap regardless of row width or relation
+   * count on Benchmark.
+   */
+  async existsById(id: string): Promise<boolean> {
+    const row = await this.prisma.benchmark.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    return row !== null;
+  }
 }

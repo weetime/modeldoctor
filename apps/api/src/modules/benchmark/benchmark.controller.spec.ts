@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
@@ -98,6 +99,12 @@ describe("BenchmarkController", () => {
         {
           provide: BenchmarkTemplateRepository,
           useValue: { findByIdOrNull: vi.fn(async () => null) },
+        },
+        {
+          // Mock BaselineService — controller spec doesn't exercise the
+          // create()/baselineId path, so a no-op existsById is enough.
+          provide: BaselineService,
+          useValue: { existsById: vi.fn(async () => false) },
         },
       ],
     })
@@ -485,6 +492,12 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         {
           provide: BenchmarkTemplateRepository,
           useValue: { findByIdOrNull: vi.fn(async () => null) },
+        },
+        {
+          // Mock BaselineService — controller spec doesn't exercise the
+          // create()/baselineId path, so a no-op existsById is enough.
+          provide: BaselineService,
+          useValue: { existsById: vi.fn(async () => false) },
         },
       ],
     })
