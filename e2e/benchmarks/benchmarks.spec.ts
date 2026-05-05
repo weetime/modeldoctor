@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { registerAndLogin } from "./helpers/auth";
-import { resetTestDb } from "./helpers/db";
-import { clickSave } from "./helpers/form";
+import { registerAndLogin } from "../helpers/auth";
+import { resetTestDb } from "../helpers/db";
+import { clickSave } from "../helpers/form";
 
 test.beforeEach(async ({ page }) => {
   resetTestDb();
@@ -23,7 +23,10 @@ test("create benchmark form: connection picker + tool params + submit hits api",
 }) => {
   // Step 1: seed a connection so the picker has something to choose.
   await page.goto("/connections");
-  await page.getByRole("button", { name: /new connection/i }).first().click();
+  await page
+    .getByRole("button", { name: /new connection/i })
+    .first()
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^Name/i).fill("e2e-bench-conn");
   await dialog.getByRole("combobox", { name: /category/i }).click();
@@ -92,7 +95,7 @@ test("paste cURL on benchmark create opens save-connection dialog prefilled", as
   await expect(curlBox).toBeVisible();
 
   await curlBox.fill(
-    'curl http://example.test:9000/v1/chat/completions ' +
+    "curl http://example.test:9000/v1/chat/completions " +
       '-H "Authorization: Bearer sk-curl" ' +
       '-d \'{"model":"curl-model"}\'',
   );

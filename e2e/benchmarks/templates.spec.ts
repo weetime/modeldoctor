@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { registerAndLogin } from "./helpers/auth";
-import { resetTestDb } from "./helpers/db";
-import { clickSave } from "./helpers/form";
+import { registerAndLogin } from "../helpers/auth";
+import { resetTestDb } from "../helpers/db";
+import { clickSave } from "../helpers/form";
 
 test.beforeEach(async ({ page }) => {
   resetTestDb();
@@ -13,7 +13,10 @@ test("create template via page → appears in list", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: /template/i })).toBeVisible();
 
   // Click "New template" — actions.new in benchmark-templates.json.
-  await page.getByRole("button", { name: /^new template$/i }).first().click();
+  await page
+    .getByRole("button", { name: /^new template$/i })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/benchmark-templates\/new/, { timeout: 5_000 });
   await expect(page.getByRole("heading", { level: 1, name: /new template/i })).toBeVisible();
 

@@ -1,6 +1,6 @@
 import { type Page, expect, test } from "@playwright/test";
-import { registerAndLogin } from "./helpers/auth";
-import { resetTestDb } from "./helpers/db";
+import { registerAndLogin } from "../helpers/auth";
+import { resetTestDb } from "../helpers/db";
 
 test.beforeEach(async ({ page }) => {
   resetTestDb();
@@ -10,7 +10,10 @@ test.beforeEach(async ({ page }) => {
 async function createConnection(page: Page, name: string, port = 8000): Promise<void> {
   // Toolbar's primary "New connection" button is the first one in the DOM
   // when both empty-state and toolbar buttons are present.
-  await page.getByRole("button", { name: /new connection/i }).first().click();
+  await page
+    .getByRole("button", { name: /new connection/i })
+    .first()
+    .click();
   // Wait for the dialog to mount.
   await expect(page.getByRole("dialog")).toBeVisible();
 
@@ -33,7 +36,10 @@ test("create connection via dialog → appears in list", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: /connections/i })).toBeVisible();
 
   // Open the create dialog.
-  await page.getByRole("button", { name: /new connection/i }).first().click();
+  await page
+    .getByRole("button", { name: /new connection/i })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
   // Required-field smoke: 5 red asterisks (name, category, apiBaseUrl, apiKey, model).
@@ -63,7 +69,10 @@ test("edit connection → name updates in list", async ({ page }) => {
   });
 
   // Edit pencil icon button on the row (aria-label="Edit").
-  await page.getByRole("button", { name: /^edit$/i }).first().click();
+  await page
+    .getByRole("button", { name: /^edit$/i })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
   // Replace the name.
@@ -85,7 +94,10 @@ test("delete connection → row removed", async ({ page }) => {
   });
 
   // Delete row + confirm via the AlertDialog.
-  await page.getByRole("button", { name: /^delete$/i }).first().click();
+  await page
+    .getByRole("button", { name: /^delete$/i })
+    .first()
+    .click();
   // Confirm in the alert dialog.
   await page
     .getByRole("alertdialog")

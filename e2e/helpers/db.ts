@@ -20,7 +20,8 @@ export function resetTestDb(): void {
     "postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test";
 
   // Tables use Prisma's `@@map(...)` snake_case names (see schema.prisma).
-  const sql = `TRUNCATE TABLE baselines, benchmarks, benchmark_templates, diagnostics_runs, connections, refresh_tokens, users RESTART IDENTITY CASCADE;`;
+  const sql =
+    "TRUNCATE TABLE baselines, benchmarks, benchmark_templates, diagnostics_runs, connections, refresh_tokens, users RESTART IDENTITY CASCADE;";
 
   execFileSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1", "-c", sql], {
     stdio: "pipe",

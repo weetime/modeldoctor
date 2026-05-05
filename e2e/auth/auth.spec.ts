@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { registerAndLogin } from "./helpers/auth";
-import { resetTestDb } from "./helpers/db";
+import { registerAndLogin } from "../helpers/auth";
+import { resetTestDb } from "../helpers/db";
 
 test.beforeEach(() => {
   resetTestDb();
