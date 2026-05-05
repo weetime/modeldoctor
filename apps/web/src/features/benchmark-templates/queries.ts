@@ -56,6 +56,9 @@ export function useDeleteTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => benchmarkTemplateApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: benchmarkTemplateKeys.all }),
+    onSuccess: (_v, id) => {
+      qc.removeQueries({ queryKey: benchmarkTemplateKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: benchmarkTemplateKeys.lists() });
+    },
   });
 }
