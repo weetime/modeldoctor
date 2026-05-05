@@ -1,0 +1,129 @@
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Strategy:
+# - One npm ecosystem entry at the repo root — pnpm workspace's lockfile is at
+#   the root, and Dependabot's npm ecosystem supports pnpm-lock.yaml since 2024.
+#   It scans every package.json reachable through the workspace, so we don't
+#   need separate entries per app/package.
+# - Group minor + patch updates per scope (production, dev, NestJS, React, types)
+#   so we get one PR per scope per week instead of dozens of single-package PRs.
+# - Major updates land as individual PRs (NOT grouped) so each major lands with
+#   its own review + CI cycle.
+# - GitHub Actions ecosystem covers the runner-image / action versions used in
+#   .github/workflows/.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 8
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+          - "nestjs-*"
+        update-types:
+          - "minor"
+          - "patch"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router*"
+          - "react-i18next"
+          - "react-hook-form"
+          - "@hookform/*"
+          - "@radix-ui/*"
+        update-types:
+          - "minor"
+          - "patch"
+      tooling:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
+          - "@vitejs/*"
+          - "@biomejs/*"
+          - "typescript"
+          - "tsx"
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+        update-types:
+          - "minor"
+          - "patch"
+      production-minor:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+        exclude-patterns:
+          - "@nestjs/*"
+          - "nestjs-*"
+          - "react*"
+          - "@radix-ui/*"
+          - "@hookform/*"
+          - "prisma"
+          - "@prisma/*"
+      development-minor:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
+          - "@vitejs/*"
+          - "@biomejs/*"
+          - "typescript"
+          - "tsx"
+          - "@types/*"
+    ignore:
+      # Vitest is intentionally on different majors per app (apps/api v2,
+      # apps/web v1). CLAUDE.md "do not unify" — block major bumps from Dependabot.
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/*"
+        update-types: ["version-update:semver-major"]
+      # zod v4 is breaking (errorMap behavior change for refines among others);
+      # plan it as a deliberate migration, not an auto-PR.
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 4
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
