@@ -24,12 +24,16 @@ const PROFILES: GuidellmParams["profile"][] = [
 const API_TYPES: GuidellmParams["apiType"][] = ["chat", "completion"];
 const DATASETS: GuidellmParams["datasetName"][] = ["random", "sharegpt"];
 
-export function GuidellmParamsForm() {
+interface GuidellmParamsFormProps {
+  fieldPrefix?: "params" | "config";
+}
+
+export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFormProps = {}) {
   const { register, setValue, control } = useFormContext();
-  const profile = useWatch({ control, name: "params.profile" });
-  const apiType = useWatch({ control, name: "params.apiType" });
-  const datasetName = useWatch({ control, name: "params.datasetName" });
-  const validateBackend = useWatch({ control, name: "params.validateBackend" });
+  const profile = useWatch({ control, name: `${fieldPrefix}.profile` });
+  const apiType = useWatch({ control, name: `${fieldPrefix}.apiType` });
+  const datasetName = useWatch({ control, name: `${fieldPrefix}.datasetName` });
+  const validateBackend = useWatch({ control, name: `${fieldPrefix}.validateBackend` });
 
   const idPrefix = useId();
   const ids = {
@@ -54,7 +58,7 @@ export function GuidellmParamsForm() {
           <Label htmlFor={ids.profile}>Profile</Label>
           <Select
             onValueChange={(v) =>
-              setValue("params.profile", v as GuidellmParams["profile"], {
+              setValue(`${fieldPrefix}.profile`, v as GuidellmParams["profile"], {
                 shouldValidate: true,
               })
             }
@@ -76,7 +80,7 @@ export function GuidellmParamsForm() {
           <Label htmlFor={ids.apiType}>API type</Label>
           <Select
             onValueChange={(v) =>
-              setValue("params.apiType", v as GuidellmParams["apiType"], {
+              setValue(`${fieldPrefix}.apiType`, v as GuidellmParams["apiType"], {
                 shouldValidate: true,
               })
             }
@@ -101,7 +105,7 @@ export function GuidellmParamsForm() {
           <Label htmlFor={ids.dataset}>Dataset</Label>
           <Select
             onValueChange={(v) =>
-              setValue("params.datasetName", v as GuidellmParams["datasetName"], {
+              setValue(`${fieldPrefix}.datasetName`, v as GuidellmParams["datasetName"], {
                 shouldValidate: true,
               })
             }
@@ -124,7 +128,7 @@ export function GuidellmParamsForm() {
           <Input
             id={ids.seed}
             type="number"
-            {...register("params.datasetSeed", {
+            {...register(`${fieldPrefix}.datasetSeed`, {
               setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
             })}
           />
@@ -138,7 +142,7 @@ export function GuidellmParamsForm() {
             <Input
               id={ids.inputTokens}
               type="number"
-              {...register("params.datasetInputTokens", { valueAsNumber: true })}
+              {...register(`${fieldPrefix}.datasetInputTokens`, { valueAsNumber: true })}
             />
           </div>
           <div>
@@ -146,7 +150,7 @@ export function GuidellmParamsForm() {
             <Input
               id={ids.outputTokens}
               type="number"
-              {...register("params.datasetOutputTokens", { valueAsNumber: true })}
+              {...register(`${fieldPrefix}.datasetOutputTokens`, { valueAsNumber: true })}
             />
           </div>
         </div>
@@ -159,7 +163,7 @@ export function GuidellmParamsForm() {
             id={ids.requestRate}
             type="number"
             step="0.1"
-            {...register("params.requestRate", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.requestRate`, { valueAsNumber: true })}
           />
         </div>
         <div>
@@ -167,7 +171,7 @@ export function GuidellmParamsForm() {
           <Input
             id={ids.totalRequests}
             type="number"
-            {...register("params.totalRequests", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.totalRequests`, { valueAsNumber: true })}
           />
         </div>
       </div>
@@ -178,7 +182,7 @@ export function GuidellmParamsForm() {
           <Input
             id={ids.maxDuration}
             type="number"
-            {...register("params.maxDurationSeconds", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.maxDurationSeconds`, { valueAsNumber: true })}
           />
         </div>
         <div>
@@ -186,7 +190,7 @@ export function GuidellmParamsForm() {
           <Input
             id={ids.maxConcurrency}
             type="number"
-            {...register("params.maxConcurrency", { valueAsNumber: true })}
+            {...register(`${fieldPrefix}.maxConcurrency`, { valueAsNumber: true })}
           />
         </div>
       </div>
@@ -195,7 +199,7 @@ export function GuidellmParamsForm() {
         <Label htmlFor={ids.processor}>Processor (optional)</Label>
         <Input
           id={ids.processor}
-          {...register("params.processor", {
+          {...register(`${fieldPrefix}.processor`, {
             setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
           })}
           placeholder="HuggingFace tokenizer name"
@@ -206,7 +210,7 @@ export function GuidellmParamsForm() {
         <Switch
           id={ids.validateBackend}
           checked={validateBackend === true}
-          onCheckedChange={(v) => setValue("params.validateBackend", v, { shouldValidate: true })}
+          onCheckedChange={(v) => setValue(`${fieldPrefix}.validateBackend`, v, { shouldValidate: true })}
         />
         <Label htmlFor={ids.validateBackend}>Validate backend before run</Label>
       </div>
