@@ -38,8 +38,10 @@ test("create benchmark form: connection picker + tool params + submit hits api",
   await page.goto("/benchmarks/new");
   await expect(page.getByRole("heading", { level: 1, name: /new benchmark/i })).toBeVisible();
 
-  // Required asterisks: Connection + Name (post-#99).
-  await expect(page.locator("label span", { hasText: "*" })).toHaveCount(2);
+  // Required asterisks: Connection + Input tokens + Output tokens + Name.
+  // Input/Output tokens are required only when datasetName=random (default
+  // for guidellm) — see GuidellmParamsForm.
+  await expect(page.locator("label span", { hasText: "*" })).toHaveCount(4);
 
   // ConnectionPicker — first combobox on the page (Endpoint section).
   await page.getByRole("combobox").first().click();

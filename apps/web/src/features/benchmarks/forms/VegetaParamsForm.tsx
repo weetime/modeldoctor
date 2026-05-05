@@ -1,5 +1,5 @@
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -8,8 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VegetaParams } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 
 const API_TYPES: VegetaParams["apiType"][] = [
   "chat",
@@ -25,57 +24,75 @@ interface VegetaParamsFormProps {
 }
 
 export function VegetaParamsForm({ fieldPrefix = "params" }: VegetaParamsFormProps = {}) {
-  const { register, setValue, control } = useFormContext();
-  const apiType = useWatch({ control, name: `${fieldPrefix}.apiType` });
-
-  const idPrefix = useId();
-  const ids = {
-    apiType: `${idPrefix}-apiType`,
-    rate: `${idPrefix}-rate`,
-    duration: `${idPrefix}-duration`,
-  };
+  const { control } = useFormContext();
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor={ids.apiType}>API type</Label>
-        <Select
-          value={apiType ?? ""}
-          onValueChange={(v) =>
-            setValue(`${fieldPrefix}.apiType`, v as VegetaParams["apiType"], {
-              shouldValidate: true,
-            })
-          }
-        >
-          <SelectTrigger id={ids.apiType}>
-            <SelectValue placeholder="Select API type" />
-          </SelectTrigger>
-          <SelectContent>
-            {API_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor={ids.rate}>Rate (req/s)</Label>
-          <Input
-            id={ids.rate}
-            type="number"
-            {...register(`${fieldPrefix}.rate`, { valueAsNumber: true })}
-          />
-        </div>
-        <div>
-          <Label htmlFor={ids.duration}>Duration (s)</Label>
-          <Input
-            id={ids.duration}
-            type="number"
-            {...register(`${fieldPrefix}.duration`, { valueAsNumber: true })}
-          />
-        </div>
+      <FormField
+        control={control}
+        name={`${fieldPrefix}.apiType`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>API type</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value ?? ""}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select API type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {API_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.rate`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rate (req/s)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.duration`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Duration (s)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
     </div>
   );

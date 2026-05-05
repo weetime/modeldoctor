@@ -1,3 +1,11 @@
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,123 +32,200 @@ interface GenaiPerfParamsFormProps {
 }
 
 export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsFormProps = {}) {
-  const { register, setValue, control } = useFormContext();
-  const endpointType = useWatch({ control, name: `${fieldPrefix}.endpointType` });
-  const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` });
+  const { control, register, setValue } = useFormContext();
+  const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` }) as boolean | undefined;
 
   const idPrefix = useId();
   const ids = {
-    endpointType: `${idPrefix}-endpointType`,
-    numPrompts: `${idPrefix}-numPrompts`,
-    concurrency: `${idPrefix}-concurrency`,
-    inputTokensMean: `${idPrefix}-inputTokensMean`,
-    inputTokensStddev: `${idPrefix}-inputTokensStddev`,
-    outputTokensMean: `${idPrefix}-outputTokensMean`,
-    outputTokensStddev: `${idPrefix}-outputTokensStddev`,
     streaming: `${idPrefix}-streaming`,
     tokenizer: `${idPrefix}-tokenizer`,
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor={ids.endpointType}>Endpoint type</Label>
-        <Select
-          value={endpointType ?? ""}
-          onValueChange={(v) =>
-            setValue(`${fieldPrefix}.endpointType`, v as GenaiPerfParams["endpointType"], {
-              shouldValidate: true,
-            })
-          }
-        >
-          <SelectTrigger id={ids.endpointType}>
-            <SelectValue placeholder="Select endpoint type" />
-          </SelectTrigger>
-          <SelectContent>
-            {ENDPOINT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor={ids.numPrompts}>Num prompts</Label>
-          <Input
-            id={ids.numPrompts}
-            type="number"
-            {...register(`${fieldPrefix}.numPrompts`, { valueAsNumber: true })}
-          />
-        </div>
-        <div>
-          <Label htmlFor={ids.concurrency}>Concurrency</Label>
-          <Input
-            id={ids.concurrency}
-            type="number"
-            {...register(`${fieldPrefix}.concurrency`, { valueAsNumber: true })}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor={ids.inputTokensMean}>Input tokens mean (optional)</Label>
-          <Input
-            id={ids.inputTokensMean}
-            type="number"
-            {...register(`${fieldPrefix}.inputTokensMean`, {
-              setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
-            })}
-          />
-        </div>
-        <div>
-          <Label htmlFor={ids.inputTokensStddev}>Input tokens stddev</Label>
-          <Input
-            id={ids.inputTokensStddev}
-            type="number"
-            {...register(`${fieldPrefix}.inputTokensStddev`, { valueAsNumber: true })}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor={ids.outputTokensMean}>Output tokens mean (optional)</Label>
-          <Input
-            id={ids.outputTokensMean}
-            type="number"
-            {...register(`${fieldPrefix}.outputTokensMean`, {
-              setValueAs: (v) => (v === "" || v === undefined ? undefined : Number(v)),
-            })}
-          />
-        </div>
-        <div>
-          <Label htmlFor={ids.outputTokensStddev}>Output tokens stddev</Label>
-          <Input
-            id={ids.outputTokensStddev}
-            type="number"
-            {...register(`${fieldPrefix}.outputTokensStddev`, { valueAsNumber: true })}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <Switch
-          id={ids.streaming}
-          checked={streaming === true}
-          onCheckedChange={(v) => setValue(`${fieldPrefix}.streaming`, v, { shouldValidate: true })}
+      <FormField
+        control={control}
+        name={`${fieldPrefix}.endpointType`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Endpoint type</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value ?? ""}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select endpoint type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {ENDPOINT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.numPrompts`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Num prompts</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        <Label htmlFor={ids.streaming}>Streaming</Label>
-      </div>
-      <div>
-        <Label htmlFor={ids.tokenizer}>Tokenizer (HuggingFace id, optional)</Label>
-        <Input
-          id={ids.tokenizer}
-          {...register(`${fieldPrefix}.tokenizer`, {
-            setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
-          })}
-          placeholder="Overrides connection-level default; leave empty to use it."
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.concurrency`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Concurrency</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
       </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.inputTokensMean`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Input tokens mean</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormDescription>Optional. Auto-derived from prompts when empty.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.inputTokensStddev`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Input tokens stddev</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.outputTokensMean`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Output tokens mean</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormDescription>Optional. Auto-derived from prompts when empty.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`${fieldPrefix}.outputTokensStddev`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Output tokens stddev</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <details className="rounded-md border border-border bg-muted/20 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+          Advanced
+        </summary>
+        <div className="mt-3 space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch
+              id={ids.streaming}
+              checked={streaming === true}
+              onCheckedChange={(v) =>
+                setValue(`${fieldPrefix}.streaming`, v, { shouldValidate: true })
+              }
+            />
+            <Label htmlFor={ids.streaming}>Streaming</Label>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={ids.tokenizer}>Tokenizer (HuggingFace id, optional)</Label>
+            <Input
+              id={ids.tokenizer}
+              {...register(`${fieldPrefix}.tokenizer`, {
+                setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
+              })}
+              placeholder="Overrides connection-level default; leave empty to use it."
+            />
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
