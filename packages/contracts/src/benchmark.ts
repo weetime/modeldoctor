@@ -41,7 +41,7 @@ export const benchmarkSchema = z.object({
   toolVersion: z.string().nullable(),
   driverKind: benchmarkDriverKindSchema,
 
-  name: z.string().nullable(),
+  name: z.string(),
   description: z.string().nullable(),
 
   status: benchmarkStatusSchema,

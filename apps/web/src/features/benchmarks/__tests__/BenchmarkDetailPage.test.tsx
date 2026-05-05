@@ -418,21 +418,6 @@ describe("BenchmarkDetailPage", () => {
     expect(body.name).toBe("smoke (rerun)");
   });
 
-  it("falls back to a synthetic name when the source Run has no name", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed", name: null }));
-    vi.mocked(api.post).mockResolvedValueOnce(makeBenchmark({ id: "r2" }));
-    const user = userEvent.setup();
-    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
-    await user.click(btn);
-    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
-    const [, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
-    // Schema requires name to be 1..128; synthesized payload must satisfy that.
-    expect(typeof body.name).toBe("string");
-    expect((body.name as string).length).toBeGreaterThan(0);
-    expect((body.name as string).length).toBeLessThanOrEqual(128);
-  });
-
   it("truncates the source name so the ' (rerun)' suffix fits within the 128-char limit", async () => {
     const longName = "x".repeat(125); // 125 + " (rerun)" (8) = 133 > 128
     vi.mocked(api.get).mockResolvedValueOnce(

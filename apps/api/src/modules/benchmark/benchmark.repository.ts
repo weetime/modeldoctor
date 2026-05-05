@@ -17,7 +17,7 @@ export type CreateBenchmarkInput = {
   tool: "guidellm" | "genai-perf" | "vegeta";
   driverKind: "local" | "k8s";
   params: Prisma.InputJsonValue;
-  name?: string | null;
+  name: string;
   description?: string | null;
   templateId?: string | null;
   parentBenchmarkId?: string | null;
@@ -65,7 +65,7 @@ export class BenchmarkRepository {
       tool: input.tool,
       driverKind: input.driverKind,
       params: input.params,
-      name: input.name ?? null,
+      name: input.name,
       description: input.description ?? null,
     };
     if (input.userId) data.user = { connect: { id: input.userId } };

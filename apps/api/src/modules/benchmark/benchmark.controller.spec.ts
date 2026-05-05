@@ -143,6 +143,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
       },
     });
@@ -152,6 +153,7 @@ describe("BenchmarkController", () => {
         scenario: "capacity",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
       },
     });
@@ -161,6 +163,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
       },
     });
@@ -186,6 +189,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
       },
     });
@@ -208,6 +212,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
       },
     });
@@ -261,6 +266,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         status: "running",
         driverHandle: "subprocess:9999",
@@ -282,6 +288,7 @@ describe("BenchmarkController", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         status: "completed",
       },
@@ -310,6 +317,7 @@ describe("BenchmarkController", () => {
             scenario: "inference",
             tool: "guidellm",
             driverKind: "local",
+            name: "test-benchmark",
             params: {},
           },
         });
@@ -335,6 +343,7 @@ describe("BenchmarkController", () => {
             scenario: "inference",
             tool: "guidellm",
             driverKind: "local",
+            name: "test-benchmark",
             params: {},
           },
         });
@@ -354,6 +363,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
         },
       });
@@ -374,6 +384,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
         },
       });
@@ -392,6 +403,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
           status: "running",
           driverHandle: "subprocess:cancel-me",
@@ -413,6 +425,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
           status: "running",
         },
@@ -432,6 +445,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
           status: "completed",
         },
@@ -453,6 +467,7 @@ describe("BenchmarkController", () => {
           scenario: "inference",
           tool: "guidellm",
           driverKind: "local",
+          name: "test-benchmark",
           params: {},
           status: "completed",
         },
@@ -527,6 +542,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         status: "completed",
       },
@@ -546,6 +562,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         scenario: "inference",
         tool: "vegeta",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         status: "completed",
         rawOutput: {
@@ -573,6 +590,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         status: "completed",
       },
