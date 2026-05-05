@@ -41,7 +41,7 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 
 - `apps/api/tsconfig.json` must not set `incremental: true` (conflicts with `nest-cli.json` `deleteOutDir`).
 - Vitest config files in `apps/api/` must stay `.mts`.
-- `apps/api` uses vitest@2, `apps/web` uses vitest@1 — do not unify.
+- Vitest 2 across the workspace. `apps/web/src/test/setup.ts` MUST use the explicit `expect.extend(matchers)` form (importing `@testing-library/jest-dom/matchers`); the side-effect `import "@testing-library/jest-dom/vitest"` does not extend `expect` under Vitest 2.
 - `apps/api/tsconfig.json` `include` must stay narrow (`["src/**/*"]`).
 
 ## Page layout convention

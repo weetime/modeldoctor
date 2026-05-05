@@ -1,7 +1,9 @@
-import "@testing-library/jest-dom/vitest";
+import * as matchers from "@testing-library/jest-dom/matchers";
 import "fake-indexeddb/auto";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, expect } from "vitest";
+
+expect.extend(matchers);
 
 // jsdom@24 does not implement Pointer Events, scrollIntoView, or ResizeObserver.
 // Radix UI primitives (Select, DropdownMenu, Dialog, Tabs, Slider) call these
