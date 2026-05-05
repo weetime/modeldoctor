@@ -53,7 +53,7 @@ export function TemplateEditPage() {
     return (
       <>
         <PageHeader title={t("edit.title")} subtitle={t("edit.subtitle")} />
-        <div className="mx-auto max-w-3xl px-8 py-6 text-sm text-muted-foreground">…</div>
+        <div className="px-8 py-6 text-sm text-muted-foreground">…</div>
       </>
     );
   }
@@ -61,7 +61,7 @@ export function TemplateEditPage() {
     return (
       <>
         <PageHeader title={t("edit.title")} subtitle={t("edit.subtitle")} />
-        <div className="mx-auto max-w-3xl px-8 py-6 text-sm text-destructive">404</div>
+        <div className="px-8 py-6 text-sm text-destructive">404</div>
       </>
     );
   }
@@ -89,7 +89,7 @@ export function TemplateEditPage() {
   return (
     <>
       <PageHeader title={t("edit.title")} subtitle={t("edit.subtitle")} />
-      <div className="mx-auto max-w-3xl space-y-4 px-8 py-6">
+      <div className="space-y-4 px-8 py-6">
         {!canEdit && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
             {t("edit.readonlyBanner")}
