@@ -1,6 +1,9 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
+import { TemplateCreatePage } from "@/features/benchmark-templates/TemplateCreatePage";
+import { TemplateEditPage } from "@/features/benchmark-templates/TemplateEditPage";
+import { TemplateListPage } from "@/features/benchmark-templates/TemplateListPage";
 import { BenchmarkCapacityPage } from "@/features/benchmarks/BenchmarkCapacityPage";
 import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
 import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
@@ -46,6 +49,9 @@ export const routes: RouteObject[] = [
           { path: "benchmarks/compare", element: <BenchmarkComparePage /> },
           { path: "benchmarks/new", element: <BenchmarkCreatePage /> },
           { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
+          { path: "benchmark-templates", element: <TemplateListPage /> },
+          { path: "benchmark-templates/new", element: <TemplateCreatePage /> },
+          { path: "benchmark-templates/:id", element: <TemplateEditPage /> },
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
