@@ -137,10 +137,7 @@ describe("AllExceptionsFilter", () => {
 
   it("case 10: prototype-chain pollution attempt in code field → falls back to HTTP-status default", () => {
     const { host, response } = makeHost();
-    filter.catch(
-      new HttpException({ message: "x", code: "toString" }, HttpStatus.FORBIDDEN),
-      host,
-    );
+    filter.catch(new HttpException({ message: "x", code: "toString" }, HttpStatus.FORBIDDEN), host);
     // "toString" is on Object.prototype but NOT a registered ErrorCode → must fall back
     expect(response.body).toMatchObject({
       error: { code: ErrorCodes.FORBIDDEN, message: "x" },
