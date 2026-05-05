@@ -7,11 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  BenchmarkStatus,
-  BenchmarkTool,
-  ListBenchmarksQuery,
-} from "@modeldoctor/contracts";
+import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

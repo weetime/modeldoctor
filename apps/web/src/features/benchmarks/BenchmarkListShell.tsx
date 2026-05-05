@@ -13,11 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type {
-  BenchmarkStatus,
-  BenchmarkTool,
-  ListBenchmarksQuery,
-} from "@modeldoctor/contracts";
+import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { History as HistoryIcon } from "lucide-react";

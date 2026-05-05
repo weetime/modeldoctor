@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { type Benchmark as PrismaBenchmark, Prisma } from "@prisma/client";
+import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({

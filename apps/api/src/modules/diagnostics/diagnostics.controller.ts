@@ -1,7 +1,7 @@
 import {
   type DiagnosticsRunRequest,
-  diagnosticsRunRequestSchema,
   type DiagnosticsRunResponse,
+  diagnosticsRunRequestSchema,
   diagnosticsRunResponseSchema,
 } from "@modeldoctor/contracts";
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";

@@ -263,7 +263,9 @@ describe("BenchmarkDetailPage", () => {
   });
 
   it("does not render statusMessage Alert when status=failed but statusMessage is null", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "failed", statusMessage: null }));
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "failed", statusMessage: null }),
+    );
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     await screen.findByText("smoke");
     expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
@@ -336,7 +338,12 @@ describe("BenchmarkDetailPage", () => {
 
   it("shows the pending label while status=submitted", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
-      makeBenchmark({ status: "submitted", startedAt: null, summaryMetrics: null, rawOutput: null }),
+      makeBenchmark({
+        status: "submitted",
+        startedAt: null,
+        summaryMetrics: null,
+        rawOutput: null,
+      }),
     );
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     await waitFor(() =>
@@ -428,7 +435,9 @@ describe("BenchmarkDetailPage", () => {
 
   it("truncates the source name so the ' (rerun)' suffix fits within the 128-char limit", async () => {
     const longName = "x".repeat(125); // 125 + " (rerun)" (8) = 133 > 128
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed", name: longName }));
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "completed", name: longName }),
+    );
     vi.mocked(api.post).mockResolvedValueOnce(makeBenchmark({ id: "r2" }));
     const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });

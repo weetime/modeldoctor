@@ -152,10 +152,7 @@ describe("DiagnosticsService", () => {
   });
 
   it("persists completed run with started/completed timestamps and results", async () => {
-    const { connectionId } = await seedUserAndConnection(
-      prisma,
-      "e2e-svc-anon@example.com",
-    );
+    const { connectionId } = await seedUserAndConnection(prisma, "e2e-svc-anon@example.com");
 
     vi.spyOn(
       service as unknown as { executeProbes: () => unknown },

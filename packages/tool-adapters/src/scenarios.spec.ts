@@ -3,9 +3,9 @@ import { byTool } from "./core/registry.js";
 import { guidellmParamsSchema } from "./guidellm/schema.js";
 import {
   SCENARIOS,
+  type ScenarioId,
   applyScenarioConstraints,
   assertScenariosInvariant,
-  type ScenarioId,
 } from "./scenarios.js";
 
 describe("SCENARIOS constant", () => {
@@ -68,9 +68,7 @@ describe("applyScenarioConstraints", () => {
     const merged = applyScenarioConstraints("gateway", "vegeta");
     // Valid minimal vegeta params (mirrors vegetaParamDefaults — see
     // packages/tool-adapters/src/vegeta/schema.ts).
-    expect(() =>
-      merged.parse({ apiType: "chat", rate: 10, duration: 30 }),
-    ).not.toThrow();
+    expect(() => merged.parse({ apiType: "chat", rate: 10, duration: 30 })).not.toThrow();
     // Missing required `rate` — base schema must still reject it.
     expect(() => merged.parse({ apiType: "chat", duration: 30 })).toThrow();
   });

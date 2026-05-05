@@ -13,12 +13,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
-import type {
-  DiagnosticsRunResponse,
-  ProbeCategory,
-  ProbeName,
-  ProbeResult,
-} from "./types";
+import type { DiagnosticsRunResponse, ProbeCategory, ProbeName, ProbeResult } from "./types";
 import { PROBES_BY_CATEGORY } from "./types";
 
 const CATEGORIES: ProbeCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];

@@ -1,7 +1,7 @@
 import { genaiPerfAdapter } from "../genai-perf/index.js";
 import { guidellmAdapter } from "../guidellm/index.js";
-import { vegetaAdapter } from "../vegeta/index.js";
 import type { ScenarioId } from "../scenarios.js";
+import { vegetaAdapter } from "../vegeta/index.js";
 import type { ToolAdapter, ToolName } from "./interface.js";
 
 const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {

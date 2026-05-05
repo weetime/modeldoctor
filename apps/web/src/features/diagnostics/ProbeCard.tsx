@@ -127,9 +127,7 @@ function ProbeResultDetails({ result }: { result: ProbeResult }) {
 
   return (
     <div className="space-y-2 text-xs">
-      <p className="text-muted-foreground">
-        {t("meta.latency", { ms: result.latencyMs ?? "—" })}
-      </p>
+      <p className="text-muted-foreground">{t("meta.latency", { ms: result.latencyMs ?? "—" })}</p>
       <ul className="space-y-1 font-mono">
         {result.checks.map((c) => (
           <li key={c.name} className="flex items-start gap-1">
@@ -155,11 +153,7 @@ function ProbeResultDetails({ result }: { result: ProbeResult }) {
       ) : null}
       {details.audioB64 ? (
         // biome-ignore lint/a11y/useMediaCaption: audio probe output has no transcript
-        <audio
-          controls
-          src={`data:audio/wav;base64,${details.audioB64}`}
-          className="w-full"
-        />
+        <audio controls src={`data:audio/wav;base64,${details.audioB64}`} className="w-full" />
       ) : null}
       {details.imageGenUrl ? (
         <img

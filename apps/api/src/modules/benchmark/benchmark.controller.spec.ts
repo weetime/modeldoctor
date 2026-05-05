@@ -518,10 +518,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         status: "completed",
       },
     });
-    const result = await controller.getCharts(
-      { sub: user.id, roles: [] } as never,
-      benchmark.id,
-    );
+    const result = await controller.getCharts({ sub: user.id, roles: [] } as never, benchmark.id);
     expect(result).toEqual({ latencyCdf: null, ttftHistogram: null });
   });
 
@@ -545,10 +542,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         },
       },
     });
-    const result = await controller.getCharts(
-      { sub: user.id, roles: [] } as never,
-      benchmark.id,
-    );
+    const result = await controller.getCharts({ sub: user.id, roles: [] } as never, benchmark.id);
     expect(result.latencyCdf?.samples).toEqual([5, 10]);
     expect(result.ttftHistogram).toBeNull();
   });

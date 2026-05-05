@@ -1,5 +1,5 @@
 import { SCENARIOS, type ScenarioId } from "@modeldoctor/tool-adapters/schemas";
-import { Activity, Gauge, Network, type LucideIcon } from "lucide-react";
+import { Activity, Gauge, type LucideIcon, Network } from "lucide-react";
 
 /**
  * Lucide icon for each scenario, consumed by the sidebar in Phase 14.

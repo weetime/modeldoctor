@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
-import { type Benchmark as PrismaBenchmark, Prisma } from "@prisma/client";
+import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as hmacToken from "../../common/hmac/hmac-token.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
@@ -242,9 +242,7 @@ describe("BenchmarkService.cancel", () => {
   });
 
   it("marks benchmark as canceled and calls driver.cancel when handle exists", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }));
     const dto = await svc.cancel("b1", "u1");
     expect(mockDriver.cancel).toHaveBeenCalledWith("subprocess:1234");
     expect(dto.status).toBe("canceled");
@@ -342,9 +340,7 @@ describe("BenchmarkService.start — failure path", () => {
   });
 
   it("marks benchmark as failed when driver.start throws and re-raises", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }));
     (mockDriver.start as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
     await expect(svc.start("b1")).rejects.toThrow(/boom/);
     const row = await repo.findById("b1");
@@ -365,9 +361,7 @@ describe("BenchmarkService.cancel — driver-error path", () => {
   });
 
   it("re-raises driver errors and leaves row in its prior status", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }));
     (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("apiserver flake"),
     );

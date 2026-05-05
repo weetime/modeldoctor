@@ -45,6 +45,5 @@ export const createBenchmarkTemplateRequestSchema = z.object({
 });
 export type CreateBenchmarkTemplateRequest = z.infer<typeof createBenchmarkTemplateRequestSchema>;
 
-export const updateBenchmarkTemplateRequestSchema =
-  createBenchmarkTemplateRequestSchema.partial();
+export const updateBenchmarkTemplateRequestSchema = createBenchmarkTemplateRequestSchema.partial();
 export type UpdateBenchmarkTemplateRequest = z.infer<typeof updateBenchmarkTemplateRequestSchema>;
