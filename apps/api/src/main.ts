@@ -5,7 +5,6 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import { json, urlencoded } from "express";
 import { Logger } from "nestjs-pino";
-import { patchNestJsSwagger } from "nestjs-zod";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
 import type { Env } from "./config/env.schema.js";
@@ -35,7 +34,11 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  patchNestJsSwagger();
+  // Note: nestjs-zod 5 dropped patchNestJsSwagger. Zod schemas in
+  // controllers will surface as generic objects in /api/docs UI rather
+  // than typed properties. Tracked as follow-up; @nestjs/swagger 11
+  // upstream recommends migrating individual DTOs to ZodResponse-based
+  // decorators when schema-aware OpenAPI is needed.
   const swaggerConfig = new DocumentBuilder()
     .setTitle("ModelDoctor API")
     .setDescription("Troubleshooting toolkit for model-serving APIs")
