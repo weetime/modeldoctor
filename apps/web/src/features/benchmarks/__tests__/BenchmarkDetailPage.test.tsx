@@ -302,11 +302,11 @@ describe("BenchmarkDetailPage", () => {
     );
   });
 
-  it("hides the delete button while the run is still running", async () => {
+  it("shows the delete button on non-terminal runs", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "running" }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     await screen.findByText("smoke");
-    expect(screen.queryByRole("button", { name: /^Delete$|^删除$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Delete$|^删除$/ })).toBeInTheDocument();
   });
 
   it("calls DELETE and navigates back to list after confirm", async () => {
@@ -351,7 +351,7 @@ describe("BenchmarkDetailPage", () => {
     );
   });
 
-  it("hides Set-as-baseline / Delete buttons while non-terminal", async () => {
+  it("hides Set-as-baseline button while non-terminal", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({ status: "running", summaryMetrics: null, rawOutput: null }),
     );
@@ -360,7 +360,6 @@ describe("BenchmarkDetailPage", () => {
     expect(
       screen.queryByRole("button", { name: /Set as baseline|设为基线/ }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Delete$|^删除$/ })).not.toBeInTheDocument();
   });
 
   // ---- F4: Re-run button (one-click clone-and-submit, see #88) ----
@@ -416,21 +415,6 @@ describe("BenchmarkDetailPage", () => {
     expect(body.params).toEqual({ profile: "throughput", totalRequests: 500 });
     // Name suffix: original name + " (rerun)"
     expect(body.name).toBe("smoke (rerun)");
-  });
-
-  it("falls back to a synthetic name when the source Run has no name", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed", name: null }));
-    vi.mocked(api.post).mockResolvedValueOnce(makeBenchmark({ id: "r2" }));
-    const user = userEvent.setup();
-    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    const btn = await screen.findByRole("button", { name: /^Re-run$|^重跑$/ });
-    await user.click(btn);
-    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
-    const [, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
-    // Schema requires name to be 1..128; synthesized payload must satisfy that.
-    expect(typeof body.name).toBe("string");
-    expect((body.name as string).length).toBeGreaterThan(0);
-    expect((body.name as string).length).toBeLessThanOrEqual(128);
   });
 
   it("truncates the source name so the ' (rerun)' suffix fits within the 128-char limit", async () => {
@@ -514,6 +498,15 @@ describe("BenchmarkDetailPage", () => {
     expect(screen.queryByText(/Distributions|分布图/i)).not.toBeInTheDocument();
   });
 
+  it("back link points to /benchmarks/:scenario based on the loaded benchmark", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "completed", scenario: "gateway" }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const backLink = await screen.findByRole("link", { name: /Back to list|返回列表/ });
+    expect(backLink).toHaveAttribute("href", "/benchmarks/gateway");
+  });
+
   it("mounts DetailVerdictRow when run.baselineId is set", async () => {
     const baseline = makeBenchmark({
       id: "br",
@@ -558,5 +551,40 @@ describe("BenchmarkDetailPage", () => {
     });
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByText(/vs baseline|vs 基准/i)).toBeInTheDocument());
+  });
+
+  // ---- Cancel button ----
+
+  it("shows the Cancel button while the run is non-terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "running" }));
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Cancel run$|^取消任务$/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("hides the Cancel button when the run is terminal", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await screen.findByText("smoke");
+    expect(
+      screen.queryByRole("button", { name: /^Cancel run$|^取消任务$/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls cancel API after confirm", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "running" }));
+    vi.mocked(api.post).mockResolvedValueOnce(makeBenchmark({ status: "canceled" }));
+    const user = userEvent.setup();
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const cancelBtn = await screen.findByRole("button", {
+      name: /^Cancel run$|^取消任务$/,
+    });
+    await user.click(cancelBtn);
+    const confirm = await screen.findByRole("button", {
+      name: /^Cancel run$|^确认取消$/,
+    });
+    await user.click(confirm);
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}));
   });
 });

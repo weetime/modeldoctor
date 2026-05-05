@@ -26,7 +26,7 @@ export function CompareToolbar({ runs, baselineId, onBaselineChange }: CompareTo
           <option value="">{t("compare.baselineNone")}</option>
           {runs.map((run) => (
             <option key={run.id} value={run.id}>
-              {run.name ?? run.id}
+              {run.name}
             </option>
           ))}
         </select>

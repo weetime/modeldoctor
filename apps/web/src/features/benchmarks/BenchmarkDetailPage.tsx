@@ -30,6 +30,7 @@ import {
   benchmarkKeys,
   isTerminalStatus,
   useBenchmarkDetail,
+  useCancelBenchmark,
   useCreateBenchmark,
   useDeleteBenchmark,
 } from "./queries";
@@ -103,8 +104,10 @@ export function BenchmarkDetailPage() {
   const [setOpen, setSetOpen] = useState(false);
   const [unsetOpen, setUnsetOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const remove = useDeleteBaseline();
   const deleteBenchmark = useDeleteBenchmark();
+  const cancelBenchmark = useCancelBenchmark();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
 
@@ -163,7 +166,7 @@ export function BenchmarkDetailPage() {
   async function handleRerun() {
     if (!benchmark || !benchmark.connectionId) return;
     // Schema caps name at 128. " (rerun)" is 8 chars; reserve 120 for the source.
-    const sourceName = benchmark.name?.trim() || `run-${benchmark.id.slice(0, 8)}`;
+    const sourceName = benchmark.name;
     const trimmed = sourceName.length > 120 ? sourceName.slice(0, 120) : sourceName;
     const newName = `${trimmed} (rerun)`;
     try {
@@ -175,7 +178,7 @@ export function BenchmarkDetailPage() {
         description: benchmark.description ?? undefined,
         params: benchmark.params,
       });
-      toast.success(t("detail.rerun.success", { name: next.name ?? next.id }));
+      toast.success(t("detail.rerun.success", { name: next.name }));
       navigate(`/benchmarks/${next.id}`);
     } catch (e) {
       toast.error((e as Error).message || t("detail.rerun.errors.generic"));
@@ -185,7 +188,7 @@ export function BenchmarkDetailPage() {
   return (
     <>
       <PageHeader
-        title={benchmark.name ?? benchmark.id}
+        title={benchmark.name}
         subtitle={subtitle}
         rightSlot={
           <div className="flex items-center gap-2">
@@ -223,13 +226,16 @@ export function BenchmarkDetailPage() {
                   <TooltipContent>{t("detail.rerun.connectionMissingTooltip")}</TooltipContent>
                 </Tooltip>
               ))}
-            {isTerminal && (
-              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-                {t("detail.delete.button")}
+            {!isTerminal && (
+              <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
+                {t("detail.cancel.button")}
               </Button>
             )}
+            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+              {t("detail.delete.button")}
+            </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link to="/benchmarks">
+              <Link to={`/benchmarks/${benchmark.scenario}`}>
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("detail.back")}
               </Link>
@@ -338,6 +344,34 @@ export function BenchmarkDetailPage() {
               disabled={deleteBenchmark.isPending}
             >
               {t("detail.delete.confirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("detail.cancel.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("detail.cancel.confirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("detail.cancel.dismiss")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                cancelBenchmark.mutate(benchmark.id, {
+                  onSuccess: () => {
+                    toast.success(t("detail.cancel.success"));
+                    setCancelOpen(false);
+                  },
+                  onError: () => {
+                    toast.error(t("detail.cancel.errors.generic"));
+                  },
+                });
+              }}
+              disabled={cancelBenchmark.isPending}
+            >
+              {t("detail.cancel.confirmAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -285,15 +285,35 @@ describe("BenchmarkService.delete", () => {
     vi.clearAllMocks();
   });
 
-  it("deletes a terminal benchmark", async () => {
+  it("deletes a terminal benchmark without calling driver.cancel", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "completed" }));
     await svc.delete("b1", "u1");
     expect(repo.delete).toHaveBeenCalledWith("b1");
+    expect(mockDriver.cancel).not.toHaveBeenCalled();
   });
 
-  it("throws ConflictException when benchmark is not terminal", async () => {
-    repo.setup(makeBenchmarkRow({ id: "b1", status: "running" }));
-    await expect(svc.delete("b1", "u1")).rejects.toThrow(ConflictException);
+  it("deletes a submitted benchmark and best-effort cancels driver", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: "k8s:job-1" }));
+    await svc.delete("b1", "u1");
+    expect(mockDriver.cancel).toHaveBeenCalledWith("k8s:job-1");
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+  });
+
+  it("deletes a running benchmark even when driver.cancel throws", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "k8s:job-2" }));
+    (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("apiserver flake"),
+    );
+    await svc.delete("b1", "u1");
+    expect(mockDriver.cancel).toHaveBeenCalledWith("k8s:job-2");
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+  });
+
+  it("does not call driver.cancel when driverHandle is null", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: null }));
+    await svc.delete("b1", "u1");
+    expect(mockDriver.cancel).not.toHaveBeenCalled();
+    expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 });
 

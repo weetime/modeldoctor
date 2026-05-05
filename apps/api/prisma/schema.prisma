@@ -102,7 +102,7 @@ model Benchmark {
   toolVersion String? @map("tool_version")
   driverKind  String  @map("driver_kind") // 'local' | 'k8s'
 
-  name        String?
+  name        String
   description String? @db.Text
 
   status        String  @default("pending")

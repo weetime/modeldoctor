@@ -131,6 +131,7 @@ describe("BenchmarkTemplateRepository", () => {
         scenario: "inference",
         tool: "guidellm",
         driverKind: "local",
+        name: "test-benchmark",
         params: {},
         templateId: tpl.id,
       },

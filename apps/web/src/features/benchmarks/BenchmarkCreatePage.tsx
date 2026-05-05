@@ -131,7 +131,7 @@ export function BenchmarkCreatePage() {
       // overrides whatever the form may carry. Keeps a single source of truth.
       const body: CreateBenchmarkRequest = { ...values, scenario };
       const benchmark = await createMut.mutateAsync(body);
-      toast.success(t("create.submitted", { name: benchmark.name ?? benchmark.id }));
+      toast.success(t("create.submitted", { name: benchmark.name }));
       navigate(`/benchmarks/${benchmark.id}`);
     } catch (e) {
       const err = e as { code?: string; message?: string; status?: number };

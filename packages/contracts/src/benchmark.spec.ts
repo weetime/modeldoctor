@@ -51,7 +51,7 @@ function minimalBenchmark() {
     tool: "guidellm" as const,
     toolVersion: null,
     driverKind: "local" as const,
-    name: null,
+    name: "test-benchmark",
     description: null,
     status: "completed" as const,
     statusMessage: null,

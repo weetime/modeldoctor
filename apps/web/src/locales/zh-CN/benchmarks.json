@@ -43,6 +43,7 @@
     "clear": "清除筛选"
   },
   "columns": {
+    "name": "名称",
     "createdAt": "创建时间",
     "tool": "工具",
     "connection": "Connection",
@@ -123,6 +124,17 @@
       "success": "已删除",
       "errors": {
         "generic": "删除失败"
+      }
+    },
+    "cancel": {
+      "button": "取消任务",
+      "confirmTitle": "取消该任务？",
+      "confirmBody": "任务会停止，K8s 中关联的 Job 会被删除。记录保留在历史中，状态为 canceled。",
+      "confirmAction": "确认取消",
+      "dismiss": "保持运行",
+      "success": "已取消",
+      "errors": {
+        "generic": "取消失败"
       }
     },
     "rerun": {
