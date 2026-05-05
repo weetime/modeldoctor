@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { RunRepository } from "../../src/modules/run/run.repository.js";
+import { BenchmarkRepository } from "../../src/modules/benchmark/benchmark.repository.js";
 import { type E2EContext, bootE2E } from "../helpers/app.js";
 
 describe("Auth (e2e)", () => {
@@ -273,9 +273,9 @@ describe("Auth (e2e)", () => {
     expect(typeof bRotated.body.accessTokenExpiresAt).toBe("string");
   });
 
-  // ── 11. Admin sees runs from all users ────────────────────────────────────
-  it("GET /api/runs?scope=all with admin token → sees all users' runs", async () => {
-    const repo = ctx.app.get(RunRepository);
+  // ── 11. Admin sees benchmarks from all users ──────────────────────────────
+  it("GET /api/benchmarks?scope=all with admin token → sees all users' benchmarks", async () => {
+    const repo = ctx.app.get(BenchmarkRepository);
 
     // Re-use the admin account registered in test #1
     const adminLoginRes = await request(ctx.app.getHttpServer())
@@ -285,51 +285,47 @@ describe("Auth (e2e)", () => {
     const adminToken = adminLoginRes.body.accessToken as string;
     const adminId = adminLoginRes.body.user.id as string;
 
-    // Register another user to own some runs
+    // Register another user to own some benchmarks
     const user2Res = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
       .send({ email: "rbac-user@example.com", password: "Password1!" })
       .expect(201);
     const user2Id = user2Res.body.user.id as string;
 
-    // Seed vegeta runs for both users via RunRepository (unified Run table)
+    // Seed vegeta benchmarks for both users via BenchmarkRepository
     const adminRow = await repo.create({
       userId: adminId,
-      kind: "benchmark",
+      scenario: "gateway",
       tool: "vegeta",
-      scenario: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
-      mode: "fixed",
       driverKind: "local",
-      params: {},
+      params: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(adminRow.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
     const user2Row = await repo.create({
       userId: user2Id,
-      kind: "benchmark",
+      scenario: "gateway",
       tool: "vegeta",
-      scenario: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
-      mode: "fixed",
       driverKind: "local",
-      params: {},
+      params: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(user2Row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
-    const adminRunsRes = await request(ctx.app.getHttpServer())
-      .get("/api/runs?scope=all")
+    const adminBenchmarksRes = await request(ctx.app.getHttpServer())
+      .get("/api/benchmarks?scope=all")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
 
-    const urls = adminRunsRes.body.items.map(
-      (r: { scenario: { apiBaseUrl?: string } }) => r.scenario?.apiBaseUrl,
+    const urls = adminBenchmarksRes.body.items.map(
+      (r: { params: { apiBaseUrl?: string } }) => r.params?.apiBaseUrl,
     );
     expect(urls).toContain("http://admin-run");
     expect(urls).toContain("http://user2-run");
   });
 
-  // ── 12. User sees only own runs (default scope=own) ──────────────────────
-  it("GET /api/runs (no scope) with user token → only own runs", async () => {
-    const repo = ctx.app.get(RunRepository);
+  // ── 12. User sees only own benchmarks (default scope=own) ────────────────
+  it("GET /api/benchmarks (no scope) with user token → only own benchmarks", async () => {
+    const repo = ctx.app.get(BenchmarkRepository);
 
     const userRes = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
@@ -338,34 +334,32 @@ describe("Auth (e2e)", () => {
     const userId = userRes.body.user.id as string;
     const userToken = userRes.body.accessToken as string;
 
-    // Seed a vegeta run for this user via RunRepository (unified Run table)
+    // Seed a vegeta benchmark for this user via BenchmarkRepository
     const row = await repo.create({
       userId,
-      kind: "benchmark",
+      scenario: "gateway",
       tool: "vegeta",
-      scenario: { apiType: "chat", apiBaseUrl: "http://own-run", model: "m", rate: 1, duration: 1 },
-      mode: "fixed",
       driverKind: "local",
-      params: {},
+      params: { apiType: "chat", apiBaseUrl: "http://own-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
 
-    const runsRes = await request(ctx.app.getHttpServer())
-      .get("/api/runs")
+    const benchmarksRes = await request(ctx.app.getHttpServer())
+      .get("/api/benchmarks")
       .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
 
-    // All returned runs must belong to this user
-    expect(runsRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(true);
+    // All returned benchmarks must belong to this user
+    expect(benchmarksRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(true);
     expect(
-      runsRes.body.items.some(
-        (r: { scenario: { apiBaseUrl?: string } }) => r.scenario?.apiBaseUrl === "http://own-run",
+      benchmarksRes.body.items.some(
+        (r: { params: { apiBaseUrl?: string } }) => r.params?.apiBaseUrl === "http://own-run",
       ),
     ).toBe(true);
   });
 
   // ── 13. Non-admin user requesting scope=all → 403 ─────────────────────────
-  it("GET /api/runs?scope=all with non-admin token → 403 + admin-role message", async () => {
+  it("GET /api/benchmarks?scope=all with non-admin token → 403 + admin-role message", async () => {
     const userRes = await request(ctx.app.getHttpServer())
       .post("/api/auth/register")
       .send({ email: "scope-forbidden-user@example.com", password: "Password1!" })
@@ -373,11 +367,11 @@ describe("Auth (e2e)", () => {
     const userToken = userRes.body.accessToken as string;
 
     const res = await request(ctx.app.getHttpServer())
-      .get("/api/runs?scope=all")
+      .get("/api/benchmarks?scope=all")
       .set("Authorization", `Bearer ${userToken}`)
       .expect(403);
     // AllExceptionsFilter normalizes the http status → "FORBIDDEN" (the controller's
-    // exception body `code: "RUN_SCOPE_FORBIDDEN"` is preserved in the message instead).
+    // exception body `code: "BENCHMARK_SCOPE_FORBIDDEN"` is preserved in the message instead).
     expect(res.body.error.code).toBe("FORBIDDEN");
     expect(res.body.error.message).toMatch(/admin role required/i);
   });

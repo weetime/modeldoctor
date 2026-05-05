@@ -2,7 +2,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
-describe("E2ETest (e2e)", () => {
+describe("Diagnostics (e2e)", () => {
   let ctx: E2EContext;
   let accessToken: string;
 
@@ -18,7 +18,7 @@ describe("E2ETest (e2e)", () => {
 
   it("rejects missing connectionId", async () => {
     const res = await request(ctx.app.getHttpServer())
-      .post("/api/e2e-test")
+      .post("/api/diagnostics/runs")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({ probes: ["chat-text"] })
       .expect(400);
@@ -29,7 +29,7 @@ describe("E2ETest (e2e)", () => {
 
   it("rejects empty probes array", async () => {
     const res = await request(ctx.app.getHttpServer())
-      .post("/api/e2e-test")
+      .post("/api/diagnostics/runs")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({ connectionId: "fake-connection-id", probes: [] })
       .expect(400);
@@ -40,7 +40,7 @@ describe("E2ETest (e2e)", () => {
 
   it("rejects unknown probe name", async () => {
     const res = await request(ctx.app.getHttpServer())
-      .post("/api/e2e-test")
+      .post("/api/diagnostics/runs")
       .set("Authorization", `Bearer ${accessToken}`)
       .send({ connectionId: "fake-connection-id", probes: ["bogus"] })
       .expect(400);
