@@ -76,7 +76,12 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
             id={descId}
             rows={2}
             {...register("description", {
-              setValueAs: (v) => (v === "" || v === undefined ? null : v),
+              // Schema is `z.string().max(2048).optional()` — accepts `string`
+              // or `undefined`, NOT `null`. Mapping empty input to `null` (the
+              // previous behavior) made every freshly-mounted create form
+              // invalid (Save permanently disabled) until the user typed
+              // something into description. Map back to undefined instead.
+              setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
             })}
             disabled={disableAll}
           />
