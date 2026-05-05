@@ -61,10 +61,7 @@ describe("AllExceptionsFilter", () => {
 
   it("case 3: HttpException with {message} body → message preserved, code = HTTP-status default", () => {
     const { host, response } = makeHost();
-    filter.catch(
-      new HttpException({ message: "custom msg" }, HttpStatus.CONFLICT),
-      host,
-    );
+    filter.catch(new HttpException({ message: "custom msg" }, HttpStatus.CONFLICT), host);
     const body = response.body as { error: { code: string; message: string } };
     expect(body.error.code).toBe("CONFLICT");
     expect(body.error.message).toBe("custom msg");
@@ -73,7 +70,10 @@ describe("AllExceptionsFilter", () => {
   it("case 4: HttpException with registered domain code → domain code surfaces", () => {
     const { host, response } = makeHost();
     filter.catch(
-      new ForbiddenException({ message: "template forbidden", code: "BENCHMARK_TEMPLATE_FORBIDDEN" }),
+      new ForbiddenException({
+        message: "template forbidden",
+        code: "BENCHMARK_TEMPLATE_FORBIDDEN",
+      }),
       host,
     );
     const body = response.body as { error: { code: string; message: string } };
@@ -128,10 +128,7 @@ describe("AllExceptionsFilter", () => {
 
   it("case 9: non-string code in body (code: 123) → falls back to HTTP-status default", () => {
     const { host, response } = makeHost();
-    filter.catch(
-      new HttpException({ message: "bad", code: 123 }, HttpStatus.BAD_REQUEST),
-      host,
-    );
+    filter.catch(new HttpException({ message: "bad", code: 123 }, HttpStatus.BAD_REQUEST), host);
     const body = response.body as { error: { code: string } };
     // code 123 is not a string, so falls back to BAD_REQUEST
     expect(body.error.code).toBe("BAD_REQUEST");

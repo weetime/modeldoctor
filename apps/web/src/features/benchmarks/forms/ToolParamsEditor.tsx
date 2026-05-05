@@ -46,7 +46,8 @@ export function ToolParamsEditor({
 }: ToolParamsEditorProps) {
   const { t } = useTranslation("benchmarks");
   const { control, reset, getValues } = useFormContext();
-  const formTool = (useWatch({ control, name: "tool" }) ?? SCENARIOS[scenario].tools[0]) as ToolName;
+  const formTool = (useWatch({ control, name: "tool" }) ??
+    SCENARIOS[scenario].tools[0]) as ToolName;
   const tool = displayTool ?? formTool;
   const id = useId();
   const toolFieldId = `${id}-tool`;
