@@ -51,7 +51,7 @@ export function RegisterPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel required>Email</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -70,7 +70,7 @@ export function RegisterPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel required>Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
