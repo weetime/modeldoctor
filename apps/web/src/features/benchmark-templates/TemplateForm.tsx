@@ -10,7 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { TOOL_DEFAULTS, ToolParamsEditor } from "@/features/benchmarks/forms/ToolParamsEditor";
+import {
+  TOOL_DEFAULTS,
+  ToolParamsForm,
+  ToolSelectorField,
+} from "@/features/benchmarks/forms/ToolParamsEditor";
 import { SCENARIOS, type ScenarioId } from "@/features/benchmarks/scenarios";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
@@ -51,26 +55,45 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <FormSection title={t("create.sections.basic")}>
-        <FormField
-          control={control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("create.fields.name")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("create.fields.namePlaceholder")}
-                  disabled={disableAll}
-                  {...field}
-                  value={field.value ?? ""}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("create.fields.name")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t("create.fields.namePlaceholder")}
+                    disabled={disableAll}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="space-y-2">
+            <Label htmlFor={tagsId}>{t("create.fields.tags")}</Label>
+            <Input
+              id={tagsId}
+              placeholder={t("create.fields.tagsPlaceholder")}
+              disabled={disableAll}
+              {...register("tags", {
+                setValueAs: (v) =>
+                  typeof v === "string"
+                    ? v
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    : (v ?? []),
+              })}
+            />
+          </div>
+        </div>
         <FormField
           control={control}
           name="description"
@@ -92,54 +115,48 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
             </FormItem>
           )}
         />
-        <div className="space-y-2">
-          <Label htmlFor={tagsId}>{t("create.fields.tags")}</Label>
-          <Input
-            id={tagsId}
-            placeholder={t("create.fields.tagsPlaceholder")}
-            disabled={disableAll}
-            {...register("tags", {
-              setValueAs: (v) =>
-                typeof v === "string"
-                  ? v
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                  : (v ?? []),
-            })}
+      </FormSection>
+
+      <FormSection title={t("create.sections.scenario")}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={scenarioId}>{t("create.fields.scenario")}</Label>
+            {disableScenarioTool ? (
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm">
+                {t(`list.tabs.${scenario}`)}
+              </div>
+            ) : (
+              <Select value={scenario} onValueChange={(v) => handleScenarioChange(v as ScenarioId)}>
+                <SelectTrigger id={scenarioId} aria-label="Scenario">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["inference", "capacity", "gateway"] as ScenarioId[]).map((sid) => (
+                    <SelectItem key={sid} value={sid}>
+                      {t(`list.tabs.${sid}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <ToolSelectorField
+            scenario={scenario}
+            paramsFieldName="config"
+            displayTool={mode !== "create" ? displayTool : undefined}
           />
         </div>
       </FormSection>
 
-      <FormSection title={t("create.sections.scenario")}>
-        <div className="max-w-xs space-y-2">
-          <Label htmlFor={scenarioId}>{t("create.fields.scenario")}</Label>
-          {disableScenarioTool ? (
-            <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm">
-              {t(`list.tabs.${scenario}`)}
-            </div>
-          ) : (
-            <Select value={scenario} onValueChange={(v) => handleScenarioChange(v as ScenarioId)}>
-              <SelectTrigger id={scenarioId} aria-label="Scenario">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(["inference", "capacity", "gateway"] as ScenarioId[]).map((sid) => (
-                  <SelectItem key={sid} value={sid}>
-                    {t(`list.tabs.${sid}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+      <FormSection
+        title={t("benchmarks:create.sections.parameters", { defaultValue: "Parameters" })}
+      >
+        <ToolParamsForm
+          scenario={scenario}
+          paramsFieldName="config"
+          displayTool={mode !== "create" ? displayTool : undefined}
+        />
       </FormSection>
-
-      <ToolParamsEditor
-        scenario={scenario}
-        paramsFieldName="config"
-        displayTool={mode !== "create" ? displayTool : undefined}
-      />
 
       {mode === "create" && isAdmin && (
         <FormSection title={t("create.sections.official")}>

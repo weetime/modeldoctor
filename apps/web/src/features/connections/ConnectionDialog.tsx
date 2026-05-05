@@ -349,26 +349,46 @@ export function ConnectionDialog({
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="apiBaseUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          autoComplete="off"
-                          placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("dialog.fields.apiBaseUrlHelp")}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="apiBaseUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.apiBaseUrlHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.model")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.modelPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -422,24 +442,6 @@ export function ConnectionDialog({
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t("dialog.apiKeyEncryptedNotice")}
                       </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>{t("dialog.fields.model")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          autoComplete="off"
-                          placeholder={t("dialog.fields.modelPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

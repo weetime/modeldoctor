@@ -102,23 +102,41 @@ export function SetBaselineDialog({
             </DialogHeader>
 
             <FormSection>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("detail.baseline.dialog.nameLabel")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("detail.baseline.dialog.namePlaceholder")}
-                        maxLength={200}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>{t("detail.baseline.dialog.nameLabel")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("detail.baseline.dialog.namePlaceholder")}
+                          maxLength={200}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tagsInput"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("detail.baseline.dialog.tagsLabel")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="qwen, throughput"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="description"
@@ -136,18 +154,6 @@ export function SetBaselineDialog({
                       />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tagsInput"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("detail.baseline.dialog.tagsLabel")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="qwen, throughput" {...field} value={field.value ?? ""} />
-                    </FormControl>
                   </FormItem>
                 )}
               />
