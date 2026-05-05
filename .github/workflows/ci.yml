@@ -34,7 +34,7 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.5.2
       - uses: actions/setup-node@v6
