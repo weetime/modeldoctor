@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { guidellmRateTypes } from "@modeldoctor/tool-adapters/schemas";
 import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -23,13 +24,6 @@ const PROFILES: GuidellmParams["profile"][] = [
 
 const API_TYPES: GuidellmParams["apiType"][] = ["chat", "completion"];
 const DATASETS: GuidellmParams["datasetName"][] = ["random", "sharegpt"];
-const RATE_TYPES: GuidellmParams["rateType"][] = [
-  "constant",
-  "poisson",
-  "throughput",
-  "synchronous",
-  "sweep",
-];
 
 interface GuidellmParamsFormProps {
   fieldPrefix?: "params" | "config";
@@ -180,7 +174,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
               <SelectValue placeholder="Select rate type" />
             </SelectTrigger>
             <SelectContent>
-              {RATE_TYPES.map((rt) => (
+              {guidellmRateTypes.map((rt) => (
                 <SelectItem key={rt} value={rt}>
                   {rt}
                 </SelectItem>

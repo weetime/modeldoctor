@@ -46,6 +46,12 @@ export const guidellmParamsSchema = z
   });
 export type GuidellmParams = z.infer<typeof guidellmParamsSchema>;
 
+/** Tuple of accepted rateType values, exposed for UI dropdowns to derive
+ *  options without duplicating the enum literal. Single source of truth:
+ *  adding a new rateType value requires updating only schema.ts. */
+export const guidellmRateTypes = guidellmParamsSchema._def.schema.shape.rateType
+  .options as readonly GuidellmParams["rateType"][];
+
 const dist = z.object({
   mean: z.number(),
   p50: z.number(),

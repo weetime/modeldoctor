@@ -10,6 +10,7 @@ export {
   guidellmParamsSchema,
   guidellmReportSchema,
   guidellmParamDefaults,
+  guidellmRateTypes,
   type GuidellmParams,
   type GuidellmReport,
 } from "./guidellm/schema.js";
