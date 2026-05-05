@@ -4,7 +4,7 @@
 
 - All local, reversible edits (Read / Edit / Write under this repo)
 - Running `pnpm …`, `pnpm -r …`, `pnpm -F <pkg> …`, `pnpm dev/build/test/lint/format/type-check` (including starting and later killing the dev server the session itself launched)
-- Running `docker compose up/down/ps/logs` for the repo's own `docker-compose.yml` and `psql` against the local dev DB
+- Running `psql` against the local dev DB (`postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor`, started via brew services — no docker-compose)
 - Running `vegeta`, `curl`, and other read-only CLI tooling
 - `git add`, `git commit`, `git status/diff/log/show`, `git checkout <existing-branch>`, `git stash`, `git restore` of unstaged changes
 - Creating git branches whose name begins with `feat/`, `fix/`, `chore/`, `test/`, `refactor/`, `build/`, or `docs/`
@@ -18,7 +18,8 @@
 - `gh pr merge` (or any merge to `main`/`master`)
 - `git push --force*` (anywhere, on any branch)
 - Any commit, push, rebase, or reset targeting `main` / `master` directly
-- `git reset --hard`, `git clean -fd`, `git branch -D` of branches that have ever been pushed, `git push origin --delete …`
+- `git reset --hard`, `git clean -fd`, `git branch -D` of branches that have ever been pushed
+- `git push origin --delete <branch>` for branches whose PR is NOT merged (in-progress work). Deleting branches whose PR is in MERGED state — verified via `gh pr list --state all --head <branch>` — is pre-authorized; clean up local worktree, local branch, and remote branch in the same turn the PR merges, and proactively prune sibling MERGED branches that are still on `origin`
 - `rm -rf` that touches anything outside this repo, or that targets `.git`, `node_modules` of another worktree, or anything the user didn't explicitly nominate
 - Installing a new top-level dependency the active plan did not specify, or changing `pnpm.onlyBuiltDependencies` / `packageManager` / lockfile-regeneration flags
 - Running `prisma migrate reset`, dropping tables, or any other destructive DB operation against shared data
@@ -26,7 +27,7 @@
 
 **Plan discipline.** When executing an implementation plan from `docs/superpowers/plans/`, follow it literally. If reality forces a deviation (npm API changed, path doesn't exist, recommended config doesn't work), **report the deviation in the turn it's discovered**; do not silently rewrite the plan.
 
-**Commit / PR conventions.** Conventional-commit prefixes (`feat:`, `build:`, `refactor:`, `test:`, `fix:`, `docs:`, `chore:`), one logical change per commit, explicit `git add <files>` (never `git add -A`), commit bodies end with `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`. One phase of the NestJS refactor = one PR from a `feat/nestjs-phase-<N>` branch cut from `main`; do not mix commits across phases.
+**Commit / PR conventions.** Conventional-commit prefixes (`feat:`, `build:`, `refactor:`, `test:`, `fix:`, `docs:`, `chore:`), one logical change per commit, explicit `git add <files>` (never `git add -A`), commit bodies end with `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`. For structurally-coupled work (full-stack renames, schema reset + cascading consumer changes), prefer a single PR with phase-per-commit over multiple incremental PRs that would require shim layers — long-lived feature branches are acceptable in exchange for atomic merges.
 
 **PR follow-through.** A PR is not "done" at `gh pr create`. After opening a PR — and after every subsequent `git push` to the same branch — verify the signals before handing back to the user:
 
