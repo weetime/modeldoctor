@@ -8,8 +8,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { guidellmRateTypes } from "@modeldoctor/tool-adapters/schemas";
 import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 const PROFILES: GuidellmParams["profile"][] = [
@@ -33,7 +34,17 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
   const profile = useWatch({ control, name: `${fieldPrefix}.profile` });
   const apiType = useWatch({ control, name: `${fieldPrefix}.apiType` });
   const datasetName = useWatch({ control, name: `${fieldPrefix}.datasetName` });
+  const rateType = useWatch({ control, name: `${fieldPrefix}.rateType` });
   const validateBackend = useWatch({ control, name: `${fieldPrefix}.validateBackend` });
+
+  // When editing an older template whose config omits rateType, the field is
+  // undefined. Write "constant" into form state immediately so submitting
+  // doesn't 400 with "rateType: Required".
+  useEffect(() => {
+    if (rateType === undefined) {
+      setValue(`${fieldPrefix}.rateType`, "constant", { shouldValidate: true });
+    }
+  }, [rateType, setValue, fieldPrefix]);
 
   const idPrefix = useId();
   const ids = {
@@ -43,6 +54,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
     seed: `${idPrefix}-seed`,
     inputTokens: `${idPrefix}-inputTokens`,
     outputTokens: `${idPrefix}-outputTokens`,
+    rateType: `${idPrefix}-rateType`,
     requestRate: `${idPrefix}-requestRate`,
     totalRequests: `${idPrefix}-totalRequests`,
     maxDuration: `${idPrefix}-maxDuration`,
@@ -158,6 +170,28 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
 
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <Label htmlFor={ids.rateType}>Rate type</Label>
+          <Select
+            onValueChange={(v) =>
+              setValue(`${fieldPrefix}.rateType`, v as GuidellmParams["rateType"], {
+                shouldValidate: true,
+              })
+            }
+            value={rateType}
+          >
+            <SelectTrigger id={ids.rateType}>
+              <SelectValue placeholder="Select rate type" />
+            </SelectTrigger>
+            <SelectContent>
+              {guidellmRateTypes.map((rt) => (
+                <SelectItem key={rt} value={rt}>
+                  {rt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <Label htmlFor={ids.requestRate}>Request rate (0 = unlimited)</Label>
           <Input
             id={ids.requestRate}
@@ -166,6 +200,9 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.requestRate`, { valueAsNumber: true })}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.totalRequests}>Total requests</Label>
           <Input
@@ -174,9 +211,6 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.totalRequests`, { valueAsNumber: true })}
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.maxDuration}>Max duration (s)</Label>
           <Input
@@ -185,6 +219,9 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.maxDurationSeconds`, { valueAsNumber: true })}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.maxConcurrency}>Max concurrency</Label>
           <Input

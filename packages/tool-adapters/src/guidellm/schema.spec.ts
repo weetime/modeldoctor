@@ -7,6 +7,7 @@ describe("guidellmParamsSchema", () => {
       profile: "throughput",
       apiType: "chat",
       datasetName: "random",
+      rateType: "constant",
       requestRate: 0,
       totalRequests: 100,
     });
@@ -24,6 +25,7 @@ describe("guidellmParamsSchema", () => {
       datasetName: "random",
       datasetInputTokens: 256,
       datasetOutputTokens: 128,
+      rateType: "constant",
       requestRate: 0,
       totalRequests: 1000,
     });
@@ -38,6 +40,7 @@ describe("guidellmParamsSchema", () => {
       datasetName: "random",
       datasetInputTokens: 256,
       datasetOutputTokens: 128,
+      rateType: "constant",
       requestRate: 0,
       totalRequests: 1000,
       processor: "",
@@ -53,6 +56,7 @@ describe("guidellmParamsSchema", () => {
       datasetName: "random",
       datasetInputTokens: 256,
       datasetOutputTokens: 128,
+      rateType: "constant",
       requestRate: 0.5,
       totalRequests: 1000,
     });
@@ -66,6 +70,7 @@ describe("guidellmParamsSchema", () => {
       apiType: "chat",
       datasetName: "random",
       datasetOutputTokens: 128,
+      rateType: "constant",
       requestRate: 0,
       totalRequests: 1000,
     });
@@ -83,6 +88,7 @@ describe("guidellmParamsSchema", () => {
       apiType: "chat",
       datasetName: "random",
       datasetInputTokens: 256,
+      rateType: "constant",
       requestRate: 0,
       totalRequests: 1000,
     });
@@ -117,6 +123,7 @@ describe("guidellmParamsSchema", () => {
       datasetName: "random",
       datasetInputTokens: 128,
       datasetOutputTokens: 64,
+      rateType: "constant",
     });
     expect(result.validateBackend).toBe(false);
   });

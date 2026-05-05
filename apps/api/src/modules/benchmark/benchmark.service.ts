@@ -14,7 +14,9 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 import { signCallbackToken } from "../../common/hmac/hmac-token.js";
+import { formatZodError } from "../../common/zod/format-zod-error.js";
 import type { Env } from "../../config/env.schema.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
@@ -120,9 +122,10 @@ export class BenchmarkService {
       // Second: full base schema including superRefine cross-field checks.
       params = adapter.paramsSchema.parse(req.params);
     } catch (e) {
+      const detail = e instanceof ZodError ? formatZodError(e) : (e as Error).message;
       throw new BadRequestException({
         code: "BENCHMARK_PARAMS_INVALID",
-        message: `params validation failed: ${(e as Error).message}`,
+        message: `params validation failed: ${detail}`,
       });
     }
 

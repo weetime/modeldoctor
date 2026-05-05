@@ -64,7 +64,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         // Domain-specific code override: if the exception body carries an explicit
         // `code` string (e.g. "BENCHMARK_TEMPLATE_OFFICIAL_FORBIDDEN"), use it
         // instead of the generic HTTP-status-derived code so client UIs can switch on it.
-        if (typeof rec.code === "string") {
+        // Only registered codes pass through; unregistered ones fall back to the
+        // HTTP-status default (forces devs to register new codes in ErrorCodes first).
+        if (typeof rec.code === "string" && Object.hasOwn(ErrorCodes, rec.code)) {
           code = rec.code as ErrorCode;
         }
       } else {

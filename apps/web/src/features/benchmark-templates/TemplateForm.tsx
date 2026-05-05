@@ -10,6 +10,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TOOL_DEFAULTS, ToolParamsEditor } from "@/features/benchmarks/forms/ToolParamsEditor";
 import { SCENARIOS, type ScenarioId } from "@/features/benchmarks/scenarios";
+import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -20,9 +21,13 @@ export interface TemplateFormProps {
    *  "edit-readonly" disables everything (used when viewer is not owner+not admin). */
   mode: "create" | "edit-owner" | "edit-readonly";
   isAdmin: boolean;
+  /** Display-only values for the disabled scenario/tool selectors, supplied by
+   * the edit page. Create page passes these via the form (mode === "create"). */
+  displayScenario?: ScenarioId;
+  displayTool?: ToolName;
 }
 
-export function TemplateForm({ mode, isAdmin }: TemplateFormProps) {
+export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: TemplateFormProps) {
   const { t } = useTranslation("benchmark-templates");
   const { register, control, reset, getValues } = useFormContext();
   const id = useId();
@@ -32,7 +37,11 @@ export function TemplateForm({ mode, isAdmin }: TemplateFormProps) {
   const scenarioId = `${id}-scenario`;
   const officialId = `${id}-official`;
 
-  const scenario = (useWatch({ control, name: "scenario" }) ?? "inference") as ScenarioId;
+  const formScenario = (useWatch({ control, name: "scenario" }) ?? "inference") as
+    | ScenarioId
+    | undefined;
+  const scenario =
+    mode === "create" ? (formScenario ?? "inference") : (displayScenario ?? "inference");
   const disableScenarioTool = mode !== "create";
   const disableAll = mode === "edit-readonly";
 
@@ -67,7 +76,12 @@ export function TemplateForm({ mode, isAdmin }: TemplateFormProps) {
             id={descId}
             rows={2}
             {...register("description", {
-              setValueAs: (v) => (v === "" || v === undefined ? null : v),
+              // Schema is `z.string().max(2048).optional()` — accepts `string`
+              // or `undefined`, NOT `null`. Mapping empty input to `null` (the
+              // previous behavior) made every freshly-mounted create form
+              // invalid (Save permanently disabled) until the user typed
+              // something into description. Map back to undefined instead.
+              setValueAs: (v) => (v === "" || v === undefined ? undefined : v),
             })}
             disabled={disableAll}
           />
@@ -118,7 +132,11 @@ export function TemplateForm({ mode, isAdmin }: TemplateFormProps) {
         </div>
       </section>
 
-      <ToolParamsEditor scenario={scenario} paramsFieldName="config" />
+      <ToolParamsEditor
+        scenario={scenario}
+        paramsFieldName="config"
+        displayTool={mode !== "create" ? displayTool : undefined}
+      />
 
       {mode === "create" && isAdmin && (
         <section className="rounded-lg border border-border bg-card p-4">

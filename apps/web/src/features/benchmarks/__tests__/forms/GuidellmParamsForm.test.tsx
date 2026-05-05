@@ -18,6 +18,7 @@ function Wrapper({ children, defaults }: { children: React.ReactNode; defaults?:
         datasetName: "random",
         datasetInputTokens: 1024,
         datasetOutputTokens: 128,
+        rateType: "constant",
         requestRate: 0,
         totalRequests: 1000,
         maxDurationSeconds: 1800,

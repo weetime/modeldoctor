@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  type UpdateBenchmarkTemplateRequest,
-  updateBenchmarkTemplateRequestSchema,
+  type PatchBenchmarkTemplateRequest,
+  patchBenchmarkTemplateRequestSchema,
 } from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
@@ -31,14 +31,8 @@ export function TemplateEditPage() {
   const canEdit = !!tpl && (isAdmin || tpl.createdBy === myId);
   const mode = !canEdit ? "edit-readonly" : "edit-owner";
 
-  const patchSchema = updateBenchmarkTemplateRequestSchema.omit({
-    isOfficial: true,
-    scenario: true,
-    tool: true,
-  });
-
-  const form = useForm<Partial<UpdateBenchmarkTemplateRequest>>({
-    resolver: zodResolver(patchSchema),
+  const form = useForm<PatchBenchmarkTemplateRequest>({
+    resolver: zodResolver(patchBenchmarkTemplateRequestSchema),
     mode: "onChange",
     defaultValues: {},
   });
@@ -51,10 +45,6 @@ export function TemplateEditPage() {
       config: tpl.config,
       tags: tpl.tags,
     });
-    // Set the disabled fields so the disabled selectors render the right value
-    form.setValue("scenario" as never, tpl.scenario as never);
-    form.setValue("tool" as never, tpl.tool as never);
-    form.setValue("isOfficial" as never, tpl.isOfficial as never);
   }, [tpl, form]);
 
   if (tplQ.isLoading) {
@@ -105,7 +95,12 @@ export function TemplateEditPage() {
         )}
         <FormProvider {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
-            <TemplateForm mode={mode} isAdmin={isAdmin} />
+            <TemplateForm
+              mode={mode}
+              isAdmin={isAdmin}
+              displayScenario={tpl.scenario}
+              displayTool={tpl.tool}
+            />
             <div className="flex justify-end gap-2">
               <Button
                 type="button"

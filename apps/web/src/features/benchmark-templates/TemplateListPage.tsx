@@ -6,13 +6,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/stores/auth-store";
 import type { BenchmarkTemplate, ScenarioId } from "@modeldoctor/contracts";
 import { Plus } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DeleteTemplateDialog } from "./DeleteTemplateDialog";
 import { TemplateCard } from "./TemplateCard";
 import { useDeleteTemplate, useTemplates } from "./queries";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const SCENARIO_TABS: { id: ScenarioId; labelKey: string }[] = [
   { id: "inference", labelKey: "list.tabs.inference" },
@@ -32,12 +34,36 @@ export function TemplateListPage() {
   const officialOnly = params.get("isOfficial") === "true";
   const search = params.get("search") ?? "";
 
-  const { data, isLoading } = useTemplates({
+  const [searchDraft, setSearchDraft] = useState(search);
+  const lastPushed = useRef(search);
+
+  // Sync URL → local when external state changes (back/forward, "clear all", etc.)
+  useEffect(() => {
+    if (search !== lastPushed.current) {
+      setSearchDraft(search);
+      lastPushed.current = search;
+    }
+  }, [search]);
+
+  // Local → URL with debounce
+  useEffect(() => {
+    const trimmed = searchDraft.trim();
+    if (trimmed === (lastPushed.current || "")) return;
+    const handle = window.setTimeout(() => {
+      lastPushed.current = trimmed;
+      setParam("search", trimmed || null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft]);
+
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useTemplates({
     scenario,
     isOfficial: officialOnly || undefined,
     search: search || undefined,
     limit: 50,
   });
+  const items = data?.pages.flatMap((p) => p.items) ?? [];
+  const hasActiveFilters = Boolean(search) || officialOnly;
   const deleteMut = useDeleteTemplate();
   const user = useAuthStore((s) => s.user);
   const myId = user?.id;
@@ -70,8 +96,8 @@ export function TemplateListPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Input
             id={searchId}
-            value={search}
-            onChange={(e) => setParam("search", e.target.value)}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             placeholder={t("list.filters.search")}
             className="max-w-xs"
           />
@@ -106,23 +132,29 @@ export function TemplateListPage() {
 
         {isLoading && <div className="text-sm text-muted-foreground">…</div>}
 
-        {!isLoading && data && data.items.length === 0 && (
+        {!isLoading && items.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-12 text-center">
-            <p className="text-base font-medium">{t("list.empty.title")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("list.empty.subtitle")}</p>
-            <Button
-              className="mt-4"
-              onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              {t("actions.new")}
-            </Button>
+            <p className="text-base font-medium">
+              {hasActiveFilters ? t("list.empty.noResults.title") : t("list.empty.title")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasActiveFilters ? t("list.empty.noResults.subtitle") : t("list.empty.subtitle")}
+            </p>
+            {!hasActiveFilters && (
+              <Button
+                className="mt-4"
+                onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t("actions.new")}
+              </Button>
+            )}
           </div>
         )}
 
-        {!isLoading && data && data.items.length > 0 && (
+        {!isLoading && items.length > 0 && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {data.items.map((tpl) => (
+            {items.map((tpl) => (
               <TemplateCard
                 key={tpl.id}
                 template={tpl}
@@ -130,6 +162,14 @@ export function TemplateListPage() {
                 onDeleteClick={() => setPendingDelete(tpl)}
               />
             ))}
+          </div>
+        )}
+
+        {hasNextPage && (
+          <div className="mt-4 flex justify-center">
+            <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+              {isFetchingNextPage ? "…" : t("list.loadMore")}
+            </Button>
           </div>
         )}
       </div>

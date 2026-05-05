@@ -47,3 +47,15 @@ export type CreateBenchmarkTemplateRequest = z.infer<typeof createBenchmarkTempl
 
 export const updateBenchmarkTemplateRequestSchema = createBenchmarkTemplateRequestSchema.partial();
 export type UpdateBenchmarkTemplateRequest = z.infer<typeof updateBenchmarkTemplateRequestSchema>;
+
+/**
+ * PATCH /api/benchmark-templates/:id body schema. Strips isOfficial (immutable
+ * post-create) + scenario/tool (changing these would invalidate stored config).
+ * Server enforces; client mirrors so form types stay in sync.
+ */
+export const patchBenchmarkTemplateRequestSchema = updateBenchmarkTemplateRequestSchema.omit({
+  isOfficial: true,
+  scenario: true,
+  tool: true,
+});
+export type PatchBenchmarkTemplateRequest = z.infer<typeof patchBenchmarkTemplateRequestSchema>;

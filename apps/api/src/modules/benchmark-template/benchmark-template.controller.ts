@@ -5,7 +5,7 @@ import {
   type ListBenchmarkTemplatesResponse,
   createBenchmarkTemplateRequestSchema,
   listBenchmarkTemplatesQuerySchema,
-  updateBenchmarkTemplateRequestSchema,
+  patchBenchmarkTemplateRequestSchema as patchSchema,
 } from "@modeldoctor/contracts";
 import {
   Body,
@@ -26,14 +26,9 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { BenchmarkTemplateService, type TemplateActor } from "./benchmark-template.service.js";
 
-// PATCH body schema: drop isOfficial (immutable post-create) + scenario/tool
-// (changing these would invalidate the stored config). Anything the client
-// sends in these fields is stripped here, never reaches the service.
-export const patchSchema = updateBenchmarkTemplateRequestSchema.omit({
-  isOfficial: true,
-  scenario: true,
-  tool: true,
-});
+// patchSchema is imported from @modeldoctor/contracts (patchBenchmarkTemplateRequestSchema).
+// Re-exported so controller.spec.ts can use it directly without knowing the contracts name.
+export { patchSchema };
 
 function actorFrom(user: JwtPayload): TemplateActor {
   return { sub: user.sub, isAdmin: user.roles.includes("admin") };
