@@ -109,6 +109,23 @@ describe("BenchmarkCreatePage", () => {
     expect(screen.queryByLabelText(/Rate \(req\/s\)/i)).not.toBeInTheDocument();
   });
 
+  it("renders red asterisk on required Connection / Name labels", () => {
+    render(<BenchmarkCreatePage />, { wrapper: Wrapper });
+    // <FormLabel required> renders text + a span containing "*"
+    const labels = screen.getAllByText("*", { selector: "span" });
+    expect(labels.length).toBeGreaterThanOrEqual(2); // connection + name
+  });
+
+  it("shows required error under Name when blurred while empty", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<BenchmarkCreatePage />, { wrapper: Wrapper });
+    const nameInput = screen.getByLabelText(/Name/i);
+    await user.click(nameInput);
+    await user.tab();
+    expect(await screen.findByText(/required/i)).toBeInTheDocument();
+  });
+
   it("resets form when ?scenario= URL changes (regression for stale tool)", () => {
     // This test exercises the useEffect that calls form.reset() on scenario
     // change — the BenchmarkCreatePage instance stays mounted across the
