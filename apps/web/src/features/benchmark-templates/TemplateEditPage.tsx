@@ -75,10 +75,14 @@ export function TemplateEditPage() {
 
   async function onDelete() {
     if (!id) return;
+    // Navigate first so the detail component unmounts before the mutation's
+    // onSuccess fires removeQueries(detail). Otherwise the still-active
+    // useTemplate observer refetches the just-deleted row and prints a 404
+    // in the console between the delete and the unmount.
+    navigate("/benchmark-templates");
     try {
       await deleteMut.mutateAsync(id);
       toast.success(t("edit.deleted"));
-      navigate("/benchmark-templates");
     } catch (e) {
       toast.error((e as Error).message ?? t("edit.errors.deleteFailed"));
     }
