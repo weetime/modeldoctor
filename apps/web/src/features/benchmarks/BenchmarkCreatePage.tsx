@@ -14,7 +14,9 @@ import { useConnections } from "@/features/connections/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateBenchmarkRequest,
+  type ScenarioId,
   createBenchmarkRequestSchema,
+  scenarioIdSchema,
 } from "@modeldoctor/contracts";
 import {
   genaiPerfParamDefaults,
@@ -25,20 +27,19 @@ import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { GenaiPerfParamsForm } from "./forms/GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./forms/GuidellmParamsForm";
 import { VegetaParamsForm } from "./forms/VegetaParamsForm";
 import { useCreateBenchmark } from "./queries";
+import { SCENARIOS } from "./scenarios";
 
 const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
   "genai-perf": genaiPerfParamDefaults,
 };
-
-const TOOLS: ToolName[] = ["guidellm", "vegeta", "genai-perf"];
 
 /**
  * Thin inline connection picker — lists the user's saved connections in a
@@ -90,25 +91,33 @@ export function BenchmarkCreatePage() {
   const nameFieldId = `${idPrefix}-name`;
   const descFieldId = `${idPrefix}-desc`;
 
+  // Phase 13: scenario comes from ?scenario=… in the URL. Invalid / missing
+  // values fall back to "inference". The submit body forwards this scenario
+  // (the contract requires it), and the tool dropdown is narrowed to
+  // SCENARIOS[scenario].tools so callers can't pick an incompatible tool.
+  const [params] = useSearchParams();
+  const scenarioParam = params.get("scenario");
+  const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
+  const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
+  const availableTools = SCENARIOS[scenario].tools;
+  const defaultTool = availableTools[0];
+
   const form = useForm<CreateBenchmarkRequest>({
     resolver: zodResolver(createBenchmarkRequestSchema),
     mode: "onChange",
     defaultValues: {
-      tool: "guidellm",
-      // Phase 13 will read this from URL (?scenario=...). For now, default to
-      // inference so the form satisfies the contract; the field is hidden in
-      // the UI until Phase 13 surfaces it explicitly.
-      scenario: "inference",
+      tool: defaultTool,
+      scenario,
       connectionId: "",
       name: "",
       description: undefined,
-      params: TOOL_DEFAULTS.guidellm as Record<string, unknown>,
+      params: TOOL_DEFAULTS[defaultTool] as Record<string, unknown>,
     },
   });
 
   // Single source of truth: form state. useWatch keeps the section render +
   // tool-specific subform in sync without a duplicate useState/useEffect pair.
-  const tool = (useWatch({ control: form.control, name: "tool" }) ?? "guidellm") as ToolName;
+  const tool = (useWatch({ control: form.control, name: "tool" }) ?? defaultTool) as ToolName;
   const connectionId = useWatch({ control: form.control, name: "connectionId" }) ?? "";
 
   function handleToolChange(next: ToolName) {
@@ -132,7 +141,10 @@ export function BenchmarkCreatePage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      const benchmark = await createMut.mutateAsync(values);
+      // scenario is sourced from the URL (not the form), so the create body
+      // overrides whatever the form may carry. Keeps a single source of truth.
+      const body: CreateBenchmarkRequest = { ...values, scenario };
+      const benchmark = await createMut.mutateAsync(body);
       toast.success(t("create.submitted", { name: benchmark.name ?? benchmark.id }));
       navigate(`/runs/${benchmark.id}`);
     } catch (e) {
@@ -164,25 +176,36 @@ export function BenchmarkCreatePage() {
               />
             </section>
 
-            {/* Tool section */}
+            {/* Tool section — single-tool scenarios (capacity, gateway) skip
+                the dropdown and just label the auto-selected tool. */}
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("create.sections.tool")}
               </h2>
               <div className="max-w-xs">
                 <Label htmlFor={toolFieldId}>{t("create.fields.tool")}</Label>
-                <Select value={tool} onValueChange={(v) => handleToolChange(v as ToolName)}>
-                  <SelectTrigger id={toolFieldId} aria-label="Tool">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TOOLS.map((tn) => (
-                      <SelectItem key={tn} value={tn}>
-                        {t(`create.tools.${tn}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {availableTools.length > 1 ? (
+                  <Select value={tool} onValueChange={(v) => handleToolChange(v as ToolName)}>
+                    <SelectTrigger id={toolFieldId} aria-label="Tool">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTools.map((tn) => (
+                        <SelectItem key={tn} value={tn}>
+                          {t(`create.tools.${tn}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div
+                    id={toolFieldId}
+                    aria-label="Tool"
+                    className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm"
+                  >
+                    {t(`create.tools.${tool}`)}
+                  </div>
+                )}
               </div>
             </section>
 
