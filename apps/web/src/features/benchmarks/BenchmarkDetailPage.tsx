@@ -166,7 +166,7 @@ export function BenchmarkDetailPage() {
   async function handleRerun() {
     if (!benchmark || !benchmark.connectionId) return;
     // Schema caps name at 128. " (rerun)" is 8 chars; reserve 120 for the source.
-    const sourceName = benchmark.name?.trim() || `run-${benchmark.id.slice(0, 8)}`;
+    const sourceName = benchmark.name;
     const trimmed = sourceName.length > 120 ? sourceName.slice(0, 120) : sourceName;
     const newName = `${trimmed} (rerun)`;
     try {
@@ -178,7 +178,7 @@ export function BenchmarkDetailPage() {
         description: benchmark.description ?? undefined,
         params: benchmark.params,
       });
-      toast.success(t("detail.rerun.success", { name: next.name ?? next.id }));
+      toast.success(t("detail.rerun.success", { name: next.name }));
       navigate(`/benchmarks/${next.id}`);
     } catch (e) {
       toast.error((e as Error).message || t("detail.rerun.errors.generic"));
@@ -188,7 +188,7 @@ export function BenchmarkDetailPage() {
   return (
     <>
       <PageHeader
-        title={benchmark.name ?? benchmark.id}
+        title={benchmark.name}
         subtitle={subtitle}
         rightSlot={
           <div className="flex items-center gap-2">

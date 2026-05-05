@@ -43,6 +43,7 @@
     "clear": "清除筛选"
   },
   "columns": {
+    "name": "名称",
     "createdAt": "创建时间",
     "tool": "工具",
     "connection": "Connection",

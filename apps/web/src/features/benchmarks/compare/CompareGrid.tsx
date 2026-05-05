@@ -37,7 +37,7 @@ export function CompareGrid({ runs, baselineId }: CompareGridProps) {
                   run.id === baselineId && "bg-amber-50 dark:bg-amber-950/30",
                 )}
               >
-                {run.name ?? run.id}
+                {run.name}
               </TableHead>
             ))}
           </TableRow>

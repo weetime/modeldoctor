@@ -238,6 +238,16 @@ describe("BenchmarkListShell", () => {
     await waitFor(() => expect(screen.getByText("compare-stub")).toBeInTheDocument());
   });
 
+  it("renders the benchmark name in the first content column", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      items: [makeBenchmark("r1", "guidellm", "completed", guidellmMetrics)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+    // benchmark.name is set to the id in makeBenchmark; expect to find "r1"
+    expect(await screen.findByText("r1")).toBeInTheDocument();
+  });
+
   it("Compare button disabled with mixed-tools tooltip when selection mixes tools", async () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       items: [

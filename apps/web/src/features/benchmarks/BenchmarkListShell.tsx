@@ -223,6 +223,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10" />
+                  <TableHead>{t("columns.name")}</TableHead>
                   <TableHead>{t("columns.createdAt")}</TableHead>
                   <TableHead>{t("columns.tool")}</TableHead>
                   <TableHead>{t("columns.connection")}</TableHead>
@@ -242,6 +243,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         aria-label={`select ${benchmark.id}`}
                       />
                     </TableCell>
+                    <TableCell className="font-medium">{benchmark.name}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDistanceToNow(new Date(benchmark.createdAt), { addSuffix: true })}
                     </TableCell>

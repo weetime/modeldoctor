@@ -43,6 +43,7 @@
     "clear": "Clear filters"
   },
   "columns": {
+    "name": "Name",
     "createdAt": "Created",
     "tool": "Tool",
     "connection": "Connection",
