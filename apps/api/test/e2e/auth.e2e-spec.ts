@@ -298,6 +298,7 @@ describe("Auth (e2e)", () => {
       scenario: "gateway",
       tool: "vegeta",
       driverKind: "local",
+      name: "admin-run",
       params: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(adminRow.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
@@ -307,6 +308,7 @@ describe("Auth (e2e)", () => {
       scenario: "gateway",
       tool: "vegeta",
       driverKind: "local",
+      name: "user2-run",
       params: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(user2Row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
@@ -340,6 +342,7 @@ describe("Auth (e2e)", () => {
       scenario: "gateway",
       tool: "vegeta",
       driverKind: "local",
+      name: "own-run",
       params: { apiType: "chat", apiBaseUrl: "http://own-run", model: "m", rate: 1, duration: 1 },
     });
     await repo.update(row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });

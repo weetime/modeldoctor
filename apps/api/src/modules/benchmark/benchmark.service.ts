@@ -289,8 +289,9 @@ export class BenchmarkService {
       try {
         await this.driver.cancel(row.driverHandle);
       } catch (e) {
+        const err = e as Error;
         this.log.warn(
-          `delete: best-effort driver.cancel failed for ${row.id}: ${(e as Error).message}`,
+          `delete: best-effort driver.cancel failed for ${row.id}: ${err.message}\n${err.stack ?? ""}`,
         );
       }
     }
