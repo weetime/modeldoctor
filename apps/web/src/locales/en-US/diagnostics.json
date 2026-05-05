@@ -1,5 +1,5 @@
 {
-  "title": "E2E Smoke",
+  "title": "Endpoint Health",
   "subtitle": "Functional probes covering text / image / audio / embeddings / rerank / image-gen pipelines.",
   "category": {
     "label": "Category",

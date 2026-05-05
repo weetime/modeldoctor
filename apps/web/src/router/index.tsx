@@ -1,12 +1,14 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
-import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
-import { DevChartsPage } from "@/features/dev-charts";
+import { BenchmarkCapacityPage } from "@/features/benchmarks/BenchmarkCapacityPage";
 import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
 import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
+import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage";
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { BenchmarkComparePage } from "@/features/benchmarks/compare/BenchmarkComparePage";
+import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
+import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
@@ -33,22 +35,18 @@ export const routes: RouteObject[] = [
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/runs" replace /> },
-          { path: "e2e", element: <DiagnosticsPage /> },
+          { index: true, element: <Navigate to="/benchmarks/inference" replace /> },
           {
-            // Phase 14 will split this into /benchmarks/inference,
-            // /benchmarks/capacity, /benchmarks/gateway. Until then, keep the
-            // /runs route alive by mounting the inference scenario page (the
-            // closest analogue to the previous "all benchmarks" view).
-            path: "runs",
-            element: <BenchmarkInferencePage />,
+            path: "benchmarks",
+            element: <Navigate to="/benchmarks/inference" replace />,
           },
-          { path: "runs/new", element: <BenchmarkCreatePage /> },
-          { path: "runs/compare", element: <BenchmarkComparePage /> },
-          {
-            path: "runs/:id",
-            element: <BenchmarkDetailPage />,
-          },
+          { path: "benchmarks/inference", element: <BenchmarkInferencePage /> },
+          { path: "benchmarks/capacity", element: <BenchmarkCapacityPage /> },
+          { path: "benchmarks/gateway", element: <BenchmarkGatewayPage /> },
+          { path: "benchmarks/compare", element: <BenchmarkComparePage /> },
+          { path: "benchmarks/new", element: <BenchmarkCreatePage /> },
+          { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
+          { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
           { path: "settings", element: <SettingsPage /> },

@@ -24,7 +24,7 @@ import { PROBES_BY_CATEGORY } from "./types";
 const CATEGORIES: ProbeCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
 
 export function DiagnosticsPage() {
-  const { t } = useTranslation("e2e");
+  const { t } = useTranslation("diagnostics");
   const { t: tc } = useTranslation("common");
   const slice = useE2EStore();
   const endpoint = slice.manualEndpoint;

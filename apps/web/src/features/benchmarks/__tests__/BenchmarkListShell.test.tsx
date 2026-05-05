@@ -104,11 +104,11 @@ function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={["/runs"]}>
+        <MemoryRouter initialEntries={["/benchmarks"]}>
           <Routes>
-            <Route path="/runs" element={children} />
-            <Route path="/runs/compare" element={<div>compare-stub</div>} />
-            <Route path="/runs/:id" element={<div>detail</div>} />
+            <Route path="/benchmarks" element={children} />
+            <Route path="/benchmarks/compare" element={<div>compare-stub</div>} />
+            <Route path="/benchmarks/:id" element={<div>detail</div>} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -215,7 +215,7 @@ describe("BenchmarkListShell", () => {
     expect(compareBtn).toBeDisabled();
   });
 
-  it("Compare button enabled with 2 same-tool selected; click navigates to /runs/compare?ids=", async () => {
+  it("Compare button enabled with 2 same-tool selected; click navigates to /benchmarks/compare?ids=", async () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       items: [
         makeBenchmark("a", "guidellm", "completed", guidellmMetrics),
@@ -232,7 +232,7 @@ describe("BenchmarkListShell", () => {
     const compareBtn = screen.getByRole("button", { name: /Compare \(2\)|对比 \(2\)/i });
     expect(compareBtn).not.toBeDisabled();
     await userEvent.click(compareBtn);
-    // Wrapper has a stub /runs/compare route; assert navigation fired by
+    // Wrapper has a stub /benchmarks/compare route; assert navigation fired by
     // verifying we landed there. Full happy-path is covered by
     // BenchmarkComparePage's own tests.
     await waitFor(() => expect(screen.getByText("compare-stub")).toBeInTheDocument());

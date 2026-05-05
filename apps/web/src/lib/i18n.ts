@@ -1,20 +1,20 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enBenchmarks from "@/locales/en-US/benchmarks.json";
 import enCommon from "@/locales/en-US/common.json";
 import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
-import enE2E from "@/locales/en-US/e2e.json";
+import enDiagnostics from "@/locales/en-US/diagnostics.json";
 import enPlayground from "@/locales/en-US/playground.json";
-import enRuns from "@/locales/en-US/runs.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
+import zhBenchmarks from "@/locales/zh-CN/benchmarks.json";
 import zhCommon from "@/locales/zh-CN/common.json";
 import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
-import zhE2E from "@/locales/zh-CN/e2e.json";
+import zhDiagnostics from "@/locales/zh-CN/diagnostics.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
-import zhRuns from "@/locales/zh-CN/runs.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
 
@@ -24,8 +24,8 @@ void i18n.use(initReactI18next).init({
       common: enCommon,
       sidebar: enSidebar,
       connections: enConnections,
-      e2e: enE2E,
-      runs: enRuns,
+      diagnostics: enDiagnostics,
+      benchmarks: enBenchmarks,
       debug: enDebug,
       settings: enSettings,
       playground: enPlayground,
@@ -34,8 +34,8 @@ void i18n.use(initReactI18next).init({
       common: zhCommon,
       sidebar: zhSidebar,
       connections: zhConnections,
-      e2e: zhE2E,
-      runs: zhRuns,
+      diagnostics: zhDiagnostics,
+      benchmarks: zhBenchmarks,
       debug: zhDebug,
       settings: zhSettings,
       playground: zhPlayground,
@@ -44,7 +44,16 @@ void i18n.use(initReactI18next).init({
   // `lng` is set by main.tsx from the locale store before first render.
   fallbackLng: "en-US",
   defaultNS: "common",
-  ns: ["common", "sidebar", "connections", "e2e", "runs", "debug", "settings", "playground"],
+  ns: [
+    "common",
+    "sidebar",
+    "connections",
+    "diagnostics",
+    "benchmarks",
+    "debug",
+    "settings",
+    "playground",
+  ],
   interpolation: { escapeValue: false },
   returnNull: false,
 });

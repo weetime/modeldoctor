@@ -75,8 +75,8 @@ function renderPage(initialUrl: string) {
       <TooltipProvider>
         <MemoryRouter initialEntries={[initialUrl]}>
           <Routes>
-            <Route path="/runs" element={<div>list</div>} />
-            <Route path="/runs/compare" element={<BenchmarkComparePage />} />
+            <Route path="/benchmarks" element={<div>list</div>} />
+            <Route path="/benchmarks/compare" element={<BenchmarkComparePage />} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -90,15 +90,15 @@ describe("BenchmarkComparePage", () => {
   });
 
   it("renders empty state when only one id", () => {
-    renderPage("/runs/compare?ids=a");
-    expect(screen.getByText(/Select 2\+ Runs|2 个以上/i)).toBeInTheDocument();
+    renderPage("/benchmarks/compare?ids=a");
+    expect(screen.getByText(/Select 2\+ benchmarks|2 个以上/i)).toBeInTheDocument();
   });
 
   it("happy path: renders grid for 2 same-tool benchmarks", async () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce(makeBenchmark("a"))
       .mockResolvedValueOnce(makeBenchmark("b"));
-    renderPage("/runs/compare?ids=a,b");
+    renderPage("/benchmarks/compare?ids=a,b");
     // Run name "a" appears in BOTH the toolbar <option> and the grid <TableHead>;
     // same for "b". Using getAllByText to disambiguate.
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
@@ -111,7 +111,7 @@ describe("BenchmarkComparePage", () => {
       .mockResolvedValueOnce(makeBenchmark("b"))
       .mockResolvedValueOnce(makeBenchmark("c"))
       .mockResolvedValueOnce(makeBenchmark("d"));
-    renderPage("/runs/compare?ids=a,b,c,d");
+    renderPage("/benchmarks/compare?ids=a,b,c,d");
     // Run name appears in BOTH toolbar <option> and grid <TableHead>.
     await waitFor(() => expect(screen.getAllByText("d").length).toBeGreaterThan(0));
   });
@@ -120,7 +120,7 @@ describe("BenchmarkComparePage", () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce(makeBenchmark("a", "guidellm"))
       .mockResolvedValueOnce(makeBenchmark("b", "vegeta"));
-    renderPage("/runs/compare?ids=a,b");
+    renderPage("/benchmarks/compare?ids=a,b");
     await waitFor(() =>
       expect(
         screen.getByText(/Compare requires the same tool|对比需要相同 tool/i),
@@ -134,7 +134,7 @@ describe("BenchmarkComparePage", () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce(makeBenchmark("a", "guidellm", 200, "inference"))
       .mockResolvedValueOnce(makeBenchmark("b", "vegeta", 200, "gateway"));
-    renderPage("/runs/compare?ids=a,b");
+    renderPage("/benchmarks/compare?ids=a,b");
     await waitFor(() =>
       expect(
         screen.getByText(/Compare requires the same scenario|对比需要相同 scenario/i),
@@ -148,7 +148,7 @@ describe("BenchmarkComparePage", () => {
   });
 
   it("renders empty-state picker when no ids param", () => {
-    renderPage("/runs/compare");
+    renderPage("/benchmarks/compare");
     // The empty state renders the scenario <select> with all 3 SCENARIOS
     // as <option>s. The inference scenario label "推理性能基准" comes from
     // SCENARIOS["inference"].label and is unique on the page.
@@ -165,7 +165,7 @@ describe("BenchmarkComparePage", () => {
     const err = new Error("not found") as Error & { status: number };
     err.status = 404;
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark("a")).mockRejectedValueOnce(err);
-    renderPage("/runs/compare?ids=a,b");
+    renderPage("/benchmarks/compare?ids=a,b");
     // Alert reports the lost benchmark; with only 1 surviving the >=2 gate
     // keeps the grid hidden — only the alert + page header should show.
     await waitFor(() =>
@@ -179,7 +179,7 @@ describe("BenchmarkComparePage", () => {
     const a = makeBenchmark("a", "guidellm");
     a.baselineFor = { id: "b_1", name: "anchor", createdAt: "2026-05-01T00:00:00.000Z" };
     vi.mocked(api.get).mockResolvedValueOnce(a).mockResolvedValueOnce(makeBenchmark("b"));
-    renderPage("/runs/compare?ids=a,b&baseline=none");
+    renderPage("/benchmarks/compare?ids=a,b&baseline=none");
     // Toolbar dropdown is the visible signal: with None selected the
     // <select> value is "" so its first <option> ("None (no verdict)" /
     // "无（不显示徽标）") is the displayed text.

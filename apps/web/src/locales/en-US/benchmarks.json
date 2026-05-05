@@ -12,7 +12,7 @@
     "sections": {
       "endpoint": "Endpoint",
       "tool": "Tool",
-      "metadata": "Run details",
+      "metadata": "Benchmark details",
       "parameters": "Parameters"
     },
     "fields": {
@@ -56,7 +56,7 @@
     "open": ""
   },
   "compareButton": "Compare ({{n}})",
-  "compareDisabledNeedTwo": "Select at least 2 Runs to compare",
+  "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
   "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
   "empty": {
     "title": "No benchmarks yet",
@@ -68,9 +68,9 @@
   "retry": "Retry",
   "detail": {
     "back": "Back to list",
-    "subtitle": "{{kind}} · {{tool}} · {{when}}",
+    "subtitle": "{{scenario}} · {{tool}} · {{when}}",
     "metadata": {
-      "kind": "Kind",
+      "scenario": "Scenario",
       "tool": "Tool",
       "mode": "Mode",
       "driverKind": "Driver",
@@ -159,18 +159,18 @@
     }
   },
   "compare": {
-    "title": "Compare Runs",
-    "subtitle": "{{n}} runs · {{tool}}",
+    "title": "Compare Benchmarks",
+    "subtitle": "{{n}} benchmarks · {{tool}}",
     "back": "Back to list",
     "baselineLabel": "Baseline",
     "baselineNone": "None (no verdict)",
-    "baselineMissing": "{{failed}} Run(s) no longer accessible — comparing the remaining {{n}}",
+    "baselineMissing": "{{failed}} benchmark(s) no longer accessible — comparing the remaining {{n}}",
     "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
     "mixedToolsTitle": "Mixed tools",
     "mixedToolsBody": "Compare requires the same tool. Selected: {{summary}}",
     "mixedScenariosTitle": "Mixed scenarios",
     "mixedScenariosBody": "Compare requires the same scenario. Selected: {{scenarios}}",
-    "needTwoEmpty": "Select 2+ Runs from the list to compare",
+    "needTwoEmpty": "Select 2+ benchmarks from the list to compare",
     "empty": {
       "title": "Pick a scenario, then select benchmarks",
       "scenarioLabel": "Scenario",

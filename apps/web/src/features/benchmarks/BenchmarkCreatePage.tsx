@@ -82,7 +82,7 @@ function SavedConnectionPicker({
 }
 
 export function BenchmarkCreatePage() {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const navigate = useNavigate();
   const createMut = useCreateBenchmark();
   const idPrefix = useId();
@@ -166,7 +166,7 @@ export function BenchmarkCreatePage() {
       const body: CreateBenchmarkRequest = { ...values, scenario };
       const benchmark = await createMut.mutateAsync(body);
       toast.success(t("create.submitted", { name: benchmark.name ?? benchmark.id }));
-      navigate(`/runs/${benchmark.id}`);
+      navigate(`/benchmarks/${benchmark.id}`);
     } catch (e) {
       const err = e as { code?: string; message?: string; status?: number };
       toast.error(err.message ?? t("create.errors.submitFailed"));
@@ -259,7 +259,7 @@ export function BenchmarkCreatePage() {
             </section>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => navigate("/runs")}>
+              <Button type="button" variant="outline" onClick={() => navigate("/benchmarks")}>
                 {t("actions.cancel")}
               </Button>
               <Button type="submit" disabled={submitDisabled}>

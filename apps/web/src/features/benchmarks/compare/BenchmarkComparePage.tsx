@@ -23,7 +23,7 @@ function parseIds(searchParams: URLSearchParams): string[] {
 }
 
 export function BenchmarkComparePage() {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const [searchParams, setSearchParams] = useSearchParams();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
@@ -35,7 +35,7 @@ export function BenchmarkComparePage() {
   // user's None selection on the next render.
   const baselineParam = searchParams.get("baseline");
 
-  // Gate fetches at the array level: if the user lands on /runs/compare with
+  // Gate fetches at the array level: if the user lands on /benchmarks/compare with
   // 0 or 1 ids (manual URL edit / shared half-baked link), the empty state
   // renders below — but useQueries runs unconditionally at the hook level, so
   // the query.enabled flag must also be false to avoid firing a real GET
@@ -105,7 +105,7 @@ export function BenchmarkComparePage() {
           title={t("compare.needTwoEmpty")}
           actions={
             <Button asChild variant="outline" size="sm">
-              <Link to="/runs">
+              <Link to="/benchmarks">
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("compare.back")}
               </Link>
@@ -134,7 +134,7 @@ export function BenchmarkComparePage() {
         subtitle={subtitle}
         rightSlot={
           <Button asChild variant="ghost" size="sm">
-            <Link to="/runs">
+            <Link to="/benchmarks">
               <ArrowLeft className="mr-1 h-4 w-4" />
               {t("compare.back")}
             </Link>

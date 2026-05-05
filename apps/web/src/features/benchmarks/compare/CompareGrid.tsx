@@ -12,7 +12,7 @@ export interface CompareGridProps {
 }
 
 export function CompareGrid({ runs, baselineId }: CompareGridProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
 
   // All runs share one tool by the time CompareGrid mounts (validated upstream).
   // If the array is empty just render nothing — BenchmarkComparePage shows EmptyState.

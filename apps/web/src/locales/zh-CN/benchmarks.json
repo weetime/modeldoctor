@@ -12,7 +12,7 @@
     "sections": {
       "endpoint": "接入点",
       "tool": "工具",
-      "metadata": "运行详情",
+      "metadata": "基准测试详情",
       "parameters": "参数"
     },
     "fields": {
@@ -56,7 +56,7 @@
     "open": ""
   },
   "compareButton": "对比 ({{n}})",
-  "compareDisabledNeedTwo": "至少选 2 个 Run 才能对比",
+  "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
   "compareDisabledMixedTools": "对比需要相同 tool（{{summary}}）",
   "empty": {
     "title": "暂无基准测试",
@@ -68,9 +68,9 @@
   "retry": "重试",
   "detail": {
     "back": "返回列表",
-    "subtitle": "{{kind}} · {{tool}} · {{when}}",
+    "subtitle": "{{scenario}} · {{tool}} · {{when}}",
     "metadata": {
-      "kind": "类型",
+      "scenario": "场景",
       "tool": "工具",
       "mode": "模式",
       "driverKind": "Driver",
@@ -159,18 +159,18 @@
     }
   },
   "compare": {
-    "title": "对比 Run",
-    "subtitle": "{{n}} 个 run · {{tool}}",
+    "title": "对比基准测试",
+    "subtitle": "{{n}} 个基准测试 · {{tool}}",
     "back": "返回列表",
     "baselineLabel": "基准",
     "baselineNone": "无（不显示徽标）",
-    "baselineMissing": "{{failed}} 个 Run 已无法访问，仅对比剩余 {{n}} 个",
+    "baselineMissing": "{{failed}} 个基准测试已无法访问，仅对比剩余 {{n}} 个",
     "mixedToolsAlert": "对比需要相同 tool。当前选中：{{summary}}",
     "mixedToolsTitle": "工具不一致",
     "mixedToolsBody": "对比需要相同 tool。当前选中：{{summary}}",
     "mixedScenariosTitle": "场景不一致",
     "mixedScenariosBody": "对比需要相同 scenario。当前选中：{{scenarios}}",
-    "needTwoEmpty": "从列表选 2 个以上 Run 才能对比",
+    "needTwoEmpty": "从列表选 2 个以上基准测试才能对比",
     "empty": {
       "title": "选择场景后再挑选基准测试",
       "scenarioLabel": "场景",

@@ -45,7 +45,7 @@ export function BenchmarkListFilters({
   onChange,
   availableTools,
 }: BenchmarkListFiltersProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
 
   function patch(p: Partial<ListBenchmarksQuery>) {
     onChange({ ...query, ...p });

@@ -85,10 +85,10 @@ function Wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={["/runs/r1"]}>
+        <MemoryRouter initialEntries={["/benchmarks/r1"]}>
           <Routes>
-            <Route path="/runs" element={<div>list</div>} />
-            <Route path="/runs/:id" element={children} />
+            <Route path="/benchmarks" element={<div>list</div>} />
+            <Route path="/benchmarks/:id" element={children} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>

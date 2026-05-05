@@ -45,7 +45,7 @@ import { UnknownReport } from "./reports/UnknownReport";
  * the parent flips to the metrics + raw-output report layout.
  */
 function RunningSection({ benchmark }: { benchmark: Benchmark }) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -74,7 +74,7 @@ function RunningSection({ benchmark }: { benchmark: Benchmark }) {
 }
 
 function ReportSection({ benchmark }: { benchmark: Benchmark }) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   if (!benchmark.summaryMetrics) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
 }
 
 export function BenchmarkDetailPage() {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const { id } = useParams<{ id: string }>();
   const { data: benchmark, isLoading, isError, error } = useBenchmarkDetail(id ?? "");
   const qc = useQueryClient();
@@ -148,9 +148,7 @@ export function BenchmarkDetailPage() {
   if (!benchmark) return null;
 
   const subtitle = t("detail.subtitle", {
-    // TODO(Phase 14): rename i18n placeholder kind→scenario; the value
-    // is benchmark.scenario but the i18n template still says {{kind}}.
-    kind: benchmark.scenario,
+    scenario: benchmark.scenario,
     tool: benchmark.tool,
     when: format(new Date(benchmark.createdAt), "yyyy-MM-dd HH:mm"),
   });
@@ -178,7 +176,7 @@ export function BenchmarkDetailPage() {
         params: benchmark.params,
       });
       toast.success(t("detail.rerun.success", { name: next.name ?? next.id }));
-      navigate(`/runs/${next.id}`);
+      navigate(`/benchmarks/${next.id}`);
     } catch (e) {
       toast.error((e as Error).message || t("detail.rerun.errors.generic"));
     }
@@ -231,7 +229,7 @@ export function BenchmarkDetailPage() {
               </Button>
             )}
             <Button asChild variant="ghost" size="sm">
-              <Link to="/runs">
+              <Link to="/benchmarks">
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("detail.back")}
               </Link>
@@ -330,7 +328,7 @@ export function BenchmarkDetailPage() {
                   onSuccess: () => {
                     setDeleteOpen(false);
                     toast.success(t("detail.delete.success"));
-                    navigate("/runs");
+                    navigate("/benchmarks");
                   },
                   onError: () => {
                     toast.error(t("detail.delete.errors.generic"));

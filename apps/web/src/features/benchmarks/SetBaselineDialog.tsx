@@ -29,7 +29,7 @@ export function SetBaselineDialog({
   onOpenChange,
   onSuccess,
 }: SetBaselineDialogProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const create = useCreateBaseline();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");

@@ -59,7 +59,7 @@ describe("BenchmarkCreatePage", () => {
   });
 
   it("defaults to inference scenario when no ?scenario= param (tool select shows guidellm)", () => {
-    renderAt("/runs/new");
+    renderAt("/benchmarks/new");
     // Inference is multi-tool (guidellm + genai-perf), so the dropdown is
     // rendered as a combobox with the default-selected value visible.
     const toolCombo = screen.getByRole("combobox", { name: /Tool/i });
@@ -67,7 +67,7 @@ describe("BenchmarkCreatePage", () => {
   });
 
   it("narrows tool select to guidellm only when ?scenario=capacity", () => {
-    renderAt("/runs/new?scenario=capacity");
+    renderAt("/benchmarks/new?scenario=capacity");
     // Capacity has a single tool (guidellm), so the dropdown is replaced by a
     // read-only label — there should be no combobox in the Tool section.
     expect(screen.queryByRole("combobox", { name: /Tool/i })).not.toBeInTheDocument();
@@ -76,21 +76,21 @@ describe("BenchmarkCreatePage", () => {
   });
 
   it("narrows tool select to vegeta only when ?scenario=gateway", () => {
-    renderAt("/runs/new?scenario=gateway");
+    renderAt("/benchmarks/new?scenario=gateway");
     expect(screen.queryByRole("combobox", { name: /Tool/i })).not.toBeInTheDocument();
     const label = screen.getByLabelText(/Tool/i);
     expect(label).toHaveTextContent(/vegeta/i);
   });
 
   it("falls back to inference when ?scenario= is invalid", () => {
-    renderAt("/runs/new?scenario=foo");
+    renderAt("/benchmarks/new?scenario=foo");
     // Falls back to inference → multi-tool dropdown rendered.
     const toolCombo = screen.getByRole("combobox", { name: /Tool/i });
     expect(within(toolCombo).getByText(/guidellm/i)).toBeInTheDocument();
   });
 
   it("renders VegetaParamsForm fields when ?scenario=gateway", () => {
-    renderAt("/runs/new?scenario=gateway");
+    renderAt("/benchmarks/new?scenario=gateway");
     // VegetaParamsForm exposes a "Rate (req/s)" field that no other params
     // form has — distinctive enough to confirm the right subform mounted.
     expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("BenchmarkCreatePage", () => {
   });
 
   it("renders GuidellmParamsForm fields when ?scenario=capacity", () => {
-    renderAt("/runs/new?scenario=capacity");
+    renderAt("/benchmarks/new?scenario=capacity");
     // GuidellmParamsForm exposes a "Profile" field that vegeta/genai-perf
     // forms don't — distinctive enough to confirm the right subform mounted.
     expect(screen.getByLabelText(/^Profile$/i)).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe("BenchmarkCreatePage", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={["/runs/new?scenario=inference"]}>
+        <MemoryRouter initialEntries={["/benchmarks/new?scenario=inference"]}>
           <NavCapture />
           <BenchmarkCreatePage />
         </MemoryRouter>
@@ -139,7 +139,7 @@ describe("BenchmarkCreatePage", () => {
     // Navigate to gateway in the same tree. The form.reset useEffect must
     // fire and switch the tool to vegeta (single-tool readonly indicator).
     act(() => {
-      navigateRef?.("/runs/new?scenario=gateway");
+      navigateRef?.("/benchmarks/new?scenario=gateway");
     });
 
     expect(screen.queryByRole("combobox", { name: /Tool/i })).not.toBeInTheDocument();

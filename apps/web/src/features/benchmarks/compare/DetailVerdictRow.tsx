@@ -26,7 +26,7 @@ interface VerdictItem {
 }
 
 export function DetailVerdictRow({ benchmark, baselineId }: DetailVerdictRowProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const baselineQuery = useBaselineById(baselineId);
   const baselineBenchmarkId = baselineQuery.data?.benchmarkId ?? "";
   const baselineBenchmark = useBenchmarkDetail(baselineBenchmarkId);

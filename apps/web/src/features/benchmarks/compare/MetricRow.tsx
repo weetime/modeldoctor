@@ -18,7 +18,7 @@ function fmtNum(n: number | null, digits: number, suffix?: string): string {
 }
 
 export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const digits = descriptor.digits ?? 1;
   const baseline = baselineId ? runs.find((r) => r.id === baselineId) : null;
   const baselineValue = baseline ? descriptor.read(baseline.summaryMetrics) : null;

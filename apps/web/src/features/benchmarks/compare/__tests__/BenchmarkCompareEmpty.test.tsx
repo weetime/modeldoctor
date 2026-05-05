@@ -81,10 +81,10 @@ function renderPage() {
   return render(
     <QueryClientProvider client={qc}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={["/runs/compare"]}>
+        <MemoryRouter initialEntries={["/benchmarks/compare"]}>
           <LocationProbe />
           <Routes>
-            <Route path="/runs/compare" element={<BenchmarkCompareEmpty />} />
+            <Route path="/benchmarks/compare" element={<BenchmarkCompareEmpty />} />
           </Routes>
         </MemoryRouter>
       </TooltipProvider>
@@ -130,7 +130,7 @@ describe("BenchmarkCompareEmpty", () => {
     expect(screen.getByText(/Select 2\+ benchmarks|至少选择 2 个基准测试/i)).toBeInTheDocument();
   });
 
-  it("happy path: ticking 2 benchmarks then submit navigates to /runs/compare?ids=a,b without a scenario param", async () => {
+  it("happy path: ticking 2 benchmarks then submit navigates to /benchmarks/compare?ids=a,b without a scenario param", async () => {
     const resp: ListBenchmarksResponse = {
       items: [makeBenchmark("alpha"), makeBenchmark("beta")],
       nextCursor: null,
@@ -154,7 +154,7 @@ describe("BenchmarkCompareEmpty", () => {
 
     // useLocation() reflects the navigation; assert the destination.
     await waitFor(() =>
-      expect(screen.getByTestId("loc-pathname").textContent).toBe("/runs/compare"),
+      expect(screen.getByTestId("loc-pathname").textContent).toBe("/benchmarks/compare"),
     );
     const search = screen.getByTestId("loc-search").textContent ?? "";
     const sp = new URLSearchParams(search);

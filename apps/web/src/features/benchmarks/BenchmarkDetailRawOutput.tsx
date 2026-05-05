@@ -10,7 +10,7 @@ export function BenchmarkDetailRawOutput({
   rawOutput: Record<string, unknown> | null;
   logs: string | null;
 }) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const [showRaw, setShowRaw] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
 

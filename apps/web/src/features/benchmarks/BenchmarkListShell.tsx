@@ -39,7 +39,7 @@ interface BenchmarkListShellProps {
 }
 
 export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const qc = useQueryClient();
   const cfg = SCENARIOS[scenario];
 
@@ -55,7 +55,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
     const get = (k: string) => searchParams.get(k) ?? undefined;
     const tool = get("tool");
     // Defensive: only honor tool query param when it's a tool the scenario
-    // actually allows. A stale ?tool=vegeta on /runs (inference) would
+    // actually allows. A stale ?tool=vegeta on /benchmarks/inference would
     // otherwise produce an empty list with no obvious cause.
     if (tool && (cfg.tools as readonly string[]).includes(tool)) {
       q.tool = tool as BenchmarkTool;
@@ -165,7 +165,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     disabled={compareDisabledReason !== null}
                     onClick={() => {
                       if (compareDisabledReason !== null) return;
-                      navigate(`/runs/compare?ids=${[...selected].join(",")}`);
+                      navigate(`/benchmarks/compare?ids=${[...selected].join(",")}`);
                     }}
                   >
                     {t("compareButton", { n: selected.size })}
@@ -185,12 +185,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
               )}
             </Tooltip>
             <Button asChild size="sm">
-              {/*
-                Phase 14 will rename `/runs/new` → `/benchmarks/new`. Until the
-                router rename lands, link to the existing route and forward
-                the scenario via query string.
-              */}
-              <Link to={`/runs/new?scenario=${scenario}`}>{t("actions.new")}</Link>
+              <Link to={`/benchmarks/new?scenario=${scenario}`}>{t("actions.new")}</Link>
             </Button>
           </div>
         }
@@ -268,7 +263,10 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                       {fmtNum(readErrorRate(benchmark.summaryMetrics), 4)}
                     </TableCell>
                     <TableCell>
-                      <Link to={`/runs/${benchmark.id}`} className="text-primary hover:underline">
+                      <Link
+                        to={`/benchmarks/${benchmark.id}`}
+                        className="text-primary hover:underline"
+                      >
                         →
                       </Link>
                     </TableCell>

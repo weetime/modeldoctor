@@ -10,7 +10,7 @@ export interface BenchmarkChartsSectionProps {
 }
 
 export function BenchmarkChartsSection({ benchmarkId, tool }: BenchmarkChartsSectionProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   const { data, isLoading, isError } = useBenchmarkCharts(benchmarkId);
 
   if (isError) {

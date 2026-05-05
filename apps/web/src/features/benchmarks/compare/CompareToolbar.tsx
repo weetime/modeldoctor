@@ -13,7 +13,7 @@ export interface CompareToolbarProps {
 }
 
 export function CompareToolbar({ runs, baselineId, onBaselineChange }: CompareToolbarProps) {
-  const { t } = useTranslation("runs");
+  const { t } = useTranslation("benchmarks");
   return (
     <div className="flex items-center gap-3 text-sm">
       <label className="flex items-center gap-2">

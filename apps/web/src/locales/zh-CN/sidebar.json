@@ -1,9 +1,9 @@
 {
   "groups": {
-    "playground": "试验场",
-    "performance": "性能",
-    "debug": "排障",
-    "dev": "开发"
+    "playground": "Playground",
+    "benchmarks": "基准测试",
+    "diagnostics": "诊断",
+    "dev": "开发工具"
   },
   "items": {
     "playgroundChat": "对话",
@@ -11,11 +11,14 @@
     "playgroundAudio": "语音",
     "playgroundEmbeddings": "嵌入",
     "playgroundRerank": "重排",
-    "e2e": "E2E Smoke",
-    "runs": "基准测试",
+    "benchmarkInference": "推理性能基准",
+    "benchmarkCapacity": "容量规划",
+    "benchmarkGateway": "网关压测",
+    "benchmarkCompare": "对比分析",
     "requestDebug": "请求调试",
-    "connections": "连接库",
+    "diagnostics": "端点检测",
+    "connections": "连接",
     "settings": "设置",
-    "devCharts": "图表 Demo"
+    "devCharts": "图表调试"
   }
 }

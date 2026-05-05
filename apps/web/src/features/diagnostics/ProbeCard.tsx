@@ -29,7 +29,7 @@ export function ProbeCard({
   onRun,
   disabledReason,
 }: Props) {
-  const { t } = useTranslation("e2e");
+  const { t } = useTranslation("diagnostics");
   const { t: tc } = useTranslation("common");
   const variant: "default" | "warning" | "success" | "destructive" = running
     ? "warning"
@@ -122,7 +122,7 @@ interface DiagnosticsDetails {
 }
 
 function ProbeResultDetails({ result }: { result: ProbeResult }) {
-  const { t } = useTranslation("e2e");
+  const { t } = useTranslation("diagnostics");
   const details = (result.details ?? {}) as DiagnosticsDetails;
 
   return (
