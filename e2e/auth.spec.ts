@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { registerAndLogin } from "./helpers/auth";
 import { resetTestDb } from "./helpers/db";
 
 test.beforeEach(() => {
@@ -6,19 +7,7 @@ test.beforeEach(() => {
 });
 
 test("register → auto-login → land on benchmarks page", async ({ page }) => {
-  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-  const password = "test-pass-1234";
-
-  await page.goto("/register");
-  await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
-
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /create account/i }).click();
-
-  // Auto-redirect to /benchmarks on successful register (RegisterPage.tsx:36).
-  await expect(page).toHaveURL(/\/benchmarks/, { timeout: 15_000 });
-
+  const { email } = await registerAndLogin(page);
   // Sidebar shows the user's email when logged in.
   await expect(page.getByText(email)).toBeVisible();
 });
@@ -30,10 +19,22 @@ test("required-field validation: empty email + password blocks submit", async ({
   const stars = page.locator("label span", { hasText: "*" });
   await expect(stars).toHaveCount(2);
 
-  // Click submit without typing anything — RHF is in onSubmit mode here, so
-  // it surfaces validation errors but does NOT navigate.
   await page.getByRole("button", { name: /create account/i }).click();
-
   // Stay on /register (no redirect to /benchmarks).
   await expect(page).toHaveURL(/\/register/);
+});
+
+test("logout from sidebar then login again", async ({ page }) => {
+  const { email, password } = await registerAndLogin(page);
+
+  // Logout button — sidebar exposes a logout affordance for the current user.
+  await page.getByRole("button", { name: /logout|sign out|登出|退出/i }).click();
+  await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
+
+  // Login round-trip with the same credentials.
+  await page.getByLabel(/email/i).fill(email);
+  await page.getByLabel(/password/i).fill(password);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page).toHaveURL(/\/benchmarks/, { timeout: 10_000 });
+  await expect(page.getByText(email)).toBeVisible();
 });
