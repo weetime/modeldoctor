@@ -31,10 +31,8 @@
     "submitted": "基准测试「{{name}}」已提交"
   },
   "filters": {
-    "kind": "类型",
     "tool": "工具",
     "status": "状态",
-    "connection": "Connection",
     "baseline": "基线",
     "baselineIs": "是基线",
     "baselineRef": "对比某个基线",
@@ -45,15 +43,12 @@
     "clear": "清除筛选"
   },
   "columns": {
-    "selected": "",
     "createdAt": "创建时间",
-    "kind": "类型",
     "tool": "工具",
     "connection": "Connection",
     "status": "状态",
     "p95": "p95 (ms)",
-    "errorRate": "错误率",
-    "open": ""
+    "errorRate": "错误率"
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
@@ -72,7 +67,6 @@
     "metadata": {
       "scenario": "场景",
       "tool": "工具",
-      "mode": "模式",
       "driverKind": "Driver",
       "status": "状态",
       "connection": "Connection",
@@ -80,8 +74,7 @@
       "createdAt": "创建于",
       "startedAt": "开始于",
       "completedAt": "结束于",
-      "duration": "时长",
-      "notStarted": "—"
+      "duration": "时长"
     },
     "statusMessage": {
       "title": "失败原因"
@@ -165,7 +158,6 @@
     "baselineLabel": "基准",
     "baselineNone": "无（不显示徽标）",
     "baselineMissing": "{{failed}} 个基准测试已无法访问，仅对比剩余 {{n}} 个",
-    "mixedToolsAlert": "对比需要相同 tool。当前选中：{{summary}}",
     "mixedToolsTitle": "工具不一致",
     "mixedToolsBody": "对比需要相同 tool。当前选中：{{summary}}",
     "mixedScenariosTitle": "场景不一致",

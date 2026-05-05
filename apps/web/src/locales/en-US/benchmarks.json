@@ -31,10 +31,8 @@
     "submitted": "Benchmark \"{{name}}\" submitted"
   },
   "filters": {
-    "kind": "Kind",
     "tool": "Tool",
     "status": "Status",
-    "connection": "Connection",
     "baseline": "Baseline",
     "baselineIs": "Is a baseline",
     "baselineRef": "References a baseline",
@@ -45,15 +43,12 @@
     "clear": "Clear filters"
   },
   "columns": {
-    "selected": "",
     "createdAt": "Created",
-    "kind": "Kind",
     "tool": "Tool",
     "connection": "Connection",
     "status": "Status",
     "p95": "p95 (ms)",
-    "errorRate": "Error rate",
-    "open": ""
+    "errorRate": "Error rate"
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
@@ -72,7 +67,6 @@
     "metadata": {
       "scenario": "Scenario",
       "tool": "Tool",
-      "mode": "Mode",
       "driverKind": "Driver",
       "status": "Status",
       "connection": "Connection",
@@ -80,8 +74,7 @@
       "createdAt": "Created",
       "startedAt": "Started",
       "completedAt": "Completed",
-      "duration": "Duration",
-      "notStarted": "—"
+      "duration": "Duration"
     },
     "statusMessage": {
       "title": "Failure reason"
@@ -165,7 +158,6 @@
     "baselineLabel": "Baseline",
     "baselineNone": "None (no verdict)",
     "baselineMissing": "{{failed}} benchmark(s) no longer accessible — comparing the remaining {{n}}",
-    "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
     "mixedToolsTitle": "Mixed tools",
     "mixedToolsBody": "Compare requires the same tool. Selected: {{summary}}",
     "mixedScenariosTitle": "Mixed scenarios",
