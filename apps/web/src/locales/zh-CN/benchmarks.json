@@ -125,6 +125,17 @@
         "generic": "删除失败"
       }
     },
+    "cancel": {
+      "button": "取消任务",
+      "confirmTitle": "取消该任务？",
+      "confirmBody": "任务会停止，K8s 中关联的 Job 会被删除。记录保留在历史中，状态为 canceled。",
+      "confirmAction": "确认取消",
+      "dismiss": "保持运行",
+      "success": "已取消",
+      "errors": {
+        "generic": "取消失败"
+      }
+    },
     "rerun": {
       "button": "重跑",
       "connectionMissingTooltip": "原 Connection 已删除，请到「新建基准测试」里重新选一个。",

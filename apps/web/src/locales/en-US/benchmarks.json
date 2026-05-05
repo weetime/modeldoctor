@@ -125,6 +125,17 @@
         "generic": "Failed to delete"
       }
     },
+    "cancel": {
+      "button": "Cancel run",
+      "confirmTitle": "Cancel this run?",
+      "confirmBody": "The benchmark will stop and its backing K8s job will be removed. The record stays in history with status 'canceled'.",
+      "confirmAction": "Cancel run",
+      "dismiss": "Keep running",
+      "success": "Run canceled",
+      "errors": {
+        "generic": "Failed to cancel"
+      }
+    },
     "rerun": {
       "button": "Re-run",
       "connectionMissingTooltip": "The original connection has been deleted; pick a new one from \"New Benchmark\" instead.",
