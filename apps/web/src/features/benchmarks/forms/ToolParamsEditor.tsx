@@ -33,12 +33,21 @@ export interface ToolParamsEditorProps {
    * existing BenchmarkCreatePage callers don't need to change. Template
    * forms pass "config" because that's the BenchmarkTemplate column name. */
   paramsFieldName?: "params" | "config";
+  /** Display-only tool value for edit modes where the tool selector is
+   * disabled and the value is not stored in the form. When omitted the tool
+   * is read from the form via useWatch (create mode). */
+  displayTool?: ToolName;
 }
 
-export function ToolParamsEditor({ scenario, paramsFieldName = "params" }: ToolParamsEditorProps) {
+export function ToolParamsEditor({
+  scenario,
+  paramsFieldName = "params",
+  displayTool,
+}: ToolParamsEditorProps) {
   const { t } = useTranslation("benchmarks");
   const { control, reset, getValues } = useFormContext();
-  const tool = (useWatch({ control, name: "tool" }) ?? SCENARIOS[scenario].tools[0]) as ToolName;
+  const formTool = (useWatch({ control, name: "tool" }) ?? SCENARIOS[scenario].tools[0]) as ToolName;
+  const tool = displayTool ?? formTool;
   const id = useId();
   const toolFieldId = `${id}-tool`;
 
