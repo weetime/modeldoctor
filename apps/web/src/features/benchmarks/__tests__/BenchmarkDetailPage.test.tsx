@@ -148,9 +148,11 @@ describe("BenchmarkDetailPage", () => {
     );
   });
 
-  it("renders GuidellmReportView when summaryMetrics.tool === 'guidellm'", async () => {
+  it("renders the inference scenario report for tool === 'guidellm'", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
+        scenario: "inference",
+        tool: "guidellm",
         summaryMetrics: {
           tool: "guidellm",
           data: {
@@ -171,9 +173,11 @@ describe("BenchmarkDetailPage", () => {
     await screen.findByText(/TTFT/i);
   });
 
-  it("renders VegetaReportView when summaryMetrics.tool === 'vegeta'", async () => {
+  it("renders the gateway scenario report for tool === 'vegeta'", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
+        scenario: "gateway",
+        tool: "vegeta",
         summaryMetrics: {
           tool: "vegeta",
           data: {
@@ -193,9 +197,11 @@ describe("BenchmarkDetailPage", () => {
     await screen.findByText(/Status codes/i);
   });
 
-  it("renders GenaiPerfReportView when summaryMetrics.tool === 'genai-perf'", async () => {
+  it("renders the inference scenario report for tool === 'genai-perf'", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
+        scenario: "inference",
+        tool: "genai-perf",
         summaryMetrics: {
           tool: "genai-perf",
           data: {
@@ -272,9 +278,13 @@ describe("BenchmarkDetailPage", () => {
     expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
   });
 
-  it("renders UnknownReportView for unrecognized envelope", async () => {
+  it("renders UnknownReport for unrecognized envelope", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
+        scenario: "inference",
+        // future-tool isn't in benchmarkToolSchema; the makeBenchmark helper's
+        // type cast lets us simulate an envelope an unknown tool would produce.
+        tool: "future-tool" as Benchmark["tool"],
         summaryMetrics: { tool: "future-tool", data: { something: "else" } },
       }),
     );

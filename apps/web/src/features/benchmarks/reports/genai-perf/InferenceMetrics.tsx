@@ -1,15 +1,24 @@
-import type { GenaiPerfReport } from "@modeldoctor/tool-adapters/schemas";
-import { MetricCard } from "../components/MetricCard";
+import type { Benchmark } from "@modeldoctor/contracts";
+import { type GenaiPerfReport, genaiPerfReportSchema } from "@modeldoctor/tool-adapters/schemas";
+import { MetricCard } from "../../components/MetricCard";
+import { UnknownReport } from "../UnknownReport";
 
-export interface GenaiPerfReportViewProps {
-  data: GenaiPerfReport;
+export interface GenaiPerfInferenceMetricsProps {
+  benchmark: Benchmark;
 }
 
 function fmt(n: number, digits = 1): string {
   return n.toFixed(digits);
 }
 
-export function GenaiPerfReportView({ data }: GenaiPerfReportViewProps) {
+export function GenaiPerfInferenceMetrics({ benchmark }: GenaiPerfInferenceMetricsProps) {
+  const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
+  const parsed = genaiPerfReportSchema.safeParse(tagged?.data);
+  if (!parsed.success) {
+    return <UnknownReport benchmark={benchmark} reason={parsed.error.message} />;
+  }
+  const data: GenaiPerfReport = parsed.data;
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       <MetricCard

@@ -15,14 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
-import {
-  type GenaiPerfReport,
-  type GuidellmReport,
-  type VegetaReport,
-  genaiPerfReportSchema,
-  guidellmReportSchema,
-  vegetaReportSchema,
-} from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Loader2, RefreshCw, SearchX } from "lucide-react";
@@ -42,10 +34,10 @@ import {
   useDeleteBenchmark,
 } from "./queries";
 import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
-import { GenaiPerfReportView } from "./reports/GenaiPerfReportView";
-import { GuidellmReportView } from "./reports/GuidellmReportView";
-import { UnknownReportView } from "./reports/UnknownReportView";
-import { VegetaReportView } from "./reports/VegetaReportView";
+import { CapacityReport } from "./reports/CapacityReport";
+import { GatewayReport } from "./reports/GatewayReport";
+import { InferenceReport } from "./reports/InferenceReport";
+import { UnknownReport } from "./reports/UnknownReport";
 
 /**
  * Pre-terminal placeholder rendered while the benchmark is still in flight.
@@ -81,43 +73,24 @@ function RunningSection({ benchmark }: { benchmark: Benchmark }) {
   );
 }
 
-function ReportSection({ metrics }: { metrics: Benchmark["summaryMetrics"] }) {
+function ReportSection({ benchmark }: { benchmark: Benchmark }) {
   const { t } = useTranslation("runs");
-  if (!metrics) {
+  if (!benchmark.summaryMetrics) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
         {t("detail.metrics.empty")}
       </div>
     );
   }
-  const tagged = metrics as { tool?: string; data?: unknown };
-  switch (tagged.tool) {
-    case "guidellm": {
-      const parsed = guidellmReportSchema.safeParse(tagged.data);
-      return parsed.success ? (
-        <GuidellmReportView data={parsed.data as GuidellmReport} />
-      ) : (
-        <UnknownReportView raw={metrics} reason={parsed.error.message} />
-      );
-    }
-    case "vegeta": {
-      const parsed = vegetaReportSchema.safeParse(tagged.data);
-      return parsed.success ? (
-        <VegetaReportView data={parsed.data as VegetaReport} />
-      ) : (
-        <UnknownReportView raw={metrics} reason={parsed.error.message} />
-      );
-    }
-    case "genai-perf": {
-      const parsed = genaiPerfReportSchema.safeParse(tagged.data);
-      return parsed.success ? (
-        <GenaiPerfReportView data={parsed.data as GenaiPerfReport} />
-      ) : (
-        <UnknownReportView raw={metrics} reason={parsed.error.message} />
-      );
-    }
+  switch (benchmark.scenario) {
+    case "inference":
+      return <InferenceReport benchmark={benchmark} />;
+    case "capacity":
+      return <CapacityReport benchmark={benchmark} />;
+    case "gateway":
+      return <GatewayReport benchmark={benchmark} />;
     default:
-      return <UnknownReportView raw={metrics} reason="unknown report envelope" />;
+      return <UnknownReport benchmark={benchmark} />;
   }
 }
 
@@ -289,7 +262,7 @@ export function BenchmarkDetailPage() {
             )}
             <section>
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-              <ReportSection metrics={benchmark.summaryMetrics} />
+              <ReportSection benchmark={benchmark} />
             </section>
             <section>
               <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>

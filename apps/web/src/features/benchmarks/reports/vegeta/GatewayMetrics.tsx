@@ -1,16 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { VegetaReport } from "@modeldoctor/tool-adapters/schemas";
-import { MetricCard } from "../components/MetricCard";
+import type { Benchmark } from "@modeldoctor/contracts";
+import { type VegetaReport, vegetaReportSchema } from "@modeldoctor/tool-adapters/schemas";
+import { MetricCard } from "../../components/MetricCard";
+import { UnknownReport } from "../UnknownReport";
 
-export interface VegetaReportViewProps {
-  data: VegetaReport;
+export interface VegetaGatewayMetricsProps {
+  benchmark: Benchmark;
 }
 
 function fmt(n: number, digits = 1): string {
   return n.toFixed(digits);
 }
 
-export function VegetaReportView({ data }: VegetaReportViewProps) {
+export function VegetaGatewayMetrics({ benchmark }: VegetaGatewayMetricsProps) {
+  const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
+  const parsed = vegetaReportSchema.safeParse(tagged?.data);
+  if (!parsed.success) {
+    return <UnknownReport benchmark={benchmark} reason={parsed.error.message} />;
+  }
+  const data: VegetaReport = parsed.data;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
