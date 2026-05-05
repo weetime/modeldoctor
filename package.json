@@ -14,10 +14,14 @@
     "format": "pnpm -r --if-present format",
     "type-check": "pnpm -r --if-present type-check",
     "test": "pnpm -r --if-present test",
-    "test:e2e": "pnpm -F @modeldoctor/api test:e2e"
+    "test:e2e:api": "pnpm -F @modeldoctor/api test:e2e",
+    "test:e2e:browser": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:browser:ui": "playwright test --config e2e/playwright.config.ts --ui",
+    "test:e2e": "pnpm test:e2e:api && pnpm test:e2e:browser"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^20",
     "concurrently": "^8",
     "supertest": "^7",
@@ -25,6 +29,12 @@
     "vitest": "^1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@swc/core", "prisma", "@prisma/client", "@prisma/engines", "argon2"]
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines",
+      "argon2"
+    ]
   }
 }
