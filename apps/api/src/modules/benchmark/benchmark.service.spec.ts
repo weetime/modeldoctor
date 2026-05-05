@@ -293,18 +293,14 @@ describe("BenchmarkService.delete", () => {
   });
 
   it("deletes a submitted benchmark and best-effort cancels driver", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: "k8s:job-1" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: "k8s:job-1" }));
     await svc.delete("b1", "u1");
     expect(mockDriver.cancel).toHaveBeenCalledWith("k8s:job-1");
     expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 
   it("deletes a running benchmark even when driver.cancel throws", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "k8s:job-2" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "k8s:job-2" }));
     (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("apiserver flake"),
     );

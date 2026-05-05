@@ -585,8 +585,6 @@ describe("BenchmarkDetailPage", () => {
       name: /^Cancel run$|^确认取消$/,
     });
     await user.click(confirm);
-    await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}),
-    );
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}));
   });
 });
