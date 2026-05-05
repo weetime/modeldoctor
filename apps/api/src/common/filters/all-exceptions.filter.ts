@@ -66,7 +66,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         // instead of the generic HTTP-status-derived code so client UIs can switch on it.
         // Only registered codes pass through; unregistered ones fall back to the
         // HTTP-status default (forces devs to register new codes in ErrorCodes first).
-        if (typeof rec.code === "string" && rec.code in ErrorCodes) {
+        if (typeof rec.code === "string" && Object.hasOwn(ErrorCodes, rec.code)) {
           code = rec.code as ErrorCode;
         }
       } else {

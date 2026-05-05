@@ -1,3 +1,4 @@
+import { ErrorCodes } from "@modeldoctor/contracts";
 import { ForbiddenException, HttpException, HttpStatus } from "@nestjs/common";
 import type { ArgumentsHost } from "@nestjs/common";
 import type { Request, Response } from "express";
@@ -132,6 +133,18 @@ describe("AllExceptionsFilter", () => {
     const body = response.body as { error: { code: string } };
     // code 123 is not a string, so falls back to BAD_REQUEST
     expect(body.error.code).toBe("BAD_REQUEST");
+  });
+
+  it("case 10: prototype-chain pollution attempt in code field → falls back to HTTP-status default", () => {
+    const { host, response } = makeHost();
+    filter.catch(
+      new HttpException({ message: "x", code: "toString" }, HttpStatus.FORBIDDEN),
+      host,
+    );
+    // "toString" is on Object.prototype but NOT a registered ErrorCode → must fall back
+    expect(response.body).toMatchObject({
+      error: { code: ErrorCodes.FORBIDDEN, message: "x" },
+    });
   });
 
   it("requestId from request is forwarded to error body", () => {
