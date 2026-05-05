@@ -10,6 +10,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -34,6 +35,7 @@ const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
 @Injectable()
 export class BenchmarkService {
+  private readonly log = new Logger(BenchmarkService.name);
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
   private readonly driverKind: "local" | "k8s";
@@ -277,11 +279,20 @@ export class BenchmarkService {
     if (userId !== undefined && row.userId !== userId) {
       throw new NotFoundException(`Benchmark ${id} not found`);
     }
-    if (!(TERMINAL_STATES as readonly string[]).includes(row.status)) {
-      throw new ConflictException({
-        code: "BENCHMARK_NOT_TERMINAL",
-        message: `Cannot delete a benchmark in state '${row.status}'. Cancel it first.`,
-      });
+    // Non-terminal rows may have a backing driver job (K8s Job, subprocess,
+    // …). Best-effort cancel before DB delete so we don't orphan resources.
+    // The K8sJobDriver already treats 404 on the Job as idempotent; any
+    // other error is logged and swallowed so a flaky apiserver doesn't
+    // block the user from clearing a stuck row.
+    const isTerminal = (TERMINAL_STATES as readonly string[]).includes(row.status);
+    if (!isTerminal && row.driverHandle) {
+      try {
+        await this.driver.cancel(row.driverHandle);
+      } catch (e) {
+        this.log.warn(
+          `delete: best-effort driver.cancel failed for ${row.id}: ${(e as Error).message}`,
+        );
+      }
     }
     await this.repo.delete(row.id);
   }
