@@ -15,6 +15,10 @@ export const guidellmParamsSchema = z
     datasetInputTokens: z.number().int().positive().optional(),
     datasetOutputTokens: z.number().int().positive().optional(),
     datasetSeed: z.number().int().optional(),
+    // Full 5-value enum here so that capacity scenario's z.literal("sweep")
+    // constraint can merge cleanly. The inference scenario narrows to
+    // {constant, poisson, throughput, synchronous} server-side.
+    rateType: z.enum(["constant", "poisson", "throughput", "synchronous", "sweep"]),
     requestRate: z.number().min(0).default(0),
     totalRequests: z.number().int().min(1).max(100_000).default(1000),
     maxDurationSeconds: z.number().int().positive().default(1800),
@@ -75,6 +79,7 @@ export const guidellmParamDefaults: Partial<GuidellmParams> = {
   profile: "throughput",
   apiType: "chat",
   datasetName: "random",
+  rateType: "constant",
   requestRate: 0,
   totalRequests: 1000,
   maxDurationSeconds: 1800,

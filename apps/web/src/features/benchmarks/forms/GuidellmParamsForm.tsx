@@ -23,6 +23,13 @@ const PROFILES: GuidellmParams["profile"][] = [
 
 const API_TYPES: GuidellmParams["apiType"][] = ["chat", "completion"];
 const DATASETS: GuidellmParams["datasetName"][] = ["random", "sharegpt"];
+const RATE_TYPES: GuidellmParams["rateType"][] = [
+  "constant",
+  "poisson",
+  "throughput",
+  "synchronous",
+  "sweep",
+];
 
 interface GuidellmParamsFormProps {
   fieldPrefix?: "params" | "config";
@@ -33,6 +40,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
   const profile = useWatch({ control, name: `${fieldPrefix}.profile` });
   const apiType = useWatch({ control, name: `${fieldPrefix}.apiType` });
   const datasetName = useWatch({ control, name: `${fieldPrefix}.datasetName` });
+  const rateType = useWatch({ control, name: `${fieldPrefix}.rateType` });
   const validateBackend = useWatch({ control, name: `${fieldPrefix}.validateBackend` });
 
   const idPrefix = useId();
@@ -43,6 +51,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
     seed: `${idPrefix}-seed`,
     inputTokens: `${idPrefix}-inputTokens`,
     outputTokens: `${idPrefix}-outputTokens`,
+    rateType: `${idPrefix}-rateType`,
     requestRate: `${idPrefix}-requestRate`,
     totalRequests: `${idPrefix}-totalRequests`,
     maxDuration: `${idPrefix}-maxDuration`,
@@ -158,6 +167,28 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
 
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <Label htmlFor={ids.rateType}>Rate type</Label>
+          <Select
+            onValueChange={(v) =>
+              setValue(`${fieldPrefix}.rateType`, v as GuidellmParams["rateType"], {
+                shouldValidate: true,
+              })
+            }
+            value={rateType ?? "constant"}
+          >
+            <SelectTrigger id={ids.rateType}>
+              <SelectValue placeholder="Select rate type" />
+            </SelectTrigger>
+            <SelectContent>
+              {RATE_TYPES.map((rt) => (
+                <SelectItem key={rt} value={rt}>
+                  {rt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <Label htmlFor={ids.requestRate}>Request rate (0 = unlimited)</Label>
           <Input
             id={ids.requestRate}
@@ -166,6 +197,9 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.requestRate`, { valueAsNumber: true })}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.totalRequests}>Total requests</Label>
           <Input
@@ -174,9 +208,6 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.totalRequests`, { valueAsNumber: true })}
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.maxDuration}>Max duration (s)</Label>
           <Input
@@ -185,6 +216,9 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             {...register(`${fieldPrefix}.maxDurationSeconds`, { valueAsNumber: true })}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={ids.maxConcurrency}>Max concurrency</Label>
           <Input
