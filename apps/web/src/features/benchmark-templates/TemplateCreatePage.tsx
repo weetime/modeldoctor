@@ -1,5 +1,6 @@
+import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
-import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { TOOL_DEFAULTS } from "@/features/benchmarks/forms/ToolParamsEditor";
 import { SCENARIOS } from "@/features/benchmarks/scenarios";
 import { useAuthStore } from "@/stores/auth-store";
@@ -10,7 +11,7 @@ import {
   createBenchmarkTemplateRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import { FormProvider, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ import { useCreateTemplate } from "./queries";
 
 export function TemplateCreatePage() {
   const { t } = useTranslation("benchmark-templates");
+  const { t: tc } = useTranslation("common");
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const user = useAuthStore((s) => s.user);
@@ -32,7 +34,7 @@ export function TemplateCreatePage() {
 
   const form = useForm<CreateBenchmarkTemplateRequest>({
     resolver: zodResolver(createBenchmarkTemplateRequestSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       name: "",
       description: undefined,
@@ -58,23 +60,18 @@ export function TemplateCreatePage() {
     <>
       <PageHeader title={t("create.title")} subtitle={t("create.subtitle")} />
       <div className="mx-auto max-w-3xl px-8 py-6">
-        <FormProvider {...form}>
+        <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <TemplateForm mode="create" isAdmin={isAdmin} />
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/benchmark-templates")}
-              >
-                {t("actions.cancel")}
-              </Button>
-              <Button type="submit" disabled={!form.formState.isValid || createMut.isPending}>
-                {createMut.isPending ? "…" : t("actions.save")}
-              </Button>
-            </div>
+            <FormActions
+              onCancel={() => navigate("/benchmark-templates")}
+              cancelLabel={tc("actions.cancel")}
+              submitLabel={t("actions.save")}
+              disabled={!form.formState.isValid}
+              pending={createMut.isPending}
+            />
           </form>
-        </FormProvider>
+        </Form>
       </div>
     </>
   );

@@ -1,5 +1,7 @@
+import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -7,7 +9,7 @@ import {
   patchBenchmarkTemplateRequestSchema,
 } from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -33,7 +35,7 @@ export function TemplateEditPage() {
 
   const form = useForm<PatchBenchmarkTemplateRequest>({
     resolver: zodResolver(patchBenchmarkTemplateRequestSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {},
   });
 
@@ -93,7 +95,7 @@ export function TemplateEditPage() {
             {t("edit.readonlyBanner")}
           </div>
         )}
-        <FormProvider {...form}>
+        <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <TemplateForm
               mode={mode}
@@ -101,16 +103,14 @@ export function TemplateEditPage() {
               displayScenario={tpl.scenario}
               displayTool={tpl.tool}
             />
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/benchmark-templates")}
-              >
-                {t("actions.back")}
-              </Button>
-              {canEdit && (
-                <>
+            <FormActions
+              onCancel={() => navigate("/benchmark-templates")}
+              cancelLabel={t("actions.back")}
+              submitLabel={t("actions.save")}
+              disabled={!canEdit}
+              pending={updateMut.isPending}
+              leading={
+                canEdit ? (
                   <Button
                     type="button"
                     variant="destructive"
@@ -118,14 +118,11 @@ export function TemplateEditPage() {
                   >
                     {t("actions.delete")}
                   </Button>
-                  <Button type="submit" disabled={updateMut.isPending}>
-                    {updateMut.isPending ? "…" : t("actions.save")}
-                  </Button>
-                </>
-              )}
-            </div>
+                ) : undefined
+              }
+            />
           </form>
-        </FormProvider>
+        </Form>
       </div>
       <DeleteTemplateDialog
         template={tpl}

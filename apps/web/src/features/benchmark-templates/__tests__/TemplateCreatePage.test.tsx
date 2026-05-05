@@ -53,4 +53,20 @@ describe("TemplateCreatePage", () => {
       screen.getByText(/标记为官方模板|mark as official|create\.fields\.isOfficial/i),
     ).toBeInTheDocument();
   });
+
+  it("renders red asterisk on the required Name label", () => {
+    render(<TemplateCreatePage />, { wrapper: Wrapper });
+    const labels = screen.getAllByText("*", { selector: "span" });
+    expect(labels.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows required error under Name when blurred while empty", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<TemplateCreatePage />, { wrapper: Wrapper });
+    const nameInput = screen.getByLabelText(/Name/i);
+    await user.click(nameInput);
+    await user.tab();
+    expect(await screen.findByText(/required/i)).toBeInTheDocument();
+  });
 });
