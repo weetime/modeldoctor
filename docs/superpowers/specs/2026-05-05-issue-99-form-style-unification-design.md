@@ -4,6 +4,8 @@
 **Issue:** [#99 UI优化风格统一](https://github.com/weetime/modeldoctor/issues/99)
 **Scope:** spec + 4 个创建表单一次性迁移到统一规范（单 PR）
 
+> **长期约定已固化到 [`CLAUDE.md`](../../../CLAUDE.md) 的 "Page layout convention" 章节**（"Page body layout" + "Creation/edit form pages" + "Page vs Dialog" 三个小节）。本 spec 描述的是 #99 这一轮迁移决策，**未来新页面以 CLAUDE.md 为准**。
+
 ## Background
 
 Issue #99 反馈：仓库当前存在两种"创建"形态（页面式 + 弹窗式），且每个表单的字段布局、必填提示、校验交互不统一。要求：
