@@ -12,6 +12,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { Prisma, BenchmarkTemplate as PrismaBenchmarkTemplate } from "@prisma/client";
+import { ZodError } from "zod";
+import { formatZodError } from "../../common/zod/format-zod-error.js";
 import {
   BenchmarkTemplateRepository,
   type UpdateBenchmarkTemplateInput,
@@ -125,9 +127,10 @@ export class BenchmarkTemplateService {
       ).parse(config);
       byTool(tool as ToolName).paramsSchema.parse(config);
     } catch (e) {
+      const detail = e instanceof ZodError ? formatZodError(e) : (e as Error).message;
       throw new BadRequestException({
         code: "BENCHMARK_TEMPLATE_CONFIG_INVALID",
-        message: `config validation failed: ${(e as Error).message}`,
+        message: `config validation failed: ${detail}`,
       });
     }
   }
