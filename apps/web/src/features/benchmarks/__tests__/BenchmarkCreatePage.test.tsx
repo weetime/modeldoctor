@@ -9,6 +9,9 @@ vi.mock("@/features/connections/queries", () => ({
     data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m" }],
     isLoading: false,
   }),
+  useConnection: () => ({ data: null }),
+  useCreateConnection: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+  useUpdateConnection: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
 }));
 
 const mockMutate = vi.fn();

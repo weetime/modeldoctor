@@ -92,6 +92,10 @@ All forms (page-style and dialog-style alike) follow the unified shadcn `<Form>`
 - **Footer:** use `<FormActions onCancel cancelLabel submitLabel disabled pending leading?>`. `cancelLabel` MUST be passed (no English fallback). For destructive actions (Delete on edit pages), pass them via `leading` slot.
 - **i18n validation:** zod default error messages route through the global `z.setErrorMap` in `apps/web/src/lib/i18n.ts` (zh-CN + en-US under `common.validation.*`). For `.refine(message: …)` use `validation.someKey` keys — zod v3 short-circuits the errorMap for explicit refine messages, so `<FormMessage>` performs a render-time `i18n.t()` fallback.
 
+### Shared field components
+
+- **Connection picker:** any page that lets the user choose a saved connection MUST use `<ConnectionPicker>` from `apps/web/src/components/connection/ConnectionPicker.tsx`. It provides the unified dropdown (saved entries + optional Manual + "+ 新建连接") with a "粘贴 cURL" button. Do NOT roll your own select with just `useConnections()` — that misses curl-import + new-connection affordances. `<EndpointPicker>` (端点检测 / playground) embeds it for the manual-mode flow; creation pages use it directly with `allowManual={false}`.
+
 ### Page vs Dialog (creation flows)
 
 - **Page-style** when: > 5 fields, multiple sections, contains a dynamic sub-form (e.g. `ToolParamsEditor`), needs deep-link URL params, submit navigates to a detail page. Examples: `BenchmarkCreatePage`, `TemplateCreatePage` / `TemplateEditPage`.

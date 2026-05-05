@@ -1,6 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
+import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
 import {
   Form,
   FormControl,
@@ -10,15 +11,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useConnections } from "@/features/connections/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateBenchmarkRequest,
@@ -34,40 +27,6 @@ import { toast } from "sonner";
 import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
-
-function SavedConnectionPicker({
-  value,
-  onChange,
-  id,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  id?: string;
-}) {
-  const { t } = useTranslation("connections");
-  const { data: connections, isLoading } = useConnections();
-
-  return (
-    <Select value={value || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? "" : v)}>
-      <SelectTrigger id={id} aria-label="Connection">
-        <SelectValue
-          placeholder={
-            isLoading
-              ? "Loading…"
-              : t("picker.placeholder", { defaultValue: "Select a connection" })
-          }
-        />
-      </SelectTrigger>
-      <SelectContent>
-        {(connections ?? []).map((conn) => (
-          <SelectItem key={conn.id} value={conn.id}>
-            {conn.name} — {conn.baseUrl}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
 
 export function BenchmarkCreatePage() {
   const { t } = useTranslation("benchmarks");
@@ -134,10 +93,10 @@ export function BenchmarkCreatePage() {
                       {t("create.fields.connection", { defaultValue: "Connection" })}
                     </FormLabel>
                     <FormControl>
-                      <SavedConnectionPicker
-                        value={field.value ?? ""}
-                        onChange={(next) =>
-                          form.setValue("connectionId", next, { shouldValidate: true })
+                      <ConnectionPicker
+                        selectedConnectionId={field.value || null}
+                        onSelect={(id) =>
+                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
                         }
                       />
                     </FormControl>
