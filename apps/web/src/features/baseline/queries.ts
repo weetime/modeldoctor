@@ -21,9 +21,10 @@ export function useCreateBaseline() {
     mutationFn: (body) => baselineApi.create(body),
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: baselineKeys.all });
-      // The Run that just became a baseline now has baselineFor set; refetch.
-      qc.invalidateQueries({ queryKey: ["runs", "detail", created.runId] });
-      qc.invalidateQueries({ queryKey: ["runs", "list"] });
+      // The Benchmark that just became a baseline now has baselineFor set;
+      // refetch its detail entry.
+      qc.invalidateQueries({ queryKey: ["benchmarks", "detail", created.benchmarkId] });
+      qc.invalidateQueries({ queryKey: ["benchmarks", "list"] });
     },
   });
 }
@@ -34,8 +35,8 @@ export function useDeleteBaseline() {
     mutationFn: (id) => baselineApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: baselineKeys.all });
-      qc.invalidateQueries({ queryKey: ["runs", "detail"] });
-      qc.invalidateQueries({ queryKey: ["runs", "list"] });
+      qc.invalidateQueries({ queryKey: ["benchmarks", "detail"] });
+      qc.invalidateQueries({ queryKey: ["benchmarks", "list"] });
     },
   });
 }

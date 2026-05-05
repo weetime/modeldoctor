@@ -4,6 +4,7 @@ import { genaiPerfParamDefaults, genaiPerfParamsSchema, genaiPerfReportSchema } 
 
 export const genaiPerfAdapter: ToolAdapter = {
   name: "genai-perf",
+  scenarios: ["inference"] as const,
   paramsSchema: genaiPerfParamsSchema,
   reportSchema: genaiPerfReportSchema,
   paramDefaults: genaiPerfParamDefaults,

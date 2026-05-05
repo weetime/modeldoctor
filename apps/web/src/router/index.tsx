@@ -1,9 +1,15 @@
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
+import { BenchmarkCapacityPage } from "@/features/benchmarks/BenchmarkCapacityPage";
+import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
+import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
+import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage";
+import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
+import { BenchmarkComparePage } from "@/features/benchmarks/compare/BenchmarkComparePage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
-import { E2ESmokePage } from "@/features/e2e-smoke/E2ESmokePage";
+import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
@@ -13,10 +19,6 @@ import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage"
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
-import { RunCreatePage } from "@/features/runs/RunCreatePage";
-import { RunDetailPage } from "@/features/runs/RunDetailPage";
-import { RunListPage } from "@/features/runs/RunListPage";
-import { RunComparePage } from "@/features/runs/compare/RunComparePage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { Navigate, type RouteObject } from "react-router-dom";
@@ -33,18 +35,18 @@ export const routes: RouteObject[] = [
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/runs" replace /> },
-          { path: "e2e", element: <E2ESmokePage /> },
+          { index: true, element: <Navigate to="/benchmarks/inference" replace /> },
           {
-            path: "runs",
-            element: <RunListPage />,
+            path: "benchmarks",
+            element: <Navigate to="/benchmarks/inference" replace />,
           },
-          { path: "runs/new", element: <RunCreatePage /> },
-          { path: "runs/compare", element: <RunComparePage /> },
-          {
-            path: "runs/:id",
-            element: <RunDetailPage />,
-          },
+          { path: "benchmarks/inference", element: <BenchmarkInferencePage /> },
+          { path: "benchmarks/capacity", element: <BenchmarkCapacityPage /> },
+          { path: "benchmarks/gateway", element: <BenchmarkGatewayPage /> },
+          { path: "benchmarks/compare", element: <BenchmarkComparePage /> },
+          { path: "benchmarks/new", element: <BenchmarkCreatePage /> },
+          { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
+          { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
           { path: "settings", element: <SettingsPage /> },

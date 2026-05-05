@@ -49,22 +49,21 @@ describe("baseline queries", () => {
     vi.mocked(api.post).mockResolvedValueOnce({
       id: "b_1",
       userId: "u_1",
-      runId: "r_1",
+      benchmarkId: "r_1",
       name: "anchor",
       description: null,
       tags: [],
       templateId: null,
-      templateVersion: null,
       active: true,
       createdAt: "2026-05-02T00:00:00.000Z",
       updatedAt: "2026-05-02T00:00:00.000Z",
     });
     const { result } = renderHook(() => useCreateBaseline(), { wrapper: makeWrapper() });
     await act(async () => {
-      await result.current.mutateAsync({ runId: "r_1", name: "anchor", tags: [] });
+      await result.current.mutateAsync({ benchmarkId: "r_1", name: "anchor", tags: [] });
     });
     expect(api.post).toHaveBeenCalledWith("/api/baselines", {
-      runId: "r_1",
+      benchmarkId: "r_1",
       name: "anchor",
       tags: [],
     });
@@ -73,11 +72,13 @@ describe("baseline queries", () => {
   });
 
   it("useCreateBaseline surfaces 409 as ApiError", async () => {
-    vi.mocked(api.post).mockRejectedValueOnce(new ApiError(409, "Run r_1 already has a baseline"));
+    vi.mocked(api.post).mockRejectedValueOnce(
+      new ApiError(409, "Benchmark r_1 already has a baseline"),
+    );
     const { result } = renderHook(() => useCreateBaseline(), { wrapper: makeWrapper() });
     await act(async () => {
       await expect(
-        result.current.mutateAsync({ runId: "r_1", name: "x", tags: [] }),
+        result.current.mutateAsync({ benchmarkId: "r_1", name: "x", tags: [] }),
       ).rejects.toBeInstanceOf(ApiError);
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -105,12 +106,11 @@ describe("useBaselineById", () => {
         {
           id: "b_1",
           userId: "u",
-          runId: "r_1",
+          benchmarkId: "r_1",
           name: "anchor",
           description: null,
           tags: [],
           templateId: null,
-          templateVersion: null,
           active: true,
           createdAt: "2026-05-01T00:00:00.000Z",
           updatedAt: "2026-05-01T00:00:00.000Z",
@@ -120,7 +120,7 @@ describe("useBaselineById", () => {
 
     const { result } = renderHook(() => useBaselineById("b_1"), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.data?.id).toBe("b_1"));
-    expect(result.current.data?.runId).toBe("r_1");
+    expect(result.current.data?.benchmarkId).toBe("r_1");
   });
 
   it("returns undefined when id not in list", async () => {

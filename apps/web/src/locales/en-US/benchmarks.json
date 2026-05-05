@@ -1,0 +1,201 @@
+{
+  "title": "Benchmark History",
+  "subtitle": "Past benchmark runs, newest first",
+  "actions": {
+    "new": "New Benchmark",
+    "cancel": "Cancel",
+    "submit": "Submit"
+  },
+  "create": {
+    "title": "New Benchmark",
+    "subtitle": "Configure a benchmark or load test, then submit",
+    "sections": {
+      "endpoint": "Endpoint",
+      "tool": "Tool",
+      "metadata": "Benchmark details",
+      "parameters": "Parameters"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description (optional)",
+      "tool": "Tool"
+    },
+    "tools": {
+      "guidellm": "guidellm",
+      "vegeta": "vegeta",
+      "genai-perf": "genai-perf"
+    },
+    "errors": {
+      "submitFailed": "Failed to submit benchmark"
+    },
+    "submitted": "Benchmark \"{{name}}\" submitted"
+  },
+  "filters": {
+    "tool": "Tool",
+    "status": "Status",
+    "baseline": "Baseline",
+    "baselineIs": "Is a baseline",
+    "baselineRef": "References a baseline",
+    "createdAfter": "From",
+    "createdBefore": "Until",
+    "search": "Search by name or description",
+    "any": "Any",
+    "clear": "Clear filters"
+  },
+  "columns": {
+    "createdAt": "Created",
+    "tool": "Tool",
+    "connection": "Connection",
+    "status": "Status",
+    "p95": "p95 (ms)",
+    "errorRate": "Error rate"
+  },
+  "compareButton": "Compare ({{n}})",
+  "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
+  "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
+  "empty": {
+    "title": "No benchmarks yet",
+    "filtered": "No benchmarks match these filters",
+    "description": "Click \"New Benchmark\" in the top-right to trigger one."
+  },
+  "loadMore": "Load more",
+  "errorBanner": "Failed to load benchmarks",
+  "retry": "Retry",
+  "detail": {
+    "back": "Back to list",
+    "subtitle": "{{scenario}} · {{tool}} · {{when}}",
+    "metadata": {
+      "scenario": "Scenario",
+      "tool": "Tool",
+      "driverKind": "Driver",
+      "status": "Status",
+      "connection": "Connection",
+      "connectionMissing": "(deleted)",
+      "createdAt": "Created",
+      "startedAt": "Started",
+      "completedAt": "Completed",
+      "duration": "Duration"
+    },
+    "statusMessage": {
+      "title": "Failure reason"
+    },
+    "metrics": {
+      "title": "Summary metrics",
+      "empty": "No metrics recorded for this benchmark."
+    },
+    "rawOutput": {
+      "toggle": "Raw output (JSON)"
+    },
+    "logs": {
+      "toggle": "Logs"
+    },
+    "baseline": {
+      "setButton": "Set as baseline",
+      "unsetButton": "✓ Baseline · Unset",
+      "unsetConfirmTitle": "Unset this baseline?",
+      "unsetConfirmBody": "This removes the baseline mark; the benchmark itself stays. Other benchmarks that compared against this baseline keep their data; their `baselineId` link is cleared.",
+      "unsetConfirmAction": "Unset baseline",
+      "dialog": {
+        "title": "Set as baseline",
+        "body": "Mark this benchmark as a reference for future regression diffs.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. throughput-baseline-v1",
+        "descriptionLabel": "Description (optional)",
+        "tagsLabel": "Tags (comma separated, optional)",
+        "submit": "Save",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "alreadyExists": "This benchmark already has a baseline.",
+        "generic": "Could not save baseline."
+      }
+    },
+    "notFound": {
+      "title": "Not found",
+      "body": "It may have been deleted, or you may not own it."
+    },
+    "loadError": "Failed to load",
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Delete this benchmark?",
+      "confirmBody": "It will be removed from history along with its raw output. This cannot be undone.",
+      "confirmAction": "Delete",
+      "success": "Deleted",
+      "errors": {
+        "generic": "Failed to delete"
+      }
+    },
+    "rerun": {
+      "button": "Re-run",
+      "connectionMissingTooltip": "The original connection has been deleted; pick a new one from \"New Benchmark\" instead.",
+      "success": "Submitted re-run \"{{name}}\"",
+      "errors": {
+        "generic": "Failed to submit re-run"
+      }
+    },
+    "running": {
+      "pending": "Waiting to start…",
+      "title": "Running…",
+      "elapsed": "{{sec}}s elapsed"
+    },
+    "charts": {
+      "title": "Distributions",
+      "latencyCdfTitle": "Latency CDF",
+      "ttftHistogramTitle": "TTFT Histogram",
+      "empty": "No chart data",
+      "loadError": "Failed to load charts"
+    },
+    "verdict": {
+      "title": "vs baseline",
+      "loading": "Loading baseline…",
+      "loadError": "Could not load baseline for comparison"
+    }
+  },
+  "compare": {
+    "title": "Compare Benchmarks",
+    "subtitle": "{{n}} benchmarks · {{tool}}",
+    "back": "Back to list",
+    "baselineLabel": "Baseline",
+    "baselineNone": "None (no verdict)",
+    "baselineMissing": "{{failed}} benchmark(s) no longer accessible — comparing the remaining {{n}}",
+    "mixedToolsTitle": "Mixed tools",
+    "mixedToolsBody": "Compare requires the same tool. Selected: {{summary}}",
+    "mixedScenariosTitle": "Mixed scenarios",
+    "mixedScenariosBody": "Compare requires the same scenario. Selected: {{scenarios}}",
+    "needTwoEmpty": "Select 2+ benchmarks from the list to compare",
+    "empty": {
+      "title": "Pick a scenario, then select benchmarks",
+      "scenarioLabel": "Scenario",
+      "scenarioPlaceholder": "Pick a scenario",
+      "listTitle": "Recent benchmarks",
+      "listEmpty": "No completed benchmarks for this scenario yet.",
+      "submit": "Start comparison",
+      "needTwo": "Select 2+ benchmarks to compare"
+    },
+    "metricColumnLabel": "Metric",
+    "verdict": {
+      "regressed": "regressed",
+      "improved": "improved",
+      "unchanged": "unchanged"
+    },
+    "metricRowLabel": {
+      "ttftMean": "TTFT mean (ms)",
+      "ttftP50": "TTFT p50 (ms)",
+      "ttftP95": "TTFT p95 (ms)",
+      "ttftP99": "TTFT p99 (ms)",
+      "itlMean": "ITL mean (ms)",
+      "itlP95": "ITL p95 (ms)",
+      "e2eLatencyP50": "E2E latency p50 (ms)",
+      "latencyP95": "Latency p95 (ms)",
+      "e2eLatencyP99": "E2E latency p99 (ms)",
+      "latencyMin": "Latency min (ms)",
+      "latencyMean": "Latency mean (ms)",
+      "latencyP50": "Latency p50 (ms)",
+      "latencyP90": "Latency p90 (ms)",
+      "latencyP99": "Latency p99 (ms)",
+      "latencyMax": "Latency max (ms)",
+      "errorRate": "Error rate",
+      "throughput": "Throughput (req/s)"
+    }
+  }
+}

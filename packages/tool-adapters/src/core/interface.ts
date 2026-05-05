@@ -78,6 +78,7 @@ export interface BuildCommandResult {
 // deliberate interface evolution and must be documented in the changelog.
 export interface ToolAdapter {
   readonly name: ToolName;
+  readonly scenarios: readonly import("../scenarios.js").ScenarioId[];
   readonly paramsSchema: z.ZodTypeAny;
   readonly reportSchema: z.ZodTypeAny;
   readonly paramDefaults: unknown;

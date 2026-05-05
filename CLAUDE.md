@@ -54,7 +54,7 @@ All top-level routed pages MUST render `PageHeader` as their first visual row:
 
 ### Non-Playground pages
 
-Render `<PageHeader title=... subtitle=... />` directly at the top of the page, then page body. Reference: `apps/web/src/features/runs/RunCreatePage.tsx`.
+Render `<PageHeader title=... subtitle=... />` directly at the top of the page, then page body. Reference: `apps/web/src/features/benchmarks/BenchmarkCreatePage.tsx`.
 
 ### Playground pages
 

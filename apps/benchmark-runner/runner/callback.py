@@ -28,12 +28,28 @@ def _post(url: str, token: str, body: dict) -> None:
         raise RuntimeError(f"Callback POST {url} returned {resp.status_code}: {resp.text[:200]}")
 
 
-def post_state_running(*, callback_url: str, token: str, run_id: str) -> None:
-    """POST {state: 'running'} to the v2 /state endpoint."""
+def post_state_running(
+    *,
+    callback_url: str,
+    token: str,
+    benchmark_id: str,
+    tool_version: str | None = None,
+) -> None:
+    """POST {state: 'running', toolVersion?} to the v2 /state endpoint.
+
+    ``tool_version`` is the first stripped line of ``<tool> --version``
+    output, captured at runner boot. The BFF persists it on the
+    benchmark row so users can see exactly which tool build produced
+    the result. Optional: when ``None`` the field is omitted from the
+    body so older BFFs that don't accept it still succeed.
+    """
+    body: dict = {"state": "running"}
+    if tool_version is not None:
+        body["toolVersion"] = tool_version
     _post(
-        _join(callback_url, f"api/internal/runs/{run_id}/state"),
+        _join(callback_url, f"api/internal/benchmarks/{benchmark_id}/state"),
         token,
-        {"state": "running"},
+        body,
     )
 
 
@@ -41,13 +57,13 @@ def post_log_batch(
     *,
     callback_url: str,
     token: str,
-    run_id: str,
+    benchmark_id: str,
     stream: str,
     lines: list[str],
 ) -> None:
     """POST a batch of stdout/stderr lines to the v2 /log endpoint."""
     _post(
-        _join(callback_url, f"api/internal/runs/{run_id}/log"),
+        _join(callback_url, f"api/internal/benchmarks/{benchmark_id}/log"),
         token,
         {"stream": stream, "lines": lines},
     )
@@ -57,7 +73,7 @@ def post_finish(
     *,
     callback_url: str,
     token: str,
-    run_id: str,
+    benchmark_id: str,
     state: str,
     exit_code: int,
     stdout: str,
@@ -76,4 +92,4 @@ def post_finish(
     }
     if message is not None:
         body["message"] = message
-    _post(_join(callback_url, f"api/internal/runs/{run_id}/finish"), token, body)
+    _post(_join(callback_url, f"api/internal/benchmarks/{benchmark_id}/finish"), token, body)

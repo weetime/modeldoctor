@@ -12,12 +12,11 @@ const USER: JwtPayload = { sub: "u_1", email: "alice@example.com", roles: [] };
 const FIXTURE: Baseline = {
   id: "b_1",
   userId: "u_1",
-  runId: "r_1",
+  benchmarkId: "r_1",
   name: "throughput-anchor",
   description: null,
   tags: [],
   templateId: null,
-  templateVersion: null,
   active: true,
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
@@ -56,7 +55,7 @@ describe("BaselineController", () => {
   describe("create", () => {
     it("calls service.create(userId, body)", async () => {
       svc.create.mockResolvedValue(FIXTURE);
-      const body = { runId: "r_1", name: "throughput-anchor", tags: [] };
+      const body = { benchmarkId: "r_1", name: "throughput-anchor", tags: [] };
       const out = await controller.create(USER, body);
       expect(svc.create).toHaveBeenCalledWith("u_1", body);
       expect(out).toBe(FIXTURE);
@@ -64,14 +63,14 @@ describe("BaselineController", () => {
 
     it("propagates 404 / 409 from service", async () => {
       svc.create.mockRejectedValueOnce(new NotFoundException("r_x"));
-      await expect(controller.create(USER, { runId: "r_x", name: "x", tags: [] })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.create(USER, { benchmarkId: "r_x", name: "x", tags: [] }),
+      ).rejects.toThrow(NotFoundException);
 
       svc.create.mockRejectedValueOnce(new ConflictException("dup"));
-      await expect(controller.create(USER, { runId: "r_1", name: "x", tags: [] })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        controller.create(USER, { benchmarkId: "r_1", name: "x", tags: [] }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

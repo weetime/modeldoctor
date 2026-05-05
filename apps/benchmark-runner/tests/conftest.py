@@ -15,7 +15,7 @@ def md_env_minimal() -> dict[str, str]:
     Tests that need a different argv / output_files override these keys.
     """
     return {
-        "MD_RUN_ID": "r-test",
+        "MD_BENCHMARK_ID": "b-test",
         "MD_CALLBACK_URL": "http://api.test.svc:3001",
         "MD_CALLBACK_TOKEN": "hmac-test-token",
         "MD_ARGV": json.dumps(["echo", "hello"]),

@@ -1,15 +1,18 @@
 import {
+  Activity,
   Boxes,
   Bug,
   CheckCircle2,
   Database,
-  History,
+  Gauge,
+  GitCompare,
   Image as ImageIcon,
   LineChart,
   ListOrdered,
   type LucideIcon,
   MessageSquare,
   Mic,
+  Network,
   Settings,
 } from "lucide-react";
 
@@ -43,16 +46,22 @@ export const sidebarGroups: SidebarGroup[] = [
     ],
   },
   {
-    id: "performance",
-    labelKey: "groups.performance",
-    items: [{ to: "/runs", icon: History, labelKey: "items.runs" }],
+    id: "benchmarks",
+    labelKey: "groups.benchmarks",
+    items: [
+      { to: "/benchmarks/inference", icon: Gauge, labelKey: "items.benchmarkInference" },
+      { to: "/benchmarks/capacity", icon: Activity, labelKey: "items.benchmarkCapacity" },
+      { to: "/benchmarks/gateway", icon: Network, labelKey: "items.benchmarkGateway" },
+      { to: "/benchmarks/compare", icon: GitCompare, labelKey: "items.benchmarkCompare" },
+      // benchmark-templates entry omitted in PR1; lands in PR2.
+    ],
   },
   {
-    id: "debug",
-    labelKey: "groups.debug",
+    id: "diagnostics",
+    labelKey: "groups.diagnostics",
     items: [
       { to: "/debug", icon: Bug, labelKey: "items.requestDebug" },
-      { to: "/e2e", icon: CheckCircle2, labelKey: "items.e2e" },
+      { to: "/diagnostics", icon: CheckCircle2, labelKey: "items.diagnostics" },
     ],
   },
   {

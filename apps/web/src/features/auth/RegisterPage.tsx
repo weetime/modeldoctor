@@ -32,7 +32,7 @@ export function RegisterPage() {
     try {
       const data = await api.post<AuthTokenResponse>("/api/auth/register", values);
       setAuth(data.accessToken, data.user, data.accessTokenExpiresAt);
-      navigate("/runs", { replace: true });
+      navigate("/benchmarks", { replace: true });
     } catch (e) {
       setSubmitError(e instanceof ApiError ? e.message : "Registration failed");
     }
