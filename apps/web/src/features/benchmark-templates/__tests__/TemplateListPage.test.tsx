@@ -16,11 +16,17 @@ vi.mock("@/stores/auth-store", () => ({
 import { TemplateListPage } from "../TemplateListPage";
 import { useTemplates } from "../queries";
 
-function Wrapper({ children }: { children: ReactNode }) {
+function Wrapper({
+  children,
+  initialEntries = ["/"],
+}: {
+  children: ReactNode;
+  initialEntries?: string[];
+}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -94,5 +100,23 @@ describe("TemplateListPage", () => {
       </Wrapper>,
     );
     expect(screen.getByText(/no templates yet|还没有模板|list\.empty\.title/i)).toBeInTheDocument();
+  });
+
+  it("shows no-results empty state when search has no matches", () => {
+    (useTemplates as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] },
+      isLoading: false,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      isFetchingNextPage: false,
+    });
+    render(
+      <Wrapper initialEntries={["/benchmark-templates?search=xyz"]}>
+        <TemplateListPage />
+      </Wrapper>,
+    );
+    expect(
+      screen.getByText(/no matching results|没有匹配的结果|noResults\.title/i),
+    ).toBeInTheDocument();
   });
 });

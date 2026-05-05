@@ -26,7 +26,11 @@
     "loadMore": "Load more",
     "empty": {
       "title": "No templates yet",
-      "subtitle": "Create the first template for this scenario"
+      "subtitle": "Create the first template for this scenario",
+      "noResults": {
+        "title": "No matching results",
+        "subtitle": "Try adjusting the search or scenario"
+      }
     }
   },
   "create": {

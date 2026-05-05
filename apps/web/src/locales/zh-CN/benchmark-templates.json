@@ -26,7 +26,11 @@
     "loadMore": "加载更多",
     "empty": {
       "title": "还没有模板",
-      "subtitle": "为该场景创建第一个模板"
+      "subtitle": "为该场景创建第一个模板",
+      "noResults": {
+        "title": "没有匹配的结果",
+        "subtitle": "试试调整搜索条件或场景"
+      }
     }
   },
   "create": {

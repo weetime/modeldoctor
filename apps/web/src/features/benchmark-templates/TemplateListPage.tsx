@@ -63,6 +63,7 @@ export function TemplateListPage() {
     limit: 50,
   });
   const items = data?.pages.flatMap((p) => p.items) ?? [];
+  const hasActiveFilters = Boolean(search) || officialOnly;
   const deleteMut = useDeleteTemplate();
   const user = useAuthStore((s) => s.user);
   const myId = user?.id;
@@ -133,15 +134,21 @@ export function TemplateListPage() {
 
         {!isLoading && items.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-12 text-center">
-            <p className="text-base font-medium">{t("list.empty.title")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("list.empty.subtitle")}</p>
-            <Button
-              className="mt-4"
-              onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              {t("actions.new")}
-            </Button>
+            <p className="text-base font-medium">
+              {hasActiveFilters ? t("list.empty.noResults.title") : t("list.empty.title")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasActiveFilters ? t("list.empty.noResults.subtitle") : t("list.empty.subtitle")}
+            </p>
+            {!hasActiveFilters && (
+              <Button
+                className="mt-4"
+                onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t("actions.new")}
+              </Button>
+            )}
           </div>
         )}
 
