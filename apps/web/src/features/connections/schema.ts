@@ -5,9 +5,9 @@ const baseShape = {
   name: z
     .string()
     .transform((v) => v.trim())
-    .pipe(z.string().min(1, "required")),
-  apiBaseUrl: z.string().url("invalid URL"),
-  model: z.string().min(1, "required"),
+    .pipe(z.string().min(1)),
+  apiBaseUrl: z.string().url(),
+  model: z.string().min(1),
   customHeaders: z.string(),
   queryParams: z.string(),
   tokenizerHfId: z.string(),
@@ -33,18 +33,11 @@ const baseShape = {
  */
 export const connectionInputCreateSchema = z.object({
   ...baseShape,
-  // Reject control chars + leading/trailing whitespace at form level
-  // for parity with server-side contract (prevents accidental paste
-  // of token with trailing newline).
   apiKey: z
     .string()
-    .min(1, "required")
-    .refine((v) => !/\p{Cc}/u.test(v), {
-      message: "apiKey must not contain control characters",
-    })
-    .refine((v) => v === v.trim(), {
-      message: "apiKey must not have leading or trailing whitespace",
-    }),
+    .min(1)
+    .refine((v) => !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
+    .refine((v) => v === v.trim(), { message: "validation.apiKeyTrim" }),
 });
 
 /**
@@ -57,12 +50,8 @@ export const connectionInputEditSchema = z.object({
   ...baseShape,
   apiKey: z
     .string()
-    .refine((v) => v === "" || !/\p{Cc}/u.test(v), {
-      message: "apiKey must not contain control characters",
-    })
-    .refine((v) => v === "" || v === v.trim(), {
-      message: "apiKey must not have leading or trailing whitespace",
-    }),
+    .refine((v) => v === "" || !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
+    .refine((v) => v === "" || v === v.trim(), { message: "validation.apiKeyTrim" }),
 });
 
 /** Backwards-compatible alias used by callers that need the create shape. */

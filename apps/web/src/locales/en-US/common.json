@@ -82,6 +82,8 @@
     "invalidEmail": "Invalid email format",
     "invalidUrl": "Invalid URL format",
     "invalidFormat": "Invalid format",
-    "invalidEnum": "Please select a valid option"
+    "invalidEnum": "Please select a valid option",
+    "apiKeyControlChar": "API key must not contain control characters",
+    "apiKeyTrim": "API key must not have leading or trailing whitespace"
   }
 }
