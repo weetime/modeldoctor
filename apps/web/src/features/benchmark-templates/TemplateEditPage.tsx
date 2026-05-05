@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  type UpdateBenchmarkTemplateRequest,
-  updateBenchmarkTemplateRequestSchema,
+  type PatchBenchmarkTemplateRequest,
+  patchBenchmarkTemplateRequestSchema,
 } from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
@@ -31,14 +31,8 @@ export function TemplateEditPage() {
   const canEdit = !!tpl && (isAdmin || tpl.createdBy === myId);
   const mode = !canEdit ? "edit-readonly" : "edit-owner";
 
-  const patchSchema = updateBenchmarkTemplateRequestSchema.omit({
-    isOfficial: true,
-    scenario: true,
-    tool: true,
-  });
-
-  const form = useForm<Partial<UpdateBenchmarkTemplateRequest>>({
-    resolver: zodResolver(patchSchema),
+  const form = useForm<PatchBenchmarkTemplateRequest>({
+    resolver: zodResolver(patchBenchmarkTemplateRequestSchema),
     mode: "onChange",
     defaultValues: {},
   });
