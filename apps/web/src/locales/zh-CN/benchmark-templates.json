@@ -23,6 +23,7 @@
     "createdAt": "创建于 {{when}}",
     "updatedAt": "更新于 {{when}}",
     "by": "by {{name}}",
+    "loadMore": "加载更多",
     "empty": {
       "title": "还没有模板",
       "subtitle": "为该场景创建第一个模板"

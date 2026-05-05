@@ -2,10 +2,9 @@ import type {
   BenchmarkTemplate,
   CreateBenchmarkTemplateRequest,
   ListBenchmarkTemplatesQuery,
-  ListBenchmarkTemplatesResponse,
   UpdateBenchmarkTemplateRequest,
 } from "@modeldoctor/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { benchmarkTemplateApi } from "./api";
 
 export const benchmarkTemplateKeys = {
@@ -16,10 +15,15 @@ export const benchmarkTemplateKeys = {
   detail: (id: string) => [...benchmarkTemplateKeys.details(), id] as const,
 };
 
+// q MUST NOT carry `cursor` — useInfiniteQuery owns paging via pageParam.
 export function useTemplates(q: Partial<ListBenchmarkTemplatesQuery> = {}) {
-  return useQuery<ListBenchmarkTemplatesResponse>({
+  return useInfiniteQuery({
     queryKey: benchmarkTemplateKeys.list(q),
-    queryFn: () => benchmarkTemplateApi.list(q),
+    queryFn: ({ pageParam }) =>
+      benchmarkTemplateApi.list({ ...q, cursor: (pageParam as string | undefined) ?? undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    staleTime: 30_000,
   });
 }
 

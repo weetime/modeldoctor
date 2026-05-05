@@ -23,6 +23,7 @@
     "createdAt": "Created {{when}}",
     "updatedAt": "Updated {{when}}",
     "by": "by {{name}}",
+    "loadMore": "Load more",
     "empty": {
       "title": "No templates yet",
       "subtitle": "Create the first template for this scenario"

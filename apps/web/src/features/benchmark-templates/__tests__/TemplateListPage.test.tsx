@@ -29,37 +29,45 @@ describe("TemplateListPage", () => {
   it("renders official badge for official templates and orders official first", async () => {
     (useTemplates as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
-        items: [
+        pages: [
           {
-            id: "off",
-            name: "Official",
-            isOfficial: true,
-            scenario: "inference",
-            tool: "guidellm",
-            createdBy: "admin-1",
-            tags: [],
-            updatedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            description: null,
-            config: {},
-          },
-          {
-            id: "mine",
-            name: "Mine",
-            isOfficial: false,
-            scenario: "inference",
-            tool: "guidellm",
-            createdBy: "user-1",
-            tags: [],
-            updatedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            description: null,
-            config: {},
+            items: [
+              {
+                id: "off",
+                name: "Official",
+                isOfficial: true,
+                scenario: "inference",
+                tool: "guidellm",
+                createdBy: "admin-1",
+                tags: [],
+                updatedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                description: null,
+                config: {},
+              },
+              {
+                id: "mine",
+                name: "Mine",
+                isOfficial: false,
+                scenario: "inference",
+                tool: "guidellm",
+                createdBy: "user-1",
+                tags: [],
+                updatedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                description: null,
+                config: {},
+              },
+            ],
+            nextCursor: null,
           },
         ],
-        nextCursor: null,
+        pageParams: [undefined],
       },
       isLoading: false,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      isFetchingNextPage: false,
     });
     render(
       <Wrapper>
@@ -74,8 +82,11 @@ describe("TemplateListPage", () => {
 
   it("shows empty-state copy when items array is empty", () => {
     (useTemplates as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { items: [], nextCursor: null },
+      data: { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] },
       isLoading: false,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      isFetchingNextPage: false,
     });
     render(
       <Wrapper>

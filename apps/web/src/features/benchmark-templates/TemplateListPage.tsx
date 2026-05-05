@@ -56,12 +56,13 @@ export function TemplateListPage() {
     return () => window.clearTimeout(handle);
   }, [searchDraft]);
 
-  const { data, isLoading } = useTemplates({
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useTemplates({
     scenario,
     isOfficial: officialOnly || undefined,
     search: search || undefined,
     limit: 50,
   });
+  const items = data?.pages.flatMap((p) => p.items) ?? [];
   const deleteMut = useDeleteTemplate();
   const user = useAuthStore((s) => s.user);
   const myId = user?.id;
@@ -130,7 +131,7 @@ export function TemplateListPage() {
 
         {isLoading && <div className="text-sm text-muted-foreground">…</div>}
 
-        {!isLoading && data && data.items.length === 0 && (
+        {!isLoading && items.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-12 text-center">
             <p className="text-base font-medium">{t("list.empty.title")}</p>
             <p className="mt-1 text-sm text-muted-foreground">{t("list.empty.subtitle")}</p>
@@ -144,9 +145,9 @@ export function TemplateListPage() {
           </div>
         )}
 
-        {!isLoading && data && data.items.length > 0 && (
+        {!isLoading && items.length > 0 && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {data.items.map((tpl) => (
+            {items.map((tpl) => (
               <TemplateCard
                 key={tpl.id}
                 template={tpl}
@@ -154,6 +155,14 @@ export function TemplateListPage() {
                 onDeleteClick={() => setPendingDelete(tpl)}
               />
             ))}
+          </div>
+        )}
+
+        {hasNextPage && (
+          <div className="mt-4 flex justify-center">
+            <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+              {isFetchingNextPage ? "…" : t("list.loadMore")}
+            </Button>
           </div>
         )}
       </div>
