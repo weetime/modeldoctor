@@ -6,13 +6,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/stores/auth-store";
 import type { BenchmarkTemplate, ScenarioId } from "@modeldoctor/contracts";
 import { Plus } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DeleteTemplateDialog } from "./DeleteTemplateDialog";
 import { TemplateCard } from "./TemplateCard";
 import { useDeleteTemplate, useTemplates } from "./queries";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const SCENARIO_TABS: { id: ScenarioId; labelKey: string }[] = [
   { id: "inference", labelKey: "list.tabs.inference" },
@@ -31,6 +33,28 @@ export function TemplateListPage() {
   const scenario = (params.get("scenario") as ScenarioId) || "inference";
   const officialOnly = params.get("isOfficial") === "true";
   const search = params.get("search") ?? "";
+
+  const [searchDraft, setSearchDraft] = useState(search);
+  const lastPushed = useRef(search);
+
+  // Sync URL → local when external state changes (back/forward, "clear all", etc.)
+  useEffect(() => {
+    if (search !== lastPushed.current) {
+      setSearchDraft(search);
+      lastPushed.current = search;
+    }
+  }, [search]);
+
+  // Local → URL with debounce
+  useEffect(() => {
+    const trimmed = searchDraft.trim();
+    if (trimmed === (lastPushed.current || "")) return;
+    const handle = window.setTimeout(() => {
+      lastPushed.current = trimmed;
+      setParam("search", trimmed || null);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft]);
 
   const { data, isLoading } = useTemplates({
     scenario,
@@ -70,8 +94,8 @@ export function TemplateListPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Input
             id={searchId}
-            value={search}
-            onChange={(e) => setParam("search", e.target.value)}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             placeholder={t("list.filters.search")}
             className="max-w-xs"
           />
