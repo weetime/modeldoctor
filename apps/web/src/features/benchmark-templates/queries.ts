@@ -60,7 +60,11 @@ export function useDeleteTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => benchmarkTemplateApi.delete(id),
-    onSuccess: (_v, id) => {
+    onSuccess: async (_v, id) => {
+      // Cancel any in-flight detail fetch for this id BEFORE removing the
+      // cache, so the active observer (TemplateEditPage's useTemplate) doesn't
+      // refetch the just-deleted row and produce a 404 in the console.
+      await qc.cancelQueries({ queryKey: benchmarkTemplateKeys.detail(id) });
       qc.removeQueries({ queryKey: benchmarkTemplateKeys.detail(id) });
       qc.invalidateQueries({ queryKey: benchmarkTemplateKeys.lists() });
     },
