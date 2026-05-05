@@ -9,14 +9,15 @@ interface FormSectionProps {
 }
 
 /**
- * Standard creation-form section wrapper. Renders a bordered card with an
- * optional small-caps title + description, then form fields below. Used by
- * both page-style (multi-section) and dialog-style (typically single section)
- * creation forms.
+ * Standard creation-form section wrapper — flat layout per #99.
+ * Renders an optional small-caps title + description, then fields below.
+ * No border / bg / padding: fields sit directly on the page (or dialog)
+ * background; sections are separated only by spacing + headings.
+ * A subtle bottom divider visually groups each section without nesting cards.
  */
 export function FormSection({ title, description, children, className }: FormSectionProps) {
   return (
-    <section className={cn("rounded-lg border border-border bg-card p-4 space-y-3", className)}>
+    <section className={cn("space-y-3 pb-4 last:pb-0", className)}>
       {title ? (
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {title}
