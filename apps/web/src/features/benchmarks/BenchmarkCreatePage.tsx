@@ -18,26 +18,14 @@ import {
   createBenchmarkRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import {
-  genaiPerfParamDefaults,
-  guidellmParamDefaults,
-  vegetaParamDefaults,
-} from "@modeldoctor/tool-adapters/schemas";
-import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ToolParamsEditor } from "./forms/ToolParamsEditor";
+import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
-
-const TOOL_DEFAULTS: Record<ToolName, unknown> = {
-  guidellm: guidellmParamDefaults,
-  vegeta: vegetaParamDefaults,
-  "genai-perf": genaiPerfParamDefaults,
-};
 
 /**
  * Thin inline connection picker — lists the user's saved connections in a

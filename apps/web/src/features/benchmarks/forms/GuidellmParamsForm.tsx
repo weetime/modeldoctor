@@ -210,7 +210,9 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
         <Switch
           id={ids.validateBackend}
           checked={validateBackend === true}
-          onCheckedChange={(v) => setValue(`${fieldPrefix}.validateBackend`, v, { shouldValidate: true })}
+          onCheckedChange={(v) =>
+            setValue(`${fieldPrefix}.validateBackend`, v, { shouldValidate: true })
+          }
         />
         <Label htmlFor={ids.validateBackend}>Validate backend before run</Label>
       </div>

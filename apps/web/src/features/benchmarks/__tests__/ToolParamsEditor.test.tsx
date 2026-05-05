@@ -9,8 +9,6 @@ function Wrapper({
   defaultValues,
   children,
 }: {
-  scenario: "inference" | "capacity" | "gateway";
-  paramsFieldName: "params" | "config";
   defaultValues: Record<string, unknown>;
   children: ReactNode;
 }) {
@@ -26,7 +24,7 @@ function Wrapper({
 describe("ToolParamsEditor", () => {
   it("renders a readonly tool badge when scenario has a single tool (capacity)", () => {
     render(
-      <Wrapper scenario="capacity" paramsFieldName="params" defaultValues={{ tool: "guidellm", params: {} }}>
+      <Wrapper defaultValues={{ tool: "guidellm", params: {} }}>
         <ToolParamsEditor scenario="capacity" />
       </Wrapper>,
     );
@@ -36,19 +34,26 @@ describe("ToolParamsEditor", () => {
 
   it("renders a tool dropdown when scenario has multiple tools (inference)", () => {
     render(
-      <Wrapper scenario="inference" paramsFieldName="params" defaultValues={{ tool: "guidellm", params: {} }}>
+      <Wrapper defaultValues={{ tool: "guidellm", params: {} }}>
         <ToolParamsEditor scenario="inference" />
       </Wrapper>,
     );
     expect(screen.getByRole("combobox", { name: /tool/i })).toBeInTheDocument();
   });
 
-  it("uses paramsFieldName='config' for register paths when prop is supplied", () => {
+  it("propagates paramsFieldName='config' to the sub-form's registered field paths", () => {
     render(
-      <Wrapper scenario="inference" paramsFieldName="config" defaultValues={{ tool: "guidellm", config: {} }}>
+      <Wrapper defaultValues={{ tool: "guidellm", config: { profile: "throughput" } }}>
         <ToolParamsEditor scenario="inference" paramsFieldName="config" />
       </Wrapper>,
     );
-    expect(screen.getByRole("combobox", { name: /tool/i })).toBeInTheDocument();
+    // GuidellmParamsForm always renders several <Input> fields via register().
+    // With paramsFieldName="config" they should all be prefixed "config.", not "params.".
+    const inputs = document.querySelectorAll("input[name]");
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const el of inputs) {
+      const name = (el as HTMLInputElement).name;
+      expect(name.startsWith("config.")).toBe(true);
+    }
   });
 });

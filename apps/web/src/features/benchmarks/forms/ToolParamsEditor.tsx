@@ -21,7 +21,7 @@ import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
 import { VegetaParamsForm } from "./VegetaParamsForm";
 
-const TOOL_DEFAULTS: Record<ToolName, unknown> = {
+export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
   "genai-perf": genaiPerfParamDefaults,
@@ -53,8 +53,10 @@ export function ToolParamsEditor({ scenario, paramsFieldName = "params" }: ToolP
   }
 
   const ParamsForm =
-    tool === "guidellm" ? GuidellmParamsForm
-      : tool === "vegeta" ? VegetaParamsForm
+    tool === "guidellm"
+      ? GuidellmParamsForm
+      : tool === "vegeta"
+        ? VegetaParamsForm
         : GenaiPerfParamsForm;
 
   return (
