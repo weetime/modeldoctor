@@ -5,7 +5,7 @@ import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
 import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
-import { BenchmarkListShell } from "@/features/benchmarks/BenchmarkListShell";
+import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { BenchmarkComparePage } from "@/features/benchmarks/compare/BenchmarkComparePage";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
@@ -36,8 +36,12 @@ export const routes: RouteObject[] = [
           { index: true, element: <Navigate to="/runs" replace /> },
           { path: "e2e", element: <DiagnosticsPage /> },
           {
+            // Phase 14 will split this into /benchmarks/inference,
+            // /benchmarks/capacity, /benchmarks/gateway. Until then, keep the
+            // /runs route alive by mounting the inference scenario page (the
+            // closest analogue to the previous "all benchmarks" view).
             path: "runs",
-            element: <BenchmarkListShell />,
+            element: <BenchmarkInferencePage />,
           },
           { path: "runs/new", element: <BenchmarkCreatePage /> },
           { path: "runs/compare", element: <BenchmarkComparePage /> },

@@ -132,7 +132,7 @@ describe("BenchmarkListShell", () => {
 
   it("renders a guidellm row with tool / status / p95 / errorRate", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_BENCHMARK);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     expect(await screen.findByText("guidellm")).toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
     // guidellm: data.e2eLatency.p95 (already ms)
@@ -147,7 +147,7 @@ describe("BenchmarkListShell", () => {
       nextCursor: null,
     };
     vi.mocked(api.get).mockResolvedValue(resp);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     expect(await screen.findByText("vegeta")).toBeInTheDocument();
     // vegeta latencies are already in ms after schema normalization.
     expect(screen.getByText("250.5")).toBeInTheDocument();
@@ -161,7 +161,7 @@ describe("BenchmarkListShell", () => {
       nextCursor: null,
     };
     vi.mocked(api.get).mockResolvedValue(resp);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     expect(await screen.findByText("genai-perf")).toBeInTheDocument();
     expect(screen.getByText("333.3")).toBeInTheDocument();
     // genai-perf schema has no error/success counts → error rate column is "—".
@@ -179,7 +179,7 @@ describe("BenchmarkListShell", () => {
       nextCursor: null,
     };
     vi.mocked(api.get).mockResolvedValue(resp);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     expect(await screen.findByText("running")).toBeInTheDocument();
     const cells = screen.getAllByRole("cell");
     // last cell is the "→" link; -2 = errorRate, -3 = p95
@@ -189,7 +189,7 @@ describe("BenchmarkListShell", () => {
 
   it("compare button is disabled by default", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_BENCHMARK);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     await screen.findByText("guidellm"); // wait for load
     const compare = screen.getByRole("button", { name: /compare/i });
     expect(compare).toBeDisabled();
@@ -197,7 +197,7 @@ describe("BenchmarkListShell", () => {
 
   it("renders empty state when there are no benchmarks", async () => {
     vi.mocked(api.get).mockResolvedValue(EMPTY);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(screen.getByText(/No benchmarks yet|暂无基准测试/i)).toBeInTheDocument(),
     );
@@ -208,7 +208,7 @@ describe("BenchmarkListShell", () => {
       items: [makeBenchmark("a", "guidellm", "completed", guidellmMetrics)],
       nextCursor: null,
     } satisfies ListBenchmarksResponse);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     // Page does not render run.name — wait on the row's checkbox instead.
     await screen.findByRole("checkbox", { name: /select a/i });
     const compareBtn = screen.getByRole("button", { name: /Compare \(0\)|对比 \(0\)/i });
@@ -223,7 +223,7 @@ describe("BenchmarkListShell", () => {
       ],
       nextCursor: null,
     } satisfies ListBenchmarksResponse);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     const checkboxA = await screen.findByRole("checkbox", { name: /select a/i });
     const checkboxB = screen.getByRole("checkbox", { name: /select b/i });
     await userEvent.click(checkboxA);
@@ -246,7 +246,7 @@ describe("BenchmarkListShell", () => {
       ],
       nextCursor: null,
     } satisfies ListBenchmarksResponse);
-    render(<BenchmarkListShell />, { wrapper: Wrapper });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     const checkboxA = await screen.findByRole("checkbox", { name: /select a/i });
     await userEvent.click(checkboxA);
     await userEvent.click(screen.getByRole("checkbox", { name: /select b/i }));

@@ -27,25 +27,39 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { benchmarkKeys, useBenchmarkList } from "./queries";
+import { SCENARIOS, type ScenarioId } from "./scenarios";
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
   if (n == null) return "—";
   return n.toFixed(digits);
 }
 
-export function BenchmarkListShell() {
+interface BenchmarkListShellProps {
+  scenario: ScenarioId;
+}
+
+export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const { t } = useTranslation("runs");
   const qc = useQueryClient();
+  const cfg = SCENARIOS[scenario];
 
   const [searchParams, setSearchParams] = useSearchParams();
   // Cursor is intentionally NOT stored in the URL — useInfiniteQuery owns
   // pagination state. Putting cursor in the URL would change the query key on
   // every "Load more" click and replace the list instead of appending.
   const query: Partial<ListBenchmarksQuery> = useMemo(() => {
-    const q: Partial<ListBenchmarksQuery> = { limit: 20 };
+    // Always pin the scenario filter from the page prop. Users cannot widen
+    // the view across scenarios from a scenario-specific page; that's the
+    // whole point of the per-scenario list.
+    const q: Partial<ListBenchmarksQuery> = { limit: 20, scenario };
     const get = (k: string) => searchParams.get(k) ?? undefined;
     const tool = get("tool");
-    if (tool) q.tool = tool as BenchmarkTool;
+    // Defensive: only honor tool query param when it's a tool the scenario
+    // actually allows. A stale ?tool=vegeta on /runs (inference) would
+    // otherwise produce an empty list with no obvious cause.
+    if (tool && (cfg.tools as readonly string[]).includes(tool)) {
+      q.tool = tool as BenchmarkTool;
+    }
     const status = get("status");
     if (status) q.status = status as BenchmarkStatus;
     const connectionId = get("connectionId");
@@ -60,7 +74,7 @@ export function BenchmarkListShell() {
     if (baseline === "is") q.isBaseline = true;
     if (baseline === "ref") q.referencesBaseline = true;
     return q;
-  }, [searchParams]);
+  }, [searchParams, scenario, cfg.tools]);
 
   function patchQuery(next: Partial<ListBenchmarksQuery>) {
     const sp = new URLSearchParams();
@@ -132,8 +146,8 @@ export function BenchmarkListShell() {
   return (
     <>
       <PageHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
+        title={cfg.label}
+        subtitle={cfg.description}
         rightSlot={
           <div className="flex gap-2">
             <Button
@@ -171,14 +185,23 @@ export function BenchmarkListShell() {
               )}
             </Tooltip>
             <Button asChild size="sm">
-              <Link to="/runs/new">{t("actions.new")}</Link>
+              {/*
+                Phase 14 will rename `/runs/new` → `/benchmarks/new`. Until the
+                router rename lands, link to the existing route and forward
+                the scenario via query string.
+              */}
+              <Link to={`/runs/new?scenario=${scenario}`}>{t("actions.new")}</Link>
             </Button>
           </div>
         }
       />
 
       <div className="space-y-4 px-8 py-6">
-        <BenchmarkListFilters query={query} onChange={patchQuery} />
+        <BenchmarkListFilters
+          query={query}
+          onChange={patchQuery}
+          availableTools={cfg.tools as readonly BenchmarkTool[]}
+        />
 
         {isError ? (
           <Alert variant="destructive">

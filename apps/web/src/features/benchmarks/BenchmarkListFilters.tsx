@@ -19,7 +19,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const ALL = "__all__";
 
-const TOOLS: BenchmarkTool[] = ["guidellm", "genai-perf", "vegeta"];
+const ALL_TOOLS: BenchmarkTool[] = ["guidellm", "genai-perf", "vegeta"];
 const STATUSES: BenchmarkStatus[] = [
   "pending",
   "submitted",
@@ -32,9 +32,19 @@ const STATUSES: BenchmarkStatus[] = [
 export interface BenchmarkListFiltersProps {
   query: Partial<ListBenchmarksQuery>;
   onChange: (next: Partial<ListBenchmarksQuery>) => void;
+  /**
+   * Tool options available in the current view. When omitted, all tools are
+   * offered. When a scenario page passes a single-tool list, the tool dropdown
+   * collapses (no need to filter when there's only one choice).
+   */
+  availableTools?: readonly BenchmarkTool[];
 }
 
-export function BenchmarkListFilters({ query, onChange }: BenchmarkListFiltersProps) {
+export function BenchmarkListFilters({
+  query,
+  onChange,
+  availableTools,
+}: BenchmarkListFiltersProps) {
   const { t } = useTranslation("runs");
 
   function patch(p: Partial<ListBenchmarksQuery>) {
@@ -74,24 +84,31 @@ export function BenchmarkListFilters({ query, onChange }: BenchmarkListFiltersPr
     query.isBaseline !== undefined ||
     query.referencesBaseline !== undefined;
 
+  const toolOptions = availableTools ?? ALL_TOOLS;
+  // Hide the tool dropdown entirely when the scenario constrains the view to
+  // a single tool — the dropdown would offer no useful choice.
+  const showToolDropdown = toolOptions.length > 1;
+
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <Select
-        value={query.tool ?? ALL}
-        onValueChange={(v) => patch({ tool: v === ALL ? undefined : (v as BenchmarkTool) })}
-      >
-        <SelectTrigger className="w-[160px]" aria-label={t("filters.tool")}>
-          <SelectValue placeholder={t("filters.tool")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>{t("filters.any")}</SelectItem>
-          {TOOLS.map((tool) => (
-            <SelectItem key={tool} value={tool}>
-              {tool}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {showToolDropdown && (
+        <Select
+          value={query.tool ?? ALL}
+          onValueChange={(v) => patch({ tool: v === ALL ? undefined : (v as BenchmarkTool) })}
+        >
+          <SelectTrigger className="w-[160px]" aria-label={t("filters.tool")}>
+            <SelectValue placeholder={t("filters.tool")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{t("filters.any")}</SelectItem>
+            {toolOptions.map((tool) => (
+              <SelectItem key={tool} value={tool}>
+                {tool}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       <Select
         value={query.status ?? ALL}
