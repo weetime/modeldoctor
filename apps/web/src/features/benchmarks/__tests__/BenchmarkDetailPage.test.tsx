@@ -499,6 +499,15 @@ describe("BenchmarkDetailPage", () => {
     expect(screen.queryByText(/Distributions|分布图/i)).not.toBeInTheDocument();
   });
 
+  it("back link points to /benchmarks/:scenario based on the loaded benchmark", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "completed", scenario: "gateway" }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const backLink = await screen.findByRole("link", { name: /Back to list|返回列表/ });
+    expect(backLink).toHaveAttribute("href", "/benchmarks/gateway");
+  });
+
   it("mounts DetailVerdictRow when run.baselineId is set", async () => {
     const baseline = makeBenchmark({
       id: "br",

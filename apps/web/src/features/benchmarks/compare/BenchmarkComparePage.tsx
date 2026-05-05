@@ -56,6 +56,9 @@ export function BenchmarkComparePage() {
   const failedCount = queries.filter((q) => q.isError).length;
   const isLoading = queries.some((q) => q.isLoading);
 
+  const backScenario = successfulBenchmarks[0]?.scenario ?? "gateway";
+  const backHref = `/benchmarks/${backScenario}`;
+
   const tools = new Set(successfulBenchmarks.map((r) => r.tool));
   const isMixed = tools.size > 1;
 
@@ -105,7 +108,7 @@ export function BenchmarkComparePage() {
           title={t("compare.needTwoEmpty")}
           actions={
             <Button asChild variant="outline" size="sm">
-              <Link to="/benchmarks">
+              <Link to={backHref}>
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("compare.back")}
               </Link>
@@ -134,7 +137,7 @@ export function BenchmarkComparePage() {
         subtitle={subtitle}
         rightSlot={
           <Button asChild variant="ghost" size="sm">
-            <Link to="/benchmarks">
+            <Link to={backHref}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               {t("compare.back")}
             </Link>

@@ -229,7 +229,7 @@ export function BenchmarkDetailPage() {
               </Button>
             )}
             <Button asChild variant="ghost" size="sm">
-              <Link to="/benchmarks">
+              <Link to={`/benchmarks/${benchmark.scenario}`}>
                 <ArrowLeft className="mr-1 h-4 w-4" />
                 {t("detail.back")}
               </Link>
