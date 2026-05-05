@@ -11,6 +11,7 @@ import {
 } from "react-hook-form";
 
 import { Label } from "@/components/ui/label";
+import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const Form = FormProvider;
@@ -81,8 +82,8 @@ FormItem.displayName = "FormItem";
 
 const FormLabel = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
->(({ className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & { required?: boolean }
+>(({ className, children, required, ...props }, ref) => {
   const { error, formItemId } = useFormField();
 
   return (
@@ -91,7 +92,14 @@ const FormLabel = React.forwardRef<
       className={cn(error && "text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required ? (
+        <span aria-hidden="true" className="ml-0.5 text-destructive">
+          *
+        </span>
+      ) : null}
+    </Label>
   );
 });
 FormLabel.displayName = "FormLabel";
@@ -136,7 +144,12 @@ const FormMessage = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message) : children;
+  const raw = error ? String(error?.message ?? "") : "";
+  const body = error
+    ? raw.startsWith("validation.")
+      ? i18n.t(raw, { ns: "common", defaultValue: raw })
+      : raw
+    : children;
 
   if (!body) {
     return null;

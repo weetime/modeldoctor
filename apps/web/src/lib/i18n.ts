@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { z } from "zod";
 
 import enBenchmarkTemplates from "@/locales/en-US/benchmark-templates.json";
 import enBenchmarks from "@/locales/en-US/benchmarks.json";
@@ -61,6 +62,53 @@ void i18n.use(initReactI18next).init({
   ],
   interpolation: { escapeValue: false },
   returnNull: false,
+});
+
+// `.refine(fn, { message: "validation.someKey" })` cannot be translated here
+// because zod v3 short-circuits the errorMap when a refine message is set
+// explicitly. Translation for those `validation.*` raw strings happens at
+// render time inside `<FormMessage>` (apps/web/src/components/ui/form.tsx).
+z.setErrorMap((issue, ctx) => {
+  switch (issue.code) {
+    case "invalid_type": {
+      if (issue.received === "undefined") {
+        return { message: i18n.t("validation.required", { ns: "common" }) };
+      }
+      return { message: i18n.t("validation.invalidType", { ns: "common" }) };
+    }
+    case "too_small": {
+      if (issue.type === "string") {
+        if (issue.minimum === 1) {
+          return { message: i18n.t("validation.required", { ns: "common" }) };
+        }
+        return {
+          message: i18n.t("validation.tooShort", { ns: "common", min: issue.minimum }),
+        };
+      }
+      return {
+        message: i18n.t("validation.tooSmall", { ns: "common", min: issue.minimum }),
+      };
+    }
+    case "too_big": {
+      if (issue.type === "string") {
+        return { message: i18n.t("validation.tooLong", { ns: "common", max: issue.maximum }) };
+      }
+      return { message: i18n.t("validation.tooBig", { ns: "common", max: issue.maximum }) };
+    }
+    case "invalid_string": {
+      if (issue.validation === "email")
+        return { message: i18n.t("validation.invalidEmail", { ns: "common" }) };
+      if (issue.validation === "url")
+        return { message: i18n.t("validation.invalidUrl", { ns: "common" }) };
+      if (issue.validation === "regex")
+        return { message: i18n.t("validation.invalidFormat", { ns: "common" }) };
+      return { message: ctx.defaultError };
+    }
+    case "invalid_enum_value":
+      return { message: i18n.t("validation.invalidEnum", { ns: "common" }) };
+    default:
+      return { message: ctx.defaultError };
+  }
 });
 
 export default i18n;

@@ -71,5 +71,17 @@
     "unknown": "Unknown error",
     "network": "Network error",
     "required": "This field is required"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidType": "Invalid type",
+    "tooShort": "Must be at least {{min}} characters",
+    "tooLong": "Must be at most {{max}} characters",
+    "tooSmall": "Must be at least {{min}}",
+    "tooBig": "Must be at most {{max}}",
+    "invalidEmail": "Invalid email format",
+    "invalidUrl": "Invalid URL format",
+    "invalidFormat": "Invalid format",
+    "invalidEnum": "Please select a valid option"
   }
 }
