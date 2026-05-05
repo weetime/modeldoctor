@@ -10,7 +10,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { guidellmRateTypes } from "@modeldoctor/tool-adapters/schemas";
 import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 const PROFILES: GuidellmParams["profile"][] = [
@@ -36,6 +36,15 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
   const datasetName = useWatch({ control, name: `${fieldPrefix}.datasetName` });
   const rateType = useWatch({ control, name: `${fieldPrefix}.rateType` });
   const validateBackend = useWatch({ control, name: `${fieldPrefix}.validateBackend` });
+
+  // When editing an older template whose config omits rateType, the field is
+  // undefined. Write "constant" into form state immediately so submitting
+  // doesn't 400 with "rateType: Required".
+  useEffect(() => {
+    if (rateType === undefined) {
+      setValue(`${fieldPrefix}.rateType`, "constant", { shouldValidate: true });
+    }
+  }, [rateType, setValue, fieldPrefix]);
 
   const idPrefix = useId();
   const ids = {
@@ -168,7 +177,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
                 shouldValidate: true,
               })
             }
-            value={rateType ?? "constant"}
+            value={rateType}
           >
             <SelectTrigger id={ids.rateType}>
               <SelectValue placeholder="Select rate type" />
