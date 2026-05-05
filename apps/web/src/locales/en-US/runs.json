@@ -166,6 +166,8 @@
     "baselineNone": "None (no verdict)",
     "baselineMissing": "{{failed}} Run(s) no longer accessible — comparing the remaining {{n}}",
     "mixedToolsAlert": "Compare requires the same tool. Selected: {{summary}}",
+    "mixedToolsTitle": "Mixed tools",
+    "mixedToolsBody": "Compare requires the same tool. Selected: {{summary}}",
     "mixedScenariosTitle": "Mixed scenarios",
     "mixedScenariosBody": "Compare requires the same scenario. Selected: {{scenarios}}",
     "needTwoEmpty": "Select 2+ Runs from the list to compare",

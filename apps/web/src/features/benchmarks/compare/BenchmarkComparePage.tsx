@@ -154,8 +154,9 @@ export function BenchmarkComparePage() {
         )}
         {isMixed && (
           <Alert variant="destructive">
+            <AlertTitle>{t("compare.mixedToolsTitle")}</AlertTitle>
             <AlertDescription>
-              {t("compare.mixedToolsAlert", { summary: [...tools].join(" + ") })}
+              {t("compare.mixedToolsBody", { summary: [...tools].join(" + ") })}
             </AlertDescription>
           </Alert>
         )}

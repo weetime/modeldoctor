@@ -166,6 +166,8 @@
     "baselineNone": "无（不显示徽标）",
     "baselineMissing": "{{failed}} 个 Run 已无法访问，仅对比剩余 {{n}} 个",
     "mixedToolsAlert": "对比需要相同 tool。当前选中：{{summary}}",
+    "mixedToolsTitle": "工具不一致",
+    "mixedToolsBody": "对比需要相同 tool。当前选中：{{summary}}",
     "mixedScenariosTitle": "场景不一致",
     "mixedScenariosBody": "对比需要相同 scenario。当前选中：{{scenarios}}",
     "needTwoEmpty": "从列表选 2 个以上 Run 才能对比",

@@ -14,8 +14,9 @@ import { SCENARIOS, type ScenarioId } from "../scenarios";
  * Two-step picker:
  *   1. Pick a scenario (filters the benchmark list by `scenario`).
  *   2. Tick 2+ completed benchmarks → "Start comparison" navigates to
- *      `/runs/compare?scenario=<id>&ids=<a,b>`. The compare page itself
- *      then takes over with its existing `?ids=` flow.
+ *      `/runs/compare?ids=<a,b>`. The compare page itself then takes
+ *      over with its existing `?ids=` flow; it derives the scenario
+ *      from the fetched benchmarks, so we don't pass `?scenario=`.
  *
  * Phase 14 will rename `/runs/compare` → `/benchmarks/compare`. For now
  * the URL stays as-is to avoid touching the router mid-phase.
@@ -41,8 +42,9 @@ export function BenchmarkCompareEmpty() {
 
   function handleSubmit() {
     if (!scenario || selected.length < 2) return;
+    // ComparePage derives scenario from the fetched benchmarks; passing
+    // `?scenario=` here would be a no-op. Only forward `?ids=`.
     const sp = new URLSearchParams();
-    sp.set("scenario", scenario);
     sp.set("ids", selected.join(","));
     navigate(`/runs/compare?${sp.toString()}`);
   }
