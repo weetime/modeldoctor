@@ -24,7 +24,7 @@ import {
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -114,6 +114,26 @@ export function BenchmarkCreatePage() {
       params: TOOL_DEFAULTS[defaultTool] as Record<string, unknown>,
     },
   });
+
+  // Reset form defaults when the URL-driven scenario changes (e.g. browser
+  // back/forward between ?scenario=inference and ?scenario=gateway). Without
+  // this, defaultValues are only read at mount, so the form would keep a
+  // stale tool/params combo and the readonly Tool indicator would show a
+  // tool that doesn't match the URL — and the submit body would carry a
+  // mismatched (tool, scenario) which the server rejects with
+  // BENCHMARK_SCENARIO_TOOL_MISMATCH. Wiping any partial form data here is
+  // acceptable UX: this page is a URL-driven flow.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form is stable, defaultTool is derived from scenario
+  useEffect(() => {
+    form.reset({
+      tool: defaultTool,
+      scenario,
+      connectionId: "",
+      name: "",
+      description: undefined,
+      params: TOOL_DEFAULTS[defaultTool] as Record<string, unknown>,
+    });
+  }, [scenario]);
 
   // Single source of truth: form state. useWatch keeps the section render +
   // tool-specific subform in sync without a duplicate useState/useEffect pair.

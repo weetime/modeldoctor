@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { act, render, screen, within } from "@testing-library/react";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BenchmarkCreatePage } from "../BenchmarkCreatePage";
 
@@ -87,5 +87,65 @@ describe("BenchmarkCreatePage", () => {
     // Falls back to inference → multi-tool dropdown rendered.
     const toolCombo = screen.getByRole("combobox", { name: /Tool/i });
     expect(within(toolCombo).getByText(/guidellm/i)).toBeInTheDocument();
+  });
+
+  it("renders VegetaParamsForm fields when ?scenario=gateway", () => {
+    renderAt("/runs/new?scenario=gateway");
+    // VegetaParamsForm exposes a "Rate (req/s)" field that no other params
+    // form has — distinctive enough to confirm the right subform mounted.
+    expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Duration \(s\)/i)).toBeInTheDocument();
+    // GuidellmParamsForm's "Profile" field MUST NOT be present.
+    expect(screen.queryByLabelText(/^Profile$/i)).not.toBeInTheDocument();
+  });
+
+  it("renders GuidellmParamsForm fields when ?scenario=capacity", () => {
+    renderAt("/runs/new?scenario=capacity");
+    // GuidellmParamsForm exposes a "Profile" field that vegeta/genai-perf
+    // forms don't — distinctive enough to confirm the right subform mounted.
+    expect(screen.getByLabelText(/^Profile$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Request rate/i)).toBeInTheDocument();
+    // VegetaParamsForm's "Rate (req/s)" field MUST NOT be present.
+    expect(screen.queryByLabelText(/Rate \(req\/s\)/i)).not.toBeInTheDocument();
+  });
+
+  it("resets form when ?scenario= URL changes (regression for stale tool)", () => {
+    // This test exercises the useEffect that calls form.reset() on scenario
+    // change — the BenchmarkCreatePage instance stays mounted across the
+    // URL change (no remount), so a stale `tool` would survive without the
+    // reset. We trigger navigation programmatically inside the same
+    // MemoryRouter tree to keep the page mounted.
+    let navigateRef: ((to: string) => void) | null = null;
+    function NavCapture() {
+      const navigate = useNavigate();
+      navigateRef = (to: string) => navigate(to);
+      return null;
+    }
+
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/runs/new?scenario=inference"]}>
+          <NavCapture />
+          <BenchmarkCreatePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Initial: inference → multi-tool combobox showing guidellm.
+    const initialCombo = screen.getByRole("combobox", { name: /Tool/i });
+    expect(within(initialCombo).getByText(/guidellm/i)).toBeInTheDocument();
+
+    // Navigate to gateway in the same tree. The form.reset useEffect must
+    // fire and switch the tool to vegeta (single-tool readonly indicator).
+    act(() => {
+      navigateRef?.("/runs/new?scenario=gateway");
+    });
+
+    expect(screen.queryByRole("combobox", { name: /Tool/i })).not.toBeInTheDocument();
+    const label = screen.getByLabelText(/Tool/i);
+    expect(label).toHaveTextContent(/vegeta/i);
+    // And the VegetaParamsForm should now be the rendered subform.
+    expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
   });
 });
