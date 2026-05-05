@@ -36,7 +36,7 @@
     "@nestjs/swagger": "^7",
     "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.5.0",
-    "@prisma/client": "^6.19.3",
+    "@prisma/client": "^7.8.0",
     "argon2": "^0.44.0",
     "cookie-parser": "^1.4.7",
     "nanoid": "^5.1.11",
