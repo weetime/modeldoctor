@@ -44,6 +44,16 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 - Vitest 2 across the workspace. `apps/web/src/test/setup.ts` MUST use the explicit `expect.extend(matchers)` form (importing `@testing-library/jest-dom/matchers`); the side-effect `import "@testing-library/jest-dom/vitest"` does not extend `expect` under Vitest 2.
 - `apps/api/tsconfig.json` `include` must stay narrow (`["src/**/*"]`).
 
+## Testing layers
+
+1. **Unit / component (Vitest)** — `apps/web/src/**/*.test.{ts,tsx}` (UI components, stores, schemas) and `apps/api/src/**/*.spec.ts` (services, pipes). Fast, mocked.
+2. **HTTP-layer e2e (Vitest + supertest)** — `apps/api/test/e2e/*.e2e-spec.ts`. Runs against `modeldoctor_test` Postgres via `pickTestDatabaseUrl`. Tests api routes end-to-end without a browser. Run via `pnpm test:e2e:api`.
+3. **Browser e2e (Playwright)** — `e2e/*.spec.ts`. Auto-starts api + web on test ports (`E2E_API_PORT=3401`, `E2E_WEB_PORT=5573` by default), uses the SAME `modeldoctor_test` DB as #2 — so do not run vitest e2e and Playwright concurrently. Run via `pnpm test:e2e:browser` (or `pnpm test:e2e:browser:ui` for the UI runner).
+
+`pnpm test:e2e` runs api e2e then browser e2e in sequence. Use it pre-PR; in CI they should be separate jobs (db reset between them).
+
+The first browser-e2e run in a fresh worktree needs `pnpm -r build` first (so `packages/contracts/dist` exists for the api typecheck). The api e2e env in `e2e/playwright.config.ts` sets `NODE_ENV=test` plus the JWT/encryption/callback secrets explicitly — auth would silently use empty defaults otherwise.
+
 ## Page layout convention
 
 All top-level routed pages MUST render `PageHeader` as their first visual row:
