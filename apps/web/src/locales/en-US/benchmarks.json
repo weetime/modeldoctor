@@ -162,6 +162,12 @@
       "loadError": "Could not load baseline for comparison"
     }
   },
+  "forms": {
+    "unsupportedCategory": {
+      "guidellm": "guidellm does not support '{{category}}' connections — try vegeta or genai-perf instead",
+      "genaiPerf": "genai-perf does not support '{{category}}' connections — try vegeta instead"
+    }
+  },
   "compare": {
     "title": "Compare Benchmarks",
     "subtitle": "{{n}} benchmarks · {{tool}}",

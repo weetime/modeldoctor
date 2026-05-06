@@ -162,6 +162,12 @@
       "loadError": "无法加载基准用于对比"
     }
   },
+  "forms": {
+    "unsupportedCategory": {
+      "guidellm": "guidellm 不支持 {{category}} 类型连接，请改用 vegeta 或 genai-perf",
+      "genaiPerf": "genai-perf 不支持 {{category}} 类型连接，请改用 vegeta"
+    }
+  },
   "compare": {
     "title": "对比基准测试",
     "subtitle": "{{n}} 个基准测试 · {{tool}}",
