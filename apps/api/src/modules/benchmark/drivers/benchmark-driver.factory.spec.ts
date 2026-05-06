@@ -2,11 +2,9 @@ import type { ConfigService } from "@nestjs/config";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../config/env.schema.js";
 import { createBenchmarkDriver, imageForTool } from "./benchmark-driver.factory.js";
-import { SubprocessDriver } from "./subprocess-driver.js";
 
 function mockConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
   const defaults: Partial<Env> = {
-    BENCHMARK_DRIVER: "subprocess",
     BENCHMARK_K8S_NAMESPACE: "modeldoctor-benchmarks",
     RUNNER_IMAGE_GUIDELLM: "img-guidellm:latest",
     RUNNER_IMAGE_VEGETA: "img-vegeta:latest",
@@ -33,16 +31,8 @@ describe("imageForTool", () => {
 });
 
 describe("createBenchmarkDriver", () => {
-  it("builds a SubprocessDriver when BENCHMARK_DRIVER=subprocess", async () => {
-    const cfg = mockConfig({ BENCHMARK_DRIVER: "subprocess" });
-    const d = await createBenchmarkDriver(cfg);
-    expect(d).toBeInstanceOf(SubprocessDriver);
-  });
-});
-
-describe("createBenchmarkDriver k8s branch", () => {
-  it("builds a K8sJobDriver when BENCHMARK_DRIVER=k8s (via __test_kc_loader__)", async () => {
-    const cfg = mockConfig({ BENCHMARK_DRIVER: "k8s", BENCHMARK_K8S_NAMESPACE: "ns-x" });
+  it("builds a K8sJobDriver (via __test_kc_loader__)", async () => {
+    const cfg = mockConfig({ BENCHMARK_K8S_NAMESPACE: "ns-x" });
     // Stub the lazy k8s import so the test doesn't pull in the real client.
     const fakeK8s = {
       KubeConfig: class {
@@ -61,10 +51,5 @@ describe("createBenchmarkDriver k8s branch", () => {
     } finally {
       (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__ = undefined;
     }
-  });
-
-  it("throws on unknown BENCHMARK_DRIVER value", async () => {
-    const cfg = mockConfig({ BENCHMARK_DRIVER: "wat" as never });
-    await expect(createBenchmarkDriver(cfg)).rejects.toThrow(/Unknown BENCHMARK_DRIVER/);
   });
 });

@@ -36,10 +36,12 @@ k3d image import gpustack/benchmark-runner:v0.0.4 -c modeldoctor
 Then in your API env:
 
 ```bash
-export BENCHMARK_DRIVER=k8s
-export BENCHMARK_RUNNER_IMAGE=gpustack/benchmark-runner:v0.0.4
+# K8s is the only execution mode (#101) — no driver toggle.
 export BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
 export BENCHMARK_CALLBACK_URL=http://host.k3d.internal:3001
+export RUNNER_IMAGE_GUIDELLM=gpustack/benchmark-runner-guidellm:v0.0.4
+export RUNNER_IMAGE_VEGETA=gpustack/benchmark-runner-vegeta:v0.0.4
+export RUNNER_IMAGE_GENAI_PERF=gpustack/benchmark-runner-genai-perf:v0.0.4
 pnpm -F @modeldoctor/api start:dev
 ```
 

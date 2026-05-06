@@ -38,7 +38,13 @@ export class BenchmarkService {
   private readonly log = new Logger(BenchmarkService.name);
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
-  private readonly driverKind: "local" | "k8s";
+  /**
+   * Pre-#101 this field branched on `BENCHMARK_DRIVER` to support a
+   * subprocess driver alongside k8s. K8s is now the only execution
+   * mode, so the value is constant. Kept for DB-schema continuity
+   * (`Benchmark.driverKind` column, exposed in the contract).
+   */
+  private readonly driverKind = "k8s" as const;
 
   constructor(
     private readonly repo: BenchmarkRepository,
@@ -65,10 +71,6 @@ export class BenchmarkService {
       );
     }
     this.callbackUrl = url;
-
-    const driverChoice = (this.config.get("BENCHMARK_DRIVER", { infer: true }) ??
-      "subprocess") as string;
-    this.driverKind = driverChoice === "k8s" ? "k8s" : "local";
   }
 
   async findById(id: string): Promise<Benchmark | null> {
@@ -224,7 +226,7 @@ export class BenchmarkService {
         tool: row.tool as ToolName,
         buildResult,
         callback: { url: this.callbackUrl, token: callbackToken },
-        image: this.driverKind === "k8s" ? imageForTool(row.tool as ToolName, this.config) : "",
+        image: imageForTool(row.tool as ToolName, this.config),
       });
       handle = result.handle;
     } catch (e) {

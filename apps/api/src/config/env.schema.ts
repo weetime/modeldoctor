@@ -56,11 +56,11 @@ export const EnvSchema = z
     // Secret used to derive per-run HMAC callback tokens. Phase 3 enforces;
     // Phase 1 only validates length when present.
     BENCHMARK_CALLBACK_SECRET: z.string().min(32).optional(),
-    // Phase 3 driver + k8s config — full validation in Task 9
-    BENCHMARK_DRIVER: z.enum(["subprocess", "k8s"]).default("subprocess"),
+    // K8s job runner config — subprocess driver removed in #101.
     BENCHMARK_CALLBACK_URL: z.string().url().optional(),
     BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
-    // #53 Phase 2 (#78): per-tool runner images, required when k8s driver.
+    // Per-tool runner images (#53 Phase 2 / #78). Required when
+    // NODE_ENV !== "test" (k8s is the only execution mode).
     RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
     RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
@@ -121,7 +121,7 @@ export const EnvSchema = z
         message: "BENCHMARK_CALLBACK_URL is required when NODE_ENV is not 'test'",
       });
     }
-    if (env.BENCHMARK_DRIVER === "k8s") {
+    if (env.NODE_ENV !== "test") {
       const perToolImages = [
         "RUNNER_IMAGE_GUIDELLM",
         "RUNNER_IMAGE_VEGETA",
@@ -132,7 +132,7 @@ export const EnvSchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: [key],
-            message: `${key} is required when BENCHMARK_DRIVER='k8s'`,
+            message: `${key} is required when NODE_ENV is not 'test' (k8s is the only runner)`,
           });
         }
       }

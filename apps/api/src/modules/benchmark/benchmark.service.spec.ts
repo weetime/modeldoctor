@@ -51,7 +51,9 @@ const ENV_DEFAULTS: Record<string, unknown> = {
   BENCHMARK_CALLBACK_SECRET: "x".repeat(32),
   BENCHMARK_CALLBACK_URL: "http://api/",
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
-  BENCHMARK_DRIVER: "subprocess",
+  RUNNER_IMAGE_GUIDELLM: "img-guidellm:test",
+  RUNNER_IMAGE_VEGETA: "img-vegeta:test",
+  RUNNER_IMAGE_GENAI_PERF: "img-genai-perf:test",
 };
 
 function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
