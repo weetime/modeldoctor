@@ -21,7 +21,6 @@ import { GUIDELLM_CATEGORY_DEFAULTS, guidellmRateTypes } from "@modeldoctor/tool
 import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 
 const PROFILES: GuidellmParams["profile"][] = [
   "throughput",
@@ -61,7 +60,6 @@ interface GuidellmParamsFormProps {
 export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFormProps = {}) {
   const { control, register, setValue } = useFormContext();
 
-  const { t } = useTranslation("benchmarks");
   const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
   const connections = useConnections();
   const connection = connectionId
@@ -78,9 +76,6 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
       setValue(`${fieldPrefix}.apiType`, def.apiType, { shouldDirty: false });
     }
   }, [connection, fieldPrefix, setValue]);
-
-  const unsupported =
-    connection && "unsupported" in GUIDELLM_CATEGORY_DEFAULTS[connection.category];
 
   const profile = useWatch({ control, name: `${fieldPrefix}.profile` }) as
     | GuidellmParams["profile"]
@@ -191,11 +186,6 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
             </FormItem>
           )}
         />
-        {unsupported && connection && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            {t("forms.unsupportedCategory.guidellm", { category: connection.category })}
-          </p>
-        )}
         <FormField
           control={control}
           name={`${fieldPrefix}.apiType`}

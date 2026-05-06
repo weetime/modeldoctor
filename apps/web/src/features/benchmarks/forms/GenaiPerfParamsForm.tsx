@@ -21,7 +21,6 @@ import { GENAI_PERF_CATEGORY_DEFAULTS } from "@modeldoctor/tool-adapters/schemas
 import type { GenaiPerfParams } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 
 const ENDPOINT_TYPES: GenaiPerfParams["endpointType"][] = [
   "chat",
@@ -38,7 +37,6 @@ export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsF
   const { control, register, setValue } = useFormContext();
   const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` }) as boolean | undefined;
 
-  const { t } = useTranslation("benchmarks");
   const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
   const connections = useConnections();
   const connection = connectionId
@@ -56,9 +54,6 @@ export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsF
     }
   }, [connection, fieldPrefix, setValue]);
 
-  const unsupported =
-    connection && "unsupported" in GENAI_PERF_CATEGORY_DEFAULTS[connection.category];
-
   const idPrefix = useId();
   const ids = {
     streaming: `${idPrefix}-streaming`,
@@ -67,11 +62,6 @@ export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsF
 
   return (
     <div className="space-y-4">
-      {unsupported && connection && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">
-          {t("forms.unsupportedCategory.genaiPerf", { category: connection.category })}
-        </p>
-      )}
       <FormField
         control={control}
         name={`${fieldPrefix}.endpointType`}

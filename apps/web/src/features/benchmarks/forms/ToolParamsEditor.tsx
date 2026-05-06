@@ -30,6 +30,7 @@ const TOOL_CATEGORY_DEFAULTS = {
 } as const;
 import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
+import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
 
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
@@ -142,13 +143,56 @@ export function ToolSelectorField({
   );
 }
 
-/** Tool-specific parameter form (no tool selector, no section heading). */
+/**
+ * Returns context for "the picked connection's category is or isn't compatible
+ * with the currently-selected tool". Drives both the inline notice in
+ * ToolParamsForm and the page-level Submit disable. Returns null when there's
+ * no conflict (no connection picked, or tool supports the category).
+ */
+export function useToolUnsupported(
+  scenario: ScenarioId,
+  displayTool?: ToolName,
+): {
+  tool: ToolName;
+  category: string;
+  alternatives: ToolName[];
+} | null {
+  const { control } = useFormContext();
+  const tool = useToolFromForm(scenario, displayTool);
+  const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
+  const connections = useConnections();
+  const connection = connectionId
+    ? connections.data?.find((c) => c.id === connectionId)
+    : undefined;
+  if (!connection) return null;
+  const def = TOOL_CATEGORY_DEFAULTS[tool][connection.category];
+  if (!("unsupported" in def)) return null;
+  const alternatives = SCENARIOS[scenario].tools.filter(
+    (t) => !("unsupported" in TOOL_CATEGORY_DEFAULTS[t][connection.category]),
+  );
+  return { tool, category: connection.category, alternatives };
+}
+
+/** Tool-specific parameter form (no tool selector, no section heading).
+ * When the picked connection's category is not supported by the active tool
+ * we replace the params with an inline notice so the user can't submit a
+ * config that's guaranteed to fail. */
 export function ToolParamsForm({
   scenario,
   paramsFieldName = "params",
   displayTool,
 }: ToolEditorProps) {
   const tool = useToolFromForm(scenario, displayTool);
+  const unsupported = useToolUnsupported(scenario, displayTool);
+  if (unsupported) {
+    return (
+      <ToolUnsupportedNotice
+        tool={unsupported.tool}
+        category={unsupported.category}
+        alternatives={unsupported.alternatives}
+      />
+    );
+  }
   const ParamsForm =
     tool === "guidellm"
       ? GuidellmParamsForm

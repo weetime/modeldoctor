@@ -34,7 +34,12 @@
       "submitFailed": "Failed to submit benchmark"
     },
     "submitted": "Benchmark \"{{name}}\" submitted",
-    "unsupportedToolForCategory": "Does not support '{{category}}' connections"
+    "unsupportedToolForCategory": "Does not support '{{category}}' connections",
+    "toolUnsupported": {
+      "title": "{{tool}} does not support '{{category}}' connections",
+      "suggestSwitch": "Switch to {{alternatives}} to continue",
+      "suggestChangeConnection": "Pick a compatible connection, or choose a different scenario"
+    }
   },
   "status": {
     "pending": "Pending",
@@ -194,12 +199,6 @@
       "hint": "Connection settings (baseUrl / apiKey / headers / queryParams) reflect the live connection; if it has been edited since this benchmark ran, what was actually sent may differ",
       "connectionMissing": "Connection deleted — URL and credentials cannot be resolved",
       "loading": "Loading…"
-    }
-  },
-  "forms": {
-    "unsupportedCategory": {
-      "guidellm": "guidellm does not support '{{category}}' connections — try vegeta or genai-perf instead",
-      "genaiPerf": "genai-perf does not support '{{category}}' connections — try vegeta instead"
     }
   },
   "compare": {

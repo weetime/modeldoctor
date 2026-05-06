@@ -34,7 +34,12 @@
       "submitFailed": "提交基准测试失败"
     },
     "submitted": "基准测试「{{name}}」已提交",
-    "unsupportedToolForCategory": "不支持 {{category}} 类型连接"
+    "unsupportedToolForCategory": "不支持 {{category}} 类型连接",
+    "toolUnsupported": {
+      "title": "{{tool}} 不支持 {{category}} 类型连接",
+      "suggestSwitch": "请改用 {{alternatives}} 继续",
+      "suggestChangeConnection": "请更换为兼容的连接，或选择其他场景"
+    }
   },
   "status": {
     "pending": "等待中",
@@ -194,12 +199,6 @@
       "hint": "连接信息（baseUrl / apiKey / Headers / queryParams）来自当前连接配置；如该连接被修改，本次压测实际发送的可能不同",
       "connectionMissing": "连接已删除，无法解析 URL / 凭证",
       "loading": "加载中…"
-    }
-  },
-  "forms": {
-    "unsupportedCategory": {
-      "guidellm": "guidellm 不支持 {{category}} 类型连接，请改用 vegeta 或 genai-perf",
-      "genaiPerf": "genai-perf 不支持 {{category}} 类型连接，请改用 vegeta"
     }
   },
   "compare": {

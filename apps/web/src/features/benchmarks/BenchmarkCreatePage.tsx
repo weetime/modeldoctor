@@ -20,17 +20,42 @@ import {
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { TOOL_DEFAULTS, ToolParamsForm, ToolSelectorField } from "./forms/ToolParamsEditor";
+import {
+  TOOL_DEFAULTS,
+  ToolParamsForm,
+  ToolSelectorField,
+  useToolUnsupported,
+} from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
 
-export function BenchmarkCreatePage() {
+/** Submit row — split out so it can use the same useFormContext + useToolUnsupported as the rest of the form. */
+function SubmitRow({
+  scenario,
+  pending,
+  onCancel,
+}: { scenario: ScenarioId; pending: boolean; onCancel: () => void }) {
   const { t } = useTranslation("benchmarks");
   const { t: tc } = useTranslation("common");
+  const { formState } = useFormContext();
+  const unsupported = useToolUnsupported(scenario);
+  return (
+    <FormActions
+      onCancel={onCancel}
+      cancelLabel={tc("actions.cancel")}
+      submitLabel={t("actions.submit")}
+      disabled={!formState.isValid || unsupported !== null}
+      pending={pending}
+    />
+  );
+}
+
+export function BenchmarkCreatePage() {
+  const { t } = useTranslation("benchmarks");
   const navigate = useNavigate();
   const createMut = useCreateBenchmark();
 
@@ -150,12 +175,10 @@ export function BenchmarkCreatePage() {
               <ToolParamsForm scenario={scenario} />
             </FormSection>
 
-            <FormActions
-              onCancel={() => navigate("/benchmarks")}
-              cancelLabel={tc("actions.cancel")}
-              submitLabel={t("actions.submit")}
-              disabled={!form.formState.isValid}
+            <SubmitRow
+              scenario={scenario}
               pending={createMut.isPending}
+              onCancel={() => navigate("/benchmarks")}
             />
           </form>
         </Form>
