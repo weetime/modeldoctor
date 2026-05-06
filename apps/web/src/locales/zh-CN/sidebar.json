@@ -14,7 +14,7 @@
     "benchmarkInference": "推理性能基准",
     "benchmarkCapacity": "容量规划",
     "benchmarkGateway": "网关压测",
-    "benchmarkCompare": "对比分析",
+    "endpointReports": "端点报告",
     "benchmarkTemplates": "测试模板",
     "requestDebug": "请求调试",
     "diagnostics": "端点检测",

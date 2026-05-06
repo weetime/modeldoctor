@@ -14,7 +14,7 @@
     "benchmarkInference": "Inference Performance",
     "benchmarkCapacity": "Capacity Planning",
     "benchmarkGateway": "Gateway Load Test",
-    "benchmarkCompare": "Compare",
+    "endpointReports": "Endpoint Reports",
     "benchmarkTemplates": "Test Templates",
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",

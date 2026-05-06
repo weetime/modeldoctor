@@ -234,15 +234,6 @@
     "mixedScenariosTitle": "场景不一致",
     "mixedScenariosBody": "对比需要相同 scenario。当前选中：{{scenarios}}",
     "needTwoEmpty": "从列表选 2 个以上基准测试才能对比",
-    "empty": {
-      "title": "选择场景后再挑选基准测试",
-      "scenarioLabel": "场景",
-      "scenarioPlaceholder": "选择场景",
-      "listTitle": "最近的基准测试",
-      "listEmpty": "该场景下还没有已完成的基准测试。",
-      "submit": "开始对比",
-      "needTwo": "至少选择 2 个基准测试"
-    },
     "metricColumnLabel": "指标",
     "verdict": {
       "regressed": "退化",

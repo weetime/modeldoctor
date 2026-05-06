@@ -146,18 +146,14 @@ describe("BenchmarkComparePage", () => {
     expect(screen.queryByText("b")).not.toBeInTheDocument();
   });
 
-  it("renders empty-state picker when no ids param", () => {
-    renderPage("/benchmarks/compare");
-    // The empty state renders the scenario <select> with all 3 SCENARIOS
-    // as <option>s. The inference scenario label "推理性能基准" comes from
-    // SCENARIOS["inference"].label and is unique on the page.
-    expect(screen.getByText(/推理性能基准/)).toBeInTheDocument();
-    expect(screen.getByText(/网关压测/)).toBeInTheDocument();
-    // The "Pick a scenario, then select benchmarks" subtitle anchors the
-    // picker UI in either locale (EN / ZH).
-    expect(
-      screen.getByText(/Pick a scenario, then select benchmarks|选择场景后再挑选基准测试/i),
-    ).toBeInTheDocument();
+  it("renders nothing when mounted directly with no ids (gate-bypass safety)", () => {
+    // BenchmarkCompareGate normally intercepts no-ids navigation and
+    // redirects to /benchmarks/inference. If something bypasses the gate
+    // and mounts the page directly, it should render null rather than the
+    // old picker (which was removed).
+    const { container } = renderPage("/benchmarks/compare");
+    // No Compare header, no benchmark grid — empty container.
+    expect(container.querySelector("h1")).toBeNull();
   });
 
   it("shows partial alert when one of the benchmarks 404s", async () => {
