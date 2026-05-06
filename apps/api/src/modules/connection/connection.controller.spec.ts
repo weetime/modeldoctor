@@ -54,6 +54,7 @@ function makeMockService() {
     update: vi.fn(),
     delete: vi.fn(),
     getOwnedDecrypted: vi.fn(),
+    revealApiKey: vi.fn(),
   };
 }
 
@@ -225,5 +226,44 @@ describe("ConnectionController", () => {
       svc.delete.mockRejectedValue(new NotFoundException("not found"));
       await expect(controller.remove(USER, "c_missing")).rejects.toThrow(NotFoundException);
     });
+  });
+});
+
+describe("ConnectionController.revealKey", () => {
+  let controller: ConnectionController;
+  let svc: ReturnType<typeof makeMockService>;
+
+  beforeEach(async () => {
+    svc = makeMockService();
+    const moduleRef = await Test.createTestingModule({
+      controllers: [ConnectionController],
+      providers: [{ provide: ConnectionService, useValue: svc }],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+    controller = moduleRef.get(ConnectionController);
+  });
+
+  it("returns plaintext apiKey for the owner", async () => {
+    svc.revealApiKey.mockResolvedValue({ apiKey: "sk-secret-12345" });
+    await expect(controller.revealKey(USER, "c_1")).resolves.toEqual({
+      apiKey: "sk-secret-12345",
+    });
+    expect(svc.revealApiKey).toHaveBeenCalledWith(USER.sub, "c_1");
+  });
+
+  it("propagates ForbiddenException for non-owners", async () => {
+    svc.revealApiKey.mockRejectedValue(new ForbiddenException());
+    await expect(controller.revealKey(USER, "c_other")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it("propagates NotFoundException for unknown ids", async () => {
+    svc.revealApiKey.mockRejectedValue(new NotFoundException());
+    await expect(controller.revealKey(USER, "c_404")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

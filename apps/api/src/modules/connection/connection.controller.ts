@@ -1,5 +1,6 @@
 import {
   type ConnectionPublic,
+  type ConnectionRevealKeyResponse,
   type ConnectionWithSecret,
   type CreateConnection,
   type ListConnectionsResponse,
@@ -46,6 +47,14 @@ export class ConnectionController {
   @Get(":id")
   detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ConnectionPublic> {
     return this.service.findOwnedPublic(user.sub, id);
+  }
+
+  @Get(":id/reveal-key")
+  revealKey(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<ConnectionRevealKeyResponse> {
+    return this.service.revealApiKey(user.sub, id);
   }
 
   @Patch(":id")

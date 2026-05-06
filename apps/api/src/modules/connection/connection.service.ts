@@ -109,6 +109,17 @@ export class ConnectionService {
   }
 
   /**
+   * Owner-only — exposes the decrypted apiKey for UI affordances that need
+   * the plaintext (currently: benchmark detail page Request details panel).
+   * Throws Forbidden / NotFound through `findOwnedRow` for unauthorized or
+   * missing ids.
+   */
+  async revealApiKey(userId: string, id: string): Promise<{ apiKey: string }> {
+    const row = await this.findOwnedRow(userId, id);
+    return { apiKey: decrypt(row.apiKeyCipher, this.key) };
+  }
+
+  /**
    * INTERNAL — not exposed via HTTP. Used by playground/load-test/e2e/benchmark
    * services to obtain decrypted credentials for an upstream call.
    */
