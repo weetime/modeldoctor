@@ -286,6 +286,12 @@
     "empty": {
       "title": "暂无报告数据",
       "body": "选定时间范围内没有基准测试。"
+    },
+    "detail": {
+      "timeseries": {
+        "title": "p95 时间序列",
+        "empty": "数据点不足"
+      }
     }
   }
 }

@@ -286,6 +286,12 @@
     "empty": {
       "title": "No report data",
       "body": "No benchmarks within the selected window."
+    },
+    "detail": {
+      "timeseries": {
+        "title": "p95 over time",
+        "empty": "Not enough data"
+      }
     }
   }
 }
