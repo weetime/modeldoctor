@@ -17,7 +17,7 @@ test("Endpoint Reports: empty state on fresh DB; sidebar entry navigates here", 
   });
 
   // Sidebar entry navigates here.
-  await page.getByRole("link", { name: /Endpoint Reports|端点报告/i }).click();
+  await page.getByRole("link", { name: /Performance Trends|性能趋势/i }).click();
   await expect(page).toHaveURL(/\/benchmarks\/reports$/);
 });
 

@@ -261,8 +261,8 @@
     }
   },
   "reports": {
-    "title": "Endpoint Reports",
-    "subtitle": "Per-connection benchmark aggregates over a recent window",
+    "title": "Performance Trends",
+    "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",
     "ranges": {
       "7d": "Last 7 days",
