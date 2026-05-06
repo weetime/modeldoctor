@@ -22,8 +22,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
+import { RequestDetailsSection } from "./RequestDetailsSection";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
@@ -176,7 +178,13 @@ export function BenchmarkDetailPage() {
         connectionId: benchmark.connectionId,
         name: newName,
         description: benchmark.description ?? undefined,
-        params: benchmark.params,
+        params:
+          benchmark.tool === "vegeta"
+            ? (migrateVegetaParams(
+                benchmark.params as Parameters<typeof migrateVegetaParams>[0],
+                null,
+              ) as unknown as Record<string, unknown>)
+            : benchmark.params,
       });
       toast.success(t("detail.rerun.success", { name: next.name }));
       navigate(`/benchmarks/${next.id}`);
@@ -262,6 +270,11 @@ export function BenchmarkDetailPage() {
             {benchmark.baselineId && (
               <section>
                 <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
+              </section>
+            )}
+            {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
+              <section>
+                <RequestDetailsSection benchmark={benchmark} />
               </section>
             )}
             <section>
