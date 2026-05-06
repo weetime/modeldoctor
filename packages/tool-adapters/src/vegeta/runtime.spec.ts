@@ -88,6 +88,41 @@ describe("vegeta.buildCommand", () => {
     });
     expect(r.argv[2]).toContain("vegeta encode -to=json < attack.bin > attack.ndjson");
   });
+
+  it("uses params.path verbatim (overrides apiType-derived default)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "embeddings",
+        rate: 10,
+        duration: 30,
+        path: "/embeddings",
+        body: '{"model":"bge-m3","input":"hi"}',
+      },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["targets.txt"]).toContain("POST http://localhost:8000/embeddings");
+    expect(r.inputFiles?.["targets.txt"]).not.toContain("/v1/embeddings");
+  });
+
+  it("uses params.body verbatim (no model substitution from connection)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "embeddings",
+        rate: 10,
+        duration: 30,
+        path: "/v1/embeddings",
+        body: '{"model":"OVERRIDE","input":"custom"}',
+      },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["request.json"]).toBe('{"model":"OVERRIDE","input":"custom"}');
+    // connection.model "Qwen2.5-0.5B-Instruct" should NOT have been re-injected.
+    expect(r.inputFiles?.["request.json"]).not.toContain("Qwen2.5");
+  });
 });
 
 describe("vegeta.parseProgress", () => {

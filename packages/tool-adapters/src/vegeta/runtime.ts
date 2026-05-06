@@ -6,7 +6,7 @@ import type {
 } from "../core/interface.js";
 import { type VegetaParams, type VegetaReport, vegetaReportSchema } from "./schema.js";
 
-const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
+export const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
   chat: "/v1/chat/completions",
   "chat-vision": "/v1/chat/completions",
   "chat-audio": "/v1/chat/completions",
@@ -15,7 +15,7 @@ const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
   images: "/v1/images/generations",
 };
 
-const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) => string> = {
+export const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) => string> = {
   chat: (m) => JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
   "chat-vision": (m) =>
     JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
@@ -27,8 +27,7 @@ const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) => strin
 
 export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommandResult {
   const { params, connection } = plan;
-  const path = API_TYPE_TO_PATH[params.apiType];
-  let url = connection.baseUrl + path;
+  let url = connection.baseUrl + params.path;
 
   // Append queryParams (one "k=v" per non-empty line)
   if (connection.queryParams.trim()) {
@@ -51,7 +50,7 @@ export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommand
     extraHeaders = lines.map((h) => `\n${h}`).join("");
   }
 
-  const body = API_TYPE_TO_BODY[params.apiType](connection.model);
+  const body = params.body;
   // vegeta's HTTP-format target file: "METHOD URL\nHeaders\n@bodyfile"
   const targetsTxt = `POST ${url}\nContent-Type: application/json\nAuthorization: Bearer ${connection.apiKey}${extraHeaders}\n@request.json`;
 
