@@ -5,6 +5,9 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   rightSlot?: ReactNode;
+  /** Theme switching now lives in the left sidebar (above 设置), so the
+   * page-header toggle is OFF by default. Pass `showThemeToggle` only on
+   * pages that genuinely need a duplicate (none currently). */
   showThemeToggle?: boolean;
 }
 
@@ -12,7 +15,7 @@ export function PageHeader({
   title,
   subtitle,
   rightSlot,
-  showThemeToggle = true,
+  showThemeToggle = false,
 }: PageHeaderProps) {
   return (
     <header className="border-b border-border bg-background">

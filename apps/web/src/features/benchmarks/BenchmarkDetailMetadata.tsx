@@ -2,6 +2,7 @@ import type { Benchmark } from "@modeldoctor/contracts";
 import { format, formatDistanceStrict } from "date-fns";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { StatusBadge } from "./status-display";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -19,7 +20,9 @@ export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark })
     <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
       <Row label={t("detail.metadata.scenario")}>{benchmark.scenario}</Row>
       <Row label={t("detail.metadata.tool")}>{benchmark.tool}</Row>
-      <Row label={t("detail.metadata.status")}>{benchmark.status}</Row>
+      <Row label={t("detail.metadata.status")}>
+        <StatusBadge status={benchmark.status} />
+      </Row>
       <Row label={t("detail.metadata.connection")}>
         {benchmark.connection?.name ?? t("detail.metadata.connectionMissing")}
       </Row>

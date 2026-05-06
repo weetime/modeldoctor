@@ -2,17 +2,23 @@
   "title": "基准测试历史",
   "subtitle": "按时间倒序展示历次基准测试",
   "actions": {
-    "new": "新建基准测试",
+    "new": "新建",
     "cancel": "取消",
     "submit": "提交"
   },
   "create": {
-    "title": "新建基准测试",
-    "subtitle": "配置基准测试或负载测试参数，然后提交",
+    "title": "新建",
+    "titleByScenario": {
+      "inference": "新建推理性能基准",
+      "capacity": "新建容量规划",
+      "gateway": "新建网关压测"
+    },
+    "subtitle": "配置参数后提交",
     "sections": {
       "endpoint": "接入点",
       "tool": "工具",
-      "metadata": "基准测试详情",
+      "target": "目标",
+      "metadata": "基本信息",
       "parameters": "参数"
     },
     "fields": {
@@ -25,10 +31,29 @@
       "vegeta": "vegeta",
       "genai-perf": "genai-perf"
     },
+    "toolDescriptions": {
+      "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
+      "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
+      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings"
+    },
     "errors": {
       "submitFailed": "提交基准测试失败"
     },
-    "submitted": "基准测试「{{name}}」已提交"
+    "submitted": "基准测试「{{name}}」已提交",
+    "unsupportedToolForCategory": "不支持 {{category}} 类型连接",
+    "toolUnsupported": {
+      "title": "{{tool}} 不支持 {{category}} 类型连接",
+      "suggestSwitch": "请改用 {{alternatives}} 继续",
+      "suggestChangeConnection": "请更换为兼容的连接，或选择其他场景"
+    }
+  },
+  "status": {
+    "pending": "等待中",
+    "submitted": "已提交",
+    "running": "运行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "canceled": "已取消"
   },
   "filters": {
     "tool": "工具",
@@ -38,6 +63,7 @@
     "baselineRef": "对比某个基线",
     "createdAfter": "起",
     "createdBefore": "止",
+    "clearRange": "清除时间范围",
     "search": "按名称或备注搜索",
     "any": "全部",
     "clear": "清除筛选"
@@ -49,7 +75,21 @@
     "connection": "Connection",
     "status": "状态",
     "p95": "p95 (ms)",
-    "errorRate": "错误率"
+    "errorRate": "错误率",
+    "actions": "操作"
+  },
+  "rowActions": {
+    "viewDetail": "详情",
+    "rerun": "重跑",
+    "more": "更多",
+    "delete": "删除",
+    "saveAsTemplate": {
+      "label": "保存为模板",
+      "success": "已保存为模板「{{name}}」",
+      "errors": {
+        "generic": "保存为模板失败"
+      }
+    }
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
@@ -160,6 +200,26 @@
       "title": "vs 基准",
       "loading": "加载基准中…",
       "loadError": "无法加载基准用于对比"
+    },
+    "requestDetails": {
+      "title": "请求详情",
+      "method": "方法",
+      "url": "URL",
+      "headers": "请求头",
+      "body": "请求体",
+      "params": "运行参数",
+      "paramKeys": {
+        "apiType": "API 类型",
+        "rate": "速率（req/s）",
+        "duration": "时长（s）",
+        "path": "Path"
+      },
+      "copyCurl": "复制为 cURL",
+      "copySuccess": "已复制到剪贴板",
+      "copyError": "复制失败：剪贴板权限被拒绝",
+      "hint": "连接信息（baseUrl / apiKey / Headers / queryParams）来自当前连接配置；如该连接被修改，本次压测实际发送的可能不同",
+      "connectionMissing": "连接已删除，无法解析 URL / 凭证",
+      "loading": "加载中…"
     }
   },
   "compare": {

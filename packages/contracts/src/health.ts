@@ -8,10 +8,3 @@ export const HealthResponseSchema = z.object({
   details: z.record(z.object({ status: z.string() })).optional(),
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-
-export const CheckVegetaResponseSchema = z.object({
-  installed: z.boolean(),
-  message: z.string(),
-  path: z.string().nullable(),
-});
-export type CheckVegetaResponse = z.infer<typeof CheckVegetaResponseSchema>;

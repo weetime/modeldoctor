@@ -16,8 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useConnections } from "@/features/connections/queries";
+import { GENAI_PERF_CATEGORY_DEFAULTS } from "@modeldoctor/tool-adapters/schemas";
 import type { GenaiPerfParams } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 const ENDPOINT_TYPES: GenaiPerfParams["endpointType"][] = [
@@ -34,6 +36,23 @@ interface GenaiPerfParamsFormProps {
 export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsFormProps = {}) {
   const { control, register, setValue } = useFormContext();
   const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` }) as boolean | undefined;
+
+  const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
+  const connections = useConnections();
+  const connection = connectionId
+    ? connections.data?.find((c) => c.id === connectionId)
+    : undefined;
+
+  const lastConnectionId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!connection) return;
+    if (lastConnectionId.current === connection.id) return;
+    lastConnectionId.current = connection.id;
+    const def = GENAI_PERF_CATEGORY_DEFAULTS[connection.category];
+    if ("endpointType" in def) {
+      setValue(`${fieldPrefix}.endpointType`, def.endpointType, { shouldDirty: false });
+    }
+  }, [connection, fieldPrefix, setValue]);
 
   const idPrefix = useId();
   const ids = {

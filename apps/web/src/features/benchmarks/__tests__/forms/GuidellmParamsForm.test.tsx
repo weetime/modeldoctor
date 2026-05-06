@@ -1,33 +1,45 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { guidellmParamsSchema } from "@modeldoctor/tool-adapters/schemas";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { GuidellmParamsForm } from "../../forms/GuidellmParamsForm";
 
-const wrapperSchema = z.object({ params: guidellmParamsSchema });
+vi.mock("@/lib/api-client", () => ({
+  api: { get: vi.fn() },
+}));
+
+const simpleSchema = z.object({ params: guidellmParamsSchema });
+
+const defaultParams = {
+  profile: "throughput" as const,
+  apiType: "chat" as const,
+  datasetName: "random" as const,
+  datasetInputTokens: 1024,
+  datasetOutputTokens: 128,
+  rateType: "constant" as const,
+  requestRate: 0,
+  totalRequests: 1000,
+  maxDurationSeconds: 1800,
+  maxConcurrency: 100,
+  validateBackend: false,
+};
 
 function Wrapper({ children, defaults }: { children: React.ReactNode; defaults?: unknown }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const form = useForm({
-    resolver: zodResolver(wrapperSchema),
+    resolver: zodResolver(simpleSchema),
     defaultValues: {
-      params: defaults ?? {
-        profile: "throughput",
-        apiType: "chat",
-        datasetName: "random",
-        datasetInputTokens: 1024,
-        datasetOutputTokens: 128,
-        rateType: "constant",
-        requestRate: 0,
-        totalRequests: 1000,
-        maxDurationSeconds: 1800,
-        maxConcurrency: 100,
-        validateBackend: false,
-      },
+      params: defaults ?? defaultParams,
     },
   });
-  return <FormProvider {...form}>{children}</FormProvider>;
+  return (
+    <QueryClientProvider client={qc}>
+      <FormProvider {...form}>{children}</FormProvider>
+    </QueryClientProvider>
+  );
 }
 
 describe("GuidellmParamsForm", () => {
@@ -100,3 +112,6 @@ describe("GuidellmParamsForm", () => {
     expect(screen.getByLabelText(/max concurrency/i)).toBeInTheDocument();
   });
 });
+
+// Category-mismatch warning moved to <ToolUnsupportedNotice>, rendered by
+// ToolParamsForm wrapper. See ToolParamsForm.test.tsx for that coverage.

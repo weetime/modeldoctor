@@ -14,7 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
+import { useConnection } from "@/features/connections/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
+import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Loader2, RefreshCw, SearchX } from "lucide-react";
@@ -24,6 +26,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
+import { RequestDetailsSection } from "./RequestDetailsSection";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
@@ -99,6 +102,10 @@ export function BenchmarkDetailPage() {
   const { t } = useTranslation("benchmarks");
   const { id } = useParams<{ id: string }>();
   const { data: benchmark, isLoading, isError, error } = useBenchmarkDetail(id ?? "");
+  // Loaded eagerly so the rerun handler can substitute the current
+  // connection model into legacy params (those that lack `body`). This
+  // also primes the cache for the RequestDetailsSection rendered below.
+  const { data: rerunConnection } = useConnection(benchmark?.connectionId ?? null);
   const qc = useQueryClient();
 
   const [setOpen, setSetOpen] = useState(false);
@@ -176,7 +183,13 @@ export function BenchmarkDetailPage() {
         connectionId: benchmark.connectionId,
         name: newName,
         description: benchmark.description ?? undefined,
-        params: benchmark.params,
+        params:
+          benchmark.tool === "vegeta"
+            ? (migrateVegetaParams(
+                benchmark.params as Parameters<typeof migrateVegetaParams>[0],
+                rerunConnection?.model ?? null,
+              ) as unknown as Record<string, unknown>)
+            : benchmark.params,
       });
       toast.success(t("detail.rerun.success", { name: next.name }));
       navigate(`/benchmarks/${next.id}`);
@@ -264,6 +277,11 @@ export function BenchmarkDetailPage() {
                 <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
               </section>
             )}
+            {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
+              <section>
+                <RequestDetailsSection benchmark={benchmark} />
+              </section>
+            )}
             <section>
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
               <ReportSection benchmark={benchmark} />
@@ -334,7 +352,9 @@ export function BenchmarkDetailPage() {
                   onSuccess: () => {
                     setDeleteOpen(false);
                     toast.success(t("detail.delete.success"));
-                    navigate("/benchmarks");
+                    // Mirror "返回列表" — keep the user in the same scenario
+                    // tab they came from, not the default inference list.
+                    navigate(`/benchmarks/${benchmark.scenario}`);
                   },
                   onError: () => {
                     toast.error(t("detail.delete.errors.generic"));

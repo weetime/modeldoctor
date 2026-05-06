@@ -10,10 +10,6 @@
   },
   "environment": {
     "title": "Environment",
-    "vegeta": "Vegeta",
-    "vegetaCheck": "Check Vegeta",
-    "vegetaInstalled": "Installed at {{path}}",
-    "vegetaMissing": "Vegeta is not installed. Install via:",
     "version": "Server version",
     "buildMode": "Build mode"
   },

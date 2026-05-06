@@ -131,29 +131,48 @@ export function ConnectionPicker({
           onValueChange={onSelectValue}
         >
           <SelectTrigger className={triggerClassName}>
-            <SelectValue placeholder={t("endpoint.loadFromSaved")} />
+            <SelectValue placeholder={t("endpoint.loadFromSaved")}>
+              {selectedConnectionId === MANUAL || (allowManual && !selectedConnectionId)
+                ? t("endpoint.manual")
+                : selectedConnectionId
+                  ? (connectionList.find((c) => c.id === selectedConnectionId)?.name ?? "")
+                  : ""}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {allowManual ? <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem> : null}
             {connectionList.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
+              <SelectItem key={c.id} value={c.id} className="py-2">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-baseline gap-2 text-sm">
+                    <span className="font-medium">{c.name}</span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">{c.model}</span>
+                  </div>
+                  <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
+                </div>
               </SelectItem>
             ))}
             <SelectSeparator />
             <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setCurlOpen((v) => !v)}
-          className="shrink-0"
-        >
-          <ClipboardPaste className="h-3.5 w-3.5" />
-          <span className="ml-1">{t("endpoint.pasteCurl")}</span>
-        </Button>
+        {/* Inline cURL-paste button only when the consumer asked for the
+         * onCurlParsed flow (端点检测). The default path opens
+         * ConnectionDialog, which has its own cURL-paste section, so a
+         * second affordance here would be redundant. */}
+        {onCurlParsed ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setCurlOpen((v) => !v)}
+            className="shrink-0"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            <span className="ml-1">{t("endpoint.pasteCurl")}</span>
+          </Button>
+        ) : null}
       </div>
 
       {curlOpen ? (

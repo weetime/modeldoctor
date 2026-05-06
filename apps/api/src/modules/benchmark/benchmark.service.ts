@@ -334,7 +334,14 @@ function toContract(row: BenchmarkWithRelations): Benchmark {
     id: row.id,
     userId: row.userId,
     connectionId: row.connectionId,
-    connection: row.connection ? { id: row.connection.id, name: row.connection.name } : null,
+    connection: row.connection
+      ? {
+          id: row.connection.id,
+          name: row.connection.name,
+          model: row.connection.model,
+          baseUrl: row.connection.baseUrl,
+        }
+      : null,
     scenario: row.scenario as Benchmark["scenario"],
     tool: row.tool as Benchmark["tool"],
     toolVersion: row.toolVersion,

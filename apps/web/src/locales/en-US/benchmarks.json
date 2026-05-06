@@ -2,17 +2,23 @@
   "title": "Benchmark History",
   "subtitle": "Past benchmark runs, newest first",
   "actions": {
-    "new": "New Benchmark",
+    "new": "New",
     "cancel": "Cancel",
     "submit": "Submit"
   },
   "create": {
-    "title": "New Benchmark",
-    "subtitle": "Configure a benchmark or load test, then submit",
+    "title": "New",
+    "titleByScenario": {
+      "inference": "New Inference Benchmark",
+      "capacity": "New Capacity Plan",
+      "gateway": "New Gateway Test"
+    },
+    "subtitle": "Configure parameters, then submit",
     "sections": {
       "endpoint": "Endpoint",
       "tool": "Tool",
-      "metadata": "Benchmark details",
+      "target": "Target",
+      "metadata": "Basic info",
       "parameters": "Parameters"
     },
     "fields": {
@@ -25,10 +31,29 @@
       "vegeta": "vegeta",
       "genai-perf": "genai-perf"
     },
+    "toolDescriptions": {
+      "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
+      "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
+      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings"
+    },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
     },
-    "submitted": "Benchmark \"{{name}}\" submitted"
+    "submitted": "Benchmark \"{{name}}\" submitted",
+    "unsupportedToolForCategory": "Does not support '{{category}}' connections",
+    "toolUnsupported": {
+      "title": "{{tool}} does not support '{{category}}' connections",
+      "suggestSwitch": "Switch to {{alternatives}} to continue",
+      "suggestChangeConnection": "Pick a compatible connection, or choose a different scenario"
+    }
+  },
+  "status": {
+    "pending": "Pending",
+    "submitted": "Submitted",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "canceled": "Canceled"
   },
   "filters": {
     "tool": "Tool",
@@ -38,6 +63,7 @@
     "baselineRef": "References a baseline",
     "createdAfter": "From",
     "createdBefore": "Until",
+    "clearRange": "Clear date range",
     "search": "Search by name or description",
     "any": "Any",
     "clear": "Clear filters"
@@ -49,7 +75,21 @@
     "connection": "Connection",
     "status": "Status",
     "p95": "p95 (ms)",
-    "errorRate": "Error rate"
+    "errorRate": "Error rate",
+    "actions": "Actions"
+  },
+  "rowActions": {
+    "viewDetail": "Detail",
+    "rerun": "Rerun",
+    "more": "More",
+    "delete": "Delete",
+    "saveAsTemplate": {
+      "label": "Save as template",
+      "success": "Saved as template \"{{name}}\"",
+      "errors": {
+        "generic": "Failed to save as template"
+      }
+    }
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
@@ -160,6 +200,26 @@
       "title": "vs baseline",
       "loading": "Loading baseline…",
       "loadError": "Could not load baseline for comparison"
+    },
+    "requestDetails": {
+      "title": "Request details",
+      "method": "Method",
+      "url": "URL",
+      "headers": "Headers",
+      "body": "Body",
+      "params": "Run params",
+      "paramKeys": {
+        "apiType": "API type",
+        "rate": "Rate (req/s)",
+        "duration": "Duration (s)",
+        "path": "Path"
+      },
+      "copyCurl": "Copy as cURL",
+      "copySuccess": "Copied to clipboard",
+      "copyError": "Copy failed: clipboard permission denied",
+      "hint": "Connection settings (baseUrl / apiKey / headers / queryParams) reflect the live connection; if it has been edited since this benchmark ran, what was actually sent may differ",
+      "connectionMissing": "Connection deleted — URL and credentials cannot be resolved",
+      "loading": "Loading…"
     }
   },
   "compare": {

@@ -1,7 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
-import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -20,17 +20,42 @@ import {
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
+import {
+  TOOL_DEFAULTS,
+  ToolParamsForm,
+  ToolSelectorField,
+  useToolUnsupported,
+} from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
 
-export function BenchmarkCreatePage() {
+/** Submit row — split out so it can use the same useFormContext + useToolUnsupported as the rest of the form. */
+function SubmitRow({
+  scenario,
+  pending,
+  onCancel,
+}: { scenario: ScenarioId; pending: boolean; onCancel: () => void }) {
   const { t } = useTranslation("benchmarks");
   const { t: tc } = useTranslation("common");
+  const { formState } = useFormContext();
+  const unsupported = useToolUnsupported(scenario);
+  return (
+    <FormActions
+      onCancel={onCancel}
+      cancelLabel={tc("actions.cancel")}
+      submitLabel={t("actions.submit")}
+      disabled={!formState.isValid || unsupported !== null}
+      pending={pending}
+    />
+  );
+}
+
+export function BenchmarkCreatePage() {
+  const { t } = useTranslation("benchmarks");
   const navigate = useNavigate();
   const createMut = useCreateBenchmark();
 
@@ -79,77 +104,103 @@ export function BenchmarkCreatePage() {
 
   return (
     <>
-      <PageHeader title={t("create.title")} subtitle={t("create.subtitle")} />
+      <PageHeader title={t(`create.titleByScenario.${scenario}`)} subtitle={t("create.subtitle")} />
       <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
-            <FormSection title={t("create.sections.endpoint")}>
-              <FormField
-                control={form.control}
-                name="connectionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>
-                      {t("create.fields.connection", { defaultValue: "Connection" })}
-                    </FormLabel>
-                    <FormControl>
-                      <ConnectionPicker
-                        selectedConnectionId={field.value || null}
-                        onSelect={(id) =>
-                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
+            {/* Top row: 基本信息 (left) + 目标 (right) — both info-light, paired
+             * for 2-col on md+. On small screens they stack naturally. */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("create.sections.metadata")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("create.fields.name")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("create.fields.description")}</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value === "" ? undefined : e.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-            <ToolParamsEditor scenario={scenario} />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("create.sections.target")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="connectionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>
+                          {t("create.fields.connection", { defaultValue: "Connection" })}
+                        </FormLabel>
+                        <FormControl>
+                          <ConnectionPicker
+                            selectedConnectionId={field.value || null}
+                            onSelect={(id) =>
+                              form.setValue("connectionId", id ?? "", { shouldValidate: true })
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <ToolSelectorField scenario={scenario} />
+                </CardContent>
+              </Card>
+            </div>
 
-            <FormSection title={t("create.sections.metadata")}>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("create.fields.name")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("create.fields.description")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(e.target.value === "" ? undefined : e.target.value)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("create.sections.parameters")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ToolParamsForm scenario={scenario} />
+              </CardContent>
+            </Card>
 
-            <FormActions
-              onCancel={() => navigate("/benchmarks")}
-              cancelLabel={tc("actions.cancel")}
-              submitLabel={t("actions.submit")}
-              disabled={!form.formState.isValid}
+            <SubmitRow
+              scenario={scenario}
               pending={createMut.isPending}
+              onCancel={() => navigate("/benchmarks")}
             />
           </form>
         </Form>

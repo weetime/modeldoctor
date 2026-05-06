@@ -21,6 +21,37 @@ vi.mock("@/lib/api-client", () => {
   return { ApiError, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn() } };
 });
 
+// Stub useConnection so it never fires api.get — the polling test counts
+// api.get calls precisely, and the connection fetch would throw off those
+// counts. The rerun-related tests only care that migrateVegetaParams gets
+// the right model, which is covered separately.
+vi.mock("@/features/connections/queries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/connections/queries")>();
+  return {
+    ...actual,
+    useConnection: () => ({
+      data: {
+        id: "c1",
+        userId: "u_1",
+        name: "test-conn",
+        baseUrl: "http://x",
+        apiKeyPreview: "sk-...test",
+        model: "test-model",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat" as const,
+        tags: [],
+        prometheusUrl: null,
+        serverKind: null,
+        tokenizerHfId: null,
+        createdAt: "2026-05-06T00:00:00.000Z",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+      },
+    }),
+    useRevealApiKey: () => ({ data: { apiKey: "sk-test-secret" } }),
+  };
+});
+
 // ECharts uses canvas APIs not present in jsdom; stub the chart components
 // so the new RunChartsSection can render in this page test.
 vi.mock("@/components/charts", () => ({
@@ -48,7 +79,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     id: "r1",
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "vLLM Local" },
+    connection: { id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" },
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
@@ -86,6 +117,11 @@ function Wrapper({ children }: { children: ReactNode }) {
       <TooltipProvider>
         <MemoryRouter initialEntries={["/benchmarks/r1"]}>
           <Routes>
+            {/* Literal scenario route — matches post-delete navigation
+             * `/benchmarks/<scenario>`. React Router v6 prefers literal
+             * over param, so this wins over the `:id` fallback for
+             * /benchmarks/inference even though both could match. */}
+            <Route path="/benchmarks/inference" element={<div>list</div>} />
             <Route path="/benchmarks" element={<div>list</div>} />
             <Route path="/benchmarks/:id" element={children} />
           </Routes>
@@ -177,6 +213,13 @@ describe("BenchmarkDetailPage", () => {
       makeBenchmark({
         scenario: "gateway",
         tool: "vegeta",
+        params: {
+          apiType: "embeddings",
+          rate: 10,
+          duration: 30,
+          path: "/v1/embeddings",
+          body: '{"model":"m","input":"hello"}',
+        },
         summaryMetrics: {
           tool: "vegeta",
           data: {

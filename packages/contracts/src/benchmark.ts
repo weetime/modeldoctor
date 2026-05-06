@@ -21,6 +21,8 @@ export type BenchmarkStatus = z.infer<typeof benchmarkStatusSchema>;
 export const benchmarkConnectionRefSchema = z.object({
   id: z.string(),
   name: z.string(),
+  model: z.string(),
+  baseUrl: z.string(),
 });
 export type BenchmarkConnectionRef = z.infer<typeof benchmarkConnectionRefSchema>;
 

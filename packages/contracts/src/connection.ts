@@ -60,3 +60,9 @@ export const listConnectionsResponseSchema = z.object({
   items: z.array(connectionPublicSchema),
 });
 export type ListConnectionsResponse = z.infer<typeof listConnectionsResponseSchema>;
+
+/** Owner-only response from GET /api/connections/:id/reveal-key. */
+export const connectionRevealKeyResponseSchema = z.object({
+  apiKey: z.string().min(1),
+});
+export type ConnectionRevealKeyResponse = z.infer<typeof connectionRevealKeyResponseSchema>;

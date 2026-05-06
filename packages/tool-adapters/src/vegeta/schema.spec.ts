@@ -3,28 +3,49 @@ import { vegetaParamDefaults, vegetaParamsSchema, vegetaReportSchema } from "./s
 
 describe("vegetaParamsSchema", () => {
   it("rejects rate=0", () => {
-    const r = vegetaParamsSchema.safeParse({ apiType: "chat", rate: 0, duration: 30 });
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 0,
+      duration: 30,
+      path: "/v1/chat/completions",
+      body: '{"model":"m","messages":[]}',
+    });
     expect(r.success).toBe(false);
   });
 
   it("rejects duration > 3600", () => {
-    const r = vegetaParamsSchema.safeParse({ apiType: "chat", rate: 10, duration: 3601 });
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 3601,
+      path: "/v1/chat/completions",
+      body: '{"model":"m","messages":[]}',
+    });
     expect(r.success).toBe(false);
   });
 
   it("accepts a typical config", () => {
-    const r = vegetaParamsSchema.safeParse({ apiType: "chat", rate: 10, duration: 60 });
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 60,
+      path: "/v1/chat/completions",
+      body: '{"model":"m","messages":[]}',
+    });
     expect(r.success).toBe(true);
   });
 
-  // M3: paramDefaults real roundtrip test
-  it("paramDefaults parses cleanly and preserves default values", () => {
-    // vegeta defaults are intentionally complete: apiType + rate + duration
-    // covers every required field, so no FE-side gap-filling is needed
-    // (unlike guidellm random-dataset which still requires datasetInputTokens
-    // and datasetOutputTokens). Spread is kept for symmetry with the guidellm
-    // spec's roundtrip pattern.
-    const merged = { ...vegetaParamDefaults };
+  // M3: paramDefaults partial roundtrip test
+  it("paramDefaults parses cleanly and preserves default values when path+body are supplied", () => {
+    // vegetaParamDefaults only covers apiType + rate + duration; path and body
+    // cannot be defaulted statically (they depend on connection.model at
+    // pick-time). FE merges defaults + connection-derived path/body before
+    // submitting. This test simulates that merge.
+    const merged = {
+      ...vegetaParamDefaults,
+      path: "/v1/chat/completions",
+      body: '{"model":"m","messages":[]}',
+    };
     const r = vegetaParamsSchema.safeParse(merged);
     expect(r.success).toBe(true);
     if (r.success) {
@@ -32,6 +53,89 @@ describe("vegetaParamsSchema", () => {
       expect(r.data.rate).toBe(10);
       expect(r.data.duration).toBe(30);
     }
+  });
+
+  it("requires path", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects path without leading slash", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "v1/chat/completions",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts custom path", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v2/foo",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("requires body", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects invalid JSON body", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions",
+      body: "{not json",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects path containing query string or fragment", () => {
+    const r1 = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions?foo=1",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r1.success).toBe(false);
+    const r2 = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions#frag",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r2.success).toBe(false);
+  });
+
+  it("accepts valid JSON body", () => {
+    const r = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions",
+      body: '{"model":"m","messages":[{"role":"user","content":"hi"}]}',
+    });
+    expect(r.success).toBe(true);
   });
 });
 

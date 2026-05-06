@@ -19,11 +19,19 @@ const baseConn = {
   tokenizerHfId: null,
 };
 
+const baseParams = {
+  apiType: "chat" as const,
+  rate: 10,
+  duration: 30,
+  path: "/v1/chat/completions",
+  body: '{"model":"Qwen2.5-0.5B-Instruct","messages":[{"role":"user","content":"hello"}]}',
+};
+
 describe("vegeta.buildCommand", () => {
   it("emits a shell pipeline argv via /bin/sh -c", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -37,7 +45,7 @@ describe("vegeta.buildCommand", () => {
   it("writes targets.txt as inputFile (with apiKey embedded)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -53,7 +61,7 @@ describe("vegeta.buildCommand", () => {
   it("declares output files for report and attack stream", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -64,7 +72,7 @@ describe("vegeta.buildCommand", () => {
   it("declares an attack.ndjson output file for per-request latencies (F3 #88)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -74,11 +82,65 @@ describe("vegeta.buildCommand", () => {
   it("appends 'vegeta encode -to=json' to the shell pipeline (F3 #88)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
     expect(r.argv[2]).toContain("vegeta encode -to=json < attack.bin > attack.ndjson");
+  });
+
+  it("uses params.path verbatim (overrides apiType-derived default)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "embeddings",
+        rate: 10,
+        duration: 30,
+        path: "/embeddings",
+        body: '{"model":"bge-m3","input":"hi"}',
+      },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["targets.txt"]).toContain("POST http://localhost:8000/embeddings");
+    expect(r.inputFiles?.["targets.txt"]).not.toContain("/v1/embeddings");
+  });
+
+  it("strips trailing slash from connection.baseUrl before appending path", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "chat",
+        rate: 10,
+        duration: 30,
+        path: "/v1/chat/completions",
+        body: '{"model":"m","messages":[]}',
+      },
+      connection: { ...baseConn, baseUrl: "http://localhost:8000/" },
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["targets.txt"]).toContain(
+      "POST http://localhost:8000/v1/chat/completions",
+    );
+    expect(r.inputFiles?.["targets.txt"]).not.toContain("//v1/");
+  });
+
+  it("uses params.body verbatim (no model substitution from connection)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "embeddings",
+        rate: 10,
+        duration: 30,
+        path: "/v1/embeddings",
+        body: '{"model":"OVERRIDE","input":"custom"}',
+      },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["request.json"]).toBe('{"model":"OVERRIDE","input":"custom"}');
+    // connection.model "Qwen2.5-0.5B-Instruct" should NOT have been re-injected.
+    expect(r.inputFiles?.["request.json"]).not.toContain("Qwen2.5");
   });
 });
 

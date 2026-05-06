@@ -68,7 +68,7 @@ function makeBenchmark(
     id,
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "vLLM Local" },
+    connection: { id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" },
     scenario: "inference",
     tool,
     toolVersion: null,
@@ -133,7 +133,8 @@ describe("BenchmarkListShell", () => {
     vi.mocked(api.get).mockResolvedValue(ONE_BENCHMARK);
     render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
     expect(await screen.findByText("guidellm")).toBeInTheDocument();
-    expect(screen.getByText("completed")).toBeInTheDocument();
+    // Status now renders via <StatusBadge> with the i18n label.
+    expect(screen.getByText(/Completed|已完成/)).toBeInTheDocument();
     // guidellm: data.e2eLatency.p95 (already ms)
     expect(screen.getByText("491.2")).toBeInTheDocument();
     // guidellm: data.requests.error / data.requests.total = 1/10 = 0.1000
@@ -179,7 +180,8 @@ describe("BenchmarkListShell", () => {
     };
     vi.mocked(api.get).mockResolvedValue(resp);
     render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
-    expect(await screen.findByText("running")).toBeInTheDocument();
+    // <StatusBadge> renders the i18n label for "running".
+    expect(await screen.findByText(/Running|运行中/)).toBeInTheDocument();
     const cells = screen.getAllByRole("cell");
     // last cell is the "→" link; -2 = errorRate, -3 = p95
     expect(cells[cells.length - 2].textContent).toBe("—");

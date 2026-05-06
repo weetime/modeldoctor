@@ -40,3 +40,14 @@ export {
   type ScenarioId,
   type ScenarioConfig,
 } from "./scenarios.js";
+
+export {
+  API_TYPE_TO_BODY as VEGETA_API_TYPE_TO_BODY,
+  API_TYPE_TO_PATH as VEGETA_API_TYPE_TO_PATH,
+} from "./vegeta/runtime.js";
+export { migrateVegetaParams } from "./vegeta/migrate-params.js";
+export {
+  GENAI_PERF_CATEGORY_DEFAULTS,
+  GUIDELLM_CATEGORY_DEFAULTS,
+  VEGETA_CATEGORY_DEFAULTS,
+} from "./category-defaults.js";

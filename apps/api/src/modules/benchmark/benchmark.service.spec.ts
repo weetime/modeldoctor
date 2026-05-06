@@ -66,7 +66,7 @@ function makeBenchmarkRow(over: Partial<BenchmarkWithRelations> = {}): Benchmark
     id: "b1",
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "conn" },
+    connection: { id: "c1", name: "conn", model: "m", baseUrl: "http://x" },
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
