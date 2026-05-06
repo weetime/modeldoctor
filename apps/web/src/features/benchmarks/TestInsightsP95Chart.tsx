@@ -69,12 +69,9 @@ export function TestInsightsP95Chart({ points }: Props) {
 
   if (points.length === 0) {
     return (
-      <div
-        role="status"
-        className="flex h-64 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground"
-      >
+      <output className="flex h-64 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
         {t("reports.detail.timeseries.empty")}
-      </div>
+      </output>
     );
   }
   return <ReactECharts option={option} style={{ height: 256, width: "100%" }} />;

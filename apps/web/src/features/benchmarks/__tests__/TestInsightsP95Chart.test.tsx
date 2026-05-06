@@ -1,7 +1,7 @@
+import i18n from "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
 import { TestInsightsP95Chart } from "../TestInsightsP95Chart";
 
 // echarts-for-react renders an <Echarts /> div in jsdom; we assert via

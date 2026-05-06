@@ -32,12 +32,9 @@ export function TestInsightsRunsTable({ runs }: Props) {
   const { t } = useTranslation("benchmarks");
   if (runs.length === 0) {
     return (
-      <div
-        role="status"
-        className="flex h-32 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground"
-      >
+      <output className="flex h-32 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
         {t("reports.detail.runs.empty")}
-      </div>
+      </output>
     );
   }
   return (
@@ -49,9 +46,7 @@ export function TestInsightsRunsTable({ runs }: Props) {
             <TableHead>{t("reports.detail.runs.columns.createdAt")}</TableHead>
             <TableHead>{t("reports.detail.runs.columns.tool")}</TableHead>
             <TableHead>{t("reports.detail.runs.columns.status")}</TableHead>
-            <TableHead className="text-right">
-              {t("reports.detail.runs.columns.p95")}
-            </TableHead>
+            <TableHead className="text-right">{t("reports.detail.runs.columns.p95")}</TableHead>
             <TableHead className="text-right">
               {t("reports.detail.runs.columns.errorRate")}
             </TableHead>
@@ -61,10 +56,7 @@ export function TestInsightsRunsTable({ runs }: Props) {
           {runs.map((b) => (
             <TableRow key={b.id}>
               <TableCell className="font-medium">
-                <Link
-                  to={`/benchmarks/${b.id}`}
-                  className="hover:text-primary hover:underline"
-                >
+                <Link to={`/benchmarks/${b.id}`} className="hover:text-primary hover:underline">
                   {b.name}
                 </Link>
               </TableCell>

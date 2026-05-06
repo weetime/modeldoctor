@@ -103,9 +103,7 @@ export function EndpointReportsPage() {
                           })}
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        {t("reports.summary.statusBreakdownTooltip")}
-                      </TooltipContent>
+                      <TooltipContent>{t("reports.summary.statusBreakdownTooltip")}</TooltipContent>
                     </Tooltip>
                   </div>
                   <div>

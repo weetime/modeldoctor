@@ -16,10 +16,10 @@ import { ArrowLeft, SearchX } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { readP95Latency } from "./compare/metrics";
-import { useBenchmarkList } from "./queries";
 import { TestInsightsP95Chart } from "./TestInsightsP95Chart";
 import { TestInsightsRunsTable } from "./TestInsightsRunsTable";
+import { readP95Latency } from "./compare/metrics";
+import { useBenchmarkList } from "./queries";
 
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
 
@@ -59,9 +59,7 @@ export function TestInsightsDetailPage() {
       .filter((r) => r.status === "completed")
       .map((r) => {
         const p95 = readP95Latency(r.summaryMetrics);
-        return p95 != null
-          ? { ts: r.createdAt, p95Ms: p95, name: r.name, id: r.id }
-          : null;
+        return p95 != null ? { ts: r.createdAt, p95Ms: p95, name: r.name, id: r.id } : null;
       })
       .filter((x): x is { ts: string; p95Ms: number; name: string; id: string } => x !== null)
       .sort((a, b) => +new Date(a.ts) - +new Date(b.ts));

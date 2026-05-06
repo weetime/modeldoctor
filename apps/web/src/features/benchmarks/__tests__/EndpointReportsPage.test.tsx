@@ -1,5 +1,5 @@
-import i18n from "@/lib/i18n";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import i18n from "@/lib/i18n";
 import type { EndpointReportsResponse } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";

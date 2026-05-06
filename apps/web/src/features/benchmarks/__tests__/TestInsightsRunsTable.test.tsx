@@ -1,9 +1,9 @@
+import i18n from "@/lib/i18n";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import i18n from "@/lib/i18n";
 import { TestInsightsRunsTable } from "../TestInsightsRunsTable";
 
 function withProviders(node: React.ReactNode) {
@@ -76,9 +76,7 @@ describe("TestInsightsRunsTable", () => {
 
   it("renders dash when summary metrics are absent", () => {
     render(
-      withProviders(
-        <TestInsightsRunsTable runs={[makeRun({ id: "b1", summaryMetrics: null })]} />,
-      ),
+      withProviders(<TestInsightsRunsTable runs={[makeRun({ id: "b1", summaryMetrics: null })]} />),
     );
     // Find the table cell containing "—". It appears in p95 + errorRate columns.
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
@@ -86,6 +84,8 @@ describe("TestInsightsRunsTable", () => {
 
   it("renders empty placeholder when runs is []", () => {
     render(withProviders(<TestInsightsRunsTable runs={[]} />));
-    expect(screen.getByText(/选定时间范围内没有基准测试|No benchmarks within/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/选定时间范围内没有基准测试|No benchmarks within/i),
+    ).toBeInTheDocument();
   });
 });
