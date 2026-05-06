@@ -29,17 +29,22 @@ kubectl auth can-i create jobs --as=system:serviceaccount:modeldoctor:modeldocto
 k3d cluster create modeldoctor
 kubectl create namespace modeldoctor
 kubectl apply -f deploy/k8s/rbac.yaml
-docker pull gpustack/benchmark-runner:v0.0.4
-k3d image import gpustack/benchmark-runner:v0.0.4 -c modeldoctor
+
+# Build the three runner images with the current source tree's git SHA and
+# import them into k3d. The script prints the matching RUNNER_IMAGE_*
+# tags to paste into your `.env` (one per tool).
+./tools/build-runner-images.sh --import k3d --cluster modeldoctor
 ```
 
-Then in your API env:
+Then in your API env (paste the tags printed by the script):
 
 ```bash
-export BENCHMARK_DRIVER=k8s
-export BENCHMARK_RUNNER_IMAGE=gpustack/benchmark-runner:v0.0.4
+# K8s is the only execution mode (#101) — no driver toggle.
 export BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
 export BENCHMARK_CALLBACK_URL=http://host.k3d.internal:3001
+export RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:<sha-from-script>
+export RUNNER_IMAGE_VEGETA=md-runner-vegeta:<sha-from-script>
+export RUNNER_IMAGE_GENAI_PERF=md-runner-genai-perf:<sha-from-script>
 pnpm -F @modeldoctor/api start:dev
 ```
 

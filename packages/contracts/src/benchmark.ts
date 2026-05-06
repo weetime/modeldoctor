@@ -18,9 +18,6 @@ export const benchmarkStatusSchema = z.enum([
 ]);
 export type BenchmarkStatus = z.infer<typeof benchmarkStatusSchema>;
 
-export const benchmarkDriverKindSchema = z.enum(["local", "k8s"]);
-export type BenchmarkDriverKind = z.infer<typeof benchmarkDriverKindSchema>;
-
 export const benchmarkConnectionRefSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -39,7 +36,6 @@ export const benchmarkSchema = z.object({
   scenario: scenarioIdSchema,
   tool: benchmarkToolSchema,
   toolVersion: z.string().nullable(),
-  driverKind: benchmarkDriverKindSchema,
 
   name: z.string(),
   description: z.string().nullable(),

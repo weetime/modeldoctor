@@ -24,7 +24,6 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     scenario: "capacity",
     tool: "guidellm",
     toolVersion: null,
-    driverKind: "local",
     name: "sweep",
     description: null,
     status: "completed",

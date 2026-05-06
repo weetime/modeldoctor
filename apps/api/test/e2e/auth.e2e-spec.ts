@@ -297,7 +297,6 @@ describe("Auth (e2e)", () => {
       userId: adminId,
       scenario: "gateway",
       tool: "vegeta",
-      driverKind: "local",
       name: "admin-run",
       params: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
     });
@@ -307,7 +306,6 @@ describe("Auth (e2e)", () => {
       userId: user2Id,
       scenario: "gateway",
       tool: "vegeta",
-      driverKind: "local",
       name: "user2-run",
       params: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
     });
@@ -341,7 +339,6 @@ describe("Auth (e2e)", () => {
       userId,
       scenario: "gateway",
       tool: "vegeta",
-      driverKind: "local",
       name: "own-run",
       params: { apiType: "chat", apiBaseUrl: "http://own-run", model: "m", rate: 1, duration: 1 },
     });

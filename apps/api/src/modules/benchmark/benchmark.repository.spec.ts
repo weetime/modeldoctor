@@ -46,7 +46,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: { rate: 10 },
       name: "smoke",
     });
@@ -70,7 +69,6 @@ describe("BenchmarkRepository", () => {
         userId: user.id,
         scenario: i % 2 === 0 ? "inference" : "capacity",
         tool: "guidellm",
-        driverKind: "local",
         name: "test-benchmark",
         params: {},
       });
@@ -99,7 +97,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       name: "test-benchmark",
       params: {},
     });
@@ -107,7 +104,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "vegeta",
-      driverKind: "local",
       name: "test-benchmark",
       params: {},
     });
@@ -125,7 +121,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       name: "test-benchmark",
       params: {},
     });
@@ -153,7 +148,6 @@ describe("BenchmarkRepository", () => {
           userId: user.id,
           scenario: "inference",
           tool: "guidellm",
-          driverKind: "local",
           name: "test-benchmark",
           params: {},
           createdAt: new Date(`2026-04-30T0${i}:00:00Z`),
@@ -183,7 +177,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: {},
       name: "shared-name",
     });
@@ -191,7 +184,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: {},
       name: "shared-name",
     });
@@ -201,7 +193,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: {},
       name: "shared-name",
     });
@@ -211,7 +202,6 @@ describe("BenchmarkRepository", () => {
       userId: user.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: {},
       name: "other-name",
     });
@@ -223,7 +213,6 @@ describe("BenchmarkRepository", () => {
       userId: otherUser.id,
       scenario: "inference",
       tool: "guidellm",
-      driverKind: "local",
       params: {},
       name: "shared-name",
     });

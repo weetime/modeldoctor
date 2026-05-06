@@ -72,7 +72,6 @@ function makeBenchmark(
     scenario: "inference",
     tool,
     toolVersion: null,
-    driverKind: "local",
     name: id,
     description: null,
     status,

@@ -31,7 +31,6 @@ function makeBenchmark(overrides: Partial<PrismaBenchmark> = {}): PrismaBenchmar
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
-    driverKind: "local",
     name: "test-benchmark",
     description: null,
     status: "completed",

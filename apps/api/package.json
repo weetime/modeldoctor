@@ -8,6 +8,7 @@
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:status": "prisma migrate status",
     "db:setup:test": "createdb modeldoctor_test 2>&1 | grep -v 'already exists' || true; psql -d modeldoctor_test -c \"GRANT ALL ON SCHEMA public TO modeldoctor; ALTER DATABASE modeldoctor_test OWNER TO modeldoctor;\" && DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test prisma migrate deploy",
     "db:studio": "prisma studio",
     "start": "node dist/main.js",

@@ -68,7 +68,6 @@
     "metadata": {
       "scenario": "Scenario",
       "tool": "Tool",
-      "driverKind": "Driver",
       "status": "Status",
       "connection": "Connection",
       "connectionMissing": "(deleted)",

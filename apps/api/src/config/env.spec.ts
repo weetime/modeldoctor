@@ -47,6 +47,9 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     });
     expect(env.DATABASE_URL).toBe("postgresql://u:p@h:5432/d");
   });
@@ -76,6 +79,9 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     });
     expect(env.JWT_ACCESS_SECRET).toBe("a".repeat(32));
   });
@@ -172,71 +178,32 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     };
 
-    it("defaults BENCHMARK_DRIVER to subprocess", () => {
+    it("requires RUNNER_IMAGE_GUIDELLM outside test mode", () => {
+      const { RUNNER_IMAGE_GUIDELLM: _omitted, ...rest } = baseDev;
+      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_GUIDELLM/);
+    });
+
+    it("requires RUNNER_IMAGE_VEGETA outside test mode", () => {
+      const { RUNNER_IMAGE_VEGETA: _omitted, ...rest } = baseDev;
+      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_VEGETA/);
+    });
+
+    it("requires RUNNER_IMAGE_GENAI_PERF outside test mode", () => {
+      const { RUNNER_IMAGE_GENAI_PERF: _omitted, ...rest } = baseDev;
+      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_GENAI_PERF/);
+    });
+
+    it("accepts a fully-configured dev env with all three RUNNER_IMAGE_* set", () => {
       const env = validateEnv(baseDev);
-      expect(env.BENCHMARK_DRIVER).toBe("subprocess");
-    });
-
-    it("rejects unknown BENCHMARK_DRIVER values", () => {
-      expect(() => validateEnv({ ...baseDev, BENCHMARK_DRIVER: "bogus" })).toThrow(
-        /BENCHMARK_DRIVER/,
-      );
-    });
-
-    it("requires RUNNER_IMAGE_GUIDELLM when BENCHMARK_DRIVER=k8s", () => {
-      expect(() =>
-        validateEnv({
-          ...baseDev,
-          BENCHMARK_DRIVER: "k8s",
-          RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
-          RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
-        }),
-      ).toThrow(/RUNNER_IMAGE_GUIDELLM/);
-    });
-
-    it("requires RUNNER_IMAGE_VEGETA when BENCHMARK_DRIVER=k8s", () => {
-      expect(() =>
-        validateEnv({
-          ...baseDev,
-          BENCHMARK_DRIVER: "k8s",
-          RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
-          RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
-        }),
-      ).toThrow(/RUNNER_IMAGE_VEGETA/);
-    });
-
-    it("requires RUNNER_IMAGE_GENAI_PERF when BENCHMARK_DRIVER=k8s", () => {
-      expect(() =>
-        validateEnv({
-          ...baseDev,
-          BENCHMARK_DRIVER: "k8s",
-          RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
-          RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
-        }),
-      ).toThrow(/RUNNER_IMAGE_GENAI_PERF/);
-    });
-
-    it("accepts BENCHMARK_DRIVER=k8s when all three RUNNER_IMAGE_* are set", () => {
-      const env = validateEnv({
-        ...baseDev,
-        BENCHMARK_DRIVER: "k8s",
-        RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
-        RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
-        RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
-      });
-      expect(env.BENCHMARK_DRIVER).toBe("k8s");
       expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
-      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:dev2");
-      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:dev2");
-      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:dev2");
-    });
-
-    it("does NOT require RUNNER_IMAGE_* when BENCHMARK_DRIVER=subprocess", () => {
-      const env = validateEnv({ ...baseDev, BENCHMARK_DRIVER: "subprocess" });
-      expect(env.BENCHMARK_DRIVER).toBe("subprocess");
-      expect(env.RUNNER_IMAGE_GUIDELLM).toBeUndefined();
+      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:test");
+      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:test");
+      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:test");
     });
 
     it("defaults BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to 1800", () => {
@@ -260,10 +227,11 @@ describe("validateEnv", () => {
     });
 
     it("does not require benchmark vars in test mode", () => {
-      // Sanity: existing baseTest still passes.
+      // Sanity: minimal `baseTest` still validates without RUNNER_IMAGE_*
+      // (they're only required when NODE_ENV !== "test").
       const env = validateEnv(baseTest);
       expect(env.NODE_ENV).toBe("test");
-      expect(env.BENCHMARK_DRIVER).toBe("subprocess");
+      expect(env.RUNNER_IMAGE_GUIDELLM).toBeUndefined();
     });
   });
 });

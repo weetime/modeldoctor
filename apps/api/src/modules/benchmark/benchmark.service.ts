@@ -38,7 +38,6 @@ export class BenchmarkService {
   private readonly log = new Logger(BenchmarkService.name);
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
-  private readonly driverKind: "local" | "k8s";
 
   constructor(
     private readonly repo: BenchmarkRepository,
@@ -65,10 +64,6 @@ export class BenchmarkService {
       );
     }
     this.callbackUrl = url;
-
-    const driverChoice = (this.config.get("BENCHMARK_DRIVER", { infer: true }) ??
-      "subprocess") as string;
-    this.driverKind = driverChoice === "k8s" ? "k8s" : "local";
   }
 
   async findById(id: string): Promise<Benchmark | null> {
@@ -177,7 +172,6 @@ export class BenchmarkService {
       connectionId: conn.id,
       scenario: req.scenario,
       tool: req.tool,
-      driverKind: this.driverKind,
       name: req.name,
       description: req.description ?? null,
       params: params as Prisma.InputJsonValue,
@@ -224,7 +218,7 @@ export class BenchmarkService {
         tool: row.tool as ToolName,
         buildResult,
         callback: { url: this.callbackUrl, token: callbackToken },
-        image: this.driverKind === "k8s" ? imageForTool(row.tool as ToolName, this.config) : "",
+        image: imageForTool(row.tool as ToolName, this.config),
       });
       handle = result.handle;
     } catch (e) {
@@ -346,7 +340,6 @@ function toContract(row: BenchmarkWithRelations): Benchmark {
     scenario: row.scenario as Benchmark["scenario"],
     tool: row.tool as Benchmark["tool"],
     toolVersion: row.toolVersion,
-    driverKind: row.driverKind as Benchmark["driverKind"],
     name: row.name,
     description: row.description,
     status: row.status as Benchmark["status"],

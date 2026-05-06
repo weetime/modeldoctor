@@ -19,7 +19,6 @@ export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark })
     <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
       <Row label={t("detail.metadata.scenario")}>{benchmark.scenario}</Row>
       <Row label={t("detail.metadata.tool")}>{benchmark.tool}</Row>
-      <Row label={t("detail.metadata.driverKind")}>{benchmark.driverKind}</Row>
       <Row label={t("detail.metadata.status")}>{benchmark.status}</Row>
       <Row label={t("detail.metadata.connection")}>
         {benchmark.connection?.name ?? t("detail.metadata.connectionMissing")}

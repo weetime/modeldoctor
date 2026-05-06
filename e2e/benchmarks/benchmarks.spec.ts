@@ -10,12 +10,11 @@ test.beforeEach(async ({ page }) => {
 
 /**
  * NOTE — running a benchmark end-to-end isn't viable in this e2e env:
- * `BENCHMARK_DRIVER=subprocess` (the default) tries to actually spawn
- * vegeta / guidellm / genai-perf, which aren't installed inside the
- * test container. So the smoke covers the FORM integration (connection
- * picker, params, validation) and asserts the api was called with the
- * right shape, then accepts the runner's 500 as known. Replacing the
- * driver with a noop is its own task.
+ * the K8s job driver (the only runner since #101) needs a kube cluster
+ * + runner images, neither available in test. So the smoke covers the
+ * FORM integration (connection picker, params, validation) and asserts
+ * the api was called with the right shape, then accepts the runner's
+ * 500 as known.
  */
 
 test("create benchmark form: connection picker + tool params + submit hits api", async ({
