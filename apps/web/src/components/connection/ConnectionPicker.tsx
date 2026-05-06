@@ -157,16 +157,22 @@ export function ConnectionPicker({
             <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setCurlOpen((v) => !v)}
-          className="shrink-0"
-        >
-          <ClipboardPaste className="h-3.5 w-3.5" />
-          <span className="ml-1">{t("endpoint.pasteCurl")}</span>
-        </Button>
+        {/* Inline cURL-paste button only when the consumer asked for the
+         * onCurlParsed flow (端点检测). The default path opens
+         * ConnectionDialog, which has its own cURL-paste section, so a
+         * second affordance here would be redundant. */}
+        {onCurlParsed ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setCurlOpen((v) => !v)}
+            className="shrink-0"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            <span className="ml-1">{t("endpoint.pasteCurl")}</span>
+          </Button>
+        ) : null}
       </div>
 
       {curlOpen ? (

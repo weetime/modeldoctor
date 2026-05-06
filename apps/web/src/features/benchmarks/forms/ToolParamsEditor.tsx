@@ -18,7 +18,7 @@ import {
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { SCENARIOS } from "../scenarios";
@@ -99,6 +99,30 @@ export function ToolSelectorField({
       [paramsFieldName]: TOOL_DEFAULTS[next] as Record<string, unknown>,
     });
   }
+
+  // Auto-switch tool when the picked connection is incompatible with the
+  // current selection but another tool in this scenario does support it.
+  // Falls through (no switch) when the user is in display-only mode, when
+  // there's only one tool in the scenario, or when no tool supports the
+  // connection's category — the latter case surfaces via <ToolUnsupportedNotice>.
+  // useRef tracks the last connection-id we acted on so user-driven tool
+  // changes after the auto-switch don't get clobbered.
+  const lastAutoSwitchConn = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (displayTool) return;
+    if (!connection) return;
+    if (availableTools.length <= 1) return;
+    if (lastAutoSwitchConn.current === connection.id && !isToolUnsupported(tool)) return;
+    if (!isToolUnsupported(tool)) {
+      lastAutoSwitchConn.current = connection.id;
+      return;
+    }
+    const supported = availableTools.find((tn) => !isToolUnsupported(tn));
+    if (!supported) return;
+    lastAutoSwitchConn.current = connection.id;
+    handleToolChange(supported);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: handleToolChange / isToolUnsupported are stable enough for this effect; we only want to react to connection or tool changes.
+  }, [connection, tool, displayTool, availableTools]);
 
   return (
     <div className="space-y-2">
