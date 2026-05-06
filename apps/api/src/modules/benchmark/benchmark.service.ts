@@ -357,6 +357,10 @@ export class BenchmarkService {
       // health score for unrelated reasons.
       const completed = runs.filter((r) => r.status === "completed");
       const failed = runs.filter((r) => r.status === "failed");
+      const canceled = runs.filter((r) => r.status === "canceled").length;
+      const inProgress = runs.filter(
+        (r) => r.status === "pending" || r.status === "submitted" || r.status === "running",
+      ).length;
       const successRateDenominator = completed.length + failed.length;
 
       const successRate =
@@ -395,6 +399,12 @@ export class BenchmarkService {
             "chat") as EndpointReport["connection"]["category"],
         },
         totalRuns: runs.length,
+        statusCounts: {
+          completed: completed.length,
+          failed: failed.length,
+          canceled,
+          inProgress,
+        },
         successRate,
         p95Latency,
         latestRun,
