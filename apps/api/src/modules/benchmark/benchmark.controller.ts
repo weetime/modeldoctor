@@ -2,9 +2,12 @@ import {
   type Benchmark,
   type BenchmarkChartsResponse,
   type CreateBenchmarkRequest,
+  type EndpointReportRange,
+  type EndpointReportsResponse,
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
   createBenchmarkRequestSchema,
+  endpointReportRangeSchema,
   listBenchmarksQuerySchema,
 } from "@modeldoctor/contracts";
 import {
@@ -47,6 +50,15 @@ export class BenchmarkController {
       });
     }
     return this.service.list(query, query.scope === "all" ? undefined : user.sub);
+  }
+
+  @Get("reports/by-connection")
+  reportsByConnection(
+    @CurrentUser() user: JwtPayload,
+    @Query("range", new ZodValidationPipe(endpointReportRangeSchema.optional()))
+    range: EndpointReportRange | undefined,
+  ): Promise<EndpointReportsResponse> {
+    return this.service.getByConnectionReports(user.sub, range ?? "30d");
   }
 
   @Get(":id")

@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
@@ -590,5 +591,62 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
     await expect(
       controller.getCharts({ sub: user.id, roles: [] } as never, "nonexistent-id"),
     ).rejects.toThrow(/not found/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lightweight mock-service factory for unit tests that don't need a real DB
+// ---------------------------------------------------------------------------
+function makeMockService() {
+  return {
+    list: vi.fn(),
+    findByIdOrFail: vi.fn(),
+    create: vi.fn(),
+    cancel: vi.fn(),
+    delete: vi.fn(),
+    getByConnectionReports: vi.fn(),
+  };
+}
+
+const USER: JwtPayload = { sub: "u_1", email: "alice@example.com", roles: [] };
+
+describe("BenchmarkController.reportsByConnection", () => {
+  let controller: BenchmarkController;
+  let svc: ReturnType<typeof makeMockService>;
+
+  beforeEach(async () => {
+    svc = makeMockService();
+    const moduleRef = await Test.createTestingModule({
+      controllers: [BenchmarkController],
+      providers: [
+        { provide: BenchmarkService, useValue: svc },
+        { provide: BenchmarkChartsService, useValue: {} },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+    controller = moduleRef.get(BenchmarkController);
+  });
+
+  it("forwards user.sub and default range '30d' when no query param", async () => {
+    svc.getByConnectionReports.mockResolvedValue({
+      range: "30d",
+      generatedAt: "2026-05-06T00:00:00.000Z",
+      items: [],
+    });
+    const result = await controller.reportsByConnection(USER, undefined);
+    expect(svc.getByConnectionReports).toHaveBeenCalledWith(USER.sub, "30d");
+    expect(result.range).toBe("30d");
+  });
+
+  it("forwards explicit range when provided", async () => {
+    svc.getByConnectionReports.mockResolvedValue({
+      range: "7d",
+      generatedAt: "2026-05-06T00:00:00.000Z",
+      items: [],
+    });
+    await controller.reportsByConnection(USER, "7d");
+    expect(svc.getByConnectionReports).toHaveBeenCalledWith(USER.sub, "7d");
   });
 });
