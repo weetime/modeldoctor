@@ -117,7 +117,7 @@ export function BenchmarkListFilters({
           <SelectItem value={ALL}>{t("filters.any")}</SelectItem>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {s}
+              {t(`status.${s}`)}
             </SelectItem>
           ))}
         </SelectContent>

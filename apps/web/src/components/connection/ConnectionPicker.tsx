@@ -2,9 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
@@ -48,12 +46,6 @@ export interface ConnectionPickerProps {
   className?: string;
   /** Class for the `<SelectTrigger>` — useful for sizing inside form fields. */
   triggerClassName?: string;
-  /** Predicate marking a saved connection as un-pickable in this context.
-   * Returning a non-empty string disables the option and renders the string
-   * as an inline hint underneath. Returning `null`/`undefined` keeps the
-   * connection selectable (default). Disabled connections are sorted to the
-   * bottom of the dropdown so the usable list stays visible at a glance. */
-  disabledReason?: (connection: ConnectionPublic) => string | null | undefined;
 }
 
 /**
@@ -73,25 +65,10 @@ export function ConnectionPicker({
   onCurlParsed,
   className,
   triggerClassName,
-  disabledReason,
 }: ConnectionPickerProps) {
   const { t } = useTranslation("common");
   const listQuery = useConnections();
-  const rawList: ConnectionPublic[] = listQuery.data ?? [];
-
-  // Stable partition: enabled connections first (preserving server order),
-  // disabled at the bottom. The disabled reason is hoisted to the group
-  // label so individual rows stay clean — we use the first disabled item's
-  // reason on the assumption that all disabled connections in this picker
-  // share the same root cause (e.g. "this scenario doesn't support the
-  // {{category}} modality"). If that ever stops being true, the per-item
-  // model name still differentiates the rows visually.
-  const annotated = rawList.map((c) => ({ c, reason: disabledReason?.(c) ?? null }));
-  const enabled = annotated.filter((a) => !a.reason);
-  const disabled = annotated.filter((a) => a.reason);
-  const disabledGroupReason = disabled[0]?.reason ?? null;
-  // For trigger lookup we still need a flat list.
-  const connectionList = [...enabled, ...disabled];
+  const connectionList: ConnectionPublic[] = listQuery.data ?? [];
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
@@ -158,64 +135,24 @@ export function ConnectionPicker({
               {selectedConnectionId === MANUAL || (allowManual && !selectedConnectionId)
                 ? t("endpoint.manual")
                 : selectedConnectionId
-                  ? (connectionList.find((a) => a.c.id === selectedConnectionId)?.c.name ?? "")
+                  ? (connectionList.find((c) => c.id === selectedConnectionId)?.name ?? "")
                   : ""}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {allowManual ? <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem> : null}
-            {enabled.length > 0 ? (
-              <SelectGroup>
-                {/* Only label the "available" group when there's also an
-                 * "unavailable" group below — otherwise the single group is
-                 * the whole list and a header would be visual noise. */}
-                {disabled.length > 0 ? (
-                  <SelectLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {t("endpoint.availableConnections")}
-                  </SelectLabel>
-                ) : null}
-                {enabled.map(({ c }) => (
-                  <SelectItem key={c.id} value={c.id} className="py-2">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-baseline gap-2 text-sm">
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-xs text-muted-foreground">·</span>
-                        <span className="text-xs text-muted-foreground">{c.model}</span>
-                      </div>
-                      <div className="font-mono text-[11px] text-muted-foreground/70">
-                        {c.baseUrl}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ) : null}
-            {disabled.length > 0 ? (
-              <SelectGroup>
-                <SelectLabel className="text-[11px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                  {t("endpoint.unavailableConnections")}
-                  {disabledGroupReason ? (
-                    <span className="ml-2 normal-case tracking-normal text-muted-foreground">
-                      — {disabledGroupReason}
-                    </span>
-                  ) : null}
-                </SelectLabel>
-                {disabled.map(({ c }) => (
-                  <SelectItem key={c.id} value={c.id} className="py-2" disabled>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-baseline gap-2 text-sm">
-                        <span className="font-medium">{c.name}</span>
-                        <span className="text-xs text-muted-foreground">·</span>
-                        <span className="text-xs text-muted-foreground">{c.model}</span>
-                      </div>
-                      <div className="font-mono text-[11px] text-muted-foreground/70">
-                        {c.baseUrl}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ) : null}
+            {connectionList.map((c) => (
+              <SelectItem key={c.id} value={c.id} className="py-2">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-baseline gap-2 text-sm">
+                    <span className="font-medium">{c.name}</span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">{c.model}</span>
+                  </div>
+                  <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
+                </div>
+              </SelectItem>
+            ))}
             <SelectSeparator />
             <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
           </SelectContent>

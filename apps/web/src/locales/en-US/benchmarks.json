@@ -34,7 +34,7 @@
       "submitFailed": "Failed to submit benchmark"
     },
     "submitted": "Benchmark \"{{name}}\" submitted",
-    "unsupportedCategoryForScenario": "Tools in this scenario do not support '{{category}}' connections"
+    "unsupportedToolForCategory": "Does not support '{{category}}' connections"
   },
   "status": {
     "pending": "Pending",

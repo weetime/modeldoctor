@@ -14,19 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  type ConnectionPublic,
   type CreateBenchmarkRequest,
-  type ModalityCategory,
   type ScenarioId,
   createBenchmarkRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import {
-  GENAI_PERF_CATEGORY_DEFAULTS,
-  GUIDELLM_CATEGORY_DEFAULTS,
-  VEGETA_CATEGORY_DEFAULTS,
-} from "@modeldoctor/tool-adapters/schemas";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -34,27 +27,6 @@ import { toast } from "sonner";
 import { TOOL_DEFAULTS, ToolParamsForm, ToolSelectorField } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
-
-const TOOL_CATEGORY_DEFAULTS = {
-  vegeta: VEGETA_CATEGORY_DEFAULTS,
-  guidellm: GUIDELLM_CATEGORY_DEFAULTS,
-  "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
-} as const;
-
-/** Categories supported by ANY tool available in this scenario. A connection
- * whose category falls outside this set cannot be used to run any benchmark
- * in the scenario, so the picker disables it. */
-function supportedCategoriesForScenario(scenario: ScenarioId): Set<ModalityCategory> {
-  const out = new Set<ModalityCategory>();
-  for (const tool of SCENARIOS[scenario].tools) {
-    const map = TOOL_CATEGORY_DEFAULTS[tool];
-    for (const cat of Object.keys(map) as ModalityCategory[]) {
-      const def = map[cat];
-      if (!("unsupported" in def)) out.add(cat);
-    }
-  }
-  return out;
-}
 
 export function BenchmarkCreatePage() {
   const { t } = useTranslation("benchmarks");
@@ -67,12 +39,6 @@ export function BenchmarkCreatePage() {
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
   const defaultTool = SCENARIOS[scenario].tools[0];
-
-  const supported = useMemo(() => supportedCategoriesForScenario(scenario), [scenario]);
-  const connectionDisabledReason = (c: ConnectionPublic): string | null =>
-    supported.has(c.category)
-      ? null
-      : t("create.unsupportedCategoryForScenario", { category: c.category });
 
   const form = useForm<CreateBenchmarkRequest>({
     resolver: zodResolver(createBenchmarkRequestSchema),
@@ -118,30 +84,30 @@ export function BenchmarkCreatePage() {
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <FormSection title={t("create.sections.endpoint")}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="connectionId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>
-                        {t("create.fields.connection", { defaultValue: "Connection" })}
-                      </FormLabel>
-                      <FormControl>
-                        <ConnectionPicker
-                          selectedConnectionId={field.value || null}
-                          onSelect={(id) =>
-                            form.setValue("connectionId", id ?? "", { shouldValidate: true })
-                          }
-                          disabledReason={connectionDisabledReason}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <ToolSelectorField scenario={scenario} />
-              </div>
+              <FormField
+                control={form.control}
+                name="connectionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>
+                      {t("create.fields.connection", { defaultValue: "Connection" })}
+                    </FormLabel>
+                    <FormControl>
+                      <ConnectionPicker
+                        selectedConnectionId={field.value || null}
+                        onSelect={(id) =>
+                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormSection>
+
+            <FormSection title={t("create.sections.tool")}>
+              <ToolSelectorField scenario={scenario} />
             </FormSection>
 
             <FormSection title={t("create.sections.metadata")}>

@@ -59,9 +59,7 @@
     "filled": "已填充：{{fields}}",
     "newConnection": "+ 新建连接",
     "saved": "已保存到连接「{{name}}」",
-    "saveFailed": "保存失败",
-    "availableConnections": "可用",
-    "unavailableConnections": "不可用"
+    "saveFailed": "保存失败"
   },
   "empty": {
     "noConnections": "尚未创建任何连接",
