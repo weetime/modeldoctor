@@ -35,9 +35,13 @@ export function TestInsightsDetailPage() {
   const range = (searchParams.get("range") ?? "30d") as EndpointReportRange;
 
   const conn = useConnection(connectionId);
+  // rangeToISO uses Date.now() — memoize on `range` so the query key is
+  // stable across renders. Otherwise the key churns each render and the
+  // query never settles (manifested as a CI-only flake in 5s test budget).
+  const createdAfter = useMemo(() => rangeToISO(range), [range]);
   const list = useBenchmarkList({
     connectionId,
-    createdAfter: rangeToISO(range),
+    createdAfter,
     limit: 200,
     scope: "own",
   });
