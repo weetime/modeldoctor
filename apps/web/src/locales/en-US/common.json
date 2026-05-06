@@ -59,7 +59,9 @@
     "filled": "Filled: {{fields}}",
     "newConnection": "+ New connection",
     "saved": "Saved to connection \"{{name}}\"",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "availableConnections": "Available",
+    "unavailableConnections": "Unavailable"
   },
   "empty": {
     "noConnections": "No connections yet",

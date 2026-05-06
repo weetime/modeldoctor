@@ -75,8 +75,9 @@ describe("ConnectionPicker", () => {
     );
     await userEvent.click(screen.getByRole("combobox"));
 
-    // The disabled hint renders inside the embeddings option.
-    expect(await screen.findByText("no embeddings here")).toBeInTheDocument();
+    // The disabled hint is hoisted to the unavailable group's label.
+    await screen.findByText(/Unavailable|不可用/i);
+    expect(screen.getByText(/no embeddings here/)).toBeInTheDocument();
 
     // DOM order of options: enabled (audio, chat) first, then disabled (embeddings).
     const options = screen.getAllByRole("option");

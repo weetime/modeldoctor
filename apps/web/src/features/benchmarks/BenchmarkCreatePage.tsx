@@ -31,7 +31,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
+import { TOOL_DEFAULTS, ToolParamsForm, ToolSelectorField } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
 
@@ -118,27 +118,30 @@ export function BenchmarkCreatePage() {
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <FormSection title={t("create.sections.endpoint")}>
-              <FormField
-                control={form.control}
-                name="connectionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>
-                      {t("create.fields.connection", { defaultValue: "Connection" })}
-                    </FormLabel>
-                    <FormControl>
-                      <ConnectionPicker
-                        selectedConnectionId={field.value || null}
-                        onSelect={(id) =>
-                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
-                        }
-                        disabledReason={connectionDisabledReason}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="connectionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>
+                        {t("create.fields.connection", { defaultValue: "Connection" })}
+                      </FormLabel>
+                      <FormControl>
+                        <ConnectionPicker
+                          selectedConnectionId={field.value || null}
+                          onSelect={(id) =>
+                            form.setValue("connectionId", id ?? "", { shouldValidate: true })
+                          }
+                          disabledReason={connectionDisabledReason}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <ToolSelectorField scenario={scenario} />
+              </div>
             </FormSection>
 
             <FormSection title={t("create.sections.metadata")}>
@@ -177,7 +180,9 @@ export function BenchmarkCreatePage() {
               />
             </FormSection>
 
-            <ToolParamsEditor scenario={scenario} />
+            <FormSection title={t("create.sections.parameters")}>
+              <ToolParamsForm scenario={scenario} />
+            </FormSection>
 
             <FormActions
               onCancel={() => navigate("/benchmarks")}

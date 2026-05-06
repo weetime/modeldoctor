@@ -2,7 +2,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
@@ -78,12 +80,18 @@ export function ConnectionPicker({
   const rawList: ConnectionPublic[] = listQuery.data ?? [];
 
   // Stable partition: enabled connections first (preserving server order),
-  // disabled at the bottom. Each carries its disabled reason for inline hint.
+  // disabled at the bottom. The disabled reason is hoisted to the group
+  // label so individual rows stay clean — we use the first disabled item's
+  // reason on the assumption that all disabled connections in this picker
+  // share the same root cause (e.g. "this scenario doesn't support the
+  // {{category}} modality"). If that ever stops being true, the per-item
+  // model name still differentiates the rows visually.
   const annotated = rawList.map((c) => ({ c, reason: disabledReason?.(c) ?? null }));
-  const connectionList = [
-    ...annotated.filter((a) => !a.reason),
-    ...annotated.filter((a) => a.reason),
-  ];
+  const enabled = annotated.filter((a) => !a.reason);
+  const disabled = annotated.filter((a) => a.reason);
+  const disabledGroupReason = disabled[0]?.reason ?? null;
+  // For trigger lookup we still need a flat list.
+  const connectionList = [...enabled, ...disabled];
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
@@ -156,21 +164,58 @@ export function ConnectionPicker({
           </SelectTrigger>
           <SelectContent>
             {allowManual ? <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem> : null}
-            {connectionList.map(({ c, reason }) => (
-              <SelectItem key={c.id} value={c.id} className="py-2" disabled={!!reason}>
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-baseline gap-2 text-sm">
-                    <span className="font-medium">{c.name}</span>
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground">{c.model}</span>
-                  </div>
-                  <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
-                  {reason ? (
-                    <div className="text-[11px] text-amber-600 dark:text-amber-400">{reason}</div>
+            {enabled.length > 0 ? (
+              <SelectGroup>
+                {/* Only label the "available" group when there's also an
+                 * "unavailable" group below — otherwise the single group is
+                 * the whole list and a header would be visual noise. */}
+                {disabled.length > 0 ? (
+                  <SelectLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {t("endpoint.availableConnections")}
+                  </SelectLabel>
+                ) : null}
+                {enabled.map(({ c }) => (
+                  <SelectItem key={c.id} value={c.id} className="py-2">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-baseline gap-2 text-sm">
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">{c.model}</span>
+                      </div>
+                      <div className="font-mono text-[11px] text-muted-foreground/70">
+                        {c.baseUrl}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
+            {disabled.length > 0 ? (
+              <SelectGroup>
+                <SelectLabel className="text-[11px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  {t("endpoint.unavailableConnections")}
+                  {disabledGroupReason ? (
+                    <span className="ml-2 normal-case tracking-normal text-muted-foreground">
+                      — {disabledGroupReason}
+                    </span>
                   ) : null}
-                </div>
-              </SelectItem>
-            ))}
+                </SelectLabel>
+                {disabled.map(({ c }) => (
+                  <SelectItem key={c.id} value={c.id} className="py-2" disabled>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-baseline gap-2 text-sm">
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">{c.model}</span>
+                      </div>
+                      <div className="font-mono text-[11px] text-muted-foreground/70">
+                        {c.baseUrl}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
             <SelectSeparator />
             <SelectItem value={NEW_CONNECTION}>{t("endpoint.newConnection")}</SelectItem>
           </SelectContent>

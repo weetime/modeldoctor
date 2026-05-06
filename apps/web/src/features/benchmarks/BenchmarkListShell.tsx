@@ -24,6 +24,7 @@ import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { benchmarkKeys, useBenchmarkList } from "./queries";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
+import { StatusBadge } from "./status-display";
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
   if (n == null) return "—";
@@ -269,7 +270,9 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         "—"
                       )}
                     </TableCell>
-                    <TableCell>{benchmark.status}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={benchmark.status} />
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {fmtNum(readP95Latency(benchmark.summaryMetrics))}
                     </TableCell>

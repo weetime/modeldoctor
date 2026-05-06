@@ -36,6 +36,14 @@
     "submitted": "Benchmark \"{{name}}\" submitted",
     "unsupportedCategoryForScenario": "Tools in this scenario do not support '{{category}}' connections"
   },
+  "status": {
+    "pending": "Pending",
+    "submitted": "Submitted",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "canceled": "Canceled"
+  },
   "filters": {
     "tool": "Tool",
     "status": "Status",
