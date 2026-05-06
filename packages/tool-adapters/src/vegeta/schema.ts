@@ -4,6 +4,21 @@ export const vegetaParamsSchema = z.object({
   apiType: z.enum(["chat", "embeddings", "rerank", "images", "chat-vision", "chat-audio"]),
   rate: z.number().int().min(1).max(10_000),
   duration: z.number().int().min(1).max(3_600),
+  path: z
+    .string()
+    .min(1)
+    .regex(/^\//, "must start with /"),
+  body: z
+    .string()
+    .min(1)
+    .refine((s) => {
+      try {
+        JSON.parse(s);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "must be valid JSON"),
 });
 export type VegetaParams = z.infer<typeof vegetaParamsSchema>;
 

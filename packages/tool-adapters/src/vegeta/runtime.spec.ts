@@ -19,11 +19,19 @@ const baseConn = {
   tokenizerHfId: null,
 };
 
+const baseParams = {
+  apiType: "chat" as const,
+  rate: 10,
+  duration: 30,
+  path: "/v1/chat/completions",
+  body: '{"model":"Qwen2.5-0.5B-Instruct","messages":[{"role":"user","content":"hello"}]}',
+};
+
 describe("vegeta.buildCommand", () => {
   it("emits a shell pipeline argv via /bin/sh -c", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -37,7 +45,7 @@ describe("vegeta.buildCommand", () => {
   it("writes targets.txt as inputFile (with apiKey embedded)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -53,7 +61,7 @@ describe("vegeta.buildCommand", () => {
   it("declares output files for report and attack stream", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -64,7 +72,7 @@ describe("vegeta.buildCommand", () => {
   it("declares an attack.ndjson output file for per-request latencies (F3 #88)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
@@ -74,7 +82,7 @@ describe("vegeta.buildCommand", () => {
   it("appends 'vegeta encode -to=json' to the shell pipeline (F3 #88)", () => {
     const r = buildCommand({
       runId: "r1",
-      params: { apiType: "chat", rate: 10, duration: 30 },
+      params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });

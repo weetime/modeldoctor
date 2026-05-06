@@ -66,11 +66,26 @@ describe("applyScenarioConstraints", () => {
 
   it("gateway + vegeta has no rateType (returns base schema that still validates)", () => {
     const merged = applyScenarioConstraints("gateway", "vegeta");
-    // Valid minimal vegeta params (mirrors vegetaParamDefaults — see
+    // Valid minimal vegeta params (path + body now required — see
     // packages/tool-adapters/src/vegeta/schema.ts).
-    expect(() => merged.parse({ apiType: "chat", rate: 10, duration: 30 })).not.toThrow();
+    expect(() =>
+      merged.parse({
+        apiType: "chat",
+        rate: 10,
+        duration: 30,
+        path: "/v1/chat/completions",
+        body: '{"model":"m","messages":[]}',
+      }),
+    ).not.toThrow();
     // Missing required `rate` — base schema must still reject it.
-    expect(() => merged.parse({ apiType: "chat", duration: 30 })).toThrow();
+    expect(() =>
+      merged.parse({
+        apiType: "chat",
+        duration: 30,
+        path: "/v1/chat/completions",
+        body: '{"model":"m","messages":[]}',
+      }),
+    ).toThrow();
   });
 
   it("throws when scenario+tool combination is invalid", () => {
