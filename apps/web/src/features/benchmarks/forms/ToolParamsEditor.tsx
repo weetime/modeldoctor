@@ -80,12 +80,17 @@ export function ToolSelectorField({
       {availableTools.length > 1 ? (
         <Select value={tool} onValueChange={(v) => handleToolChange(v as ToolName)}>
           <SelectTrigger id={toolFieldId} aria-label="Tool">
-            <SelectValue />
+            <SelectValue>{t(`create.tools.${tool}`)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {availableTools.map((tn) => (
-              <SelectItem key={tn} value={tn}>
-                {t(`create.tools.${tn}`)}
+              <SelectItem key={tn} value={tn} className="py-2">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium">{t(`create.tools.${tn}`)}</span>
+                  <span className="text-[11px] text-muted-foreground/70">
+                    {t(`create.toolDescriptions.${tn}`)}
+                  </span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -94,9 +99,12 @@ export function ToolSelectorField({
         <div
           id={toolFieldId}
           aria-label="Tool"
-          className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm"
+          className="flex flex-col gap-0.5 rounded-md border border-input bg-muted px-3 py-2"
         >
-          {t(`create.tools.${tool}`)}
+          <span className="text-sm font-medium">{t(`create.tools.${tool}`)}</span>
+          <span className="text-[11px] text-muted-foreground/70">
+            {t(`create.toolDescriptions.${tool}`)}
+          </span>
         </div>
       )}
     </div>

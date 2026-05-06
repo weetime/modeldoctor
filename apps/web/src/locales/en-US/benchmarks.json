@@ -25,6 +25,11 @@
       "vegeta": "vegeta",
       "genai-perf": "genai-perf"
     },
+    "toolDescriptions": {
+      "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
+      "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
+      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings"
+    },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
     },

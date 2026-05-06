@@ -25,6 +25,11 @@
       "vegeta": "vegeta",
       "genai-perf": "genai-perf"
     },
+    "toolDescriptions": {
+      "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
+      "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
+      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings"
+    },
     "errors": {
       "submitFailed": "提交基准测试失败"
     },
