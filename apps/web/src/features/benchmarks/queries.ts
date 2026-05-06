@@ -1,9 +1,12 @@
 import type {
   Benchmark,
   CreateBenchmarkRequest,
+  EndpointReportRange,
+  EndpointReportsResponse,
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 import { benchmarkApi } from "./api";
 
 /**
@@ -89,5 +92,22 @@ export function useBenchmarkCharts(benchmarkId: string) {
     // changes once the run finishes. Cache for the page's lifetime.
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 5 * 60 * 1000,
+  });
+}
+
+const reportsKey = (range: EndpointReportRange) =>
+  [...benchmarkKeys.all, "reports", "by-connection", range] as const;
+
+export function useEndpointReports(range: EndpointReportRange = "30d") {
+  return useQuery({
+    queryKey: reportsKey(range),
+    queryFn: () =>
+      api.get<EndpointReportsResponse>(
+        `/api/benchmarks/reports/by-connection?range=${range}`,
+      ),
+    // Reports are aggregations of historical data; refetching often is
+    // expensive (5000-row scan). 60s stale window keeps the page feeling
+    // live without pounding the API.
+    staleTime: 60_000,
   });
 }
