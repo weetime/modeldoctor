@@ -108,33 +108,6 @@ export function BenchmarkCreatePage() {
       <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
-            <FormSection title={t("create.sections.endpoint")}>
-              <FormField
-                control={form.control}
-                name="connectionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>
-                      {t("create.fields.connection", { defaultValue: "Connection" })}
-                    </FormLabel>
-                    <FormControl>
-                      <ConnectionPicker
-                        selectedConnectionId={field.value || null}
-                        onSelect={(id) =>
-                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
-
-            <FormSection title={t("create.sections.tool")}>
-              <ToolSelectorField scenario={scenario} />
-            </FormSection>
-
             <FormSection title={t("create.sections.metadata")}>
               <FormField
                 control={form.control}
@@ -169,6 +142,33 @@ export function BenchmarkCreatePage() {
                   </FormItem>
                 )}
               />
+            </FormSection>
+
+            <FormSection title={t("create.sections.endpoint")}>
+              <FormField
+                control={form.control}
+                name="connectionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>
+                      {t("create.fields.connection", { defaultValue: "Connection" })}
+                    </FormLabel>
+                    <FormControl>
+                      <ConnectionPicker
+                        selectedConnectionId={field.value || null}
+                        onSelect={(id) =>
+                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormSection>
+
+            <FormSection title={t("create.sections.tool")}>
+              <ToolSelectorField scenario={scenario} />
             </FormSection>
 
             <FormSection title={t("create.sections.parameters")}>
