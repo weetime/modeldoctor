@@ -273,6 +273,8 @@
       "totalRuns": "{{count}} 次测试",
       "successRate": "成功率 {{rate}}%",
       "successRateMissing": "成功率 —",
+      "statusBreakdown": "成功 {{completed}} · 失败 {{failed}} · 取消 {{canceled}}",
+      "statusBreakdownTooltip": "成功率分母 = 成功 + 失败；取消不计入",
       "latest": "最近：{{name}} · {{when}}"
     },
     "trend": {
@@ -284,6 +286,33 @@
     "empty": {
       "title": "暂无报告数据",
       "body": "选定时间范围内没有基准测试。"
+    },
+    "detail": {
+      "backToIndex": "返回测试洞察",
+      "summary": {
+        "title": "概要",
+        "toolDistribution": "工具分布"
+      },
+      "timeseries": {
+        "title": "p95 时间序列",
+        "empty": "数据点不足"
+      },
+      "runs": {
+        "title": "运行历史",
+        "empty": "选定时间范围内没有基准测试",
+        "columns": {
+          "name": "名称",
+          "createdAt": "创建时间",
+          "tool": "工具",
+          "status": "状态",
+          "p95": "p95 (ms)",
+          "errorRate": "错误率"
+        }
+      },
+      "notFound": {
+        "title": "未找到此连接",
+        "body": "它可能已被删除"
+      }
     }
   }
 }

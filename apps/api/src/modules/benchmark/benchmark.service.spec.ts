@@ -1012,4 +1012,32 @@ describe("BenchmarkService.getByConnectionReports", () => {
     expect(out.items).toEqual([]);
     expect(prisma.connection.findMany).not.toHaveBeenCalled();
   });
+
+  it("emits statusCounts breakdown (completed / failed / canceled / inProgress)", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({ id: "b1", status: "completed" }),
+        makeRow({ id: "b2", status: "completed" }),
+        makeRow({ id: "b3", status: "completed" }),
+        makeRow({ id: "b4", status: "failed" }),
+        makeRow({ id: "b5", status: "canceled" }),
+        makeRow({ id: "b6", status: "running" }),
+        makeRow({ id: "b7", status: "submitted" }),
+        makeRow({ id: "b8", status: "pending" }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([{ id: "c_1", category: "chat" }]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items[0].statusCounts).toEqual({
+      completed: 3,
+      failed: 1,
+      canceled: 1,
+      inProgress: 3,
+    });
+  });
 });

@@ -10,6 +10,7 @@ import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
 import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage";
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
+import { TestInsightsDetailPage } from "@/features/benchmarks/TestInsightsDetailPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
@@ -49,6 +50,7 @@ export const routes: RouteObject[] = [
           { path: "benchmarks/gateway", element: <BenchmarkGatewayPage /> },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/reports", element: <EndpointReportsPage /> },
+          { path: "benchmarks/reports/:connectionId", element: <TestInsightsDetailPage /> },
           { path: "benchmarks/new", element: <BenchmarkCreatePage /> },
           { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
           { path: "benchmark-templates", element: <TemplateListPage /> },
