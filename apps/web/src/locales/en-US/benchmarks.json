@@ -288,6 +288,11 @@
       "body": "No benchmarks within the selected window."
     },
     "detail": {
+      "backToIndex": "Back to Test Insights",
+      "summary": {
+        "title": "Summary",
+        "toolDistribution": "Tool distribution"
+      },
       "timeseries": {
         "title": "p95 over time",
         "empty": "Not enough data"
@@ -303,6 +308,10 @@
           "p95": "p95 (ms)",
           "errorRate": "Error rate"
         }
+      },
+      "notFound": {
+        "title": "Connection not found",
+        "body": "It may have been deleted"
       }
     }
   }

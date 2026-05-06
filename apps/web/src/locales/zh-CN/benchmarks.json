@@ -288,6 +288,11 @@
       "body": "选定时间范围内没有基准测试。"
     },
     "detail": {
+      "backToIndex": "返回测试洞察",
+      "summary": {
+        "title": "概要",
+        "toolDistribution": "工具分布"
+      },
       "timeseries": {
         "title": "p95 时间序列",
         "empty": "数据点不足"
@@ -303,6 +308,10 @@
           "p95": "p95 (ms)",
           "errorRate": "错误率"
         }
+      },
+      "notFound": {
+        "title": "未找到此连接",
+        "body": "它可能已被删除"
       }
     }
   }
