@@ -16,9 +16,9 @@ import { ArrowRight, BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { TrendIndicator } from "./TrendIndicator";
 import { useEndpointReports } from "./queries";
 import { StatusBadge } from "./status-display";
-import { TrendIndicator } from "./TrendIndicator";
 
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
 

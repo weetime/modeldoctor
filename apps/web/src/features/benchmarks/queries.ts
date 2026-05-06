@@ -1,3 +1,4 @@
+import { api } from "@/lib/api-client";
 import type {
   Benchmark,
   CreateBenchmarkRequest,
@@ -6,7 +7,6 @@ import type {
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
 import { benchmarkApi } from "./api";
 
 /**
@@ -102,9 +102,7 @@ export function useEndpointReports(range: EndpointReportRange = "30d") {
   return useQuery({
     queryKey: reportsKey(range),
     queryFn: () =>
-      api.get<EndpointReportsResponse>(
-        `/api/benchmarks/reports/by-connection?range=${range}`,
-      ),
+      api.get<EndpointReportsResponse>(`/api/benchmarks/reports/by-connection?range=${range}`),
     // Reports are aggregations of historical data; refetching often is
     // expensive (5000-row scan). 60s stale window keeps the page feeling
     // live without pounding the API.

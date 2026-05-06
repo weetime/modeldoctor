@@ -1,10 +1,10 @@
+import i18n from "@/lib/i18n";
 import type { EndpointReportsResponse } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
 import { EndpointReportsPage } from "../EndpointReportsPage";
 
 vi.mock("@/lib/api-client", () => ({ api: { get: vi.fn() } }));
@@ -63,9 +63,7 @@ describe("EndpointReportsPage", () => {
     vi.mocked(api.get).mockResolvedValue(oneItem);
     render(withProviders(<EndpointReportsPage />));
 
-    await waitFor(() =>
-      expect(screen.getByText("bge-by-mis-tei")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("bge-by-mis-tei")).toBeInTheDocument());
     expect(screen.getByText("gen-studio_bge-m3-uZbs")).toBeInTheDocument();
     expect(screen.getByText("http://183.240.109.2:30888")).toBeInTheDocument();
     expect(screen.getByText(/12/)).toBeInTheDocument(); // run count
@@ -75,9 +73,7 @@ describe("EndpointReportsPage", () => {
   it("renders the regression marker when p95 last > first × 1.05", async () => {
     vi.mocked(api.get).mockResolvedValue(oneItem);
     render(withProviders(<EndpointReportsPage />));
-    await waitFor(() =>
-      expect(screen.getByLabelText(/regression|劣化/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/regression|劣化/i)).toBeInTheDocument());
   });
 
   it("'View history' link points to /benchmarks/inference?connectionId=<id>", async () => {
