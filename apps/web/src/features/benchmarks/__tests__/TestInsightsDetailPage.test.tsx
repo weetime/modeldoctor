@@ -4,11 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TestInsightsDetailPage } from "../TestInsightsDetailPage";
 
 vi.mock("@/lib/api-client", () => ({ api: { get: vi.fn() } }));
 import { api } from "@/lib/api-client";
+
+beforeEach(() => {
+  vi.mocked(api.get).mockReset();
+});
 
 // echarts wrapper is verified in its own spec; stub here to keep the
 // page test fast.
@@ -132,19 +136,21 @@ describe("TestInsightsDetailPage", () => {
     const wrap = withProviders();
     render(wrap(<TestInsightsDetailPage />));
 
-    // Wait for both connection + list data to render.
-    await waitFor(() => {
-      expect(screen.getByText("bge-by-mis-tei")).toBeInTheDocument();
-      // Tool distribution renders both tools (may appear in both the distribution
-      // bar and the run-history table badge — use getAllByText).
-      expect(screen.getAllByText(/guidellm/).length).toBeGreaterThanOrEqual(1);
+    // Connection settles first (single-fetch useQuery), runs settles second
+    // (useInfiniteQuery — slower on CI). Wait on the runs-dependent state
+    // explicitly so we don't race the second resolution.
+    expect(
+      await screen.findByText("bge-by-mis-tei", undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/guidellm/).length).toBeGreaterThanOrEqual(1), {
+      timeout: 5000,
     });
 
     // Subtitle renders both baseUrl and model: "http://x · m1".
     expect(screen.getByText(/http:\/\/x.*m1/)).toBeInTheDocument();
     expect(screen.getAllByText(/vegeta/).length).toBeGreaterThanOrEqual(1);
 
-    // Chart placeholder receives 1 point (only completed runs with p95 — both have it).
+    // Chart placeholder receives 2 points (both completed runs carry p95).
     const chart = screen.getByTestId("p95-chart");
     expect(chart).toHaveAttribute("data-len", "2");
 
