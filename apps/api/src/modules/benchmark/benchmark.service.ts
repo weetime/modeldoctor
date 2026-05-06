@@ -1,5 +1,6 @@
 import {
   type Benchmark,
+  type BenchmarkStatus,
   type CreateBenchmarkRequest,
   type EndpointReport,
   type EndpointReportRange,
@@ -31,6 +32,12 @@ import { imageForTool } from "./k8s/runner-images.js";
 import { readP95LatencyMs } from "./metrics.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
+
+/** Safety cap for the per-user/per-window query the reports endpoint
+ * issues. In practice user × 30-day windows are << 1000 rows; this
+ * exists only to bound worst-case memory if a power user runs many
+ * thousands of tests. */
+const MAX_REPORT_ROWS = 5000;
 // 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
 // callback shouldn't be rejected if the runner overruns by clock skew or
 // shutdown grace.
@@ -315,7 +322,7 @@ export class BenchmarkService {
     const result = await this.repo.list({
       userId,
       createdAfter: since.toISOString(),
-      limit: 5000,
+      limit: MAX_REPORT_ROWS,
     });
 
     type Row = (typeof result)["items"][number];
@@ -341,14 +348,17 @@ export class BenchmarkService {
     const items: EndpointReport[] = [];
     for (const [connId, runs] of groups.entries()) {
       const connection = runs[0].connection!;
-      const terminal = runs.filter(
-        (r) => r.status === "completed" || r.status === "failed",
-      );
+      // Success-rate denominator is completed + failed only. Cancellation
+      // is user action (someone clicked "cancel"), not an endpoint signal —
+      // including canceled runs would artificially lower the connection's
+      // health score for unrelated reasons.
       const completed = runs.filter((r) => r.status === "completed");
+      const failed = runs.filter((r) => r.status === "failed");
+      const successRateDenominator = completed.length + failed.length;
 
       const successRate =
-        terminal.length > 0
-          ? (completed.length / terminal.length) * 100
+        successRateDenominator > 0
+          ? (completed.length / successRateDenominator) * 100
           : null;
 
       const completedAsc = [...completed].sort(
@@ -372,21 +382,15 @@ export class BenchmarkService {
             }
           : null;
 
-      const latestRow = [...runs].sort(
-        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-      )[0];
-      const latestRun = latestRow
-        ? {
-            id: latestRow.id,
-            name: latestRow.name,
-            status: latestRow.status as EndpointReport["latestRun"] extends {
-              status: infer S;
-            }
-              ? S
-              : never,
-            createdAt: latestRow.createdAt.toISOString(),
-          }
-        : null;
+      const latestRow = runs.reduce((a, b) =>
+        a.createdAt >= b.createdAt ? a : b,
+      );
+      const latestRun = {
+        id: latestRow.id,
+        name: latestRow.name,
+        status: latestRow.status as BenchmarkStatus,
+        createdAt: latestRow.createdAt.toISOString(),
+      };
 
       items.push({
         connection: {

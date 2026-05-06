@@ -181,6 +181,7 @@ function build(
     mockConnections,
     (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
     (baselineSvc ?? new MockBaselineService()) as unknown as BaselineService,
+    { connection: { findMany: vi.fn() } } as never,
   );
 }
 
@@ -992,5 +993,23 @@ describe("BenchmarkService.getByConnectionReports", () => {
     const expected = Date.now() - 7 * 86400_000;
     // Allow ±2s skew for the time it takes the test to run.
     expect(Math.abs(lowerBound.getTime() - expected)).toBeLessThan(2000);
+  });
+
+  it("does not call connection.findMany when no rows have a connection", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        // All rows orphaned — every connection deleted.
+        makeRow({ id: "b1", connection: null }),
+        makeRow({ id: "b2", connection: null }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items).toEqual([]);
+    expect(prisma.connection.findMany).not.toHaveBeenCalled();
   });
 });
