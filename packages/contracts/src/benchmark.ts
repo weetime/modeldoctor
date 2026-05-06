@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { baselineSummarySchema } from "./baseline.js";
+import { ModalityCategorySchema } from "./modality.js";
 
 // ── Discriminators ───────────────────────────────────────────────────
 export const scenarioIdSchema = z.enum(["inference", "capacity", "gateway"]);
@@ -161,3 +162,47 @@ export const benchmarkChartsResponseSchema = z.object({
   ttftHistogram: z.object({ buckets: z.array(histogramBucketSchema) }).nullable(),
 });
 export type BenchmarkChartsResponse = z.infer<typeof benchmarkChartsResponseSchema>;
+
+// ── Endpoint reports (GET /api/benchmarks/reports/by-connection) ─────
+
+export const endpointReportRangeSchema = z.enum(["7d", "30d", "90d"]);
+export type EndpointReportRange = z.infer<typeof endpointReportRangeSchema>;
+
+export const endpointReportSchema = z.object({
+  connection: z.object({
+    id: z.string(),
+    name: z.string(),
+    model: z.string(),
+    baseUrl: z.string(),
+    category: ModalityCategorySchema,
+  }),
+  totalRuns: z.number().int().nonnegative(),
+  // % in [0, 100]; null when no terminal (completed|failed) runs in the window.
+  successRate: z.number().min(0).max(100).nullable(),
+  // p95 latency in ms (mirrors what FE compare/metrics.ts reads). first =
+  // chronologically-earliest completed run with a usable p95; last =
+  // chronologically-latest. null when no completed run carries metrics.
+  p95Latency: z
+    .object({
+      first: z.number().nullable(),
+      last: z.number().nullable(),
+    })
+    .nullable(),
+  // Latest run regardless of status — drives "Latest: <name> · <when>".
+  latestRun: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      status: benchmarkStatusSchema,
+      createdAt: z.string().datetime(),
+    })
+    .nullable(),
+});
+export type EndpointReport = z.infer<typeof endpointReportSchema>;
+
+export const endpointReportsResponseSchema = z.object({
+  range: endpointReportRangeSchema,
+  generatedAt: z.string().datetime(),
+  items: z.array(endpointReportSchema),
+});
+export type EndpointReportsResponse = z.infer<typeof endpointReportsResponseSchema>;
