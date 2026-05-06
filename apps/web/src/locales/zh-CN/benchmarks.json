@@ -291,6 +291,18 @@
       "timeseries": {
         "title": "p95 时间序列",
         "empty": "数据点不足"
+      },
+      "runs": {
+        "title": "运行历史",
+        "empty": "选定时间范围内没有基准测试",
+        "columns": {
+          "name": "名称",
+          "createdAt": "创建时间",
+          "tool": "工具",
+          "status": "状态",
+          "p95": "p95 (ms)",
+          "errorRate": "错误率"
+        }
       }
     }
   }

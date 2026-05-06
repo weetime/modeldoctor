@@ -291,6 +291,18 @@
       "timeseries": {
         "title": "p95 over time",
         "empty": "Not enough data"
+      },
+      "runs": {
+        "title": "Run history",
+        "empty": "No benchmarks within the selected window",
+        "columns": {
+          "name": "Name",
+          "createdAt": "Created",
+          "tool": "Tool",
+          "status": "Status",
+          "p95": "p95 (ms)",
+          "errorRate": "Error rate"
+        }
       }
     }
   }
