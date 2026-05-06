@@ -117,6 +117,11 @@ function Wrapper({ children }: { children: ReactNode }) {
       <TooltipProvider>
         <MemoryRouter initialEntries={["/benchmarks/r1"]}>
           <Routes>
+            {/* Literal scenario route — matches post-delete navigation
+             * `/benchmarks/<scenario>`. React Router v6 prefers literal
+             * over param, so this wins over the `:id` fallback for
+             * /benchmarks/inference even though both could match. */}
+            <Route path="/benchmarks/inference" element={<div>list</div>} />
             <Route path="/benchmarks" element={<div>list</div>} />
             <Route path="/benchmarks/:id" element={children} />
           </Routes>

@@ -68,7 +68,12 @@
     "connection": "Connection",
     "status": "状态",
     "p95": "p95 (ms)",
-    "errorRate": "错误率"
+    "errorRate": "错误率",
+    "actions": "操作",
+    "actionLabels": {
+      "viewDetail": "详情",
+      "delete": "删除"
+    }
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",

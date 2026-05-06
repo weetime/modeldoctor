@@ -68,7 +68,12 @@
     "connection": "Connection",
     "status": "Status",
     "p95": "p95 (ms)",
-    "errorRate": "Error rate"
+    "errorRate": "Error rate",
+    "actions": "Actions",
+    "actionLabels": {
+      "viewDetail": "View",
+      "delete": "Delete"
+    }
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",

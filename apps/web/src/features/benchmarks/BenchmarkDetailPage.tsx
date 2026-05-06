@@ -352,7 +352,9 @@ export function BenchmarkDetailPage() {
                   onSuccess: () => {
                     setDeleteOpen(false);
                     toast.success(t("detail.delete.success"));
-                    navigate("/benchmarks");
+                    // Mirror "返回列表" — keep the user in the same scenario
+                    // tab they came from, not the default inference list.
+                    navigate(`/benchmarks/${benchmark.scenario}`);
                   },
                   onError: () => {
                     toast.error(t("detail.delete.errors.generic"));

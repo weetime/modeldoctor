@@ -1,6 +1,16 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,13 +26,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { History as HistoryIcon } from "lucide-react";
+import { Eye, History as HistoryIcon, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
-import { benchmarkKeys, useBenchmarkList } from "./queries";
+import { benchmarkKeys, useBenchmarkList, useDeleteBenchmark } from "./queries";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
 import { StatusBadge } from "./status-display";
 
@@ -87,6 +98,8 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   }
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const deleteBenchmark = useDeleteBenchmark();
   const navigate = useNavigate();
 
   const {
@@ -231,7 +244,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                   <TableHead>{t("columns.status")}</TableHead>
                   <TableHead className="text-right">{t("columns.p95")}</TableHead>
                   <TableHead className="text-right">{t("columns.errorRate")}</TableHead>
-                  <TableHead className="w-10" />
+                  <TableHead className="w-24 text-center">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -244,7 +257,14 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         aria-label={`select ${benchmark.id}`}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{benchmark.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        to={`/benchmarks/${benchmark.id}`}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {benchmark.name}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDistanceToNow(new Date(benchmark.createdAt), { addSuffix: true })}
                     </TableCell>
@@ -279,13 +299,30 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     <TableCell className="text-right tabular-nums">
                       {fmtNum(readErrorRate(benchmark.summaryMetrics), 4)}
                     </TableCell>
-                    <TableCell>
-                      <Link
-                        to={`/benchmarks/${benchmark.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        →
-                      </Link>
+                    <TableCell className="text-center">
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t("columns.actionLabels.viewDetail")}
+                          title={t("columns.actionLabels.viewDetail")}
+                        >
+                          <Link to={`/benchmarks/${benchmark.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t("columns.actionLabels.delete")}
+                          title={t("columns.actionLabels.delete")}
+                          onClick={() => setPendingDeleteId(benchmark.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -307,6 +344,40 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
           </div>
         )}
       </div>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("detail.delete.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("detail.delete.confirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("detail.baseline.dialog.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingDeleteId) return;
+                deleteBenchmark.mutate(pendingDeleteId, {
+                  onSuccess: () => {
+                    setPendingDeleteId(null);
+                    toast.success(t("detail.delete.success"));
+                  },
+                  onError: () => {
+                    toast.error(t("detail.delete.errors.generic"));
+                  },
+                });
+              }}
+              disabled={deleteBenchmark.isPending}
+            >
+              {t("detail.delete.confirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
