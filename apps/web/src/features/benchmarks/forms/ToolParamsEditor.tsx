@@ -156,10 +156,15 @@ export function ToolSelectorField({
           </SelectContent>
         </Select>
       ) : (
-        // Single-tool scenario (e.g. gateway → vegeta). Render as plain
-        // inline text — no input chrome, no description: the user has no
-        // choice to make here so the field is purely informational.
-        <div id={toolFieldId} aria-label="Tool" className="text-sm font-medium">
+        // Single-tool scenario (e.g. gateway → vegeta). Read-only display
+        // that matches the input chrome (border, padding, height) so it
+        // sits in the form rhythm — but uses bg-background (not bg-muted)
+        // since the field isn't disabled, just not a choice.
+        <div
+          id={toolFieldId}
+          aria-label="Tool"
+          className="flex h-10 items-center rounded-md border border-input bg-background px-3 text-sm"
+        >
           {t(`create.tools.${tool}`)}
         </div>
       )}

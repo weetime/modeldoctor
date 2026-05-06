@@ -7,8 +7,8 @@
     "submit": "提交"
   },
   "create": {
-    "title": "新建基准测试",
-    "subtitle": "配置基准测试或负载测试参数，然后提交",
+    "title": "新建",
+    "subtitle": "配置参数后提交",
     "sections": {
       "endpoint": "接入点",
       "tool": "工具",

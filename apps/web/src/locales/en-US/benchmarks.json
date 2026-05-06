@@ -7,8 +7,8 @@
     "submit": "Submit"
   },
   "create": {
-    "title": "New Benchmark",
-    "subtitle": "Configure a benchmark or load test, then submit",
+    "title": "New",
+    "subtitle": "Configure parameters, then submit",
     "sections": {
       "endpoint": "Endpoint",
       "tool": "Tool",
