@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
+import { useConnection } from "@/features/connections/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -101,6 +102,10 @@ export function BenchmarkDetailPage() {
   const { t } = useTranslation("benchmarks");
   const { id } = useParams<{ id: string }>();
   const { data: benchmark, isLoading, isError, error } = useBenchmarkDetail(id ?? "");
+  // Loaded eagerly so the rerun handler can substitute the current
+  // connection model into legacy params (those that lack `body`). This
+  // also primes the cache for the RequestDetailsSection rendered below.
+  const { data: rerunConnection } = useConnection(benchmark?.connectionId ?? null);
   const qc = useQueryClient();
 
   const [setOpen, setSetOpen] = useState(false);
@@ -182,7 +187,7 @@ export function BenchmarkDetailPage() {
           benchmark.tool === "vegeta"
             ? (migrateVegetaParams(
                 benchmark.params as Parameters<typeof migrateVegetaParams>[0],
-                null,
+                rerunConnection?.model ?? null,
               ) as unknown as Record<string, unknown>)
             : benchmark.params,
       });

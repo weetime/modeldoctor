@@ -21,6 +21,18 @@ vi.mock("@/lib/api-client", () => {
   return { ApiError, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn() } };
 });
 
+// Stub useConnection so it never fires api.get — the polling test counts
+// api.get calls precisely, and the connection fetch would throw off those
+// counts. The rerun-related tests only care that migrateVegetaParams gets
+// the right model, which is covered separately.
+vi.mock("@/features/connections/queries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/connections/queries")>();
+  return {
+    ...actual,
+    useConnection: () => ({ data: { id: "c1", model: "test-model" } }),
+  };
+});
+
 // ECharts uses canvas APIs not present in jsdom; stub the chart components
 // so the new RunChartsSection can render in this page test.
 vi.mock("@/components/charts", () => ({
