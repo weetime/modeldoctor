@@ -17,7 +17,8 @@
     "sections": {
       "endpoint": "Endpoint",
       "tool": "Tool",
-      "metadata": "Benchmark details",
+      "target": "Target",
+      "metadata": "Basic info",
       "parameters": "Parameters"
     },
     "fields": {

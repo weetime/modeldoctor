@@ -48,9 +48,10 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("BenchmarkCreatePage", () => {
-  it("renders endpoint, tool, name, description sections", () => {
+  it("renders target, tool, name, description sections", () => {
     render(<BenchmarkCreatePage />, { wrapper: Wrapper });
-    expect(screen.getByText(/Endpoint/i)).toBeInTheDocument();
+    // Endpoint + tool now collapse into a single "Target" card.
+    expect(screen.getByText(/Target|目标/)).toBeInTheDocument();
     expect(screen.getAllByText(/Tool/i).length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/Name/i)).toBeInTheDocument();
   });

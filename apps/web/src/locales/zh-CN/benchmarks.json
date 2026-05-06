@@ -17,7 +17,8 @@
     "sections": {
       "endpoint": "接入点",
       "tool": "工具",
-      "metadata": "基准测试详情",
+      "target": "目标",
+      "metadata": "基本信息",
       "parameters": "参数"
     },
     "fields": {

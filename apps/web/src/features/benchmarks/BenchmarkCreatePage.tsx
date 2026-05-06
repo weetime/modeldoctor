@@ -1,7 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
-import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -108,72 +108,94 @@ export function BenchmarkCreatePage() {
       <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
-            <FormSection title={t("create.sections.metadata")}>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("create.fields.name")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("create.fields.description")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(e.target.value === "" ? undefined : e.target.value)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
+            {/* Top row: 基本信息 (left) + 目标 (right) — both info-light, paired
+             * for 2-col on md+. On small screens they stack naturally. */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("create.sections.metadata")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("create.fields.name")}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("create.fields.description")}</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value === "" ? undefined : e.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-            <FormSection title={t("create.sections.endpoint")}>
-              <FormField
-                control={form.control}
-                name="connectionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>
-                      {t("create.fields.connection", { defaultValue: "Connection" })}
-                    </FormLabel>
-                    <FormControl>
-                      <ConnectionPicker
-                        selectedConnectionId={field.value || null}
-                        onSelect={(id) =>
-                          form.setValue("connectionId", id ?? "", { shouldValidate: true })
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("create.sections.target")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="connectionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>
+                          {t("create.fields.connection", { defaultValue: "Connection" })}
+                        </FormLabel>
+                        <FormControl>
+                          <ConnectionPicker
+                            selectedConnectionId={field.value || null}
+                            onSelect={(id) =>
+                              form.setValue("connectionId", id ?? "", { shouldValidate: true })
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <ToolSelectorField scenario={scenario} />
+                </CardContent>
+              </Card>
+            </div>
 
-            <FormSection title={t("create.sections.tool")}>
-              <ToolSelectorField scenario={scenario} />
-            </FormSection>
-
-            <FormSection title={t("create.sections.parameters")}>
-              <ToolParamsForm scenario={scenario} />
-            </FormSection>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("create.sections.parameters")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ToolParamsForm scenario={scenario} />
+              </CardContent>
+            </Card>
 
             <SubmitRow
               scenario={scenario}
