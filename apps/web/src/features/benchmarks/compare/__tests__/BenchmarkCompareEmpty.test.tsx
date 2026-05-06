@@ -38,7 +38,6 @@ function makeBenchmark(
     scenario,
     tool,
     toolVersion: null,
-    driverKind: "local",
     name: id,
     description: null,
     status,

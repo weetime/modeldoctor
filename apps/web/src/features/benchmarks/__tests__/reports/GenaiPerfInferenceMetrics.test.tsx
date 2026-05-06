@@ -34,7 +34,6 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     scenario: "inference",
     tool: "genai-perf",
     toolVersion: null,
-    driverKind: "local",
     name: "smoke",
     description: null,
     status: "completed",

@@ -68,7 +68,6 @@
     "metadata": {
       "scenario": "场景",
       "tool": "工具",
-      "driverKind": "Driver",
       "status": "状态",
       "connection": "Connection",
       "connectionMissing": "(已删除)",

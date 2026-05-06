@@ -100,7 +100,6 @@ model Benchmark {
   scenario    String  // 'inference' | 'capacity' | 'gateway'
   tool        String  // 'guidellm' | 'vegeta' | 'genai-perf'
   toolVersion String? @map("tool_version")
-  driverKind  String  @map("driver_kind") // 'local' | 'k8s'
 
   name        String
   description String? @db.Text

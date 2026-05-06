@@ -14,7 +14,6 @@ function makeBenchmark(id: string, p95: number, errors = 0, total = 100): Benchm
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
-    driverKind: "local",
     name: id,
     description: null,
     status: "completed",

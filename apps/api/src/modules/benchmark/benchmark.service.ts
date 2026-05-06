@@ -38,13 +38,6 @@ export class BenchmarkService {
   private readonly log = new Logger(BenchmarkService.name);
   private readonly callbackSecret: Buffer;
   private readonly callbackUrl: string;
-  /**
-   * Pre-#101 this field branched on `BENCHMARK_DRIVER` to support a
-   * subprocess driver alongside k8s. K8s is now the only execution
-   * mode, so the value is constant. Kept for DB-schema continuity
-   * (`Benchmark.driverKind` column, exposed in the contract).
-   */
-  private readonly driverKind = "k8s" as const;
 
   constructor(
     private readonly repo: BenchmarkRepository,
@@ -179,7 +172,6 @@ export class BenchmarkService {
       connectionId: conn.id,
       scenario: req.scenario,
       tool: req.tool,
-      driverKind: this.driverKind,
       name: req.name,
       description: req.description ?? null,
       params: params as Prisma.InputJsonValue,
@@ -348,7 +340,6 @@ function toContract(row: BenchmarkWithRelations): Benchmark {
     scenario: row.scenario as Benchmark["scenario"],
     tool: row.tool as Benchmark["tool"],
     toolVersion: row.toolVersion,
-    driverKind: row.driverKind as Benchmark["driverKind"],
     name: row.name,
     description: row.description,
     status: row.status as Benchmark["status"],

@@ -12,7 +12,6 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
-    driverKind: "local",
     name: "smoke",
     description: null,
     status: "completed",

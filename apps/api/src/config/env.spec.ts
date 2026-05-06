@@ -47,9 +47,9 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:prod",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:prod",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:prod",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     });
     expect(env.DATABASE_URL).toBe("postgresql://u:p@h:5432/d");
   });
@@ -79,9 +79,9 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:prod",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:prod",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:prod",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     });
     expect(env.JWT_ACCESS_SECRET).toBe("a".repeat(32));
   });
@@ -178,9 +178,9 @@ describe("validateEnv", () => {
       CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
       BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:dev2",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:dev2",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:dev2",
+      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     };
 
     it("requires RUNNER_IMAGE_GUIDELLM outside test mode", () => {
@@ -201,9 +201,9 @@ describe("validateEnv", () => {
     it("accepts a fully-configured dev env with all three RUNNER_IMAGE_* set", () => {
       const env = validateEnv(baseDev);
       expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
-      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:dev2");
-      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:dev2");
-      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:dev2");
+      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:test");
+      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:test");
+      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:test");
     });
 
     it("defaults BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to 1800", () => {

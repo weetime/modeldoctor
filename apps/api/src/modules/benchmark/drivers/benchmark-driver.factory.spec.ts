@@ -6,9 +6,9 @@ import { createBenchmarkDriver, imageForTool } from "./benchmark-driver.factory.
 function mockConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
   const defaults: Partial<Env> = {
     BENCHMARK_K8S_NAMESPACE: "modeldoctor-benchmarks",
-    RUNNER_IMAGE_GUIDELLM: "img-guidellm:latest",
-    RUNNER_IMAGE_VEGETA: "img-vegeta:latest",
-    RUNNER_IMAGE_GENAI_PERF: "img-genai-perf:latest",
+    RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+    RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+    RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
     ...overrides,
   } as Partial<Env>;
   return {
@@ -19,9 +19,9 @@ function mockConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
 describe("imageForTool", () => {
   it("returns the per-tool env var", () => {
     const cfg = mockConfig();
-    expect(imageForTool("guidellm", cfg)).toBe("img-guidellm:latest");
-    expect(imageForTool("vegeta", cfg)).toBe("img-vegeta:latest");
-    expect(imageForTool("genai-perf", cfg)).toBe("img-genai-perf:latest");
+    expect(imageForTool("guidellm", cfg)).toBe("md-runner-guidellm:test");
+    expect(imageForTool("vegeta", cfg)).toBe("md-runner-vegeta:test");
+    expect(imageForTool("genai-perf", cfg)).toBe("md-runner-genai-perf:test");
   });
 
   it("throws when image env var is unset", () => {

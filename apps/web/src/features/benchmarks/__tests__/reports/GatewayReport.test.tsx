@@ -23,7 +23,6 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     scenario: "gateway",
     tool: "vegeta",
     toolVersion: null,
-    driverKind: "local",
     name: "smoke",
     description: null,
     status: "completed",

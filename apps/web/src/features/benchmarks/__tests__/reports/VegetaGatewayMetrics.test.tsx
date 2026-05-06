@@ -26,7 +26,6 @@ function makeBenchmark(
     scenario: "gateway",
     tool: "vegeta",
     toolVersion: null,
-    driverKind: "local",
     name: "smoke",
     description: null,
     status: "completed",
