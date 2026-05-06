@@ -268,5 +268,31 @@
       "errorRate": "错误率",
       "throughput": "吞吐 (req/s)"
     }
+  },
+  "reports": {
+    "title": "端点报告",
+    "subtitle": "按连接聚合最近 N 天的基准测试，便于追踪端点健康趋势",
+    "rangeLabel": "时间范围",
+    "ranges": {
+      "7d": "近 7 天",
+      "30d": "近 30 天",
+      "90d": "近 90 天"
+    },
+    "summary": {
+      "totalRuns": "{{count}} 次测试",
+      "successRate": "成功率 {{rate}}%",
+      "successRateMissing": "成功率 —",
+      "latest": "最近：{{name}} · {{when}}"
+    },
+    "trend": {
+      "regression": "p95 劣化",
+      "improvement": "p95 改善",
+      "stable": "p95 稳定"
+    },
+    "viewHistory": "查看历史",
+    "empty": {
+      "title": "暂无报告数据",
+      "body": "选定时间范围内没有基准测试。"
+    }
   }
 }

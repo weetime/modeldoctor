@@ -268,5 +268,31 @@
       "errorRate": "Error rate",
       "throughput": "Throughput (req/s)"
     }
+  },
+  "reports": {
+    "title": "Endpoint Reports",
+    "subtitle": "Per-connection benchmark aggregates over a recent window",
+    "rangeLabel": "Range",
+    "ranges": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    },
+    "summary": {
+      "totalRuns": "{{count}} runs",
+      "successRate": "Success {{rate}}%",
+      "successRateMissing": "Success —",
+      "latest": "Latest: {{name}} · {{when}}"
+    },
+    "trend": {
+      "regression": "p95 regression",
+      "improvement": "p95 improvement",
+      "stable": "p95 stable"
+    },
+    "viewHistory": "View history",
+    "empty": {
+      "title": "No report data",
+      "body": "No benchmarks within the selected window."
+    }
   }
 }
