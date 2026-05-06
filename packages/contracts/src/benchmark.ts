@@ -169,11 +169,7 @@ export const endpointReportRangeSchema = z.enum(["7d", "30d", "90d"]);
 export type EndpointReportRange = z.infer<typeof endpointReportRangeSchema>;
 
 export const endpointReportSchema = z.object({
-  connection: z.object({
-    id: z.string(),
-    name: z.string(),
-    model: z.string(),
-    baseUrl: z.string(),
+  connection: benchmarkConnectionRefSchema.extend({
     category: ModalityCategorySchema,
   }),
   totalRuns: z.number().int().nonnegative(),
@@ -184,8 +180,8 @@ export const endpointReportSchema = z.object({
   // chronologically-latest. null when no completed run carries metrics.
   p95Latency: z
     .object({
-      first: z.number().nullable(),
-      last: z.number().nullable(),
+      first: z.number().nonnegative().nullable(),
+      last: z.number().nonnegative().nullable(),
     })
     .nullable(),
   // Latest run regardless of status — drives "Latest: <name> · <when>".
