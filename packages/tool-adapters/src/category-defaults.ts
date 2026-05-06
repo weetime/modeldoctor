@@ -13,35 +13,32 @@ import type { VegetaParams } from "./vegeta/schema.js";
  * speak this modality" — the form renders an inline warning instead of
  * silently picking a wrong fallback.
  */
-export const VEGETA_CATEGORY_DEFAULTS: Record<
-  ModalityCategory,
-  { apiType: VegetaParams["apiType"] }
-> = {
+export const VEGETA_CATEGORY_DEFAULTS = {
   chat: { apiType: "chat" },
   audio: { apiType: "chat-audio" },
   embeddings: { apiType: "embeddings" },
   rerank: { apiType: "rerank" },
   image: { apiType: "images" },
-};
+} as const satisfies Record<ModalityCategory, { apiType: VegetaParams["apiType"] }>;
 
-export const GENAI_PERF_CATEGORY_DEFAULTS: Record<
-  ModalityCategory,
-  { endpointType: GenaiPerfParams["endpointType"] } | { unsupported: true }
-> = {
+export const GENAI_PERF_CATEGORY_DEFAULTS = {
   chat: { endpointType: "chat" },
   audio: { unsupported: true },
   embeddings: { endpointType: "embeddings" },
   rerank: { endpointType: "rankings" },
   image: { unsupported: true },
-};
-
-export const GUIDELLM_CATEGORY_DEFAULTS: Record<
+} as const satisfies Record<
   ModalityCategory,
-  { apiType: GuidellmParams["apiType"] } | { unsupported: true }
-> = {
+  { endpointType: GenaiPerfParams["endpointType"] } | { unsupported: true }
+>;
+
+export const GUIDELLM_CATEGORY_DEFAULTS = {
   chat: { apiType: "chat" },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },
   image: { unsupported: true },
-};
+} as const satisfies Record<
+  ModalityCategory,
+  { apiType: GuidellmParams["apiType"] } | { unsupported: true }
+>;
