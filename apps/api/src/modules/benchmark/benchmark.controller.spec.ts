@@ -10,8 +10,7 @@ import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
-import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
-import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
+import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 
 // Stub adapter registry to avoid pulling in the real (Phase 1 stubbed) adapters'
 // buildCommand which throws "not implemented". The controller spec only needs
@@ -46,7 +45,7 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
   };
 });
 
-const mockDriver: BenchmarkExecutionDriver = {
+const mockRunner = {
   start: vi.fn(async () => ({ handle: "subprocess:1234" })),
   cancel: vi.fn(async () => undefined),
   cleanup: vi.fn(async () => undefined),
@@ -96,7 +95,7 @@ describe("BenchmarkController", () => {
             },
           },
         },
-        { provide: BENCHMARK_DRIVER, useValue: mockDriver },
+        { provide: K8sBenchmarkRunner, useValue: mockRunner },
         { provide: ConnectionService, useValue: mockConnections },
         {
           provide: BenchmarkTemplateRepository,
@@ -250,7 +249,7 @@ describe("BenchmarkController", () => {
     });
     expect(dto.status).toBe("submitted");
     expect(dto.driverHandle).toBe("subprocess:1234");
-    expect(mockDriver.start).toHaveBeenCalledTimes(1);
+    expect(mockRunner.start).toHaveBeenCalledTimes(1);
   });
 
   it("cancel transitions a running benchmark to canceled", async () => {
@@ -271,7 +270,7 @@ describe("BenchmarkController", () => {
     const userArg = { sub: user.id, email: user.email, roles: [] };
     const dto = await controller.cancel(userArg as never, benchmark.id);
     expect(dto.status).toBe("canceled");
-    expect(mockDriver.cancel).toHaveBeenCalledWith("subprocess:9999");
+    expect(mockRunner.cancel).toHaveBeenCalledWith("subprocess:9999");
   });
 
   it("delete removes a terminal benchmark", async () => {
@@ -489,7 +488,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
             },
           },
         },
-        { provide: BENCHMARK_DRIVER, useValue: mockDriver },
+        { provide: K8sBenchmarkRunner, useValue: mockRunner },
         { provide: ConnectionService, useValue: mockConnections },
         {
           provide: BenchmarkTemplateRepository,

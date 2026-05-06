@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BenchmarkExecutionContext } from "./execution-driver.interface.js";
-import { K8sJobDriver } from "./k8s-job-driver.js";
+import { type BenchmarkRunInput, K8sBenchmarkRunner } from "./k8s-benchmark-runner.js";
 
-const ctx: BenchmarkExecutionContext = {
+const ctx: BenchmarkRunInput = {
   runId: "abc",
   tool: "guidellm",
   buildResult: {
@@ -15,7 +14,7 @@ const ctx: BenchmarkExecutionContext = {
   image: "img:latest",
 };
 
-function mkDriver() {
+function mkRunner() {
   const batch = {
     createNamespacedJob: vi.fn(async () => ({ body: { metadata: { uid: "uid-1" } } })),
     deleteNamespacedJob: vi.fn(async () => ({})),
@@ -25,17 +24,14 @@ function mkDriver() {
     deleteNamespacedSecret: vi.fn(async () => ({})),
     patchNamespacedSecret: vi.fn(async () => ({})),
   };
-  const driver = new K8sJobDriver({
-    namespace: "ns",
-    apis: { batch: batch as never, core: core as never },
-  });
-  return { driver, batch, core };
+  const runner = new K8sBenchmarkRunner("ns", batch as never, core as never);
+  return { runner, batch, core };
 }
 
-describe("K8sJobDriver", () => {
+describe("K8sBenchmarkRunner", () => {
   it("creates Secret then Job", async () => {
-    const { driver, batch, core } = mkDriver();
-    const { handle } = await driver.start(ctx);
+    const { runner, batch, core } = mkRunner();
+    const { handle } = await runner.start(ctx);
     expect(handle).toBe("ns/run-abc");
     expect(core.createNamespacedSecret).toHaveBeenCalled();
     expect(batch.createNamespacedJob).toHaveBeenCalled();
@@ -46,31 +42,31 @@ describe("K8sJobDriver", () => {
   });
 
   it("rolls back Secret if Job creation fails", async () => {
-    const { driver, batch, core } = mkDriver();
+    const { runner, batch, core } = mkRunner();
     batch.createNamespacedJob = vi.fn(async () => {
       throw new Error("simulated job-create failure");
     }) as never;
-    await expect(driver.start(ctx)).rejects.toThrow(/simulated/);
+    await expect(runner.start(ctx)).rejects.toThrow(/simulated/);
     expect(core.deleteNamespacedSecret).toHaveBeenCalled();
   });
 
   it("cancel returns silently on 404", async () => {
-    const { driver, batch } = mkDriver();
+    const { runner, batch } = mkRunner();
     batch.deleteNamespacedJob = vi.fn(async () => {
       const e = new Error("not found") as Error & { statusCode?: number };
       e.statusCode = 404;
       throw e;
     }) as never;
-    await expect(driver.cancel("ns/run-abc")).resolves.toBeUndefined();
+    await expect(runner.cancel("ns/run-abc")).resolves.toBeUndefined();
   });
 
   it("cancel rethrows non-404 errors", async () => {
-    const { driver, batch } = mkDriver();
+    const { runner, batch } = mkRunner();
     batch.deleteNamespacedJob = vi.fn(async () => {
       const e = new Error("apiserver flake") as Error & { statusCode?: number };
       e.statusCode = 500;
       throw e;
     }) as never;
-    await expect(driver.cancel("ns/run-abc")).rejects.toThrow(/apiserver flake/);
+    await expect(runner.cancel("ns/run-abc")).rejects.toThrow(/apiserver flake/);
   });
 });

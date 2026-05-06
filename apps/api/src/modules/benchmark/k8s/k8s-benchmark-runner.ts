@@ -1,30 +1,51 @@
 import type { BatchV1Api, CoreV1Api } from "@kubernetes/client-node";
-import { Logger } from "@nestjs/common";
-import type {
-  BenchmarkExecutionContext,
-  BenchmarkExecutionDriver,
-  BenchmarkExecutionHandle,
-} from "./execution-driver.interface.js";
+import type { BuildCommandResult, ToolName } from "@modeldoctor/tool-adapters";
+import { Injectable, Logger } from "@nestjs/common";
 import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 
-export interface K8sJobDriverOpts {
-  namespace: string;
-  apis: { batch: BatchV1Api; core: CoreV1Api };
+/**
+ * Per-run input the runner expects. Sensitive values flow via
+ * `buildResult.secretEnv` and `buildResult.inputFiles` and MUST NOT
+ * appear in argv. The runner materializes them as a per-run K8s Secret
+ * and mounts them into the Job pod.
+ *
+ * `image` is resolved per-tool via `imageForTool()` (see
+ * `runner-images.ts`) and is NOT part of the adapter's responsibility —
+ * adapters are deployment-mode-agnostic.
+ */
+export interface BenchmarkRunInput {
+  runId: string;
+  tool: ToolName;
+  buildResult: BuildCommandResult;
+  callback: { url: string; token: string };
+  image: string;
 }
 
-export class K8sJobDriver implements BenchmarkExecutionDriver {
-  private readonly log = new Logger(K8sJobDriver.name);
-  private readonly namespace: string;
-  private readonly batch: BatchV1Api;
-  private readonly core: CoreV1Api;
+/** Opaque handle to an in-flight Job. Format: `<namespace>/<jobName>`. */
+export type BenchmarkRunHandle = string;
 
-  constructor(opts: K8sJobDriverOpts) {
-    this.namespace = opts.namespace;
-    this.batch = opts.apis.batch;
-    this.core = opts.apis.core;
-  }
+/**
+ * Launches benchmark Jobs in K8s. The single execution backend for
+ * ModelDoctor (subprocess + driver-factory abstraction were removed in
+ * #101). Lifecycle progression after `start()` flows through HTTP
+ * callbacks; this class only handles spawn + cancel + cleanup.
+ *
+ * Wired via `useFactory` in `BenchmarkModule` so the kube client is
+ * loaded lazily (skipping the import in test mode where we never run
+ * a real K8s call). Tests instantiate this class directly with mocked
+ * `BatchV1Api` / `CoreV1Api`.
+ */
+@Injectable()
+export class K8sBenchmarkRunner {
+  private readonly log = new Logger(K8sBenchmarkRunner.name);
 
-  async start(ctx: BenchmarkExecutionContext): Promise<{ handle: BenchmarkExecutionHandle }> {
+  constructor(
+    private readonly namespace: string,
+    private readonly batch: BatchV1Api,
+    private readonly core: CoreV1Api,
+  ) {}
+
+  async start(ctx: BenchmarkRunInput): Promise<{ handle: BenchmarkRunHandle }> {
     const ns = this.namespace;
     const secret = buildSecretManifest(ctx, ns);
     await this.core.createNamespacedSecret(ns, secret);
@@ -79,7 +100,7 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
     return { handle: `${ns}/${jobName(ctx.runId)}` };
   }
 
-  async cancel(handle: BenchmarkExecutionHandle): Promise<void> {
+  async cancel(handle: BenchmarkRunHandle): Promise<void> {
     const [ns, name] = handle.split("/");
     if (!ns || !name) return;
     try {
@@ -92,9 +113,6 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
         undefined,
         // propagationPolicy: 'Background' triggers Job → Secret cascade
         // via ownerReferences set in start().
-        // (Legacy benchmark driver uses 'Foreground' to gate on cascade
-        // completion; the benchmark module doesn't gate on cancel
-        // completion, so 'Background' is fine here.)
         "Background",
       );
     } catch (e) {
@@ -112,9 +130,10 @@ export class K8sJobDriver implements BenchmarkExecutionDriver {
     }
   }
 
-  async cleanup(handle: BenchmarkExecutionHandle): Promise<void> {
-    // K8s Job has TTL via spec.ttlSecondsAfterFinished; no explicit cleanup needed.
-    // Method exists for interface symmetry.
+  async cleanup(handle: BenchmarkRunHandle): Promise<void> {
+    // K8s Job has TTL via spec.ttlSecondsAfterFinished; no explicit
+    // cleanup needed. Method exists for service-side symmetry — the
+    // service calls cleanup() unconditionally on terminal state.
     void handle;
   }
 }

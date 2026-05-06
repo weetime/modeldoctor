@@ -8,7 +8,6 @@ import { type ToolName, applyScenarioConstraints, byTool } from "@modeldoctor/to
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -23,9 +22,8 @@ import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
-import { imageForTool } from "./drivers/benchmark-driver.factory.js";
-import { BENCHMARK_DRIVER } from "./drivers/benchmark-driver.token.js";
-import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
+import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
+import { imageForTool } from "./k8s/runner-images.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
 // 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
@@ -41,7 +39,7 @@ export class BenchmarkService {
 
   constructor(
     private readonly repo: BenchmarkRepository,
-    @Inject(BENCHMARK_DRIVER) private readonly driver: BenchmarkExecutionDriver,
+    private readonly runner: K8sBenchmarkRunner,
     private readonly config: ConfigService<Env, true>,
     private readonly connections: ConnectionService,
     private readonly templates: BenchmarkTemplateRepository,
@@ -213,7 +211,7 @@ export class BenchmarkService {
         },
         callback: { url: this.callbackUrl, token: callbackToken },
       });
-      const result = await this.driver.start({
+      const result = await this.runner.start({
         runId: row.id,
         tool: row.tool as ToolName,
         buildResult,
@@ -254,9 +252,9 @@ export class BenchmarkService {
       });
     }
     if (row.status !== "pending" && row.driverHandle) {
-      // re-raises non-404 errors per K8sJobDriver contract; let them propagate
+      // re-raises non-404 errors per K8sBenchmarkRunner contract; let them propagate
       // so callers see a 5xx instead of a misleading 200 canceled.
-      await this.driver.cancel(row.driverHandle);
+      await this.runner.cancel(row.driverHandle);
     }
     await this.repo.update(row.id, {
       status: "canceled",
@@ -275,13 +273,13 @@ export class BenchmarkService {
     }
     // Non-terminal rows may have a backing driver job (K8s Job, subprocess,
     // …). Best-effort cancel before DB delete so we don't orphan resources.
-    // The K8sJobDriver already treats 404 on the Job as idempotent; any
+    // The K8sBenchmarkRunner already treats 404 on the Job as idempotent; any
     // other error is logged and swallowed so a flaky apiserver doesn't
     // block the user from clearing a stuck row.
     const isTerminal = (TERMINAL_STATES as readonly string[]).includes(row.status);
     if (!isTerminal && row.driverHandle) {
       try {
-        await this.driver.cancel(row.driverHandle);
+        await this.runner.cancel(row.driverHandle);
       } catch (e) {
         const err = e as Error;
         this.log.warn(
