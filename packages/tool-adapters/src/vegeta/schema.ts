@@ -7,7 +7,11 @@ export const vegetaParamsSchema = z.object({
   path: z
     .string()
     .min(1)
-    .regex(/^\//, "must start with /"),
+    .regex(/^\//, "must start with /")
+    .refine(
+      (p) => !p.includes("?") && !p.includes("#"),
+      "must not contain '?' or '#' (query string and fragment are not allowed in path)",
+    ),
   body: z
     .string()
     .min(1)

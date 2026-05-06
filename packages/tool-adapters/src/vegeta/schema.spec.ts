@@ -108,6 +108,25 @@ describe("vegetaParamsSchema", () => {
     expect(r.success).toBe(false);
   });
 
+  it("rejects path containing query string or fragment", () => {
+    const r1 = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions?foo=1",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r1.success).toBe(false);
+    const r2 = vegetaParamsSchema.safeParse({
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions#frag",
+      body: '{"model":"m","messages":[]}',
+    });
+    expect(r2.success).toBe(false);
+  });
+
   it("accepts valid JSON body", () => {
     const r = vegetaParamsSchema.safeParse({
       apiType: "chat",
