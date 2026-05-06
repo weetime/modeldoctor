@@ -8,7 +8,7 @@ import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-tem
 import type { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
-import type { BenchmarkExecutionDriver } from "./drivers/execution-driver.interface.js";
+import type { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 
 // Stub adapter registry to avoid pulling in the real (stubbed) adapters'
 // buildCommand / paramsSchema implementations. We also stub
@@ -136,11 +136,15 @@ class MockBaselineService {
   existsById = vi.fn(async (id: string) => this.ids.has(id));
 }
 
-const mockDriver: BenchmarkExecutionDriver = {
+// Mock cast to K8sBenchmarkRunner — only the public methods that
+// BenchmarkService actually calls (start / cancel / cleanup) need to
+// be present. The class also holds private fields (namespace, batch,
+// core, log) that we don't need to satisfy with a real mock.
+const mockRunner = {
   start: vi.fn(async () => ({ handle: "subprocess:1234" })),
   cancel: vi.fn(async () => undefined),
   cleanup: vi.fn(async () => undefined),
-};
+} as unknown as K8sBenchmarkRunner;
 
 const mockConnections: ConnectionService = {
   getOwnedDecrypted: vi.fn(async () => ({
@@ -172,7 +176,7 @@ function build(
 ) {
   return new BenchmarkService(
     repo as unknown as BenchmarkRepository,
-    mockDriver,
+    mockRunner,
     mockConfig(configOverrides) as unknown as ConfigService<typeof ENV_DEFAULTS, true>,
     mockConnections,
     (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
@@ -226,7 +230,7 @@ describe("BenchmarkService.create", () => {
       params: {},
     });
     expect(repo.create).toHaveBeenCalledTimes(1);
-    expect(mockDriver.start).toHaveBeenCalledTimes(1);
+    expect(mockRunner.start).toHaveBeenCalledTimes(1);
     expect(dto.status).toBe("submitted");
     expect(dto.driverHandle).toBe("subprocess:1234");
   });
@@ -259,7 +263,7 @@ describe("BenchmarkService.cancel", () => {
   it("marks benchmark as canceled and calls driver.cancel when handle exists", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }));
     const dto = await svc.cancel("b1", "u1");
-    expect(mockDriver.cancel).toHaveBeenCalledWith("subprocess:1234");
+    expect(mockRunner.cancel).toHaveBeenCalledWith("subprocess:1234");
     expect(dto.status).toBe("canceled");
     expect(dto.completedAt).not.toBeNull();
   });
@@ -267,7 +271,7 @@ describe("BenchmarkService.cancel", () => {
   it("does NOT call driver.cancel when status is pending", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "pending", driverHandle: null }));
     await svc.cancel("b1", "u1");
-    expect(mockDriver.cancel).not.toHaveBeenCalled();
+    expect(mockRunner.cancel).not.toHaveBeenCalled();
   });
 
   it("throws BadRequestException when benchmark is already terminal", async () => {
@@ -290,30 +294,30 @@ describe("BenchmarkService.delete", () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "completed" }));
     await svc.delete("b1", "u1");
     expect(repo.delete).toHaveBeenCalledWith("b1");
-    expect(mockDriver.cancel).not.toHaveBeenCalled();
+    expect(mockRunner.cancel).not.toHaveBeenCalled();
   });
 
   it("deletes a submitted benchmark and best-effort cancels driver", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: "k8s:job-1" }));
     await svc.delete("b1", "u1");
-    expect(mockDriver.cancel).toHaveBeenCalledWith("k8s:job-1");
+    expect(mockRunner.cancel).toHaveBeenCalledWith("k8s:job-1");
     expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 
   it("deletes a running benchmark even when driver.cancel throws", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "k8s:job-2" }));
-    (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    (mockRunner.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("apiserver flake"),
     );
     await svc.delete("b1", "u1");
-    expect(mockDriver.cancel).toHaveBeenCalledWith("k8s:job-2");
+    expect(mockRunner.cancel).toHaveBeenCalledWith("k8s:job-2");
     expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 
   it("does not call driver.cancel when driverHandle is null", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "submitted", driverHandle: null }));
     await svc.delete("b1", "u1");
-    expect(mockDriver.cancel).not.toHaveBeenCalled();
+    expect(mockRunner.cancel).not.toHaveBeenCalled();
     expect(repo.delete).toHaveBeenCalledWith("b1");
   });
 });
@@ -376,7 +380,7 @@ describe("BenchmarkService.start — failure path", () => {
 
   it("marks benchmark as failed when driver.start throws and re-raises", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }));
-    (mockDriver.start as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    (mockRunner.start as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
     await expect(svc.start("b1")).rejects.toThrow(/boom/);
     const row = await repo.findById("b1");
     expect(row?.status).toBe("failed");
@@ -397,7 +401,7 @@ describe("BenchmarkService.cancel — driver-error path", () => {
 
   it("re-raises driver errors and leaves row in its prior status", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", status: "running", driverHandle: "subprocess:1234" }));
-    (mockDriver.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    (mockRunner.cancel as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("apiserver flake"),
     );
     await expect(svc.cancel("b1", "u1")).rejects.toThrow(/apiserver flake/);

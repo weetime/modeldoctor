@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { BenchmarkExecutionContext } from "./execution-driver.interface.js";
+import type { BenchmarkRunInput } from "./k8s-benchmark-runner.js";
 import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 
-const ctx: BenchmarkExecutionContext = {
+const ctx: BenchmarkRunInput = {
   runId: "abc123",
   tool: "guidellm",
   buildResult: {
