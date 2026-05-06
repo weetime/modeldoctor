@@ -57,6 +57,7 @@
     "baselineRef": "References a baseline",
     "createdAfter": "From",
     "createdBefore": "Until",
+    "clearRange": "Clear date range",
     "search": "Search by name or description",
     "any": "Any",
     "clear": "Clear filters"

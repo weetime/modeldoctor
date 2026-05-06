@@ -57,6 +57,7 @@
     "baselineRef": "对比某个基线",
     "createdAfter": "起",
     "createdBefore": "止",
+    "clearRange": "清除时间范围",
     "search": "按名称或备注搜索",
     "any": "全部",
     "clear": "清除筛选"

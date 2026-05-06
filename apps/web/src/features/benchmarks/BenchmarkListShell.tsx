@@ -26,7 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Eye, History as HistoryIcon, Trash2 } from "lucide-react";
+import { ArrowRight, History as HistoryIcon, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -309,7 +309,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                           title={t("columns.actionLabels.viewDetail")}
                         >
                           <Link to={`/benchmarks/${benchmark.id}`}>
-                            <Eye className="h-4 w-4" />
+                            <ArrowRight className="h-4 w-4" />
                           </Link>
                         </Button>
                         <Button

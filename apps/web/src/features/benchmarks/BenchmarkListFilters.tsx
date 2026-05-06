@@ -10,6 +10,7 @@ import {
 import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DateRangeFilter } from "./DateRangeFilter";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -149,35 +150,13 @@ export function BenchmarkListFilters({
         onChange={(e) => setSearchDraft(e.target.value)}
       />
 
-      <div className="flex items-center gap-1 text-sm">
-        <span className="text-muted-foreground">{t("filters.createdAfter")}</span>
-        <Input
-          type="datetime-local"
-          className="w-[200px]"
-          aria-label={t("filters.createdAfter")}
-          value={query.createdAfter?.slice(0, 16) ?? ""}
-          onChange={(e) =>
-            patch({
-              createdAfter: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-            })
-          }
-        />
-      </div>
-
-      <div className="flex items-center gap-1 text-sm">
-        <span className="text-muted-foreground">{t("filters.createdBefore")}</span>
-        <Input
-          type="datetime-local"
-          className="w-[200px]"
-          aria-label={t("filters.createdBefore")}
-          value={query.createdBefore?.slice(0, 16) ?? ""}
-          onChange={(e) =>
-            patch({
-              createdBefore: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-            })
-          }
-        />
-      </div>
+      <DateRangeFilter
+        startISO={query.createdAfter}
+        endISO={query.createdBefore}
+        onChange={({ startISO, endISO }) =>
+          patch({ createdAfter: startISO, createdBefore: endISO })
+        }
+      />
 
       {isFiltered && (
         <Button variant="ghost" size="sm" onClick={() => onChange({ limit: query.limit })}>
