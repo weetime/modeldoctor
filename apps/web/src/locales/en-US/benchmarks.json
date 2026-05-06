@@ -160,6 +160,25 @@
       "title": "vs baseline",
       "loading": "Loading baseline…",
       "loadError": "Could not load baseline for comparison"
+    },
+    "requestDetails": {
+      "title": "Request details",
+      "method": "Method",
+      "url": "URL",
+      "headers": "Headers",
+      "body": "Body",
+      "params": "Run params",
+      "paramKeys": {
+        "apiType": "API type",
+        "rate": "Rate (req/s)",
+        "duration": "Duration (s)",
+        "path": "Path"
+      },
+      "copyCurl": "Copy as cURL",
+      "copySuccess": "Copied to clipboard",
+      "hint": "Connection settings (baseUrl / apiKey / headers / queryParams) reflect the live connection; if it has been edited since this benchmark ran, what was actually sent may differ",
+      "connectionMissing": "Connection deleted — URL and credentials cannot be resolved",
+      "loading": "Loading…"
     }
   },
   "forms": {

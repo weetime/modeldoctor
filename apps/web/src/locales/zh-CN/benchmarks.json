@@ -160,6 +160,25 @@
       "title": "vs 基准",
       "loading": "加载基准中…",
       "loadError": "无法加载基准用于对比"
+    },
+    "requestDetails": {
+      "title": "请求详情",
+      "method": "方法",
+      "url": "URL",
+      "headers": "请求头",
+      "body": "请求体",
+      "params": "运行参数",
+      "paramKeys": {
+        "apiType": "API 类型",
+        "rate": "速率（req/s）",
+        "duration": "时长（s）",
+        "path": "Path"
+      },
+      "copyCurl": "复制为 cURL",
+      "copySuccess": "已复制到剪贴板",
+      "hint": "连接信息（baseUrl / apiKey / Headers / queryParams）来自当前连接配置；如该连接被修改，本次压测实际发送的可能不同",
+      "connectionMissing": "连接已删除，无法解析 URL / 凭证",
+      "loading": "加载中…"
     }
   },
   "forms": {
