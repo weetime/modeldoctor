@@ -46,6 +46,12 @@ export interface ConnectionPickerProps {
   className?: string;
   /** Class for the `<SelectTrigger>` — useful for sizing inside form fields. */
   triggerClassName?: string;
+  /** Predicate marking a saved connection as un-pickable in this context.
+   * Returning a non-empty string disables the option and renders the string
+   * as an inline hint underneath. Returning `null`/`undefined` keeps the
+   * connection selectable (default). Disabled connections are sorted to the
+   * bottom of the dropdown so the usable list stays visible at a glance. */
+  disabledReason?: (connection: ConnectionPublic) => string | null | undefined;
 }
 
 /**
@@ -65,10 +71,19 @@ export function ConnectionPicker({
   onCurlParsed,
   className,
   triggerClassName,
+  disabledReason,
 }: ConnectionPickerProps) {
   const { t } = useTranslation("common");
   const listQuery = useConnections();
-  const connectionList: ConnectionPublic[] = listQuery.data ?? [];
+  const rawList: ConnectionPublic[] = listQuery.data ?? [];
+
+  // Stable partition: enabled connections first (preserving server order),
+  // disabled at the bottom. Each carries its disabled reason for inline hint.
+  const annotated = rawList.map((c) => ({ c, reason: disabledReason?.(c) ?? null }));
+  const connectionList = [
+    ...annotated.filter((a) => !a.reason),
+    ...annotated.filter((a) => a.reason),
+  ];
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
@@ -135,14 +150,14 @@ export function ConnectionPicker({
               {selectedConnectionId === MANUAL || (allowManual && !selectedConnectionId)
                 ? t("endpoint.manual")
                 : selectedConnectionId
-                  ? (connectionList.find((c) => c.id === selectedConnectionId)?.name ?? "")
+                  ? (connectionList.find((a) => a.c.id === selectedConnectionId)?.c.name ?? "")
                   : ""}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {allowManual ? <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem> : null}
-            {connectionList.map((c) => (
-              <SelectItem key={c.id} value={c.id} className="py-2">
+            {connectionList.map(({ c, reason }) => (
+              <SelectItem key={c.id} value={c.id} className="py-2" disabled={!!reason}>
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-baseline gap-2 text-sm">
                     <span className="font-medium">{c.name}</span>
@@ -150,6 +165,9 @@ export function ConnectionPicker({
                     <span className="text-xs text-muted-foreground">{c.model}</span>
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
+                  {reason ? (
+                    <div className="text-[11px] text-amber-600 dark:text-amber-400">{reason}</div>
+                  ) : null}
                 </div>
               </SelectItem>
             ))}

@@ -29,7 +29,26 @@ vi.mock("@/features/connections/queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/connections/queries")>();
   return {
     ...actual,
-    useConnection: () => ({ data: { id: "c1", model: "test-model" } }),
+    useConnection: () => ({
+      data: {
+        id: "c1",
+        userId: "u_1",
+        name: "test-conn",
+        baseUrl: "http://x",
+        apiKeyPreview: "sk-...test",
+        model: "test-model",
+        customHeaders: "",
+        queryParams: "",
+        category: "chat" as const,
+        tags: [],
+        prometheusUrl: null,
+        serverKind: null,
+        tokenizerHfId: null,
+        createdAt: "2026-05-06T00:00:00.000Z",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+      },
+    }),
+    useRevealApiKey: () => ({ data: { apiKey: "sk-test-secret" } }),
   };
 });
 
@@ -60,7 +79,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     id: "r1",
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "vLLM Local" },
+    connection: { id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" },
     scenario: "inference",
     tool: "guidellm",
     toolVersion: null,
@@ -189,6 +208,13 @@ describe("BenchmarkDetailPage", () => {
       makeBenchmark({
         scenario: "gateway",
         tool: "vegeta",
+        params: {
+          apiType: "embeddings",
+          rate: 10,
+          duration: 30,
+          path: "/v1/embeddings",
+          body: '{"model":"m","input":"hello"}',
+        },
         summaryMetrics: {
           tool: "vegeta",
           data: {

@@ -57,6 +57,37 @@ describe("ConnectionPicker", () => {
     expect(screen.getByText("http://183.240.109.2:30888")).toBeInTheDocument();
   });
 
+  it("disables connections per disabledReason and sorts disabled ones to the bottom", async () => {
+    const c2: ConnectionPublic = { ...conn, id: "c_2", name: "audio-conn", category: "audio" };
+    const c3: ConnectionPublic = { ...conn, id: "c_3", name: "chat-conn", category: "chat" };
+    (useConnections as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [conn, c2, c3], // server order: embeddings, audio, chat
+      isLoading: false,
+    });
+    render(
+      withQc(
+        <ConnectionPicker
+          selectedConnectionId={null}
+          onSelect={() => {}}
+          disabledReason={(c) => (c.category === "embeddings" ? "no embeddings here" : null)}
+        />,
+      ),
+    );
+    await userEvent.click(screen.getByRole("combobox"));
+
+    // The disabled hint renders inside the embeddings option.
+    expect(await screen.findByText("no embeddings here")).toBeInTheDocument();
+
+    // DOM order of options: enabled (audio, chat) first, then disabled (embeddings).
+    const options = screen.getAllByRole("option");
+    const optionNames = options.map((o) => o.textContent ?? "");
+    const audioIdx = optionNames.findIndex((n) => n.includes("audio-conn"));
+    const chatIdx = optionNames.findIndex((n) => n.includes("chat-conn"));
+    const embIdx = optionNames.findIndex((n) => n.includes("bge-by-mis-tei"));
+    expect(audioIdx).toBeLessThan(embIdx);
+    expect(chatIdx).toBeLessThan(embIdx);
+  });
+
   it("closed trigger renders only the connection name", async () => {
     (useConnections as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [conn],

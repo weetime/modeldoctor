@@ -22,7 +22,7 @@ function makeBenchmark(
     id: "r1",
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "gateway" },
+    connection: { id: "c1", name: "gateway", model: "m", baseUrl: "http://x" },
     scenario: "gateway",
     tool: "vegeta",
     toolVersion: null,

@@ -20,7 +20,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     id: "r1",
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "vLLM Local" },
+    connection: { id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" },
     scenario: "capacity",
     tool: "guidellm",
     toolVersion: null,

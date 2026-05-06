@@ -251,7 +251,23 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                       <Badge variant="default">{benchmark.tool}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {benchmark.connection?.name ?? "—"}
+                      {benchmark.connection ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-foreground">{benchmark.connection.name}</span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {benchmark.connection.model}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="font-mono text-xs">
+                            {benchmark.connection.baseUrl}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell>{benchmark.status}</TableCell>
                     <TableCell className="text-right tabular-nums">

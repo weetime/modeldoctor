@@ -14,12 +14,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  type ConnectionPublic,
   type CreateBenchmarkRequest,
+  type ModalityCategory,
   type ScenarioId,
   createBenchmarkRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import { useEffect } from "react";
+import {
+  GENAI_PERF_CATEGORY_DEFAULTS,
+  GUIDELLM_CATEGORY_DEFAULTS,
+  VEGETA_CATEGORY_DEFAULTS,
+} from "@modeldoctor/tool-adapters/schemas";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -27,6 +34,27 @@ import { toast } from "sonner";
 import { TOOL_DEFAULTS, ToolParamsEditor } from "./forms/ToolParamsEditor";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
+
+const TOOL_CATEGORY_DEFAULTS = {
+  vegeta: VEGETA_CATEGORY_DEFAULTS,
+  guidellm: GUIDELLM_CATEGORY_DEFAULTS,
+  "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
+} as const;
+
+/** Categories supported by ANY tool available in this scenario. A connection
+ * whose category falls outside this set cannot be used to run any benchmark
+ * in the scenario, so the picker disables it. */
+function supportedCategoriesForScenario(scenario: ScenarioId): Set<ModalityCategory> {
+  const out = new Set<ModalityCategory>();
+  for (const tool of SCENARIOS[scenario].tools) {
+    const map = TOOL_CATEGORY_DEFAULTS[tool];
+    for (const cat of Object.keys(map) as ModalityCategory[]) {
+      const def = map[cat];
+      if (!("unsupported" in def)) out.add(cat);
+    }
+  }
+  return out;
+}
 
 export function BenchmarkCreatePage() {
   const { t } = useTranslation("benchmarks");
@@ -39,6 +67,12 @@ export function BenchmarkCreatePage() {
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
   const defaultTool = SCENARIOS[scenario].tools[0];
+
+  const supported = useMemo(() => supportedCategoriesForScenario(scenario), [scenario]);
+  const connectionDisabledReason = (c: ConnectionPublic): string | null =>
+    supported.has(c.category)
+      ? null
+      : t("create.unsupportedCategoryForScenario", { category: c.category });
 
   const form = useForm<CreateBenchmarkRequest>({
     resolver: zodResolver(createBenchmarkRequestSchema),
@@ -98,6 +132,7 @@ export function BenchmarkCreatePage() {
                         onSelect={(id) =>
                           form.setValue("connectionId", id ?? "", { shouldValidate: true })
                         }
+                        disabledReason={connectionDisabledReason}
                       />
                     </FormControl>
                     <FormMessage />

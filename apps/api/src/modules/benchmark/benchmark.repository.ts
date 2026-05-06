@@ -4,7 +4,7 @@ import { PrismaService } from "../../database/prisma.service.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({
   include: {
-    connection: { select: { id: true, name: true } },
+    connection: { select: { id: true, name: true, model: true, baseUrl: true } },
     baselineFor: { select: { id: true, name: true, createdAt: true } },
   },
 });

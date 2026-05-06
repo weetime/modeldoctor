@@ -52,10 +52,10 @@ export function RequestDetailsSection({ benchmark }: Props) {
       </p>
     );
   }
-  if (connLoading || keyLoading) {
+  if (connLoading) {
     return <p className="text-sm text-muted-foreground">{t("detail.requestDetails.loading")}</p>;
   }
-  if (!connection || !revealed) {
+  if (!connection) {
     return (
       <p className="text-sm text-muted-foreground">
         {t("detail.requestDetails.connectionMissing")}
@@ -73,9 +73,13 @@ export function RequestDetailsSection({ benchmark }: Props) {
   );
 
   const url = buildUrl(connection.baseUrl, migrated.path, connection.queryParams);
-  const headers = [
+  // Display headers use the apiKey *preview* (`sk-...XXXX`) so screen-shares
+  // and screenshots don't leak the secret. The full plaintext is only
+  // injected when the user clicks "Copy as cURL" so the resulting command is
+  // actually runnable.
+  const displayHeaders = [
     "Content-Type: application/json",
-    `Authorization: Bearer ${revealed.apiKey}`,
+    `Authorization: Bearer ${connection.apiKeyPreview}`,
     ...connection.customHeaders
       .split("\n")
       .map((h) => h.trim())
@@ -83,8 +87,26 @@ export function RequestDetailsSection({ benchmark }: Props) {
   ];
   const body = prettyBody(migrated.body);
 
+  // Snapshot connection here so the closure in copyCurl narrows to non-null
+  // (the early-return above already guarantees this at render time, but
+  // closure capture loses that narrowing without a const binding).
+  const conn = connection;
   async function copyCurl() {
-    const curl = buildCurl(url, headers, migrated.body);
+    if (!revealed) {
+      // Reveal-key still loading or unavailable — refuse to put a masked
+      // apiKey on the clipboard since the resulting cURL would not run.
+      toast.error(t("detail.requestDetails.copyError"));
+      return;
+    }
+    const plaintextHeaders = [
+      "Content-Type: application/json",
+      `Authorization: Bearer ${revealed.apiKey}`,
+      ...conn.customHeaders
+        .split("\n")
+        .map((h) => h.trim())
+        .filter((h) => h.length > 0 && h.includes(":")),
+    ];
+    const curl = buildCurl(url, plaintextHeaders, migrated.body);
     try {
       await navigator.clipboard.writeText(curl);
       toast.success(t("detail.requestDetails.copySuccess"));
@@ -97,7 +119,7 @@ export function RequestDetailsSection({ benchmark }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{t("detail.requestDetails.title")}</h3>
-        <Button variant="outline" size="sm" onClick={copyCurl}>
+        <Button variant="outline" size="sm" onClick={copyCurl} disabled={keyLoading || !revealed}>
           <Copy className="mr-1 h-4 w-4" />
           {t("detail.requestDetails.copyCurl")}
         </Button>
@@ -113,7 +135,7 @@ export function RequestDetailsSection({ benchmark }: Props) {
         <dt className="text-muted-foreground">{t("detail.requestDetails.headers")}</dt>
         <dd>
           <pre className="whitespace-pre-wrap break-all rounded-md border border-border bg-muted/30 p-2 font-mono text-xs">
-            {headers.join("\n")}
+            {displayHeaders.join("\n")}
           </pre>
         </dd>
 

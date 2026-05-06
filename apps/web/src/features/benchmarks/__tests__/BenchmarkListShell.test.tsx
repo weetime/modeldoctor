@@ -68,7 +68,7 @@ function makeBenchmark(
     id,
     userId: "u1",
     connectionId: "c1",
-    connection: { id: "c1", name: "vLLM Local" },
+    connection: { id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" },
     scenario: "inference",
     tool,
     toolVersion: null,

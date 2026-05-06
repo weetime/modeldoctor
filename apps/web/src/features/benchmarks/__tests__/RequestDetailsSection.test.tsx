@@ -33,7 +33,12 @@ function makeBenchmark(): Benchmark {
     id: "b_1",
     userId: "u_1",
     connectionId: "c_emb",
-    connection: { id: "c_emb", name: "bge-by-mis-tei" },
+    connection: {
+      id: "c_emb",
+      name: "bge-by-mis-tei",
+      model: "bge-m3-uZbs",
+      baseUrl: "http://gw",
+    },
     scenario: "gateway",
     tool: "vegeta",
     toolVersion: "12.11.0",
@@ -74,7 +79,7 @@ function withProviders(node: React.ReactNode) {
 }
 
 describe("RequestDetailsSection", () => {
-  it("renders URL with path appended, plaintext Bearer header, and pretty body", async () => {
+  it("renders URL with path appended, masked Bearer header, and pretty body", async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === "/api/connections/c_emb") return Promise.resolve(CONNECTION) as unknown as never;
       if (url === "/api/connections/c_emb/reveal-key")
@@ -87,7 +92,10 @@ describe("RequestDetailsSection", () => {
     await waitFor(() => {
       expect(screen.getByText("http://gw/v1/embeddings")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Authorization: Bearer sk-secret/)).toBeInTheDocument();
+    // Display uses connection.apiKeyPreview, NOT the full plaintext apiKey.
+    // The plaintext only goes onto the clipboard via Copy-cURL.
+    expect(screen.getByText(/Authorization: Bearer sk-\.\.\.bc8d/)).toBeInTheDocument();
+    expect(screen.queryByText(/Authorization: Bearer sk-secret/)).not.toBeInTheDocument();
     expect(screen.getByText(/X-Trace: 1/)).toBeInTheDocument();
     // body pretty-print contains both keys
     expect(screen.getByText(/"model": "bge-m3-uZbs"/)).toBeInTheDocument();

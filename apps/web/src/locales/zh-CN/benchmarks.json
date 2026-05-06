@@ -33,7 +33,8 @@
     "errors": {
       "submitFailed": "提交基准测试失败"
     },
-    "submitted": "基准测试「{{name}}」已提交"
+    "submitted": "基准测试「{{name}}」已提交",
+    "unsupportedCategoryForScenario": "当前场景的工具不支持 {{category}} 类型连接"
   },
   "filters": {
     "tool": "工具",
