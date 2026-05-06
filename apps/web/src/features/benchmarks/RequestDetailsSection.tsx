@@ -30,9 +30,14 @@ function prettyBody(body: string): string {
   }
 }
 
+function shEscape(s: string): string {
+  // POSIX shell idiom: end the open quote, append \' (a literal '), reopen.
+  return s.replace(/'/g, "'\\''");
+}
+
 function buildCurl(url: string, headers: string[], body: string): string {
-  const headerArgs = headers.map((h) => ` -H '${h}'`).join("");
-  return `curl -X POST '${url}'${headerArgs} -d '${body}'`;
+  const headerArgs = headers.map((h) => ` -H '${shEscape(h)}'`).join("");
+  return `curl -X POST '${shEscape(url)}'${headerArgs} -d '${shEscape(body)}'`;
 }
 
 export function RequestDetailsSection({ benchmark }: Props) {
@@ -80,8 +85,12 @@ export function RequestDetailsSection({ benchmark }: Props) {
 
   async function copyCurl() {
     const curl = buildCurl(url, headers, migrated.body);
-    await navigator.clipboard.writeText(curl);
-    toast.success(t("detail.requestDetails.copySuccess"));
+    try {
+      await navigator.clipboard.writeText(curl);
+      toast.success(t("detail.requestDetails.copySuccess"));
+    } catch {
+      toast.error(t("detail.requestDetails.copyError"));
+    }
   }
 
   return (

@@ -176,6 +176,7 @@
       },
       "copyCurl": "Copy as cURL",
       "copySuccess": "Copied to clipboard",
+      "copyError": "Copy failed: clipboard permission denied",
       "hint": "Connection settings (baseUrl / apiKey / headers / queryParams) reflect the live connection; if it has been edited since this benchmark ran, what was actually sent may differ",
       "connectionMissing": "Connection deleted — URL and credentials cannot be resolved",
       "loading": "Loading…"

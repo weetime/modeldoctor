@@ -117,4 +117,52 @@ describe("RequestDetailsSection", () => {
     expect(arg).toContain("-H 'Authorization: Bearer sk-secret'");
     expect(arg).toContain('-d \'{"model":"bge-m3-uZbs","input":"hello"}\'');
   });
+
+  it("escapes single quotes in body when building cURL", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === "/api/connections/c_emb")
+        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb/reveal-key")
+        return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
+      throw new Error("unexpected");
+    });
+
+    const benchmark = makeBenchmark();
+    benchmark.params = {
+      ...benchmark.params,
+      body: '{"input":"it\'s"}',
+    };
+    render(withProviders(<RequestDetailsSection benchmark={benchmark} />));
+    await waitFor(() => screen.getByRole("button", { name: /cURL/i }));
+    await userEvent.click(screen.getByRole("button", { name: /cURL/i }));
+
+    const arg = writeText.mock.calls[0][0] as string;
+    // The single quote is escaped using the POSIX 'foo'\''bar' idiom.
+    expect(arg).toContain("'{\"input\":\"it'\\''s\"}'");
+  });
+
+  it("shows an error toast when clipboard.writeText rejects", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.assign(navigator, { clipboard: { writeText } });
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === "/api/connections/c_emb")
+        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb/reveal-key")
+        return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
+      throw new Error("unexpected");
+    });
+
+    // Spy on the toast.error helper.
+    const toastModule = await import("sonner");
+    const errorSpy = vi.spyOn(toastModule.toast, "error");
+
+    render(withProviders(<RequestDetailsSection benchmark={makeBenchmark()} />));
+    await waitFor(() => screen.getByRole("button", { name: /cURL/i }));
+    await userEvent.click(screen.getByRole("button", { name: /cURL/i }));
+
+    await waitFor(() => expect(errorSpy).toHaveBeenCalled());
+    errorSpy.mockRestore();
+  });
 });
