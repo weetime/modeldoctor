@@ -10,10 +10,6 @@
   },
   "environment": {
     "title": "环境",
-    "vegeta": "Vegeta",
-    "vegetaCheck": "检查 Vegeta",
-    "vegetaInstalled": "已安装于 {{path}}",
-    "vegetaMissing": "未安装 Vegeta，请通过以下命令安装：",
     "version": "服务版本",
     "buildMode": "构建模式"
   },

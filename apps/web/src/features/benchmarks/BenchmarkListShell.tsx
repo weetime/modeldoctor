@@ -15,6 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,17 +29,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCreateTemplate } from "@/features/benchmark-templates/queries";
+import type {
+  Benchmark,
+  BenchmarkStatus,
+  BenchmarkTool,
+  ListBenchmarksQuery,
+} from "@modeldoctor/contracts";
+import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, History as HistoryIcon, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Copy as CopyIcon,
+  History as HistoryIcon,
+  MoreHorizontal,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
-import { benchmarkKeys, useBenchmarkList, useDeleteBenchmark } from "./queries";
+import { useBenchmarkList, useCreateBenchmark, useDeleteBenchmark } from "./queries";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
 import { StatusBadge } from "./status-display";
 
@@ -48,7 +67,6 @@ interface BenchmarkListShellProps {
 
 export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const { t } = useTranslation("benchmarks");
-  const qc = useQueryClient();
   const cfg = SCENARIOS[scenario];
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -100,7 +118,57 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const deleteBenchmark = useDeleteBenchmark();
+  const createBenchmark = useCreateBenchmark();
+  const createTemplate = useCreateTemplate();
   const navigate = useNavigate();
+
+  async function handleRerunRow(b: Benchmark) {
+    if (!b.connectionId) {
+      toast.error(t("detail.rerun.connectionMissingTooltip"));
+      return;
+    }
+    const trimmed = b.name.length > 120 ? b.name.slice(0, 120) : b.name;
+    const newName = `${trimmed} (rerun)`;
+    try {
+      const next = await createBenchmark.mutateAsync({
+        tool: b.tool,
+        scenario: b.scenario,
+        connectionId: b.connectionId,
+        name: newName,
+        description: b.description ?? undefined,
+        params:
+          b.tool === "vegeta"
+            ? (migrateVegetaParams(
+                b.params as Parameters<typeof migrateVegetaParams>[0],
+                b.connection?.model ?? null,
+              ) as unknown as Record<string, unknown>)
+            : b.params,
+      });
+      toast.success(t("detail.rerun.success", { name: next.name }));
+      navigate(`/benchmarks/${next.id}`);
+    } catch (e) {
+      toast.error((e as Error).message || t("detail.rerun.errors.generic"));
+    }
+  }
+
+  async function handleSaveAsTemplate(b: Benchmark) {
+    const trimmed = b.name.length > 90 ? b.name.slice(0, 90) : b.name;
+    const newName = `${trimmed} (template)`;
+    try {
+      const next = await createTemplate.mutateAsync({
+        name: newName,
+        description: b.description ?? undefined,
+        scenario: b.scenario,
+        tool: b.tool,
+        config: b.params as Record<string, unknown>,
+        tags: [],
+        isOfficial: false,
+      });
+      toast.success(t("rowActions.saveAsTemplate.success", { name: next.name }));
+    } catch (e) {
+      toast.error((e as Error).message || t("rowActions.saveAsTemplate.errors.generic"));
+    }
+  }
 
   const {
     data,
@@ -160,13 +228,6 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
         subtitle={cfg.description}
         rightSlot={
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => qc.invalidateQueries({ queryKey: benchmarkKeys.lists() })}
-            >
-              {t("retry")}
-            </Button>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -244,7 +305,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                   <TableHead>{t("columns.status")}</TableHead>
                   <TableHead className="text-right">{t("columns.p95")}</TableHead>
                   <TableHead className="text-right">{t("columns.errorRate")}</TableHead>
-                  <TableHead className="w-24 text-center">{t("columns.actions")}</TableHead>
+                  <TableHead className="w-56 text-center">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -301,27 +362,51 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center gap-1">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          aria-label={t("columns.actionLabels.viewDetail")}
-                          title={t("columns.actionLabels.viewDetail")}
-                        >
+                        <Button asChild variant="ghost" size="sm" className="gap-1">
                           <Link to={`/benchmarks/${benchmark.id}`}>
                             <ArrowRight className="h-4 w-4" />
+                            <span>{t("rowActions.viewDetail")}</span>
                           </Link>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          aria-label={t("columns.actionLabels.delete")}
-                          title={t("columns.actionLabels.delete")}
-                          onClick={() => setPendingDeleteId(benchmark.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="gap-1"
+                          onClick={() => handleRerunRow(benchmark)}
+                          disabled={benchmark.connectionId === null || createBenchmark.isPending}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <RefreshCw className="h-4 w-4" />
+                          <span>{t("rowActions.rerun")}</span>
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={t("rowActions.more")}
+                              title={t("rowActions.more")}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleSaveAsTemplate(benchmark)}
+                              disabled={createTemplate.isPending}
+                              className="gap-2"
+                            >
+                              <CopyIcon className="h-4 w-4" />
+                              {t("rowActions.saveAsTemplate.label")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setPendingDeleteId(benchmark.id)}
+                              className="gap-2 text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t("rowActions.delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

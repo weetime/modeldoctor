@@ -2,7 +2,7 @@
   "title": "Benchmark History",
   "subtitle": "Past benchmark runs, newest first",
   "actions": {
-    "new": "New Benchmark",
+    "new": "New",
     "cancel": "Cancel",
     "submit": "Submit"
   },
@@ -70,10 +70,19 @@
     "status": "Status",
     "p95": "p95 (ms)",
     "errorRate": "Error rate",
-    "actions": "Actions",
-    "actionLabels": {
-      "viewDetail": "View",
-      "delete": "Delete"
+    "actions": "Actions"
+  },
+  "rowActions": {
+    "viewDetail": "Detail",
+    "rerun": "Rerun",
+    "more": "More",
+    "delete": "Delete",
+    "saveAsTemplate": {
+      "label": "Save as template",
+      "success": "Saved as template \"{{name}}\"",
+      "errors": {
+        "generic": "Failed to save as template"
+      }
     }
   },
   "compareButton": "Compare ({{n}})",

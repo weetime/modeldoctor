@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { useE2EStore } from "@/features/diagnostics/store";
 import { useDebugStore } from "@/features/request-debug/store";
-import { api } from "@/lib/api-client";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
@@ -43,20 +42,6 @@ export function SettingsPage() {
   const resetSidebar = useSidebarStore((s) => s.reset);
   const [resetOpen, setResetOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
-
-  const [vegeta, setVegeta] = useState<{
-    installed: boolean;
-    path?: string;
-  } | null>(null);
-
-  const onCheckVegeta = async () => {
-    try {
-      const data = await api.get<{ installed: boolean; path?: string }>("/api/check-vegeta");
-      setVegeta(data);
-    } catch {
-      setVegeta({ installed: false });
-    }
-  };
 
   const onClearTestData = () => {
     resetE2E();
@@ -116,32 +101,8 @@ export function SettingsPage() {
         </Section>
 
         <Section title={t("environment.title")}>
-          <div className="space-y-4 text-sm">
-            <div>
-              <div className="font-medium">{t("environment.vegeta")}</div>
-              <div className="mt-2 flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={onCheckVegeta}>
-                  {t("environment.vegetaCheck")}
-                </Button>
-                {vegeta?.installed ? (
-                  <span className="text-success">
-                    {t("environment.vegetaInstalled", { path: vegeta.path })}
-                  </span>
-                ) : null}
-                {vegeta && !vegeta.installed ? (
-                  <span className="text-destructive">
-                    {t("environment.vegetaMissing")}{" "}
-                    <code className="ml-1 rounded bg-muted px-1 font-mono text-xs">
-                      brew install vegeta
-                    </code>
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            <div className="text-muted-foreground">
-              {t("environment.buildMode")}:{" "}
-              <span className="font-mono">{import.meta.env.MODE}</span>
-            </div>
+          <div className="text-sm text-muted-foreground">
+            {t("environment.buildMode")}: <span className="font-mono">{import.meta.env.MODE}</span>
           </div>
         </Section>
 

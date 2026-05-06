@@ -2,7 +2,7 @@
   "title": "基准测试历史",
   "subtitle": "按时间倒序展示历次基准测试",
   "actions": {
-    "new": "新建基准测试",
+    "new": "新建",
     "cancel": "取消",
     "submit": "提交"
   },
@@ -70,10 +70,19 @@
     "status": "状态",
     "p95": "p95 (ms)",
     "errorRate": "错误率",
-    "actions": "操作",
-    "actionLabels": {
-      "viewDetail": "详情",
-      "delete": "删除"
+    "actions": "操作"
+  },
+  "rowActions": {
+    "viewDetail": "详情",
+    "rerun": "重跑",
+    "more": "更多",
+    "delete": "删除",
+    "saveAsTemplate": {
+      "label": "保存为模板",
+      "success": "已保存为模板「{{name}}」",
+      "errors": {
+        "generic": "保存为模板失败"
+      }
     }
   },
   "compareButton": "对比 ({{n}})",

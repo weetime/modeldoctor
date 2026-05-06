@@ -79,7 +79,14 @@ export const sidebarGroups: SidebarGroup[] = [
   },
 ];
 
-export const sidebarUtilityItems: SidebarItem[] = [
+/** Top-of-rail items rendered ABOVE all groups. Connections is foundational
+ * (every playground tab and every benchmark depends on a saved connection),
+ * so promoting it out of the bottom utility area keeps it one click away
+ * from anywhere in the app. */
+export const sidebarPrimaryItems: SidebarItem[] = [
   { to: "/connections", icon: Database, labelKey: "items.connections" },
+];
+
+export const sidebarUtilityItems: SidebarItem[] = [
   { to: "/settings", icon: Settings, labelKey: "items.settings" },
 ];

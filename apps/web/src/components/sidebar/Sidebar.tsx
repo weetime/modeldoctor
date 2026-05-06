@@ -1,12 +1,32 @@
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
+import {
+  ChevronDown,
+  LogOut,
+  Monitor,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sun,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { type SidebarItem as Item, sidebarGroups, sidebarUtilityItems } from "./sidebar-config";
+import {
+  type SidebarItem as Item,
+  sidebarGroups,
+  sidebarPrimaryItems,
+  sidebarUtilityItems,
+} from "./sidebar-config";
 
 interface ItemRowProps {
   item: Item;
@@ -55,6 +75,60 @@ function ItemRow({ item, t, railCollapsed }: ItemRowProps) {
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+function ThemeRow({ railCollapsed }: { railCollapsed: boolean }) {
+  const { t } = useTranslation("common");
+  const mode = useThemeStore((s) => s.mode);
+  const setMode = useThemeStore((s) => s.setMode);
+  const Icon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
+  const label = t("theme.label");
+  const items: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: t("theme.light"), icon: Sun },
+    { value: "dark", label: t("theme.dark"), icon: Moon },
+    { value: "system", label: t("theme.system"), icon: Monitor },
+  ];
+
+  const trigger = (
+    <DropdownMenuTrigger asChild>
+      <button
+        type="button"
+        aria-label={t("theme.toggle")}
+        className={cn(
+          "group flex w-full items-center rounded-md text-sm",
+          "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-3 py-1.5",
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+        {railCollapsed ? null : <span className="flex-1 text-left">{label}</span>}
+      </button>
+    </DropdownMenuTrigger>
+  );
+
+  return (
+    <DropdownMenu>
+      {railCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipContent side="right">{label}</TooltipContent>
+        </Tooltip>
+      ) : (
+        trigger
+      )}
+      <DropdownMenuContent side="top" align="start" className="min-w-[8rem]">
+        {items.map((item) => (
+          <DropdownMenuItem key={item.value} onClick={() => setMode(item.value)} className="gap-2">
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+            {mode === item.value ? (
+              <span className="ml-auto text-xs text-muted-foreground">●</span>
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -130,6 +204,13 @@ export function Sidebar() {
       <Separator />
 
       <nav className={cn("flex-1 overflow-y-auto py-3", railCollapsed ? "px-2" : "px-2")}>
+        {sidebarPrimaryItems.length > 0 ? (
+          <div className="mb-3 flex flex-col gap-px">
+            {sidebarPrimaryItems.map((item) => (
+              <ItemRow key={item.to} item={item} t={(k) => t(k)} railCollapsed={railCollapsed} />
+            ))}
+          </div>
+        ) : null}
         {sidebarGroups.map((group) => {
           const isCollapsed = collapsed[group.id];
           const visibleItems = group.items.filter((item) => !item.devOnly || import.meta.env.DEV);
@@ -210,7 +291,8 @@ export function Sidebar() {
         </div>
       ) : null}
 
-      <div className="px-2 py-3">
+      <div className="flex flex-col gap-px px-2 py-3">
+        <ThemeRow railCollapsed={railCollapsed} />
         {sidebarUtilityItems.map((item) => (
           <ItemRow key={item.to} item={item} t={(k) => t(k)} railCollapsed={railCollapsed} />
         ))}
