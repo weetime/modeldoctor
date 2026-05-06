@@ -8,6 +8,11 @@
   },
   "create": {
     "title": "新建",
+    "titleByScenario": {
+      "inference": "新建推理性能基准",
+      "capacity": "新建容量规划",
+      "gateway": "新建网关压测"
+    },
     "subtitle": "配置参数后提交",
     "sections": {
       "endpoint": "接入点",

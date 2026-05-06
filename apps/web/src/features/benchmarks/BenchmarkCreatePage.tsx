@@ -104,7 +104,7 @@ export function BenchmarkCreatePage() {
 
   return (
     <>
-      <PageHeader title={t("create.title")} subtitle={t("create.subtitle")} />
+      <PageHeader title={t(`create.titleByScenario.${scenario}`)} subtitle={t("create.subtitle")} />
       <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">

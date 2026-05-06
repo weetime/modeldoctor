@@ -8,6 +8,11 @@
   },
   "create": {
     "title": "New",
+    "titleByScenario": {
+      "inference": "New Inference Benchmark",
+      "capacity": "New Capacity Plan",
+      "gateway": "New Gateway Test"
+    },
     "subtitle": "Configure parameters, then submit",
     "sections": {
       "endpoint": "Endpoint",
