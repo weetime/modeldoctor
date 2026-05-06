@@ -173,6 +173,16 @@ export const endpointReportSchema = z.object({
     category: ModalityCategorySchema,
   }),
   totalRuns: z.number().int().nonnegative(),
+  // Per-status row counts within the window. Success-rate denominator is
+  // (completed + failed); canceled is user action, inProgress collapses
+  // pending/submitted/running. Surfaced so the index card can show the
+  // breakdown transparently.
+  statusCounts: z.object({
+    completed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    canceled: z.number().int().nonnegative(),
+    inProgress: z.number().int().nonnegative(),
+  }),
   // % in [0, 100]; null when no terminal (completed|failed) runs in the window.
   successRate: z.number().min(0).max(100).nullable(),
   // p95 latency in ms (mirrors what FE compare/metrics.ts reads). first =
