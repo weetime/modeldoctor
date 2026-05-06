@@ -37,7 +37,7 @@ DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor \
   pnpm -F @modeldoctor/api db:migrate:deploy
 ```
 
-For everyday `pnpm dev`, copy `.env.example` to `.env` at the repo root so NestJS picks up `DATABASE_URL` automatically (`.env` is gitignored).
+For everyday `pnpm dev`, copy `apps/api/.env.example` to `apps/api/.env` so NestJS + Prisma CLI both pick up `DATABASE_URL` automatically (`.env` is gitignored). Per-app `.env` follows Vite/Next.js/Turborepo convention; tools auto-discover from cwd, no path-resolve gymnastics.
 
 Running e2e tests (`pnpm test:e2e`) spins up throwaway Postgres containers via testcontainers and does not touch your local database.
 
@@ -133,8 +133,8 @@ pip install -e apps/benchmark-runner
 which benchmark-runner
 
 # Generate secrets, then start the dev server.
-echo "CONNECTION_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
-echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> .env
+echo "CONNECTION_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
+echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> apps/api/.env
 pnpm dev
 ```
 
