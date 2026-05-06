@@ -24,11 +24,7 @@ function asFiniteNumber(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
-function fromDist(
-  data: Record<string, unknown>,
-  key: string,
-  field: string,
-): number | null {
+function fromDist(data: Record<string, unknown>, key: string, field: string): number | null {
   const dist = data[key] as Record<string, unknown> | undefined;
   return asFiniteNumber(dist?.[field]);
 }

@@ -347,7 +347,10 @@ export class BenchmarkService {
 
     const items: EndpointReport[] = [];
     for (const [connId, runs] of groups.entries()) {
-      const connection = runs[0].connection!;
+      // groups Map only contains rows whose connection passed the !r.connection
+      // guard above, so the embedded ref is non-null here.
+      const connection = runs[0].connection;
+      if (!connection) continue;
       // Success-rate denominator is completed + failed only. Cancellation
       // is user action (someone clicked "cancel"), not an endpoint signal —
       // including canceled runs would artificially lower the connection's
@@ -357,34 +360,24 @@ export class BenchmarkService {
       const successRateDenominator = completed.length + failed.length;
 
       const successRate =
-        successRateDenominator > 0
-          ? (completed.length / successRateDenominator) * 100
-          : null;
+        successRateDenominator > 0 ? (completed.length / successRateDenominator) * 100 : null;
 
       const completedAsc = [...completed].sort(
         (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
       );
-      const firstWithMetric = completedAsc.find(
-        (r) => readP95LatencyMs(r.summaryMetrics) != null,
-      );
+      const firstWithMetric = completedAsc.find((r) => readP95LatencyMs(r.summaryMetrics) != null);
       const lastWithMetric = [...completedAsc]
         .reverse()
         .find((r) => readP95LatencyMs(r.summaryMetrics) != null);
       const p95Latency =
         firstWithMetric || lastWithMetric
           ? {
-              first: firstWithMetric
-                ? readP95LatencyMs(firstWithMetric.summaryMetrics)
-                : null,
-              last: lastWithMetric
-                ? readP95LatencyMs(lastWithMetric.summaryMetrics)
-                : null,
+              first: firstWithMetric ? readP95LatencyMs(firstWithMetric.summaryMetrics) : null,
+              last: lastWithMetric ? readP95LatencyMs(lastWithMetric.summaryMetrics) : null,
             }
           : null;
 
-      const latestRow = runs.reduce((a, b) =>
-        a.createdAt >= b.createdAt ? a : b,
-      );
+      const latestRow = runs.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b));
       const latestRun = {
         id: latestRow.id,
         name: latestRow.name,
@@ -398,7 +391,8 @@ export class BenchmarkService {
           name: connection.name,
           model: connection.model,
           baseUrl: connection.baseUrl,
-          category: (categoryById.get(connId) ?? "chat") as EndpointReport["connection"]["category"],
+          category: (categoryById.get(connId) ??
+            "chat") as EndpointReport["connection"]["category"],
         },
         totalRuns: runs.length,
         successRate,
