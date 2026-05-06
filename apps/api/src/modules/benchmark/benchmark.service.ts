@@ -1,6 +1,10 @@
 import {
   type Benchmark,
+  type BenchmarkStatus,
   type CreateBenchmarkRequest,
+  type EndpointReport,
+  type EndpointReportRange,
+  type EndpointReportsResponse,
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
@@ -18,14 +22,22 @@ import { ZodError } from "zod";
 import { signCallbackToken } from "../../common/hmac/hmac-token.js";
 import { formatZodError } from "../../common/zod/format-zod-error.js";
 import type { Env } from "../../config/env.schema.js";
+import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
+import { readP95LatencyMs } from "./metrics.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
+
+/** Safety cap for the per-user/per-window query the reports endpoint
+ * issues. In practice user × 30-day windows are << 1000 rows; this
+ * exists only to bound worst-case memory if a power user runs many
+ * thousands of tests. */
+const MAX_REPORT_ROWS = 5000;
 // 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
 // callback shouldn't be rejected if the runner overruns by clock skew or
 // shutdown grace.
@@ -44,6 +56,7 @@ export class BenchmarkService {
     private readonly connections: ConnectionService,
     private readonly templates: BenchmarkTemplateRepository,
     private readonly baselines: BaselineService,
+    private readonly prisma: PrismaService,
   ) {
     const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
       | string
@@ -288,6 +301,112 @@ export class BenchmarkService {
       }
     }
     await this.repo.delete(row.id);
+  }
+
+  /**
+   * Connection-anchored 7/30/90-day report. Pulls all of `userId`'s
+   * benchmarks within the window, buckets by connectionId in JS, and
+   * emits one summary per connection. Bounded data per user/window —
+   * no streaming needed.
+   *
+   * Orphaned benchmarks (connection deleted, FK SET NULL) are dropped —
+   * they don't belong on a connection-anchored view.
+   */
+  async getByConnectionReports(
+    userId: string,
+    range: EndpointReportRange,
+  ): Promise<EndpointReportsResponse> {
+    const days = ({ "7d": 7, "30d": 30, "90d": 90 } as const)[range];
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    const result = await this.repo.list({
+      userId,
+      createdAfter: since.toISOString(),
+      limit: MAX_REPORT_ROWS,
+    });
+
+    type Row = (typeof result)["items"][number];
+    const groups = new Map<string, Row[]>();
+    for (const r of result.items) {
+      if (!r.connection) continue;
+      const arr = groups.get(r.connection.id) ?? [];
+      arr.push(r);
+      groups.set(r.connection.id, arr);
+    }
+
+    // Batch-load category for every grouped connection in one query.
+    const connectionIds = [...groups.keys()];
+    const categoryRows =
+      connectionIds.length > 0
+        ? await this.prisma.connection.findMany({
+            where: { id: { in: connectionIds } },
+            select: { id: true, category: true },
+          })
+        : [];
+    const categoryById = new Map(categoryRows.map((r) => [r.id, r.category]));
+
+    const items: EndpointReport[] = [];
+    for (const [connId, runs] of groups.entries()) {
+      // groups Map only contains rows whose connection passed the !r.connection
+      // guard above, so the embedded ref is non-null here.
+      const connection = runs[0].connection;
+      if (!connection) continue;
+      // Success-rate denominator is completed + failed only. Cancellation
+      // is user action (someone clicked "cancel"), not an endpoint signal —
+      // including canceled runs would artificially lower the connection's
+      // health score for unrelated reasons.
+      const completed = runs.filter((r) => r.status === "completed");
+      const failed = runs.filter((r) => r.status === "failed");
+      const successRateDenominator = completed.length + failed.length;
+
+      const successRate =
+        successRateDenominator > 0 ? (completed.length / successRateDenominator) * 100 : null;
+
+      const completedAsc = [...completed].sort(
+        (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
+      );
+      const firstWithMetric = completedAsc.find((r) => readP95LatencyMs(r.summaryMetrics) != null);
+      const lastWithMetric = [...completedAsc]
+        .reverse()
+        .find((r) => readP95LatencyMs(r.summaryMetrics) != null);
+      const p95Latency =
+        firstWithMetric || lastWithMetric
+          ? {
+              first: firstWithMetric ? readP95LatencyMs(firstWithMetric.summaryMetrics) : null,
+              last: lastWithMetric ? readP95LatencyMs(lastWithMetric.summaryMetrics) : null,
+            }
+          : null;
+
+      const latestRow = runs.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b));
+      const latestRun = {
+        id: latestRow.id,
+        name: latestRow.name,
+        status: latestRow.status as BenchmarkStatus,
+        createdAt: latestRow.createdAt.toISOString(),
+      };
+
+      items.push({
+        connection: {
+          id: connection.id,
+          name: connection.name,
+          model: connection.model,
+          baseUrl: connection.baseUrl,
+          category: (categoryById.get(connId) ??
+            "chat") as EndpointReport["connection"]["category"],
+        },
+        totalRuns: runs.length,
+        successRate,
+        p95Latency,
+        latestRun,
+      });
+    }
+
+    items.sort((a, b) => b.totalRuns - a.totalRuns);
+    return {
+      range,
+      generatedAt: new Date().toISOString(),
+      items,
+    };
   }
 
   /**

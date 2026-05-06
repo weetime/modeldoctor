@@ -234,15 +234,6 @@
     "mixedScenariosTitle": "Mixed scenarios",
     "mixedScenariosBody": "Compare requires the same scenario. Selected: {{scenarios}}",
     "needTwoEmpty": "Select 2+ benchmarks from the list to compare",
-    "empty": {
-      "title": "Pick a scenario, then select benchmarks",
-      "scenarioLabel": "Scenario",
-      "scenarioPlaceholder": "Pick a scenario",
-      "listTitle": "Recent benchmarks",
-      "listEmpty": "No completed benchmarks for this scenario yet.",
-      "submit": "Start comparison",
-      "needTwo": "Select 2+ benchmarks to compare"
-    },
     "metricColumnLabel": "Metric",
     "verdict": {
       "regressed": "regressed",
@@ -267,6 +258,32 @@
       "latencyMax": "Latency max (ms)",
       "errorRate": "Error rate",
       "throughput": "Throughput (req/s)"
+    }
+  },
+  "reports": {
+    "title": "Test Insights",
+    "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
+    "rangeLabel": "Range",
+    "ranges": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    },
+    "summary": {
+      "totalRuns": "{{count}} runs",
+      "successRate": "Success {{rate}}%",
+      "successRateMissing": "Success —",
+      "latest": "Latest: {{name}} · {{when}}"
+    },
+    "trend": {
+      "regression": "p95 regression",
+      "improvement": "p95 improvement",
+      "stable": "p95 stable"
+    },
+    "viewHistory": "View history",
+    "empty": {
+      "title": "No report data",
+      "body": "No benchmarks within the selected window."
     }
   }
 }

@@ -10,7 +10,6 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
-import { BenchmarkCompareEmpty } from "./BenchmarkCompareEmpty";
 import { CompareGrid } from "./CompareGrid";
 import { CompareToolbar } from "./CompareToolbar";
 
@@ -92,12 +91,11 @@ export function BenchmarkComparePage() {
     setSearchParams(sp);
   }
 
-  // No `?ids=` at all → user navigated directly via the top-level menu.
-  // Show the picker (scenario + benchmark list) so the menu entry is
-  // functional. With ≥1 id we keep the legacy "Select 2+" empty state to
-  // catch shared half-baked links / manual URL edits.
+  // Unreachable path: BenchmarkCompareGate routes empty `ids` to
+  // /benchmarks/inference before this component renders. Defensive
+  // null fallback in case the page is mounted directly somehow.
   if (ids.length === 0) {
-    return <BenchmarkCompareEmpty />;
+    return null;
   }
   if (ids.length < 2) {
     return (

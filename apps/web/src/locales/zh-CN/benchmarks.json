@@ -234,15 +234,6 @@
     "mixedScenariosTitle": "场景不一致",
     "mixedScenariosBody": "对比需要相同 scenario。当前选中：{{scenarios}}",
     "needTwoEmpty": "从列表选 2 个以上基准测试才能对比",
-    "empty": {
-      "title": "选择场景后再挑选基准测试",
-      "scenarioLabel": "场景",
-      "scenarioPlaceholder": "选择场景",
-      "listTitle": "最近的基准测试",
-      "listEmpty": "该场景下还没有已完成的基准测试。",
-      "submit": "开始对比",
-      "needTwo": "至少选择 2 个基准测试"
-    },
     "metricColumnLabel": "指标",
     "verdict": {
       "regressed": "退化",
@@ -267,6 +258,32 @@
       "latencyMax": "延迟最大 (ms)",
       "errorRate": "错误率",
       "throughput": "吞吐 (req/s)"
+    }
+  },
+  "reports": {
+    "title": "测试洞察",
+    "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
+    "rangeLabel": "时间范围",
+    "ranges": {
+      "7d": "近 7 天",
+      "30d": "近 30 天",
+      "90d": "近 90 天"
+    },
+    "summary": {
+      "totalRuns": "{{count}} 次测试",
+      "successRate": "成功率 {{rate}}%",
+      "successRateMissing": "成功率 —",
+      "latest": "最近：{{name}} · {{when}}"
+    },
+    "trend": {
+      "regression": "p95 劣化",
+      "improvement": "p95 改善",
+      "stable": "p95 稳定"
+    },
+    "viewHistory": "查看历史",
+    "empty": {
+      "title": "暂无报告数据",
+      "body": "选定时间范围内没有基准测试。"
     }
   }
 }
