@@ -1,25 +1,74 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ConnectionPublic, ListConnectionsResponse } from "@modeldoctor/contracts";
 import { vegetaParamsSchema } from "@modeldoctor/tool-adapters/schemas";
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { VegetaParamsForm } from "../../forms/VegetaParamsForm";
 
-const wrapperSchema = z.object({ params: vegetaParamsSchema });
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    get: vi.fn(),
+  },
+}));
 
-function Wrapper({ children }: { children: React.ReactNode }) {
-  const form = useForm({
-    resolver: zodResolver(wrapperSchema),
-    defaultValues: {
-      params: { apiType: "chat", rate: 10, duration: 30 },
-    },
-  });
-  return <FormProvider {...form}>{children}</FormProvider>;
+import { api } from "@/lib/api-client";
+
+const wrapperSchema = z.object({
+  connectionId: z.string(),
+  params: vegetaParamsSchema,
+});
+
+const baseConnection: ConnectionPublic = {
+  id: "c_emb",
+  userId: "u_1",
+  name: "bge-by-mis-tei",
+  baseUrl: "http://example/v1",
+  apiKeyPreview: "sk-...bc8d",
+  model: "bge-m3-uZbs",
+  customHeaders: "",
+  queryParams: "",
+  category: "embeddings",
+  tags: [],
+  prometheusUrl: null,
+  serverKind: null,
+  tokenizerHfId: null,
+  createdAt: "2026-05-06T00:00:00.000Z",
+  updatedAt: "2026-05-06T00:00:00.000Z",
+};
+
+function makeWrapper(initialConnectionId = "") {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    const form = useForm({
+      resolver: zodResolver(wrapperSchema),
+      defaultValues: {
+        connectionId: initialConnectionId,
+        params: {
+          apiType: "chat",
+          rate: 10,
+          duration: 30,
+          path: "/v1/chat/completions",
+          body: '{"model":"x","messages":[{"role":"user","content":"hello"}]}',
+        },
+      },
+    });
+    return (
+      <QueryClientProvider client={qc}>
+        <FormProvider {...form}>{children}</FormProvider>
+      </QueryClientProvider>
+    );
+  };
 }
 
 describe("VegetaParamsForm", () => {
   it("renders apiType, rate, duration fields", () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [baseConnection],
+    } satisfies ListConnectionsResponse);
+    const Wrapper = makeWrapper();
     render(
       <Wrapper>
         <VegetaParamsForm />
@@ -28,5 +77,35 @@ describe("VegetaParamsForm", () => {
     expect(screen.getByLabelText(/api type/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^rate/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/duration/i)).toBeInTheDocument();
+  });
+
+  it("hides path + body fields by default (Advanced collapsed)", () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [baseConnection],
+    } satisfies ListConnectionsResponse);
+    const Wrapper = makeWrapper();
+    render(
+      <Wrapper>
+        <VegetaParamsForm />
+      </Wrapper>,
+    );
+    const advanced = screen.getByText(/advanced/i).closest("details");
+    expect(advanced).not.toBeNull();
+    expect((advanced as HTMLDetailsElement).open).toBe(false);
+  });
+
+  it("exposes path + body inputs once Advanced is opened", () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [baseConnection],
+    } satisfies ListConnectionsResponse);
+    const Wrapper = makeWrapper();
+    render(
+      <Wrapper>
+        <VegetaParamsForm />
+      </Wrapper>,
+    );
+    fireEvent.click(screen.getByText(/advanced/i));
+    expect(screen.getByLabelText(/^path/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^body/i)).toBeInTheDocument();
   });
 });
