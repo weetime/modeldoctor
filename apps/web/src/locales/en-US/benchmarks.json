@@ -261,7 +261,7 @@
     }
   },
   "reports": {
-    "title": "Performance Trends",
+    "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",
     "ranges": {

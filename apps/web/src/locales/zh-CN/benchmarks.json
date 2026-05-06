@@ -261,7 +261,7 @@
     }
   },
   "reports": {
-    "title": "性能趋势",
+    "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
     "rangeLabel": "时间范围",
     "ranges": {
