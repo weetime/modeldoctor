@@ -26,18 +26,18 @@ import { SseHub } from "./sse/sse-hub.service.js";
     {
       // Wire up the runner with a real KubeConfig + apiClients. The
       // dynamic import keeps `@kubernetes/client-node` (and its native
-      // deps) out of any path that doesn't actually create a Job —
-      // notably `NODE_ENV=test` where tests stub or skip the client.
+      // deps) out of any module-import that doesn't actually create a
+      // Job — notably tests, which use `Test.createTestingModule` +
+      // `overrideProvider(K8sBenchmarkRunner, { useValue: mockRunner })`
+      // to replace this provider entirely (so this useFactory body
+      // never runs in test mode).
       provide: K8sBenchmarkRunner,
       inject: [ConfigService],
       useFactory: async (config: ConfigService<Env, true>): Promise<K8sBenchmarkRunner> => {
         const ns =
           (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string | undefined) ??
           "modeldoctor-benchmarks";
-        const stub = (globalThis as { __test_kc_loader__?: () => unknown }).__test_kc_loader__;
-        const k8s = stub
-          ? (stub() as typeof import("@kubernetes/client-node"))
-          : await import("@kubernetes/client-node");
+        const k8s = await import("@kubernetes/client-node");
         const kc = new k8s.KubeConfig();
         const explicitKubeconfig = config.get("KUBECONFIG", { infer: true }) as string | undefined;
         if (explicitKubeconfig) {

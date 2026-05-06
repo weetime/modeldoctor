@@ -136,11 +136,15 @@ class MockBaselineService {
   existsById = vi.fn(async (id: string) => this.ids.has(id));
 }
 
+// Mock cast to K8sBenchmarkRunner — only the public methods that
+// BenchmarkService actually calls (start / cancel / cleanup) need to
+// be present. The class also holds private fields (namespace, batch,
+// core, log) that we don't need to satisfy with a real mock.
 const mockRunner = {
   start: vi.fn(async () => ({ handle: "subprocess:1234" })),
   cancel: vi.fn(async () => undefined),
   cleanup: vi.fn(async () => undefined),
-};
+} as unknown as K8sBenchmarkRunner;
 
 const mockConnections: ConnectionService = {
   getOwnedDecrypted: vi.fn(async () => ({
