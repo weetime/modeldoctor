@@ -48,36 +48,47 @@ export function VegetaParamsForm({ fieldPrefix = "params" }: VegetaParamsFormPro
   const lastConnectionId = useRef<string | undefined>(undefined);
   const lastApiType = useRef<VegetaParams["apiType"] | undefined>(undefined);
 
-  // When the connection changes: derive apiType from category, then path +
-  // body from the new apiType + connection.model.
-  useEffect(() => {
-    if (!connection) return;
-    if (lastConnectionId.current === connection.id) return;
-    lastConnectionId.current = connection.id;
-    const def = VEGETA_CATEGORY_DEFAULTS[connection.category];
-    const nextApiType = def.apiType;
-    setValue(`${fieldPrefix}.apiType`, nextApiType, { shouldDirty: false });
-    setValue(`${fieldPrefix}.path`, VEGETA_API_TYPE_TO_PATH[nextApiType], {
-      shouldDirty: false,
-    });
-    setValue(`${fieldPrefix}.body`, VEGETA_API_TYPE_TO_BODY[nextApiType](connection.model), {
-      shouldDirty: false,
-    });
-    lastApiType.current = nextApiType;
-  }, [connection, fieldPrefix, setValue]);
-
-  // When apiType changes via a user pick: reset path + body to the new
-  // template against the current connection.model (or "<unknown>" fallback).
+  // Single source of truth for "what should apiType / path / body be?":
+  //  - When the picked connection changes, derive apiType from category and
+  //    reset all three from the new template + connection.model.
+  //  - When the user manually changes apiType (with same connection), reset
+  //    path + body to the new template against the current connection.model.
+  // Two effects would race: an apiType-effect with `connection.model` in
+  // its dep array re-fires on connection change with the stale (unchanged)
+  // apiType value and overwrites what the connection-effect just wrote.
   useEffect(() => {
     if (!apiType) return;
-    if (lastApiType.current === apiType) return;
-    lastApiType.current = apiType;
-    const model = connection?.model ?? "<unknown>";
-    setValue(`${fieldPrefix}.path`, VEGETA_API_TYPE_TO_PATH[apiType], { shouldDirty: false });
-    setValue(`${fieldPrefix}.body`, VEGETA_API_TYPE_TO_BODY[apiType](model), {
-      shouldDirty: false,
-    });
-  }, [apiType, connection?.model, fieldPrefix, setValue]);
+
+    // Case 1: connection changed. Reset everything atomically.
+    if (connection && lastConnectionId.current !== connection.id) {
+      lastConnectionId.current = connection.id;
+      const def = VEGETA_CATEGORY_DEFAULTS[connection.category];
+      const nextApiType = def.apiType;
+      setValue(`${fieldPrefix}.apiType`, nextApiType, { shouldDirty: false });
+      setValue(`${fieldPrefix}.path`, VEGETA_API_TYPE_TO_PATH[nextApiType], {
+        shouldDirty: false,
+      });
+      setValue(
+        `${fieldPrefix}.body`,
+        VEGETA_API_TYPE_TO_BODY[nextApiType](connection.model),
+        { shouldDirty: false },
+      );
+      lastApiType.current = nextApiType;
+      return;
+    }
+
+    // Case 2: user changed apiType. Reset path + body only.
+    if (lastApiType.current !== apiType) {
+      lastApiType.current = apiType;
+      const model = connection?.model ?? "<unknown>";
+      setValue(`${fieldPrefix}.path`, VEGETA_API_TYPE_TO_PATH[apiType], {
+        shouldDirty: false,
+      });
+      setValue(`${fieldPrefix}.body`, VEGETA_API_TYPE_TO_BODY[apiType](model), {
+        shouldDirty: false,
+      });
+    }
+  }, [connection, apiType, fieldPrefix, setValue]);
 
   return (
     <div className="space-y-4">

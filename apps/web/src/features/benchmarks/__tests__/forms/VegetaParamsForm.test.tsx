@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { ConnectionPublic, ListConnectionsResponse } from "@modeldoctor/contracts";
 import { vegetaParamsSchema } from "@modeldoctor/tool-adapters/schemas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -107,5 +107,64 @@ describe("VegetaParamsForm", () => {
     fireEvent.click(screen.getByText(/advanced/i));
     expect(screen.getByLabelText(/^path/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^body/i)).toBeInTheDocument();
+  });
+
+  it("resets apiType + path + body when an embedding connection is selected", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [baseConnection],
+    } satisfies ListConnectionsResponse);
+
+    // Start with no connectionId; render the form, then bump connectionId
+    // through the form-state to simulate connection picker selection.
+    function Harness() {
+      const form = useForm({
+        resolver: zodResolver(wrapperSchema),
+        defaultValues: {
+          connectionId: "",
+          params: {
+            apiType: "chat",
+            rate: 10,
+            duration: 30,
+            path: "/v1/chat/completions",
+            body: '{"model":"x","messages":[{"role":"user","content":"hello"}]}',
+          },
+        },
+      });
+
+      return (
+        <FormProvider {...form}>
+          <button
+            type="button"
+            data-testid="pick-connection"
+            onClick={() =>
+              form.setValue("connectionId", "c_emb", { shouldDirty: false })
+            }
+          />
+          <VegetaParamsForm />
+        </FormProvider>
+      );
+    }
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { getByTestId } = render(
+      <QueryClientProvider client={qc}>
+        <Harness />
+      </QueryClientProvider>,
+    );
+
+    // Open Advanced so we can read path/body input values.
+    fireEvent.click(screen.getByText(/advanced/i));
+
+    // Confirm initial values reflect the form defaults (chat).
+    expect(screen.getByLabelText(/^path/i)).toHaveValue("/v1/chat/completions");
+
+    // Simulate user picking the embeddings connection.
+    fireEvent.click(getByTestId("pick-connection"));
+
+    // After all effects settle, apiType / path / body all reflect embeddings.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^path/i)).toHaveValue("/v1/embeddings");
+    });
+    const body = (screen.getByLabelText(/^body/i) as HTMLTextAreaElement).value;
+    expect(JSON.parse(body)).toEqual({ model: "bge-m3-uZbs", input: "hello" });
   });
 });
