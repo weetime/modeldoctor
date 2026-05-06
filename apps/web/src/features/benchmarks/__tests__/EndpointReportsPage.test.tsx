@@ -1,4 +1,5 @@
 import i18n from "@/lib/i18n";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { EndpointReportsResponse } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -15,7 +16,9 @@ function withProviders(node: React.ReactNode) {
   return (
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={qc}>
-        <MemoryRouter>{node}</MemoryRouter>
+        <MemoryRouter>
+          <TooltipProvider>{node}</TooltipProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     </I18nextProvider>
   );
@@ -34,6 +37,7 @@ const oneItem: EndpointReportsResponse = {
         category: "embeddings",
       },
       totalRuns: 12,
+      statusCounts: { completed: 11, failed: 1, canceled: 0, inProgress: 0 },
       successRate: 99.8,
       p95Latency: { first: 147, last: 296 },
       latestRun: {
@@ -76,10 +80,29 @@ describe("EndpointReportsPage", () => {
     await waitFor(() => expect(screen.getByLabelText(/regression|劣化/i)).toBeInTheDocument());
   });
 
-  it("'View history' link points to /benchmarks/inference?connectionId=<id>", async () => {
+  it("'View history' link points to /benchmarks/reports/<id>?range=<range>", async () => {
     vi.mocked(api.get).mockResolvedValue(oneItem);
     render(withProviders(<EndpointReportsPage />));
     const link = await screen.findByRole("link", { name: /View history|查看历史/i });
-    expect(link).toHaveAttribute("href", "/benchmarks/inference?connectionId=c_1");
+    expect(link).toHaveAttribute("href", "/benchmarks/reports/c_1?range=30d");
+  });
+
+  it("renders status breakdown text with completed / failed / canceled counts", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      ...oneItem,
+      items: [
+        {
+          ...oneItem.items[0],
+          totalRuns: 12,
+          statusCounts: { completed: 10, failed: 1, canceled: 1, inProgress: 0 },
+        },
+      ],
+    } satisfies EndpointReportsResponse);
+    render(withProviders(<EndpointReportsPage />));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/成功 10 · 失败 1 · 取消 1|Success 10 · Failed 1 · Canceled 1/i),
+      ).toBeInTheDocument(),
+    );
   });
 });

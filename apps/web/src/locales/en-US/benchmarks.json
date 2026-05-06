@@ -273,6 +273,8 @@
       "totalRuns": "{{count}} runs",
       "successRate": "Success {{rate}}%",
       "successRateMissing": "Success —",
+      "statusBreakdown": "Success {{completed}} · Failed {{failed}} · Canceled {{canceled}}",
+      "statusBreakdownTooltip": "Success-rate denominator = success + failed; canceled excluded",
       "latest": "Latest: {{name}} · {{when}}"
     },
     "trend": {

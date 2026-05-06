@@ -273,6 +273,8 @@
       "totalRuns": "{{count}} 次测试",
       "successRate": "成功率 {{rate}}%",
       "successRateMissing": "成功率 —",
+      "statusBreakdown": "成功 {{completed}} · 失败 {{failed}} · 取消 {{canceled}}",
+      "statusBreakdownTooltip": "成功率分母 = 成功 + 失败；取消不计入",
       "latest": "最近：{{name}} · {{when}}"
     },
     "trend": {

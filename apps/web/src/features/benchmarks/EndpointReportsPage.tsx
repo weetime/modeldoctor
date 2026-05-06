@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { EndpointReportRange } from "@modeldoctor/contracts";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowRight, BarChart3 } from "lucide-react";
@@ -83,13 +84,29 @@ export function EndpointReportsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <div className="text-muted-foreground">
-                    {t("reports.summary.totalRuns", { count: item.totalRuns })} ·{" "}
-                    {item.successRate != null
-                      ? t("reports.summary.successRate", {
-                          rate: item.successRate.toFixed(1),
-                        })
-                      : t("reports.summary.successRateMissing")}
+                  <div className="space-y-1 text-muted-foreground">
+                    <div>
+                      {t("reports.summary.totalRuns", { count: item.totalRuns })} ·{" "}
+                      {item.successRate != null
+                        ? t("reports.summary.successRate", {
+                            rate: item.successRate.toFixed(1),
+                          })
+                        : t("reports.summary.successRateMissing")}
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help text-xs">
+                          {t("reports.summary.statusBreakdown", {
+                            completed: item.statusCounts.completed,
+                            failed: item.statusCounts.failed,
+                            canceled: item.statusCounts.canceled,
+                          })}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t("reports.summary.statusBreakdownTooltip")}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <div>
                     p95:{" "}
@@ -114,7 +131,7 @@ export function EndpointReportsPage() {
                   ) : null}
                   <div className="pt-2">
                     <Button asChild variant="outline" size="sm" className="gap-1">
-                      <Link to={`/benchmarks/inference?connectionId=${item.connection.id}`}>
+                      <Link to={`/benchmarks/reports/${item.connection.id}?range=${range}`}>
                         {t("reports.viewHistory")}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
