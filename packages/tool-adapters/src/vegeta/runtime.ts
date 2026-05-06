@@ -27,7 +27,7 @@ export const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) =
 
 export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommandResult {
   const { params, connection } = plan;
-  let url = connection.baseUrl + params.path;
+  let url = connection.baseUrl.replace(/\/+$/, "") + params.path;
 
   // Append queryParams (one "k=v" per non-empty line)
   if (connection.queryParams.trim()) {

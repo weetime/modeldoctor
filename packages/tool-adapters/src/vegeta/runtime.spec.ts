@@ -106,6 +106,25 @@ describe("vegeta.buildCommand", () => {
     expect(r.inputFiles?.["targets.txt"]).not.toContain("/v1/embeddings");
   });
 
+  it("strips trailing slash from connection.baseUrl before appending path", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        apiType: "chat",
+        rate: 10,
+        duration: 30,
+        path: "/v1/chat/completions",
+        body: '{"model":"m","messages":[]}',
+      },
+      connection: { ...baseConn, baseUrl: "http://localhost:8000/" },
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.inputFiles?.["targets.txt"]).toContain(
+      "POST http://localhost:8000/v1/chat/completions",
+    );
+    expect(r.inputFiles?.["targets.txt"]).not.toContain("//v1/");
+  });
+
   it("uses params.body verbatim (no model substitution from connection)", () => {
     const r = buildCommand({
       runId: "r1",
