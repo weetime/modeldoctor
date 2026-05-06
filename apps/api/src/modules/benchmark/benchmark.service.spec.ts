@@ -721,3 +721,276 @@ describe("BenchmarkService.create — FK reference validation", () => {
     expect(repo.create).not.toHaveBeenCalled();
   });
 });
+
+// ── getByConnectionReports ───────────────────────────────────────────────────
+
+function makeMockRepoLocal() {
+  return {
+    list: vi.fn(),
+    findById: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    countActiveByName: vi.fn(),
+    existsById: vi.fn(),
+  };
+}
+function makeMockPrismaLocal() {
+  return {
+    connection: { findMany: vi.fn() },
+  } as unknown as { connection: { findMany: ReturnType<typeof vi.fn> } };
+}
+
+describe("BenchmarkService.getByConnectionReports", () => {
+  function makeRow(
+    overrides: Partial<{
+      id: string;
+      connectionId: string;
+      connection: { id: string; name: string; model: string; baseUrl: string } | null;
+      tool: "guidellm" | "vegeta" | "genai-perf";
+      status: string;
+      summaryMetrics: unknown;
+      createdAt: Date;
+      name: string;
+    }> = {},
+  ) {
+    return {
+      id: overrides.id ?? "b1",
+      userId: "u_1",
+      connectionId: overrides.connectionId ?? (overrides.connection === null ? null : "c_1"),
+      connection:
+        overrides.connection === null
+          ? null
+          : (overrides.connection ?? {
+              id: "c_1",
+              name: "conn-1",
+              model: "m1",
+              baseUrl: "http://x/1",
+            }),
+      scenario: "inference",
+      tool: overrides.tool ?? "guidellm",
+      toolVersion: null,
+      name: overrides.name ?? "run",
+      description: null,
+      status: overrides.status ?? "completed",
+      statusMessage: null,
+      progress: 1,
+      driverHandle: null,
+      params: {},
+      rawOutput: null,
+      summaryMetrics:
+        overrides.summaryMetrics !== undefined
+          ? overrides.summaryMetrics
+          : {
+              tool: "guidellm",
+              data: { e2eLatency: { p95: 100 } },
+            },
+      serverMetrics: null,
+      templateId: null,
+      parentBenchmarkId: null,
+      baselineId: null,
+      logs: null,
+      createdAt: overrides.createdAt ?? new Date("2026-05-01T00:00:00Z"),
+      startedAt: null,
+      completedAt: null,
+      baselineFor: null,
+    };
+  }
+
+  function makeSvc(
+    repo: ReturnType<typeof makeMockRepoLocal>,
+    prisma: ReturnType<typeof makeMockPrismaLocal>,
+  ) {
+    return new BenchmarkService(
+      repo as never,
+      {} as never, // runner — not used by getByConnectionReports
+      mockConfig() as unknown as ConfigService<typeof ENV_DEFAULTS, true>,
+      {} as never, // connections — not used
+      {} as never, // templates — not used
+      {} as never, // baselines — not used
+      prisma as never,
+    );
+  }
+
+  it("groups runs by connection and returns one entry per group", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({
+          id: "b1",
+          connectionId: "c_a",
+          connection: { id: "c_a", name: "A", model: "ma", baseUrl: "http://a" },
+        }),
+        makeRow({
+          id: "b2",
+          connectionId: "c_a",
+          connection: { id: "c_a", name: "A", model: "ma", baseUrl: "http://a" },
+        }),
+        makeRow({
+          id: "b3",
+          connectionId: "c_b",
+          connection: { id: "c_b", name: "B", model: "mb", baseUrl: "http://b" },
+        }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([
+      { id: "c_a", category: "chat" },
+      { id: "c_b", category: "embeddings" },
+    ]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+
+    expect(out.range).toBe("30d");
+    expect(out.items).toHaveLength(2);
+    const byId = Object.fromEntries(out.items.map((i) => [i.connection.id, i]));
+    expect(byId.c_a.totalRuns).toBe(2);
+    expect(byId.c_b.totalRuns).toBe(1);
+  });
+
+  it("sorts items by totalRuns descending", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({
+          id: "b1",
+          connectionId: "c_a",
+          connection: { id: "c_a", name: "A", model: "ma", baseUrl: "http://a" },
+        }),
+        makeRow({
+          id: "b2",
+          connectionId: "c_b",
+          connection: { id: "c_b", name: "B", model: "mb", baseUrl: "http://b" },
+        }),
+        makeRow({
+          id: "b3",
+          connectionId: "c_b",
+          connection: { id: "c_b", name: "B", model: "mb", baseUrl: "http://b" },
+        }),
+        makeRow({
+          id: "b4",
+          connectionId: "c_b",
+          connection: { id: "c_b", name: "B", model: "mb", baseUrl: "http://b" },
+        }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([
+      { id: "c_a", category: "chat" },
+      { id: "c_b", category: "chat" },
+    ]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items.map((i) => i.connection.id)).toEqual(["c_b", "c_a"]);
+  });
+
+  it("computes successRate from terminal runs only", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({ id: "b1", status: "completed" }),
+        makeRow({ id: "b2", status: "completed" }),
+        makeRow({ id: "b3", status: "completed" }),
+        makeRow({ id: "b4", status: "failed" }),
+        makeRow({ id: "b5", status: "failed" }),
+        makeRow({ id: "b6", status: "running" }), // ignored — not terminal
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([{ id: "c_1", category: "chat" }]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items[0].successRate).toBe(60); // 3 / (3+2) = 60%
+  });
+
+  it("p95Latency picks earliest + latest completed run with usable metrics", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({
+          id: "old",
+          createdAt: new Date("2026-04-20"),
+          summaryMetrics: { tool: "guidellm", data: { e2eLatency: { p95: 100 } } },
+        }),
+        makeRow({
+          id: "mid",
+          createdAt: new Date("2026-04-25"),
+          summaryMetrics: { tool: "guidellm", data: { e2eLatency: { p95: 150 } } },
+        }),
+        makeRow({
+          id: "new",
+          createdAt: new Date("2026-05-01"),
+          summaryMetrics: { tool: "guidellm", data: { e2eLatency: { p95: 250 } } },
+        }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([{ id: "c_1", category: "chat" }]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items[0].p95Latency).toEqual({ first: 100, last: 250 });
+  });
+
+  it("drops rows whose connection is null (deleted connection)", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({
+          id: "b1",
+          connectionId: "c_a",
+          connection: { id: "c_a", name: "A", model: "ma", baseUrl: "http://a" },
+        }),
+        makeRow({ id: "b2", connection: null }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([{ id: "c_a", category: "chat" }]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items).toHaveLength(1);
+    expect(out.items[0].connection.id).toBe("c_a");
+  });
+
+  it("returns p95Latency=null when no completed run carries usable metrics", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({
+      items: [
+        makeRow({ id: "b1", status: "failed", summaryMetrics: null }),
+        makeRow({ id: "b2", status: "running", summaryMetrics: null }),
+      ],
+      nextCursor: null,
+    });
+    const prisma = makeMockPrismaLocal();
+    prisma.connection.findMany.mockResolvedValueOnce([{ id: "c_1", category: "chat" }]);
+    const svc = makeSvc(repo, prisma);
+
+    const out = await svc.getByConnectionReports("u_1", "30d");
+    expect(out.items[0].p95Latency).toBeNull();
+  });
+
+  it("range '7d' lower-bounds repo.list via createdAfter", async () => {
+    const repo = makeMockRepoLocal();
+    repo.list.mockResolvedValueOnce({ items: [], nextCursor: null });
+    const prisma = makeMockPrismaLocal();
+    const svc = makeSvc(repo, prisma);
+
+    await svc.getByConnectionReports("u_1", "7d");
+    const call = repo.list.mock.calls[0][0];
+    expect(call.userId).toBe("u_1");
+    expect(call.createdAfter).toBeDefined();
+    const lowerBound = new Date(call.createdAfter as string);
+    const expected = Date.now() - 7 * 86400_000;
+    // Allow ±2s skew for the time it takes the test to run.
+    expect(Math.abs(lowerBound.getTime() - expected)).toBeLessThan(2000);
+  });
+});

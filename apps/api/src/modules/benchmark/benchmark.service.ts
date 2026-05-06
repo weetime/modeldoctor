@@ -1,6 +1,9 @@
 import {
   type Benchmark,
   type CreateBenchmarkRequest,
+  type EndpointReport,
+  type EndpointReportRange,
+  type EndpointReportsResponse,
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
@@ -18,12 +21,14 @@ import { ZodError } from "zod";
 import { signCallbackToken } from "../../common/hmac/hmac-token.js";
 import { formatZodError } from "../../common/zod/format-zod-error.js";
 import type { Env } from "../../config/env.schema.js";
+import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
+import { readP95LatencyMs } from "./metrics.js";
 
 const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
 // 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
@@ -44,6 +49,7 @@ export class BenchmarkService {
     private readonly connections: ConnectionService,
     private readonly templates: BenchmarkTemplateRepository,
     private readonly baselines: BaselineService,
+    private readonly prisma: PrismaService,
   ) {
     const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
       | string
@@ -288,6 +294,121 @@ export class BenchmarkService {
       }
     }
     await this.repo.delete(row.id);
+  }
+
+  /**
+   * Connection-anchored 7/30/90-day report. Pulls all of `userId`'s
+   * benchmarks within the window, buckets by connectionId in JS, and
+   * emits one summary per connection. Bounded data per user/window —
+   * no streaming needed.
+   *
+   * Orphaned benchmarks (connection deleted, FK SET NULL) are dropped —
+   * they don't belong on a connection-anchored view.
+   */
+  async getByConnectionReports(
+    userId: string,
+    range: EndpointReportRange,
+  ): Promise<EndpointReportsResponse> {
+    const days = ({ "7d": 7, "30d": 30, "90d": 90 } as const)[range];
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    const result = await this.repo.list({
+      userId,
+      createdAfter: since.toISOString(),
+      limit: 5000,
+    });
+
+    type Row = (typeof result)["items"][number];
+    const groups = new Map<string, Row[]>();
+    for (const r of result.items) {
+      if (!r.connection) continue;
+      const arr = groups.get(r.connection.id) ?? [];
+      arr.push(r);
+      groups.set(r.connection.id, arr);
+    }
+
+    // Batch-load category for every grouped connection in one query.
+    const connectionIds = [...groups.keys()];
+    const categoryRows =
+      connectionIds.length > 0
+        ? await this.prisma.connection.findMany({
+            where: { id: { in: connectionIds } },
+            select: { id: true, category: true },
+          })
+        : [];
+    const categoryById = new Map(categoryRows.map((r) => [r.id, r.category]));
+
+    const items: EndpointReport[] = [];
+    for (const [connId, runs] of groups.entries()) {
+      const connection = runs[0].connection!;
+      const terminal = runs.filter(
+        (r) => r.status === "completed" || r.status === "failed",
+      );
+      const completed = runs.filter((r) => r.status === "completed");
+
+      const successRate =
+        terminal.length > 0
+          ? (completed.length / terminal.length) * 100
+          : null;
+
+      const completedAsc = [...completed].sort(
+        (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
+      );
+      const firstWithMetric = completedAsc.find(
+        (r) => readP95LatencyMs(r.summaryMetrics) != null,
+      );
+      const lastWithMetric = [...completedAsc]
+        .reverse()
+        .find((r) => readP95LatencyMs(r.summaryMetrics) != null);
+      const p95Latency =
+        firstWithMetric || lastWithMetric
+          ? {
+              first: firstWithMetric
+                ? readP95LatencyMs(firstWithMetric.summaryMetrics)
+                : null,
+              last: lastWithMetric
+                ? readP95LatencyMs(lastWithMetric.summaryMetrics)
+                : null,
+            }
+          : null;
+
+      const latestRow = [...runs].sort(
+        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+      )[0];
+      const latestRun = latestRow
+        ? {
+            id: latestRow.id,
+            name: latestRow.name,
+            status: latestRow.status as EndpointReport["latestRun"] extends {
+              status: infer S;
+            }
+              ? S
+              : never,
+            createdAt: latestRow.createdAt.toISOString(),
+          }
+        : null;
+
+      items.push({
+        connection: {
+          id: connection.id,
+          name: connection.name,
+          model: connection.model,
+          baseUrl: connection.baseUrl,
+          category: (categoryById.get(connId) ?? "chat") as EndpointReport["connection"]["category"],
+        },
+        totalRuns: runs.length,
+        successRate,
+        p95Latency,
+        latestRun,
+      });
+    }
+
+    items.sort((a, b) => b.totalRuns - a.totalRuns);
+    return {
+      range,
+      generatedAt: new Date().toISOString(),
+      items,
+    };
   }
 
   /**
