@@ -1,5 +1,6 @@
 import type {
   ConnectionPublic,
+  ConnectionRevealKeyResponse,
   ConnectionWithSecret,
   CreateConnection,
   ListConnectionsResponse,
@@ -114,7 +115,7 @@ export class ConnectionService {
    * Throws Forbidden / NotFound through `findOwnedRow` for unauthorized or
    * missing ids.
    */
-  async revealApiKey(userId: string, id: string): Promise<{ apiKey: string }> {
+  async revealApiKey(userId: string, id: string): Promise<ConnectionRevealKeyResponse> {
     const row = await this.findOwnedRow(userId, id);
     return { apiKey: decrypt(row.apiKeyCipher, this.key) };
   }

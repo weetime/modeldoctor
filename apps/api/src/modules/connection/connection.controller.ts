@@ -20,6 +20,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
@@ -49,6 +50,7 @@ export class ConnectionController {
     return this.service.findOwnedPublic(user.sub, id);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Get(":id/reveal-key")
   revealKey(
     @CurrentUser() user: JwtPayload,

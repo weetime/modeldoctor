@@ -247,6 +247,26 @@ describe("ConnectionService", () => {
     });
   });
 
+  describe("revealApiKey", () => {
+    it("returns decrypted apiKey for the owner", async () => {
+      const PLAINTEXT = "sk-reveal-test-1234";
+      const cipher = await encryptForTest(PLAINTEXT);
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      const out = await service.revealApiKey("u_1", "c_1");
+      expect(out).toEqual({ apiKey: PLAINTEXT });
+    });
+
+    it("throws ForbiddenException for cross-user access", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ userId: "u_other" }));
+      await expect(service.revealApiKey("u_1", "c_1")).rejects.toThrow(ForbiddenException);
+    });
+
+    it("throws NotFoundException for unknown id", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(null);
+      await expect(service.revealApiKey("u_1", "c_x")).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe("delete", () => {
     it("throws ForbiddenException for cross-user access", async () => {
       prismaMock.connection.findUnique.mockResolvedValue(makeRow({ userId: "u_other" }));
