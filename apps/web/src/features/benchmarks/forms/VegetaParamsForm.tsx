@@ -68,11 +68,9 @@ export function VegetaParamsForm({ fieldPrefix = "params" }: VegetaParamsFormPro
       setValue(`${fieldPrefix}.path`, VEGETA_API_TYPE_TO_PATH[nextApiType], {
         shouldDirty: false,
       });
-      setValue(
-        `${fieldPrefix}.body`,
-        VEGETA_API_TYPE_TO_BODY[nextApiType](connection.model),
-        { shouldDirty: false },
-      );
+      setValue(`${fieldPrefix}.body`, VEGETA_API_TYPE_TO_BODY[nextApiType](connection.model), {
+        shouldDirty: false,
+      });
       lastApiType.current = nextApiType;
       return;
     }

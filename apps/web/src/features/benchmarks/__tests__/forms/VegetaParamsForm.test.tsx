@@ -136,9 +136,7 @@ describe("VegetaParamsForm", () => {
           <button
             type="button"
             data-testid="pick-connection"
-            onClick={() =>
-              form.setValue("connectionId", "c_emb", { shouldDirty: false })
-            }
+            onClick={() => form.setValue("connectionId", "c_emb", { shouldDirty: false })}
           />
           <VegetaParamsForm />
         </FormProvider>

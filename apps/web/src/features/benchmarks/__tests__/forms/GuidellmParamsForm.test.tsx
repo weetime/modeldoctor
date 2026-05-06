@@ -185,8 +185,6 @@ describe("GuidellmParamsForm category warning", () => {
         <GuidellmParamsForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument());
   });
 });

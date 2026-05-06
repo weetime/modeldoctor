@@ -61,8 +61,7 @@ export function useRevealApiKey(id: string | null | undefined) {
   return useQuery({
     queryKey: [...detailKey(id ?? ""), "reveal-key"] as const,
     enabled: !!id,
-    queryFn: () =>
-      api.get<ConnectionRevealKeyResponse>(`/api/connections/${id}/reveal-key`),
+    queryFn: () => api.get<ConnectionRevealKeyResponse>(`/api/connections/${id}/reveal-key`),
     // apiKey doesn't change unless the user rotates it — cache aggressively.
     staleTime: 5 * 60 * 1000,
   });

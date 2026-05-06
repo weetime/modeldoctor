@@ -1,10 +1,10 @@
+import i18n from "@/lib/i18n";
 import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
-import i18n from "@/lib/i18n";
 import { RequestDetailsSection } from "../RequestDetailsSection";
 
 vi.mock("@/lib/api-client", () => ({ api: { get: vi.fn() } }));
@@ -76,8 +76,7 @@ function withProviders(node: React.ReactNode) {
 describe("RequestDetailsSection", () => {
   it("renders URL with path appended, plaintext Bearer header, and pretty body", async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url === "/api/connections/c_emb")
-        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb") return Promise.resolve(CONNECTION) as unknown as never;
       if (url === "/api/connections/c_emb/reveal-key")
         return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
       throw new Error(`unexpected url ${url}`);
@@ -99,8 +98,7 @@ describe("RequestDetailsSection", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url === "/api/connections/c_emb")
-        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb") return Promise.resolve(CONNECTION) as unknown as never;
       if (url === "/api/connections/c_emb/reveal-key")
         return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
       throw new Error("unexpected");
@@ -122,8 +120,7 @@ describe("RequestDetailsSection", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url === "/api/connections/c_emb")
-        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb") return Promise.resolve(CONNECTION) as unknown as never;
       if (url === "/api/connections/c_emb/reveal-key")
         return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
       throw new Error("unexpected");
@@ -147,8 +144,7 @@ describe("RequestDetailsSection", () => {
     const writeText = vi.fn().mockRejectedValue(new Error("denied"));
     Object.assign(navigator, { clipboard: { writeText } });
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url === "/api/connections/c_emb")
-        return Promise.resolve(CONNECTION) as unknown as never;
+      if (url === "/api/connections/c_emb") return Promise.resolve(CONNECTION) as unknown as never;
       if (url === "/api/connections/c_emb/reveal-key")
         return Promise.resolve({ apiKey: "sk-secret" }) as unknown as never;
       throw new Error("unexpected");

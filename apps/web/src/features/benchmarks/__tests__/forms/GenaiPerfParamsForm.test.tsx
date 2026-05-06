@@ -125,9 +125,7 @@ describe("GenaiPerfParamsForm category warning + endpointType reset", () => {
         <GenaiPerfParamsForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument());
   });
 
   it("warns when picking an image connection (genai-perf does not support image)", async () => {
@@ -140,8 +138,6 @@ describe("GenaiPerfParamsForm category warning + endpointType reset", () => {
         <GenaiPerfParamsForm />
       </Wrapper>,
     );
-    await waitFor(() =>
-      expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/不支持|does not support/i)).toBeInTheDocument());
   });
 });

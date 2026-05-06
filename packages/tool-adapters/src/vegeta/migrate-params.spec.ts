@@ -3,10 +3,7 @@ import { migrateVegetaParams } from "./migrate-params.js";
 
 describe("migrateVegetaParams", () => {
   it("fills missing path + body from apiType + model (legacy benchmark)", () => {
-    const out = migrateVegetaParams(
-      { apiType: "embeddings", rate: 10, duration: 30 },
-      "bge-m3",
-    );
+    const out = migrateVegetaParams({ apiType: "embeddings", rate: 10, duration: 30 }, "bge-m3");
     expect(out.apiType).toBe("embeddings");
     expect(out.path).toBe("/v1/embeddings");
     expect(JSON.parse(out.body)).toEqual({ model: "bge-m3", input: "hello" });

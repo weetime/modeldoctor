@@ -255,15 +255,11 @@ describe("ConnectionController.revealKey", () => {
 
   it("propagates ForbiddenException for non-owners", async () => {
     svc.revealApiKey.mockRejectedValue(new ForbiddenException());
-    await expect(controller.revealKey(USER, "c_other")).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(controller.revealKey(USER, "c_other")).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("propagates NotFoundException for unknown ids", async () => {
     svc.revealApiKey.mockRejectedValue(new NotFoundException());
-    await expect(controller.revealKey(USER, "c_404")).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(controller.revealKey(USER, "c_404")).rejects.toBeInstanceOf(NotFoundException);
   });
 });
