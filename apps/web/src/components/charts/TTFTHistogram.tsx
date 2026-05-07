@@ -27,7 +27,9 @@ function bucketKey(b: { lower: number; upper: number }): string {
 }
 
 function bucketLabel(b: { lower: number; upper: number }): string {
-  return `[${b.lower}, ${b.upper})`;
+  // Bucket boundaries arrive as raw floats from the histogram pipeline; rounding
+  // to integers keeps x-axis labels readable. Tooltip shows the formatted label.
+  return `[${Math.round(b.lower)}, ${Math.round(b.upper)})`;
 }
 
 function alignBuckets(series: TTFTHistogramSeries[]): {
