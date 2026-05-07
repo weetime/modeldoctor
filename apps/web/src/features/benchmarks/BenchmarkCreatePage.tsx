@@ -103,10 +103,18 @@ export function BenchmarkCreatePage() {
   const bannerTpl = useTemplate(watchedTemplateId ?? undefined);
 
   function applyTemplate(template: BenchmarkTemplate) {
+    // Scenario mismatch: redirect URL so the page re-renders under the
+    // template's scenario, then the prefill effect re-runs and applies the
+    // template cleanly. URL stays the single source of truth for scenario.
     if (template.scenario !== scenario) {
       toast.warning(
         t("create.prefillFromTemplate.scenarioMismatch", { scenario: template.scenario }),
       );
+      const next = new URLSearchParams(params);
+      next.set("scenario", template.scenario);
+      next.set("templateId", template.id);
+      setSearchParams(next, { replace: true });
+      return;
     }
     form.reset({
       tool: template.tool,
@@ -120,15 +128,20 @@ export function BenchmarkCreatePage() {
     toast.info(t("create.prefillFromTemplate.applied", { name: template.name }));
   }
 
-  // One-shot prefill from URL ?templateId=
+  // One-shot prefill from URL ?templateId=. Re-runs across a scenario change
+  // so the redirect path in applyTemplate can land and reapply.
   const hasAppliedRef = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: applyTemplate is stable; we only want to run when template loads
+  // biome-ignore lint/correctness/useExhaustiveDependencies: applyTemplate is stable; we only want to run when template loads or scenario settles
   useEffect(() => {
     if (tplQuery.data && !hasAppliedRef.current) {
       applyTemplate(tplQuery.data);
-      hasAppliedRef.current = true;
+      // Only consider it applied when scenarios actually matched — otherwise
+      // applyTemplate redirected and we want the post-redirect render to retry.
+      if (tplQuery.data.scenario === scenario) {
+        hasAppliedRef.current = true;
+      }
     }
-  }, [tplQuery.data]);
+  }, [tplQuery.data, scenario]);
 
   // 404 / fetch error: toast + drop the bad URL param
   // biome-ignore lint/correctness/useExhaustiveDependencies: params and setSearchParams are stable RouterDom returns; t is stable i18n; we only re-run when templateIdParam or fetch error state changes
@@ -143,8 +156,7 @@ export function BenchmarkCreatePage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      const body: CreateBenchmarkRequest = { ...values, scenario };
-      const benchmark = await createMut.mutateAsync(body);
+      const benchmark = await createMut.mutateAsync(values);
       toast.success(t("create.submitted", { name: benchmark.name }));
       navigate(`/benchmarks/${benchmark.id}`);
     } catch (e) {

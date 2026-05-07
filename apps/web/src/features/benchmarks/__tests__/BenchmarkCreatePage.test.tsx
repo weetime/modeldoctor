@@ -296,6 +296,73 @@ describe("BenchmarkCreatePage", () => {
     expect(payload.templateId).toBe("tpl-1");
   });
 
+  it("redirects URL scenario when template's scenario differs (URL prefill)", async () => {
+    // Template is for gateway, but URL says scenario=inference. Page should
+    // redirect URL to scenario=gateway so form state and submission stay
+    // coherent with the visible page (single-source-of-truth = URL).
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "gateway",
+        tool: "vegeta",
+        config: { rate: 50, duration: 30 },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // After redirect + re-apply, Vegeta-only "Rate (req/s)" field is mounted.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
+    });
+    // And the prefilled banner should reflect the template name.
+    expect(await screen.findByText(/prefilled from template|已从模板/i)).toBeInTheDocument();
+  });
+
+  it("submits with form scenario (not URL scenario) — onSubmit uses values", async () => {
+    // Regression: previously onSubmit overrode `scenario` from URL, which
+    // could disagree with the form's scenario in mid-redirect frames.
+    // After the fix, payload.scenario must come from form values.
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.scenario).toBe("inference");
+  });
+
   it("submits without templateId after clear-link is clicked", async () => {
     mockUseTemplate.mockReturnValue({
       data: {
