@@ -65,11 +65,11 @@ export class SynthesizeService {
     const runs = body.runIds.length > 0
       ? await this.prisma.benchmark.findMany({
           where: { userId, id: { in: body.runIds } },
-          select: { id: true, updatedAt: true, scenario: true, tool: true, status: true, summaryMetrics: true, name: true, params: true },
+          select: { id: true, completedAt: true, createdAt: true, scenario: true, tool: true, status: true, summaryMetrics: true, name: true, params: true },
         })
       : [];
     const runIdsHash = createHash("sha256")
-      .update(runs.map((r) => `${r.id}:${r.updatedAt.toISOString()}`).sort().join(","))
+      .update(runs.map((r) => `${r.id}:${(r.completedAt ?? r.createdAt).toISOString()}`).sort().join(","))
       .digest("hex");
 
     const cacheKey = `${userId}:${connectionId}:${body.profileSlug}:${body.range}:${runIdsHash}`;
