@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AiDiagnosisCard } from "./AiDiagnosisCard";
 import { FindingsCard } from "./FindingsCard";
 import { ProfileSelector } from "./ProfileSelector";
 import { ScenarioPanel } from "./ScenarioPanel";
@@ -183,6 +184,12 @@ export function InsightsDetailPage() {
           axisValues={overallAxisValues}
         />
         <FindingsCard findings={findings} defaultLimit={5} />
+        <AiDiagnosisCard
+          connectionId={connectionId}
+          profileSlug={activeProfile?.slug ?? "default"}
+          range={range}
+          runIds={runs.map((r) => r.id)}
+        />
         {SCENARIOS.map((s) => (
           <ScenarioPanel
             key={s}
