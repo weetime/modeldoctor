@@ -55,16 +55,18 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          '"Inter Variable"',
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
-          "Segoe UI",
+          '"Segoe UI"',
           "Roboto",
           "sans-serif",
         ],
         mono: [
-          "JetBrains Mono",
-          "SF Mono",
+          '"JetBrains Mono Variable"',
+          '"JetBrains Mono"',
+          '"SF Mono"',
           "Menlo",
           "ui-monospace",
           "monospace",

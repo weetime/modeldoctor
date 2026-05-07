@@ -14,6 +14,8 @@
     "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.1.1",
+    "@fontsource-variable/jetbrains-mono": "^5.1.2",
     "@hookform/resolvers": "^3",
     "@modeldoctor/contracts": "workspace:*",
     "@modeldoctor/tool-adapters": "workspace:*",
