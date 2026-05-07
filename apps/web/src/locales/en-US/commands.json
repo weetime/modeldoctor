@@ -1,0 +1,26 @@
+{
+  "label": "Command Menu",
+  "description": "Search and run a command…",
+  "placeholder": "Type a command or search a page…",
+  "empty": "No matching commands.",
+  "group": {
+    "navigate": "Navigate",
+    "theme": "Theme",
+    "help": "Help"
+  },
+  "theme": {
+    "light": "Switch to Light",
+    "dark": "Switch to Dark",
+    "system": "Follow System"
+  },
+  "help": {
+    "shortcuts": "Keyboard shortcuts",
+    "title": "Keyboard shortcuts",
+    "description": "Globally available shortcuts."
+  },
+  "rows": {
+    "commandMenu": "Open command menu",
+    "help": "Show shortcuts",
+    "close": "Close dialog"
+  }
+}

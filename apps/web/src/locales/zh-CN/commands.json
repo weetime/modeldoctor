@@ -1,0 +1,26 @@
+{
+  "label": "命令菜单",
+  "description": "搜索并执行命令…",
+  "placeholder": "输入命令或搜索页面…",
+  "empty": "未找到匹配项。",
+  "group": {
+    "navigate": "导航",
+    "theme": "主题",
+    "help": "帮助"
+  },
+  "theme": {
+    "light": "切换到浅色",
+    "dark": "切换到深色",
+    "system": "跟随系统"
+  },
+  "help": {
+    "shortcuts": "键盘快捷键",
+    "title": "键盘快捷键",
+    "description": "全局可用的快捷键。"
+  },
+  "rows": {
+    "commandMenu": "打开命令菜单",
+    "help": "查看快捷键帮助",
+    "close": "关闭弹窗"
+  }
+}
