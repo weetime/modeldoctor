@@ -51,13 +51,11 @@ interface SettingRowProps {
  */
 export function SettingRow({ label, description, htmlFor, control }: SettingRowProps) {
   return (
-    <div className="grid grid-cols-1 items-start gap-1.5 py-2.5 md:grid-cols-[180px_minmax(0,1fr)] md:gap-6">
-      <div className="md:pt-1.5">
-        <Label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-        </Label>
-      </div>
-      <div>
+    <div className="grid grid-cols-1 items-start gap-1.5 py-3 md:grid-cols-[180px_minmax(0,1fr)] md:gap-6">
+      <Label htmlFor={htmlFor} className="text-sm font-medium leading-6">
+        {label}
+      </Label>
+      <div className="leading-6">
         {control}
         {description ? <p className="mt-1.5 text-xs text-muted-foreground">{description}</p> : null}
       </div>
