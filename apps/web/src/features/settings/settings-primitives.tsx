@@ -56,9 +56,11 @@ export function SettingRow({ label, description, htmlFor, control }: SettingRowP
         <Label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
         </Label>
-        {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
       </div>
-      <div>{control}</div>
+      <div>
+        {control}
+        {description ? <p className="mt-1.5 text-xs text-muted-foreground">{description}</p> : null}
+      </div>
     </div>
   );
 }
