@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
 import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
@@ -10,7 +11,6 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AiDiagnosisCard } from "./AiDiagnosisCard";
-import { FindingsCard } from "./FindingsCard";
 import { ProfileSelector } from "./ProfileSelector";
 import { ScenarioPanel } from "./ScenarioPanel";
 import { ScoreBanner } from "./ScoreBanner";
@@ -143,65 +143,82 @@ export function InsightsDetailPage() {
         title={conn.data.name}
         subtitle={`${conn.data.baseUrl} · ${conn.data.model} · ${conn.data.category}`}
         rightSlot={
-          <div className="flex items-center gap-3">
-            <ProfileSelector value={activeProfile?.slug ?? "default"} options={profiles.data.items} onChange={setProfile} />
-            {profileDirty && activeProfile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  updateConn.mutate({
-                    id: connectionId,
-                    body: { evaluationProfileId: activeProfile.id },
-                  })
-                }
-                disabled={updateConn.isPending}
-              >
-                {t("detail.profile.setDefault")}
-              </Button>
-            )}
-            <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {RANGES.map((r) => (
-                  <SelectItem key={r} value={r}>{r === "7d" ? "近 7 天" : r === "30d" ? "近 30 天" : "近 90 天"}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/benchmarks/reports"><ArrowLeft className="mr-1 h-4 w-4" />{t("detail.backToIndex")}</Link>
-            </Button>
-          </div>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/benchmarks/reports"><ArrowLeft className="mr-1 h-4 w-4" />{t("detail.backToIndex")}</Link>
+          </Button>
         }
       />
-      <div className="space-y-6 px-8 py-6">
-        <ScoreBanner
-          composite={composite}
-          perScenario={subScores}
-          totalChecks={findings.filter((f) => f.severity !== "no_data").length}
-          totalRuns={runs.length}
-          rangeDays={({ "7d": 7, "30d": 30, "90d": 90 } as const)[range]}
-          axisValues={overallAxisValues}
-        />
-        <FindingsCard findings={findings} defaultLimit={5} />
-        <AiDiagnosisCard
-          connectionId={connectionId}
-          profileSlug={activeProfile?.slug ?? "default"}
-          range={range}
-          runIds={runs.map((r) => r.id)}
-        />
-        {SCENARIOS.map((s) => (
-          <ScenarioPanel
-            key={s}
-            scenario={s}
-            subScore={subScores[s]}
-            axisValues={perScenarioAxisValues[s]}
-            findings={perScenarioFindings[s]}
-            runs={runsByScenario[s]}
-            connectionId={connectionId}
-            rangeFromISO={createdAfter}
+      <div className="grid grid-cols-1 gap-6 px-8 py-6 lg:grid-cols-[280px_1fr]">
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <ScoreBanner
+            compact
+            composite={composite}
+            perScenario={subScores}
+            totalChecks={findings.filter((f) => f.severity !== "no_data").length}
+            totalRuns={runs.length}
+            rangeDays={({ "7d": 7, "30d": 30, "90d": 90 } as const)[range]}
+            axisValues={overallAxisValues}
           />
-        ))}
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-muted-foreground">{t("detail.profile.label")}</div>
+                <ProfileSelector
+                  value={activeProfile?.slug ?? "default"}
+                  options={profiles.data.items}
+                  onChange={setProfile}
+                />
+                {profileDirty && activeProfile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-full justify-start px-2 text-xs"
+                    onClick={() =>
+                      updateConn.mutate({
+                        id: connectionId,
+                        body: { evaluationProfileId: activeProfile.id },
+                      })
+                    }
+                    disabled={updateConn.isPending}
+                  >
+                    {t("detail.profile.setDefault")}
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-muted-foreground">{t("detail.in", { days: ({ "7d": 7, "30d": 30, "90d": 90 } as const)[range] })}</div>
+                <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RANGES.map((r) => (
+                      <SelectItem key={r} value={r}>{r === "7d" ? "近 7 天" : r === "30d" ? "近 30 天" : "近 90 天"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+        <main className="min-w-0 space-y-6">
+          <AiDiagnosisCard
+            connectionId={connectionId}
+            profileSlug={activeProfile?.slug ?? "default"}
+            range={range}
+            runIds={runs.map((r) => r.id)}
+          />
+          {SCENARIOS.map((s) => (
+            <ScenarioPanel
+              key={s}
+              scenario={s}
+              subScore={subScores[s]}
+              axisValues={perScenarioAxisValues[s]}
+              findings={perScenarioFindings[s]}
+              runs={runsByScenario[s]}
+              connectionId={connectionId}
+              rangeFromISO={createdAfter}
+            />
+          ))}
+        </main>
       </div>
     </>
   );
