@@ -1,4 +1,5 @@
 import { FormActions } from "@/components/common/form-actions";
+import { FormSection } from "@/components/common/form-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -113,7 +114,7 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
               </Alert>
             )}
 
-            <div className="space-y-3">
+            <FormSection>
               <FormField
                 control={form.control}
                 name="name"
@@ -169,7 +170,7 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
                   </FormItem>
                 )}
               />
-            </div>
+            </FormSection>
 
             <DialogFooter>
               <FormActions
