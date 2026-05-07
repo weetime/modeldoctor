@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export interface HistogramBucket {
   lower: number;
@@ -27,7 +27,9 @@ function bucketKey(b: { lower: number; upper: number }): string {
 }
 
 function bucketLabel(b: { lower: number; upper: number }): string {
-  return `[${b.lower}, ${b.upper})`;
+  // Bucket boundaries arrive as raw floats from the histogram pipeline; rounding
+  // to integers keeps x-axis labels readable. Tooltip shows the formatted label.
+  return `[${Math.round(b.lower)}, ${Math.round(b.upper)})`;
 }
 
 function alignBuckets(series: TTFTHistogramSeries[]): {
@@ -63,7 +65,7 @@ function buildOption(
   const { labels, perRun } = alignBuckets(series);
   return {
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    legend: { data: perRun.map((r) => r.name) },
+    legend: { data: perRun.map((r) => r.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: {
       type: "category",
       data: labels,
@@ -73,7 +75,7 @@ function buildOption(
       axisLabel: { interval: "auto", rotate: labels.length > 12 ? 30 : 0 },
     },
     yAxis: { type: "value", name: yLabel, nameLocation: "middle", nameGap: 40 },
-    grid: { left: 56, right: 24, top: 40, bottom: 56 },
+    grid: { left: 56, right: 24, top: 56, bottom: 64 },
     series: perRun.map((r) => {
       const color = colorMap?.[r.runId];
       return {
@@ -99,15 +101,14 @@ export function TTFTHistogram(props: TTFTHistogramProps) {
     height = 360,
     loading,
     empty,
-    theme = "auto",
   } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => s.buckets.length === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, xLabel, yLabel, colorMap), dark),
-    [series, xLabel, yLabel, colorMap, dark],
+    () => themed(buildOption(series, xLabel, yLabel, colorMap), tokens),
+    [series, xLabel, yLabel, colorMap, tokens],
   );
 
   return (

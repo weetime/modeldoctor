@@ -1,25 +1,34 @@
 {
   "title": "设置",
-  "subtitle": "外观、环境与库数据。",
+  "subtitle": "个人偏好、集成配置与应用状态。",
   "appearance": {
     "title": "外观",
+    "description": "控制界面在所有页面的呈现方式。",
     "theme": "主题",
     "themeOptions": { "light": "浅色", "dark": "深色", "system": "跟随系统" },
+    "palette": "主题色",
+    "paletteHint": "Slate 为默认；其余为预置高级主题，每个都同时支持浅/深色。",
     "language": "语言",
     "languages": { "en": "English", "zh": "中文" }
   },
   "environment": {
-    "title": "环境",
+    "title": "关于",
+    "description": "应用与构建信息。",
     "version": "服务版本",
     "buildMode": "构建模式"
   },
   "ai": {
     "title": "AI 智能诊断",
-    "description": "配置自定义 LLM 评判提供商。API Key 会加密存储，不会以明文返回。",
+    "description": "连接自定义 LLM 评判提供商，API Key 会加密存储。",
     "enabled": "启用",
     "baseUrl": "Base URL",
     "model": "模型",
     "apiKey": "API Key",
+    "keyPlaceholderExisting": "sk-*** （留空使用已保存的 Key）",
+    "showKey": "显示 Key",
+    "hideKey": "隐藏 Key",
+    "savedKeyNotRevealable": "已保存的 Key 不可还原；输入新 Key 可用此按钮预览",
+    "keyEmpty": "尚未输入 Key",
     "test": "测试连接",
     "testing": "测试中…",
     "saving": "保存中…",
@@ -27,19 +36,22 @@
     "testSuccess": "连接正常（{{ms}} ms）",
     "testFailed": "连接失败：{{error}}",
     "error": {
-      "keyRequired": "请输入 API Key 以更新配置",
-      "fillBeforeTest": "请先填写 Base URL、API Key 和模型名称"
+      "keyRequired": "首次配置需要填写 API Key",
+      "fillBeforeTest": "请先填写 Base URL 和模型；首次测试还需填写 API Key"
     }
   },
   "data": {
-    "title": "数据",
+    "title": "危险区",
+    "description": "不可逆操作，请谨慎。",
     "exportConnections": "导出连接",
     "importConnections": "导入连接",
     "clearTestData": "清除测试数据",
+    "clearTestDataDesc": "清空压力测试、E2E Smoke、请求调试的表单字段与结果。连接库与外观偏好保持不变。",
     "clearTestDataWarning": "会清空压力测试、E2E Smoke、请求调试三个页面的表单字段与测试结果。连接库和外观偏好保持不变。",
     "clearTestDataConfirm": "清除测试数据",
     "clearTestDataSuccess": "已清除测试数据",
     "resetState": "重置应用状态",
+    "resetStateDesc": "删除所有连接、表单数据与本地偏好，恢复初始状态。",
     "resetWarning": "将删除所有连接、表单数据、主题和语言偏好。确定继续？",
     "resetConfirm": "确认重置"
   }

@@ -1,25 +1,34 @@
 {
   "title": "Settings",
-  "subtitle": "Appearance, environment, and library data.",
+  "subtitle": "Personal preferences, integrations, and app state.",
   "appearance": {
     "title": "Appearance",
+    "description": "Controls how the interface looks across every page.",
     "theme": "Theme",
     "themeOptions": { "light": "Light", "dark": "Dark", "system": "System" },
+    "palette": "Palette",
+    "paletteHint": "Slate is the default. The others are curated palettes; each supports light + dark.",
     "language": "Language",
     "languages": { "en": "English", "zh": "中文" }
   },
   "environment": {
-    "title": "Environment",
+    "title": "About",
+    "description": "Application and build information.",
     "version": "Server version",
     "buildMode": "Build mode"
   },
   "ai": {
     "title": "AI Diagnostics",
-    "description": "Configure a custom LLM judge provider. The API key is stored encrypted and never returned in plaintext.",
+    "description": "Connect a custom LLM judge provider. API keys are stored encrypted.",
     "enabled": "Enabled",
     "baseUrl": "Base URL",
     "model": "Model",
     "apiKey": "API Key",
+    "keyPlaceholderExisting": "sk-*** (leave blank to keep saved key)",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "savedKeyNotRevealable": "Saved keys cannot be revealed. Type a new key to preview it here.",
+    "keyEmpty": "No key entered",
     "test": "Test connection",
     "testing": "Testing…",
     "saving": "Saving…",
@@ -27,19 +36,22 @@
     "testSuccess": "Connection OK ({{ms}} ms)",
     "testFailed": "Connection failed: {{error}}",
     "error": {
-      "keyRequired": "Please enter the API key to update settings",
-      "fillBeforeTest": "Fill in Base URL, API Key, and Model before testing"
+      "keyRequired": "API Key is required for first-time setup",
+      "fillBeforeTest": "Fill Base URL and Model first; the first test also requires an API Key"
     }
   },
   "data": {
-    "title": "Data",
+    "title": "Danger zone",
+    "description": "Irreversible actions. Proceed with care.",
     "exportConnections": "Export connections",
     "importConnections": "Import connections",
     "clearTestData": "Clear test data",
+    "clearTestDataDesc": "Clears form fields and results in Load Test, E2E Smoke, and Request Debug. Your connection library and appearance preferences are kept.",
     "clearTestDataWarning": "This clears every page's form fields and test results across Load Test, E2E Smoke, and Request Debug. Your connection library and appearance settings are kept.",
     "clearTestDataConfirm": "Clear test data",
     "clearTestDataSuccess": "Test data cleared",
     "resetState": "Reset app state",
+    "resetStateDesc": "Removes every connection, every form value, and local preferences, restoring the initial state.",
     "resetWarning": "This deletes every connection, every form value, theme, and locale preference. Are you sure?",
     "resetConfirm": "Reset everything"
   }

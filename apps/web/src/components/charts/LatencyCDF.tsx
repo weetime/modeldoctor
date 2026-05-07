@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export interface LatencyCDFSeries {
   runId: string;
@@ -54,7 +54,7 @@ function buildOption(
 
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: ecSeries.map((s) => s.name) },
+    legend: { data: ecSeries.map((s) => s.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: { type: "value", name: xLabel, nameLocation: "middle", nameGap: 28 },
     yAxis: {
       type: "value",
@@ -65,8 +65,8 @@ function buildOption(
       nameGap: 48,
       axisLabel: { formatter: (v: number) => `${Math.round(v * 100)}%` },
     },
-    grid: { left: 64, right: 24, top: 40, bottom: 48 },
-    dataZoom: [{ type: "inside" }, { type: "slider", height: 18 }],
+    grid: { left: 64, right: 24, top: 56, bottom: 64 },
+    dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: ecSeries,
   };
 }
@@ -80,10 +80,9 @@ export function LatencyCDF(props: LatencyCDFProps) {
     height = 360,
     loading,
     empty,
-    theme = "auto",
   } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   // Cheap predicate: avoid resolveCDF here (it sorts on every render — see PR #66 review).
   const isEmpty =
     empty ??
@@ -91,8 +90,8 @@ export function LatencyCDF(props: LatencyCDFProps) {
       series.every((s) => (s.cdf?.length ?? 0) === 0 && (s.samples?.length ?? 0) === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, xLabel, colorMap), dark),
-    [series, xLabel, colorMap, dark],
+    () => themed(buildOption(series, xLabel, colorMap), tokens),
+    [series, xLabel, colorMap, tokens],
   );
 
   return (

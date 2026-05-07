@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export interface QPSTimeseriesSeries {
   runId: string;
@@ -35,33 +35,24 @@ function buildOption(
   });
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: ecSeries.map((s) => s.name) },
+    legend: { data: ecSeries.map((s) => s.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: { type: "time" },
     yAxis: { type: "value", name: yLabel, nameLocation: "middle", nameGap: 40 },
-    grid: { left: 56, right: 24, top: 40, bottom: 40 },
-    dataZoom: [{ type: "inside" }, { type: "slider", height: 18 }],
+    grid: { left: 56, right: 24, top: 56, bottom: 64 },
+    dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: ecSeries,
   };
 }
 
 export function QPSTimeseries(props: QPSTimeseriesProps) {
-  const {
-    series,
-    yLabel = "QPS",
-    colorMap,
-    ariaLabel,
-    height = 360,
-    loading,
-    empty,
-    theme = "auto",
-  } = props;
+  const { series, yLabel = "QPS", colorMap, ariaLabel, height = 360, loading, empty } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => s.points.length === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, yLabel, colorMap), dark),
-    [series, yLabel, colorMap, dark],
+    () => themed(buildOption(series, yLabel, colorMap), tokens),
+    [series, yLabel, colorMap, tokens],
   );
 
   return (

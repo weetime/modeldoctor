@@ -23,17 +23,28 @@ import { useE2EStore } from "@/features/diagnostics/store";
 import { useDebugStore } from "@/features/request-debug/store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
+import { PALETTES, type Palette, type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
+import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
+
+const PALETTE_SWATCH_HSL: Record<Palette, string> = {
+  slate: "240 5.9% 10%",
+  aurora: "240 60% 60%",
+  indigo: "244 100% 68%",
+  plum: "263 84% 58%",
+  clay: "21 90% 40%",
+};
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
   const { t: tc } = useTranslation("common");
   const theme = useThemeStore((s) => s.mode);
   const setTheme = useThemeStore((s) => s.setMode);
+  const palette = useThemeStore((s) => s.palette);
+  const setPalette = useThemeStore((s) => s.setPalette);
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const resetE2E = useE2EStore((s) => s.reset);
@@ -52,9 +63,6 @@ export function SettingsPage() {
   };
 
   const onResetAll = () => {
-    // Call every persistent store's reset() so localStorage holds the new
-    // INITIAL state for each. Reload gives a fresh React tree and resets
-    // route + any non-store component-local state.
     resetE2E();
     resetDebug();
     resetTheme();
@@ -66,59 +74,120 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <div className="space-y-6 px-8 py-6">
-        <Section title={t("appearance.title")}>
-          <div className="space-y-4">
-            <div>
-              <Label>{t("appearance.theme")}</Label>
-              <RadioGroup
-                value={theme}
-                onValueChange={(v) => setTheme(v as ThemeMode)}
-                className="mt-2 flex gap-4"
-              >
-                {(["light", "dark", "system"] as ThemeMode[]).map((m) => (
-                  <div key={m} className="flex items-center gap-2">
-                    <RadioGroupItem id={`th-${m}`} value={m} />
-                    <Label htmlFor={`th-${m}`} className="font-normal">
-                      {t(`appearance.themeOptions.${m}`)}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>{t("appearance.language")}</Label>
-              <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-                <SelectTrigger className="mt-2 max-w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en-US">{t("appearance.languages.en")}</SelectItem>
-                  <SelectItem value="zh-CN">{t("appearance.languages.zh")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </Section>
+      <div className="px-8 py-6">
+        <div className="divide-y divide-border">
+          <SettingSection title={t("appearance.title")} description={t("appearance.description")}>
+            <SettingRow
+              label={t("appearance.theme")}
+              control={
+                <RadioGroup
+                  value={theme}
+                  onValueChange={(v) => setTheme(v as ThemeMode)}
+                  className="flex flex-wrap gap-4"
+                >
+                  {(["light", "dark", "system"] as ThemeMode[]).map((m) => (
+                    <div key={m} className="flex items-center gap-2">
+                      <RadioGroupItem id={`th-${m}`} value={m} />
+                      <Label htmlFor={`th-${m}`} className="text-sm">
+                        {t(`appearance.themeOptions.${m}`)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              }
+            />
+            <SettingRow
+              label={t("appearance.palette")}
+              description={t("appearance.paletteHint")}
+              control={
+                <RadioGroup
+                  value={palette}
+                  onValueChange={(v) => setPalette(v as Palette)}
+                  className="flex flex-wrap gap-4"
+                >
+                  {PALETTES.map((p) => (
+                    <div key={p} className="flex items-center gap-2">
+                      <RadioGroupItem id={`pal-${p}`} value={p} />
+                      <Label
+                        htmlFor={`pal-${p}`}
+                        className="flex items-center gap-2 text-sm capitalize"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="h-3 w-3 rounded-full border border-border"
+                          style={{ backgroundColor: `hsl(${PALETTE_SWATCH_HSL[p]})` }}
+                        />
+                        {p}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              }
+            />
+            <SettingRow
+              label={t("appearance.language")}
+              control={
+                <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+                  <SelectTrigger className="max-w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en-US">{t("appearance.languages.en")}</SelectItem>
+                    <SelectItem value="zh-CN">{t("appearance.languages.zh")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              }
+            />
+          </SettingSection>
 
-        <Section title={t("environment.title")}>
-          <div className="text-sm text-muted-foreground">
-            {t("environment.buildMode")}: <span className="font-mono">{import.meta.env.MODE}</span>
-          </div>
-        </Section>
+          <SettingSection title={t("ai.title")} description={t("ai.description")}>
+            <AiDiagnosisSection />
+          </SettingSection>
 
-        <AiDiagnosisSection />
+          <SettingSection title={t("environment.title")} description={t("environment.description")}>
+            <SettingRow
+              label={t("environment.buildMode")}
+              control={
+                <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
+                  {import.meta.env.MODE}
+                </code>
+              }
+            />
+          </SettingSection>
 
-        <Section title={t("data.title")}>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setClearOpen(true)}>
-              {t("data.clearTestData")}
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setResetOpen(true)}>
-              {t("data.resetState")}
-            </Button>
-          </div>
-        </Section>
+          <SettingSection title={t("data.title")} description={t("data.description")} destructive>
+            <DangerZoneCard>
+              <DangerZoneRow
+                title={t("data.clearTestData")}
+                description={t("data.clearTestDataDesc")}
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setClearOpen(true)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {t("data.clearTestData")}
+                  </Button>
+                }
+              />
+              <DangerZoneRow
+                title={t("data.resetState")}
+                description={t("data.resetStateDesc")}
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setResetOpen(true)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {t("data.resetState")}
+                  </Button>
+                }
+              />
+            </DangerZoneCard>
+          </SettingSection>
+        </div>
       </div>
 
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
@@ -148,16 +217,5 @@ export function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
-      {children}
-    </section>
   );
 }

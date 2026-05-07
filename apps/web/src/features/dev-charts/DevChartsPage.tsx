@@ -4,6 +4,7 @@ import {
   QPSTimeseries,
   TTFTHistogram,
   assignRunColors,
+  useChartTokens,
 } from "@/components/charts";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
@@ -28,8 +29,9 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function DevChartsPage() {
-  const colorMap = useMemo(() => assignRunColors(RUN_ID_LIST), []);
-  const largeColorMap = useMemo(() => assignRunColors(["large"]), []);
+  const tokens = useChartTokens();
+  const colorMap = useMemo(() => assignRunColors(RUN_ID_LIST, tokens.palette), [tokens]);
+  const largeColorMap = useMemo(() => assignRunColors(["large"], tokens.palette), [tokens]);
 
   return (
     <div className="space-y-6 p-6">
@@ -55,12 +57,6 @@ export function DevChartsPage() {
             colorMap={largeColorMap}
           />
         </Card>
-        <Card title="Loading">
-          <PercentileTimeseries ariaLabel="loading" series={[]} loading />
-        </Card>
-        <Card title="Empty">
-          <PercentileTimeseries ariaLabel="empty" series={[]} />
-        </Card>
       </Section>
 
       <Section title="LatencyCDF">
@@ -69,12 +65,6 @@ export function DevChartsPage() {
         </Card>
         <Card title="10k samples">
           <LatencyCDF ariaLabel="10k cdf" series={fixtures.largeCDF} colorMap={largeColorMap} />
-        </Card>
-        <Card title="Loading">
-          <LatencyCDF ariaLabel="loading" series={[]} loading />
-        </Card>
-        <Card title="Empty">
-          <LatencyCDF ariaLabel="empty" series={[]} />
         </Card>
       </Section>
 
@@ -93,12 +83,6 @@ export function DevChartsPage() {
             colorMap={largeColorMap}
           />
         </Card>
-        <Card title="Loading">
-          <TTFTHistogram ariaLabel="loading" series={[]} loading />
-        </Card>
-        <Card title="Empty">
-          <TTFTHistogram ariaLabel="empty" series={[]} />
-        </Card>
       </Section>
 
       <Section title="QPSTimeseries">
@@ -108,11 +92,14 @@ export function DevChartsPage() {
         <Card title="10k points">
           <QPSTimeseries ariaLabel="10k qps" series={fixtures.largeQPS} colorMap={largeColorMap} />
         </Card>
+      </Section>
+
+      <Section title="Empty / Loading states">
         <Card title="Loading">
-          <QPSTimeseries ariaLabel="loading" series={[]} loading />
+          <PercentileTimeseries ariaLabel="loading" series={[]} loading />
         </Card>
         <Card title="Empty">
-          <QPSTimeseries ariaLabel="empty" series={[]} />
+          <PercentileTimeseries ariaLabel="empty" series={[]} />
         </Card>
       </Section>
     </div>

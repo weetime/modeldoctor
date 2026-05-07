@@ -32,12 +32,12 @@ export function BenchmarkChartsSection({ benchmarkId, tool }: BenchmarkChartsSec
     );
   }
 
-  // vegeta has no TTFT — single chart spans full width on lg.
-  const cdfClass = hasHistogram ? "" : "lg:col-span-2";
-
+  // Stacked single-column: TTFT histogram x-axis labels (long bucket ranges)
+  // and CDF zoom slider all need real horizontal room — side-by-side made
+  // both unreadable.
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div className={`rounded-md border border-border bg-card p-3 ${cdfClass}`.trim()}>
+    <div className="space-y-4">
+      <div className="rounded-md border border-border bg-card p-3">
         <div className="mb-2 text-xs font-medium text-muted-foreground">
           {t("detail.charts.latencyCdfTitle")}
         </div>

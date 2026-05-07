@@ -9,9 +9,9 @@ import {
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { useThemeStore } from "../../stores/theme-store";
-import { applyTheme, palette } from "./theme";
+import { type ChartTokens, applyTheme, getChartTokens } from "./theme";
 
 echarts.use([
   LineChart,
@@ -39,8 +39,19 @@ export function useChartDark(theme: ChartTheme = "auto"): boolean {
   );
 }
 
-export function themed(opt: EChartsOption, dark: boolean): EChartsOption {
-  return applyTheme(opt, dark);
+/**
+ * Resolve chart palette + text/axis colors from the active palette+mode.
+ * Re-runs when either dimension changes so charts re-render with new colors.
+ */
+export function useChartTokens(): ChartTokens {
+  const palette = useThemeStore((s) => s.palette);
+  const mode = useThemeStore((s) => s.mode);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getChartTokens reads CSS, deps trigger recompute when active palette/mode changes
+  return useMemo(() => getChartTokens(), [palette, mode]);
+}
+
+export function themed(opt: EChartsOption, tokens: ChartTokens): EChartsOption {
+  return applyTheme(opt, tokens);
 }
 
 export interface ChartFrameProps {
@@ -96,7 +107,10 @@ export interface DomainChartProps {
  * Caller must ensure `runIds` contains no duplicates; duplicates silently
  * retain the color of the last occurrence.
  */
-export function assignRunColors(runIds: readonly string[]): Record<string, string> {
+export function assignRunColors(
+  runIds: readonly string[],
+  palette: readonly string[],
+): Record<string, string> {
   const out: Record<string, string> = {};
   runIds.forEach((id, i) => {
     out[id] = palette[i % palette.length];

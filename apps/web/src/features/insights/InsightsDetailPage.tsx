@@ -230,7 +230,7 @@ export function InsightsDetailPage() {
       />
       <div className="space-y-6 px-8 py-6">
         {/* Hero band */}
-        <Card className="overflow-hidden border-violet-200/60 bg-gradient-to-br from-violet-50 via-background to-background dark:border-violet-900/40 dark:from-violet-950/30">
+        <Card>
           <CardContent className="grid grid-cols-1 items-center gap-6 p-8 md:grid-cols-[auto_220px_1fr]">
             {/* Composite score block */}
             <div className="flex flex-col items-start">
@@ -262,10 +262,8 @@ export function InsightsDetailPage() {
                   key={s}
                   type="button"
                   onClick={() => setScenario(s)}
-                  className={`group rounded-lg border bg-card/60 p-4 text-left transition-colors hover:bg-accent ${
-                    activeScenario === s
-                      ? "border-violet-500/60 ring-1 ring-violet-500/30"
-                      : "border-border"
+                  className={`group rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent ${
+                    activeScenario === s ? "border-primary ring-1 ring-primary/30" : "border-border"
                   }`}
                 >
                   <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -286,48 +284,44 @@ export function InsightsDetailPage() {
           </CardContent>
         </Card>
 
-        {/* AI + Tabs row */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_3fr]">
-          <div className="lg:sticky lg:top-6 lg:self-start">
-            <AiDiagnosisCard
-              connectionId={connectionId}
-              profileSlug={activeProfile?.slug ?? "default"}
-              range={range}
-              runIds={runs.map((r) => r.id)}
-            />
-          </div>
-          <div className="min-w-0">
-            <Tabs value={activeScenario} onValueChange={setScenario}>
-              <TabsList>
-                {SCENARIOS.map((s) => (
-                  <TabsTrigger key={s} value={s} className="gap-1.5">
-                    {t(`detail.scenario.${s}`)}
-                    <span
-                      className={`tabular-nums text-xs ${
-                        subScores[s] == null ? "text-muted-foreground" : "font-semibold"
-                      }`}
-                    >
-                      {subScores[s] ?? "—"}
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {SCENARIOS.map((s) => (
-                <TabsContent key={s} value={s} className="mt-4">
-                  <ScenarioPanel
-                    scenario={s}
-                    subScore={subScores[s]}
-                    axisValues={perScenarioAxisValues[s]}
-                    findings={perScenarioFindings[s]}
-                    runs={runsByScenario[s]}
-                    connectionId={connectionId}
-                    rangeFromISO={createdAfter}
-                  />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </div>
-        </div>
+        {/* Scenario tabs — full-width */}
+        <Tabs value={activeScenario} onValueChange={setScenario}>
+          <TabsList className="grid w-full grid-cols-3">
+            {SCENARIOS.map((s) => (
+              <TabsTrigger key={s} value={s} className="gap-1.5">
+                {t(`detail.scenario.${s}`)}
+                <span
+                  className={`tabular-nums text-xs ${
+                    subScores[s] == null ? "text-muted-foreground" : "font-semibold"
+                  }`}
+                >
+                  {subScores[s] ?? "—"}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {SCENARIOS.map((s) => (
+            <TabsContent key={s} value={s} className="mt-4">
+              <ScenarioPanel
+                scenario={s}
+                subScore={subScores[s]}
+                axisValues={perScenarioAxisValues[s]}
+                findings={perScenarioFindings[s]}
+                runs={runsByScenario[s]}
+                connectionId={connectionId}
+                rangeFromISO={createdAfter}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* AI 智能诊断 — full-width at the bottom */}
+        <AiDiagnosisCard
+          connectionId={connectionId}
+          profileSlug={activeProfile?.slug ?? "default"}
+          range={range}
+          runIds={runs.map((r) => r.id)}
+        />
       </div>
     </>
   );

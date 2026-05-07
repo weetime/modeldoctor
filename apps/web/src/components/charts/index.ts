@@ -28,5 +28,6 @@ export type {
 export { QPSTimeseries } from "./QPSTimeseries";
 export type { QPSTimeseriesProps, QPSTimeseriesSeries } from "./QPSTimeseries";
 
-export { assignRunColors } from "./_shared";
+export { assignRunColors, useChartTokens } from "./_shared";
 export type { ChartTheme, DomainChartProps } from "./_shared";
+export type { ChartTokens } from "./theme";
