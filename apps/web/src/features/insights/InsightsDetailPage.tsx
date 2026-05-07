@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
@@ -10,14 +11,20 @@ import { ArrowLeft, SearchX } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AiDiagnosisCard } from "./AiDiagnosisCard";
 import { ProfileSelector } from "./ProfileSelector";
+import { RadarChart } from "./RadarChart";
 import { ScenarioPanel } from "./ScenarioPanel";
-import { ScoreBanner } from "./ScoreBanner";
 import { buildFindings } from "./buildFindings";
 import { axisValue, compositeScore, scenarioScore } from "./evaluate";
 import { useEvaluationProfiles } from "./queries";
+
+function severityClass(score: number | null): string {
+  if (score == null) return "text-muted-foreground";
+  if (score >= 85) return "text-emerald-600 dark:text-emerald-400";
+  if (score >= 60) return "text-amber-600 dark:text-amber-400";
+  return "text-rose-600 dark:text-rose-400";
+}
 
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
 const SCENARIOS: ScenarioId[] = ["inference", "capacity", "gateway"];
@@ -149,101 +156,152 @@ export function InsightsDetailPage() {
     setSearchParams(sp);
   }
 
+  const totalChecks = findings.filter((f) => f.severity !== "no_data").length;
+  const rangeDays = ({ "7d": 7, "30d": 30, "90d": 90 } as const)[range];
+
   return (
     <>
       <PageHeader
         title={conn.data.name}
         subtitle={`${conn.data.baseUrl} · ${conn.data.model} · ${conn.data.category}`}
         rightSlot={
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/benchmarks/reports"><ArrowLeft className="mr-1 h-4 w-4" />{t("detail.backToIndex")}</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ProfileSelector
+              value={activeProfile?.slug ?? "default"}
+              options={profiles.data.items}
+              onChange={setProfile}
+            />
+            {profileDirty && activeProfile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  updateConn.mutate({
+                    id: connectionId,
+                    body: { evaluationProfileId: activeProfile.id },
+                  })
+                }
+                disabled={updateConn.isPending}
+              >
+                {t("detail.profile.setDefault")}
+              </Button>
+            )}
+            <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RANGES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r === "7d" ? "近 7 天" : r === "30d" ? "近 30 天" : "近 90 天"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/benchmarks/reports">
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                {t("detail.backToIndex")}
+              </Link>
+            </Button>
+          </div>
         }
       />
-      <div className="grid grid-cols-1 gap-6 px-8 py-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <ScoreBanner
-            compact
-            composite={composite}
-            perScenario={subScores}
-            totalChecks={findings.filter((f) => f.severity !== "no_data").length}
-            totalRuns={runs.length}
-            rangeDays={({ "7d": 7, "30d": 30, "90d": 90 } as const)[range]}
-            axisValues={overallAxisValues}
-          />
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-muted-foreground">{t("detail.profile.label")}</div>
-                <ProfileSelector
-                  value={activeProfile?.slug ?? "default"}
-                  options={profiles.data.items}
-                  onChange={setProfile}
-                />
-                {profileDirty && activeProfile && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-full justify-start px-2 text-xs"
-                    onClick={() =>
-                      updateConn.mutate({
-                        id: connectionId,
-                        body: { evaluationProfileId: activeProfile.id },
-                      })
-                    }
-                    disabled={updateConn.isPending}
-                  >
-                    {t("detail.profile.setDefault")}
-                  </Button>
-                )}
+      <div className="space-y-6 px-8 py-6">
+        {/* Hero band */}
+        <Card className="overflow-hidden border-violet-200/60 bg-gradient-to-br from-violet-50 via-background to-background dark:border-violet-900/40 dark:from-violet-950/30">
+          <CardContent className="grid grid-cols-1 items-center gap-6 p-8 md:grid-cols-[auto_220px_1fr]">
+            {/* Composite score block */}
+            <div className="flex flex-col items-start">
+              <div className="flex items-baseline gap-2">
+                <span
+                  data-testid="composite-score"
+                  className={`text-7xl font-bold leading-none tabular-nums tracking-tight ${severityClass(composite)}`}
+                >
+                  {composite ?? "—"}
+                </span>
+                <span className="text-2xl font-medium text-muted-foreground">/ 100</span>
               </div>
-              <div className="space-y-1.5">
-                <div className="text-xs font-medium text-muted-foreground">{t("detail.in", { days: ({ "7d": 7, "30d": 30, "90d": 90 } as const)[range] })}</div>
-                <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {RANGES.map((r) => (
-                      <SelectItem key={r} value={r}>{r === "7d" ? "近 7 天" : r === "30d" ? "近 30 天" : "近 90 天"}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="mt-2 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                {t("detail.compositeScore")}
               </div>
-            </CardContent>
-          </Card>
-        </aside>
-        <main className="min-w-0 space-y-6">
-          <AiDiagnosisCard
-            connectionId={connectionId}
-            profileSlug={activeProfile?.slug ?? "default"}
-            range={range}
-            runIds={runs.map((r) => r.id)}
-          />
-          <Tabs value={activeScenario} onValueChange={setScenario}>
-            <TabsList>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {t("detail.checks", { count: totalChecks })} · {t("detail.runs", { count: runs.length })} · {t("detail.in", { days: rangeDays })}
+              </div>
+            </div>
+            {/* Radar chart */}
+            <div className="flex justify-center md:justify-start">
+              <RadarChart values={overallAxisValues} size={200} />
+            </div>
+            {/* Per-scenario KPI tiles */}
+            <div className="grid grid-cols-3 gap-3">
               {SCENARIOS.map((s) => (
-                <TabsTrigger key={s} value={s} className="gap-1.5">
-                  {t(`detail.scenario.${s}`)}
-                  <span className={`tabular-nums text-xs ${subScores[s] == null ? "text-muted-foreground" : "font-semibold"}`}>
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setScenario(s)}
+                  className={`group rounded-lg border bg-card/60 p-4 text-left transition-colors hover:bg-accent ${
+                    activeScenario === s ? "border-violet-500/60 ring-1 ring-violet-500/30" : "border-border"
+                  }`}
+                >
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {t(`detail.scenario.${s}`)}
+                  </div>
+                  <div
+                    data-testid={`subscore-${s}`}
+                    className={`mt-1 text-3xl font-bold tabular-nums ${severityClass(subScores[s])}`}
+                  >
                     {subScores[s] ?? "—"}
-                  </span>
-                </TabsTrigger>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {t("detail.runs", { count: runsByScenario[s].length })}
+                  </div>
+                </button>
               ))}
-            </TabsList>
-            {SCENARIOS.map((s) => (
-              <TabsContent key={s} value={s} className="mt-4">
-                <ScenarioPanel
-                  scenario={s}
-                  subScore={subScores[s]}
-                  axisValues={perScenarioAxisValues[s]}
-                  findings={perScenarioFindings[s]}
-                  runs={runsByScenario[s]}
-                  connectionId={connectionId}
-                  rangeFromISO={createdAfter}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </main>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI + Tabs row */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_3fr]">
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <AiDiagnosisCard
+              connectionId={connectionId}
+              profileSlug={activeProfile?.slug ?? "default"}
+              range={range}
+              runIds={runs.map((r) => r.id)}
+            />
+          </div>
+          <div className="min-w-0">
+            <Tabs value={activeScenario} onValueChange={setScenario}>
+              <TabsList>
+                {SCENARIOS.map((s) => (
+                  <TabsTrigger key={s} value={s} className="gap-1.5">
+                    {t(`detail.scenario.${s}`)}
+                    <span
+                      className={`tabular-nums text-xs ${
+                        subScores[s] == null ? "text-muted-foreground" : "font-semibold"
+                      }`}
+                    >
+                      {subScores[s] ?? "—"}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {SCENARIOS.map((s) => (
+                <TabsContent key={s} value={s} className="mt-4">
+                  <ScenarioPanel
+                    scenario={s}
+                    subScore={subScores[s]}
+                    axisValues={perScenarioAxisValues[s]}
+                    findings={perScenarioFindings[s]}
+                    runs={runsByScenario[s]}
+                    connectionId={connectionId}
+                    rangeFromISO={createdAfter}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        </div>
       </div>
     </>
   );
