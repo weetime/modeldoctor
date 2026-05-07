@@ -143,10 +143,7 @@ export class SynthesizeService {
   }
 
   invalidate(userId: string, connectionId: string): void {
-    const prefix = `${userId}:${connectionId}:`;
-    for (const k of [...(this.cache as any).map.keys()]) {
-      if (typeof k === "string" && k.startsWith(prefix)) (this.cache as any).map.delete(k);
-    }
+    this.cache.deleteByPrefix(`${userId}:${connectionId}:`);
   }
 }
 

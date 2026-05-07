@@ -24,4 +24,15 @@ export class LruCache<K, V> {
       this.map.delete(oldestKey);
     }
   }
+
+  /**
+   * Delete every entry whose string key starts with `prefix`. Only meaningful
+   * when `K` is `string`; non-string keys are ignored. Lets callers invalidate
+   * a logical group of entries without reaching into the private map.
+   */
+  deleteByPrefix(prefix: string): void {
+    for (const k of this.map.keys()) {
+      if (typeof k === "string" && k.startsWith(prefix)) this.map.delete(k);
+    }
+  }
 }

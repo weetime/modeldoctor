@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEvaluationProfiles } from "@/features/insights/queries";
+import { getValidatedRange } from "@/features/insights/range";
 import type { EndpointReportRange } from "@modeldoctor/contracts";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowRight, BarChart3, Search } from "lucide-react";
@@ -29,9 +30,7 @@ const ALL = "__all__";
 export function EndpointReportsPage() {
   const { t } = useTranslation("benchmarks");
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawRange = searchParams.get("range");
-  const range: EndpointReportRange =
-    rawRange === "7d" || rawRange === "30d" || rawRange === "90d" ? rawRange : "30d";
+  const range = getValidatedRange(searchParams.get("range"));
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? ALL;
   const profileFilter = searchParams.get("profile") ?? ALL;

@@ -18,6 +18,7 @@ import { ScenarioPanel } from "./ScenarioPanel";
 import { buildFindings } from "./buildFindings";
 import { axisValue, compositeScore, scenarioScore } from "./evaluate";
 import { useEvaluationProfiles } from "./queries";
+import { getValidatedRange } from "./range";
 
 function severityClass(score: number | null): string {
   if (score == null) return "text-muted-foreground";
@@ -38,9 +39,7 @@ export function InsightsDetailPage() {
   const { t } = useTranslation("insights");
   const { connectionId = "" } = useParams<{ connectionId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const rawRange = searchParams.get("range");
-  const range: EndpointReportRange =
-    rawRange === "7d" || rawRange === "30d" || rawRange === "90d" ? rawRange : "30d";
+  const range = getValidatedRange(searchParams.get("range"));
   const profileSlug = searchParams.get("profile") ?? null;
   const rawScenario = searchParams.get("scenario");
   const activeScenario: ScenarioId =
