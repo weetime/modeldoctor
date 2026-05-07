@@ -7,12 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  PALETTES,
-  type Palette,
-  type ThemeMode,
-  useThemeStore,
-} from "@/stores/theme-store";
+import { PALETTES, type Palette, type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

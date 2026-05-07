@@ -69,10 +69,7 @@ describe("themeStore", () => {
   });
 
   it("rehydrates legacy {mode} payload with default palette=slate", async () => {
-    localStorage.setItem(
-      "md.theme.v1",
-      JSON.stringify({ state: { mode: "dark" }, version: 0 }),
-    );
+    localStorage.setItem("md.theme.v1", JSON.stringify({ state: { mode: "dark" }, version: 0 }));
     await useThemeStore.persist.rehydrate();
     expect(useThemeStore.getState().palette).toBe("slate");
     expect(document.documentElement.dataset.palette).toBe("slate");

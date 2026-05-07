@@ -9,9 +9,9 @@ import {
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { useMemo, type ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { useThemeStore } from "../../stores/theme-store";
-import { applyTheme, getChartTokens, type ChartTokens } from "./theme";
+import { type ChartTokens, applyTheme, getChartTokens } from "./theme";
 
 echarts.use([
   LineChart,
