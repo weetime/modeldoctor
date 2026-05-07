@@ -1,6 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -10,9 +11,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useTemplate } from "@/features/benchmark-templates/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type BenchmarkTemplate,
@@ -21,20 +22,19 @@ import {
   createBenchmarkRequestSchema,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
+import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useForm, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { X } from "lucide-react";
-import { useTemplate } from "@/features/benchmark-templates/queries";
+import { PrefillFromTemplatePopover } from "./PrefillFromTemplatePopover";
 import {
   TOOL_DEFAULTS,
   ToolParamsForm,
   ToolSelectorField,
   useToolUnsupported,
 } from "./forms/ToolParamsEditor";
-import { PrefillFromTemplatePopover } from "./PrefillFromTemplatePopover";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
 
@@ -131,6 +131,7 @@ export function BenchmarkCreatePage() {
   }, [tplQuery.data]);
 
   // 404 / fetch error: toast + drop the bad URL param
+  // biome-ignore lint/correctness/useExhaustiveDependencies: params and setSearchParams are stable RouterDom returns; t is stable i18n; we only re-run when templateIdParam or fetch error state changes
   useEffect(() => {
     if (templateIdParam && tplQuery.isError) {
       toast.error(t("create.prefillFromTemplate.notFound"));
@@ -164,9 +165,7 @@ export function BenchmarkCreatePage() {
           <form onSubmit={onSubmit} className="space-y-6">
             {watchedTemplateId && bannerTpl.data && (
               <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-                <span>
-                  {t("create.prefilledBanner.label", { name: bannerTpl.data.name })}
-                </span>
+                <span>{t("create.prefilledBanner.label", { name: bannerTpl.data.name })}</span>
                 <Button
                   type="button"
                   variant="ghost"
