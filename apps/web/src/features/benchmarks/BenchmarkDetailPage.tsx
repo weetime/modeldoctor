@@ -19,7 +19,7 @@ import type { Benchmark } from "@modeldoctor/contracts";
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, RefreshCw, SearchX } from "lucide-react";
+import { ArrowLeft, Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
 import { RequestDetailsSection } from "./RequestDetailsSection";
+import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
@@ -112,6 +113,7 @@ export function BenchmarkDetailPage() {
   const [unsetOpen, setUnsetOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
   const remove = useDeleteBaseline();
   const deleteBenchmark = useDeleteBenchmark();
   const cancelBenchmark = useCancelBenchmark();
@@ -239,6 +241,12 @@ export function BenchmarkDetailPage() {
                   <TooltipContent>{t("detail.rerun.connectionMissingTooltip")}</TooltipContent>
                 </Tooltip>
               ))}
+            {isTerminal && benchmark.status === "completed" && (
+              <Button variant="outline" size="sm" onClick={() => setSaveTplOpen(true)}>
+                <Copy className="mr-1 h-4 w-4" />
+                {t("detail.saveAsTemplate.button")}
+              </Button>
+            )}
             {!isTerminal && (
               <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
                 {t("detail.cancel.button")}
@@ -396,6 +404,11 @@ export function BenchmarkDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SaveAsTemplateDialog
+        benchmark={saveTplOpen ? benchmark : null}
+        onOpenChange={setSaveTplOpen}
+      />
     </>
   );
 }

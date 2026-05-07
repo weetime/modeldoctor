@@ -629,4 +629,36 @@ describe("BenchmarkDetailPage", () => {
     await user.click(confirm);
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}));
   });
+
+  it("renders Save-as-Template button when status is completed", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    expect(
+      await screen.findByRole("button", { name: /save as template|保存为模板/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides Save-as-Template button when status is failed", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "failed", statusMessage: "boom" }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    // Wait for the page to settle on a non-button anchor we know exists for failed:
+    await screen.findByText(/boom/);
+    expect(
+      screen.queryByRole("button", { name: /save as template|保存为模板/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides Save-as-Template button when status is running", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ status: "running", summaryMetrics: null }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    // Wait for the running placeholder so we know the page is past initial loading:
+    await screen.findByText(/Running…|运行中…/);
+    expect(
+      screen.queryByRole("button", { name: /save as template|保存为模板/i }),
+    ).not.toBeInTheDocument();
+  });
 });
