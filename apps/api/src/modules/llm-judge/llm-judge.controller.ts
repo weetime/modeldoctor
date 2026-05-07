@@ -43,11 +43,25 @@ export class LlmJudgeController {
 
   @Post("test")
   async test(
+    @CurrentUser() user: JwtPayload,
     @Body(new ZodValidationPipe(testLlmJudgeRequestSchema)) body: TestLlmJudgeRequest,
   ): Promise<TestLlmJudgeResponse> {
+    // Resolve apiKey: prefer the request body, otherwise decrypt the saved provider's key.
+    let apiKey = body.apiKey;
+    if (!apiKey) {
+      const saved = await this.svc.getDecrypted(user.sub);
+      if (!saved) {
+        return testLlmJudgeResponseSchema.parse({
+          ok: false,
+          latencyMs: null,
+          error: "No saved provider; supply apiKey to test",
+        });
+      }
+      apiKey = saved.apiKey;
+    }
     try {
       const r = await chatCompletion(
-        { baseUrl: body.baseUrl, apiKey: body.apiKey, model: body.model },
+        { baseUrl: body.baseUrl, apiKey, model: body.model },
         [{ role: "user", content: "ping" }],
         { timeoutMs: 10_000 },
       );

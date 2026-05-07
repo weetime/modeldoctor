@@ -22,6 +22,11 @@
     "baseUrl": "Base URL",
     "model": "模型",
     "apiKey": "API Key",
+    "keyPlaceholderExisting": "sk-*** （留空使用已保存的 Key）",
+    "showKey": "显示 Key",
+    "hideKey": "隐藏 Key",
+    "savedKeyNotRevealable": "已保存的 Key 不可还原；输入新 Key 可用此按钮预览",
+    "keyEmpty": "尚未输入 Key",
     "test": "测试连接",
     "testing": "测试中…",
     "saving": "保存中…",
@@ -29,8 +34,8 @@
     "testSuccess": "连接正常（{{ms}} ms）",
     "testFailed": "连接失败：{{error}}",
     "error": {
-      "keyRequired": "请输入 API Key 以更新配置",
-      "fillBeforeTest": "请先填写 Base URL、API Key 和模型名称"
+      "keyRequired": "首次配置需要填写 API Key",
+      "fillBeforeTest": "请先填写 Base URL 和模型；首次测试还需填写 API Key"
     }
   },
   "data": {

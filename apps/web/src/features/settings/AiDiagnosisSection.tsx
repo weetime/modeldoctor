@@ -34,21 +34,34 @@ export function AiDiagnosisSection() {
   });
 
   async function onSave(values: UpsertLlmJudgeProvider) {
-    if (!values.apiKey && provider.data) {
+    // First-time create requires a key. Updates may omit it (server reuses saved cipher).
+    if (!values.apiKey && !provider.data) {
       toast.error(t("ai.error.keyRequired"));
       return;
     }
-    await upsert.mutateAsync(values);
+    // Empty string → omit so the schema's optional() and the server's reuse path both kick in.
+    const payload: UpsertLlmJudgeProvider = {
+      baseUrl: values.baseUrl,
+      model: values.model,
+      enabled: values.enabled,
+      ...(values.apiKey ? { apiKey: values.apiKey } : {}),
+    };
+    await upsert.mutateAsync(payload);
     toast.success(t("ai.saveSuccess"));
   }
 
   async function onTest() {
     const v = form.getValues();
-    if (!v.baseUrl || !v.apiKey || !v.model) {
+    // Need baseUrl + model always. apiKey may be omitted iff a saved provider exists.
+    if (!v.baseUrl || !v.model || (!v.apiKey && !provider.data)) {
       toast.error(t("ai.error.fillBeforeTest"));
       return;
     }
-    const r = await test.mutateAsync({ baseUrl: v.baseUrl, apiKey: v.apiKey, model: v.model });
+    const r = await test.mutateAsync({
+      baseUrl: v.baseUrl,
+      model: v.model,
+      ...(v.apiKey ? { apiKey: v.apiKey } : {}),
+    });
     if (r.ok) toast.success(t("ai.testSuccess", { ms: r.latencyMs }));
     else toast.error(t("ai.testFailed", { error: r.error ?? "unknown" }));
   }
@@ -103,14 +116,24 @@ export function AiDiagnosisSection() {
             <Input
               id="ai-key"
               type={showKey ? "text" : "password"}
-              placeholder={provider.data ? "sk-*** (留空保留现值)" : "sk-..."}
+              placeholder={provider.data ? t("ai.keyPlaceholderExisting") : "sk-..."}
               {...form.register("apiKey")}
             />
             <button
               type="button"
               onClick={() => setShowKey((s) => !s)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+              disabled={!form.watch("apiKey")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={showKey ? "hide" : "show"}
+              title={
+                form.watch("apiKey")
+                  ? showKey
+                    ? t("ai.hideKey")
+                    : t("ai.showKey")
+                  : provider.data
+                    ? t("ai.savedKeyNotRevealable")
+                    : t("ai.keyEmpty")
+              }
             >
               {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

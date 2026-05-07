@@ -22,6 +22,11 @@
     "baseUrl": "Base URL",
     "model": "Model",
     "apiKey": "API Key",
+    "keyPlaceholderExisting": "sk-*** (leave blank to keep saved key)",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "savedKeyNotRevealable": "Saved keys cannot be revealed. Type a new key to preview it here.",
+    "keyEmpty": "No key entered",
     "test": "Test connection",
     "testing": "Testing…",
     "saving": "Saving…",
@@ -29,8 +34,8 @@
     "testSuccess": "Connection OK ({{ms}} ms)",
     "testFailed": "Connection failed: {{error}}",
     "error": {
-      "keyRequired": "Please enter the API key to update settings",
-      "fillBeforeTest": "Fill in Base URL, API Key, and Model before testing"
+      "keyRequired": "API Key is required for first-time setup",
+      "fillBeforeTest": "Fill Base URL and Model first; the first test also requires an API Key"
     }
   },
   "data": {

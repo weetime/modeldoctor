@@ -1,6 +1,6 @@
 // apps/api/src/modules/llm-judge/llm-judge.service.ts
 import type { LlmJudgeProviderPublic, UpsertLlmJudgeProvider } from "@modeldoctor/contracts";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
@@ -53,7 +53,17 @@ export class LlmJudgeService {
   }
 
   async upsert(userId: string, input: UpsertLlmJudgeProvider): Promise<LlmJudgeProviderPublic> {
-    const apiKeyCipher = encrypt(input.apiKey, this.key);
+    // Resolve apiKeyCipher: encrypt the new key when provided, otherwise reuse the saved one.
+    let apiKeyCipher: string;
+    if (input.apiKey) {
+      apiKeyCipher = encrypt(input.apiKey, this.key);
+    } else {
+      const existing = await this.prisma.llmJudgeProvider.findUnique({ where: { userId } });
+      if (!existing) {
+        throw new BadRequestException("apiKey is required to create the provider");
+      }
+      apiKeyCipher = existing.apiKeyCipher;
+    }
     const row = await this.prisma.llmJudgeProvider.upsert({
       where: { userId },
       update: { baseUrl: input.baseUrl, apiKeyCipher, model: input.model, enabled: input.enabled },
