@@ -5,12 +5,31 @@ import { getCheck } from "../checks/descriptors";
 
 function run(p: Partial<Benchmark> & { id: string; summaryMetrics: any }): Benchmark {
   return {
-    id: p.id, userId: "u1", connectionId: "c1", connection: null,
-    scenario: p.scenario ?? "inference", tool: p.tool ?? "guidellm", toolVersion: null,
-    name: p.id, description: null, status: "completed", statusMessage: null, progress: null,
-    driverHandle: null, params: {}, rawOutput: null, summaryMetrics: p.summaryMetrics,
-    serverMetrics: null, templateId: null, parentBenchmarkId: null, baselineId: null, logs: null,
-    createdAt: "2026-05-01T00:00:00.000Z", startedAt: null, completedAt: null, baselineFor: null,
+    id: p.id,
+    userId: "u1",
+    connectionId: "c1",
+    connection: null,
+    scenario: p.scenario ?? "inference",
+    tool: p.tool ?? "guidellm",
+    toolVersion: null,
+    name: p.id,
+    description: null,
+    status: "completed",
+    statusMessage: null,
+    progress: null,
+    driverHandle: null,
+    params: {},
+    rawOutput: null,
+    summaryMetrics: p.summaryMetrics,
+    serverMetrics: null,
+    templateId: null,
+    parentBenchmarkId: null,
+    baselineId: null,
+    logs: null,
+    createdAt: "2026-05-01T00:00:00.000Z",
+    startedAt: null,
+    completedAt: null,
+    baselineFor: null,
   } as Benchmark;
 }
 
@@ -26,13 +45,15 @@ const guidellmMetrics = (ttft_p95: number) => ({
 
 describe("aggregateCheck", () => {
   it("returns null when no completed runs match", () => {
-    const c = getCheck("inference.ttft.p95.ms")!;
+    const c = getCheck("inference.ttft.p95.ms");
+    if (!c) throw new Error("expected check");
     const v = aggregateCheck(c, [run({ id: "r1", summaryMetrics: null, status: "failed" } as any)]);
     expect(v).toBeNull();
   });
 
   it("returns median across runs", () => {
-    const c = getCheck("inference.ttft.p95.ms")!;
+    const c = getCheck("inference.ttft.p95.ms");
+    if (!c) throw new Error("expected check");
     const runs = [
       run({ id: "r1", summaryMetrics: guidellmMetrics(100) }),
       run({ id: "r2", summaryMetrics: guidellmMetrics(300) }),
@@ -42,7 +63,8 @@ describe("aggregateCheck", () => {
   });
 
   it("respects toolFilter", () => {
-    const c = getCheck("inference.itl.p95.ms")!; // guidellm-only
+    const c = getCheck("inference.itl.p95.ms"); // guidellm-only
+    if (!c) throw new Error("expected check");
     const runs = [run({ id: "r1", tool: "vegeta", summaryMetrics: { tool: "vegeta", data: {} } })];
     expect(aggregateCheck(c, runs)).toBeNull();
   });

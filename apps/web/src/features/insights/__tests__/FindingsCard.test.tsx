@@ -1,16 +1,29 @@
+import i18n from "@/lib/i18n";
+import type { Finding } from "@modeldoctor/contracts";
 // apps/web/src/features/insights/__tests__/FindingsCard.test.tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Finding } from "@modeldoctor/contracts";
-import { describe, expect, it } from "vitest";
 import { I18nextProvider } from "react-i18next";
-import i18n from "@/lib/i18n";
+import { describe, expect, it } from "vitest";
 import { FindingsCard } from "../FindingsCard";
 
-function f(severity: Finding["severity"], scenario: Finding["scenario"], checkId: string, value: number, recommendation = "fix it"): Finding {
+function f(
+  severity: Finding["severity"],
+  scenario: Finding["scenario"],
+  checkId: string,
+  value: number,
+  recommendation = "fix it",
+): Finding {
   return {
-    checkId, scenario, axis: "responsiveness", severity, value, weight: 1,
-    threshold: { warn: 100, crit: 200 }, recommendation, contributingRunIds: [],
+    checkId,
+    scenario,
+    axis: "responsiveness",
+    severity,
+    value,
+    weight: 1,
+    threshold: { warn: 100, crit: 200 },
+    recommendation,
+    contributingRunIds: [],
   };
 }
 

@@ -1,5 +1,5 @@
 // apps/api/src/modules/insights/synthesize.controller.ts
-import { synthesizeRequestSchema, type SynthesizeRequest } from "@modeldoctor/contracts";
+import { type SynthesizeRequest, synthesizeRequestSchema } from "@modeldoctor/contracts";
 import { Body, Controller, Param, Post, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";

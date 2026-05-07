@@ -1,5 +1,5 @@
-import type { Benchmark, Finding, ProfileRules } from "@modeldoctor/contracts";
 import i18n from "@/lib/i18n";
+import type { Benchmark, Finding, ProfileRules } from "@modeldoctor/contracts";
 import { ALL_CHECKS, type CheckDescriptor } from "./checks/descriptors";
 import { evaluateSeverity } from "./evaluate";
 
@@ -42,9 +42,7 @@ export function buildFindings(runs: Benchmark[], profile: ProfileRules): Finding
   for (const check of ALL_CHECKS) {
     const rule = profile.checks[check.id];
     const { value, contributingRunIds } = aggregateCheckDetailed(check, runs);
-    const severity = rule
-      ? evaluateSeverity(value, rule, check.direction)
-      : "no_data";
+    const severity = rule ? evaluateSeverity(value, rule, check.direction) : "no_data";
     findings.push({
       checkId: check.id,
       scenario: check.scenario,

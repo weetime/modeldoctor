@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/common/page-header";
-import { AiDiagnosisSection } from "./AiDiagnosisSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +27,7 @@ import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { AiDiagnosisSection } from "./AiDiagnosisSection";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");

@@ -4,9 +4,7 @@ import { axisValue, compositeScore, evaluateSeverity, scenarioScore } from "../e
 
 describe("evaluateSeverity", () => {
   it("returns no_data when value is null", () => {
-    expect(
-      evaluateSeverity(null, { warn: 100, crit: 200 }, "lower_is_better"),
-    ).toBe("no_data");
+    expect(evaluateSeverity(null, { warn: 100, crit: 200 }, "lower_is_better")).toBe("no_data");
   });
 
   it("lower_is_better: value < warn → good", () => {
@@ -41,9 +39,15 @@ describe("evaluateSeverity", () => {
 describe("scenarioScore", () => {
   function f(severity: Finding["severity"], weight: number): Finding {
     return {
-      checkId: "x", scenario: "inference", axis: "responsiveness",
-      severity, value: 0, threshold: { warn: 0, crit: 0 }, weight,
-      recommendation: "", contributingRunIds: [],
+      checkId: "x",
+      scenario: "inference",
+      axis: "responsiveness",
+      severity,
+      value: 0,
+      threshold: { warn: 0, crit: 0 },
+      weight,
+      recommendation: "",
+      contributingRunIds: [],
     };
   }
 
@@ -94,9 +98,15 @@ describe("compositeScore", () => {
 describe("axisValue", () => {
   function f(axis: RadarAxisId, severity: Finding["severity"], weight: number): Finding {
     return {
-      checkId: "x", scenario: "inference", axis,
-      severity, value: 0, threshold: { warn: 0, crit: 0 }, weight,
-      recommendation: "", contributingRunIds: [],
+      checkId: "x",
+      scenario: "inference",
+      axis,
+      severity,
+      value: 0,
+      threshold: { warn: 0, crit: 0 },
+      weight,
+      recommendation: "",
+      contributingRunIds: [],
     };
   }
 
@@ -106,17 +116,12 @@ describe("axisValue", () => {
 
   it("returns 1.0 when all axis findings are good", () => {
     expect(
-      axisValue("responsiveness", [
-        f("responsiveness", "good", 1),
-        f("responsiveness", "good", 2),
-      ]),
+      axisValue("responsiveness", [f("responsiveness", "good", 1), f("responsiveness", "good", 2)]),
     ).toBe(1.0);
   });
 
   it("returns 0 when all axis findings are crit", () => {
-    expect(
-      axisValue("responsiveness", [f("responsiveness", "crit", 1)]),
-    ).toBe(0);
+    expect(axisValue("responsiveness", [f("responsiveness", "crit", 1)])).toBe(0);
   });
 
   it("ignores no_data on axis", () => {

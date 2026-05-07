@@ -1,5 +1,9 @@
 import { api } from "@/lib/api-client";
-import type { ListEvaluationProfilesResponse, SynthesizeRequest, SynthesizeResponse } from "@modeldoctor/contracts";
+import type {
+  ListEvaluationProfilesResponse,
+  SynthesizeRequest,
+  SynthesizeResponse,
+} from "@modeldoctor/contracts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 export function useEvaluationProfiles() {
@@ -16,6 +20,7 @@ export function defaultProfileSlug(): string {
 
 export function useSynthesize(connectionId: string) {
   return useMutation<SynthesizeResponse, Error, SynthesizeRequest>({
-    mutationFn: (body) => api.post<SynthesizeResponse>(`/api/insights/${connectionId}/synthesize`, body),
+    mutationFn: (body) =>
+      api.post<SynthesizeResponse>(`/api/insights/${connectionId}/synthesize`, body),
   });
 }

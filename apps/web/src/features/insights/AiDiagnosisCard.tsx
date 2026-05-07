@@ -26,7 +26,11 @@ export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Pr
   const { t, i18n } = useTranslation("insights");
   const provider = useLlmJudgeProvider();
   const synth = useSynthesize(connectionId);
-  const [latest, setLatest] = useState<{ findings: NarrativeFinding[]; generatedAt: string; fromCache: boolean } | null>(null);
+  const [latest, setLatest] = useState<{
+    findings: NarrativeFinding[];
+    generatedAt: string;
+    fromCache: boolean;
+  } | null>(null);
 
   async function generate() {
     try {
@@ -39,16 +43,24 @@ export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Pr
   }
 
   if (provider.isLoading) {
-    return <Card><CardContent className="p-6 text-sm text-muted-foreground">…</CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">…</CardContent>
+      </Card>
+    );
   }
 
   if (!provider.data) {
     return (
       <Card>
-        <CardHeader><h3 className="text-sm font-semibold">{t("detail.ai.title")}</h3></CardHeader>
+        <CardHeader>
+          <h3 className="text-sm font-semibold">{t("detail.ai.title")}</h3>
+        </CardHeader>
         <CardContent className="space-y-2">
           <div className="text-sm text-muted-foreground">{t("detail.ai.providerMissing")}</div>
-          <Button asChild variant="outline" size="sm"><Link to="/settings">{t("detail.ai.goToSettings")}</Link></Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/settings">{t("detail.ai.goToSettings")}</Link>
+          </Button>
         </CardContent>
       </Card>
     );
@@ -57,8 +69,12 @@ export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Pr
   if (!provider.data.enabled) {
     return (
       <Card>
-        <CardHeader><h3 className="text-sm font-semibold">{t("detail.ai.title")}</h3></CardHeader>
-        <CardContent className="text-sm text-muted-foreground">{t("detail.ai.providerDisabled")}</CardContent>
+        <CardHeader>
+          <h3 className="text-sm font-semibold">{t("detail.ai.title")}</h3>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          {t("detail.ai.providerDisabled")}
+        </CardContent>
       </Card>
     );
   }
@@ -97,11 +113,9 @@ export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Pr
           </div>
         )}
         {synth.error && !synth.isPending && (
-          <div className="text-sm text-rose-600 dark:text-rose-400">
-            {synth.error.message}
-          </div>
+          <div className="text-sm text-rose-600 dark:text-rose-400">{synth.error.message}</div>
         )}
-        {latest && latest.findings.map((f, i) => {
+        {latest?.findings.map((f, i) => {
           const sev = SEV_BADGE[f.severity];
           return (
             <div key={i} className={`rounded-md border-l-[3px] bg-card px-3 py-2 ${sev.cls}`}>
@@ -110,14 +124,18 @@ export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Pr
               </div>
               <div className="mt-1 text-sm text-muted-foreground">{f.rootCause}</div>
               <ul className="mt-1 list-disc pl-5 text-sm">
-                {f.recommendations.map((rec, j) => <li key={j}>{rec}</li>)}
+                {f.recommendations.map((rec, j) => (
+                  <li key={j}>{rec}</li>
+                ))}
               </ul>
             </div>
           );
         })}
         {latest && (
           <div className="text-xs text-muted-foreground">
-            {t("detail.ai.lastGenerated", { when: formatDistanceToNow(new Date(latest.generatedAt), { addSuffix: true }) })}
+            {t("detail.ai.lastGenerated", {
+              when: formatDistanceToNow(new Date(latest.generatedAt), { addSuffix: true }),
+            })}
             {latest.fromCache && ` · ${t("detail.ai.fromCache")}`}
           </div>
         )}

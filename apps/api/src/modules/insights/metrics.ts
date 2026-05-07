@@ -34,7 +34,8 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
     case "gateway.error_rate":
       if (m.tool === "guidellm") {
         const r = m.data.requests as { total?: number; error?: number } | undefined;
-        const t = r?.total, e = r?.error;
+        const t = r?.total;
+        const e = r?.error;
         if (typeof t !== "number" || typeof e !== "number" || t === 0) return null;
         return e / t;
       }
@@ -53,10 +54,20 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
     }
     case "capacity.tail_ratio":
     case "gateway.tail_ratio": {
-      let p50: number | null = null, p99: number | null = null;
-      if (m.tool === "guidellm") { p50 = m.data.e2eLatency?.p50 ?? null; p99 = m.data.e2eLatency?.p99 ?? null; }
-      if (m.tool === "vegeta") { p50 = m.data.latencies?.p50 ?? null; p99 = m.data.latencies?.p99 ?? null; }
-      if (m.tool === "genai-perf") { p50 = m.data.requestLatency?.p50 ?? null; p99 = m.data.requestLatency?.p99 ?? null; }
+      let p50: number | null = null;
+      let p99: number | null = null;
+      if (m.tool === "guidellm") {
+        p50 = m.data.e2eLatency?.p50 ?? null;
+        p99 = m.data.e2eLatency?.p99 ?? null;
+      }
+      if (m.tool === "vegeta") {
+        p50 = m.data.latencies?.p50 ?? null;
+        p99 = m.data.latencies?.p99 ?? null;
+      }
+      if (m.tool === "genai-perf") {
+        p50 = m.data.requestLatency?.p50 ?? null;
+        p99 = m.data.requestLatency?.p99 ?? null;
+      }
       if (typeof p50 !== "number" || typeof p99 !== "number" || p50 <= 0) return null;
       return p99 / p50;
     }

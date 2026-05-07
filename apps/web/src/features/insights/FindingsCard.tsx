@@ -6,13 +6,24 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const SEV_RANK: Record<Finding["severity"], number> = {
-  crit: 0, warn: 1, good: 2, no_data: 3,
+  crit: 0,
+  warn: 1,
+  good: 2,
+  no_data: 3,
 };
 
 const SEV_BADGE = {
   crit: { emoji: "🔴", cls: "border-l-rose-500 bg-rose-50/50 dark:bg-rose-950/20", label: "高危" },
-  warn: { emoji: "🟡", cls: "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20", label: "中等" },
-  good: { emoji: "🟢", cls: "border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20", label: "良好" },
+  warn: {
+    emoji: "🟡",
+    cls: "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20",
+    label: "中等",
+  },
+  good: {
+    emoji: "🟢",
+    cls: "border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20",
+    label: "良好",
+  },
   no_data: { emoji: "·", cls: "border-l-muted bg-muted/30", label: "无数据" },
 } as const;
 
@@ -27,7 +38,7 @@ export function FindingsCard({ findings, defaultLimit = 5 }: Props) {
 
   const visible = findings
     .filter((f) => f.severity !== "no_data")
-    .sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || (b.weight - a.weight));
+    .sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || b.weight - a.weight);
 
   const shown = expanded ? visible : visible.slice(0, defaultLimit);
   const hiddenCount = visible.length - shown.length;

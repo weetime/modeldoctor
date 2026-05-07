@@ -1,6 +1,6 @@
+import { ConfigService } from "@nestjs/config";
 // apps/api/src/modules/llm-judge/llm-judge.service.spec.ts
 import { Test } from "@nestjs/testing";
-import { ConfigService } from "@nestjs/config";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { LlmJudgeService } from "./llm-judge.service.js";
@@ -15,7 +15,8 @@ describe("LlmJudgeService", () => {
   beforeAll(async () => {
     const mod = await Test.createTestingModule({
       providers: [
-        LlmJudgeService, PrismaService,
+        LlmJudgeService,
+        PrismaService,
         { provide: ConfigService, useValue: { get: () => TEST_KEY_B64 } },
       ],
     }).compile();
@@ -25,7 +26,9 @@ describe("LlmJudgeService", () => {
   });
 
   beforeEach(async () => {
-    const u = await prisma.user.create({ data: { email: `t-${Date.now()}-${Math.random()}@e.com`, passwordHash: "x" } });
+    const u = await prisma.user.create({
+      data: { email: `t-${Date.now()}-${Math.random()}@e.com`, passwordHash: "x" },
+    });
     userId = u.id;
   });
 
@@ -40,7 +43,12 @@ describe("LlmJudgeService", () => {
   });
 
   it("upsert encrypts and round-trips", async () => {
-    const pub = await svc.upsert(userId, { baseUrl: "https://x", apiKey: "sk-secret", model: "gpt-x", enabled: true });
+    const pub = await svc.upsert(userId, {
+      baseUrl: "https://x",
+      apiKey: "sk-secret",
+      model: "gpt-x",
+      enabled: true,
+    });
     expect(pub.baseUrl).toBe("https://x");
     const dec = await svc.getDecrypted(userId);
     expect(dec?.apiKey).toBe("sk-secret");

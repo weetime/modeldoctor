@@ -1,9 +1,17 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { MemoryRouter, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { I18nextProvider } from "react-i18next";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "@/lib/i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
+import {
+  MemoryRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { describe, expect, it } from "vitest";
 import { InsightsDetailPage } from "../InsightsDetailPage";
 
 describe("InsightsDetailPage", () => {

@@ -18,7 +18,15 @@ interface Props {
   rangeFromISO: string;
 }
 
-export function ScenarioPanel({ scenario, subScore, axisValues, findings, runs, connectionId, rangeFromISO }: Props) {
+export function ScenarioPanel({
+  scenario,
+  subScore,
+  axisValues,
+  findings,
+  runs,
+  connectionId,
+  rangeFromISO,
+}: Props) {
   const { t } = useTranslation("insights");
   const hasData = runs.length > 0;
   if (!hasData) {
@@ -46,7 +54,9 @@ export function ScenarioPanel({ scenario, subScore, axisValues, findings, runs, 
       <CardHeader className="flex-row items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold">
           {t(`detail.scenario.${scenario}`)}{" "}
-          {subScore != null && <span className="ml-2 text-base font-bold tabular-nums">{subScore}</span>}
+          {subScore != null && (
+            <span className="ml-2 text-base font-bold tabular-nums">{subScore}</span>
+          )}
         </h3>
         <span className="text-xs text-muted-foreground">
           {t("detail.runs", { count: runs.length })} · {tools.join(", ")}

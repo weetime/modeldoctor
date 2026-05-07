@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { I18nextProvider } from "react-i18next";
 import i18n from "@/lib/i18n";
+import { render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
+import { describe, expect, it } from "vitest";
 import { ScoreBanner } from "../ScoreBanner";
 
 function r(ui: React.ReactNode) {
@@ -10,7 +10,15 @@ function r(ui: React.ReactNode) {
 
 describe("ScoreBanner", () => {
   it("renders composite score and per-scenario sub-scores", () => {
-    r(<ScoreBanner composite={87} perScenario={{ inference: 92, capacity: 75, gateway: 82 }} totalChecks={18} totalRuns={25} rangeDays={30} />);
+    r(
+      <ScoreBanner
+        composite={87}
+        perScenario={{ inference: 92, capacity: 75, gateway: 82 }}
+        totalChecks={18}
+        totalRuns={25}
+        rangeDays={30}
+      />,
+    );
     expect(screen.getByText("87")).toBeInTheDocument();
     expect(screen.getByText(/92/)).toBeInTheDocument();
     expect(screen.getByText(/75/)).toBeInTheDocument();
@@ -18,12 +26,28 @@ describe("ScoreBanner", () => {
   });
 
   it("renders en-dash when composite is null", () => {
-    r(<ScoreBanner composite={null} perScenario={{ inference: null, capacity: null, gateway: null }} totalChecks={0} totalRuns={0} rangeDays={30} />);
+    r(
+      <ScoreBanner
+        composite={null}
+        perScenario={{ inference: null, capacity: null, gateway: null }}
+        totalChecks={0}
+        totalRuns={0}
+        rangeDays={30}
+      />,
+    );
     expect(screen.getByTestId("composite-score").textContent).toBe("—");
   });
 
   it("dims null sub-scores", () => {
-    r(<ScoreBanner composite={92} perScenario={{ inference: 92, capacity: null, gateway: null }} totalChecks={7} totalRuns={5} rangeDays={30} />);
+    r(
+      <ScoreBanner
+        composite={92}
+        perScenario={{ inference: 92, capacity: null, gateway: null }}
+        totalChecks={7}
+        totalRuns={5}
+        rangeDays={30}
+      />,
+    );
     expect(screen.getByTestId("subscore-capacity")).toHaveTextContent("—");
   });
 });

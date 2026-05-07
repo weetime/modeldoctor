@@ -1,8 +1,14 @@
-interface Entry<V> { v: V; insertedAt: number; }
+interface Entry<V> {
+  v: V;
+  insertedAt: number;
+}
 
 export class LruCache<K, V> {
   private map = new Map<K, Entry<V>>();
-  constructor(private capacity: number, private opts: { ttlMs?: number } = {}) {}
+  constructor(
+    private capacity: number,
+    private opts: { ttlMs?: number } = {},
+  ) {}
 
   get(k: K): V | undefined {
     const e = this.map.get(k);

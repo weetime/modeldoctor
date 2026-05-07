@@ -1,5 +1,11 @@
 // apps/web/src/features/insights/ProfileSelector.tsx
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { EvaluationProfile } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 

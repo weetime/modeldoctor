@@ -22,12 +22,14 @@ export const connectionPublicSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   evaluationProfileId: z.string().nullable(),
-  evaluationProfile: z.object({
-    id: z.string(),
-    slug: z.string(),
-    name: z.string(),
-    nameKey: z.string().nullable(),
-  }).nullable(),
+  evaluationProfile: z
+    .object({
+      id: z.string(),
+      slug: z.string(),
+      name: z.string(),
+      nameKey: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type ConnectionPublic = z.infer<typeof connectionPublicSchema>;
 

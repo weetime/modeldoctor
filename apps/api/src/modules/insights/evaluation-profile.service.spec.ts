@@ -35,7 +35,9 @@ describe("EvaluationProfileService", () => {
   it("list returns the 5 seeded built-in profiles", async () => {
     const items = await svc.list();
     const slugs = items.map((p) => p.slug);
-    expect(slugs).toEqual(expect.arrayContaining(["default", "chatbot", "rag", "code-completion", "long-form"]));
+    expect(slugs).toEqual(
+      expect.arrayContaining(["default", "chatbot", "rag", "code-completion", "long-form"]),
+    );
     expect(items.every((p) => p.isBuiltin)).toBe(true);
   });
 

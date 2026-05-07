@@ -22,8 +22,12 @@ export class EvaluationProfileService {
 
   private toContract(r: any): EvaluationProfile {
     return {
-      id: r.id, slug: r.slug, name: r.name, nameKey: r.nameKey,
-      description: r.description, isBuiltin: r.isBuiltin,
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      nameKey: r.nameKey,
+      description: r.description,
+      isBuiltin: r.isBuiltin,
       rules: r.rules as ProfileRules,
       source: r.source,
       createdAt: r.createdAt.toISOString(),

@@ -1,4 +1,8 @@
-import { readErrorRate, readP95Latency, readThroughput } from "@/features/benchmarks/compare/metrics";
+import {
+  readErrorRate,
+  readP95Latency,
+  readThroughput,
+} from "@/features/benchmarks/compare/metrics";
 import type { CheckDescriptor } from "./descriptors";
 
 function fromDist(metrics: unknown, key: string, field: string): number | null {

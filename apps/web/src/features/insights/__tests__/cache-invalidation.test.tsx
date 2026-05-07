@@ -1,10 +1,10 @@
+import i18n from "@/lib/i18n";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import userEvent from "@testing-library/user-event";
-import i18n from "@/lib/i18n";
+import { describe, expect, it, vi } from "vitest";
 import { AiDiagnosisCard } from "../AiDiagnosisCard";
 
 let postCallCount = 0;

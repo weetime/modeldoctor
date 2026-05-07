@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { upsertLlmJudgeProviderSchema, type UpsertLlmJudgeProvider } from "@modeldoctor/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { type UpsertLlmJudgeProvider, upsertLlmJudgeProviderSchema } from "@modeldoctor/contracts";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -24,7 +24,12 @@ export function AiDiagnosisSection() {
     resolver: zodResolver(upsertLlmJudgeProviderSchema),
     defaultValues: { baseUrl: "", apiKey: "", model: "", enabled: true },
     values: provider.data
-      ? { baseUrl: provider.data.baseUrl, apiKey: "", model: provider.data.model, enabled: provider.data.enabled }
+      ? {
+          baseUrl: provider.data.baseUrl,
+          apiKey: "",
+          model: provider.data.model,
+          enabled: provider.data.enabled,
+        }
       : undefined,
   });
 
@@ -55,7 +60,9 @@ export function AiDiagnosisSection() {
           {t("ai.title")}
         </h2>
         <div className="flex items-center gap-2">
-          <Label htmlFor="ai-enabled" className="text-sm">{t("ai.enabled")}</Label>
+          <Label htmlFor="ai-enabled" className="text-sm">
+            {t("ai.enabled")}
+          </Label>
           <Switch
             id="ai-enabled"
             checked={form.watch("enabled")}
@@ -69,16 +76,24 @@ export function AiDiagnosisSection() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <Label htmlFor="ai-baseurl">{t("ai.baseUrl")}</Label>
-            <Input id="ai-baseurl" placeholder="https://api.deepseek.com/v1" {...form.register("baseUrl")} />
+            <Input
+              id="ai-baseurl"
+              placeholder="https://api.deepseek.com/v1"
+              {...form.register("baseUrl")}
+            />
             {form.formState.errors.baseUrl && (
-              <div className="mt-1 text-xs text-rose-500">{form.formState.errors.baseUrl.message}</div>
+              <div className="mt-1 text-xs text-rose-500">
+                {form.formState.errors.baseUrl.message}
+              </div>
             )}
           </div>
           <div>
             <Label htmlFor="ai-model">{t("ai.model")}</Label>
             <Input id="ai-model" placeholder="deepseek-chat" {...form.register("model")} />
             {form.formState.errors.model && (
-              <div className="mt-1 text-xs text-rose-500">{form.formState.errors.model.message}</div>
+              <div className="mt-1 text-xs text-rose-500">
+                {form.formState.errors.model.message}
+              </div>
             )}
           </div>
         </div>

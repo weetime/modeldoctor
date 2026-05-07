@@ -99,10 +99,15 @@ export class ConnectionService {
     if (input.prometheusUrl !== undefined) data.prometheusUrl = input.prometheusUrl;
     if (input.serverKind !== undefined) data.serverKind = input.serverKind;
     if (input.tokenizerHfId !== undefined) data.tokenizerHfId = input.tokenizerHfId;
-    if (input.evaluationProfileId !== undefined) data.evaluationProfileId = input.evaluationProfileId;
+    if (input.evaluationProfileId !== undefined)
+      data.evaluationProfileId = input.evaluationProfileId;
     if (input.apiKey !== undefined) data.apiKeyCipher = encrypt(input.apiKey, this.key);
 
-    const row = await this.prisma.connection.update({ where: { id }, data, include: { evaluationProfile: true } });
+    const row = await this.prisma.connection.update({
+      where: { id },
+      data,
+      include: { evaluationProfile: true },
+    });
 
     if (input.apiKey !== undefined) {
       return this.toContractWithSecret(row, input.apiKey);
@@ -148,15 +153,24 @@ export class ConnectionService {
   private async findOwnedRow(
     userId: string,
     id: string,
-  ): Promise<PrismaConnection & { evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null }> {
-    const row = await this.prisma.connection.findUnique({ where: { id }, include: { evaluationProfile: true } });
+  ): Promise<
+    PrismaConnection & {
+      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+    }
+  > {
+    const row = await this.prisma.connection.findUnique({
+      where: { id },
+      include: { evaluationProfile: true },
+    });
     if (!row) throw new NotFoundException(`Connection ${id} not found`);
     if (row.userId !== userId) throw new ForbiddenException();
     return row;
   }
 
   private toContractPublic(
-    row: PrismaConnection & { evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null },
+    row: PrismaConnection & {
+      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+    },
   ): ConnectionPublic {
     return {
       id: row.id,
@@ -187,7 +201,9 @@ export class ConnectionService {
   }
 
   private toContractWithSecret(
-    row: PrismaConnection & { evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null },
+    row: PrismaConnection & {
+      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+    },
     plaintext: string,
   ): ConnectionWithSecret {
     return {

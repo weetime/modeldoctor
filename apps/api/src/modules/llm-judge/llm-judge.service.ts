@@ -31,8 +31,12 @@ export class LlmJudgeService {
     const row = await this.prisma.llmJudgeProvider.findUnique({ where: { userId } });
     if (!row) return null;
     return {
-      id: row.id, baseUrl: row.baseUrl, model: row.model, enabled: row.enabled,
-      createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
+      id: row.id,
+      baseUrl: row.baseUrl,
+      model: row.model,
+      enabled: row.enabled,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 
@@ -40,8 +44,11 @@ export class LlmJudgeService {
     const row = await this.prisma.llmJudgeProvider.findUnique({ where: { userId } });
     if (!row) return null;
     return {
-      id: row.id, baseUrl: row.baseUrl, apiKey: decrypt(row.apiKeyCipher, this.key),
-      model: row.model, enabled: row.enabled,
+      id: row.id,
+      baseUrl: row.baseUrl,
+      apiKey: decrypt(row.apiKeyCipher, this.key),
+      model: row.model,
+      enabled: row.enabled,
     };
   }
 
@@ -50,11 +57,21 @@ export class LlmJudgeService {
     const row = await this.prisma.llmJudgeProvider.upsert({
       where: { userId },
       update: { baseUrl: input.baseUrl, apiKeyCipher, model: input.model, enabled: input.enabled },
-      create: { userId, baseUrl: input.baseUrl, apiKeyCipher, model: input.model, enabled: input.enabled },
+      create: {
+        userId,
+        baseUrl: input.baseUrl,
+        apiKeyCipher,
+        model: input.model,
+        enabled: input.enabled,
+      },
     });
     return {
-      id: row.id, baseUrl: row.baseUrl, model: row.model, enabled: row.enabled,
-      createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
+      id: row.id,
+      baseUrl: row.baseUrl,
+      model: row.model,
+      enabled: row.enabled,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 

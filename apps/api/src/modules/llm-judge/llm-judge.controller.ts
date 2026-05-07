@@ -1,12 +1,12 @@
 // apps/api/src/modules/llm-judge/llm-judge.controller.ts
 import {
+  type TestLlmJudgeRequest,
+  type TestLlmJudgeResponse,
+  type UpsertLlmJudgeProvider,
   llmJudgeProviderPublicSchema,
   testLlmJudgeRequestSchema,
   testLlmJudgeResponseSchema,
   upsertLlmJudgeProviderSchema,
-  type TestLlmJudgeRequest,
-  type TestLlmJudgeResponse,
-  type UpsertLlmJudgeProvider,
 } from "@modeldoctor/contracts";
 import { Body, Controller, Delete, Get, HttpCode, Post, Put, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
@@ -53,7 +53,11 @@ export class LlmJudgeController {
       );
       return testLlmJudgeResponseSchema.parse({ ok: true, latencyMs: r.latencyMs, error: null });
     } catch (e: any) {
-      return testLlmJudgeResponseSchema.parse({ ok: false, latencyMs: null, error: String(e?.message ?? e).slice(0, 500) });
+      return testLlmJudgeResponseSchema.parse({
+        ok: false,
+        latencyMs: null,
+        error: String(e?.message ?? e).slice(0, 500),
+      });
     }
   }
 }

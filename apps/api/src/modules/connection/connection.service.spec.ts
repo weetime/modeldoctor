@@ -1,9 +1,9 @@
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import type { Connection as PrismaConnection } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionService } from "./connection.service.js";
 
@@ -25,9 +25,7 @@ type RowWithProfile = PrismaConnection & {
   evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
 };
 
-function makeRow(
-  overrides: Partial<RowWithProfile> = {},
-): RowWithProfile {
+function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
   return {
     id: "c_1",
     userId: "u_1",
@@ -242,9 +240,7 @@ describe("ConnectionService", () => {
 
     it("update accepts evaluationProfileId and surfaces evaluationProfile join", async () => {
       const cipher = await encryptForTest("sk-keep-1234");
-      prismaMock.connection.findUnique.mockResolvedValue(
-        makeRow({ apiKeyCipher: cipher }),
-      );
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
       prismaMock.connection.update.mockResolvedValue(
         makeRow({
           apiKeyCipher: cipher,

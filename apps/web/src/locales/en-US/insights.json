@@ -59,26 +59,68 @@
   "checks": {
     "inference": {
       "ttft": {
-        "p95": { "ms": { "recommendation": "TTFT (time-to-first-token) is high — review model loading and continuous-batching settings; add warmup requests so cold starts don't pollute the metric." } },
-        "p99": { "ms": { "recommendation": "TTFT p99 is high — heavy tail. Investigate GC, KV cache thrash, or backend load spikes." } }
+        "p95": {
+          "ms": {
+            "recommendation": "TTFT (time-to-first-token) is high — review model loading and continuous-batching settings; add warmup requests so cold starts don't pollute the metric."
+          }
+        },
+        "p99": {
+          "ms": {
+            "recommendation": "TTFT p99 is high — heavy tail. Investigate GC, KV cache thrash, or backend load spikes."
+          }
+        }
       },
-      "itl": { "p95": { "ms": { "recommendation": "ITL (inter-token latency) is high — token rate is below threshold; investigate compute bottleneck or batch config." } } },
+      "itl": {
+        "p95": {
+          "ms": {
+            "recommendation": "ITL (inter-token latency) is high — token rate is below threshold; investigate compute bottleneck or batch config."
+          }
+        }
+      },
       "e2e": {
-        "p95": { "ms": { "recommendation": "End-to-end p95 latency is high — composite of TTFT + token count + ITL; start by improving TTFT." } },
-        "p99": { "ms": { "recommendation": "End-to-end p99 is high — heavy tail. Look at KV cache eviction or batch reshuffles." } }
+        "p95": {
+          "ms": {
+            "recommendation": "End-to-end p95 latency is high — composite of TTFT + token count + ITL; start by improving TTFT."
+          }
+        },
+        "p99": {
+          "ms": {
+            "recommendation": "End-to-end p99 is high — heavy tail. Look at KV cache eviction or batch reshuffles."
+          }
+        }
       },
-      "error_rate": { "recommendation": "Error rate is high — inspect timeouts, rate limits, model load failures; check statusMessage and logs." },
-      "throughput": { "req_per_s": { "recommendation": "Throughput is low — add replicas, raise max_concurrent, or improve batch utilization." } }
+      "error_rate": {
+        "recommendation": "Error rate is high — inspect timeouts, rate limits, model load failures; check statusMessage and logs."
+      },
+      "throughput": {
+        "req_per_s": {
+          "recommendation": "Throughput is low — add replicas, raise max_concurrent, or improve batch utilization."
+        }
+      }
     },
     "capacity": {
-      "max_qps": { "recommendation": "Max stable QPS is below baseline — check batching, replica count, tokenizer alignment." },
-      "error_rate": { "recommendation": "Errors rising under load — current QPS exceeds stable band; reduce test QPS or scale out." },
-      "tail_ratio": { "recommendation": "p99/p50 tail ratio is large — long requests block short ones; consider request bucketing or chunked prefill." }
+      "max_qps": {
+        "recommendation": "Max stable QPS is below baseline — check batching, replica count, tokenizer alignment."
+      },
+      "error_rate": {
+        "recommendation": "Errors rising under load — current QPS exceeds stable band; reduce test QPS or scale out."
+      },
+      "tail_ratio": {
+        "recommendation": "p99/p50 tail ratio is large — long requests block short ones; consider request bucketing or chunked prefill."
+      }
     },
     "gateway": {
-      "error_rate": { "recommendation": "Gateway error rate is high — inspect reverse-proxy timeouts, rate-limit rules, upstream pool config." },
-      "tail_ratio": { "recommendation": "Gateway tail ratio is large — check retries, keep-alive reuse, slow upstream responses." },
-      "throughput": { "req_per_s": { "recommendation": "Gateway throughput is low — review concurrency caps, connection pool, CPU limits." } }
+      "error_rate": {
+        "recommendation": "Gateway error rate is high — inspect reverse-proxy timeouts, rate-limit rules, upstream pool config."
+      },
+      "tail_ratio": {
+        "recommendation": "Gateway tail ratio is large — check retries, keep-alive reuse, slow upstream responses."
+      },
+      "throughput": {
+        "req_per_s": {
+          "recommendation": "Gateway throughput is low — review concurrency caps, connection pool, CPU limits."
+        }
+      }
     }
   }
 }

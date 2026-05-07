@@ -11,11 +11,11 @@ import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
-import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
+import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -26,7 +26,7 @@ import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import { Navigate, useParams, useSearchParams, type RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
 
 function RedirectToInsights() {
   const { connectionId } = useParams<{ connectionId: string }>();

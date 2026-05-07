@@ -2,10 +2,16 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
+import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
 import { ArrowLeft, SearchX } from "lucide-react";
 import { useMemo } from "react";
@@ -52,7 +58,10 @@ export function InsightsDetailPage() {
   const updateConn = useUpdateConnection();
   const createdAfter = useMemo(() => rangeToISO(range), [range]);
   const list = useBenchmarkList({
-    connectionId, createdAfter, limit: 100, scope: "own",
+    connectionId,
+    createdAfter,
+    limit: 100,
+    scope: "own",
   });
 
   const runs: Benchmark[] = useMemo(() => list.data?.pages[0]?.items ?? [], [list.data]);
@@ -68,50 +77,65 @@ export function InsightsDetailPage() {
   }, [runs, activeProfile]);
 
   const perScenarioFindings = useMemo(() => {
-    return SCENARIOS.reduce((acc, s) => {
-      acc[s] = findings.filter((f) => f.scenario === s);
-      return acc;
-    }, {} as Record<ScenarioId, typeof findings>);
+    return SCENARIOS.reduce(
+      (acc, s) => {
+        acc[s] = findings.filter((f) => f.scenario === s);
+        return acc;
+      },
+      {} as Record<ScenarioId, typeof findings>,
+    );
   }, [findings]);
 
   const subScores = useMemo(() => {
-    return SCENARIOS.reduce((acc, s) => {
-      acc[s] = scenarioScore(perScenarioFindings[s]);
-      return acc;
-    }, {} as Record<ScenarioId, number | null>);
+    return SCENARIOS.reduce(
+      (acc, s) => {
+        acc[s] = scenarioScore(perScenarioFindings[s]);
+        return acc;
+      },
+      {} as Record<ScenarioId, number | null>,
+    );
   }, [perScenarioFindings]);
 
   const composite = useMemo(() => compositeScore(subScores), [subScores]);
 
-  const overallAxisValues = useMemo(() => ({
-    responsiveness: axisValue("responsiveness", findings),
-    smoothness: axisValue("smoothness", findings),
-    throughput: axisValue("throughput", findings),
-    stability: axisValue("stability", findings),
-    tail: axisValue("tail", findings),
-    efficiency: axisValue("efficiency", findings),
-  }), [findings]);
+  const overallAxisValues = useMemo(
+    () => ({
+      responsiveness: axisValue("responsiveness", findings),
+      smoothness: axisValue("smoothness", findings),
+      throughput: axisValue("throughput", findings),
+      stability: axisValue("stability", findings),
+      tail: axisValue("tail", findings),
+      efficiency: axisValue("efficiency", findings),
+    }),
+    [findings],
+  );
 
   const perScenarioAxisValues = useMemo(() => {
-    return SCENARIOS.reduce((acc, s) => {
-      const f = perScenarioFindings[s];
-      acc[s] = {
-        responsiveness: axisValue("responsiveness", f),
-        smoothness: axisValue("smoothness", f),
-        throughput: axisValue("throughput", f),
-        stability: axisValue("stability", f),
-        tail: axisValue("tail", f),
-        efficiency: axisValue("efficiency", f),
-      };
-      return acc;
-    }, {} as Record<ScenarioId, Record<string, number | null>>);
+    return SCENARIOS.reduce(
+      (acc, s) => {
+        const f = perScenarioFindings[s];
+        acc[s] = {
+          responsiveness: axisValue("responsiveness", f),
+          smoothness: axisValue("smoothness", f),
+          throughput: axisValue("throughput", f),
+          stability: axisValue("stability", f),
+          tail: axisValue("tail", f),
+          efficiency: axisValue("efficiency", f),
+        };
+        return acc;
+      },
+      {} as Record<ScenarioId, Record<string, number | null>>,
+    );
   }, [perScenarioFindings]);
 
   const runsByScenario = useMemo(() => {
-    return SCENARIOS.reduce((acc, s) => {
-      acc[s] = runs.filter((r) => r.scenario === s);
-      return acc;
-    }, {} as Record<ScenarioId, Benchmark[]>);
+    return SCENARIOS.reduce(
+      (acc, s) => {
+        acc[s] = runs.filter((r) => r.scenario === s);
+        return acc;
+      },
+      {} as Record<ScenarioId, Benchmark[]>,
+    );
   }, [runs]);
 
   if ((conn.error as { status?: number } | null)?.status === 404) {
@@ -134,9 +158,7 @@ export function InsightsDetailPage() {
   }
   if (!conn.data || !profiles.data) return null;
 
-  const profileDirty =
-    !!activeProfile &&
-    conn.data?.evaluationProfile?.slug !== activeProfile.slug;
+  const profileDirty = !!activeProfile && conn.data?.evaluationProfile?.slug !== activeProfile.slug;
 
   function setRange(next: EndpointReportRange) {
     const sp = new URLSearchParams(searchParams);
@@ -186,7 +208,9 @@ export function InsightsDetailPage() {
               </Button>
             )}
             <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {RANGES.map((r) => (
                   <SelectItem key={r} value={r}>
@@ -223,7 +247,8 @@ export function InsightsDetailPage() {
                 {t("detail.compositeScore")}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
-                {t("detail.checks", { count: totalChecks })} · {t("detail.runs", { count: runs.length })} · {t("detail.in", { days: rangeDays })}
+                {t("detail.checks", { count: totalChecks })} ·{" "}
+                {t("detail.runs", { count: runs.length })} · {t("detail.in", { days: rangeDays })}
               </div>
             </div>
             {/* Radar chart */}
@@ -238,7 +263,9 @@ export function InsightsDetailPage() {
                   type="button"
                   onClick={() => setScenario(s)}
                   className={`group rounded-lg border bg-card/60 p-4 text-left transition-colors hover:bg-accent ${
-                    activeScenario === s ? "border-violet-500/60 ring-1 ring-violet-500/30" : "border-border"
+                    activeScenario === s
+                      ? "border-violet-500/60 ring-1 ring-violet-500/30"
+                      : "border-border"
                   }`}
                 >
                   <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">

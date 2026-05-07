@@ -25,7 +25,15 @@ function severityClass(score: number | null) {
   return "text-rose-600 dark:text-rose-400";
 }
 
-export function ScoreBanner({ composite, perScenario, totalChecks, totalRuns, rangeDays, axisValues, compact }: Props) {
+export function ScoreBanner({
+  composite,
+  perScenario,
+  totalChecks,
+  totalRuns,
+  rangeDays,
+  axisValues,
+  compact,
+}: Props) {
   const { t } = useTranslation("insights");
   if (compact) {
     return (
@@ -36,7 +44,10 @@ export function ScoreBanner({ composite, perScenario, totalChecks, totalRuns, ra
           </div>
           <div className="text-center">
             <div className="flex items-baseline justify-center gap-1.5">
-              <div data-testid="composite-score" className={`text-4xl font-bold tabular-nums ${severityClass(composite)}`}>
+              <div
+                data-testid="composite-score"
+                className={`text-4xl font-bold tabular-nums ${severityClass(composite)}`}
+              >
                 {composite ?? "—"}
               </div>
               <div className="text-sm text-muted-foreground">/ 100</div>
@@ -47,14 +58,18 @@ export function ScoreBanner({ composite, perScenario, totalChecks, totalRuns, ra
             {SCEN.map((s) => (
               <div key={s} className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">{t(`detail.scenario.${s}`)}</span>
-                <span data-testid={`subscore-${s}`} className={`font-semibold tabular-nums ${severityClass(perScenario[s])}`}>
+                <span
+                  data-testid={`subscore-${s}`}
+                  className={`font-semibold tabular-nums ${severityClass(perScenario[s])}`}
+                >
                   {perScenario[s] ?? "—"}
                 </span>
               </div>
             ))}
           </div>
           <div className="border-t border-border pt-2 text-center text-[11px] text-muted-foreground">
-            {t("detail.checks", { count: totalChecks })} · {t("detail.runs", { count: totalRuns })} · {t("detail.in", { days: rangeDays })}
+            {t("detail.checks", { count: totalChecks })} · {t("detail.runs", { count: totalRuns })}{" "}
+            · {t("detail.in", { days: rangeDays })}
           </div>
         </CardContent>
       </Card>
@@ -68,23 +83,27 @@ export function ScoreBanner({ composite, perScenario, totalChecks, totalRuns, ra
         </div>
         <div className="space-y-3">
           <div className="flex items-baseline gap-3">
-            <div data-testid="composite-score" className={`text-5xl font-bold tabular-nums ${severityClass(composite)}`}>
+            <div
+              data-testid="composite-score"
+              className={`text-5xl font-bold tabular-nums ${severityClass(composite)}`}
+            >
               {composite ?? "—"}
             </div>
             <div className="text-lg text-muted-foreground">/ 100</div>
-            <div className="text-sm text-muted-foreground">
-              · {t("detail.compositeScore")}
-            </div>
+            <div className="text-sm text-muted-foreground">· {t("detail.compositeScore")}</div>
           </div>
           <div className="text-sm text-muted-foreground">
-            {t("detail.checks", { count: totalChecks })} ·{" "}
-            {t("detail.runs", { count: totalRuns })} · {t("detail.in", { days: rangeDays })}
+            {t("detail.checks", { count: totalChecks })} · {t("detail.runs", { count: totalRuns })}{" "}
+            · {t("detail.in", { days: rangeDays })}
           </div>
           <div className="flex flex-wrap gap-3 text-sm">
             {SCEN.map((s) => (
               <div key={s} className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">{t(`detail.scenario.${s}`)}:</span>
-                <span data-testid={`subscore-${s}`} className={`font-semibold tabular-nums ${severityClass(perScenario[s])}`}>
+                <span
+                  data-testid={`subscore-${s}`}
+                  className={`font-semibold tabular-nums ${severityClass(perScenario[s])}`}
+                >
                   {perScenario[s] ?? "—"}
                 </span>
               </div>

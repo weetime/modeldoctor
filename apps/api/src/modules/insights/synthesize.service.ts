@@ -1,12 +1,12 @@
+import { createHash } from "node:crypto";
 // apps/api/src/modules/insights/synthesize.service.ts
 import {
-  narrativeFindingSchema,
   type NarrativeFinding,
   type SynthesizeRequest,
   type SynthesizeResponse,
+  narrativeFindingSchema,
 } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
-import { createHash } from "node:crypto";
 import { z } from "zod";
 import { PrismaService } from "../../database/prisma.service.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
@@ -82,23 +82,45 @@ export class SynthesizeService {
     private readonly judge: LlmJudgeService,
   ) {}
 
-  async synthesize(userId: string, connectionId: string, body: SynthesizeRequest): Promise<SynthesizeResponse> {
+  async synthesize(
+    userId: string,
+    connectionId: string,
+    body: SynthesizeRequest,
+  ): Promise<SynthesizeResponse> {
     const provider = await this.judge.getDecrypted(userId);
-    if (!provider || !provider.enabled) throw new NotFoundException("LLM provider not configured or disabled");
+    if (!provider || !provider.enabled)
+      throw new NotFoundException("LLM provider not configured or disabled");
 
-    const runs = body.runIds.length > 0
-      ? await this.prisma.benchmark.findMany({
-          where: { userId, id: { in: body.runIds } },
-          select: { id: true, completedAt: true, createdAt: true, scenario: true, tool: true, status: true, summaryMetrics: true, name: true, params: true },
-        })
-      : [];
+    const runs =
+      body.runIds.length > 0
+        ? await this.prisma.benchmark.findMany({
+            where: { userId, id: { in: body.runIds } },
+            select: {
+              id: true,
+              completedAt: true,
+              createdAt: true,
+              scenario: true,
+              tool: true,
+              status: true,
+              summaryMetrics: true,
+              name: true,
+              params: true,
+            },
+          })
+        : [];
     const runIdsHash = createHash("sha256")
-      .update(runs.map((r) => `${r.id}:${(r.completedAt ?? r.createdAt).toISOString()}`).sort().join(","))
+      .update(
+        runs
+          .map((r) => `${r.id}:${(r.completedAt ?? r.createdAt).toISOString()}`)
+          .sort()
+          .join(","),
+      )
       .digest("hex");
 
     const cacheKey = `${userId}:${connectionId}:${body.profileSlug}:${body.range}:${body.locale}:${runIdsHash}`;
     const hit = this.cache.get(cacheKey);
-    if (hit) return { findings: hit.findings, generatedAt: hit.generatedAt, runIdsHash, fromCache: true };
+    if (hit)
+      return { findings: hit.findings, generatedAt: hit.generatedAt, runIdsHash, fromCache: true };
 
     const profile = await this.profiles.getBySlug(body.profileSlug);
     const conn = await this.prisma.connection.findFirst({ where: { id: connectionId, userId } });
@@ -122,7 +144,10 @@ export class SynthesizeService {
     try {
       const r = await chatCompletion(
         { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: provider.model },
-        [{ role: "system", content: systemPrompt(body.locale) }, { role: "user", content: userPrompt }],
+        [
+          { role: "system", content: systemPrompt(body.locale) },
+          { role: "user", content: userPrompt },
+        ],
         { jsonMode: true, timeoutMs: 30_000 },
       );
       raw = r.content;
@@ -130,7 +155,7 @@ export class SynthesizeService {
       throw new ServiceUnavailableException(`LLM error: ${String(e?.message ?? e).slice(0, 300)}`);
     }
 
-    let parsed;
+    let parsed: z.infer<typeof responseSchema>;
     try {
       parsed = responseSchema.parse(JSON.parse(raw));
     } catch {
