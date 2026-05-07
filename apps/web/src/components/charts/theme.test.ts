@@ -42,10 +42,10 @@ describe("getChartTokens", () => {
     });
     const t = getChartTokens();
     expect(t.palette).toHaveLength(8);
-    expect(t.palette[0]).toBe("hsl(240 60% 60%)");
-    expect(t.palette[7]).toBe("hsl(130 40% 55%)");
-    expect(t.textColor).toBe("hsl(240 10% 3.9%)");
-    expect(t.axisColor).toBe("hsl(240 3.8% 46.1% / 0.4)");
+    expect(t.palette[0]).toBe("hsl(240, 60%, 60%)");
+    expect(t.palette[7]).toBe("hsl(130, 40%, 55%)");
+    expect(t.textColor).toBe("hsl(240, 10%, 3.9%)");
+    expect(t.axisColor).toBe("hsla(240, 3.8%, 46.1%, 0.4)");
   });
 
   it("falls back wholly when even one chart var is missing", () => {
