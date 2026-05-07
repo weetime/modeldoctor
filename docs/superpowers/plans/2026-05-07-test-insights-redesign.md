@@ -2814,7 +2814,7 @@ evaluationProfile: z.object({
 }).nullable(),
 ```
 
-In `updateConnectionSchema` add:
+In the connection update zod schema (verify name by grepping `Update.*[Cc]onnection` in `packages/contracts/src/connection.ts` — expect `updateConnectionSchema` or `connectionUpdateSchema`) add:
 ```ts
 evaluationProfileId: z.string().nullable().optional(),
 ```
@@ -3372,6 +3372,8 @@ export function AiDiagnosisSection() {
       ? { baseUrl: provider.data.baseUrl, apiKey: "", model: provider.data.model, enabled: provider.data.enabled }
       : undefined,
   });
+  // Keep a `tc` for shared action labels (Save / Cancel) consistent with other forms.
+  // Add at the top of the component: const { t: tc } = useTranslation("common");
 
   async function onSave(values: UpsertLlmJudgeProvider) {
     if (!values.apiKey && provider.data) {
@@ -3453,17 +3455,12 @@ export function AiDiagnosisSection() {
             {test.isPending ? t("ai.testing") : t("ai.test")}
           </Button>
           <Button type="submit" disabled={upsert.isPending}>
-            {upsert.isPending ? t("ai.saving") : tCommonSave()}
+            {upsert.isPending ? t("ai.saving") : tc("actions.save")}
           </Button>
         </div>
       </form>
     </section>
   );
-}
-
-function tCommonSave() {
-  // Inline rather than re-importing tc — keeps the form section self-contained.
-  return "保存";
 }
 ```
 
