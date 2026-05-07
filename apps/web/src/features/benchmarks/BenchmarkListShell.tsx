@@ -29,7 +29,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useCreateTemplate } from "@/features/benchmark-templates/queries";
 import type {
   Benchmark,
   BenchmarkStatus,
@@ -51,6 +50,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
+import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { useBenchmarkList, useCreateBenchmark, useDeleteBenchmark } from "./queries";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
@@ -117,9 +117,9 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [saveTplBenchmark, setSaveTplBenchmark] = useState<Benchmark | null>(null);
   const deleteBenchmark = useDeleteBenchmark();
   const createBenchmark = useCreateBenchmark();
-  const createTemplate = useCreateTemplate();
   const navigate = useNavigate();
 
   async function handleRerunRow(b: Benchmark) {
@@ -148,25 +148,6 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
       navigate(`/benchmarks/${next.id}`);
     } catch (e) {
       toast.error((e as Error).message || t("detail.rerun.errors.generic"));
-    }
-  }
-
-  async function handleSaveAsTemplate(b: Benchmark) {
-    const trimmed = b.name.length > 90 ? b.name.slice(0, 90) : b.name;
-    const newName = `${trimmed} (template)`;
-    try {
-      const next = await createTemplate.mutateAsync({
-        name: newName,
-        description: b.description ?? undefined,
-        scenario: b.scenario,
-        tool: b.tool,
-        config: b.params as Record<string, unknown>,
-        tags: [],
-        isOfficial: false,
-      });
-      toast.success(t("rowActions.saveAsTemplate.success", { name: next.name }));
-    } catch (e) {
-      toast.error((e as Error).message || t("rowActions.saveAsTemplate.errors.generic"));
     }
   }
 
@@ -390,14 +371,31 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleSaveAsTemplate(benchmark)}
-                              disabled={createTemplate.isPending}
-                              className="gap-2"
-                            >
-                              <CopyIcon className="h-4 w-4" />
-                              {t("rowActions.saveAsTemplate.label")}
-                            </DropdownMenuItem>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      if (benchmark.status !== "completed") {
+                                        e.preventDefault();
+                                        return;
+                                      }
+                                      setSaveTplBenchmark(benchmark);
+                                    }}
+                                    disabled={benchmark.status !== "completed"}
+                                    className="gap-2"
+                                  >
+                                    <CopyIcon className="h-4 w-4" />
+                                    {t("rowActions.saveAsTemplate.label")}
+                                  </DropdownMenuItem>
+                                </span>
+                              </TooltipTrigger>
+                              {benchmark.status !== "completed" && (
+                                <TooltipContent>
+                                  {t("rowActions.saveAsTemplate.disabledTooltip")}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                             <DropdownMenuItem
                               onClick={() => setPendingDeleteId(benchmark.id)}
                               className="gap-2 text-destructive focus:text-destructive"
@@ -463,6 +461,11 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SaveAsTemplateDialog
+        benchmark={saveTplBenchmark}
+        onOpenChange={(o) => !o && setSaveTplBenchmark(null)}
+      />
     </>
   );
 }
