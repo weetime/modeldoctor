@@ -76,7 +76,6 @@ export function PercentileTimeseries(props: PercentileTimeseriesProps) {
     height = 360,
     loading,
     empty,
-    theme = "auto",
   } = props;
 
   const tokens = useChartTokens();

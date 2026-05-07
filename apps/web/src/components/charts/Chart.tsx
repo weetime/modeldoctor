@@ -134,7 +134,7 @@ function buildOption<K extends ChartKind>(
 }
 
 export function Chart<K extends ChartKind>(props: ChartProps<K>) {
-  const { kind, data, options, theme = "auto", height = 360, loading, empty, ariaLabel } = props;
+  const { kind, data, options, height = 360, loading, empty, ariaLabel } = props;
 
   const tokens = useChartTokens();
 

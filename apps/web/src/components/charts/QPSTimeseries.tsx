@@ -45,16 +45,7 @@ function buildOption(
 }
 
 export function QPSTimeseries(props: QPSTimeseriesProps) {
-  const {
-    series,
-    yLabel = "QPS",
-    colorMap,
-    ariaLabel,
-    height = 360,
-    loading,
-    empty,
-    theme = "auto",
-  } = props;
+  const { series, yLabel = "QPS", colorMap, ariaLabel, height = 360, loading, empty } = props;
 
   const tokens = useChartTokens();
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => s.points.length === 0));

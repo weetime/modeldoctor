@@ -99,7 +99,6 @@ export function TTFTHistogram(props: TTFTHistogramProps) {
     height = 360,
     loading,
     empty,
-    theme = "auto",
   } = props;
 
   const tokens = useChartTokens();
