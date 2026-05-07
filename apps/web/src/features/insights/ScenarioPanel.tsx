@@ -61,7 +61,7 @@ export function ScenarioPanel({ scenario, subScore, axisValues, findings, runs, 
           <div>
             <Button asChild variant="ghost" size="sm" className="gap-1">
               <Link
-                to={`/benchmarks?connectionId=${connectionId}&scenario=${scenario}&createdAfter=${encodeURIComponent(rangeFromISO)}`}
+                to={`/benchmarks/${scenario}?connectionId=${encodeURIComponent(connectionId)}&createdAfter=${encodeURIComponent(rangeFromISO)}`}
               >
                 {t("detail.scenario.viewAll", { count: runs.length })}
                 <ArrowRight className="h-3 w-3" />
