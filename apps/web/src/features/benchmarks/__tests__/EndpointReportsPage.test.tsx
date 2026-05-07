@@ -80,11 +80,11 @@ describe("EndpointReportsPage", () => {
     await waitFor(() => expect(screen.getByLabelText(/regression|劣化/i)).toBeInTheDocument());
   });
 
-  it("'View history' link points to /benchmarks/reports/<id>?range=<range>", async () => {
+  it("'View detail' link points to /insights/<id>?range=<range>", async () => {
     vi.mocked(api.get).mockResolvedValue(oneItem);
     render(withProviders(<EndpointReportsPage />));
-    const link = await screen.findByRole("link", { name: /View history|查看历史/i });
-    expect(link).toHaveAttribute("href", "/benchmarks/reports/c_1?range=30d");
+    const link = await screen.findByRole("link", { name: /View detail|查看详情/i });
+    expect(link).toHaveAttribute("href", "/insights/c_1?range=30d");
   });
 
   it("renders status breakdown text with completed / failed / canceled counts", async () => {
