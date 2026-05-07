@@ -237,7 +237,6 @@ model EvaluationProfile {
   creator     User?        @relation("UserCreatedProfiles", fields: [createdBy], references: [id], onDelete: SetNull)
   connections Connection[] @relation("ConnectionEvaluationProfile")
 
-  @@index([slug])
   @@index([isBuiltin])
   @@map("evaluation_profiles")
 }
