@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type UpsertLlmJudgeProvider, upsertLlmJudgeProviderSchema } from "@modeldoctor/contracts";
@@ -10,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useLlmJudgeProvider, useTestLlmJudge, useUpsertLlmJudgeProvider } from "./queries";
+import { SettingRow } from "./settings-primitives";
 
 export function AiDiagnosisSection() {
   const { t } = useTranslation("settings");
@@ -67,28 +67,23 @@ export function AiDiagnosisSection() {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("ai.title")}
-        </h2>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="ai-enabled" className="text-sm">
-            {t("ai.enabled")}
-          </Label>
+    <form className="space-y-1" onSubmit={form.handleSubmit(onSave)}>
+      <SettingRow
+        label={t("ai.enabled")}
+        htmlFor="ai-enabled"
+        control={
           <Switch
             id="ai-enabled"
             checked={form.watch("enabled")}
             onCheckedChange={(v) => form.setValue("enabled", v)}
           />
-        </div>
-      </div>
-      <p className="mb-3 text-xs text-muted-foreground">{t("ai.description")}</p>
-
-      <form className="space-y-3" onSubmit={form.handleSubmit(onSave)}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <Label htmlFor="ai-baseurl">{t("ai.baseUrl")}</Label>
+        }
+      />
+      <SettingRow
+        label={t("ai.baseUrl")}
+        htmlFor="ai-baseurl"
+        control={
+          <div className="max-w-md">
             <Input
               id="ai-baseurl"
               placeholder="https://api.deepseek.com/v1"
@@ -100,8 +95,13 @@ export function AiDiagnosisSection() {
               </div>
             )}
           </div>
-          <div>
-            <Label htmlFor="ai-model">{t("ai.model")}</Label>
+        }
+      />
+      <SettingRow
+        label={t("ai.model")}
+        htmlFor="ai-model"
+        control={
+          <div className="max-w-md">
             <Input id="ai-model" placeholder="deepseek-chat" {...form.register("model")} />
             {form.formState.errors.model && (
               <div className="mt-1 text-xs text-rose-500">
@@ -109,10 +109,13 @@ export function AiDiagnosisSection() {
               </div>
             )}
           </div>
-        </div>
-        <div>
-          <Label htmlFor="ai-key">{t("ai.apiKey")}</Label>
-          <div className="relative">
+        }
+      />
+      <SettingRow
+        label={t("ai.apiKey")}
+        htmlFor="ai-key"
+        control={
+          <div className="relative max-w-md">
             <Input
               id="ai-key"
               type={showKey ? "text" : "password"}
@@ -138,16 +141,16 @@ export function AiDiagnosisSection() {
               {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onTest} disabled={test.isPending}>
-            {test.isPending ? t("ai.testing") : t("ai.test")}
-          </Button>
-          <Button type="submit" disabled={upsert.isPending}>
-            {upsert.isPending ? t("ai.saving") : tc("actions.save")}
-          </Button>
-        </div>
-      </form>
-    </section>
+        }
+      />
+      <div className="flex gap-2 pt-2 md:pl-[256px]">
+        <Button type="button" variant="outline" onClick={onTest} disabled={test.isPending}>
+          {test.isPending ? t("ai.testing") : t("ai.test")}
+        </Button>
+        <Button type="submit" disabled={upsert.isPending}>
+          {upsert.isPending ? t("ai.saving") : tc("actions.save")}
+        </Button>
+      </div>
+    </form>
   );
 }
