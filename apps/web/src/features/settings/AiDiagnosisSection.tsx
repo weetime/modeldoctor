@@ -143,7 +143,7 @@ export function AiDiagnosisSection() {
           </div>
         }
       />
-      <div className="flex gap-2 pt-2 md:pl-[256px]">
+      <div className="flex gap-2 pt-2 md:pl-[204px]">
         <Button type="button" variant="outline" onClick={onTest} disabled={test.isPending}>
           {test.isPending ? t("ai.testing") : t("ai.test")}
         </Button>

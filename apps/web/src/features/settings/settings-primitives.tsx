@@ -16,16 +16,19 @@ interface SettingSectionProps {
  */
 export function SettingSection({ title, description, destructive, children }: SettingSectionProps) {
   return (
-    <section className="py-8 first:pt-0 last:pb-0">
-      <header className="mb-6">
+    <section className="py-6 first:pt-0 last:pb-0">
+      <header className="mb-3">
         <h2
-          className={cn("text-lg font-semibold tracking-tight", destructive && "text-destructive")}
+          className={cn(
+            "text-base font-semibold tracking-tight",
+            destructive && "text-destructive",
+          )}
         >
           {title}
         </h2>
         {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </header>
-      <div className="space-y-1">{children}</div>
+      <div>{children}</div>
     </section>
   );
 }
@@ -48,8 +51,8 @@ interface SettingRowProps {
  */
 export function SettingRow({ label, description, htmlFor, control }: SettingRowProps) {
   return (
-    <div className="grid grid-cols-1 items-start gap-2 py-3 md:grid-cols-[240px_minmax(0,1fr)] md:gap-6">
-      <div className="md:pt-2">
+    <div className="grid grid-cols-1 items-start gap-1.5 py-2.5 md:grid-cols-[180px_minmax(0,1fr)] md:gap-6">
+      <div className="md:pt-1.5">
         <Label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
         </Label>
