@@ -44,6 +44,13 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 - Vitest 2 across the workspace. `apps/web/src/test/setup.ts` MUST use the explicit `expect.extend(matchers)` form (importing `@testing-library/jest-dom/matchers`); the side-effect `import "@testing-library/jest-dom/vitest"` does not extend `expect` under Vitest 2.
 - `apps/api/tsconfig.json` `include` must stay narrow (`["src/**/*"]`).
 
+## Insights & AI judge
+
+- `evaluation_profiles` is read-only via API; new built-in profiles are added by Prisma migration only.
+- `llm_judge_providers` reuses `CONNECTION_API_KEY_ENCRYPTION_KEY` (no separate env var).
+- `POST /api/insights/:connectionId/synthesize` is synchronous (5-30s); cache is in-memory LRU on the API process. Do not rely on consistency across multi-replica deploys.
+- AI narrative is zh-CN only for V1.
+
 ## Testing layers
 
 1. **Unit / component (Vitest)** — `apps/web/src/**/*.test.{ts,tsx}` (UI components, stores, schemas) and `apps/api/src/**/*.spec.ts` (services, pipes). Fast, mocked.
