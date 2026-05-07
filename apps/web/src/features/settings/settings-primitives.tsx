@@ -62,3 +62,38 @@ export function SettingRow({ label, description, htmlFor, control }: SettingRowP
     </div>
   );
 }
+
+interface DangerZoneCardProps {
+  children: ReactNode;
+}
+
+/** Red-outlined container that hosts a stack of `DangerZoneRow`s. */
+export function DangerZoneCard({ children }: DangerZoneCardProps) {
+  return (
+    <div className="overflow-hidden rounded-md border border-destructive/40 bg-destructive/[0.025] divide-y divide-destructive/30">
+      {children}
+    </div>
+  );
+}
+
+interface DangerZoneRowProps {
+  title: string;
+  description?: string;
+  action: ReactNode;
+}
+
+/**
+ * One destructive action: bold title + description on the left, action button
+ * on the right. Mirrors GitHub's "Danger Zone" pattern.
+ */
+export function DangerZoneRow({ title, description, action }: DangerZoneRowProps) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+}

@@ -28,7 +28,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
-import { SettingRow, SettingSection } from "./settings-primitives";
+import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
 
 const PALETTE_SWATCH_HSL: Record<Palette, string> = {
   slate: "240 5.9% 10%",
@@ -156,24 +156,36 @@ export function SettingsPage() {
           </SettingSection>
 
           <SettingSection title={t("data.title")} description={t("data.description")} destructive>
-            <SettingRow
-              label={t("data.clearTestData")}
-              description={t("data.clearTestDataDesc")}
-              control={
-                <Button variant="outline" size="sm" onClick={() => setClearOpen(true)}>
-                  {t("data.clearTestData")}
-                </Button>
-              }
-            />
-            <SettingRow
-              label={t("data.resetState")}
-              description={t("data.resetStateDesc")}
-              control={
-                <Button variant="destructive" size="sm" onClick={() => setResetOpen(true)}>
-                  {t("data.resetState")}
-                </Button>
-              }
-            />
+            <DangerZoneCard>
+              <DangerZoneRow
+                title={t("data.clearTestData")}
+                description={t("data.clearTestDataDesc")}
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setClearOpen(true)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {t("data.clearTestData")}
+                  </Button>
+                }
+              />
+              <DangerZoneRow
+                title={t("data.resetState")}
+                description={t("data.resetStateDesc")}
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setResetOpen(true)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {t("data.resetState")}
+                  </Button>
+                }
+              />
+            </DangerZoneCard>
           </SettingSection>
         </div>
       </div>
