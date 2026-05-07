@@ -282,7 +282,15 @@
       "improvement": "p95 改善",
       "stable": "p95 稳定"
     },
-    "viewHistory": "查看历史",
+    "viewDetail": "查看详情",
+    "filters": {
+      "search": "搜索连接名/模型",
+      "category": "类别",
+      "categoryAll": "全部类别",
+      "profile": "画像",
+      "profileAll": "全部画像",
+      "noResults": "无匹配结果"
+    },
     "empty": {
       "title": "暂无报告数据",
       "body": "选定时间范围内没有基准测试。"
