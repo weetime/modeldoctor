@@ -31,9 +31,18 @@
   "theme": {
     "toggle": "切换主题",
     "label": "主题",
+    "appearance": "外观",
     "light": "浅色",
     "dark": "深色",
-    "system": "跟随系统"
+    "system": "跟随系统",
+    "palette": {
+      "title": "主题色",
+      "slate": "Slate",
+      "aurora": "Aurora",
+      "indigo": "Indigo",
+      "plum": "Plum",
+      "clay": "Clay"
+    }
   },
   "sidebar": {
     "collapse": "收起侧边栏",
