@@ -31,18 +31,9 @@
   "theme": {
     "toggle": "Toggle theme",
     "label": "Theme",
-    "appearance": "Appearance",
     "light": "Light",
     "dark": "Dark",
-    "system": "System",
-    "palette": {
-      "title": "Palette",
-      "slate": "Slate",
-      "aurora": "Aurora",
-      "indigo": "Indigo",
-      "plum": "Plum",
-      "clay": "Clay"
-    }
+    "system": "System"
   },
   "sidebar": {
     "collapse": "Collapse sidebar",
