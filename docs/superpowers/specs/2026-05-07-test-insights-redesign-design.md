@@ -871,7 +871,7 @@ Generated via `pnpm prisma migrate dev --create-only --name add_evaluation_profi
 
 ### 12.2 Encryption key
 
-Reuse `ENCRYPTION_KEY` env (already used by `Connection.apiKeyCipher`). No new env var.
+Reuse `CONNECTION_API_KEY_ENCRYPTION_KEY` env (already used by `Connection.apiKeyCipher` via `ConnectionService`). Same key material; separate cipher payloads per domain (already version-tagged via `aes-gcm.ts` `v1:` prefix). No new env var.
 
 ### 12.3 Feature flag
 
