@@ -45,6 +45,19 @@
       "title": "{{tool}} does not support '{{category}}' connections",
       "suggestSwitch": "Switch to {{alternatives}} to continue",
       "suggestChangeConnection": "Pick a compatible connection, or choose a different scenario"
+    },
+    "prefillFromTemplate": {
+      "button": "Prefill from template",
+      "search": "Search templates…",
+      "empty": "No templates for this scenario yet",
+      "manage": "→ Manage templates",
+      "applied": "Prefilled from template \"{{name}}\". You can still edit.",
+      "scenarioMismatch": "Template belongs to {{scenario}}; scenario switched",
+      "notFound": "Template not found or deleted"
+    },
+    "prefilledBanner": {
+      "label": "Prefilled from template \"{{name}}\"",
+      "clear": "Clear link"
     }
   },
   "status": {
@@ -86,6 +99,7 @@
     "saveAsTemplate": {
       "label": "Save as template",
       "success": "Saved as template \"{{name}}\"",
+      "disabledTooltip": "Only completed benchmarks can be saved as a template",
       "errors": {
         "generic": "Failed to save as template"
       }
@@ -155,6 +169,9 @@
       "body": "It may have been deleted, or you may not own it."
     },
     "loadError": "Failed to load",
+    "saveAsTemplate": {
+      "button": "Save as template"
+    },
     "delete": {
       "button": "Delete",
       "confirmTitle": "Delete this benchmark?",
