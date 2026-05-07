@@ -63,7 +63,7 @@ function buildOption(
   const { labels, perRun } = alignBuckets(series);
   return {
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    legend: { data: perRun.map((r) => r.name) },
+    legend: { data: perRun.map((r) => r.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: {
       type: "category",
       data: labels,
@@ -73,7 +73,7 @@ function buildOption(
       axisLabel: { interval: "auto", rotate: labels.length > 12 ? 30 : 0 },
     },
     yAxis: { type: "value", name: yLabel, nameLocation: "middle", nameGap: 40 },
-    grid: { left: 56, right: 24, top: 40, bottom: 56 },
+    grid: { left: 56, right: 24, top: 56, bottom: 64 },
     series: perRun.map((r) => {
       const color = colorMap?.[r.runId];
       return {

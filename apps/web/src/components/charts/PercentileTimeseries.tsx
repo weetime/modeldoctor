@@ -58,11 +58,11 @@ function buildOption(
   );
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: flat.map((s) => s.name) },
+    legend: { data: flat.map((s) => s.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: { type: "time" },
     yAxis: { type: "value", name: yLabel, nameLocation: "middle", nameGap: 40 },
-    grid: { left: 56, right: 24, top: 40, bottom: 40 },
-    dataZoom: [{ type: "inside" }, { type: "slider", height: 18 }],
+    grid: { left: 56, right: 24, top: 56, bottom: 64 },
+    dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: flat,
   };
 }

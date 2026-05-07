@@ -54,7 +54,7 @@ function buildOption(
 
   return {
     tooltip: { trigger: "axis" },
-    legend: { data: ecSeries.map((s) => s.name) },
+    legend: { data: ecSeries.map((s) => s.name), type: "scroll", top: 0, left: 0, right: 24 },
     xAxis: { type: "value", name: xLabel, nameLocation: "middle", nameGap: 28 },
     yAxis: {
       type: "value",
@@ -65,8 +65,8 @@ function buildOption(
       nameGap: 48,
       axisLabel: { formatter: (v: number) => `${Math.round(v * 100)}%` },
     },
-    grid: { left: 64, right: 24, top: 40, bottom: 48 },
-    dataZoom: [{ type: "inside" }, { type: "slider", height: 18 }],
+    grid: { left: 64, right: 24, top: 56, bottom: 64 },
+    dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 8 }],
     series: ecSeries,
   };
 }
