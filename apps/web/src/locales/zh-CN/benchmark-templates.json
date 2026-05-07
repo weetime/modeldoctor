@@ -31,6 +31,9 @@
         "title": "没有匹配的结果",
         "subtitle": "试试调整搜索条件或场景"
       }
+    },
+    "cards": {
+      "useThisTemplate": "使用此模板"
     }
   },
   "create": {

@@ -31,6 +31,9 @@
         "title": "No matching results",
         "subtitle": "Try adjusting the search or scenario"
       }
+    },
+    "cards": {
+      "useThisTemplate": "Use this template"
     }
   },
   "create": {

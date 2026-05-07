@@ -265,4 +265,29 @@ describe("BenchmarkListShell", () => {
     const compareBtn = screen.getByRole("button", { name: /Compare \(2\)|对比 \(2\)/i });
     expect(compareBtn).toBeDisabled();
   });
+
+  it("save-as-template menu item is disabled for non-completed rows", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [makeBenchmark("r1", "guidellm", "running", null)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+    await screen.findByText("r1");
+    await userEvent.click(screen.getByRole("button", { name: /more|更多/i }));
+    const menuItem = await screen.findByRole("menuitem", { name: /save as template|保存为模板/i });
+    expect(menuItem).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("save-as-template menu item opens dialog for completed rows", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [makeBenchmark("r1", "guidellm", "completed", guidellmMetrics)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+    await screen.findByText("r1");
+    await userEvent.click(screen.getByRole("button", { name: /more|更多/i }));
+    const menuItem = await screen.findByRole("menuitem", { name: /save as template|保存为模板/i });
+    await userEvent.click(menuItem);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
 });

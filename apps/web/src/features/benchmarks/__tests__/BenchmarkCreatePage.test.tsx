@@ -1,12 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BenchmarkCreatePage } from "../BenchmarkCreatePage";
+
+const mockUseTemplate = vi.fn();
+vi.mock("@/features/benchmark-templates/queries", () => ({
+  useTemplate: (...args: unknown[]) => mockUseTemplate(...args),
+  useTemplates: () => ({ data: { pages: [{ items: [], nextCursor: null }] }, isLoading: false }),
+  useCreateTemplate: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+}));
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
-    data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m" }],
+    data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m", category: "chat" }],
     isLoading: false,
   }),
   useConnection: () => ({ data: null }),
@@ -48,6 +55,11 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("BenchmarkCreatePage", () => {
+  beforeEach(() => {
+    mockUseTemplate.mockReturnValue({ data: undefined, isError: false });
+    mockMutate.mockReset();
+  });
+
   it("renders target, tool, name, description sections", () => {
     render(<BenchmarkCreatePage />, { wrapper: Wrapper });
     // Endpoint + tool now collapse into a single "Target" card.
@@ -168,5 +180,225 @@ describe("BenchmarkCreatePage", () => {
     expect(label).toHaveTextContent(/vegeta/i);
     // And the VegetaParamsForm should now be the rendered subform.
     expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
+  });
+
+  it("prefills form when ?templateId= present in URL", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // Wait for prefill effect to fire:
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+  });
+
+  it("shows prefilled banner with clear-link button when templateId is set", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    expect(await screen.findByText(/prefilled from template|已从模板/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear link|清除关联/i })).toBeInTheDocument();
+  });
+
+  it("clear-link button strips templateId but keeps params", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await screen.findByText(/prefilled from template|已从模板/i);
+    const { default: userEvent } = await import("@testing-library/user-event");
+    await userEvent.click(screen.getByRole("button", { name: /clear link|清除关联/i }));
+    // Banner gone…
+    expect(screen.queryByText(/prefilled from template|已从模板/i)).not.toBeInTheDocument();
+    // …but Name field still has "preset"
+    const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+    expect(nameInput.value).toBe("preset");
+  });
+
+  it("submits with templateId from URL prefill in payload", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // Wait for prefill so the Name field is populated.
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+    // Select the connection via ConnectionPicker — it's the first combobox in DOM order.
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    // Submit.
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.templateId).toBe("tpl-1");
+  });
+
+  it("redirects URL scenario when template's scenario differs (URL prefill)", async () => {
+    // Template is for gateway, but URL says scenario=inference. Page should
+    // redirect URL to scenario=gateway so form state and submission stay
+    // coherent with the visible page (single-source-of-truth = URL).
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "gateway",
+        tool: "vegeta",
+        config: { rate: 50, duration: 30 },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // After redirect + re-apply, Vegeta-only "Rate (req/s)" field is mounted.
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
+    });
+    // And the prefilled banner should reflect the template name.
+    expect(await screen.findByText(/prefilled from template|已从模板/i)).toBeInTheDocument();
+  });
+
+  it("submits with form scenario (not URL scenario) — onSubmit uses values", async () => {
+    // Regression: previously onSubmit overrode `scenario` from URL, which
+    // could disagree with the form's scenario in mid-redirect frames.
+    // After the fix, payload.scenario must come from form values.
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.scenario).toBe("inference");
+  });
+
+  it("submits without templateId after clear-link is clicked", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await screen.findByText(/prefilled from template|已从模板/i);
+    // Select the connection via ConnectionPicker — it's the first combobox in DOM order.
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    // Clear the template link.
+    await userEvent.click(screen.getByRole("button", { name: /clear link|清除关联/i }));
+    // Submit.
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.templateId).toBeUndefined();
+    // Prefilled params are still present after clearing the link.
+    expect((payload.params as Record<string, unknown>).profile).toBe("throughput");
   });
 });

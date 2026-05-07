@@ -45,6 +45,19 @@
       "title": "{{tool}} 不支持 {{category}} 类型连接",
       "suggestSwitch": "请改用 {{alternatives}} 继续",
       "suggestChangeConnection": "请更换为兼容的连接，或选择其他场景"
+    },
+    "prefillFromTemplate": {
+      "button": "从模板预填",
+      "search": "搜索模板…",
+      "empty": "还没有此场景的模板",
+      "manage": "→ 去模板库管理",
+      "applied": "已从模板「{{name}}」预填,可继续修改",
+      "scenarioMismatch": "模板属于 {{scenario}},已切换 scenario",
+      "notFound": "模板不存在或已删除"
+    },
+    "prefilledBanner": {
+      "label": "已从模板「{{name}}」预填",
+      "clear": "清除关联"
     }
   },
   "status": {
@@ -86,6 +99,7 @@
     "saveAsTemplate": {
       "label": "保存为模板",
       "success": "已保存为模板「{{name}}」",
+      "disabledTooltip": "仅已完成的 benchmark 可保存为模板",
       "errors": {
         "generic": "保存为模板失败"
       }
@@ -155,6 +169,9 @@
       "body": "可能已被删除，或不属于你的账户。"
     },
     "loadError": "加载失败",
+    "saveAsTemplate": {
+      "button": "保存为模板"
+    },
     "delete": {
       "button": "删除",
       "confirmTitle": "删除这次基准测试？",
