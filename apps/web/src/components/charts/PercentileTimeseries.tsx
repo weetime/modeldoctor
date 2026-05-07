@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export type Percentile = "p50" | "p90" | "p95" | "p99";
 
@@ -79,7 +79,7 @@ export function PercentileTimeseries(props: PercentileTimeseriesProps) {
     theme = "auto",
   } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   const isEmpty =
     empty ??
     (series.length === 0 ||
@@ -88,8 +88,8 @@ export function PercentileTimeseries(props: PercentileTimeseriesProps) {
       ));
 
   const option = useMemo(
-    () => themed(buildOption(series, yLabel, colorMap), dark),
-    [series, yLabel, colorMap, dark],
+    () => themed(buildOption(series, yLabel, colorMap), tokens),
+    [series, yLabel, colorMap, tokens],
   );
 
   return (

@@ -12,7 +12,7 @@ import {
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useMemo } from "react";
-import { useThemeStore } from "../../stores/theme-store";
+import { useChartTokens } from "./_shared";
 import { applyTheme } from "./theme";
 
 // Tree-shake ECharts: register only what we use.
@@ -136,21 +136,11 @@ function buildOption<K extends ChartKind>(
 export function Chart<K extends ChartKind>(props: ChartProps<K>) {
   const { kind, data, options, theme = "auto", height = 360, loading, empty, ariaLabel } = props;
 
-  const storeMode = useThemeStore((s) => s.mode);
-  const dark =
-    theme === "dark"
-      ? true
-      : theme === "light"
-        ? false
-        : storeMode === "dark" ||
-          (storeMode === "system" &&
-            typeof window !== "undefined" &&
-            typeof window.matchMedia === "function" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const tokens = useChartTokens();
 
   const option = useMemo(
-    () => applyTheme(buildOption(kind, data, options), dark),
-    [kind, data, options, dark],
+    () => applyTheme(buildOption(kind, data, options), tokens),
+    [kind, data, options, tokens],
   );
 
   if (loading) {

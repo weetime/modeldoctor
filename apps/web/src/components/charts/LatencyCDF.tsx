@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export interface LatencyCDFSeries {
   runId: string;
@@ -83,7 +83,7 @@ export function LatencyCDF(props: LatencyCDFProps) {
     theme = "auto",
   } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   // Cheap predicate: avoid resolveCDF here (it sorts on every render — see PR #66 review).
   const isEmpty =
     empty ??
@@ -91,8 +91,8 @@ export function LatencyCDF(props: LatencyCDFProps) {
       series.every((s) => (s.cdf?.length ?? 0) === 0 && (s.samples?.length ?? 0) === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, xLabel, colorMap), dark),
-    [series, xLabel, colorMap, dark],
+    () => themed(buildOption(series, xLabel, colorMap), tokens),
+    [series, xLabel, colorMap, tokens],
   );
 
   return (

@@ -1,7 +1,7 @@
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
-import { ChartFrame, type DomainChartProps, themed, useChartDark } from "./_shared";
+import { ChartFrame, type DomainChartProps, themed, useChartTokens } from "./_shared";
 
 export interface HistogramBucket {
   lower: number;
@@ -102,12 +102,12 @@ export function TTFTHistogram(props: TTFTHistogramProps) {
     theme = "auto",
   } = props;
 
-  const dark = useChartDark(theme);
+  const tokens = useChartTokens();
   const isEmpty = empty ?? (series.length === 0 || series.every((s) => s.buckets.length === 0));
 
   const option = useMemo(
-    () => themed(buildOption(series, xLabel, yLabel, colorMap), dark),
-    [series, xLabel, yLabel, colorMap, dark],
+    () => themed(buildOption(series, xLabel, yLabel, colorMap), tokens),
+    [series, xLabel, yLabel, colorMap, tokens],
   );
 
   return (

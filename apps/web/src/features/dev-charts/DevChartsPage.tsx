@@ -4,6 +4,7 @@ import {
   QPSTimeseries,
   TTFTHistogram,
   assignRunColors,
+  useChartTokens,
 } from "@/components/charts";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
@@ -28,8 +29,9 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function DevChartsPage() {
-  const colorMap = useMemo(() => assignRunColors(RUN_ID_LIST), []);
-  const largeColorMap = useMemo(() => assignRunColors(["large"]), []);
+  const tokens = useChartTokens();
+  const colorMap = useMemo(() => assignRunColors(RUN_ID_LIST, tokens.palette), [tokens]);
+  const largeColorMap = useMemo(() => assignRunColors(["large"], tokens.palette), [tokens]);
 
   return (
     <div className="space-y-6 p-6">
