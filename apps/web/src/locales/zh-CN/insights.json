@@ -1,0 +1,84 @@
+{
+  "title": "测试洞察",
+  "subtitle": "按连接聚合的模型性能档案",
+  "axis": {
+    "responsiveness": "响应性",
+    "smoothness": "流畅度",
+    "throughput": "吞吐",
+    "stability": "稳定性",
+    "tail": "长尾",
+    "efficiency": "效率"
+  },
+  "detail": {
+    "backToIndex": "返回测试洞察",
+    "compositeScore": "综合评分",
+    "checks": "{{count}} 项检测",
+    "runs": "{{count}} 次测试",
+    "in": "近 {{days}} 天",
+    "notFound": "连接不存在或已删除",
+    "profile": {
+      "label": "评估画像",
+      "switch": "切换画像",
+      "setDefault": "设为默认"
+    },
+    "findings": {
+      "title": "关键发现",
+      "expandAll": "展开全部 {{count}} 项检测",
+      "noFindings": "本时间范围内无检测项数据",
+      "severity": { "good": "良好", "warn": "中等", "crit": "高危", "no_data": "无数据" }
+    },
+    "ai": {
+      "title": "AI 智能诊断",
+      "generate": "生成 AI 诊断",
+      "generating": "生成中…（约 5-15 秒）",
+      "refresh": "刷新",
+      "lastGenerated": "最新生成 {{when}}",
+      "fromCache": "来自缓存",
+      "providerMissing": "尚未配置 LLM 提供商",
+      "goToSettings": "前往设置",
+      "providerDisabled": "AI 智能诊断已停用"
+    },
+    "scenario": {
+      "inference": "推理性能基准",
+      "capacity": "容量规划",
+      "gateway": "网关压测",
+      "viewAll": "查看本场景 {{count}} 次测试",
+      "empty": {
+        "title": "尚无 {{scenario}} 测试",
+        "cta": "创建第一次测试"
+      }
+    }
+  },
+  "profiles": {
+    "default": { "name": "通用 (chatbot 中庸假设)" },
+    "chatbot": { "name": "Chatbot 实时对话" },
+    "rag": { "name": "RAG 检索增强" },
+    "code-completion": { "name": "Code Completion" },
+    "long-form": { "name": "Long-Form 长文生成" }
+  },
+  "checks": {
+    "inference": {
+      "ttft": {
+        "p95": { "ms": { "recommendation": "TTFT (首字延迟) 偏高 — 检查模型加载策略、批合并 (continuous batching) 设置；考虑增加请求预热让冷启动期请求不进统计。" } },
+        "p99": { "ms": { "recommendation": "TTFT p99 偏高 — 长尾抖动较大，排查 GC / KV cache 抖动 / 后端突发负载。" } }
+      },
+      "itl": { "p95": { "ms": { "recommendation": "ITL (token 间延迟) 偏高 — token rate 不足，排查计算瓶颈或调整 batch 配置。" } } },
+      "e2e": {
+        "p95": { "ms": { "recommendation": "端到端 p95 延迟偏高 — 综合 TTFT + token 数 + ITL 三因素，先看 TTFT 改善空间。" } },
+        "p99": { "ms": { "recommendation": "端到端 p99 偏高 — 长尾抖动大，排查 KV cache eviction、批次切换。" } }
+      },
+      "error_rate": { "recommendation": "错误率偏高 — 检查超时、限流、模型加载失败；查看 statusMessage 与 logs。" },
+      "throughput": { "req_per_s": { "recommendation": "吞吐偏低 — 增加副本、调整 max_concurrent、提升 batch 利用率。" } }
+    },
+    "capacity": {
+      "max_qps": { "recommendation": "最大稳定 QPS 偏低 — 检查批合并设置、副本数、tokenizer 路径是否对齐。" },
+      "error_rate": { "recommendation": "容量场景错误率偏高 — 当前负载超过稳定区间，下调测试 QPS 或扩容。" },
+      "tail_ratio": { "recommendation": "p99/p50 长尾比偏大 — 长请求阻塞短请求，考虑请求分桶或开启 chunked prefill。" }
+    },
+    "gateway": {
+      "error_rate": { "recommendation": "网关错误率偏高 — 排查反向代理超时、限流策略、上游连接池配置。" },
+      "tail_ratio": { "recommendation": "网关长尾比偏大 — 检查重试、长连接复用、上游慢响应阻塞。" },
+      "throughput": { "req_per_s": { "recommendation": "网关吞吐偏低 — 检查并发上限、连接池、CPU 限制。" } }
+    }
+  }
+}

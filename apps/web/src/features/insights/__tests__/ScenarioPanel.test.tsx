@@ -14,7 +14,8 @@ function r(ui: React.ReactNode) {
 describe("ScenarioPanel", () => {
   it("renders empty state when 0 runs", () => {
     r(<ScenarioPanel scenario="capacity" subScore={null} axisValues={{}} findings={[]} runs={[]} connectionId="c1" rangeFromISO="2026-04-01T00:00:00Z" />);
-    expect(screen.getAllByText(/尚无|empty/i).length).toBeGreaterThan(0);
+    // i18n now resolves the namespace; assert on real translation (en-US is fallback).
+    expect(screen.getAllByText(/no .* tests yet|尚无/i).length).toBeGreaterThan(0);
   });
 
   it("populated state renders deep-link with /benchmarks/<scenario> path and url-encoded params", () => {
