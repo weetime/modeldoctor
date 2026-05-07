@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import type { Connection as PrismaConnection } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionService } from "./connection.service.js";
 
@@ -20,7 +21,13 @@ function makePrismaMock() {
   };
 }
 
-function makeRow(overrides: Partial<PrismaConnection> = {}): PrismaConnection {
+type RowWithProfile = PrismaConnection & {
+  evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+};
+
+function makeRow(
+  overrides: Partial<RowWithProfile> = {},
+): RowWithProfile {
   return {
     id: "c_1",
     userId: "u_1",
@@ -35,6 +42,8 @@ function makeRow(overrides: Partial<PrismaConnection> = {}): PrismaConnection {
     prometheusUrl: null,
     serverKind: null,
     tokenizerHfId: null,
+    evaluationProfileId: null,
+    evaluationProfile: null,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
     ...overrides,
@@ -229,6 +238,30 @@ describe("ConnectionService", () => {
       // The DTO returned should reflect the cleared values.
       expect(out.prometheusUrl).toBeNull();
       expect(out.serverKind).toBeNull();
+    });
+
+    it("update accepts evaluationProfileId and surfaces evaluationProfile join", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({ apiKeyCipher: cipher }),
+      );
+      prismaMock.connection.update.mockResolvedValue(
+        makeRow({
+          apiKeyCipher: cipher,
+          evaluationProfileId: "clxprofdefault0000000000",
+          evaluationProfile: {
+            id: "clxprofdefault0000000000",
+            slug: "default",
+            name: "通用",
+            nameKey: "profiles.default.name",
+          },
+        }),
+      );
+      const out = await service.update("u_1", "c_1", {
+        evaluationProfileId: "clxprofdefault0000000000",
+      });
+      expect((out as ConnectionPublic).evaluationProfileId).toBe("clxprofdefault0000000000");
+      expect((out as ConnectionPublic).evaluationProfile?.slug).toBe("default");
     });
   });
 
