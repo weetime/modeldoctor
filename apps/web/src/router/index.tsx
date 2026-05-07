@@ -26,11 +26,13 @@ import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import { Navigate, useParams, type RouteObject } from "react-router-dom";
+import { Navigate, useParams, useSearchParams, type RouteObject } from "react-router-dom";
 
 function RedirectToInsights() {
   const { connectionId } = useParams<{ connectionId: string }>();
-  const search = window.location.search;
+  const [searchParams] = useSearchParams();
+  const qs = searchParams.toString();
+  const search = qs ? `?${qs}` : "";
   return <Navigate to={`/insights/${connectionId}${search}`} replace />;
 }
 

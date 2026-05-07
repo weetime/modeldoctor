@@ -29,7 +29,9 @@ export function InsightsDetailPage() {
   const { t } = useTranslation("insights");
   const { connectionId = "" } = useParams<{ connectionId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const range = (searchParams.get("range") ?? "30d") as EndpointReportRange;
+  const rawRange = searchParams.get("range");
+  const range: EndpointReportRange =
+    rawRange === "7d" || rawRange === "30d" || rawRange === "90d" ? rawRange : "30d";
   const profileSlug = searchParams.get("profile") ?? null;
 
   const conn = useConnection(connectionId);
