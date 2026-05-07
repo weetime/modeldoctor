@@ -13,7 +13,7 @@ vi.mock("@/features/benchmark-templates/queries", () => ({
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
-    data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m" }],
+    data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m", category: "chat" }],
     isLoading: false,
   }),
   useConnection: () => ({ data: null }),
@@ -57,6 +57,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe("BenchmarkCreatePage", () => {
   beforeEach(() => {
     mockUseTemplate.mockReturnValue({ data: undefined, isError: false });
+    mockMutate.mockReset();
   });
 
   it("renders target, tool, name, description sections", () => {
@@ -254,5 +255,83 @@ describe("BenchmarkCreatePage", () => {
     // …but Name field still has "preset"
     const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
     expect(nameInput.value).toBe("preset");
+  });
+
+  it("submits with templateId from URL prefill in payload", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // Wait for prefill so the Name field is populated.
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+    // Select the connection via ConnectionPicker — it's the first combobox in DOM order.
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    // Submit.
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.templateId).toBe("tpl-1");
+  });
+
+  it("submits without templateId after clear-link is clicked", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    mockMutate.mockResolvedValue({ id: "b-new", scenario: "inference", name: "preset" });
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await screen.findByText(/prefilled from template|已从模板/i);
+    // Select the connection via ConnectionPicker — it's the first combobox in DOM order.
+    const [connectionCombo] = screen.getAllByRole("combobox");
+    await userEvent.click(connectionCombo);
+    await userEvent.click(await screen.findByText("test-conn"));
+    // Clear the template link.
+    await userEvent.click(screen.getByRole("button", { name: /clear link|清除关联/i }));
+    // Submit.
+    const submit = screen.getByRole("button", { name: /Submit|提交/i });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+    const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.templateId).toBeUndefined();
+    // Prefilled params are still present after clearing the link.
+    expect((payload.params as Record<string, unknown>).profile).toBe("throughput");
   });
 });
