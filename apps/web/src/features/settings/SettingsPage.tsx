@@ -23,17 +23,27 @@ import { useE2EStore } from "@/features/diagnostics/store";
 import { useDebugStore } from "@/features/request-debug/store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
+import { PALETTES, type Palette, type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
+
+const PALETTE_SWATCH_HSL: Record<Palette, string> = {
+  slate: "240 5.9% 10%",
+  aurora: "240 60% 60%",
+  indigo: "244 100% 68%",
+  plum: "263 84% 58%",
+  clay: "21 90% 40%",
+};
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
   const { t: tc } = useTranslation("common");
   const theme = useThemeStore((s) => s.mode);
   const setTheme = useThemeStore((s) => s.setMode);
+  const palette = useThemeStore((s) => s.palette);
+  const setPalette = useThemeStore((s) => s.setPalette);
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const resetE2E = useE2EStore((s) => s.reset);
@@ -81,6 +91,32 @@ export function SettingsPage() {
                     <RadioGroupItem id={`th-${m}`} value={m} />
                     <Label htmlFor={`th-${m}`} className="font-normal">
                       {t(`appearance.themeOptions.${m}`)}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+            <div>
+              <Label>{t("appearance.palette")}</Label>
+              <p className="mt-1 text-xs text-muted-foreground">{t("appearance.paletteHint")}</p>
+              <RadioGroup
+                value={palette}
+                onValueChange={(v) => setPalette(v as Palette)}
+                className="mt-2 flex flex-wrap gap-4"
+              >
+                {PALETTES.map((p) => (
+                  <div key={p} className="flex items-center gap-2">
+                    <RadioGroupItem id={`pal-${p}`} value={p} />
+                    <Label
+                      htmlFor={`pal-${p}`}
+                      className="flex items-center gap-2 font-normal capitalize"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-3 w-3 rounded-full border border-border"
+                        style={{ backgroundColor: `hsl(${PALETTE_SWATCH_HSL[p]})` }}
+                      />
+                      {p}
                     </Label>
                   </div>
                 ))}

@@ -5,6 +5,8 @@
     "title": "Appearance",
     "theme": "Theme",
     "themeOptions": { "light": "Light", "dark": "Dark", "system": "System" },
+    "palette": "Palette",
+    "paletteHint": "Slate is the default. The others are curated palettes; each supports light + dark.",
     "language": "Language",
     "languages": { "en": "English", "zh": "中文" }
   },
