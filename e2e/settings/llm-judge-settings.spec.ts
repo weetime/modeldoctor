@@ -11,7 +11,8 @@ test("AI Diagnosis section renders + accepts form input + Save click is wired", 
   page,
 }) => {
   await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: /AI 智能诊断|AI Diagnosis/i })).toBeVisible({
+  // settings.json renders "AI Diagnostics" (en) / "AI 智能诊断" (zh).
+  await expect(page.getByRole("heading", { name: /AI 智能诊断|AI Diagnos/i })).toBeVisible({
     timeout: 10_000,
   });
 
@@ -23,7 +24,8 @@ test("AI Diagnosis section renders + accepts form input + Save click is wired", 
   // but we just want to confirm the button is wired and a toast appears
   // (success or failure). Some toasts return latencyMs strings; either
   // outcome is acceptable.
-  await page.getByRole("button", { name: /测试连接|Test/i }).click();
+  // Be strict — "Test connection" disambiguates from "Clear test data".
+  await page.getByRole("button", { name: /测试连接|Test connection/i }).click();
   // Wait for any toast (a `.sonner-toast` or generic role=status).
   await expect(
     page.getByText(/连接成功|连接失败|耗时|test|connected|failed/i).first(),

@@ -55,9 +55,10 @@ test("range picker writes ?range=7d to URL on a connection with no runs", async 
   // Connection name is in the page header.
   await expect(page.getByText("e2e-empty")).toBeVisible({ timeout: 10_000 });
 
-  // Range picker (the "30 / 7 / 90 days" combobox in the header) writes
-  // ?range=7d to the URL.
-  await page.getByRole("combobox").first().click();
-  await page.getByRole("option", { name: /近 7 天|7d/i }).click();
+  // Range picker is the second combobox in the header rightSlot
+  // (the first is ProfileSelector). Range labels are hardcoded zh-CN.
+  const comboboxes = page.getByRole("combobox");
+  await comboboxes.nth(1).click();
+  await page.getByRole("option", { name: "近 7 天" }).click();
   await expect(page).toHaveURL(/\?range=7d/);
 });
