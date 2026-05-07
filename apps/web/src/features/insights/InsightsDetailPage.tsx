@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
 import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
@@ -34,6 +35,11 @@ export function InsightsDetailPage() {
   const range: EndpointReportRange =
     rawRange === "7d" || rawRange === "30d" || rawRange === "90d" ? rawRange : "30d";
   const profileSlug = searchParams.get("profile") ?? null;
+  const rawScenario = searchParams.get("scenario");
+  const activeScenario: ScenarioId =
+    rawScenario === "inference" || rawScenario === "capacity" || rawScenario === "gateway"
+      ? rawScenario
+      : "inference";
 
   const conn = useConnection(connectionId);
   const profiles = useEvaluationProfiles();
@@ -136,6 +142,12 @@ export function InsightsDetailPage() {
     sp.set("profile", slug);
     setSearchParams(sp);
   }
+  function setScenario(s: string) {
+    const sp = new URLSearchParams(searchParams);
+    if (s === "inference") sp.delete("scenario");
+    else sp.set("scenario", s);
+    setSearchParams(sp);
+  }
 
   return (
     <>
@@ -206,18 +218,31 @@ export function InsightsDetailPage() {
             range={range}
             runIds={runs.map((r) => r.id)}
           />
-          {SCENARIOS.map((s) => (
-            <ScenarioPanel
-              key={s}
-              scenario={s}
-              subScore={subScores[s]}
-              axisValues={perScenarioAxisValues[s]}
-              findings={perScenarioFindings[s]}
-              runs={runsByScenario[s]}
-              connectionId={connectionId}
-              rangeFromISO={createdAfter}
-            />
-          ))}
+          <Tabs value={activeScenario} onValueChange={setScenario}>
+            <TabsList>
+              {SCENARIOS.map((s) => (
+                <TabsTrigger key={s} value={s} className="gap-1.5">
+                  {t(`detail.scenario.${s}`)}
+                  <span className={`tabular-nums text-xs ${subScores[s] == null ? "text-muted-foreground" : "font-semibold"}`}>
+                    {subScores[s] ?? "—"}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {SCENARIOS.map((s) => (
+              <TabsContent key={s} value={s} className="mt-4">
+                <ScenarioPanel
+                  scenario={s}
+                  subScore={subScores[s]}
+                  axisValues={perScenarioAxisValues[s]}
+                  findings={perScenarioFindings[s]}
+                  runs={runsByScenario[s]}
+                  connectionId={connectionId}
+                  rangeFromISO={createdAfter}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
         </main>
       </div>
     </>
