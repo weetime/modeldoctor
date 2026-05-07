@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* -------- Slate (default) -------- */
+  [data-palette="slate"] {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
@@ -26,9 +27,18 @@
     --success: 142 72% 35%;
     --warning: 38 92% 50%;
     --radius: 0.5rem;
+
+    --chart-1: 250 60% 55%;
+    --chart-2: 165 50% 50%;
+    --chart-3: 35 75% 55%;
+    --chart-4: 305 55% 55%;
+    --chart-5: 95 45% 55%;
+    --chart-6: 200 50% 50%;
+    --chart-7: 20 60% 50%;
+    --chart-8: 130 40% 55%;
   }
 
-  .dark {
+  [data-palette="slate"].dark {
     --background: 240 6% 8%;
     --foreground: 0 0% 98%;
     --card: 240 6% 10%;
@@ -50,6 +60,15 @@
     --ring: 240 4.9% 63.9%;
     --success: 142 70% 45%;
     --warning: 38 92% 55%;
+
+    --chart-1: 250 70% 65%;
+    --chart-2: 165 55% 55%;
+    --chart-3: 35 85% 60%;
+    --chart-4: 305 60% 65%;
+    --chart-5: 95 50% 60%;
+    --chart-6: 200 60% 55%;
+    --chart-7: 20 70% 60%;
+    --chart-8: 130 50% 60%;
   }
 
   * {
