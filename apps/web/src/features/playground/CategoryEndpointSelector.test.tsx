@@ -21,6 +21,8 @@ const list: ConnectionPublic[] = [
     prometheusUrl: null,
     serverKind: null,
     tokenizerHfId: null,
+    evaluationProfileId: null,
+    evaluationProfile: null,
   },
   {
     id: "c-embed",
@@ -38,6 +40,8 @@ const list: ConnectionPublic[] = [
     prometheusUrl: null,
     serverKind: null,
     tokenizerHfId: null,
+    evaluationProfileId: null,
+    evaluationProfile: null,
   },
 ];
 

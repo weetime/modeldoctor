@@ -31,6 +31,8 @@ const PUBLIC_FIXTURE: ConnectionPublic = {
   prometheusUrl: null,
   serverKind: null,
   tokenizerHfId: null,
+  evaluationProfileId: null,
+  evaluationProfile: null,
   createdAt: "2026-05-01T00:00:00.000Z",
   updatedAt: "2026-05-01T00:00:00.000Z",
 };

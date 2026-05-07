@@ -27,6 +27,7 @@ import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { AiDiagnosisSection } from "./AiDiagnosisSection";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
@@ -105,6 +106,8 @@ export function SettingsPage() {
             {t("environment.buildMode")}: <span className="font-mono">{import.meta.env.MODE}</span>
           </div>
         </Section>
+
+        <AiDiagnosisSection />
 
         <Section title={t("data.title")}>
           <div className="flex flex-wrap gap-2">

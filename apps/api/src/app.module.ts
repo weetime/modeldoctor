@@ -20,6 +20,8 @@ import { ConnectionModule } from "./modules/connection/connection.module.js";
 import { DebugProxyModule } from "./modules/debug-proxy/debug-proxy.module.js";
 import { DiagnosticsModule } from "./modules/diagnostics/diagnostics.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
+import { InsightsModule } from "./modules/insights/insights.module.js";
+import { LlmJudgeModule } from "./modules/llm-judge/llm-judge.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
@@ -64,6 +66,8 @@ import { UsersModule } from "./modules/users/users.module.js";
       },
     }),
     HealthModule,
+    InsightsModule,
+    LlmJudgeModule,
     DebugProxyModule,
     DiagnosticsModule,
     PlaygroundModule,

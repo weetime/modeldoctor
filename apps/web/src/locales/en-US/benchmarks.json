@@ -299,7 +299,15 @@
       "improvement": "p95 improvement",
       "stable": "p95 stable"
     },
-    "viewHistory": "View history",
+    "viewDetail": "View detail",
+    "filters": {
+      "search": "Search by name or model",
+      "category": "Category",
+      "categoryAll": "All categories",
+      "profile": "Profile",
+      "profileAll": "All profiles",
+      "noResults": "No matching results"
+    },
     "empty": {
       "title": "No report data",
       "body": "No benchmarks within the selected window."

@@ -1,0 +1,126 @@
+{
+  "title": "Test Insights",
+  "subtitle": "Model performance dossier aggregated per connection",
+  "axis": {
+    "responsiveness": "Responsiveness",
+    "smoothness": "Smoothness",
+    "throughput": "Throughput",
+    "stability": "Stability",
+    "tail": "Tail",
+    "efficiency": "Efficiency"
+  },
+  "detail": {
+    "backToIndex": "Back to Test Insights",
+    "compositeScore": "Composite score",
+    "checks": "{{count}} checks",
+    "runs": "{{count}} tests",
+    "in": "in last {{days}} days",
+    "notFound": "Connection not found or deleted",
+    "profile": {
+      "label": "Profile",
+      "switch": "Switch profile",
+      "setDefault": "Set as default"
+    },
+    "findings": {
+      "title": "Key findings",
+      "expandAll": "Expand all {{count}} checks",
+      "noFindings": "No check data in this range",
+      "severity": { "good": "Good", "warn": "Warning", "crit": "Critical", "no_data": "No data" }
+    },
+    "ai": {
+      "title": "AI Diagnosis",
+      "generate": "Generate AI diagnosis",
+      "generating": "Generating… (5-15s)",
+      "refresh": "Refresh",
+      "lastGenerated": "Generated {{when}}",
+      "fromCache": "from cache",
+      "providerMissing": "LLM provider not configured",
+      "goToSettings": "Go to settings",
+      "providerDisabled": "AI diagnosis disabled"
+    },
+    "scenario": {
+      "inference": "Inference Benchmark",
+      "capacity": "Capacity Planning",
+      "gateway": "Gateway Stress",
+      "viewAll": "View all {{count}} tests in this scenario",
+      "empty": {
+        "title": "No {{scenario}} tests yet",
+        "cta": "Create the first test"
+      }
+    }
+  },
+  "profiles": {
+    "default": { "name": "Default (chatbot baseline)" },
+    "chatbot": { "name": "Chatbot Realtime" },
+    "rag": { "name": "RAG Retrieval-Augmented" },
+    "code-completion": { "name": "Code Completion" },
+    "long-form": { "name": "Long-Form Generation" }
+  },
+  "checks": {
+    "inference": {
+      "ttft": {
+        "p95": {
+          "ms": {
+            "recommendation": "TTFT (time-to-first-token) is high — review model loading and continuous-batching settings; add warmup requests so cold starts don't pollute the metric."
+          }
+        },
+        "p99": {
+          "ms": {
+            "recommendation": "TTFT p99 is high — heavy tail. Investigate GC, KV cache thrash, or backend load spikes."
+          }
+        }
+      },
+      "itl": {
+        "p95": {
+          "ms": {
+            "recommendation": "ITL (inter-token latency) is high — token rate is below threshold; investigate compute bottleneck or batch config."
+          }
+        }
+      },
+      "e2e": {
+        "p95": {
+          "ms": {
+            "recommendation": "End-to-end p95 latency is high — composite of TTFT + token count + ITL; start by improving TTFT."
+          }
+        },
+        "p99": {
+          "ms": {
+            "recommendation": "End-to-end p99 is high — heavy tail. Look at KV cache eviction or batch reshuffles."
+          }
+        }
+      },
+      "error_rate": {
+        "recommendation": "Error rate is high — inspect timeouts, rate limits, model load failures; check statusMessage and logs."
+      },
+      "throughput": {
+        "req_per_s": {
+          "recommendation": "Throughput is low — add replicas, raise max_concurrent, or improve batch utilization."
+        }
+      }
+    },
+    "capacity": {
+      "max_qps": {
+        "recommendation": "Max stable QPS is below baseline — check batching, replica count, tokenizer alignment."
+      },
+      "error_rate": {
+        "recommendation": "Errors rising under load — current QPS exceeds stable band; reduce test QPS or scale out."
+      },
+      "tail_ratio": {
+        "recommendation": "p99/p50 tail ratio is large — long requests block short ones; consider request bucketing or chunked prefill."
+      }
+    },
+    "gateway": {
+      "error_rate": {
+        "recommendation": "Gateway error rate is high — inspect reverse-proxy timeouts, rate-limit rules, upstream pool config."
+      },
+      "tail_ratio": {
+        "recommendation": "Gateway tail ratio is large — check retries, keep-alive reuse, slow upstream responses."
+      },
+      "throughput": {
+        "req_per_s": {
+          "recommendation": "Gateway throughput is low — review concurrency caps, connection pool, CPU limits."
+        }
+      }
+    }
+  }
+}

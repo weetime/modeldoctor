@@ -10,12 +10,12 @@ import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
 import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage";
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
-import { TestInsightsDetailPage } from "@/features/benchmarks/TestInsightsDetailPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
+import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -26,7 +26,15 @@ import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import { Navigate, type RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
+
+function RedirectToInsights() {
+  const { connectionId } = useParams<{ connectionId: string }>();
+  const [searchParams] = useSearchParams();
+  const qs = searchParams.toString();
+  const search = qs ? `?${qs}` : "";
+  return <Navigate to={`/insights/${connectionId}${search}`} replace />;
+}
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
@@ -50,7 +58,8 @@ export const routes: RouteObject[] = [
           { path: "benchmarks/gateway", element: <BenchmarkGatewayPage /> },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/reports", element: <EndpointReportsPage /> },
-          { path: "benchmarks/reports/:connectionId", element: <TestInsightsDetailPage /> },
+          { path: "benchmarks/reports/:connectionId", element: <RedirectToInsights /> },
+          { path: "insights/:connectionId", element: <InsightsDetailPage /> },
           { path: "benchmarks/new", element: <BenchmarkCreatePage /> },
           { path: "benchmarks/:id", element: <BenchmarkDetailPage /> },
           { path: "benchmark-templates", element: <TemplateListPage /> },

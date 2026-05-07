@@ -22,6 +22,8 @@ model User {
   baselines        Baseline[]
   diagnosticsRuns  DiagnosticsRun[]
   createdTemplates BenchmarkTemplate[] @relation("UserCreatedTemplates")
+  createdProfiles  EvaluationProfile[] @relation("UserCreatedProfiles")
+  llmJudgeProvider LlmJudgeProvider?
 
   @@index([email])
   @@map("users")
@@ -86,6 +88,9 @@ model Connection {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   benchmarks      Benchmark[]
   diagnosticsRuns DiagnosticsRun[]
+
+  evaluationProfileId String?            @map("evaluation_profile_id")
+  evaluationProfile   EvaluationProfile? @relation("ConnectionEvaluationProfile", fields: [evaluationProfileId], references: [id], onDelete: SetNull)
 
   @@unique([userId, name])
   @@index([userId])
@@ -213,4 +218,41 @@ model Baseline {
   @@index([userId])
   @@index([templateId])
   @@map("baselines")
+}
+
+model EvaluationProfile {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  nameKey     String?  @map("name_key")
+  description String?  @db.Text
+  isBuiltin   Boolean  @default(false) @map("is_builtin")
+  createdBy   String?  @map("created_by")
+  rules       Json
+  source      String?  @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator     User?        @relation("UserCreatedProfiles", fields: [createdBy], references: [id], onDelete: SetNull)
+  connections Connection[] @relation("ConnectionEvaluationProfile")
+
+  @@index([isBuiltin])
+  @@map("evaluation_profiles")
+}
+
+model LlmJudgeProvider {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  baseUrl       String   @map("base_url")
+  apiKeyCipher  String   @map("api_key_cipher")
+  model         String
+  enabled       Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("llm_judge_providers")
 }

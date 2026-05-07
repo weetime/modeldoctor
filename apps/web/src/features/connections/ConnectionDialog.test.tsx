@@ -51,6 +51,8 @@ const EXISTING: ConnectionPublic = {
   updatedAt: "2026-04-26T14:22:00Z",
   prometheusUrl: null,
   serverKind: null,
+  evaluationProfileId: null,
+  evaluationProfile: null,
 };
 
 describe("ConnectionDialog (create mode)", () => {
