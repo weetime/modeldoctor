@@ -37,6 +37,8 @@ const baseConnection: ConnectionPublic = {
   tokenizerHfId: null,
   createdAt: "2026-05-06T00:00:00.000Z",
   updatedAt: "2026-05-06T00:00:00.000Z",
+  evaluationProfileId: null,
+  evaluationProfile: null,
 };
 
 function makeWrapper(initialConnectionId = "") {

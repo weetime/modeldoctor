@@ -26,6 +26,8 @@ const CONN_A: ConnectionPublic = {
   prometheusUrl: null,
   serverKind: null,
   tokenizerHfId: null,
+  evaluationProfileId: null,
+  evaluationProfile: null,
 };
 const CONN_B: ConnectionPublic = { ...CONN_A, id: "cb", name: "B", baseUrl: "http://b" };
 

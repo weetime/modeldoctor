@@ -22,6 +22,8 @@ const seedList: ConnectionPublic[] = [
     prometheusUrl: null,
     serverKind: null,
     tokenizerHfId: null,
+    evaluationProfileId: null,
+    evaluationProfile: null,
   },
   {
     id: "c2",
@@ -39,6 +41,8 @@ const seedList: ConnectionPublic[] = [
     prometheusUrl: null,
     serverKind: null,
     tokenizerHfId: null,
+    evaluationProfileId: null,
+    evaluationProfile: null,
   },
 ];
 
