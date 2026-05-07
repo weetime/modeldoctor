@@ -1,5 +1,20 @@
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/modules/insights/llm-client.js", () => ({
+  chatCompletion: vi.fn(async () => ({
+    content: JSON.stringify({
+      findings: [{
+        severity: "warning",
+        title: "TTFT high",
+        rootCause: "p95 1240ms exceeds threshold",
+        recommendations: ["warm up"],
+      }],
+    }),
+    latencyMs: 100,
+  })),
+}));
+
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
@@ -26,6 +41,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
 
   beforeEach(async () => {
     await prisma.benchmark.deleteMany();
+    await prisma.llmJudgeProvider.deleteMany({ where: { userId } });
     await prisma.connection.deleteMany({ where: { userId } });
   });
 
@@ -63,5 +79,52 @@ describe("/api/insights comparison endpoints (e2e)", () => {
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(r.body).toEqual({ items: [] });
+  });
+
+  it("POST /api/insights/:id/synthesize returns NarrativeFinding[] (mocked LLM)", async () => {
+    const conn = await prisma.connection.create({
+      data: {
+        userId,
+        name: "ai",
+        baseUrl: "http://x",
+        apiKeyCipher: "v1:a:b:c",
+        model: "m",
+        category: "chat",
+      },
+    });
+    // Use the API to create the provider so the apiKey is properly encrypted
+    await request(ctx.app.getHttpServer())
+      .put("/api/llm-judge/provider")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ baseUrl: "http://llm", apiKey: "sk-test", model: "m", enabled: true })
+      .expect(200);
+    const r = await request(ctx.app.getHttpServer())
+      .post(`/api/insights/${conn.id}/synthesize`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ profileSlug: "default", range: "30d", runIds: [] })
+      .expect(201);
+    expect(r.body.findings).toHaveLength(1);
+    expect(r.body.findings[0].severity).toBe("warning");
+    expect(r.body.fromCache).toBe(false);
+  });
+
+  it("synthesize returns 404 when provider not configured", async () => {
+    const conn = await prisma.connection.create({
+      data: {
+        userId,
+        name: "noai",
+        baseUrl: "http://x",
+        apiKeyCipher: "v1:a:b:c",
+        model: "m",
+        category: "chat",
+      },
+    });
+    // Note: beforeEach already wiped llmJudgeProvider; explicitly confirm clean state
+    await prisma.llmJudgeProvider.deleteMany({ where: { userId } });
+    await request(ctx.app.getHttpServer())
+      .post(`/api/insights/${conn.id}/synthesize`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ profileSlug: "default", range: "30d", runIds: [] })
+      .expect(404);
   });
 });
