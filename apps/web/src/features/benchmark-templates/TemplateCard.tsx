@@ -20,12 +20,17 @@ export interface TemplateCardProps {
 export function TemplateCard({ template, canEdit, onDeleteClick }: TemplateCardProps) {
   const { t } = useTranslation("benchmark-templates");
   return (
-    <div className="group relative rounded-lg border border-border bg-card p-4 transition hover:border-primary/40">
-      <Link to={`/benchmark-templates/${template.id}`} className="block space-y-2">
+    <div className="group relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition hover:border-primary/40">
+      <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             {template.isOfficial && <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />}
-            <h3 className="truncate text-sm font-semibold">{template.name}</h3>
+            <Link
+              to={`/benchmark-templates/${template.id}`}
+              className="truncate text-sm font-semibold hover:text-primary hover:underline"
+            >
+              {template.name}
+            </Link>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -49,7 +54,16 @@ export function TemplateCard({ template, canEdit, onDeleteClick }: TemplateCardP
             when: new Date(template.updatedAt).toLocaleString(),
           })}
         </p>
-      </Link>
+      </div>
+
+      <div className="flex justify-end">
+        <Button asChild size="sm">
+          <Link to={`/benchmarks/new?scenario=${template.scenario}&templateId=${template.id}`}>
+            {t("list.cards.useThisTemplate")}
+          </Link>
+        </Button>
+      </div>
+
       {canEdit && (
         <div className="absolute right-2 top-2 opacity-0 transition group-hover:opacity-100">
           <DropdownMenu>
