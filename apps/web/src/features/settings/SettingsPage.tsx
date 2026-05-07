@@ -74,10 +74,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      {/* Settings is the one page that opts out of the full-width body rule:
-          industry-standard settings (Vercel/Stripe/Linear/Anthropic) center a
-          narrow column for readability. */}
-      <div className="mx-auto max-w-3xl px-8 py-6">
+      <div className="px-8 py-6">
         <div className="divide-y divide-border">
           <SettingSection title={t("appearance.title")} description={t("appearance.description")}>
             <SettingRow
