@@ -20,8 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTemplate } from "@/features/benchmark-templates/queries";
-import type { Benchmark } from "@modeldoctor/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { Benchmark } from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -103,9 +103,7 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
           <form onSubmit={onSubmit} className="space-y-4">
             <DialogHeader>
               <DialogTitle>{t("detail.saveAsTemplate.button")}</DialogTitle>
-              <DialogDescription>
-                {t("rowActions.saveAsTemplate.label")}
-              </DialogDescription>
+              <DialogDescription>{t("rowActions.saveAsTemplate.label")}</DialogDescription>
             </DialogHeader>
 
             {submitError && (
@@ -121,7 +119,9 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel required>
-                      {t("benchmark-templates:create.fields.name", { defaultValue: "Template name" })}
+                      {t("benchmark-templates:create.fields.name", {
+                        defaultValue: "Template name",
+                      })}
                     </FormLabel>
                     <FormControl>
                       <Input maxLength={100} {...field} />
@@ -136,7 +136,9 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("benchmark-templates:create.fields.description", { defaultValue: "Description" })}
+                      {t("benchmark-templates:create.fields.description", {
+                        defaultValue: "Description",
+                      })}
                     </FormLabel>
                     <FormControl>
                       <Textarea

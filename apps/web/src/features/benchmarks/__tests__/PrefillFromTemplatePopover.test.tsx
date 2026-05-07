@@ -10,7 +10,10 @@ import { PrefillFromTemplatePopover } from "../PrefillFromTemplatePopover";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
       super(message);
     }
   }
@@ -49,12 +52,19 @@ describe("PrefillFromTemplatePopover", () => {
 
   it("opens, lists templates filtered by current scenario", async () => {
     vi.mocked(api.get).mockResolvedValue({
-      items: [tpl({ id: "t1", name: "vLLM single" }), tpl({ id: "t2", name: "Internal gateway", tool: "vegeta" })],
+      items: [
+        tpl({ id: "t1", name: "vLLM single" }),
+        tpl({ id: "t2", name: "Internal gateway", tool: "vegeta" }),
+      ],
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, { wrapper: Wrapper });
-    await userEvent.click(screen.getByRole("button", { name: /prefill from template|从模板预填/i }));
+    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
+    );
     expect(await screen.findByText("vLLM single")).toBeInTheDocument();
     expect(screen.getByText("Internal gateway")).toBeInTheDocument();
     // Verify the api was called with scenario filter:
@@ -69,10 +79,17 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, { wrapper: Wrapper });
-    await userEvent.click(screen.getByRole("button", { name: /prefill from template|从模板预填/i }));
+    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
+    );
     await screen.findByText("vLLM single");
-    await userEvent.type(screen.getByRole("textbox", { name: /search templates|搜索模板/i }), "vLLM");
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /search templates|搜索模板/i }),
+      "vLLM",
+    );
     expect(screen.getByText("vLLM single")).toBeInTheDocument();
     expect(screen.queryByText("Internal gateway")).not.toBeInTheDocument();
   });
@@ -83,8 +100,12 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, { wrapper: Wrapper });
-    await userEvent.click(screen.getByRole("button", { name: /prefill from template|从模板预填/i }));
+    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
+    );
     expect(await screen.findByText(/no templates|还没有此场景/i)).toBeInTheDocument();
     const manage = screen.getByRole("link", { name: /manage templates|去模板库管理/i });
     expect(manage).toHaveAttribute("href", "/benchmark-templates?scenario=inference");
@@ -98,8 +119,12 @@ describe("PrefillFromTemplatePopover", () => {
     } satisfies ListBenchmarkTemplatesResponse);
 
     const onPick = vi.fn();
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={onPick} />, { wrapper: Wrapper });
-    await userEvent.click(screen.getByRole("button", { name: /prefill from template|从模板预填/i }));
+    render(<PrefillFromTemplatePopover scenario="inference" onPick={onPick} />, {
+      wrapper: Wrapper,
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
+    );
     await userEvent.click(await screen.findByRole("button", { name: /vLLM single/ }));
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: "t1", name: "vLLM single" }));
   });

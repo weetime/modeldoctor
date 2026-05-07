@@ -10,7 +10,10 @@ import { SaveAsTemplateDialog } from "../SaveAsTemplateDialog";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
       super(message);
     }
   }
@@ -50,7 +53,9 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return (
     <QueryClientProvider client={qc}>
       {children}
@@ -66,13 +71,18 @@ describe("SaveAsTemplateDialog", () => {
 
   it("prefills name with `${benchmark.name} (template)` suffix", () => {
     render(
-      <SaveAsTemplateDialog benchmark={makeBenchmark({ name: "vLLM run" })} onOpenChange={() => {}} />,
+      <SaveAsTemplateDialog
+        benchmark={makeBenchmark({ name: "vLLM run" })}
+        onOpenChange={() => {}}
+      />,
       { wrapper: Wrapper },
     );
     // The label resolves to "Name" (en-US) / "名称" (zh-CN) via benchmark-templates:create.fields.name.
     // getByLabelText sees "Name *" (includes aria-hidden asterisk in textContent), so we use a
     // prefix-anchored pattern to avoid matching "Description" but still catch "Name" and "名称".
-    const nameInput = screen.getByLabelText(/^name|^名称|template name|模板名称/i) as HTMLInputElement;
+    const nameInput = screen.getByLabelText(
+      /^name|^名称|template name|模板名称/i,
+    ) as HTMLInputElement;
     expect(nameInput.value).toBe("vLLM run (template)");
   });
 
@@ -139,10 +149,9 @@ describe("SaveAsTemplateDialog", () => {
   it("shows inline error and keeps dialog open on mutation failure", async () => {
     vi.mocked(api.post).mockRejectedValue(new Error("boom"));
     const onOpenChange = vi.fn();
-    render(
-      <SaveAsTemplateDialog benchmark={makeBenchmark()} onOpenChange={onOpenChange} />,
-      { wrapper: Wrapper },
-    );
+    render(<SaveAsTemplateDialog benchmark={makeBenchmark()} onOpenChange={onOpenChange} />, {
+      wrapper: Wrapper,
+    });
     await userEvent.click(screen.getByRole("button", { name: /save|保存/i }));
     // Alert role appears with the localized generic error message.
     expect(await screen.findByRole("alert")).toBeInTheDocument();
