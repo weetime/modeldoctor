@@ -1,8 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BenchmarkCreatePage } from "../BenchmarkCreatePage";
+
+const mockUseTemplate = vi.fn();
+vi.mock("@/features/benchmark-templates/queries", () => ({
+  useTemplate: (...args: unknown[]) => mockUseTemplate(...args),
+  useTemplates: () => ({ data: { pages: [{ items: [], nextCursor: null }] }, isLoading: false }),
+  useCreateTemplate: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+}));
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
@@ -48,6 +55,10 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("BenchmarkCreatePage", () => {
+  beforeEach(() => {
+    mockUseTemplate.mockReturnValue({ data: undefined, isError: false });
+  });
+
   it("renders target, tool, name, description sections", () => {
     render(<BenchmarkCreatePage />, { wrapper: Wrapper });
     // Endpoint + tool now collapse into a single "Target" card.
@@ -168,5 +179,80 @@ describe("BenchmarkCreatePage", () => {
     expect(label).toHaveTextContent(/vegeta/i);
     // And the VegetaParamsForm should now be the rendered subform.
     expect(screen.getByLabelText(/Rate \(req\/s\)/i)).toBeInTheDocument();
+  });
+
+  it("prefills form when ?templateId= present in URL", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    // Wait for prefill effect to fire:
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("preset");
+    });
+  });
+
+  it("shows prefilled banner with clear-link button when templateId is set", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    expect(await screen.findByText(/prefilled from template|已从模板/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear link|清除关联/i })).toBeInTheDocument();
+  });
+
+  it("clear-link button strips templateId but keeps params", async () => {
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-1",
+        name: "preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-1");
+    await screen.findByText(/prefilled from template|已从模板/i);
+    const { default: userEvent } = await import("@testing-library/user-event");
+    await userEvent.click(screen.getByRole("button", { name: /clear link|清除关联/i }));
+    // Banner gone…
+    expect(screen.queryByText(/prefilled from template|已从模板/i)).not.toBeInTheDocument();
+    // …but Name field still has "preset"
+    const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+    expect(nameInput.value).toBe("preset");
   });
 });
