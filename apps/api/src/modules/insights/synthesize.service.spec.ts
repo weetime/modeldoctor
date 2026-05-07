@@ -35,6 +35,7 @@ describe("SynthesizeService", () => {
         profileSlug: "default",
         range: "30d",
         runIds: [],
+        locale: "zh-CN",
       }),
     ).rejects.toThrow(/provider/);
   });

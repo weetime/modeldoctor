@@ -23,14 +23,15 @@ const SEV_BADGE = {
 } as const;
 
 export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Props) {
-  const { t } = useTranslation("insights");
+  const { t, i18n } = useTranslation("insights");
   const provider = useLlmJudgeProvider();
   const synth = useSynthesize(connectionId);
   const [latest, setLatest] = useState<{ findings: NarrativeFinding[]; generatedAt: string; fromCache: boolean } | null>(null);
 
   async function generate() {
     try {
-      const r = await synth.mutateAsync({ profileSlug, range, runIds });
+      const locale = i18n.language === "en-US" ? "en-US" : "zh-CN";
+      const r = await synth.mutateAsync({ profileSlug, range, runIds, locale });
       setLatest({ findings: r.findings, generatedAt: r.generatedAt, fromCache: r.fromCache });
     } catch {
       // mutation error state shown below

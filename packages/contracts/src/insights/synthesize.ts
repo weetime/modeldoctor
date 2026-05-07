@@ -12,6 +12,8 @@ export const synthesizeRequestSchema = z.object({
   profileSlug: z.string(),
   range: z.enum(["7d", "30d", "90d"]),
   runIds: z.array(z.string()).max(500),
+  // Output language. Defaults to zh-CN for backwards compat.
+  locale: z.enum(["zh-CN", "en-US"]).default("zh-CN"),
 });
 export type SynthesizeRequest = z.infer<typeof synthesizeRequestSchema>;
 
