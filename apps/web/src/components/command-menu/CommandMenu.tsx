@@ -48,9 +48,9 @@ export function CommandMenu({ open, onOpenChange, onShowHelp }: CommandMenuProps
 
   const navItems = [
     ...sidebarPrimaryItems,
-    ...sidebarGroups.flatMap((g) => g.items.filter((i) => !i.devOnly || import.meta.env.DEV)),
+    ...sidebarGroups.flatMap((g) => g.items),
     ...sidebarUtilityItems,
-  ];
+  ].filter((i) => !i.devOnly || import.meta.env.DEV);
 
   return (
     <CommandDialog
@@ -82,15 +82,15 @@ export function CommandMenu({ open, onOpenChange, onShowHelp }: CommandMenuProps
         <CommandSeparator />
 
         <CommandGroup heading={t("group.theme")}>
-          <CommandItem value="theme light" onSelect={setTheme("light")}>
+          <CommandItem value={`${t("theme.light")} theme light`} onSelect={setTheme("light")}>
             <Sun className="text-muted-foreground" strokeWidth={1.5} />
             <span>{t("theme.light")}</span>
           </CommandItem>
-          <CommandItem value="theme dark" onSelect={setTheme("dark")}>
+          <CommandItem value={`${t("theme.dark")} theme dark`} onSelect={setTheme("dark")}>
             <Moon className="text-muted-foreground" strokeWidth={1.5} />
             <span>{t("theme.dark")}</span>
           </CommandItem>
-          <CommandItem value="theme system" onSelect={setTheme("system")}>
+          <CommandItem value={`${t("theme.system")} theme system`} onSelect={setTheme("system")}>
             <Monitor className="text-muted-foreground" strokeWidth={1.5} />
             <span>{t("theme.system")}</span>
           </CommandItem>
@@ -100,7 +100,7 @@ export function CommandMenu({ open, onOpenChange, onShowHelp }: CommandMenuProps
 
         <CommandGroup heading={t("group.help")}>
           <CommandItem
-            value="keyboard shortcuts help"
+            value={`${t("help.shortcuts")} keyboard shortcuts help ?`}
             onSelect={() => {
               close();
               onShowHelp();

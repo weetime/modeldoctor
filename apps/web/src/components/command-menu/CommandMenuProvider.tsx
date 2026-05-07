@@ -11,10 +11,13 @@ export function CommandMenuProvider() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // ⌘K / Ctrl+K: toggle the palette. `enableOnFormTags` so it works while a
-  // form input is focused — that's where users want quick navigation most.
+  // ⌘K (macOS) / Ctrl+K (Windows/Linux): toggle the palette. `mod+k` is the
+  // react-hotkeys-hook idiom for "the platform's primary modifier" — avoids
+  // the Win+K binding clashing with Windows' Cast panel shortcut.
+  // `enableOnFormTags` so it works while a form input is focused — that's
+  // where users want quick navigation most.
   useHotkeys(
-    ["meta+k", "ctrl+k"],
+    "mod+k",
     (event) => {
       event.preventDefault();
       setPaletteOpen((v) => !v);
