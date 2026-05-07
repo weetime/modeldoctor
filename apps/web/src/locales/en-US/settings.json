@@ -13,6 +13,24 @@
     "version": "Server version",
     "buildMode": "Build mode"
   },
+  "ai": {
+    "title": "AI Diagnostics",
+    "description": "Configure a custom LLM judge provider. The API key is stored encrypted and never returned in plaintext.",
+    "enabled": "Enabled",
+    "baseUrl": "Base URL",
+    "model": "Model",
+    "apiKey": "API Key",
+    "test": "Test connection",
+    "testing": "Testing…",
+    "saving": "Saving…",
+    "saveSuccess": "AI diagnostics settings saved",
+    "testSuccess": "Connection OK ({{ms}} ms)",
+    "testFailed": "Connection failed: {{error}}",
+    "error": {
+      "keyRequired": "Please enter the API key to update settings",
+      "fillBeforeTest": "Fill in Base URL, API Key, and Model before testing"
+    }
+  },
   "data": {
     "title": "Data",
     "exportConnections": "Export connections",

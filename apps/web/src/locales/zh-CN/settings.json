@@ -13,6 +13,24 @@
     "version": "服务版本",
     "buildMode": "构建模式"
   },
+  "ai": {
+    "title": "AI 智能诊断",
+    "description": "配置自定义 LLM 评判提供商。API Key 会加密存储，不会以明文返回。",
+    "enabled": "启用",
+    "baseUrl": "Base URL",
+    "model": "模型",
+    "apiKey": "API Key",
+    "test": "测试连接",
+    "testing": "测试中…",
+    "saving": "保存中…",
+    "saveSuccess": "AI 诊断配置已保存",
+    "testSuccess": "连接正常（{{ms}} ms）",
+    "testFailed": "连接失败：{{error}}",
+    "error": {
+      "keyRequired": "请输入 API Key 以更新配置",
+      "fillBeforeTest": "请先填写 Base URL、API Key 和模型名称"
+    }
+  },
   "data": {
     "title": "数据",
     "exportConnections": "导出连接",

@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/common/page-header";
+import { AiDiagnosisSection } from "./AiDiagnosisSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,6 +106,8 @@ export function SettingsPage() {
             {t("environment.buildMode")}: <span className="font-mono">{import.meta.env.MODE}</span>
           </div>
         </Section>
+
+        <AiDiagnosisSection />
 
         <Section title={t("data.title")}>
           <div className="flex flex-wrap gap-2">
