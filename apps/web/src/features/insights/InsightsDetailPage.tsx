@@ -1,7 +1,7 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
-import { useConnection } from "@/features/connections/queries";
+import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
 import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
 import { ArrowLeft, SearchX } from "lucide-react";
@@ -36,6 +36,7 @@ export function InsightsDetailPage() {
 
   const conn = useConnection(connectionId);
   const profiles = useEvaluationProfiles();
+  const updateConn = useUpdateConnection();
   const createdAfter = useMemo(() => rangeToISO(range), [range]);
   const list = useBenchmarkList({
     connectionId, createdAfter, limit: 100, scope: "own",
@@ -44,9 +45,9 @@ export function InsightsDetailPage() {
   const runs: Benchmark[] = useMemo(() => list.data?.pages[0]?.items ?? [], [list.data]);
 
   const activeProfile = useMemo(() => {
-    const slug = profileSlug ?? "default";
+    const slug = profileSlug ?? conn.data?.evaluationProfile?.slug ?? "default";
     return profiles.data?.items.find((p) => p.slug === slug);
-  }, [profiles.data, profileSlug]);
+  }, [profiles.data, profileSlug, conn.data]);
 
   const findings = useMemo(() => {
     if (!activeProfile) return [];
@@ -120,6 +121,10 @@ export function InsightsDetailPage() {
   }
   if (!conn.data || !profiles.data) return null;
 
+  const profileDirty =
+    !!activeProfile &&
+    conn.data?.evaluationProfile?.slug !== activeProfile.slug;
+
   function setRange(next: EndpointReportRange) {
     const sp = new URLSearchParams(searchParams);
     sp.set("range", next);
@@ -139,6 +144,21 @@ export function InsightsDetailPage() {
         rightSlot={
           <div className="flex items-center gap-3">
             <ProfileSelector value={activeProfile?.slug ?? "default"} options={profiles.data.items} onChange={setProfile} />
+            {profileDirty && activeProfile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  updateConn.mutate({
+                    id: connectionId,
+                    body: { evaluationProfileId: activeProfile.id },
+                  })
+                }
+                disabled={updateConn.isPending}
+              >
+                {t("detail.profile.setDefault")}
+              </Button>
+            )}
             <Select value={range} onValueChange={(v) => setRange(v as EndpointReportRange)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
