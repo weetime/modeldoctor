@@ -226,6 +226,7 @@ export class BenchmarkService {
           customHeaders: conn.customHeaders,
           queryParams: conn.queryParams,
           tokenizerHfId: conn.tokenizerHfId,
+          prometheusUrl: conn.prometheusUrl,
         },
         callback: { url: this.callbackUrl, token: callbackToken },
       });

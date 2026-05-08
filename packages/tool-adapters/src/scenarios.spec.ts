@@ -9,8 +9,13 @@ import {
 } from "./scenarios.js";
 
 describe("SCENARIOS constant", () => {
-  it("declares inference, capacity, gateway", () => {
-    expect(Object.keys(SCENARIOS).sort()).toEqual(["capacity", "gateway", "inference"]);
+  it("declares inference, capacity, gateway, prefix-cache-validation", () => {
+    expect(Object.keys(SCENARIOS).sort()).toEqual([
+      "capacity",
+      "gateway",
+      "inference",
+      "prefix-cache-validation",
+    ]);
   });
 
   it("inference scenario lists guidellm and genai-perf", () => {

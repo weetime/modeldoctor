@@ -3,10 +3,20 @@ import { baselineSummarySchema } from "./baseline.js";
 import { ModalityCategorySchema } from "./modality.js";
 
 // ── Discriminators ───────────────────────────────────────────────────
-export const scenarioIdSchema = z.enum(["inference", "capacity", "gateway"]);
+export const scenarioIdSchema = z.enum([
+  "inference",
+  "capacity",
+  "gateway",
+  "prefix-cache-validation",
+]);
 export type ScenarioId = z.infer<typeof scenarioIdSchema>;
 
-export const benchmarkToolSchema = z.enum(["guidellm", "genai-perf", "vegeta"]);
+export const benchmarkToolSchema = z.enum([
+  "guidellm",
+  "genai-perf",
+  "vegeta",
+  "prefix-cache-probe",
+]);
 export type BenchmarkTool = z.infer<typeof benchmarkToolSchema>;
 
 export const benchmarkStatusSchema = z.enum([

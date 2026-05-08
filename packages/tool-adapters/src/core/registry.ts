@@ -1,5 +1,6 @@
 import { genaiPerfAdapter } from "../genai-perf/index.js";
 import { guidellmAdapter } from "../guidellm/index.js";
+import { prefixCacheProbeAdapter } from "../prefix-cache-probe/index.js";
 import type { ScenarioId } from "../scenarios.js";
 import { vegetaAdapter } from "../vegeta/index.js";
 import type { ToolAdapter, ToolName } from "./interface.js";
@@ -8,6 +9,7 @@ const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
   guidellm: guidellmAdapter,
   "genai-perf": genaiPerfAdapter,
   vegeta: vegetaAdapter,
+  "prefix-cache-probe": prefixCacheProbeAdapter,
 };
 
 export function byTool(tool: ToolName): ToolAdapter {
