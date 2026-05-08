@@ -83,15 +83,21 @@ describe("scenarioScore", () => {
 
 describe("compositeScore", () => {
   it("returns null when all scenarios are null", () => {
-    expect(compositeScore({ inference: null, capacity: null, gateway: null })).toBeNull();
+    expect(
+      compositeScore({ inference: null, capacity: null, gateway: null, "prefix-cache-validation": null }),
+    ).toBeNull();
   });
 
   it("equal-weight average over present scenarios, rounded", () => {
-    expect(compositeScore({ inference: 90, capacity: 70, gateway: 80 })).toBe(80);
+    expect(
+      compositeScore({ inference: 90, capacity: 70, gateway: 80, "prefix-cache-validation": null }),
+    ).toBe(80);
   });
 
   it("skips null scenarios", () => {
-    expect(compositeScore({ inference: 90, capacity: null, gateway: 70 })).toBe(80);
+    expect(
+      compositeScore({ inference: 90, capacity: null, gateway: 70, "prefix-cache-validation": null }),
+    ).toBe(80);
   });
 });
 

@@ -42,7 +42,9 @@ import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
+import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
+import type { PrefixCacheProbeReport as PrefixCacheProbeData } from "@modeldoctor/tool-adapters/schemas";
 
 /**
  * Pre-terminal placeholder rendered while the benchmark is still in flight.
@@ -94,6 +96,14 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       return <CapacityReport benchmark={benchmark} />;
     case "gateway":
       return <GatewayReport benchmark={benchmark} />;
+    case "prefix-cache-validation": {
+      const raw = benchmark.summaryMetrics as { data?: PrefixCacheProbeData } | PrefixCacheProbeData | null;
+      const data =
+        raw && typeof raw === "object" && "data" in raw
+          ? (raw as { data: PrefixCacheProbeData }).data
+          : (raw as PrefixCacheProbeData);
+      return <PrefixCacheProbeReport data={data} />;
+    }
     default:
       return <UnknownReport benchmark={benchmark} />;
   }

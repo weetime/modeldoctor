@@ -293,6 +293,17 @@
     }
   },
   "reports": {
+    "prefixCacheProbe": {
+      "stickiness": "Stickiness",
+      "deterministic": "Deterministic",
+      "deterministicYes": "Yes",
+      "deterministicNo": "No",
+      "perPodTitle": "Per-Pod Counts",
+      "perPodCols": { "pod": "Pod", "queries": "Queries", "hits": "Hits", "hitRate": "Hit rate" },
+      "promptSetsTitle": "Routing per Prompt Set",
+      "promptSetsCols": { "label": "Set", "dominantPod": "Dominant Pod", "dominantPct": "Dominant %", "totalRequests": "Total Requests" },
+      "noQueries": "No prefix cache queries observed — vLLM may not have prefix caching enabled"
+    },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",
