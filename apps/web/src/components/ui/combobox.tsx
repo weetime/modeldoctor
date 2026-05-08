@@ -19,6 +19,10 @@ export interface ComboboxProps<T> {
   getKey: (item: T) => string;
   /** Plain-text label used for cmdk default filter + trigger fallback. */
   getLabel: (item: T) => string;
+  /** Optional override for cmdk's filter input. When provided, used as the
+   * CommandItem's `value` instead of `getLabel(item)` — useful when callers
+   * want fuzzy-matching across name + description + tags. */
+  getSearchText?: (item: T) => string;
   /** Optional rich row renderer; receives the item. Falls back to getLabel. */
   renderItem?: (item: T) => ReactNode;
   /** Optional trigger content when nothing is selected. */
@@ -41,6 +45,7 @@ export function Combobox<T>({
   onChange,
   getKey,
   getLabel,
+  getSearchText,
   renderItem,
   triggerLabel,
   trigger,
@@ -84,7 +89,7 @@ export function Combobox<T>({
               return (
                 <CommandItem
                   key={key}
-                  value={getLabel(item)}
+                  value={getSearchText ? getSearchText(item) : getLabel(item)}
                   onSelect={() => {
                     onChange(item);
                     setOpen(false);

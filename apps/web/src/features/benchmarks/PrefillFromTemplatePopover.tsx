@@ -26,6 +26,7 @@ export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemp
       }}
       getKey={(it) => it.id}
       getLabel={(it) => it.name}
+      getSearchText={(it) => [it.name, it.description ?? "", ...it.tags].join(" ")}
       renderItem={(it) => (
         <div className="flex w-full flex-col gap-1">
           <span className="flex items-center gap-1 text-sm font-medium">
