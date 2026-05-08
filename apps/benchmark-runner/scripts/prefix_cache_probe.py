@@ -5,7 +5,7 @@ and reads vLLM gpu_prefix_cache_queries_total deltas from Prometheus to
 determine which pod served each round. Outputs a per-round summary plus
 aggregate stickinessPct.
 
-Critical methodology (see docs/superpowers/specs/2026-05-08-genai-perf-flow-completion-design.md handoff §5):
+Critical methodology (handoff §5):
 - Each HTTP request uses its OWN httpx.AsyncClient + Connection: close.
   Reusing a single client pins the kernel TCP socket → Envoy LB sees one
   upstream regardless of plugin behavior. Independent clients let
@@ -154,7 +154,10 @@ async def main_async(args: argparse.Namespace) -> int:
     chat_url = args.url.rstrip("/") + "/v1/chat/completions"
 
     if args.rounds > len(PROMPTS):
-        print(f"[probe] --rounds {args.rounds} exceeds bundled prompt count {len(PROMPTS)}", file=sys.stderr)
+        print(
+            f"[probe] --rounds {args.rounds} exceeds bundled prompt count {len(PROMPTS)}",
+            file=sys.stderr,
+        )
         return 2
 
     rounds: list[dict[str, Any]] = []
@@ -184,10 +187,7 @@ async def main_async(args: argparse.Namespace) -> int:
             per_pod[pod]["hits"] += dh
 
     # stickinessPct = unweighted mean of dominantPct across rounds
-    if rounds:
-        stickiness = sum(r["dominantPct"] for r in rounds) / len(rounds)
-    else:
-        stickiness = 0.0
+    stickiness = sum(r["dominantPct"] for r in rounds) / len(rounds) if rounds else 0.0
 
     # deterministic = each round had >= 90% on a single pod
     deterministic = all(r["dominantPct"] >= 90.0 for r in rounds)
