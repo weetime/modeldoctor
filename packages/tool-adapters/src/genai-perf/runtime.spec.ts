@@ -238,14 +238,14 @@ describe("genai-perf.buildCommand", () => {
     expect(result.argv).toContain("Qwen/Connection");
   });
 
-  it("emits --service-kind openai (regression: chat endpoints need this)", () => {
+  it("does NOT emit --service-kind (genai-perf 0.0.16 has no such flag)", () => {
     const r = buildCommand({
       runId: "r1",
       params: baseParams,
       connection: baseConn,
       callback: { url: "http://api/", token: "tk" },
     });
-    expect(r.argv[2]).toContain("--service-kind openai");
+    expect(r.argv[2]).not.toContain("--service-kind");
   });
 
   it("uses braced \\${N} form for positional args >= 10 (regression: $10 is parsed as $1+'0' in POSIX sh)", () => {

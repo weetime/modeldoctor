@@ -123,11 +123,13 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // safe; the inconsistency is stylistic, not security-relevant.
   // Defense-in-depth: connection.apiKey is zod-refined to reject
   // control characters at input boundary (see contracts/connection.ts).
+  // `--endpoint-type chat` (combined with the OpenAI Authorization header
+  // below) is sufficient for OpenAI-compatible endpoints in genai-perf 0.0.16
+  // — that release doesn't have a `--service-kind` flag at all.
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
 genai-perf profile \\
-    --service-kind openai \\
     -m "$1" -u "$2" \\
     --endpoint-type "$3" \\
     --num-prompts "$4" --concurrency "$5" \\
