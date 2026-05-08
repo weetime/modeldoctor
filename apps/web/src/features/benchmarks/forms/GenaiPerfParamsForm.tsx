@@ -36,6 +36,7 @@ interface GenaiPerfParamsFormProps {
 export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsFormProps = {}) {
   const { control, register, setValue } = useFormContext();
   const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` }) as boolean | undefined;
+  const tokenizerOverride = (useWatch({ control, name: `${fieldPrefix}.tokenizer` }) as string | undefined) || undefined;
 
   const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
   const connections = useConnections();
@@ -242,6 +243,17 @@ export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsF
               })}
               placeholder="Overrides connection-level default; leave empty to use it."
             />
+            {(() => {
+              const resolved = tokenizerOverride ?? connection?.tokenizerHfId ?? connection?.model;
+              if (!resolved) return null;
+              return (
+                <p className="text-xs text-muted-foreground">
+                  {tokenizerOverride
+                    ? `Will use: ${resolved}`
+                    : `No override set — will use: ${resolved}`}
+                </p>
+              );
+            })()}
           </div>
         </div>
       </details>
