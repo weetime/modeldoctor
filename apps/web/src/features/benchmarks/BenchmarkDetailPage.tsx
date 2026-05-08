@@ -44,7 +44,7 @@ import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
 import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
-import type { PrefixCacheProbeReport as PrefixCacheProbeData } from "@modeldoctor/tool-adapters/schemas";
+import { prefixCacheProbeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 
 /**
  * Pre-terminal placeholder rendered while the benchmark is still in flight.
@@ -97,12 +97,11 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
     case "gateway":
       return <GatewayReport benchmark={benchmark} />;
     case "prefix-cache-validation": {
-      const raw = benchmark.summaryMetrics as { data?: PrefixCacheProbeData } | PrefixCacheProbeData | null;
-      const data =
-        raw && typeof raw === "object" && "data" in raw
-          ? (raw as { data: PrefixCacheProbeData }).data
-          : (raw as PrefixCacheProbeData);
-      return <PrefixCacheProbeReport data={data} />;
+      const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
+      const candidate = tagged && "data" in tagged ? tagged.data : tagged;
+      const parsed = prefixCacheProbeReportSchema.safeParse(candidate);
+      if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
+      return <PrefixCacheProbeReport data={parsed.data} />;
     }
     default:
       return <UnknownReport benchmark={benchmark} />;

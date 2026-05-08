@@ -42,7 +42,7 @@ export function PrefixCacheProbeReport({ data }: Props) {
       </div>
 
       {noQueries && (
-        <p className="rounded border border-yellow-700/40 bg-yellow-700/10 p-3 text-sm text-yellow-300">
+        <p className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
           {t("reports.prefixCacheProbe.noQueries")}
         </p>
       )}
