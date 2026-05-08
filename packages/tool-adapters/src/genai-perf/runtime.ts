@@ -37,8 +37,12 @@ const rawThroughputSchema = z.object({
 const rawOutputSchema = z.object({
   request_throughput: rawThroughputSchema,
   request_latency: rawDistSchema,
-  time_to_first_token: rawDistSchema,
-  inter_token_latency: rawDistSchema,
+  // Streaming-only metrics. Non-streaming runs (default since the
+  // streaming=true → false flip) omit these because there's a single
+  // response chunk per request, so first-token and inter-token timings
+  // don't exist. Mapper produces a zeroed Dist for the typed schema.
+  time_to_first_token: rawDistSchema.optional(),
+  inter_token_latency: rawDistSchema.optional(),
   output_token_throughput: rawThroughputSchema,
   output_sequence_length: rawDistSchema,
   input_sequence_length: rawDistSchema,
@@ -199,7 +203,14 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
 type RawOutput = z.infer<typeof rawOutputSchema>;
 type RawDist = z.infer<typeof rawDistSchema>;
 
-function dist(o: RawDist): GenaiPerfReport["requestLatency"] {
+function dist(o: RawDist | undefined): GenaiPerfReport["requestLatency"] {
+  // For non-streaming runs, time_to_first_token / inter_token_latency are
+  // absent (no per-token breakdown possible with a single response chunk).
+  // Return a zeroed shape so downstream consumers can rely on the field
+  // being present; the unit="" sentinel signals "not measured".
+  if (!o) {
+    return { avg: 0, min: 0, max: 0, p50: 0, p90: 0, p95: 0, p99: 0, stddev: 0, unit: "" };
+  }
   return {
     avg: o.avg,
     min: o.min ?? 0,
