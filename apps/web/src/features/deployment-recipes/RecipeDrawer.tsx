@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Check, Copy, ExternalLink, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { EngineMeta, EngineRecipe, ModelEntry } from "./types";
 
@@ -15,38 +16,40 @@ interface RecipeDrawerProps {
 }
 
 function StatusBadge({ status }: { status: EngineRecipe["status"] }) {
+  const { t } = useTranslation("deployment-recipes");
   if (status === "native") {
     return (
       <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400">
-        <Check className="h-3 w-3" /> 原生支持
+        <Check className="h-3 w-3" /> {t("status.native")}
       </span>
     );
   }
   if (status === "partial") {
     return (
       <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-        部分 / 实验
+        {t("status.partial")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-      不支持
+      {t("status.none")}
     </span>
   );
 }
 
 function CodeBlock({ code, label }: { code: string; label: string }) {
+  const { t } = useTranslation("deployment-recipes");
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      toast.success("已复制到剪贴板");
+      toast.success(t("drawer.copyToast"));
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      toast.error("复制失败");
+      toast.error(t("drawer.copyFailed"));
     }
   };
 
@@ -62,7 +65,7 @@ function CodeBlock({ code, label }: { code: string; label: string }) {
           className="h-7 gap-1.5 px-2 text-xs"
         >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "已复制" : "复制"}
+          {copied ? t("drawer.copied") : t("drawer.copy")}
         </Button>
       </div>
       <pre className="overflow-x-auto rounded-md border border-border bg-muted/60 p-3 font-mono text-xs leading-relaxed text-foreground">
@@ -82,6 +85,8 @@ function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: RecipeDrawerProps) {
+  const { t } = useTranslation("deployment-recipes");
+
   // Bail out entirely when the URL hash points to a non-existent (or unsupported)
   // model/engine combo — rendering a Root with only a Portal would otherwise
   // leave a ghost overlay that swallows clicks.
@@ -126,7 +131,7 @@ export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: Reci
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 shrink-0"
-                aria-label="关闭"
+                aria-label={t("drawer.close")}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -137,29 +142,31 @@ export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: Reci
             <section className="space-y-2.5">
               {recipe.image ? (
                 <FieldRow
-                  label="推荐镜像"
+                  label={t("drawer.image")}
                   value={<code className="font-mono text-xs">{recipe.image}</code>}
                 />
               ) : null}
               {recipe.minVersion ? (
                 <FieldRow
-                  label="最低版本"
+                  label={t("drawer.minVersion")}
                   value={<code className="font-mono text-xs">{recipe.minVersion}</code>}
                 />
               ) : null}
-              {recipe.resource ? <FieldRow label="资源建议" value={recipe.resource} /> : null}
+              {recipe.resource ? (
+                <FieldRow label={t("drawer.resource")} value={recipe.resource} />
+              ) : null}
             </section>
 
             {recipe.command ? (
               <section className="mt-6">
-                <CodeBlock code={recipe.command} label="启动命令" />
+                <CodeBlock code={recipe.command} label={t("drawer.command")} />
               </section>
             ) : null}
 
             {recipe.params && recipe.params.length > 0 ? (
               <section className="mt-6">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  关键参数
+                  {t("drawer.params")}
                 </h3>
                 <div className="overflow-hidden rounded-md border border-border">
                   <table className="w-full text-sm">
@@ -183,7 +190,7 @@ export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: Reci
             {recipe.notes ? (
               <section className="mt-6">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  注意事项
+                  {t("drawer.notes")}
                 </h3>
                 <p className="rounded-md border-l-2 border-amber-400 bg-amber-50/40 px-3 py-2 text-sm leading-relaxed text-foreground/90 dark:bg-amber-950/20">
                   {recipe.notes}
@@ -200,14 +207,14 @@ export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: Reci
                   className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  官方文档
+                  {t("drawer.docs")}
                 </a>
               </section>
             ) : null}
 
             {!recipe.command && !recipe.image && !recipe.notes ? (
               <section className="mt-6 rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-                {recipe.tooltip ?? "该组合暂未填充详细配置,欢迎补充。"}
+                {recipe.tooltip ?? t("drawer.emptyFallback")}
               </section>
             ) : null}
           </div>

@@ -1,0 +1,54 @@
+{
+  "title": "Deployment Recipes",
+  "subtitle": "Inference engine × open-weight model compatibility matrix · {{models}} models / {{engines}} engines",
+  "filters": {
+    "all": "All",
+    "searchPlaceholder": "Search model or engine…",
+    "engineToggle": "Engines",
+    "visibleColumns": "Visible columns",
+    "hideAll": "Hide all",
+    "showAll": "Show all"
+  },
+  "categories": {
+    "dense": { "label": "Dense LLM", "description": "Llama / Qwen / Mistral family" },
+    "moe": { "label": "MoE", "description": "DeepSeek / Llama4 / GPT-OSS / Qwen3-MoE" },
+    "vlm": { "label": "Multimodal / VLM", "description": "Vision-Language models" },
+    "embedding": { "label": "Embedding", "description": "Retrieval / dense vectors" },
+    "rerank": { "label": "Rerank", "description": "Second-stage reranking" },
+    "diffusion": { "label": "Text-to-Image", "description": "Diffusion · image" }
+  },
+  "categoryRow": "{{label}} ({{description}})",
+  "table": {
+    "modelHeader": "Model / Weights"
+  },
+  "status": {
+    "native": "Native",
+    "partial": "Partial / experimental",
+    "none": "Not supported",
+    "ariaNative": "Native support · click for details",
+    "ariaPartial": "Partial support · click for details",
+    "ariaNone": "Not supported"
+  },
+  "empty": {
+    "title": "No matching models",
+    "body": "Try clearing the search or switching the category."
+  },
+  "legend": {
+    "baseline": "Baseline: vLLM 0.7+ · SGLang 0.4+ · TRT-LLM 0.13+ · MindIE 1.0.RC3 · LMDeploy 0.6+ · TEI 1.5+ · Infinity 0.0.7x"
+  },
+  "drawer": {
+    "image": "Image",
+    "minVersion": "Min version",
+    "resource": "Resources",
+    "command": "Launch command",
+    "params": "Key parameters",
+    "notes": "Notes",
+    "docs": "Docs",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyToast": "Copied to clipboard",
+    "copyFailed": "Copy failed",
+    "emptyFallback": "This combination is not yet documented. Contributions welcome."
+  }
+}

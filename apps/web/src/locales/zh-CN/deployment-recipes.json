@@ -1,0 +1,54 @@
+{
+  "title": "部署示例",
+  "subtitle": "推理引擎 × 开源模型权重兼容性矩阵 · 共 {{models}} 个模型 / {{engines}} 个引擎",
+  "filters": {
+    "all": "全部",
+    "searchPlaceholder": "搜索模型或引擎名…",
+    "engineToggle": "引擎列",
+    "visibleColumns": "显示列",
+    "hideAll": "全部隐藏",
+    "showAll": "全部显示"
+  },
+  "categories": {
+    "dense": { "label": "稠密 LLM", "description": "Llama / Qwen / Mistral 系" },
+    "moe": { "label": "MoE 大模型", "description": "DeepSeek / Llama4 / GPT-OSS / Qwen3-MoE" },
+    "vlm": { "label": "多模态 / VLM", "description": "Vision-Language Models" },
+    "embedding": { "label": "Embedding", "description": "向量召回 / 检索" },
+    "rerank": { "label": "Rerank", "description": "二阶段重排" },
+    "diffusion": { "label": "文生图", "description": "Diffusion · Image" }
+  },
+  "categoryRow": "{{label}}({{description}})",
+  "table": {
+    "modelHeader": "模型 / 权重"
+  },
+  "status": {
+    "native": "原生支持",
+    "partial": "部分 / 实验",
+    "none": "不支持",
+    "ariaNative": "原生支持,点击查看详情",
+    "ariaPartial": "部分支持,点击查看详情",
+    "ariaNone": "不支持"
+  },
+  "empty": {
+    "title": "没有匹配的模型",
+    "body": "试试清空搜索或切换分类。"
+  },
+  "legend": {
+    "baseline": "数据基线:vLLM 0.7+ · SGLang 0.4+ · TRT-LLM 0.13+ · MindIE 1.0.RC3 · LMDeploy 0.6+ · TEI 1.5+ · Infinity 0.0.7x"
+  },
+  "drawer": {
+    "image": "推荐镜像",
+    "minVersion": "最低版本",
+    "resource": "资源建议",
+    "command": "启动命令",
+    "params": "关键参数",
+    "notes": "注意事项",
+    "docs": "官方文档",
+    "close": "关闭",
+    "copy": "复制",
+    "copied": "已复制",
+    "copyToast": "已复制到剪贴板",
+    "copyFailed": "复制失败",
+    "emptyFallback": "该组合暂未填充详细配置,欢迎补充。"
+  }
+}

@@ -1,13 +1,16 @@
+import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Check, Filter, Search } from "lucide-react";
+import { Check, Filter, Search, SearchX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RecipeDrawer } from "./RecipeDrawer";
-import { CATEGORIES, ENGINES, MODELS, getRecipe } from "./data";
+import { ENGINES, MODELS, getRecipe } from "./data";
+import { CATEGORY_ORDER } from "./types";
 import type { CategoryId, EngineId, EngineMeta, ModelEntry, RecipeStatus } from "./types";
 
 type CategoryFilter = "all" | CategoryId;
@@ -26,11 +29,13 @@ function StatusPill({
   active,
   highlight,
   onClick,
+  ariaLabel,
 }: {
   status: RecipeStatus;
   active: boolean;
   highlight: boolean;
   onClick?: () => void;
+  ariaLabel: string;
 }) {
   const base =
     "flex h-7 w-9 items-center justify-center rounded-md text-sm font-medium transition-colors";
@@ -40,7 +45,7 @@ function StatusPill({
       <button
         type="button"
         onClick={onClick}
-        aria-label="原生支持,点击查看详情"
+        aria-label={ariaLabel}
         className={cn(
           base,
           "border border-emerald-200/70 bg-emerald-50 text-emerald-700",
@@ -60,7 +65,7 @@ function StatusPill({
       <button
         type="button"
         onClick={onClick}
-        aria-label="部分支持,点击查看详情"
+        aria-label={ariaLabel}
         className={cn(
           base,
           "border border-amber-200/70 bg-amber-50 text-amber-700",
@@ -77,7 +82,7 @@ function StatusPill({
 
   return (
     <span
-      aria-label="不支持"
+      aria-label={ariaLabel}
       className={cn(
         base,
         "cursor-not-allowed border border-transparent bg-muted/40 text-muted-foreground/50",
@@ -99,13 +104,14 @@ function EngineToggle({
   visible: Set<EngineId>;
   onChange: (next: Set<EngineId>) => void;
 }) {
+  const { t } = useTranslation("deployment-recipes");
   const allOn = visible.size === ENGINES.length;
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           <Filter className="h-3.5 w-3.5" />
-          引擎列
+          {t("filters.engineToggle")}
           <span className="text-xs text-muted-foreground">
             {visible.size}/{ENGINES.length}
           </span>
@@ -113,7 +119,9 @@ function EngineToggle({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-2">
         <div className="mb-2 flex items-center justify-between px-1">
-          <span className="text-xs font-medium text-muted-foreground">显示列</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("filters.visibleColumns")}
+          </span>
           <Button
             type="button"
             variant="ghost"
@@ -121,7 +129,7 @@ function EngineToggle({
             className="h-6 px-1.5 text-xs"
             onClick={() => onChange(allOn ? new Set() : new Set(ENGINES.map((e) => e.id)))}
           >
-            {allOn ? "全部隐藏" : "全部显示"}
+            {allOn ? t("filters.hideAll") : t("filters.showAll")}
           </Button>
         </div>
         <div className="space-y-0.5">
@@ -158,6 +166,7 @@ function EngineToggle({
 // ---------------------------------------------------------------------------
 
 export function DeploymentRecipesPage() {
+  const { t } = useTranslation("deployment-recipes");
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [query, setQuery] = useState("");
   const [visibleEngines, setVisibleEngines] = useState<Set<EngineId>>(
@@ -229,9 +238,9 @@ export function DeploymentRecipesPage() {
       list.push(m);
       map.set(m.category, list);
     }
-    return CATEGORIES.flatMap((c) => {
-      const list = map.get(c.id) ?? [];
-      return list.length > 0 ? [{ category: c, models: list }] : [];
+    return CATEGORY_ORDER.flatMap((id) => {
+      const list = map.get(id) ?? [];
+      return list.length > 0 ? [{ id, models: list }] : [];
     });
   }, [filteredModels]);
 
@@ -244,56 +253,66 @@ export function DeploymentRecipesPage() {
   const selectedRecipe =
     selectedModel && selected ? (getRecipe(selectedModel, selected.engineId) ?? null) : null;
 
-  const totalCount = MODELS.length;
+  const tabs = useMemo<{ id: CategoryFilter; label: string }[]>(
+    () => [
+      { id: "all", label: t("filters.all") },
+      ...CATEGORY_ORDER.map((id) => ({
+        id: id as CategoryFilter,
+        label: t(`categories.${id}.label`),
+      })),
+    ],
+    [t],
+  );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <>
       <PageHeader
-        title="部署示例"
-        subtitle={`推理引擎 × 开源模型权重兼容性矩阵 · 共 ${totalCount} 个模型 / ${ENGINES.length} 个引擎`}
+        title={t("title")}
+        subtitle={t("subtitle", { models: MODELS.length, engines: ENGINES.length })}
       />
-
-      <div className="flex-1 overflow-hidden">
-        <div className="flex h-full flex-col gap-4 px-8 py-6">
-          {/* Toolbar ------------------------------------------------------- */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: "all" as CategoryFilter, label: "全部" },
-                ...CATEGORIES.map((c) => ({ id: c.id as CategoryFilter, label: c.label })),
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCategory(tab.id)}
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
-                    category === tab.id
-                      ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative ml-auto w-full max-w-xs">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜索模型或引擎名…"
-                className="h-9 pl-8 text-sm"
-              />
-            </div>
-
-            <EngineToggle visible={visibleEngines} onChange={setVisibleEngines} />
+      <div className="space-y-6 px-8 py-6">
+        {/* Toolbar -------------------------------------------------------- */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setCategory(tab.id)}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                  category === tab.id
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Matrix table ------------------------------------------------- */}
-          <TooltipProvider delayDuration={200}>
-            <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
+          <div className="relative ml-auto w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("filters.searchPlaceholder")}
+              className="h-9 pl-8 text-sm"
+            />
+          </div>
+
+          <EngineToggle visible={visibleEngines} onChange={setVisibleEngines} />
+        </div>
+
+        {/* Matrix table -------------------------------------------------- */}
+        <TooltipProvider delayDuration={200}>
+          {groupedModels.length === 0 ? (
+            <EmptyState icon={SearchX} title={t("empty.title")} body={t("empty.body")} />
+          ) : (
+            // The matrix wrapper owns its own scroll context so the sticky
+            // <thead> stays pinned. The max-h subtracts PageHeader + toolbar +
+            // page padding + legend from the dynamic viewport height.
+            <div className="max-h-[calc(100dvh-15rem)] overflow-auto rounded-lg border border-border bg-card">
               <table className="min-w-full border-collapse text-sm">
                 <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
                   <tr className="border-b border-border">
@@ -301,7 +320,7 @@ export function DeploymentRecipesPage() {
                       scope="col"
                       className="sticky left-0 z-30 min-w-[260px] bg-card/95 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                     >
-                      模型 / 权重
+                      {t("table.modelHeader")}
                     </th>
                     {visibleEngineList.map((eng) => (
                       <th
@@ -325,61 +344,67 @@ export function DeploymentRecipesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {groupedModels.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={visibleEngineList.length + 1}
-                        className="px-4 py-12 text-center text-sm text-muted-foreground"
-                      >
-                        没有匹配的模型。试试清空搜索或切换分类。
-                      </td>
-                    </tr>
-                  ) : (
-                    groupedModels.map(({ category: cat, models }) => (
-                      <CategorySection
-                        key={cat.id}
-                        label={`${cat.label}(${cat.description})`}
-                        colSpan={visibleEngineList.length + 1}
-                      >
-                        {models.map((model) => (
-                          <ModelRow
-                            key={model.id}
-                            model={model}
-                            engines={visibleEngineList}
-                            selected={selected}
-                            hoveredEngine={hoveredEngine}
-                            onHoverEngine={setHoveredEngine}
-                            onSelect={handleSelect}
-                          />
-                        ))}
-                      </CategorySection>
-                    ))
-                  )}
+                  {groupedModels.map(({ id, models }) => (
+                    <CategorySection
+                      key={id}
+                      label={t("categoryRow", {
+                        label: t(`categories.${id}.label`),
+                        description: t(`categories.${id}.description`),
+                      })}
+                      colSpan={visibleEngineList.length + 1}
+                    >
+                      {models.map((model) => (
+                        <ModelRow
+                          key={model.id}
+                          model={model}
+                          engines={visibleEngineList}
+                          selected={selected}
+                          hoveredEngine={hoveredEngine}
+                          onHoverEngine={setHoveredEngine}
+                          onSelect={handleSelect}
+                        />
+                      ))}
+                    </CategorySection>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </TooltipProvider>
+          )}
+        </TooltipProvider>
 
-          {/* Legend ------------------------------------------------------- */}
-          <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <StatusPill status="native" active={false} highlight={false} />
-              <span>原生支持</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <StatusPill status="partial" active={false} highlight={false} />
-              <span>部分 / 实验</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <StatusPill status="none" active={false} highlight={false} />
-              <span>不支持</span>
-            </div>
-            <span className="ml-auto text-[11px] text-muted-foreground/70">
-              数据基线:vLLM 0.7+ · SGLang 0.4+ · TRT-LLM 0.13+ · MindIE 1.0.RC3 · LMDeploy 0.6+ ·
-              TEI 1.5+ · Infinity 0.0.7x
-            </span>
-          </footer>
-        </div>
+        {/* Legend -------------------------------------------------------- */}
+        <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <StatusPill
+              status="native"
+              active={false}
+              highlight={false}
+              ariaLabel={t("status.ariaNative")}
+            />
+            <span>{t("status.native")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <StatusPill
+              status="partial"
+              active={false}
+              highlight={false}
+              ariaLabel={t("status.ariaPartial")}
+            />
+            <span>{t("status.partial")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <StatusPill
+              status="none"
+              active={false}
+              highlight={false}
+              ariaLabel={t("status.ariaNone")}
+            />
+            <span>{t("status.none")}</span>
+          </div>
+          <span className="ml-auto text-[11px] text-muted-foreground/70">
+            {t("legend.baseline")}
+          </span>
+        </footer>
       </div>
 
       <RecipeDrawer
@@ -389,7 +414,7 @@ export function DeploymentRecipesPage() {
         engine={selectedEngineMeta}
         recipe={selectedRecipe}
       />
-    </div>
+    </>
   );
 }
 
@@ -436,6 +461,7 @@ function ModelRow({
   onHoverEngine: (id: EngineId | null) => void;
   onSelect: (modelId: string, engineId: EngineId) => void;
 }) {
+  const { t } = useTranslation("deployment-recipes");
   return (
     <tr className="group border-b border-border/60 last:border-b-0 hover:bg-accent/30">
       <th
@@ -452,12 +478,19 @@ function ModelRow({
         const isColHighlighted = hoveredEngine === eng.id;
         const cellClickable = status !== "none";
         const tooltipText = recipe?.tooltip ?? recipe?.notes ?? null;
+        const ariaLabel =
+          status === "native"
+            ? t("status.ariaNative")
+            : status === "partial"
+              ? t("status.ariaPartial")
+              : t("status.ariaNone");
 
         const cell = (
           <StatusPill
             status={status}
             active={isActive}
             highlight={isColHighlighted}
+            ariaLabel={ariaLabel}
             onClick={cellClickable ? () => onSelect(model.id, eng.id) : undefined}
           />
         );
