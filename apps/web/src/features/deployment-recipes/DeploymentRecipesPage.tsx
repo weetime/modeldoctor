@@ -175,11 +175,13 @@ export function DeploymentRecipesPage() {
         return;
       }
       const [modelId, engineId] = raw.split("/");
-      if (!modelId || !engineId) return;
-      const model = MODELS.find((m) => m.id === modelId);
-      const recipe = model ? getRecipe(model, engineId) : null;
-      if (model && recipe && recipe.status !== "none") {
-        setSelected({ modelId, engineId: engineId as EngineId });
+      const model = modelId ? MODELS.find((m) => m.id === modelId) : null;
+      const engine = engineId ? ENGINES.find((e) => e.id === engineId) : null;
+      const recipe = model && engine ? getRecipe(model, engine.id) : null;
+      if (model && engine && recipe && recipe.status !== "none") {
+        setSelected({ modelId: model.id, engineId: engine.id });
+      } else {
+        setSelected(null);
       }
     };
     parseHash();
@@ -208,10 +210,15 @@ export function DeploymentRecipesPage() {
       if (!q) return true;
       if (m.name.toLowerCase().includes(q)) return true;
       if (m.meta.toLowerCase().includes(q)) return true;
-      // Engine name match: keep all rows where any visible engine name matches.
-      return ENGINES.some(
-        (eng) => visibleEngines.has(eng.id) && eng.name.toLowerCase().includes(q),
-      );
+      // Engine match: only keep rows that actually support a matching engine
+      // (status native or partial). Match on display name and vendor.
+      return ENGINES.some((eng) => {
+        if (!visibleEngines.has(eng.id)) return false;
+        const matches = eng.name.toLowerCase().includes(q) || eng.vendor.toLowerCase().includes(q);
+        if (!matches) return false;
+        const status = getRecipe(m, eng.id)?.status;
+        return status === "native" || status === "partial";
+      });
     });
   }, [category, query, visibleEngines]);
 

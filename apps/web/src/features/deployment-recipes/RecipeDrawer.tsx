@@ -82,13 +82,10 @@ function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export function RecipeDrawer({ open, onOpenChange, model, engine, recipe }: RecipeDrawerProps) {
-  if (!model || !engine || !recipe) {
-    return (
-      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-        <DialogPrimitive.Portal />
-      </DialogPrimitive.Root>
-    );
-  }
+  // Bail out entirely when the URL hash points to a non-existent (or unsupported)
+  // model/engine combo — rendering a Root with only a Portal would otherwise
+  // leave a ghost overlay that swallows clicks.
+  if (!model || !engine || !recipe) return null;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
