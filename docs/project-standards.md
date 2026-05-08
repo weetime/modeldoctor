@@ -325,7 +325,7 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 - 技术标识符:`vLLM`、`HTTP/1.1`、CLI 参数名(`--tensor-parallel-size`)
 - 单位与符号:`ms` / `MB` / `%` / `→ POST <url>`
 
-**V1 zh-CN-only 数据文件 carve-out**:文件头加 `// i18n: zh-CN-only V1, see #<issue>` 即可豁免;当前仅 `apps/web/src/features/deployment-recipes/data.ts` 享此豁免。
+**V1 zh-CN-only 数据文件 carve-out**:文件头加 `// i18n: zh-CN-only V1, see #<issue-number>` 即可豁免;当前仅 `apps/web/src/features/deployment-recipes/data.ts` 享此豁免。
 
 ### 16.2 命名空间与 key 命名 (RULE-i18n-2)
 
@@ -357,7 +357,7 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 下列脚本由 `pnpm -F @modeldoctor/web check:i18n` 串联,挂入根 `pnpm lint`:
 
 - `apps/web/scripts/check-i18n-parity.mjs` — zh-CN 与 en-US 各 namespace key 集合必须 1:1。
-- `apps/web/scripts/check-no-hardcoded-zh.mjs` — 扫 `apps/web/src/**/*.{ts,tsx}` 中 CJK Unified Ideographs(`[一-鿿]`)。排除:`apps/web/src/locales/**`、`__tests__/**`、`*.test.tsx`、`features/deployment-recipes/data.ts`(carve-out)。**注释也会被扫**——若需要中文注释,翻成英文。
+- `apps/web/scripts/check-no-hardcoded-zh.mjs` — 扫 `apps/web/src/**/*.{ts,tsx}` 中 CJK Unified Ideographs(`[一-鿿]`)。排除:`apps/web/src/locales/**`、`__tests__/**`、`*.test.ts`、`*.test.tsx`、`*.spec.ts`、`*.spec.tsx`、`features/deployment-recipes/data.ts`(carve-out)。**注释也会被扫**——若需要中文注释,翻成英文。
 
 ---
 
@@ -403,4 +403,4 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 - `apps/web/scripts/check-no-native-select.mjs` — 扫 `apps/web/src/**/*.tsx` 中 `<select\b` 与 `<textarea\b`,排除 `components/ui/`(shadcn 包装层)。
 - `apps/web/scripts/check-no-confirm.mjs` — 扫 `\bwindow\.(confirm|alert)\(`。
-- `apps/web/scripts/check-no-handcrafted-popover-list.mjs` — 扫 `features/**/*.tsx` 中 `<Popover` + `<Input` + `<ul` 三元共现的文件,**warn-only**(stderr,exit 0);后续视 false-positive 转硬。
+- `apps/web/scripts/check-no-handcrafted-popover-list.mjs` — 扫 `features/**/*.tsx`(排除 `__tests__`)中 `<Popover` + `<Input` + `<ul` 三元共现的文件,**warn-only**(stderr,exit 0);后续视 false-positive 转硬。
