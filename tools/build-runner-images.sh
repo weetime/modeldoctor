@@ -40,7 +40,7 @@ fi
 
 echo "==> Building runner images at tag :$TAG"
 
-for tool in guidellm vegeta genai-perf; do
+for tool in guidellm vegeta genai-perf prefix-cache-probe; do
   image="md-runner-${tool}:${TAG}"
   echo "==> docker build $image"
   docker build \
@@ -55,6 +55,7 @@ if [[ "$IMPORT" == "true" ]]; then
     "md-runner-guidellm:${TAG}" \
     "md-runner-vegeta:${TAG}" \
     "md-runner-genai-perf:${TAG}" \
+    "md-runner-prefix-cache-probe:${TAG}" \
     -c "$K3D_CLUSTER"
 fi
 
@@ -63,3 +64,4 @@ echo "==> Done. Set these in your .env (or export RUNNER_IMAGE_TAG=$TAG):"
 echo "RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:${TAG}"
 echo "RUNNER_IMAGE_VEGETA=md-runner-vegeta:${TAG}"
 echo "RUNNER_IMAGE_GENAI_PERF=md-runner-genai-perf:${TAG}"
+echo "RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:${TAG}"
