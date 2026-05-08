@@ -213,7 +213,7 @@ describe("genai-perf.buildCommand", () => {
       callback: { url: "http://cb", token: "t" },
     });
     const script = result.argv[2];
-    expect(script).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(script).toMatch(/--tokenizer\s+"\$\{\d+\}"/);
     expect(result.argv).toContain("Qwen/Per-Run");
     expect(result.argv).not.toContain("Qwen/Connection");
   });
@@ -234,7 +234,7 @@ describe("genai-perf.buildCommand", () => {
       callback: { url: "http://cb", token: "t" },
     });
     const script = result.argv[2];
-    expect(script).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(script).toMatch(/--tokenizer\s+"\$\{\d+\}"/);
     expect(result.argv).toContain("Qwen/Connection");
   });
 
@@ -248,6 +248,29 @@ describe("genai-perf.buildCommand", () => {
     expect(r.argv[2]).toContain("--service-kind openai");
   });
 
+  it("uses braced \\${N} form for positional args >= 10 (regression: $10 is parsed as $1+'0' in POSIX sh)", () => {
+    // With all 4 token-length params + tokenizer, positions go up to ${11}.
+    // POSIX/dash/bash all parse bare "$10" as "${1}0" — not what we want.
+    const r = buildCommand({
+      runId: "r1",
+      params: {
+        ...baseParams,
+        inputTokensMean: 512,
+        inputTokensStddev: 64,
+        outputTokensMean: 100,
+        outputTokensStddev: 20,
+        tokenizer: "Qwen/Qwen2.5-7B-Instruct",
+      },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    const script = r.argv[2];
+    expect(script).toContain('--output-tokens-stddev "${10}"');
+    expect(script).toContain('--tokenizer "${11}"');
+    expect(script).not.toMatch(/--output-tokens-stddev\s+"\$10"/);
+    expect(script).not.toMatch(/--tokenizer\s+"\$11"/);
+  });
+
   it("falls back to connection.model when no params.tokenizer or connection.tokenizerHfId", () => {
     const r = buildCommand({
       runId: "r1",
@@ -255,7 +278,7 @@ describe("genai-perf.buildCommand", () => {
       connection: { ...baseConn, tokenizerHfId: null }, // model = "Qwen2.5-0.5B-Instruct"
       callback: { url: "http://api/", token: "tk" },
     });
-    expect(r.argv[2]).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(r.argv[2]).toMatch(/--tokenizer\s+"\$\{\d+\}"/);
     expect(r.argv).toContain("Qwen2.5-0.5B-Instruct"); // baseConn.model
   });
 });

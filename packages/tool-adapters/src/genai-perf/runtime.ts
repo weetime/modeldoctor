@@ -59,25 +59,30 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
 
   let optionalTokenFlags = "";
   const optionalArgv: string[] = [];
-  let nextPos = 7; // $1-$6 are the six mandatory args; optional start at $7
+  // $1-$6 are the six mandatory args; optional start at $7. We always emit
+  // the braced form ${N} (not $N) because POSIX shell parses bare "$10" as
+  // "${1}0" — i.e. positional arg 1 followed by literal "0". Using ${N}
+  // is unambiguous for any N. Single-digit positions ($1..$9) work either
+  // way; we use the braced form everywhere here for consistency.
+  let nextPos = 7;
 
   if (params.inputTokensMean !== undefined) {
-    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-mean "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-mean "\${${nextPos}}"`;
     optionalArgv.push(String(params.inputTokensMean));
     nextPos++;
   }
   if (params.inputTokensStddev > 0) {
-    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-stddev "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-stddev "\${${nextPos}}"`;
     optionalArgv.push(String(params.inputTokensStddev));
     nextPos++;
   }
   if (params.outputTokensMean !== undefined) {
-    optionalTokenFlags += ` \\\n    --output-tokens-mean "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --output-tokens-mean "\${${nextPos}}"`;
     optionalArgv.push(String(params.outputTokensMean));
     nextPos++;
   }
   if (params.outputTokensStddev > 0) {
-    optionalTokenFlags += ` \\\n    --output-tokens-stddev "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --output-tokens-stddev "\${${nextPos}}"`;
     optionalArgv.push(String(params.outputTokensStddev));
     nextPos++;
   }
@@ -87,7 +92,7 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // typically set model to an HF tokenizer id (e.g. "Qwen/Qwen2.5-0.5B-Instruct").
   // genai-perf 0.0.16 hard-requires --tokenizer, so we always emit the flag.
   const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? connection.model;
-  optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
+  optionalTokenFlags += ` \\\n    --tokenizer "\${${nextPos}}"`;
   optionalArgv.push(resolvedTokenizer);
   nextPos++;
 
