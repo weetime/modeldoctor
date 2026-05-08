@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import enBenchmarkTemplates from "@/locales/en-US/benchmark-templates.json";
 import enBenchmarks from "@/locales/en-US/benchmarks.json";
+import enCommands from "@/locales/en-US/commands.json";
 import enCommon from "@/locales/en-US/common.json";
 import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
@@ -14,6 +15,7 @@ import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
 import zhBenchmarkTemplates from "@/locales/zh-CN/benchmark-templates.json";
 import zhBenchmarks from "@/locales/zh-CN/benchmarks.json";
+import zhCommands from "@/locales/zh-CN/commands.json";
 import zhCommon from "@/locales/zh-CN/common.json";
 import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
@@ -36,6 +38,7 @@ void i18n.use(initReactI18next).init({
       settings: enSettings,
       playground: enPlayground,
       insights: enInsights,
+      commands: enCommands,
     },
     "zh-CN": {
       common: zhCommon,
@@ -48,6 +51,7 @@ void i18n.use(initReactI18next).init({
       settings: zhSettings,
       playground: zhPlayground,
       insights: zhInsights,
+      commands: zhCommands,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -64,6 +68,7 @@ void i18n.use(initReactI18next).init({
     "settings",
     "playground",
     "insights",
+    "commands",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

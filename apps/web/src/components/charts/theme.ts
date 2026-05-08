@@ -1,5 +1,5 @@
 // ECharts theme tokens resolved from Tailwind CSS variables.
-// Palette + text/axis colors come from the active [data-palette] block.
+// Palette + text/axis colors come from the active :root / .dark block.
 import type { EChartsOption } from "echarts";
 
 export interface ChartTokens {
@@ -25,20 +25,20 @@ function hslFromTokens(raw: string, alpha?: number): string {
   return `hsla(${parts.join(", ")}, ${alpha})`;
 }
 
-/** Slate-light defaults, used when the document is not yet styled (jsdom, SSR). */
+/** Linear-light defaults, used when the document is not yet styled (jsdom, SSR). */
 export const FALLBACK_CHART_TOKENS: ChartTokens = {
   palette: [
-    "hsl(250, 60%, 55%)",
-    "hsl(165, 50%, 50%)",
-    "hsl(35, 75%, 55%)",
-    "hsl(305, 55%, 55%)",
-    "hsl(95, 45%, 55%)",
-    "hsl(200, 50%, 50%)",
-    "hsl(20, 60%, 50%)",
-    "hsl(130, 40%, 55%)",
+    "hsl(232, 56%, 60%)",
+    "hsl(199, 70%, 50%)",
+    "hsl(150, 50%, 45%)",
+    "hsl(36, 75%, 55%)",
+    "hsl(338, 60%, 70%)",
+    "hsl(58, 60%, 50%)",
+    "hsl(0, 65%, 60%)",
+    "hsl(225, 65%, 58%)",
   ],
-  textColor: "hsl(240, 10%, 3.9%)",
-  axisColor: "hsla(240, 3.8%, 46.1%, 0.4)",
+  textColor: "hsl(220, 13%, 9%)",
+  axisColor: "hsla(220, 9%, 46%, 0.4)",
 };
 
 export function getChartTokens(): ChartTokens {

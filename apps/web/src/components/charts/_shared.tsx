@@ -40,14 +40,13 @@ export function useChartDark(theme: ChartTheme = "auto"): boolean {
 }
 
 /**
- * Resolve chart palette + text/axis colors from the active palette+mode.
- * Re-runs when either dimension changes so charts re-render with new colors.
+ * Resolve chart palette + text/axis colors from the active mode.
+ * Re-runs when mode changes so charts re-render with new colors.
  */
 export function useChartTokens(): ChartTokens {
-  const palette = useThemeStore((s) => s.palette);
   const mode = useThemeStore((s) => s.mode);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: getChartTokens reads CSS, deps trigger recompute when active palette/mode changes
-  return useMemo(() => getChartTokens(), [palette, mode]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getChartTokens reads CSS, mode dep triggers recompute when active mode changes
+  return useMemo(() => getChartTokens(), [mode]);
 }
 
 export function themed(opt: EChartsOption, tokens: ChartTokens): EChartsOption {

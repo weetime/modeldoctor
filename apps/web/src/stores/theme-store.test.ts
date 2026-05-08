@@ -5,8 +5,7 @@ describe("themeStore", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove("dark");
-    document.documentElement.dataset.palette = "";
-    useThemeStore.setState({ mode: "system", palette: "slate" });
+    useThemeStore.setState({ mode: "system" });
   });
 
   it("defaults to system mode", () => {
@@ -42,36 +41,19 @@ describe("themeStore", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("defaults to slate palette", () => {
-    expect(useThemeStore.getState().palette).toBe("slate");
-  });
-
-  it("setPalette('aurora') writes data-palette='aurora' on <html>", () => {
-    useThemeStore.getState().setPalette("aurora");
-    expect(document.documentElement.dataset.palette).toBe("aurora");
-    expect(useThemeStore.getState().palette).toBe("aurora");
-  });
-
-  it("setPalette is independent of mode", () => {
+  it("reset() restores mode=system", () => {
     useThemeStore.getState().setMode("dark");
-    useThemeStore.getState().setPalette("plum");
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(document.documentElement.dataset.palette).toBe("plum");
-  });
-
-  it("reset() restores mode=system AND palette=slate", () => {
-    useThemeStore.getState().setMode("dark");
-    useThemeStore.getState().setPalette("clay");
     useThemeStore.getState().reset();
     expect(useThemeStore.getState().mode).toBe("system");
-    expect(useThemeStore.getState().palette).toBe("slate");
-    expect(document.documentElement.dataset.palette).toBe("slate");
   });
 
-  it("rehydrates legacy {mode} payload with default palette=slate", async () => {
-    localStorage.setItem("md.theme.v1", JSON.stringify({ state: { mode: "dark" }, version: 0 }));
+  it("rehydrates legacy {mode, palette} payload by ignoring palette", async () => {
+    localStorage.setItem(
+      "md.theme.v1",
+      JSON.stringify({ state: { mode: "dark", palette: "plum" }, version: 0 }),
+    );
     await useThemeStore.persist.rehydrate();
-    expect(useThemeStore.getState().palette).toBe("slate");
-    expect(document.documentElement.dataset.palette).toBe("slate");
+    expect(useThemeStore.getState().mode).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 });

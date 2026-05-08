@@ -6,8 +6,6 @@
     "description": "控制界面在所有页面的呈现方式。",
     "theme": "主题",
     "themeOptions": { "light": "浅色", "dark": "深色", "system": "跟随系统" },
-    "palette": "主题色",
-    "paletteHint": "Slate 为默认；其余为预置高级主题，每个都同时支持浅/深色。",
     "language": "语言",
     "languages": { "en": "English", "zh": "中文" }
   },
