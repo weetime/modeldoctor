@@ -181,6 +181,8 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 4. **key 命名:**`<section>.<field>` 两层即可(`fields.baseUrl`、`actions.save`、`alerts.failure`);过多层级难维护。
 5. **插值用 `{{var}}`,不要字符串拼接**(`t("alerts.failure", { error: msg })`)。
 
+> 详见 §16(细化与 CI 守卫)。
+
 ---
 
 ## 7. 表单规范
@@ -309,11 +311,11 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 ---
 
-## 11. 国际化(i18n)规范
+## 16. 国际化(i18n)规范
 
-> 每次新增 UI 必读。CI 守卫见 §11.7,违反硬挂。
+> 每次新增 UI 必读。CI 守卫见 §16.7,违反硬挂。
 
-### 11.1 用户可见文案必走 `t()` (RULE-i18n-1)
+### 16.1 用户可见文案必走 `t()` (RULE-i18n-1)
 
 凡是渲染到 DOM 的人类语言不得硬编码:label / placeholder / button text / error / empty state / tooltip / aria-label / toast 文本。
 
@@ -325,32 +327,32 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 **V1 zh-CN-only 数据文件 carve-out**:文件头加 `// i18n: zh-CN-only V1, see #<issue>` 即可豁免;当前仅 `apps/web/src/features/deployment-recipes/data.ts` 享此豁免。
 
-### 11.2 命名空间与 key 命名 (RULE-i18n-2)
+### 16.2 命名空间与 key 命名 (RULE-i18n-2)
 
 - 一个 feature 一个 namespace,与 `apps/web/src/features/<name>/` 同名。跨 feature 复用文案进 `common`。
 - key 用 dot-path 语义化分组:`<area>.<element>.<state>`。例 `create.prefillFromTemplate.empty`。
 - 通用动词集中 `common.actions.*`,状态 `common.status.*`,校验 `common.validation.*`。新增重复语义复用现有 key。
 
-### 11.3 zh-CN 与 en-US 必须 1:1 同步 (RULE-i18n-3)
+### 16.3 zh-CN 与 en-US 必须 1:1 同步 (RULE-i18n-3)
 
 任意一边新增 key,另一边必须同提交补齐。差异由 CI 守卫 `check-i18n-parity` 强制。
 
-### 11.4 表单校验消息 (RULE-i18n-4)
+### 16.4 表单校验消息 (RULE-i18n-4)
 
 - zod 默认错走 `lib/i18n.ts` 全局 `z.setErrorMap`(已涵盖 required / tooShort / invalidEmail 等)。
 - `.refine(message: ...)` 显式 message 必须用 `validation.<key>` 形式,不写人话;`<FormMessage>` 渲染时翻译。
 - 自定义 validation key 进 `common.validation.*`。
 
-### 11.5 插值与复数 (RULE-i18n-5)
+### 16.5 插值与复数 (RULE-i18n-5)
 
 - 动态值用 `{{name}}` 占位,禁止字符串拼接。
 - 复数走 i18next 的 `_one` / `_other` 后缀。
 
-### 11.6 source-of-truth 入口 (RULE-i18n-extra)
+### 16.6 source-of-truth 入口 (RULE-i18n-extra)
 
 - 业务代码只 `import "@/lib/i18n"`(单 side-effect)或 `import { useTranslation } from "react-i18next"`,**禁止**直接 `import xxx from "@/locales/..."`。
 
-### 11.7 CI 守卫(硬性)
+### 16.7 CI 守卫(硬性)
 
 下列脚本由 `pnpm -F @modeldoctor/web check:i18n` 串联,挂入根 `pnpm lint`:
 
@@ -359,11 +361,11 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 ---
 
-## 12. 组件复用规范
+## 17. 组件复用规范
 
-> 共享 UI 元素必须落在已有 shadcn primitive 上,不重新发明。CI 守卫见 §12.7。
+> 共享 UI 元素必须落在已有 shadcn primitive 上,不重新发明。CI 守卫见 §17.7。
 
-### 12.1 下拉选择器 (RULE-comp-1)
+### 17.1 下拉选择器 (RULE-comp-1)
 
 | 场景 | 必用 | 禁止 |
 |---|---|---|
@@ -373,29 +375,29 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 
 `<Combobox>` props 见 `components/ui/combobox.tsx` JSDoc。基于 `<Popover>` + cmdk `<Command>`,自动 a11y `listbox` + 键盘导航 + Esc。
 
-### 12.2 确认弹窗 (RULE-comp-2)
+### 17.2 确认弹窗 (RULE-comp-2)
 
 - 删除 / 不可逆操作必用 `<AlertDialog>`,**不是** `<Dialog>`;触发态 `variant="destructive"`。
 - 禁止 `window.confirm()` / `window.alert()`(CI 守卫)。
 
-### 12.3 Toast (RULE-comp-3)
+### 17.3 Toast (RULE-comp-3)
 
 全局唯一 toast:sonner(`<Toaster>` 在 `App.tsx`)。`import { toast } from "sonner"`。禁止自研 toast / showAlert / notify。
 
-### 12.4 图标 (RULE-comp-4)
+### 17.4 图标 (RULE-comp-4)
 
 只用 `lucide-react`。同一语义跨页面用同一图标(搜索全用 `Search`,不混 `Magnifier`)。
 
-### 12.5 表单 (RULE-comp-5)
+### 17.5 表单 (RULE-comp-5)
 
-交叉引用 §6。`<FormField>` → `<FormItem>` → `<FormLabel required?>` + `<FormControl>` + `<FormMessage>` 链路完整,缺一不可。
+交叉引用 §7(表单规范)。`<FormField>` → `<FormItem>` → `<FormLabel required?>` + `<FormControl>` + `<FormMessage>` 链路完整,缺一不可。
 
-### 12.6 共享业务组件强制复用 (RULE-comp-6)
+### 17.6 共享业务组件强制复用 (RULE-comp-6)
 
 - 选连接:`<ConnectionPicker>`(交叉引用 `CLAUDE.md` "Shared field components")。
 - 选 benchmark template:`<PrefillFromTemplatePopover>`(基于 `<Combobox>`)。
 
-### 12.7 CI 守卫(硬性)
+### 17.7 CI 守卫(硬性)
 
 下列脚本由 `pnpm -F @modeldoctor/web check:components` 串联,挂入根 `pnpm lint`:
 
