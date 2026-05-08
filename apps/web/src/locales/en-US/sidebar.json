@@ -20,6 +20,7 @@
     "diagnostics": "Endpoint Health",
     "connections": "Connections",
     "settings": "Settings",
-    "devCharts": "Dev Charts"
+    "devCharts": "Dev Charts",
+    "deploymentRecipes": "Deployment Recipes"
   }
 }
