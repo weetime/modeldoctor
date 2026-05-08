@@ -187,8 +187,8 @@ describe("BenchmarkComparePage", () => {
     vi.mocked(api.get).mockResolvedValueOnce(a).mockResolvedValueOnce(makeBenchmark("b"));
     renderPage("/benchmarks/compare?ids=a,b&baseline=none");
     // Toolbar dropdown is the visible signal: with None selected the
-    // <select> value is "" so its first <option> ("None (no verdict)" /
-    // "无（不显示徽标）") is the displayed text.
+    // Select trigger shows the first item ("None (no verdict)" /
+    // "无（不显示徽标）") as the rendered label.
     await waitFor(() =>
       expect(screen.getByText(/None \(no verdict\)|无（不显示徽标）/)).toBeInTheDocument(),
     );

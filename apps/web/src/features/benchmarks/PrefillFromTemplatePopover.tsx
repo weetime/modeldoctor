@@ -30,9 +30,7 @@ export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemp
       renderItem={(it) => (
         <div className="flex w-full flex-col gap-1">
           <span className="flex items-center gap-1 text-sm font-medium">
-            {it.isOfficial && (
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
-            )}
+            {it.isOfficial && <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden />}
             <span className="truncate">{it.name}</span>
           </span>
           <span className="flex flex-wrap items-center gap-1.5">

@@ -23,15 +23,18 @@ const NONE = "__none__";
 
 export function CompareToolbar({ runs, baselineId, onBaselineChange }: CompareToolbarProps) {
   const { t } = useTranslation("benchmarks");
+  const labelId = "compare-baseline-label";
   return (
     <div className="flex items-center gap-3 text-sm">
-      <label className="flex items-center gap-2">
-        <span className="text-muted-foreground">{t("compare.baselineLabel")}</span>
+      <div className="flex items-center gap-2">
+        <span id={labelId} className="text-muted-foreground">
+          {t("compare.baselineLabel")}
+        </span>
         <Select
           value={baselineId ?? NONE}
           onValueChange={(v) => onBaselineChange(v === NONE ? null : v)}
         >
-          <SelectTrigger className="h-8 min-w-[180px]">
+          <SelectTrigger className="h-8 min-w-[180px]" aria-labelledby={labelId}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -43,7 +46,7 @@ export function CompareToolbar({ runs, baselineId, onBaselineChange }: CompareTo
             ))}
           </SelectContent>
         </Select>
-      </label>
+      </div>
     </div>
   );
 }

@@ -62,13 +62,15 @@ export function Combobox<T>({
     <Button
       type="button"
       variant="outline"
+      // biome-ignore lint/a11y/useSemanticElements: this primitive intentionally
+      // implements a searchable combobox via Popover+Command, not a native <select>;
+      // the project's check-no-native-select.mjs guard forbids native <select> in
+      // feature code, so the role attribute here documents the WAI-ARIA pattern.
       role="combobox"
       aria-expanded={open}
       className={cn("justify-between", triggerClassName)}
     >
-      <span className="truncate">
-        {value !== null ? getLabel(value) : (triggerLabel ?? "")}
-      </span>
+      <span className="truncate">{value !== null ? getLabel(value) : (triggerLabel ?? "")}</span>
       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
     </Button>
   );
@@ -76,10 +78,7 @@ export function Combobox<T>({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger ?? defaultTrigger}</PopoverTrigger>
-      <PopoverContent
-        align={align}
-        className={cn("w-[320px] p-0", contentClassName)}
-      >
+      <PopoverContent align={align} className={cn("w-[320px] p-0", contentClassName)}>
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
