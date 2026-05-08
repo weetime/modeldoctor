@@ -83,8 +83,11 @@ async def snapshot_prom(prom: str, metric: str) -> dict[str, int]:
 
 
 def diff_snapshots(before: dict[str, int], after: dict[str, int]) -> dict[str, int]:
+    # Clamp at 0: a vLLM pod restart resets the counter so after < before is
+    # possible. Reporting negative deltas would violate the report schema's
+    # nonnegative() constraint and skew dominant_pct math.
     pods = set(before) | set(after)
-    return {p: after.get(p, 0) - before.get(p, 0) for p in pods}
+    return {p: max(0, after.get(p, 0) - before.get(p, 0)) for p in pods}
 
 
 async def run_round(
