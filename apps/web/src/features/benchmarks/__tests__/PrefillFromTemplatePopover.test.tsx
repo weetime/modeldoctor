@@ -86,12 +86,32 @@ describe("PrefillFromTemplatePopover", () => {
       screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
     );
     await screen.findByText("vLLM single");
-    await userEvent.type(
-      screen.getByRole("textbox", { name: /search templates|搜索模板/i }),
-      "vLLM",
-    );
+    const search = screen.getByPlaceholderText(/search templates|搜索模板/i);
+    await userEvent.type(search, "vLLM");
     expect(screen.getByText("vLLM single")).toBeInTheDocument();
     expect(screen.queryByText("Internal gateway")).not.toBeInTheDocument();
+  });
+
+  it("matches by tag when searching", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [
+        tpl({ id: "t1", name: "vLLM single", tags: ["official", "low-load"] }),
+        tpl({ id: "t2", name: "Internal gateway", tags: ["official", "vegeta-stack"] }),
+      ],
+      nextCursor: null,
+    } satisfies ListBenchmarkTemplatesResponse);
+
+    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
+    );
+    await screen.findByText("vLLM single");
+    const search = screen.getByPlaceholderText(/search templates|搜索模板/i);
+    await userEvent.type(search, "vegeta");
+    expect(screen.getByText("Internal gateway")).toBeInTheDocument();
+    expect(screen.queryByText("vLLM single")).not.toBeInTheDocument();
   });
 
   it("shows empty state with manage link when no templates exist", async () => {
@@ -125,7 +145,7 @@ describe("PrefillFromTemplatePopover", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /prefill from template|从模板预填/i }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: /vLLM single/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /vLLM single/ }));
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: "t1", name: "vLLM single" }));
   });
 });

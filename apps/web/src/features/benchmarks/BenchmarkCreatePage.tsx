@@ -190,7 +190,7 @@ export function BenchmarkCreatePage() {
                 </Button>
               </div>
             )}
-            {/* Top row: 基本信息 (left) + 目标 (right) — both info-light, paired
+            {/* Top row: basic info (left) + target (right) — both info-light, paired
              * for 2-col on md+. On small screens they stack naturally. */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <Card>

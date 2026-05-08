@@ -181,6 +181,8 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 4. **key 命名:**`<section>.<field>` 两层即可(`fields.baseUrl`、`actions.save`、`alerts.failure`);过多层级难维护。
 5. **插值用 `{{var}}`,不要字符串拼接**(`t("alerts.failure", { error: msg })`)。
 
+> 详见 §16(细化与 CI 守卫)。
+
 ---
 
 ## 7. 表单规范
@@ -306,3 +308,99 @@ sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mod
 本文是**单一真实源**。修改规则或新增约定时:
 - 在 PR 描述里列出变更条款;
 - 如果变更会让既有代码违规,PR 必须一并修掉既有违规,或新增条目到「存量债务」。
+
+---
+
+## 16. 国际化(i18n)规范
+
+> 每次新增 UI 必读。CI 守卫见 §16.7,违反硬挂。
+
+### 16.1 用户可见文案必走 `t()` (RULE-i18n-1)
+
+凡是渲染到 DOM 的人类语言不得硬编码:label / placeholder / button text / error / empty state / tooltip / aria-label / toast 文本。
+
+**白名单**(可硬编码):
+- 品牌名:`ModelDoctor`
+- 运行时数据:API/DB 返回值(`connection.name`、`run.tool`)
+- 技术标识符:`vLLM`、`HTTP/1.1`、CLI 参数名(`--tensor-parallel-size`)
+- 单位与符号:`ms` / `MB` / `%` / `→ POST <url>`
+
+**V1 zh-CN-only 数据文件 carve-out**:文件头加 `// i18n: zh-CN-only V1, see #<issue-number>` 即可豁免;当前仅 `apps/web/src/features/deployment-recipes/data.ts` 享此豁免。
+
+### 16.2 命名空间与 key 命名 (RULE-i18n-2)
+
+- 一个 feature 一个 namespace,与 `apps/web/src/features/<name>/` 同名。跨 feature 复用文案进 `common`。
+- key 用 dot-path 语义化分组:`<area>.<element>.<state>`。例 `create.prefillFromTemplate.empty`。
+- 通用动词集中 `common.actions.*`,状态 `common.status.*`,校验 `common.validation.*`。新增重复语义复用现有 key。
+
+### 16.3 zh-CN 与 en-US 必须 1:1 同步 (RULE-i18n-3)
+
+任意一边新增 key,另一边必须同提交补齐。差异由 CI 守卫 `check-i18n-parity` 强制。
+
+### 16.4 表单校验消息 (RULE-i18n-4)
+
+- zod 默认错走 `lib/i18n.ts` 全局 `z.setErrorMap`(已涵盖 required / tooShort / invalidEmail 等)。
+- `.refine(message: ...)` 显式 message 必须用 `validation.<key>` 形式,不写人话;`<FormMessage>` 渲染时翻译。
+- 自定义 validation key 进 `common.validation.*`。
+
+### 16.5 插值与复数 (RULE-i18n-5)
+
+- 动态值用 `{{name}}` 占位,禁止字符串拼接。
+- 复数走 i18next 的 `_one` / `_other` 后缀。
+
+### 16.6 source-of-truth 入口 (RULE-i18n-extra)
+
+- 业务代码只 `import "@/lib/i18n"`(单 side-effect)或 `import { useTranslation } from "react-i18next"`,**禁止**直接 `import xxx from "@/locales/..."`。
+
+### 16.7 CI 守卫(硬性)
+
+下列脚本由 `pnpm -F @modeldoctor/web check:i18n` 串联,挂入根 `pnpm lint`:
+
+- `apps/web/scripts/check-i18n-parity.mjs` — zh-CN 与 en-US 各 namespace key 集合必须 1:1。
+- `apps/web/scripts/check-no-hardcoded-zh.mjs` — 扫 `apps/web/src/**/*.{ts,tsx}` 中 CJK Unified Ideographs(`[一-鿿]`)。排除:`apps/web/src/locales/**`、`__tests__/**`、`*.test.ts`、`*.test.tsx`、`*.spec.ts`、`*.spec.tsx`、`features/deployment-recipes/data.ts`(carve-out)。**注释也会被扫**——若需要中文注释,翻成英文。
+
+---
+
+## 17. 组件复用规范
+
+> 共享 UI 元素必须落在已有 shadcn primitive 上,不重新发明。CI 守卫见 §17.7。
+
+### 17.1 下拉选择器 (RULE-comp-1)
+
+| 场景 | 必用 | 禁止 |
+|---|---|---|
+| ≤7 项固定枚举 | shadcn `<Select>` | 原生 `<select>` / `<DropdownMenu>` |
+| 可搜索 / >7 项 / 异步数据 | shadcn `<Combobox>` (`apps/web/src/components/ui/combobox.tsx`) | 手写 `<Popover>` + `<Input>` + `<ul>` |
+| 触发命令(菜单项) | shadcn `<DropdownMenu>` | `<Select>` |
+
+`<Combobox>` props 见 `components/ui/combobox.tsx` JSDoc。基于 `<Popover>` + cmdk `<Command>`,自动 a11y `listbox` + 键盘导航 + Esc。
+
+### 17.2 确认弹窗 (RULE-comp-2)
+
+- 删除 / 不可逆操作必用 `<AlertDialog>`,**不是** `<Dialog>`;触发态 `variant="destructive"`。
+- 禁止 `window.confirm()` / `window.alert()`(CI 守卫)。
+
+### 17.3 Toast (RULE-comp-3)
+
+全局唯一 toast:sonner(`<Toaster>` 在 `App.tsx`)。`import { toast } from "sonner"`。禁止自研 toast / showAlert / notify。
+
+### 17.4 图标 (RULE-comp-4)
+
+只用 `lucide-react`。同一语义跨页面用同一图标(搜索全用 `Search`,不混 `Magnifier`)。
+
+### 17.5 表单 (RULE-comp-5)
+
+交叉引用 §7(表单规范)。`<FormField>` → `<FormItem>` → `<FormLabel required?>` + `<FormControl>` + `<FormMessage>` 链路完整,缺一不可。
+
+### 17.6 共享业务组件强制复用 (RULE-comp-6)
+
+- 选连接:`<ConnectionPicker>`(交叉引用 `CLAUDE.md` "Shared field components")。
+- 选 benchmark template:`<PrefillFromTemplatePopover>`(基于 `<Combobox>`)。
+
+### 17.7 CI 守卫(硬性)
+
+下列脚本由 `pnpm -F @modeldoctor/web check:components` 串联,挂入根 `pnpm lint`:
+
+- `apps/web/scripts/check-no-native-select.mjs` — 扫 `apps/web/src/**/*.tsx` 中 `<select\b` 与 `<textarea\b`,排除 `components/ui/`(shadcn 包装层)。
+- `apps/web/scripts/check-no-confirm.mjs` — 扫 `\bwindow\.(confirm|alert)\(`。
+- `apps/web/scripts/check-no-handcrafted-popover-list.mjs` — 扫 `features/**/*.tsx`(排除 `__tests__`)中 `<Popover` + `<Input` + `<ul` 三元共现的文件,**warn-only**(stderr,exit 0);后续视 false-positive 转硬。

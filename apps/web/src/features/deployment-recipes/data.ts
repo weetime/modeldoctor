@@ -1,3 +1,7 @@
+// i18n: zh-CN-only V1, see #<deployment-recipes-i18n-issue>
+// This data table mixes display-bound Chinese descriptions with deployment
+// metadata. Migrating to t() is tracked separately; CI guard
+// `check-no-hardcoded-zh.mjs` whitelists this file by path.
 import type { EngineMeta, EngineRecipe, ModelEntry, RecipeStatus } from "./types";
 
 // ---------------------------------------------------------------------------

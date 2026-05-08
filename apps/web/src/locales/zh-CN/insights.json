@@ -36,7 +36,17 @@
       "fromCache": "来自缓存",
       "providerMissing": "尚未配置 LLM 提供商",
       "goToSettings": "前往设置",
-      "providerDisabled": "AI 智能诊断已停用"
+      "providerDisabled": "AI 智能诊断已停用",
+      "severity": {
+        "critical": "高危",
+        "warning": "警告",
+        "info": "提示"
+      }
+    },
+    "range": {
+      "7d": "近 7 天",
+      "30d": "近 30 天",
+      "90d": "近 90 天"
     },
     "scenario": {
       "inference": "推理性能基准",

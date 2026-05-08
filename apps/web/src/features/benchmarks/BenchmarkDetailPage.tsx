@@ -360,7 +360,7 @@ export function BenchmarkDetailPage() {
                   onSuccess: () => {
                     setDeleteOpen(false);
                     toast.success(t("detail.delete.success"));
-                    // Mirror "返回列表" — keep the user in the same scenario
+                    // Mirror "back to list" — keep the user in the same scenario
                     // tab they came from, not the default inference list.
                     navigate(`/benchmarks/${benchmark.scenario}`);
                   },
