@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Mic,
   Network,
+  Rocket,
   Settings,
 } from "lucide-react";
 
@@ -74,6 +75,11 @@ export const sidebarGroups: SidebarGroup[] = [
         icon: LineChart,
         labelKey: "items.devCharts",
         devOnly: true,
+      },
+      {
+        to: "/dev/deployments",
+        icon: Rocket,
+        labelKey: "items.deploymentRecipes",
       },
     ],
   },

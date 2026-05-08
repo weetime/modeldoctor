@@ -20,6 +20,7 @@
     "diagnostics": "端点检测",
     "connections": "连接",
     "settings": "设置",
-    "devCharts": "图表调试"
+    "devCharts": "图表调试",
+    "deploymentRecipes": "部署示例"
   }
 }

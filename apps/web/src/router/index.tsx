@@ -12,6 +12,7 @@ import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInference
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
+import { DeploymentRecipesPage } from "@/features/deployment-recipes";
 import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
@@ -77,6 +78,7 @@ export const routes: RouteObject[] = [
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
           { path: "dev/charts", element: <DevChartsPage /> },
+          { path: "dev/deployments", element: <DeploymentRecipesPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },
