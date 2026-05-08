@@ -17,6 +17,7 @@ const baseConn = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: null,
+        prometheusUrl: null,
 };
 
 const baseParams = {

@@ -16,6 +16,7 @@ const baseConn = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: null,
+        prometheusUrl: null,
 };
 
 const baseParams = {
@@ -186,6 +187,7 @@ describe("genai-perf.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: null,
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -206,6 +208,7 @@ describe("genai-perf.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: "Qwen/Connection",
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -226,6 +229,7 @@ describe("genai-perf.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: "Qwen/Connection",
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });

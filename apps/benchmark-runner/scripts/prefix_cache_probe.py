@@ -109,8 +109,7 @@ async def run_round(
     before_h = await snapshot_prom(prom, hits_metric)
 
     tasks = [
-        send_one(url, api_key, model, prompt, f"{label}-q{i}", max_tokens)
-        for i in range(requests)
+        send_one(url, api_key, model, prompt, f"{label}-q{i}", max_tokens) for i in range(requests)
     ]
     results = await asyncio.gather(*tasks)
     succeeded = sum(1 for ok in results if ok)
