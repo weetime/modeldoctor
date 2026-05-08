@@ -84,7 +84,12 @@ describe("scenarioScore", () => {
 describe("compositeScore", () => {
   it("returns null when all scenarios are null", () => {
     expect(
-      compositeScore({ inference: null, capacity: null, gateway: null, "prefix-cache-validation": null }),
+      compositeScore({
+        inference: null,
+        capacity: null,
+        gateway: null,
+        "prefix-cache-validation": null,
+      }),
     ).toBeNull();
   });
 
@@ -96,7 +101,12 @@ describe("compositeScore", () => {
 
   it("skips null scenarios", () => {
     expect(
-      compositeScore({ inference: 90, capacity: null, gateway: 70, "prefix-cache-validation": null }),
+      compositeScore({
+        inference: 90,
+        capacity: null,
+        gateway: 70,
+        "prefix-cache-validation": null,
+      }),
     ).toBe(80);
   });
 });

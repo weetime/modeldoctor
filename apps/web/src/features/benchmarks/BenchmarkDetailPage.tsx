@@ -16,7 +16,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
-import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
+import {
+  migrateVegetaParams,
+  prefixCacheProbeReportSchema,
+} from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
@@ -44,7 +47,6 @@ import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
 import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
-import { prefixCacheProbeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 
 /**
  * Pre-terminal placeholder rendered while the benchmark is still in flight.

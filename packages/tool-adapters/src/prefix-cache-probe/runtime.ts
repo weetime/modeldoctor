@@ -4,19 +4,12 @@ import type {
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
-import {
-  type PrefixCacheProbeParams,
-  prefixCacheProbeReportSchema,
-} from "./schema.js";
+import { type PrefixCacheProbeParams, prefixCacheProbeReportSchema } from "./schema.js";
 
-export function buildCommand(
-  plan: BuildCommandPlan<PrefixCacheProbeParams>,
-): BuildCommandResult {
+export function buildCommand(plan: BuildCommandPlan<PrefixCacheProbeParams>): BuildCommandResult {
   const { params, connection } = plan;
   if (!connection.prometheusUrl) {
-    throw new Error(
-      "prefix-cache-probe requires connection.prometheusUrl to be configured",
-    );
+    throw new Error("prefix-cache-probe requires connection.prometheusUrl to be configured");
   }
 
   // Argv passes user-supplied strings (baseUrl, prometheusUrl, model) as
@@ -59,10 +52,7 @@ export function parseProgress(_line: string): ProgressEvent | null {
   return null;
 }
 
-export function parseFinalReport(
-  _stdout: string,
-  files: Record<string, Buffer>,
-): ToolReport {
+export function parseFinalReport(_stdout: string, files: Record<string, Buffer>): ToolReport {
   const buf = files.result;
   if (!buf) {
     throw new Error("prefix-cache-probe.parseFinalReport: missing 'result' output file");

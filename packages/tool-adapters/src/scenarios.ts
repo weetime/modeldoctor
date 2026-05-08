@@ -4,14 +4,23 @@ import { allAdapters, byTool } from "./core/registry.js";
 
 export type ScenarioId = "inference" | "capacity" | "gateway" | "prefix-cache-validation";
 
-export const scenarioIdSchema = z.enum(["inference", "capacity", "gateway", "prefix-cache-validation"]);
+export const scenarioIdSchema = z.enum([
+  "inference",
+  "capacity",
+  "gateway",
+  "prefix-cache-validation",
+]);
 
 export interface ScenarioConfig {
   readonly label: string;
   readonly description: string;
   readonly tools: readonly ToolName[];
   readonly paramsConstraints: Partial<Record<ToolName, z.ZodRawShape>>;
-  readonly reportComponent: "InferenceReport" | "CapacityReport" | "GatewayReport" | "PrefixCacheProbeReport";
+  readonly reportComponent:
+    | "InferenceReport"
+    | "CapacityReport"
+    | "GatewayReport"
+    | "PrefixCacheProbeReport";
 }
 
 export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
@@ -46,7 +55,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
   },
   "prefix-cache-validation": {
     label: "Prefix-cache 路由验证",
-    description: "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本",
+    description:
+      "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本",
     tools: ["prefix-cache-probe"],
     paramsConstraints: {},
     reportComponent: "PrefixCacheProbeReport",

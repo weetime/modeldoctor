@@ -86,8 +86,7 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // connection.model is the final fallback because vLLM/SGLang deployments
   // typically set model to an HF tokenizer id (e.g. "Qwen/Qwen2.5-0.5B-Instruct").
   // genai-perf 0.0.16 hard-requires --tokenizer, so we always emit the flag.
-  const resolvedTokenizer =
-    params.tokenizer ?? connection.tokenizerHfId ?? connection.model;
+  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? connection.model;
   optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
   optionalArgv.push(resolvedTokenizer);
   nextPos++;

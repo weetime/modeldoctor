@@ -1,6 +1,6 @@
+import * as toolAdapters from "@modeldoctor/tool-adapters";
 import type { Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as toolAdapters from "@modeldoctor/tool-adapters";
 import { SseHub } from "../sse/sse-hub.service.js";
 import { BenchmarkCallbackController } from "./benchmark-callback.controller.js";
 

@@ -301,7 +301,12 @@
       "perPodTitle": "Per-Pod Counts",
       "perPodCols": { "pod": "Pod", "queries": "Queries", "hits": "Hits", "hitRate": "Hit rate" },
       "promptSetsTitle": "Routing per Prompt Set",
-      "promptSetsCols": { "label": "Set", "dominantPod": "Dominant Pod", "dominantPct": "Dominant %", "totalRequests": "Total Requests" },
+      "promptSetsCols": {
+        "label": "Set",
+        "dominantPod": "Dominant Pod",
+        "dominantPct": "Dominant %",
+        "totalRequests": "Total Requests"
+      },
       "noQueries": "No prefix cache queries observed — vLLM may not have prefix caching enabled"
     },
     "title": "Test Insights",

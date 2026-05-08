@@ -10,19 +10,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { useConnections } from "@/features/connections/queries";
 import { AlertCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useFormContext, useWatch } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 interface PrefixCacheProbeParamsFormProps {
   fieldPrefix?: "params" | "config";
 }
 
-export function PrefixCacheProbeParamsForm({ fieldPrefix = "params" }: PrefixCacheProbeParamsFormProps = {}) {
+export function PrefixCacheProbeParamsForm({
+  fieldPrefix = "params",
+}: PrefixCacheProbeParamsFormProps = {}) {
   const { control } = useFormContext();
   const { t } = useTranslation("benchmarks");
   const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
   const connections = useConnections();
-  const connection = connectionId ? connections.data?.find((c) => c.id === connectionId) : undefined;
+  const connection = connectionId
+    ? connections.data?.find((c) => c.id === connectionId)
+    : undefined;
 
   if (connection && !connection.prometheusUrl) {
     return (

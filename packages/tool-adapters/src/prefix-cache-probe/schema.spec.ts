@@ -38,9 +38,7 @@ describe("prefixCacheProbeReportSchema", () => {
       stickinessPct: 100,
       deterministic: true,
       perPod: [{ pod: "vllm-0", queries: 50, hits: 40 }],
-      promptSets: [
-        { label: "set-0", dominantPod: "vllm-0", dominantPct: 100, totalRequests: 10 },
-      ],
+      promptSets: [{ label: "set-0", dominantPod: "vllm-0", dominantPct: 100, totalRequests: 10 }],
     });
     expect(r.stickinessPct).toBe(100);
   });

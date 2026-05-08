@@ -1,8 +1,8 @@
 import i18n from "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nextProvider } from "react-i18next";
+import { describe, expect, it, vi } from "vitest";
 import { PrefixCacheProbeParamsForm } from "../PrefixCacheProbeParamsForm";
 
 const mockUseConnections = vi.fn();
@@ -10,7 +10,10 @@ vi.mock("@/features/connections/queries", () => ({
   useConnections: () => mockUseConnections(),
 }));
 
-function Harness({ connectionId, prometheusUrl }: { connectionId: string; prometheusUrl: string | null }) {
+function Harness({
+  connectionId,
+  prometheusUrl,
+}: { connectionId: string; prometheusUrl: string | null }) {
   mockUseConnections.mockReturnValue({
     data: [{ id: connectionId, prometheusUrl }],
   });
@@ -35,6 +38,8 @@ describe("PrefixCacheProbeParamsForm", () => {
 
   it("shows blocking alert when connection.prometheusUrl is null", () => {
     render(<Harness connectionId="c1" prometheusUrl={null} />);
-    expect(screen.getByText(/cannot run prefix-cache validation|无法运行 prefix-cache/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot run prefix-cache validation|无法运行 prefix-cache/i),
+    ).toBeInTheDocument();
   });
 });

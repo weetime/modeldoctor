@@ -36,7 +36,8 @@ interface GenaiPerfParamsFormProps {
 export function GenaiPerfParamsForm({ fieldPrefix = "params" }: GenaiPerfParamsFormProps = {}) {
   const { control, register, setValue } = useFormContext();
   const streaming = useWatch({ control, name: `${fieldPrefix}.streaming` }) as boolean | undefined;
-  const tokenizerOverride = (useWatch({ control, name: `${fieldPrefix}.tokenizer` }) as string | undefined) || undefined;
+  const tokenizerOverride =
+    (useWatch({ control, name: `${fieldPrefix}.tokenizer` }) as string | undefined) || undefined;
 
   const connectionId = useWatch({ control, name: "connectionId" }) as string | undefined;
   const connections = useConnections();
