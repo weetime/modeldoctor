@@ -253,13 +253,16 @@ export function DeploymentRecipesPage() {
   const selectedRecipe =
     selectedModel && selected ? (getRecipe(selectedModel, selected.engineId) ?? null) : null;
 
-  const tabs: { id: CategoryFilter; label: string }[] = [
-    { id: "all", label: t("filters.all") },
-    ...CATEGORY_ORDER.map((id) => ({
-      id: id as CategoryFilter,
-      label: t(`categories.${id}.label`),
-    })),
-  ];
+  const tabs = useMemo<{ id: CategoryFilter; label: string }[]>(
+    () => [
+      { id: "all", label: t("filters.all") },
+      ...CATEGORY_ORDER.map((id) => ({
+        id: id as CategoryFilter,
+        label: t(`categories.${id}.label`),
+      })),
+    ],
+    [t],
+  );
 
   return (
     <>
@@ -306,7 +309,10 @@ export function DeploymentRecipesPage() {
           {groupedModels.length === 0 ? (
             <EmptyState icon={SearchX} title={t("empty.title")} body={t("empty.body")} />
           ) : (
-            <div className="overflow-auto rounded-lg border border-border bg-card">
+            // The matrix wrapper owns its own scroll context so the sticky
+            // <thead> stays pinned. The max-h subtracts PageHeader + toolbar +
+            // page padding + legend from the dynamic viewport height.
+            <div className="max-h-[calc(100dvh-15rem)] overflow-auto rounded-lg border border-border bg-card">
               <table className="min-w-full border-collapse text-sm">
                 <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
                   <tr className="border-b border-border">
