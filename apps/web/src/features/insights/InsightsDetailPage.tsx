@@ -214,7 +214,7 @@ export function InsightsDetailPage() {
               <SelectContent>
                 {RANGES.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {r === "7d" ? "近 7 天" : r === "30d" ? "近 30 天" : "近 90 天"}
+                    {t(`detail.range.${r}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -315,7 +315,7 @@ export function InsightsDetailPage() {
           ))}
         </Tabs>
 
-        {/* AI 智能诊断 — full-width at the bottom */}
+        {/* AI diagnosis — full-width at the bottom */}
         <AiDiagnosisCard
           connectionId={connectionId}
           profileSlug={activeProfile?.slug ?? "default"}

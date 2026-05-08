@@ -31,8 +31,9 @@ export interface ConnectionPickerProps {
   /** Called when the user picks a saved row (or null for Manual / fresh state). */
   onSelect: (id: string | null) => void;
   /** When true, includes a "— Manual —" entry in the dropdown so the consumer
-   * can fall back to manual endpoint editing (used by 端点检测). Default false:
-   * the consumer requires a saved connection (used by 新建基准测试). */
+   * can fall back to manual endpoint editing (used by endpoint diagnostics).
+   * Default false: the consumer requires a saved connection (used by new
+   * benchmark creation flow). */
   allowManual?: boolean;
   /**
    * Override the default curl-paste behavior. When provided, the parsed curl
@@ -49,9 +50,10 @@ export interface ConnectionPickerProps {
 }
 
 /**
- * Shared connection picker chrome — saved-connection dropdown + "+ 新建连接"
- * + "粘贴 cURL" button. Used by `EndpointPicker` (端点检测) and creation
- * flows that need a saved connection (e.g. 新建基准测试).
+ * Shared connection picker chrome — saved-connection dropdown + "New
+ * connection" + "Paste cURL" button. Used by `EndpointPicker` (endpoint
+ * diagnostics) and creation flows that need a saved connection (e.g.
+ * new benchmark creation).
  *
  * Curl-paste behavior is configurable: pass `onCurlParsed` to handle the
  * parsed curl yourself (e.g. to fill manual endpoint fields), or omit it to
@@ -98,8 +100,8 @@ export function ConnectionPicker({
     }
 
     if (onCurlParsed) {
-      // Consumer-driven flow (端点检测): hand back the parsed curl, drop any
-      // saved selection, and reset our local curl state.
+      // Consumer-driven flow (endpoint diagnostics): hand back the parsed curl,
+      // drop any saved selection, and reset our local curl state.
       onCurlParsed(parsed);
       onSelect(null);
       setCurlText("");
@@ -158,7 +160,7 @@ export function ConnectionPicker({
           </SelectContent>
         </Select>
         {/* Inline cURL-paste button only when the consumer asked for the
-         * onCurlParsed flow (端点检测). The default path opens
+         * onCurlParsed flow (endpoint diagnostics). The default path opens
          * ConnectionDialog, which has its own cURL-paste section, so a
          * second affordance here would be redundant. */}
         {onCurlParsed ? (

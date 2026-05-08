@@ -36,7 +36,17 @@
       "fromCache": "from cache",
       "providerMissing": "LLM provider not configured",
       "goToSettings": "Go to settings",
-      "providerDisabled": "AI diagnosis disabled"
+      "providerDisabled": "AI diagnosis disabled",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning",
+        "info": "Info"
+      }
+    },
+    "range": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
     },
     "scenario": {
       "inference": "Inference Benchmark",

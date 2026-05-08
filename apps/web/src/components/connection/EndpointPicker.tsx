@@ -48,8 +48,9 @@ export interface EndpointPickerProps {
  * to inspect — but to actually use it for a request flow they must save it
  * as a new connection first (the `connectionId` is required server-side).
  *
- * The top-row picker chrome (saved-connection dropdown + Manual + + 新建连接
- * + 粘贴 cURL) is shared with `<ConnectionPicker>` so creation pages get the
+ * The top-row picker chrome (saved-connection dropdown + Manual + "New
+ * connection" + "Paste cURL") is shared with `<ConnectionPicker>` so
+ * creation pages get the
  * same UX.
  */
 export function EndpointPicker({

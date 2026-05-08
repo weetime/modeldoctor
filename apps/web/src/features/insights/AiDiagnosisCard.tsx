@@ -17,9 +17,9 @@ interface Props {
 }
 
 const SEV_BADGE = {
-  critical: { emoji: "🔴", label: "高危", cls: "border-rose-500" },
-  warning: { emoji: "🟡", label: "警告", cls: "border-amber-500" },
-  info: { emoji: "🔵", label: "提示", cls: "border-blue-500" },
+  critical: { emoji: "🔴", cls: "border-rose-500" },
+  warning: { emoji: "🟡", cls: "border-amber-500" },
+  info: { emoji: "🔵", cls: "border-blue-500" },
 } as const;
 
 export function AiDiagnosisCard({ connectionId, profileSlug, range, runIds }: Props) {
