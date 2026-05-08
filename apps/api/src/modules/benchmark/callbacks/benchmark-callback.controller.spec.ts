@@ -53,6 +53,7 @@ describe("BenchmarkCallbackController", () => {
   let ctrl: BenchmarkCallbackController;
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     repo = new MockBenchmarkRepo();
     sse = new SseHub();
     ctrl = new BenchmarkCallbackController(repo as never, sse);
