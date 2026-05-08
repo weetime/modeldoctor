@@ -281,6 +281,17 @@
       "throughput": "Throughput (req/s)"
     }
   },
+  "forms": {
+    "prefixCacheProbe": {
+      "promptSets": "Prompt sets",
+      "promptSetsHelp": "How many distinct long prefixes (~500 tokens each) to probe routing with",
+      "requestsPerSet": "Requests per set",
+      "maxTokens": "Max output tokens per request",
+      "promBackoffSec": "Prom scrape wait (s)",
+      "promBackoffSecHelp": "Prometheus default scrape is 15s; keep at least 18s of buffer",
+      "missingPromUrl": "This connection has no Prometheus URL — cannot run prefix-cache validation. Edit the connection to add one."
+    }
+  },
   "reports": {
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",

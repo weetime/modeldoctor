@@ -12,9 +12,11 @@ import type { ScenarioId } from "@modeldoctor/contracts";
 import {
   GENAI_PERF_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
+  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   genaiPerfParamDefaults,
   guidellmParamDefaults,
+  prefixCacheProbeParamDefaults,
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
@@ -27,9 +29,11 @@ const TOOL_CATEGORY_DEFAULTS = {
   vegeta: VEGETA_CATEGORY_DEFAULTS,
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
   "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
+  "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
 } as const;
 import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
+import { PrefixCacheProbeParamsForm } from "./PrefixCacheProbeParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
 
@@ -37,6 +41,7 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
   "genai-perf": genaiPerfParamDefaults,
+  "prefix-cache-probe": prefixCacheProbeParamDefaults,
 };
 
 export interface ToolEditorProps {
@@ -227,7 +232,9 @@ export function ToolParamsForm({
       ? GuidellmParamsForm
       : tool === "vegeta"
         ? VegetaParamsForm
-        : GenaiPerfParamsForm;
+        : tool === "prefix-cache-probe"
+          ? PrefixCacheProbeParamsForm
+          : GenaiPerfParamsForm;
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 

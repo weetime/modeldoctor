@@ -31,6 +31,14 @@ export {
   type GenaiPerfReport,
 } from "./genai-perf/schema.js";
 
+export {
+  prefixCacheProbeParamsSchema,
+  prefixCacheProbeReportSchema,
+  prefixCacheProbeParamDefaults,
+  type PrefixCacheProbeParams,
+  type PrefixCacheProbeReport,
+} from "./prefix-cache-probe/schema.js";
+
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
 
@@ -50,4 +58,5 @@ export {
   GENAI_PERF_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
+  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";

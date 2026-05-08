@@ -281,6 +281,17 @@
       "throughput": "吞吐 (req/s)"
     }
   },
+  "forms": {
+    "prefixCacheProbe": {
+      "promptSets": "前缀组数",
+      "promptSetsHelp": "用几个不同的长前缀（每个 ~500 token）做路由检测",
+      "requestsPerSet": "每组请求数",
+      "maxTokens": "每个请求最大输出 tokens",
+      "promBackoffSec": "Prometheus 抓取等待秒数",
+      "promBackoffSecHelp": "Prom 默认 15s 抓一次；最少留 18s 缓冲",
+      "missingPromUrl": "该连接未配置 Prometheus URL，无法运行 prefix-cache 验证。请在连接编辑里补上。"
+    }
+  },
   "reports": {
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
