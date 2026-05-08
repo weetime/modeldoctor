@@ -133,6 +133,10 @@
     "statusMessage": {
       "title": "Failure reason"
     },
+    "failure": {
+      "toggleStderr": "Show error output (last 200 lines of stderr)",
+      "stderrEmpty": "No stderr captured"
+    },
     "metrics": {
       "title": "Summary metrics",
       "empty": "No metrics recorded for this benchmark."

@@ -278,6 +278,30 @@ export function BenchmarkDetailPage() {
             </AlertDescription>
           </Alert>
         )}
+        {benchmark.status === "failed" && (
+          <details className="mt-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+              {t("detail.failure.toggleStderr")}
+            </summary>
+            {(() => {
+              const stderr = (benchmark.rawOutput as { stderr?: string } | null)?.stderr ?? "";
+              if (!stderr.trim()) {
+                return (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("detail.failure.stderrEmpty")}
+                  </p>
+                );
+              }
+              const lines = stderr.split("\n");
+              const tail = lines.slice(-200).join("\n");
+              return (
+                <pre className="mt-2 max-h-80 overflow-auto rounded bg-background p-3 text-xs">
+                  {tail}
+                </pre>
+              );
+            })()}
+          </details>
+        )}
         {isTerminal ? (
           <>
             {benchmark.baselineId && (

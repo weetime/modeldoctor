@@ -133,6 +133,10 @@
     "statusMessage": {
       "title": "失败原因"
     },
+    "failure": {
+      "toggleStderr": "查看错误输出（stderr 末尾 200 行）",
+      "stderrEmpty": "没有捕获到 stderr 输出"
+    },
     "metrics": {
       "title": "汇总指标",
       "empty": "本次基准测试没有记录指标。"
