@@ -1,7 +1,15 @@
-import type { CategoryMeta, EngineMeta, EngineRecipe, ModelEntry, RecipeStatus } from "./types";
+import type { EngineMeta, EngineRecipe, ModelEntry, RecipeStatus } from "./types";
 
 // ---------------------------------------------------------------------------
 // Static metadata
+//
+// NOTE — UI chrome (page title, tab labels, table headers, drawer field
+// labels) flows through i18n at apps/web/src/locales/*/deployment-recipes.json.
+// The descriptive payload below (model meta, tooltip, notes, resource, params)
+// is intentionally zh-CN-first for V1, mirroring the AI-narrative convention
+// in CLAUDE.md ("AI narrative is zh-CN only for V1"). When we localise the
+// recipe payload, lift these strings into the locale bundle keyed by the
+// model id + engine id.
 // ---------------------------------------------------------------------------
 
 export const ENGINES: EngineMeta[] = [
@@ -15,15 +23,6 @@ export const ENGINES: EngineMeta[] = [
   { id: "infinity", name: "Infinity", vendor: "Michael Feil" },
   { id: "llamacpp", name: "llama.cpp", vendor: "ggml.ai" },
   { id: "comfyui", name: "ComfyUI / Diffusers", vendor: "comfyanonymous · HF" },
-];
-
-export const CATEGORIES: CategoryMeta[] = [
-  { id: "dense", label: "稠密 LLM", description: "Llama / Qwen / Mistral 系" },
-  { id: "moe", label: "MoE 大模型", description: "DeepSeek / Llama4 / GPT-OSS / Qwen3-MoE" },
-  { id: "vlm", label: "多模态 / VLM", description: "Vision-Language Models" },
-  { id: "embedding", label: "Embedding", description: "向量召回 / 检索" },
-  { id: "rerank", label: "Rerank", description: "二阶段重排" },
-  { id: "diffusion", label: "文生图", description: "Diffusion · Image" },
 ];
 
 // ---------------------------------------------------------------------------

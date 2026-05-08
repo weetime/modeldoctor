@@ -20,11 +20,19 @@ export interface EngineMeta {
   vendor: string;
 }
 
-export interface CategoryMeta {
-  id: CategoryId;
-  label: string;
-  description: string;
-}
+/**
+ * Categories are referenced by id only — labels and descriptions live in
+ * `apps/web/src/locales/{zh-CN,en-US}/deployment-recipes.json` under
+ * `categories.<id>.{label,description}`.
+ */
+export const CATEGORY_ORDER: CategoryId[] = [
+  "dense",
+  "moe",
+  "vlm",
+  "embedding",
+  "rerank",
+  "diffusion",
+];
 
 export interface RecipeParam {
   key: string;
