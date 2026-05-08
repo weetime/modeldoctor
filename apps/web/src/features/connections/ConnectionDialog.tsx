@@ -77,6 +77,7 @@ const empty: Partial<ConnectionInput> = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: "",
+  prometheusUrl: null,
   tags: [],
 };
 
@@ -106,6 +107,7 @@ function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
     customHeaders: c.customHeaders,
     queryParams: c.queryParams,
     tokenizerHfId: c.tokenizerHfId ?? "",
+    prometheusUrl: c.prometheusUrl ?? null,
     category: c.category,
     tags: c.tags,
   };
@@ -201,6 +203,7 @@ export function ConnectionDialog({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: values.tokenizerHfId.trim() || null,
+          prometheusUrl: values.prometheusUrl ?? null,
           category: values.category,
           tags: values.tags,
         };
@@ -222,6 +225,7 @@ export function ConnectionDialog({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: values.tokenizerHfId.trim() || null,
+          prometheusUrl: values.prometheusUrl ?? null,
           category: values.category,
           tags: values.tags,
         });
@@ -572,6 +576,32 @@ export function ConnectionDialog({
                       </FormControl>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t("dialog.fields.tokenizerHfIdHelp")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="prometheusUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.prometheusUrl")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          autoComplete="off"
+                          placeholder={t("dialog.fields.prometheusUrlPlaceholder")}
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value === "" ? null : e.target.value)
+                          }
+                        />
+                      </FormControl>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("dialog.fields.prometheusUrlHelp")}
                       </p>
                       <FormMessage />
                     </FormItem>
