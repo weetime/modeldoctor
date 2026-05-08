@@ -119,18 +119,32 @@ export interface ComboboxProps<T> {
 
 ## 4. 审计修复清单
 
-### i18n（运行时硬编码 → locales）
+### i18n 修复
+
+经 grep 复核：渲染层（JSX 里 outputting 的人类语言）真正硬编码中文的只有 insights feature 的 3 个文件。其余文件命中均在 JSDoc / 行内注释里，不影响 UI；CI 守卫扫 CJK 同样会卡这些注释，故一并翻译为英文。
+
+**A. 渲染层 i18n 化（必改）**
 
 | 文件 | 改动 | 新 key |
 |---|---|---|
-| `features/insights/FindingsCard.tsx` | severity label 4 个常量 → `t('severity.critical' \| 'medium' \| 'good' \| 'no_data')` | `insights.severity.{critical,medium,good,no_data}` |
-| `features/insights/AiDiagnosisCard.tsx` | severity label 3 个 → 复用 `insights.severity.*`（critical/warning/info → 与上面合并 schema：critical / warning / info / good / no_data 五值） | 同上扩 |
-| `features/insights/InsightsDetailPage.tsx` | "近 7/30/90 天" 三元 → `insights.range.{last7d,last30d,last90d}` | 同 |
-| `features/benchmarks/BenchmarkDetailPage.tsx` | 1 行硬编码 → 落 `benchmarks.detail.<...>`（实施时 grep 该文件、读上下文确定具体 key 名） | 同 |
-| `features/benchmarks/BenchmarkCreatePage.tsx` | 1 行硬编码 → 落 `benchmarks.create.<...>`（同上） | 同 |
-| `components/connection/EndpointPicker.tsx` | 2 行硬编码 → 复用 `common.endpoint.*`（实施时确认两行语义后定 key） | 同 |
-| `features/deployment-recipes/data.ts` | **不改**，加文件头 `// i18n: zh-CN-only V1, see #<issue>`（实施时建 issue 并填编号） | — |
-| `components/connection/ConnectionPicker.tsx` | 7 行中文均在 JSDoc/注释里（"端点检测 / 新建基准测试 / 默认流"），翻译为英文以通过 CI CJK 扫描；**不改渲染逻辑** | — |
+| `features/insights/FindingsCard.tsx:15-28` | `SEV_BADGE` 中 `label` 字段 4 个中文常量删除；JSX `f.title`/`f.checkId` 处显示 label 时改 `t(\`detail.findings.severity.${f.severity}\`)` | `insights.detail.findings.severity.{crit,warn,good,no_data}` |
+| `features/insights/AiDiagnosisCard.tsx:19-23` | `SEV_BADGE` 中 `label` 字段 3 个中文常量删除；JSX 显示时改 `t(\`detail.ai.severity.${f.severity}\`)` | `insights.detail.ai.severity.{critical,warning,info}` |
+| `features/insights/InsightsDetailPage.tsx:217` | `r === "7d" ? "近 7 天" : ...` 三元改 `t(\`detail.range.${r}\`)` | `insights.detail.range.{7d,30d,90d}` |
+
+**B. 注释翻译（为通过 CI CJK 扫描）**
+
+| 文件 | 行 | 改动 |
+|---|---|---|
+| `components/connection/ConnectionPicker.tsx` | 34, 35, 52-54, 101, 161 | 注释中"端点检测 / 新建基准测试 / 默认流"等翻成英文（"endpoint diagnostics / new benchmark / default flow"） |
+| `components/connection/EndpointPicker.tsx` | 51-52 | 注释"新建连接 / 粘贴 cURL"翻成英文（"new connection / paste cURL"） |
+| `features/benchmarks/BenchmarkDetailPage.tsx` | 363 | 注释 `// Mirror "返回列表"` → `// Mirror "back to list"` |
+| `features/benchmarks/BenchmarkCreatePage.tsx` | 193 | 注释 `{/* Top row: 基本信息 (left) + 目标 (right) */}` → 英文 |
+
+**C. Carve-out**
+
+| 文件 | 改动 |
+|---|---|
+| `features/deployment-recipes/data.ts` | 加文件头 `// i18n: zh-CN-only V1, see #<issue>`（实施时建 GitHub issue 跟踪后续 i18n 化并填编号；CI 脚本路径白名单排除此文件） |
 
 ### 组件复用
 
