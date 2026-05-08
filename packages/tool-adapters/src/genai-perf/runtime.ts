@@ -82,14 +82,15 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
     nextPos++;
   }
 
-  // Tokenizer: per-run override, then connection-level fallback. Omit flag
-  // when neither is set (tool default is to derive from `-m`).
-  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? undefined;
-  if (resolvedTokenizer) {
-    optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
-    optionalArgv.push(resolvedTokenizer);
-    nextPos++;
-  }
+  // Tokenizer: per-run override > connection-level override > connection.model.
+  // connection.model is the final fallback because vLLM/SGLang deployments
+  // typically set model to an HF tokenizer id (e.g. "Qwen/Qwen2.5-0.5B-Instruct").
+  // genai-perf 0.0.16 hard-requires --tokenizer, so we always emit the flag.
+  const resolvedTokenizer =
+    params.tokenizer ?? connection.tokenizerHfId ?? connection.model;
+  optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
+  optionalArgv.push(resolvedTokenizer);
+  nextPos++;
 
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
@@ -122,6 +123,7 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
 genai-perf profile \\
+    --service-kind openai \\
     -m "$1" -u "$2" \\
     --endpoint-type "$3" \\
     --num-prompts "$4" --concurrency "$5" \\

@@ -234,22 +234,25 @@ describe("genai-perf.buildCommand", () => {
     expect(result.argv).toContain("Qwen/Connection");
   });
 
-  it("omits --tokenizer when neither is set", () => {
-    const result = buildCommand({
+  it("emits --service-kind openai (regression: chat endpoints need this)", () => {
+    const r = buildCommand({
       runId: "r1",
       params: baseParams,
-      connection: {
-        baseUrl: "http://x",
-        apiKey: "sk",
-        model: "m",
-        customHeaders: "",
-        queryParams: "",
-        tokenizerHfId: null,
-      },
-      callback: { url: "http://cb", token: "t" },
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
     });
-    const script = result.argv[2];
-    expect(script).not.toContain("--tokenizer");
+    expect(r.argv[2]).toContain("--service-kind openai");
+  });
+
+  it("falls back to connection.model when no params.tokenizer or connection.tokenizerHfId", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: { ...baseParams, tokenizer: undefined },
+      connection: { ...baseConn, tokenizerHfId: null }, // model = "Qwen2.5-0.5B-Instruct"
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.argv[2]).toMatch(/--tokenizer\s+"\$\d+"/);
+    expect(r.argv).toContain("Qwen2.5-0.5B-Instruct"); // baseConn.model
   });
 });
 
