@@ -1,5 +1,6 @@
 import type { Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as toolAdapters from "@modeldoctor/tool-adapters";
 import { SseHub } from "../sse/sse-hub.service.js";
 import { BenchmarkCallbackController } from "./benchmark-callback.controller.js";
 
@@ -157,5 +158,40 @@ describe("BenchmarkCallbackController", () => {
     expect(row?.status).toBe("failed");
     expect((row?.statusMessage as string | undefined) ?? "").toMatch(/report parse/);
     expect(row?.summaryMetrics).toBeNull();
+  });
+
+  it("/finish state=failed preserves runner message and does NOT call parseFinalReport", async () => {
+    const parseFinalReport = vi.fn(() => {
+      throw new Error("should not be called when state=failed");
+    });
+    vi.spyOn(toolAdapters, "byTool").mockReturnValueOnce({
+      name: "guidellm",
+      scenarios: ["inference"],
+      paramsSchema: { parse: (x: unknown) => x } as never,
+      reportSchema: { parse: (x: unknown) => x } as never,
+      paramDefaults: {},
+      buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
+      parseProgress: () => null,
+      parseFinalReport,
+      getMaxDurationSeconds: () => 60,
+    });
+
+    repo.setup("benchmark-1", { id: "benchmark-1", tool: "guidellm", status: "running" });
+    await ctrl.handleFinish("benchmark-1", {
+      state: "failed",
+      exitCode: 137,
+      message: "tool exited with code 137",
+      stdout: "",
+      stderr: "OSError: perf_analyzer not found",
+      files: {},
+    } as never);
+
+    expect(parseFinalReport).not.toHaveBeenCalled();
+    const row = await repo.findById("benchmark-1");
+    expect(row).toMatchObject({
+      status: "failed",
+      statusMessage: "tool exited with code 137",
+      summaryMetrics: null,
+    });
   });
 });

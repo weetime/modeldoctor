@@ -115,16 +115,19 @@ export class BenchmarkCallbackController {
     let message = body.message;
     let summary: unknown = null;
 
-    try {
-      const fileBuffers: Record<string, Buffer> = Object.fromEntries(
-        Object.entries(body.files).map(([k, v]) => [k, Buffer.from(v, "base64")]),
-      );
-      summary = adapter.parseFinalReport(body.stdout, fileBuffers);
-    } catch (e) {
-      finalState = "failed";
-      message = `report parse: ${(e as Error).message}`.slice(0, 2048);
-      summary = null;
+    if (body.state === "completed") {
+      try {
+        const fileBuffers: Record<string, Buffer> = Object.fromEntries(
+          Object.entries(body.files).map(([k, v]) => [k, Buffer.from(v, "base64")]),
+        );
+        summary = adapter.parseFinalReport(body.stdout, fileBuffers);
+      } catch (e) {
+        finalState = "failed";
+        message = `report parse: ${(e as Error).message}`.slice(0, 2048);
+        summary = null;
+      }
     }
+    // state==="failed": preserve runner-supplied message + body.stderr/stdout into rawOutput below.
 
     await this.benchmarks.update(id, {
       status: finalState,
