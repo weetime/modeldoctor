@@ -19,24 +19,18 @@ vi.mock("@/lib/api-client", () => ({
       panels: [
         {
           key: "ttft_p99",
-          group: "topline",
-          panel: "stat",
           unit: "ms",
           unavailable: false,
           series: [{ samples: [[1715212800, 187.4]] }],
         },
         {
           key: "kv_cache_usage",
-          group: "engine",
-          panel: "timeseries",
           unit: "%",
           unavailable: false,
           series: [{ label: "infer-0", samples: [[1715212800, 60]] }],
         },
         {
           key: "stage_breakdown",
-          group: "latency",
-          panel: "timeseries",
           unit: "ms",
           unavailable: true,
           reason: "no_data",

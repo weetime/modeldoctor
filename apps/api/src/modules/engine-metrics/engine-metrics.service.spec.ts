@@ -78,10 +78,17 @@ describe("EngineMetricsService", () => {
     expect(r.engineId).toBe("vllm");
     expect(r.capability).toBe(ENGINE_CAPABILITY.vllm);
     const calls = promClient.queryRange.mock.calls;
+    // Every query must have the placeholder substituted; process-level
+    // metrics (no model_name label) just won't reference the model at all.
+    let modelScopedSeen = 0;
     for (const [args] of calls) {
       expect(args.query).not.toContain("${model}");
-      expect(args.query).toContain("Qwen2.5-7B-Instruct");
+      if (args.query.includes("model_name=")) {
+        expect(args.query).toContain("Qwen2.5-7B-Instruct");
+        modelScopedSeen += 1;
+      }
     }
+    expect(modelScopedSeen).toBeGreaterThan(0);
   });
 
   it("falls through to second variant when first returns no_data", async () => {

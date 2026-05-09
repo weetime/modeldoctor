@@ -3,15 +3,11 @@ import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
 const metrics: EngineMetricSpec[] = [
   {
     key: "active_requests",
-    group: "topline",
-    panel: "gauge",
     unit: "count",
     promql: [{ tag: "v1", expr: `sum(te_request_count{state="running"})` }],
   },
   {
     key: "success_rate",
-    group: "topline",
-    panel: "stat",
     unit: "ratio",
     promql: [
       {
@@ -27,8 +23,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "request_latency_p99",
-    group: "topline",
-    panel: "stat",
     unit: "ms",
     promql: [
       {
@@ -39,22 +33,16 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "tokenize_rate",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [{ tag: "v1", expr: "sum(rate(te_tokenize_count[1m]))" }],
   },
   {
     key: "embedding_rate",
-    group: "throughput",
-    panel: "timeseries",
     unit: "rps",
     promql: [{ tag: "v1", expr: `sum(rate(te_request_count{state="success"}[1m]))` }],
   },
   {
     key: "queue_metrics",
-    group: "engine",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {

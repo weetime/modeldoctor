@@ -30,11 +30,6 @@ describe("vllm manifest", () => {
     }
   });
 
-  it("topline group has 5 panels", () => {
-    const topline = vllmManifest.metrics.filter((m) => m.group === "topline");
-    expect(topline).toHaveLength(5);
-  });
-
   it("snapshot of all rendered PromQL strings is stable", () => {
     const rendered = vllmManifest.metrics.map((m) => ({
       key: m.key,

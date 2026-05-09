@@ -3,15 +3,11 @@ import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
 const metrics: EngineMetricSpec[] = [
   {
     key: "active_requests",
-    group: "topline",
-    panel: "gauge",
     unit: "count",
     promql: [{ tag: "v1", expr: "sum(tgi_batch_current_size)" }],
   },
   {
     key: "ttft_p99",
-    group: "topline",
-    panel: "stat",
     unit: "ms",
     promql: [
       {
@@ -22,8 +18,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "e2e_latency",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -37,8 +31,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "stage_breakdown",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -51,15 +43,11 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "token_throughput_out",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [{ tag: "v1", expr: "sum(rate(tgi_tokenize_total[1m]))" }],
   },
   {
     key: "request_queue_time",
-    group: "throughput",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -70,8 +58,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "scheduler_state",
-    group: "engine",
-    panel: "timeseries",
     unit: "count",
     promql: [
       {

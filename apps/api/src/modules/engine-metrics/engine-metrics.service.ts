@@ -66,9 +66,8 @@ export class EngineMetricsService {
       this.log.warn(`panel ${spec.key} threw: ${(r.reason as Error).message}`);
       return {
         key: spec.key,
-        group: spec.group,
-        panel: spec.panel,
         unit: spec.unit,
+        thresholds: spec.thresholds,
         unavailable: true,
         reason: "prom_error",
         series: [],
@@ -101,9 +100,8 @@ export class EngineMetricsService {
       if (!r.unavailable) {
         return {
           key: spec.key,
-          group: spec.group,
-          panel: spec.panel,
           unit: spec.unit,
+          thresholds: spec.thresholds,
           unavailable: false,
           series: r.series,
         };
@@ -113,9 +111,8 @@ export class EngineMetricsService {
 
     return {
       key: spec.key,
-      group: spec.group,
-      panel: spec.panel,
       unit: spec.unit,
+      thresholds: spec.thresholds,
       unavailable: true,
       reason: lastReason ?? "no_data",
       series: [],

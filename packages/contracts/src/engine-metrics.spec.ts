@@ -2,24 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   engineMetricsSnapshotQuerySchema,
   engineMetricsSnapshotResponseSchema,
-  panelGroupSchema,
-  panelKindSchema,
   panelUnitSchema,
 } from "./engine-metrics.js";
 
 describe("engine-metrics zod schemas", () => {
-  it("panelKindSchema accepts known kinds", () => {
-    for (const v of ["stat", "gauge", "timeseries", "heatmap"]) {
-      expect(panelKindSchema.parse(v)).toBe(v);
-    }
-  });
-
-  it("panelGroupSchema accepts known groups", () => {
-    for (const v of ["topline", "latency", "throughput", "engine", "health"]) {
-      expect(panelGroupSchema.parse(v)).toBe(v);
-    }
-  });
-
   it("panelUnitSchema accepts ms/s/%/ratio/tps/rps/count/bytes", () => {
     for (const v of ["ms", "s", "%", "ratio", "tps", "rps", "count", "bytes"]) {
       expect(panelUnitSchema.parse(v)).toBe(v);
@@ -36,7 +22,7 @@ describe("engine-metrics zod schemas", () => {
     expect(() => engineMetricsSnapshotQuerySchema.parse({ from: "garbage", to: "x" })).toThrow();
   });
 
-  it("snapshot response shape: engineId / capability / panels", () => {
+  it("snapshot response shape: engineId / capability / panels (no panel/group fields)", () => {
     const ok = engineMetricsSnapshotResponseSchema.parse({
       engineId: "vllm",
       capability: "generative",
@@ -48,23 +34,31 @@ describe("engine-metrics zod schemas", () => {
       panels: [
         {
           key: "ttft_p99",
-          group: "topline",
-          panel: "stat",
           unit: "ms",
           unavailable: false,
           series: [{ samples: [[1715212800, 187.4]] }],
         },
         {
           key: "kv_cache_usage",
-          group: "engine",
-          panel: "timeseries",
           unit: "%",
           unavailable: true,
           reason: "no_data",
           series: [],
         },
+        {
+          key: "success_rate",
+          unit: "ratio",
+          thresholds: [
+            { at: 0.95, severity: "ok" },
+            { at: 0.9, severity: "warn" },
+            { at: 0, severity: "crit" },
+          ],
+          unavailable: false,
+          series: [{ samples: [[1715212800, 0.99]] }],
+        },
       ],
     });
-    expect(ok.panels).toHaveLength(2);
+    expect(ok.panels).toHaveLength(3);
+    expect(ok.panels[2].thresholds).toHaveLength(3);
   });
 });

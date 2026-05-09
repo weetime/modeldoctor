@@ -1,22 +1,29 @@
-import type { EngineMetricsPanelResult, PanelGroup } from "@modeldoctor/contracts";
+import {
+  BarChartPanel,
+  type BarChartSeries,
+  Gauge,
+  LineTimeseries,
+  type LineTimeseriesSeries,
+  Stat,
+} from "@/components/charts";
+import type { EngineMetricsPanelResult, EngineMetricsSeries } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { GaugePanel } from "./panels/GaugePanel.js";
-import { HeatmapPanel } from "./panels/HeatmapPanel.js";
-import { StatPanel } from "./panels/StatPanel.js";
-import { TimeseriesPanel } from "./panels/TimeseriesPanel.js";
+import { type Group, vizFor } from "./metric-viz.js";
 import { useEngineMetrics } from "./useEngineMetrics.js";
 
 export interface EngineMetricsSectionProps {
   connectionId: string;
-  startedAt: string; // ISO datetime — benchmark startedAt
-  finishedAt: string; // ISO datetime — benchmark finishedAt
+  /** ISO datetime — benchmark startedAt */
+  startedAt: string;
+  /** ISO datetime — benchmark finishedAt */
+  finishedAt: string;
 }
 
-const GROUP_ORDER: PanelGroup[] = ["topline", "latency", "throughput", "engine", "health"];
+const GROUP_ORDER: Group[] = ["topline", "latency", "throughput", "engine", "health"];
 
-const GROUP_GRID_CLASS: Record<PanelGroup, string> = {
+const GROUP_GRID_CLASS: Record<Group, string> = {
   topline: "grid-cols-1 md:grid-cols-2 lg:grid-cols-5",
   latency: "grid-cols-1 md:grid-cols-3",
   throughput: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
@@ -26,6 +33,25 @@ const GROUP_GRID_CLASS: Record<PanelGroup, string> = {
 
 function shiftIso(iso: string, deltaSeconds: number): string {
   return new Date(new Date(iso).getTime() + deltaSeconds * 1000).toISOString();
+}
+
+function toLineSeries(series: readonly EngineMetricsSeries[]): LineTimeseriesSeries[] {
+  return series.map((s, i) => ({
+    name: s.label ?? `series-${i}`,
+    samples: s.samples,
+  }));
+}
+
+function toBarSeries(series: readonly EngineMetricsSeries[]): BarChartSeries[] {
+  return series.map((s, i) => ({
+    name: s.label ?? `bucket-${i}`,
+    samples: s.samples,
+  }));
+}
+
+function latestValue(series: readonly EngineMetricsSeries[]): number | null {
+  const last = series.flatMap((s) => s.samples).at(-1);
+  return last?.[1] ?? null;
 }
 
 export function EngineMetricsSection({
@@ -68,14 +94,15 @@ export function EngineMetricsSection({
     );
   }
 
-  const byGroup: Record<PanelGroup, EngineMetricsPanelResult[]> = {
+  // Bucket panels by frontend-decided group.
+  const byGroup: Record<Group, EngineMetricsPanelResult[]> = {
     topline: [],
     latency: [],
     throughput: [],
     engine: [],
     health: [],
   };
-  for (const p of data.panels) byGroup[p.group].push(p);
+  for (const p of data.panels) byGroup[vizFor(p.key).group].push(p);
 
   return (
     <div className="space-y-6">
@@ -95,61 +122,71 @@ export function EngineMetricsSection({
               {t(`groups.${group}`)}
             </h4>
             <div className={`grid gap-3 ${GROUP_GRID_CLASS[group]}`}>
-              {panels.map((panel) => {
-                const label = t(`metrics.${panel.key}.label`, {
-                  defaultValue: panel.key,
-                });
-                if (panel.panel === "stat") {
-                  return (
-                    <StatPanel
-                      key={panel.key}
-                      label={label}
-                      unit={panel.unit}
-                      series={panel.series}
-                      unavailable={panel.unavailable}
-                      reason={panel.reason}
-                    />
-                  );
-                }
-                if (panel.panel === "gauge") {
-                  return (
-                    <GaugePanel
-                      key={panel.key}
-                      label={label}
-                      unit={panel.unit}
-                      series={panel.series}
-                      unavailable={panel.unavailable}
-                      reason={panel.reason}
-                    />
-                  );
-                }
-                if (panel.panel === "heatmap") {
-                  return (
-                    <HeatmapPanel
-                      key={panel.key}
-                      label={label}
-                      series={panel.series}
-                      unavailable={panel.unavailable}
-                      reason={panel.reason}
-                    />
-                  );
-                }
-                return (
-                  <TimeseriesPanel
-                    key={panel.key}
-                    label={label}
-                    unit={panel.unit}
-                    series={panel.series}
-                    unavailable={panel.unavailable}
-                    reason={panel.reason}
-                    benchmarkWindow={benchmarkWindow}
-                  />
-                );
-              })}
+              {panels.map((panel) => (
+                <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
+              ))}
             </div>
           </section>
         );
       })}
+    </div>
+  );
+}
+
+interface PanelCardProps {
+  panel: EngineMetricsPanelResult;
+  window: { from: number; to: number };
+}
+
+function PanelCard({ panel, window: w }: PanelCardProps) {
+  const { t } = useTranslation("engine-metrics");
+  const viz = vizFor(panel.key);
+  const label = t(`metrics.${panel.key}.label`, { defaultValue: panel.key });
+  const emptyText: boolean | string = panel.unavailable
+    ? t(`unavailable.${panel.reason ?? "noData"}`, {
+        defaultValue: t("unavailable.noData"),
+      })
+    : false;
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="mb-2 text-xs text-muted-foreground">{label}</div>
+      {viz.kind === "stat" && (
+        <Stat
+          ariaLabel={label}
+          value={latestValue(panel.series)}
+          unit={panel.unit}
+          thresholds={panel.thresholds}
+          empty={emptyText}
+        />
+      )}
+      {viz.kind === "gauge" && (
+        <Gauge
+          ariaLabel={label}
+          value={latestValue(panel.series)}
+          unit={panel.unit}
+          max={viz.gaugeMax}
+          empty={emptyText}
+        />
+      )}
+      {viz.kind === "line" && (
+        <LineTimeseries
+          ariaLabel={label}
+          series={toLineSeries(panel.series)}
+          unit={panel.unit}
+          markArea={w}
+          empty={emptyText}
+        />
+      )}
+      {viz.kind === "bar" && (
+        <BarChartPanel
+          ariaLabel={label}
+          series={toBarSeries(panel.series)}
+          unit={panel.unit}
+          stack={viz.barStack}
+          empty={emptyText}
+        />
+      )}
     </div>
   );
 }

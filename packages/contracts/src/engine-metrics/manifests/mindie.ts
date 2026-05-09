@@ -7,15 +7,11 @@ const M = "${model}";
 const metrics: EngineMetricSpec[] = [
   {
     key: "active_requests",
-    group: "topline",
-    panel: "gauge",
     unit: "count",
     promql: [{ tag: "v1", expr: `sum(mindie_running_request_count{model_name="${M}"})` }],
   },
   {
     key: "ttft_p99",
-    group: "topline",
-    panel: "stat",
     unit: "ms",
     promql: [
       {
@@ -26,8 +22,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "e2e_latency",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -41,8 +35,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "token_throughput_out",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [
       { tag: "v1", expr: `sum(rate(mindie_generation_tokens_total{model_name="${M}"}[1m]))` },
@@ -50,8 +42,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "kv_cache_usage",
-    group: "engine",
-    panel: "timeseries",
     unit: "%",
     promql: [
       {

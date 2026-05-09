@@ -6,12 +6,6 @@ import {
   engineCapabilitySchema,
 } from "./engine.js";
 
-export const panelKindSchema = z.enum(["stat", "gauge", "timeseries", "heatmap"]);
-export type PanelKind = z.infer<typeof panelKindSchema>;
-
-export const panelGroupSchema = z.enum(["topline", "latency", "throughput", "engine", "health"]);
-export type PanelGroup = z.infer<typeof panelGroupSchema>;
-
 export const panelUnitSchema = z.enum(["ms", "s", "%", "ratio", "tps", "rps", "count", "bytes"]);
 export type PanelUnit = z.infer<typeof panelUnitSchema>;
 
@@ -25,16 +19,17 @@ export interface PromQLVariant {
 }
 
 export interface EngineMetricSpec {
-  /** Stable cross-engine semantic key. UI uses it to choose layout slot
-   * + i18n label. Examples: "ttft_p99", "kv_cache_usage", "queue_depth". */
+  /** Stable cross-engine semantic key. Frontend metric-viz registry maps
+   * this key to a chart kind + group. Examples: "ttft_p99", "kv_cache_usage". */
   key: string;
-  group: PanelGroup;
-  panel: PanelKind;
+  /** Unit of the value — drives the formatter on the frontend. Data-only;
+   * does NOT dictate the chart kind. */
   unit: PanelUnit;
   /** PromQL templates. Tried in order; first one returning ANY non-empty
    * series wins. `${model}` is the only allowed interpolation. */
   promql: PromQLVariant[];
-  /** Optional thresholds for stat/gauge color coding. */
+  /** Optional alert thresholds. Data-only; the frontend chooses whether to
+   * use them as color bands (Stat/Gauge) or annotation lines. */
   thresholds?: Array<{ at: number; severity: "ok" | "warn" | "crit" }>;
 }
 
@@ -66,9 +61,17 @@ const engineMetricsSeriesSchema = z.object({
 
 const engineMetricsPanelResultSchema = z.object({
   key: z.string(),
-  group: panelGroupSchema,
-  panel: panelKindSchema,
   unit: panelUnitSchema,
+  /** Echoed thresholds (if any) so the frontend doesn't need to look them up
+   * separately. Data-only; presentation decides what to do with them. */
+  thresholds: z
+    .array(
+      z.object({
+        at: z.number(),
+        severity: z.enum(["ok", "warn", "crit"]),
+      }),
+    )
+    .optional(),
   /** True when no data was retrieved for any reason. */
   unavailable: z.boolean(),
   /** Why unavailable (only present when `unavailable: true`). */

@@ -7,15 +7,11 @@ const M = "${model}";
 const metrics: EngineMetricSpec[] = [
   {
     key: "active_requests",
-    group: "topline",
-    panel: "gauge",
     unit: "count",
     promql: [{ tag: "v1", expr: `sum(sglang:num_running_reqs{model_name="${M}"})` }],
   },
   {
     key: "ttft_p99",
-    group: "topline",
-    panel: "stat",
     unit: "ms",
     promql: [
       {
@@ -26,8 +22,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "success_rate",
-    group: "topline",
-    panel: "stat",
     unit: "ratio",
     promql: [
       {
@@ -43,8 +37,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "e2e_latency",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -58,22 +50,16 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "token_throughput_out",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [{ tag: "v1", expr: `sum(sglang:gen_throughput{model_name="${M}"})` }],
   },
   {
     key: "request_queue_time",
-    group: "throughput",
-    panel: "timeseries",
     unit: "count",
     promql: [{ tag: "v1", expr: `sum(sglang:num_queue_reqs{model_name="${M}"})` }],
   },
   {
     key: "kv_cache_usage",
-    group: "engine",
-    panel: "timeseries",
     unit: "%",
     promql: [
       {
@@ -84,8 +70,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "scheduler_state",
-    group: "engine",
-    panel: "timeseries",
     unit: "count",
     promql: [
       {
@@ -98,8 +82,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "finish_reason",
-    group: "health",
-    panel: "timeseries",
     unit: "rps",
     promql: [
       {

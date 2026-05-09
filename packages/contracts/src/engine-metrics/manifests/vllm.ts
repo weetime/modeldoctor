@@ -9,8 +9,6 @@ const metrics: EngineMetricSpec[] = [
   // ---- topline ----
   {
     key: "success_rate",
-    group: "topline",
-    panel: "stat",
     unit: "ratio",
     promql: [
       {
@@ -29,15 +27,11 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "active_requests",
-    group: "topline",
-    panel: "gauge",
     unit: "count",
     promql: [{ tag: "v1", expr: `sum(vllm:num_requests_running{model_name="${M}"})` }],
   },
   {
     key: "system_efficiency",
-    group: "topline",
-    panel: "stat",
     unit: "ratio",
     promql: [
       {
@@ -48,8 +42,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "ttft_p99",
-    group: "topline",
-    panel: "stat",
     unit: "ms",
     promql: [
       {
@@ -60,16 +52,12 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "preemption_rate",
-    group: "topline",
-    panel: "stat",
     unit: "rps",
     promql: [{ tag: "v1", expr: `sum(rate(vllm:num_preemptions_total{model_name="${M}"}[1m]))` }],
   },
   // ---- latency ----
   {
     key: "e2e_latency",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -83,8 +71,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "stage_breakdown",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -97,8 +83,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "ttft_vs_tpot",
-    group: "latency",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -112,15 +96,11 @@ const metrics: EngineMetricSpec[] = [
   // ---- throughput ----
   {
     key: "token_throughput_in",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [{ tag: "v1", expr: `sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[1m]))` }],
   },
   {
     key: "token_throughput_out",
-    group: "throughput",
-    panel: "timeseries",
     unit: "tps",
     promql: [
       {
@@ -131,8 +111,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "token_io_ratio",
-    group: "throughput",
-    panel: "stat",
     unit: "ratio",
     promql: [
       {
@@ -143,8 +121,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "prefix_cache_savings",
-    group: "throughput",
-    panel: "gauge",
     unit: "%",
     promql: [
       {
@@ -159,8 +135,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "request_queue_time",
-    group: "throughput",
-    panel: "timeseries",
     unit: "ms",
     promql: [
       {
@@ -173,8 +147,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "request_length_heatmap",
-    group: "throughput",
-    panel: "heatmap",
     unit: "count",
     promql: [
       {
@@ -186,8 +158,6 @@ const metrics: EngineMetricSpec[] = [
   // ---- engine ----
   {
     key: "kv_cache_usage",
-    group: "engine",
-    panel: "timeseries",
     unit: "%",
     promql: [
       {
@@ -202,8 +172,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "prefix_cache_hit_rate",
-    group: "engine",
-    panel: "gauge",
     unit: "%",
     promql: [
       {
@@ -218,8 +186,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "scheduler_state",
-    group: "engine",
-    panel: "timeseries",
     unit: "count",
     promql: [
       {
@@ -234,8 +200,6 @@ const metrics: EngineMetricSpec[] = [
   // ---- health ----
   {
     key: "python_gc_memory",
-    group: "health",
-    panel: "timeseries",
     unit: "bytes",
     promql: [
       {
@@ -249,8 +213,6 @@ const metrics: EngineMetricSpec[] = [
   },
   {
     key: "finish_reason",
-    group: "health",
-    panel: "timeseries",
     unit: "rps",
     promql: [
       {

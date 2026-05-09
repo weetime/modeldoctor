@@ -7,9 +7,7 @@ describe("tei manifest", () => {
     expect(teiManifest.metrics).toHaveLength(6);
   });
 
-  it("uses te_ prefix and only topline/throughput/engine groups", () => {
-    const groups = new Set(teiManifest.metrics.map((m) => m.group));
-    expect(groups).toEqual(new Set(["topline", "throughput", "engine"]));
+  it("uses te_ prefix in every PromQL", () => {
     for (const m of teiManifest.metrics) {
       for (const v of m.promql) {
         expect(v.expr).toMatch(/te_/);
