@@ -11,7 +11,7 @@ import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { format } from "date-fns";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { type ChartKind, type Group, vizFor } from "./metric-viz.js";
+import { type Group, vizFor } from "./metric-viz.js";
 import { useEngineMetrics } from "./useEngineMetrics.js";
 
 export interface EngineMetricsSectionProps {
@@ -22,24 +22,19 @@ export interface EngineMetricsSectionProps {
   finishedAt: string;
 }
 
-const GROUP_ORDER: Group[] = ["topline", "latency", "throughput", "engine", "health"];
-
-// Within a group, panels are sub-grouped by chart kind so cards of the same
-// height land on the same row. Mixing Stat (h=120) and Gauge (h=220) in one
-// row would force grid to stretch Stats to 220 — leaving big empty gutters
-// around the number. Kind order is "denser → taller" so the eye scans from
-// top-line numbers down to time-series detail.
-const KIND_ORDER: ChartKind[] = ["stat", "gauge", "line", "bar", "pie"];
-
-// Each kind picks columns that match its natural width. Stats are tiny and
-// can pack 4-up; gauges + line/bar charts need real width for axes/labels.
-const KIND_GRID_CLASS: Record<ChartKind, string> = {
-  stat: "grid-cols-2 md:grid-cols-3 xl:grid-cols-4",
-  gauge: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
-  line: "grid-cols-1 lg:grid-cols-2",
-  bar: "grid-cols-1 lg:grid-cols-2",
-  pie: "grid-cols-1 md:grid-cols-2",
-};
+// Grafana-style 3-section layout:
+//   1. KPI       — all Stat panels in one always-visible row
+//   2. Gauges    — all Gauge panels in one always-visible row
+//   3. Time series — line/bar panels, collapsible per business group
+//
+// Mixing kinds in the same grid row stretched short cards (Stat h=120) up to
+// the row's tallest item (Gauge h=220), leaving big empty gutters. Routing
+// panels by kind at the top level eliminates that.
+//
+// `topline` business group has no time-series — its members are exclusively
+// stats/gauges, which now surface in the KPI/Gauges sections regardless of
+// their original group annotation.
+const TIMESERIES_GROUP_ORDER: Group[] = ["latency", "throughput", "engine", "health"];
 
 function shiftIso(iso: string, deltaSeconds: number): string {
   return new Date(new Date(iso).getTime() + deltaSeconds * 1000).toISOString();
@@ -104,15 +99,22 @@ export function EngineMetricsSection({
     );
   }
 
-  // Bucket panels by frontend-decided group.
-  const byGroup: Record<Group, EngineMetricsPanelResult[]> = {
+  // Three-segment layout: top-level partition by chart kind first.
+  const stats: EngineMetricsPanelResult[] = [];
+  const gauges: EngineMetricsPanelResult[] = [];
+  const tsByGroup: Record<Group, EngineMetricsPanelResult[]> = {
     topline: [],
     latency: [],
     throughput: [],
     engine: [],
     health: [],
   };
-  for (const p of data.panels) byGroup[vizFor(p.key).group].push(p);
+  for (const p of data.panels) {
+    const viz = vizFor(p.key);
+    if (viz.kind === "stat") stats.push(p);
+    else if (viz.kind === "gauge") gauges.push(p);
+    else tsByGroup[viz.group].push(p);
+  }
 
   return (
     <div className="space-y-6">
@@ -123,17 +125,48 @@ export function EngineMetricsSection({
           to: format(new Date(data.window.to), "yyyy-MM-dd HH:mm:ss"),
         })}
       </div>
-      {GROUP_ORDER.map((group) => {
-        const panels = byGroup[group];
+
+      {stats.length > 0 && (
+        <section className="space-y-3">
+          <SectionHeader title={t("sections.kpi")} count={stats.length} />
+          {/* auto-fit lets stat cards tile a full row regardless of count —
+           * 5 stats in a 1200px row → 5-up; on a 1600px row → still 5-up but
+           * each card wider; on a narrow viewport → wraps cleanly. Keeps the
+           * Grafana KPI-row look without us hard-coding column counts. */}
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
+          >
+            {stats.map((panel) => (
+              <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {gauges.length > 0 && (
+        <section className="space-y-3">
+          <SectionHeader title={t("sections.gauges")} count={gauges.length} />
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}
+          >
+            {gauges.map((panel) => (
+              <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {TIMESERIES_GROUP_ORDER.map((group) => {
+        const panels = tsByGroup[group];
         if (panels.length === 0) return null;
-        // Topline + engine groups are the most actionable for compact
-        // benchmark detail viewing — keep them open by default. Latency /
-        // throughput / health collapse to keep the page scannable.
-        const defaultOpen = group === "topline" || group === "engine";
+        // All time-series groups collapse by default — KPIs + Gauges already
+        // surface the at-a-glance state above; the trend blocks are details
+        // the user opens on demand.
         return (
           <details
             key={group}
-            open={defaultOpen}
             className="group rounded-md border border-border bg-card/40"
           >
             <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent/40">
@@ -144,27 +177,26 @@ export function EngineMetricsSection({
                 ▸
               </span>
               <span>{t(`groups.${group}`)}</span>
-              <span className="ml-auto text-[10px] font-normal opacity-70">
-                {panels.length}
-              </span>
+              <span className="ml-auto text-[10px] font-normal opacity-70">{panels.length}</span>
             </summary>
-            <div className="space-y-3 px-3 pb-3 pt-1">
-              {KIND_ORDER.map((kind) => {
-                const subset = panels.filter((p) => vizFor(p.key).kind === kind);
-                if (subset.length === 0) return null;
-                return (
-                  <div key={kind} className={`grid gap-3 ${KIND_GRID_CLASS[kind]}`}>
-                    {subset.map((panel) => (
-                      <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
-                    ))}
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-1 gap-3 px-3 pb-3 pt-1 lg:grid-cols-2">
+              {panels.map((panel) => (
+                <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
+              ))}
             </div>
           </details>
         );
       })}
     </div>
+  );
+}
+
+function SectionHeader({ title, count }: { title: string; count: number }) {
+  return (
+    <h3 className="flex items-center gap-2 text-sm font-semibold">
+      <span>{title}</span>
+      <span className="text-xs font-normal text-muted-foreground">({count})</span>
+    </h3>
   );
 }
 

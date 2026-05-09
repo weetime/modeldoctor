@@ -13,6 +13,11 @@
     "engine": "引擎内部",
     "health": "系统健康"
   },
+  "sections": {
+    "kpi": "关键指标",
+    "gauges": "仪表盘",
+    "timeSeries": "趋势"
+  },
   "metrics": {
     "success_rate": { "label": "成功率" },
     "active_requests": { "label": "进行中请求" },
