@@ -5,6 +5,7 @@ import type {
   CreateConnection,
   ListConnectionsResponse,
   ModalityCategory,
+  ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
@@ -25,6 +26,7 @@ export interface DecryptedConnection {
   category: ModalityCategory;
   tokenizerHfId: string | null;
   prometheusUrl: string | null;
+  serverKind: ServerKind | null;
 }
 
 @Injectable()
@@ -149,6 +151,7 @@ export class ConnectionService {
       category: row.category as ModalityCategory,
       tokenizerHfId: row.tokenizerHfId,
       prometheusUrl: row.prometheusUrl,
+      serverKind: row.serverKind as ServerKind | null,
     };
   }
 

@@ -17,6 +17,7 @@ function makeConn(overrides: Partial<DecryptedConnection> & { id: string }): Dec
     category: "chat",
     tokenizerHfId: null,
     prometheusUrl: null,
+    serverKind: null,
     ...overrides,
   };
 }
