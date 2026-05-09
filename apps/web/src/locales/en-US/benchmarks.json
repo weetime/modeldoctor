@@ -108,6 +108,12 @@
       }
     }
   },
+  "scenarioDescriptions": {
+    "inference": "TTFT / TPOT / single-run throughput baseline",
+    "capacity": "SLO-driven load step sweep",
+    "gateway": "Higress / API path HTTP performance",
+    "prefix-cache-validation": "Verify Higress ai-load-balancer prefix-cache pins same-prefix requests to one vLLM replica"
+  },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
   "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",

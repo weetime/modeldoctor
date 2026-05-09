@@ -37,6 +37,8 @@ import type {
 } from "@modeldoctor/contracts";
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, zhCN } from "date-fns/locale";
+import { useLocaleStore } from "@/stores/locale-store";
 import {
   ArrowRight,
   Copy as CopyIcon,
@@ -65,8 +67,18 @@ interface BenchmarkListShellProps {
   scenario: ScenarioId;
 }
 
+const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
+  inference: "benchmarkInference",
+  capacity: "benchmarkCapacity",
+  gateway: "benchmarkGateway",
+  "prefix-cache-validation": "benchmarkPrefixCache",
+};
+
 export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const { t } = useTranslation("benchmarks");
+  const { t: tSidebar } = useTranslation("sidebar");
+  const locale = useLocaleStore((s) => s.locale);
+  const dateFnsLocale = locale === "zh-CN" ? zhCN : enUS;
   const cfg = SCENARIOS[scenario];
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -205,8 +217,8 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   return (
     <>
       <PageHeader
-        title={cfg.label}
-        subtitle={cfg.description}
+        title={tSidebar(`items.${SCENARIO_SIDEBAR_KEY[scenario]}`)}
+        subtitle={t(`scenarioDescriptions.${scenario}`)}
         rightSlot={
           <div className="flex gap-2">
             <Tooltip>
@@ -308,7 +320,10 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDistanceToNow(new Date(benchmark.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(benchmark.createdAt), {
+                        addSuffix: true,
+                        locale: dateFnsLocale,
+                      })}
                     </TableCell>
                     <TableCell>
                       <Badge variant="default">{benchmark.tool}</Badge>
