@@ -116,17 +116,34 @@ export function EngineMetricsSection({
       {GROUP_ORDER.map((group) => {
         const panels = byGroup[group];
         if (panels.length === 0) return null;
+        // Topline + engine groups are the most actionable for compact
+        // benchmark detail viewing — keep them open by default. Latency /
+        // throughput / health collapse to keep the page scannable.
+        const defaultOpen = group === "topline" || group === "engine";
         return (
-          <section key={group} className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t(`groups.${group}`)}
-            </h4>
-            <div className={`grid gap-3 ${GROUP_GRID_CLASS[group]}`}>
+          <details
+            key={group}
+            open={defaultOpen}
+            className="group rounded-md border border-border bg-card/40"
+          >
+            <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent/40">
+              <span
+                aria-hidden
+                className="inline-block transition-transform duration-150 group-open:rotate-90"
+              >
+                ▸
+              </span>
+              <span>{t(`groups.${group}`)}</span>
+              <span className="ml-auto text-[10px] font-normal opacity-70">
+                {panels.length}
+              </span>
+            </summary>
+            <div className={`grid gap-3 px-3 pb-3 pt-1 ${GROUP_GRID_CLASS[group]}`}>
               {panels.map((panel) => (
                 <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
               ))}
             </div>
-          </section>
+          </details>
         );
       })}
     </div>

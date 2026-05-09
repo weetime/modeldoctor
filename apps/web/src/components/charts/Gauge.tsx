@@ -30,7 +30,7 @@ export function Gauge({
   max,
   loading,
   empty,
-  height = 160,
+  height = 220,
 }: GaugeProps): JSX.Element {
   const tokens = useChartTokens();
   const isEmpty = empty ?? value == null;
@@ -43,17 +43,21 @@ export function Gauge({
           series: [
             {
               type: "gauge",
-              progress: { show: true, width: 8 },
-              axisLine: { lineStyle: { width: 8 } },
+              // Push the gauge close to the panel edges so it visually fills
+              // the card the same way our PieChart does (radius ~70%).
+              radius: "92%",
+              center: ["50%", "58%"],
+              progress: { show: true, width: 14 },
+              axisLine: { lineStyle: { width: 14 } },
               pointer: { show: false },
               axisTick: { show: false },
               splitLine: { show: false },
               axisLabel: { show: false },
               detail: {
                 valueAnimation: false,
-                fontSize: 22,
+                fontSize: 26,
                 fontWeight: 600,
-                offsetCenter: [0, "0%"],
+                offsetCenter: [0, "-12%"],
                 formatter: () => formatPanelValue(value, unit),
               },
               data: [{ value: value ?? 0 }],
