@@ -28,6 +28,7 @@ function abbrev(v: number): string {
 }
 
 function formatBytes(bytes: number): string {
+  if (bytes >= 2 ** 40) return `${(bytes / 2 ** 40).toFixed(1)} TiB`;
   if (bytes >= 2 ** 30) return `${(bytes / 2 ** 30).toFixed(1)} GiB`;
   if (bytes >= 2 ** 20) return `${(bytes / 2 ** 20).toFixed(1)} MiB`;
   if (bytes >= 2 ** 10) return `${(bytes / 2 ** 10).toFixed(0)} KiB`;

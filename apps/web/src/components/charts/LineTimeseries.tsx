@@ -98,7 +98,15 @@ export function LineTimeseries({
             },
           },
         },
-        yAxis: { type: "value" },
+        yAxis: {
+          type: "value",
+          // Mirror the tooltip's unit formatting on the axis labels so byte
+          // counts render as KiB/MiB/GiB/TiB instead of raw "1,800,000,000",
+          // ms/s carry their unit, ratios/percent show "%" etc.
+          axisLabel: {
+            formatter: (v: number) => formatPanelValue(v, unit),
+          },
+        },
         grid: { left: 56, right: 24, top: 56, bottom: 32 },
         series: ecSeries as EChartsOption["series"],
       },
