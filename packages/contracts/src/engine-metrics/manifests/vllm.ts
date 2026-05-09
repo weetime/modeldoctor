@@ -6,6 +6,23 @@ import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
 const M = "${model}";
 
 const metrics: EngineMetricSpec[] = [
+  // ---- throughput — prefix-cache panels lead (two-variant V1/V0 fallback) ----
+  {
+    key: "prefix_cache_savings",
+    group: "throughput",
+    panel: "gauge",
+    unit: "%",
+    promql: [
+      {
+        tag: "v1",
+        expr: `100 * sum(rate(vllm:prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+      {
+        tag: "v0",
+        expr: `100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+  },
   // ---- topline ----
   {
     key: "success_rate",
@@ -141,22 +158,6 @@ const metrics: EngineMetricSpec[] = [
       {
         tag: "v1",
         expr: `sum(rate(vllm:generation_tokens_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[5m])), 1)`,
-      },
-    ],
-  },
-  {
-    key: "prefix_cache_savings",
-    group: "throughput",
-    panel: "gauge",
-    unit: "%",
-    promql: [
-      {
-        tag: "v1",
-        expr: `100 * sum(rate(vllm:prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
-      },
-      {
-        tag: "v0",
-        expr: `100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
       },
     ],
   },
