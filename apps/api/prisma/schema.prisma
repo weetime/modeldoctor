@@ -74,7 +74,7 @@ model Connection {
   // connections (created before this migration) have no value, and the UI
   // does not expose these fields yet.
   prometheusUrl String? @map("prometheus_url")
-  serverKind    String? @map("server_kind") // 'vllm' | 'sglang' | 'tgi' | 'higress' | 'generic'
+  serverKind    String? @map("server_kind") // see serverKindSchema in @modeldoctor/contracts
 
   // HuggingFace tokenizer repo id used by benchmarks (guidellm/genai-perf)
   // when the served `model` name isn't a real HF id. Nullable: existing
