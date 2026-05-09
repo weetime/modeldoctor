@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createConnectionSchema } from "./connection.js";
+import { createConnectionSchema, serverKindSchema } from "./connection.js";
+import { ENGINE_IDS } from "./engine.js";
 
 const validBase = {
   name: "vllm-prod",
@@ -69,5 +70,19 @@ describe("createConnectionSchema — apiKey validation", () => {
       apiKey: 'sk-test$(rm)`backtick`"quote',
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("serverKindSchema after engine SSOT extraction", () => {
+  it("accepts every EngineId plus higress + generic", () => {
+    for (const id of ENGINE_IDS) {
+      expect(serverKindSchema.parse(id)).toBe(id);
+    }
+    expect(serverKindSchema.parse("higress")).toBe("higress");
+    expect(serverKindSchema.parse("generic")).toBe("generic");
+  });
+
+  it("rejects unknown values", () => {
+    expect(() => serverKindSchema.parse("nope")).toThrow();
   });
 });
