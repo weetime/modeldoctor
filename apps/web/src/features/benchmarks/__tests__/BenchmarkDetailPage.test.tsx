@@ -1,6 +1,6 @@
 import type { Benchmark } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -156,7 +156,7 @@ describe("BenchmarkDetailPage", () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark());
     const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    expect(await screen.findByText("smoke")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "smoke" })).toBeInTheDocument();
     // Metadata renders the scenario id where the legacy "kind" used to live.
     expect(screen.getByText("inference")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
@@ -326,7 +326,7 @@ describe("BenchmarkDetailPage", () => {
       makeBenchmark({ status: "failed", statusMessage: null }),
     );
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await screen.findByText("smoke");
+    await screen.findByRole("heading", { name: "smoke" });
     expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
   });
 
@@ -335,7 +335,7 @@ describe("BenchmarkDetailPage", () => {
       makeBenchmark({ status: "completed", statusMessage: "stale message from earlier attempt" }),
     );
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await screen.findByText("smoke");
+    await screen.findByRole("heading", { name: "smoke" });
     expect(screen.queryByText(/Failure reason|失败原因/i)).not.toBeInTheDocument();
   });
 
@@ -364,7 +364,7 @@ describe("BenchmarkDetailPage", () => {
   it("shows the delete button on non-terminal runs", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "running" }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await screen.findByText("smoke");
+    await screen.findByRole("heading", { name: "smoke" });
     expect(screen.getByRole("button", { name: /^Delete$|^删除$/ })).toBeInTheDocument();
   });
 
@@ -557,13 +557,16 @@ describe("BenchmarkDetailPage", () => {
     expect(screen.queryByText(/Distributions|分布图/i)).not.toBeInTheDocument();
   });
 
-  it("back link points to /benchmarks/:scenario based on the loaded benchmark", async () => {
+  it("breadcrumb scenario crumb links to /benchmarks/:scenario based on the loaded benchmark", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({ status: "completed", scenario: "gateway" }),
     );
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    const backLink = await screen.findByRole("link", { name: /Back to list|返回列表/ });
-    expect(backLink).toHaveAttribute("href", "/benchmarks/gateway");
+    // Breadcrumb middle crumb is the scenario list; we don't pin its label
+    // (varies by locale) — match by href instead within the breadcrumb nav.
+    const nav = await screen.findByRole("navigation", { name: /breadcrumb/i });
+    const link = await within(nav).findByRole("link");
+    expect(link).toHaveAttribute("href", "/benchmarks/gateway");
   });
 
   it("mounts DetailVerdictRow when run.baselineId is set", async () => {
@@ -625,7 +628,7 @@ describe("BenchmarkDetailPage", () => {
   it("hides the Cancel button when the run is terminal", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await screen.findByText("smoke");
+    await screen.findByRole("heading", { name: "smoke" });
     expect(
       screen.queryByRole("button", { name: /^Cancel run$|^取消任务$/ }),
     ).not.toBeInTheDocument();
@@ -746,7 +749,7 @@ describe("BenchmarkDetailPage", () => {
       data: { ...defaultConnectionData, prometheusUrl: null, serverKind: "vllm" },
     });
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await screen.findByText("smoke");
+    await screen.findByRole("heading", { name: "smoke" });
     expect(screen.queryByTestId("engine-metrics-section")).toBeNull();
   });
 });

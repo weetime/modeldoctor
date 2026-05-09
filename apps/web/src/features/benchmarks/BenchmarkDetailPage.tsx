@@ -18,16 +18,17 @@ import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
 import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
+import type { ScenarioId } from "@modeldoctor/contracts";
 import {
   migrateVegetaParams,
   prefixCacheProbeReportSchema,
 } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
+import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
@@ -179,8 +180,17 @@ function BenchmarkDetailTabs({
   );
 }
 
+/** Map scenario id → sidebar i18n key for breadcrumb labels. */
+const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
+  inference: "benchmarkInference",
+  capacity: "benchmarkCapacity",
+  gateway: "benchmarkGateway",
+  "prefix-cache-validation": "benchmarkPrefixCache",
+};
+
 export function BenchmarkDetailPage() {
   const { t } = useTranslation("benchmarks");
+  const { t: tSidebar } = useTranslation("sidebar");
   const { id } = useParams<{ id: string }>();
   const { data: benchmark, isLoading, isError, error } = useBenchmarkDetail(id ?? "");
   // Loaded eagerly so the rerun handler can substitute the current
@@ -280,11 +290,21 @@ export function BenchmarkDetailPage() {
     }
   }
 
+  const breadcrumbs = [
+    { label: tSidebar("groups.benchmarks") },
+    {
+      label: tSidebar(`items.${SCENARIO_SIDEBAR_KEY[benchmark.scenario as ScenarioId]}`),
+      to: `/benchmarks/${benchmark.scenario}`,
+    },
+    { label: benchmark.name },
+  ];
+
   return (
     <>
       <PageHeader
         title={benchmark.name}
         subtitle={subtitle}
+        breadcrumbs={breadcrumbs}
         rightSlot={
           <div className="flex items-center gap-2">
             {isTerminal &&
@@ -334,12 +354,6 @@ export function BenchmarkDetailPage() {
             )}
             <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
               {t("detail.delete.button")}
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to={`/benchmarks/${benchmark.scenario}`}>
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                {t("detail.back")}
-              </Link>
             </Button>
           </div>
         }
