@@ -33,9 +33,7 @@ describe("engine-metrics zod schemas", () => {
       step: 15,
     });
     expect(ok.step).toBe(15);
-    expect(() =>
-      engineMetricsSnapshotQuerySchema.parse({ from: "garbage", to: "x" }),
-    ).toThrow();
+    expect(() => engineMetricsSnapshotQuerySchema.parse({ from: "garbage", to: "x" })).toThrow();
   });
 
   it("snapshot response shape: engineId / capability / panels", () => {

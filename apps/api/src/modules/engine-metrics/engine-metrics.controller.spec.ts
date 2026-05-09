@@ -30,15 +30,11 @@ describe("EngineMetricsController", () => {
       panels: [],
     };
     svc.fetchSnapshot.mockResolvedValueOnce(sample);
-    const result = await ctrl.snapshot(
-      { sub: "u1" } as never,
-      "c1",
-      {
-        from: "2026-05-09T00:00:00.000Z",
-        to: "2026-05-09T00:01:00.000Z",
-        step: 15,
-      },
-    );
+    const result = await ctrl.snapshot({ sub: "u1" } as never, "c1", {
+      from: "2026-05-09T00:00:00.000Z",
+      to: "2026-05-09T00:01:00.000Z",
+      step: 15,
+    });
     expect(svc.fetchSnapshot).toHaveBeenCalledWith("u1", "c1", {
       from: "2026-05-09T00:00:00.000Z",
       to: "2026-05-09T00:01:00.000Z",

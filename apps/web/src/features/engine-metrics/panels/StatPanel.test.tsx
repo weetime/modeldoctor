@@ -8,7 +8,14 @@ describe("<StatPanel>", () => {
       <StatPanel
         label="TTFT P99"
         unit="ms"
-        series={[{ samples: [[100, 100], [200, 187.4]] }]}
+        series={[
+          {
+            samples: [
+              [100, 100],
+              [200, 187.4],
+            ],
+          },
+        ]}
         unavailable={false}
       />,
     );
@@ -16,20 +23,10 @@ describe("<StatPanel>", () => {
   });
 
   it("renders unavailable placeholder when flagged", () => {
-    render(
-      <StatPanel
-        label="X"
-        unit="count"
-        series={[]}
-        unavailable
-        reason="not_supported"
-      />,
-    );
+    render(<StatPanel label="X" unit="count" series={[]} unavailable reason="not_supported" />);
     // The placeholder shows the i18n unavailable string. Without i18n setup
     // in this minimal test, the literal i18n key may render — accept either.
-    expect(
-      screen.getByText(/not.supported|not reported|不上报|unavailable/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/not.supported|not reported|不上报|unavailable/i)).toBeInTheDocument();
   });
 
   it("colors per threshold severity", () => {

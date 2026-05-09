@@ -33,8 +33,7 @@ export function TimeseriesPanel({
         {
           tooltip: {
             trigger: "axis",
-            valueFormatter: (v) =>
-              typeof v === "number" ? formatPanelValue(v, unit) : String(v),
+            valueFormatter: (v) => (typeof v === "number" ? formatPanelValue(v, unit) : String(v)),
           },
           legend: {
             data: series.map((s, i) => s.label ?? `series-${i}`),
@@ -80,12 +79,7 @@ export function TimeseriesPanel({
           {t(`unavailable.${reason ?? "noData"}`, { defaultValue: t("unavailable.noData") })}
         </div>
       ) : (
-        <ReactECharts
-          option={option}
-          style={{ height: 220, width: "100%" }}
-          notMerge
-          lazyUpdate
-        />
+        <ReactECharts option={option} style={{ height: 220, width: "100%" }} notMerge lazyUpdate />
       )}
     </div>
   );

@@ -33,7 +33,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.99, sum by (le) (rate(te_request_duration_seconds_bucket[5m]))) * 1000`,
+        expr: "histogram_quantile(0.99, sum by (le) (rate(te_request_duration_seconds_bucket[5m]))) * 1000",
       },
     ],
   },
@@ -42,7 +42,7 @@ const metrics: EngineMetricSpec[] = [
     group: "throughput",
     panel: "timeseries",
     unit: "tps",
-    promql: [{ tag: "v1", expr: `sum(rate(te_tokenize_count[1m]))` }],
+    promql: [{ tag: "v1", expr: "sum(rate(te_tokenize_count[1m]))" }],
   },
   {
     key: "embedding_rate",

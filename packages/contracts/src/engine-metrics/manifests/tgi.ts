@@ -6,7 +6,7 @@ const metrics: EngineMetricSpec[] = [
     group: "topline",
     panel: "gauge",
     unit: "count",
-    promql: [{ tag: "v1", expr: `sum(tgi_batch_current_size)` }],
+    promql: [{ tag: "v1", expr: "sum(tgi_batch_current_size)" }],
   },
   {
     key: "ttft_p99",
@@ -16,7 +16,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.99, sum by (le) (rate(tgi_request_inference_duration_bucket[5m]))) * 1000`,
+        expr: "histogram_quantile(0.99, sum by (le) (rate(tgi_request_inference_duration_bucket[5m]))) * 1000",
       },
     ],
   },
@@ -54,7 +54,7 @@ const metrics: EngineMetricSpec[] = [
     group: "throughput",
     panel: "timeseries",
     unit: "tps",
-    promql: [{ tag: "v1", expr: `sum(rate(tgi_tokenize_total[1m]))` }],
+    promql: [{ tag: "v1", expr: "sum(rate(tgi_tokenize_total[1m]))" }],
   },
   {
     key: "request_queue_time",
@@ -64,7 +64,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.99, sum by (le) (rate(tgi_request_queue_duration_bucket[1m]))) * 1000`,
+        expr: "histogram_quantile(0.99, sum by (le) (rate(tgi_request_queue_duration_bucket[1m]))) * 1000",
       },
     ],
   },

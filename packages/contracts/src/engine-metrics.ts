@@ -1,28 +1,18 @@
 import { z } from "zod";
-import { ENGINE_IDS, type EngineCapability, type EngineId, engineCapabilitySchema } from "./engine.js";
+import {
+  ENGINE_IDS,
+  type EngineCapability,
+  type EngineId,
+  engineCapabilitySchema,
+} from "./engine.js";
 
 export const panelKindSchema = z.enum(["stat", "gauge", "timeseries", "heatmap"]);
 export type PanelKind = z.infer<typeof panelKindSchema>;
 
-export const panelGroupSchema = z.enum([
-  "topline",
-  "latency",
-  "throughput",
-  "engine",
-  "health",
-]);
+export const panelGroupSchema = z.enum(["topline", "latency", "throughput", "engine", "health"]);
 export type PanelGroup = z.infer<typeof panelGroupSchema>;
 
-export const panelUnitSchema = z.enum([
-  "ms",
-  "s",
-  "%",
-  "ratio",
-  "tps",
-  "rps",
-  "count",
-  "bytes",
-]);
+export const panelUnitSchema = z.enum(["ms", "s", "%", "ratio", "tps", "rps", "count", "bytes"]);
 export type PanelUnit = z.infer<typeof panelUnitSchema>;
 
 /**
@@ -96,8 +86,6 @@ export const engineMetricsSnapshotResponseSchema = z.object({
   }),
   panels: z.array(engineMetricsPanelResultSchema),
 });
-export type EngineMetricsSnapshotResponse = z.infer<
-  typeof engineMetricsSnapshotResponseSchema
->;
+export type EngineMetricsSnapshotResponse = z.infer<typeof engineMetricsSnapshotResponseSchema>;
 export type EngineMetricsPanelResult = z.infer<typeof engineMetricsPanelResultSchema>;
 export type EngineMetricsSeries = z.infer<typeof engineMetricsSeriesSchema>;

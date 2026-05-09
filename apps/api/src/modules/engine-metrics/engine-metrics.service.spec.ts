@@ -1,7 +1,4 @@
-import {
-  ENGINE_CAPABILITY,
-  getEngineManifest,
-} from "@modeldoctor/contracts";
+import { ENGINE_CAPABILITY, getEngineManifest } from "@modeldoctor/contracts";
 import { Test } from "@nestjs/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectionService, type DecryptedConnection } from "../connection/connection.service.js";
@@ -45,9 +42,7 @@ describe("EngineMetricsService", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("rejects when connection lacks prometheusUrl (422)", async () => {
-    connections.getOwnedDecrypted.mockResolvedValueOnce(
-      makeConn({ prometheusUrl: null }),
-    );
+    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn({ prometheusUrl: null }));
     await expect(
       svc.fetchSnapshot("u1", "c1", {
         from: "2026-05-09T00:00:00.000Z",
@@ -57,9 +52,7 @@ describe("EngineMetricsService", () => {
   });
 
   it("rejects when serverKind has no manifest (e.g. higress) (422)", async () => {
-    connections.getOwnedDecrypted.mockResolvedValueOnce(
-      makeConn({ serverKind: "higress" }),
-    );
+    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn({ serverKind: "higress" }));
     await expect(
       svc.fetchSnapshot("u1", "c1", {
         from: "2026-05-09T00:00:00.000Z",
@@ -80,13 +73,13 @@ describe("EngineMetricsService", () => {
       step: 15,
     });
     const manifest = getEngineManifest("vllm");
-    expect(r.panels).toHaveLength(manifest!.metrics.length);
+    expect(r.panels).toHaveLength(manifest?.metrics.length);
     expect(r.engineId).toBe("vllm");
     expect(r.capability).toBe(ENGINE_CAPABILITY.vllm);
     const calls = promClient.queryRange.mock.calls;
     for (const [args] of calls) {
       expect(args.query).not.toContain("${model}");
-      expect(args.query).toContain('Qwen2.5-7B-Instruct');
+      expect(args.query).toContain("Qwen2.5-7B-Instruct");
     }
   });
 
@@ -98,7 +91,10 @@ describe("EngineMetricsService", () => {
     // v1 prefix_cache_*, v0 gpu_prefix_cache_*), simulate v1 having no data so
     // we fall through to v0.
     promClient.queryRange.mockImplementation(async (args: { query: string }) => {
-      if (args.query.includes("vllm:prefix_cache_") && !args.query.includes("vllm:gpu_prefix_cache_")) {
+      if (
+        args.query.includes("vllm:prefix_cache_") &&
+        !args.query.includes("vllm:gpu_prefix_cache_")
+      ) {
         // v1 variant — pretend no data, force fallthrough
         return { unavailable: true, reason: "no_data", series: [] };
       }

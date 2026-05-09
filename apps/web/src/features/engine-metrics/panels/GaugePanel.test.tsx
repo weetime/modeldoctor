@@ -23,9 +23,7 @@ describe("<GaugePanel>", () => {
   });
 
   it("renders unavailable placeholder", () => {
-    render(
-      <GaugePanel label="x" unit="count" series={[]} unavailable reason="no_data" />,
-    );
+    render(<GaugePanel label="x" unit="count" series={[]} unavailable reason="no_data" />);
     expect(screen.queryByTestId("echart")).toBeNull();
   });
 });

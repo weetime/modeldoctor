@@ -1,9 +1,9 @@
+import { themed, useChartTokens } from "@/components/charts/_shared";
 import type { EngineMetricsPanelResult, PanelUnit } from "@modeldoctor/contracts";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { themed, useChartTokens } from "@/components/charts/_shared";
 import { formatPanelValue } from "./format-unit.js";
 
 export interface GaugePanelProps {
@@ -59,12 +59,7 @@ export function GaugePanel({ label, unit, series, unavailable, reason }: GaugePa
           {t(`unavailable.${reason ?? "noData"}`, { defaultValue: t("unavailable.noData") })}
         </div>
       ) : (
-        <ReactECharts
-          option={option}
-          style={{ height: 140, width: "100%" }}
-          notMerge
-          lazyUpdate
-        />
+        <ReactECharts option={option} style={{ height: 140, width: "100%" }} notMerge lazyUpdate />
       )}
     </div>
   );

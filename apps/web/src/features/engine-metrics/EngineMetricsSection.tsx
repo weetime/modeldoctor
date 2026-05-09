@@ -1,7 +1,4 @@
-import type {
-  EngineMetricsPanelResult,
-  PanelGroup,
-} from "@modeldoctor/contracts";
+import type { EngineMetricsPanelResult, PanelGroup } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

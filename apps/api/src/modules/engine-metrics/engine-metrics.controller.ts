@@ -12,9 +12,7 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { EngineMetricsService } from "./engine-metrics.service.js";
 
-class EngineMetricsSnapshotResponseDto extends createZodDto(
-  engineMetricsSnapshotResponseSchema,
-) {}
+class EngineMetricsSnapshotResponseDto extends createZodDto(engineMetricsSnapshotResponseSchema) {}
 
 @ApiTags("engine-metrics")
 @Controller("engine-metrics")

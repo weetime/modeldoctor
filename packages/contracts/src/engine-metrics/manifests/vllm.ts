@@ -29,9 +29,7 @@ const metrics: EngineMetricSpec[] = [
     group: "topline",
     panel: "gauge",
     unit: "count",
-    promql: [
-      { tag: "v1", expr: `sum(vllm:num_requests_running{model_name="${M}"})` },
-    ],
+    promql: [{ tag: "v1", expr: `sum(vllm:num_requests_running{model_name="${M}"})` }],
   },
   {
     key: "system_efficiency",
@@ -62,9 +60,7 @@ const metrics: EngineMetricSpec[] = [
     group: "topline",
     panel: "stat",
     unit: "rps",
-    promql: [
-      { tag: "v1", expr: `sum(rate(vllm:num_preemptions_total{model_name="${M}"}[1m]))` },
-    ],
+    promql: [{ tag: "v1", expr: `sum(rate(vllm:num_preemptions_total{model_name="${M}"}[1m]))` }],
   },
   // ---- latency ----
   {
@@ -116,9 +112,7 @@ const metrics: EngineMetricSpec[] = [
     group: "throughput",
     panel: "timeseries",
     unit: "tps",
-    promql: [
-      { tag: "v1", expr: `sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[1m]))` },
-    ],
+    promql: [{ tag: "v1", expr: `sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[1m]))` }],
   },
   {
     key: "token_throughput_out",

@@ -15,7 +15,13 @@ describe("<TimeseriesPanel>", () => {
         label="kv_cache_usage"
         unit="%"
         series={[
-          { label: "infer-0", samples: [[1715212800, 60], [1715212815, 75]] },
+          {
+            label: "infer-0",
+            samples: [
+              [1715212800, 60],
+              [1715212815, 75],
+            ],
+          },
           { label: "infer-1", samples: [[1715212800, 50]] },
         ]}
         unavailable={false}

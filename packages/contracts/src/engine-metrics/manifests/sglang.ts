@@ -68,9 +68,7 @@ const metrics: EngineMetricSpec[] = [
     group: "throughput",
     panel: "timeseries",
     unit: "count",
-    promql: [
-      { tag: "v1", expr: `sum(sglang:num_queue_reqs{model_name="${M}"})` },
-    ],
+    promql: [{ tag: "v1", expr: `sum(sglang:num_queue_reqs{model_name="${M}"})` }],
   },
   {
     key: "kv_cache_usage",

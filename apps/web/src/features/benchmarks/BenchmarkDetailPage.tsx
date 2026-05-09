@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
+import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
 import type { Benchmark } from "@modeldoctor/contracts";
 import {
   migrateVegetaParams,
@@ -41,7 +42,6 @@ import {
   useCreateBenchmark,
   useDeleteBenchmark,
 } from "./queries";
-import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
 import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
@@ -341,9 +341,7 @@ export function BenchmarkDetailPage() {
               benchmark.startedAt &&
               benchmark.completedAt && (
                 <section>
-                  <h3 className="mb-3 text-sm font-semibold">
-                    {t("detail.engineMetrics.title")}
-                  </h3>
+                  <h3 className="mb-3 text-sm font-semibold">{t("detail.engineMetrics.title")}</h3>
                   <EngineMetricsSection
                     connectionId={rerunConnection.id}
                     startedAt={benchmark.startedAt}

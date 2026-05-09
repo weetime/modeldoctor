@@ -83,7 +83,9 @@ export class PromClient {
       }
       const series: PromSeries[] = result.map((row) => ({
         label: pickLabel(row.metric),
-        samples: (row.values ?? []).map(([ts, v]) => [ts, Number.parseFloat(v)] as [number, number]),
+        samples: (row.values ?? []).map(
+          ([ts, v]) => [ts, Number.parseFloat(v)] as [number, number],
+        ),
       }));
       return { unavailable: false, series };
     } catch (err) {

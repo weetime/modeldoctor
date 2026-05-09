@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  ENGINE_CAPABILITY,
-  ENGINE_DISPLAY_NAME,
-  ENGINE_IDS,
-  type EngineId,
-} from "./engine.js";
+import { ENGINE_CAPABILITY, ENGINE_DISPLAY_NAME, ENGINE_IDS, type EngineId } from "./engine.js";
 
 describe("engine SSOT", () => {
   it("declares all 10 engines exactly once", () => {
@@ -25,9 +20,7 @@ describe("engine SSOT", () => {
   });
 
   it("classifies tei + infinity as embedding", () => {
-    const embedding: EngineId[] = ENGINE_IDS.filter(
-      (id) => ENGINE_CAPABILITY[id] === "embedding",
-    );
+    const embedding: EngineId[] = ENGINE_IDS.filter((id) => ENGINE_CAPABILITY[id] === "embedding");
     expect(new Set(embedding)).toEqual(new Set(["tei", "infinity"]));
   });
 });

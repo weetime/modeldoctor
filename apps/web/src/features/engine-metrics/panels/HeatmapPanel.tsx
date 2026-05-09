@@ -46,12 +46,7 @@ export function HeatmapPanel({ label, series, unavailable, reason }: HeatmapPane
           {t(`unavailable.${reason ?? "noData"}`, { defaultValue: t("unavailable.noData") })}
         </div>
       ) : (
-        <ReactECharts
-          option={option}
-          style={{ height: 220, width: "100%" }}
-          notMerge
-          lazyUpdate
-        />
+        <ReactECharts option={option} style={{ height: 220, width: "100%" }} notMerge lazyUpdate />
       )}
     </div>
   );
