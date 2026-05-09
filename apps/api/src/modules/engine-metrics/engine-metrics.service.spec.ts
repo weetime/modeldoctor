@@ -73,7 +73,8 @@ describe("EngineMetricsService", () => {
       step: 15,
     });
     const manifest = getEngineManifest("vllm");
-    expect(r.panels).toHaveLength(manifest?.metrics.length);
+    expect(manifest).not.toBeNull();
+    expect(r.panels).toHaveLength(manifest?.metrics.length ?? -1);
     expect(r.engineId).toBe("vllm");
     expect(r.capability).toBe(ENGINE_CAPABILITY.vllm);
     const calls = promClient.queryRange.mock.calls;
