@@ -1,5 +1,8 @@
 import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
 
+// M is the literal placeholder string `${model}` — service.fetchSnapshot
+// does the runtime replacement. We assign it once to a constant so the
+// surrounding template-literal noise stays readable.
 const M = "${model}";
 
 const metrics: EngineMetricSpec[] = [
@@ -72,7 +75,10 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+        expr:
+          `label_replace(histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "p50", "", ".*")` +
+          ` or label_replace(histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "p95", "", ".*")` +
+          ` or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "p99", "", ".*")`,
       },
     ],
   },
@@ -84,7 +90,9 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `(sum(rate(vllm:time_in_prefill_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="${M}"}[1m])), 1)) * 1000 or (sum(rate(vllm:time_in_decode_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="${M}"}[1m])), 1)) * 1000`,
+        expr:
+          `label_replace((sum(rate(vllm:time_in_prefill_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*")` +
+          ` or label_replace((sum(rate(vllm:time_in_decode_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")`,
       },
     ],
   },
@@ -96,7 +104,9 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+        expr:
+          `label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "ttft_p99", "", ".*")` +
+          ` or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "tpot_p99", "", ".*")`,
       },
     ],
   },
@@ -158,7 +168,9 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `histogram_quantile(0.5, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+        expr:
+          `label_replace(histogram_quantile(0.50, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "p50", "", ".*")` +
+          ` or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000, "series", "p99", "", ".*")`,
       },
     ],
   },
@@ -183,7 +195,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `100 * vllm:gpu_cache_usage_perc{model_name="${M}"}`,
+        expr: `clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="${M}"})`,
       },
     ],
   },
@@ -211,7 +223,10 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `sum(vllm:num_requests_running{model_name="${M}"}) or sum(vllm:num_requests_waiting{model_name="${M}"}) or sum(vllm:num_requests_swapped{model_name="${M}"})`,
+        expr:
+          `label_replace(sum(vllm:num_requests_running{model_name="${M}"}), "series", "running", "", ".*")` +
+          ` or label_replace(sum(vllm:num_requests_waiting{model_name="${M}"}), "series", "waiting", "", ".*")` +
+          ` or label_replace(sum(vllm:num_requests_swapped{model_name="${M}"}), "series", "swapped", "", ".*")`,
       },
     ],
   },
@@ -224,7 +239,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `process_resident_memory_bytes{job=~".*vllm.*"} or python_gc_collections_total{job=~".*vllm.*",model_name="${M}"}`,
+        expr: `process_resident_memory_bytes{job=~".*vllm.*",model_name="${M}"}`,
       },
     ],
   },

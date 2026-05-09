@@ -17,11 +17,13 @@ describe("vllm manifest", () => {
     }
   });
 
-  it("has V0/V1 dual variants for prefix-cache metrics", () => {
-    const prefix = vllmManifest.metrics.find((m) => m.key === "prefix_cache_hit_rate");
-    expect(prefix).toBeDefined();
-    const tags = (prefix?.promql ?? []).map((v) => v.tag);
-    expect(tags).toEqual(expect.arrayContaining(["v1", "v0"]));
+  it("has V0/V1 dual variants for both prefix-cache metrics", () => {
+    for (const key of ["prefix_cache_hit_rate", "prefix_cache_savings"]) {
+      const m = vllmManifest.metrics.find((x) => x.key === key);
+      expect(m).toBeDefined();
+      const tags = (m?.promql ?? []).map((v) => v.tag);
+      expect(tags).toEqual(expect.arrayContaining(["v1", "v0"]));
+    }
   });
 
   it("topline group has 5 panels", () => {

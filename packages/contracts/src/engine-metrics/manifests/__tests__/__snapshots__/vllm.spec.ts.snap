@@ -34,19 +34,19 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+      "label_replace(histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="test-model"}[1m]))) * 1000, "series", "p50", "", ".*") or label_replace(histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000, "series", "p95", "", ".*") or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000, "series", "p99", "", ".*")",
     ],
     "key": "e2e_latency",
   },
   {
     "exprs": [
-      "(sum(rate(vllm:time_in_prefill_seconds_sum{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000 or (sum(rate(vllm:time_in_decode_seconds_sum{model_name="\${model}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000",
+      "label_replace((sum(rate(vllm:time_in_prefill_seconds_sum{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*") or label_replace((sum(rate(vllm:time_in_decode_seconds_sum{model_name="\${model}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")",
     ],
     "key": "stage_breakdown",
   },
   {
     "exprs": [
-      "histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+      "label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="test-model"}[1m]))) * 1000, "series", "ttft_p99", "", ".*") or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="\${model}"}[1m]))) * 1000, "series", "tpot_p99", "", ".*")",
     ],
     "key": "ttft_vs_tpot",
   },
@@ -77,7 +77,7 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "histogram_quantile(0.5, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+      "label_replace(histogram_quantile(0.50, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="test-model"}[1m]))) * 1000, "series", "p50", "", ".*") or label_replace(histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="\${model}"}[1m]))) * 1000, "series", "p99", "", ".*")",
     ],
     "key": "request_queue_time",
   },
@@ -89,7 +89,7 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "100 * vllm:gpu_cache_usage_perc{model_name="test-model"}",
+      "clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="test-model"})",
     ],
     "key": "kv_cache_usage",
   },
@@ -102,13 +102,13 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "sum(vllm:num_requests_running{model_name="test-model"}) or sum(vllm:num_requests_waiting{model_name="\${model}"}) or sum(vllm:num_requests_swapped{model_name="\${model}"})",
+      "label_replace(sum(vllm:num_requests_running{model_name="test-model"}), "series", "running", "", ".*") or label_replace(sum(vllm:num_requests_waiting{model_name="\${model}"}), "series", "waiting", "", ".*") or label_replace(sum(vllm:num_requests_swapped{model_name="\${model}"}), "series", "swapped", "", ".*")",
     ],
     "key": "scheduler_state",
   },
   {
     "exprs": [
-      "process_resident_memory_bytes{job=~".*vllm.*"} or python_gc_collections_total{job=~".*vllm.*",model_name="test-model"}",
+      "process_resident_memory_bytes{job=~".*vllm.*",model_name="test-model"}",
     ],
     "key": "python_gc_memory",
   },
