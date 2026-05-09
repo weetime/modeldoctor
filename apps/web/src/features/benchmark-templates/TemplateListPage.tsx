@@ -91,8 +91,17 @@ export function TemplateListPage() {
 
   return (
     <>
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <div className="mx-auto max-w-6xl space-y-4 px-8 py-6">
+      <PageHeader
+        title={t("title")}
+        subtitle={t("subtitle")}
+        rightSlot={
+          <Button onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}>
+            <Plus className="mr-1 h-4 w-4" />
+            {t("actions.new")}
+          </Button>
+        }
+      />
+      <div className="space-y-6 px-8 py-6">
         <div className="flex flex-wrap items-center gap-3">
           <Input
             id={searchId}
@@ -112,12 +121,6 @@ export function TemplateListPage() {
             />
             {t("list.filters.officialOnly")}
           </label>
-          <div className="ml-auto">
-            <Button onClick={() => navigate(`/benchmark-templates/new?scenario=${scenario}`)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("actions.new")}
-            </Button>
-          </div>
         </div>
 
         <Tabs value={scenario} onValueChange={(v) => setParam("scenario", v)}>
