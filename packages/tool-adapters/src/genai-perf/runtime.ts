@@ -140,7 +140,9 @@ genai-perf profile \\
     --header "Authorization: Bearer $OPENAI_API_KEY" \\
     $STREAMING${optionalTokenFlags} \\
     --profile-export-file profile_export.json
-find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\; && [ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure
+find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\;
+find artifacts -name profile_export.json -exec cp {} ./profile_export.json \\;
+[ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure. profile_export.json (perf_analyzer raw, optional) is best-effort — its absence doesn't fail the run.
 
   return {
     argv: [
@@ -167,6 +169,12 @@ find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export
       // the find-and-copy step in the script lifts this file out of the dynamic
       // artifact subdirectory into cwd where the runner can collect it.
       profile: "profile_export_genai_perf.json",
+      // perf_analyzer raw per-request timing (timestamps in ns). Used by
+      // benchmark-charts.service.ts to derive latency CDF / TTFT histogram.
+      // Best-effort: parseFinalReport doesn't depend on it; runner uploads
+      // only when the file exists. genai-perf may rename or restructure
+      // this in newer releases — we tolerate absence.
+      raw: "profile_export.json",
     },
   };
 }

@@ -77,6 +77,64 @@ describe("BenchmarkChartsService", () => {
     });
   });
 
+  describe("genai-perf", () => {
+    // perf_analyzer raw shape: experiments[0].requests[].{timestamp, response_timestamps[]} in ns
+    const buildRawJson = (
+      requests: Array<{ timestamp: number; response_timestamps: number[] }>,
+    ): string =>
+      Buffer.from(JSON.stringify({ experiments: [{ requests }] }), "utf8").toString("base64");
+
+    it("derives latency + TTFT from streaming response_timestamps (ns → ms)", () => {
+      // Two requests, each with multiple chunks. timestamps in nanoseconds.
+      // Req 1: TTFT 100ms, total latency 250ms.
+      // Req 2: TTFT 150ms, total latency 300ms.
+      const raw = buildRawJson([
+        { timestamp: 1_000_000_000_000, response_timestamps: [1_000_100_000_000, 1_000_180_000_000, 1_000_250_000_000] },
+        { timestamp: 2_000_000_000_000, response_timestamps: [2_000_150_000_000, 2_000_220_000_000, 2_000_300_000_000] },
+      ]);
+      const result = svc.extract(makeRow("genai-perf", { raw }));
+      expect(result.latencyCdf?.samples).toEqual([250, 300]);
+      expect(result.ttftHistogram?.buckets).toHaveLength(30);
+      const total =
+        result.ttftHistogram?.buckets.reduce((s: number, b: { count: number }) => s + b.count, 0) ??
+        0;
+      expect(total).toBe(2);
+    });
+
+    it("handles non-streaming (single response_timestamp): TTFT == latency", () => {
+      const raw = buildRawJson([
+        { timestamp: 1_000_000_000_000, response_timestamps: [1_000_500_000_000] },
+      ]);
+      const result = svc.extract(makeRow("genai-perf", { raw }));
+      expect(result.latencyCdf?.samples).toEqual([500]);
+      // Single TTFT sample → single non-empty bucket; bucketize spreads as
+      // 30 buckets with all weight in the first.
+      expect(result.ttftHistogram?.buckets).toHaveLength(30);
+    });
+
+    it("returns both nulls when raw file is absent", () => {
+      const result = svc.extract(makeRow("genai-perf", {}));
+      expect(result.latencyCdf).toBeNull();
+      expect(result.ttftHistogram).toBeNull();
+    });
+
+    it("returns both nulls when raw is malformed JSON", () => {
+      const bad = Buffer.from("{nope", "utf8").toString("base64");
+      const result = svc.extract(makeRow("genai-perf", { raw: bad }));
+      expect(result.latencyCdf).toBeNull();
+      expect(result.ttftHistogram).toBeNull();
+    });
+
+    it("skips requests with empty response_timestamps", () => {
+      const raw = buildRawJson([
+        { timestamp: 1_000_000_000_000, response_timestamps: [] },
+        { timestamp: 2_000_000_000_000, response_timestamps: [2_000_100_000_000] },
+      ]);
+      const result = svc.extract(makeRow("genai-perf", { raw }));
+      expect(result.latencyCdf?.samples).toEqual([100]);
+    });
+  });
+
   describe("unknown tool / null rawOutput", () => {
     it("returns both nulls for unknown tool", () => {
       const result = svc.extract(makeRow("e2e", { report: guidellmFile }));

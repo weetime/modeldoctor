@@ -153,6 +153,18 @@ describe("genai-perf.buildCommand", () => {
     expect(r.outputFiles.profile).toBe("profile_export_genai_perf.json");
   });
 
+  it("outputFiles.raw is the perf_analyzer profile_export.json (used by chart extraction)", () => {
+    const r = buildCommand({
+      runId: "r1",
+      params: baseParams,
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.outputFiles.raw).toBe("profile_export.json");
+    // Script must also have a find/copy for the raw file (best-effort, non-failing)
+    expect(r.argv[2]).toContain("find artifacts -name profile_export.json");
+  });
+
   it("optional inputTokensMean materializes in argv when set", () => {
     const r = buildCommand({
       runId: "r1",
