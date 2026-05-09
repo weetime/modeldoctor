@@ -216,6 +216,10 @@
     "engineMetrics": {
       "title": "推理引擎指标"
     },
+    "tabs": {
+      "overview": "概览",
+      "raw": "原始输出"
+    },
     "charts": {
       "title": "分布图",
       "latencyCdfTitle": "延迟分布 (CDF)",

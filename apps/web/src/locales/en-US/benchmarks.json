@@ -216,6 +216,10 @@
     "engineMetrics": {
       "title": "Engine Metrics"
     },
+    "tabs": {
+      "overview": "Overview",
+      "raw": "Raw output"
+    },
     "charts": {
       "title": "Distributions",
       "latencyCdfTitle": "Latency CDF",

@@ -12,11 +12,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
-import type { Benchmark } from "@modeldoctor/contracts";
+import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
 import {
   migrateVegetaParams,
   prefixCacheProbeReportSchema,
@@ -109,6 +110,73 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
     default:
       return <UnknownReport benchmark={benchmark} />;
   }
+}
+
+function BenchmarkDetailTabs({
+  benchmark,
+  connection,
+}: {
+  benchmark: Benchmark;
+  connection: ConnectionPublic | null;
+}) {
+  const { t } = useTranslation("benchmarks");
+  const showCharts = benchmark.tool !== "prefix-cache-probe";
+  const showEngineMetrics = Boolean(
+    connection?.prometheusUrl &&
+      connection.serverKind &&
+      benchmark.startedAt &&
+      benchmark.completedAt,
+  );
+  const [active, setActive] = useState<string>("overview");
+
+  return (
+    <Tabs value={active} onValueChange={setActive} className="w-full">
+      <TabsList>
+        <TabsTrigger value="overview">{t("detail.tabs.overview")}</TabsTrigger>
+        {showCharts && <TabsTrigger value="charts">{t("detail.charts.title")}</TabsTrigger>}
+        {showEngineMetrics && (
+          <TabsTrigger value="engine">{t("detail.engineMetrics.title")}</TabsTrigger>
+        )}
+        <TabsTrigger value="raw">{t("detail.tabs.raw")}</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
+        {benchmark.baselineId && (
+          <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
+        )}
+        {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
+          <RequestDetailsSection benchmark={benchmark} />
+        )}
+        <section>
+          <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
+          <ReportSection benchmark={benchmark} />
+        </section>
+      </TabsContent>
+
+      {showCharts && (
+        <TabsContent value="charts" className="space-y-6">
+          <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
+        </TabsContent>
+      )}
+
+      {showEngineMetrics && benchmark.startedAt && benchmark.completedAt && connection && (
+        <TabsContent value="engine" className="space-y-6">
+          <EngineMetricsSection
+            connectionId={connection.id}
+            startedAt={benchmark.startedAt}
+            finishedAt={benchmark.completedAt}
+          />
+        </TabsContent>
+      )}
+
+      <TabsContent value="raw" className="space-y-6">
+        <BenchmarkDetailRawOutput
+          rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
+          logs={benchmark.logs}
+        />
+      </TabsContent>
+    </Tabs>
+  );
 }
 
 export function BenchmarkDetailPage() {
@@ -315,47 +383,7 @@ export function BenchmarkDetailPage() {
           </details>
         )}
         {isTerminal ? (
-          <>
-            {benchmark.baselineId && (
-              <section>
-                <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
-              </section>
-            )}
-            {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
-              <section>
-                <RequestDetailsSection benchmark={benchmark} />
-              </section>
-            )}
-            <section>
-              <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-              <ReportSection benchmark={benchmark} />
-            </section>
-            {benchmark.tool !== "prefix-cache-probe" && (
-              <section>
-                <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
-                <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
-              </section>
-            )}
-            {rerunConnection?.prometheusUrl &&
-              rerunConnection.serverKind &&
-              benchmark.startedAt &&
-              benchmark.completedAt && (
-                <section>
-                  <h3 className="mb-3 text-sm font-semibold">{t("detail.engineMetrics.title")}</h3>
-                  <EngineMetricsSection
-                    connectionId={rerunConnection.id}
-                    startedAt={benchmark.startedAt}
-                    finishedAt={benchmark.completedAt}
-                  />
-                </section>
-              )}
-            <section>
-              <BenchmarkDetailRawOutput
-                rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
-                logs={benchmark.logs}
-              />
-            </section>
-          </>
+          <BenchmarkDetailTabs benchmark={benchmark} connection={rerunConnection ?? null} />
         ) : (
           <RunningSection benchmark={benchmark} />
         )}

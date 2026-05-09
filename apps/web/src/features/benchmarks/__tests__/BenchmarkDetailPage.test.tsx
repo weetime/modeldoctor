@@ -152,15 +152,18 @@ describe("BenchmarkDetailPage", () => {
     mockUseConnection.mockReturnValue({ data: { ...defaultConnectionData } });
   });
 
-  it("renders metadata, metrics, raw output toggle", async () => {
+  it("renders metadata + Raw tab exposes raw output and logs toggles", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark());
+    const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     expect(await screen.findByText("smoke")).toBeInTheDocument();
     // Metadata renders the scenario id where the legacy "kind" used to live.
     expect(screen.getByText("inference")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
-    expect(screen.getByText(/Raw output|原始输出/i)).toBeInTheDocument();
-    expect(screen.getByText(/Logs|日志/i)).toBeInTheDocument();
+    // Raw output and logs live under the "Raw" tab now — switch to it first.
+    await user.click(screen.getByRole("tab", { name: /Raw output|原始输出/i }));
+    expect(await screen.findByRole("button", { name: /Raw output|原始输出/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Logs|日志/i })).toBeInTheDocument();
   });
 
   it("renders metrics empty when summaryMetrics is null", async () => {
@@ -512,39 +515,39 @@ describe("BenchmarkDetailPage", () => {
         .mockResolvedValueOnce(
           makeBenchmark({ status: "running", summaryMetrics: null, rawOutput: null }),
         )
-        .mockResolvedValueOnce(makeBenchmark({ status: "completed" }))
-        // Once the run flips to terminal, RunChartsSection mounts and fires a
-        // single GET /api/benchmarks/:id/charts request.
-        .mockResolvedValueOnce({ latencyCdf: null, ttftHistogram: null });
+        .mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
       render(<BenchmarkDetailPage />, { wrapper: Wrapper });
       // Initial fetch
       await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(1));
       // Advance 2s — should fetch again (still running)
       await vi.advanceTimersByTimeAsync(2_000);
       await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(2));
-      // Advance 2s more — third fetch returns terminal, then RunChartsSection
-      // fires a fourth call (the /charts endpoint).
+      // Advance 2s more — third fetch returns terminal. Charts/Engine tabs
+      // are inactive by default (Overview is), so no follow-up GETs fire.
       await vi.advanceTimersByTimeAsync(2_000);
-      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(4));
-      // After terminal, advancing 4s must NOT trigger another run-detail poll
-      // (the /charts response is cached by react-query).
+      await vi.waitFor(() => expect(get).toHaveBeenCalledTimes(3));
+      // After terminal, advancing 4s must NOT trigger another poll.
       await vi.advanceTimersByTimeAsync(4_000);
-      expect(get).toHaveBeenCalledTimes(4);
+      expect(get).toHaveBeenCalledTimes(3);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("mounts RunChartsSection when status is terminal", async () => {
-    // First call: GET /api/benchmarks/:id (run detail). Second: GET /api/benchmarks/:id/charts.
+  it("mounts RunChartsSection when the Charts tab is opened on a terminal run", async () => {
+    // First call: GET /api/benchmarks/:id (run detail). Second (after tab click):
+    // GET /api/benchmarks/:id/charts.
     vi.mocked(api.get)
       .mockResolvedValueOnce(makeBenchmark({ status: "completed" }))
       .mockResolvedValueOnce({
         latencyCdf: { samples: [10, 20] },
         ttftHistogram: { buckets: [{ lower: 0, upper: 10, count: 2 }] },
       });
+    const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await waitFor(() => expect(screen.getByText(/Distributions|分布图/i)).toBeInTheDocument());
+    const chartsTab = await screen.findByRole("tab", { name: /Distributions|分布图/i });
+    await user.click(chartsTab);
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith("/api/benchmarks/r1/charts"));
   });
 
   it("does NOT mount RunChartsSection when status is non-terminal", async () => {
@@ -722,12 +725,13 @@ describe("BenchmarkDetailPage", () => {
         serverKind: "vllm",
       },
     });
+    const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
-    await waitFor(() =>
-      expect(screen.getAllByText(/Engine Metrics|推理引擎指标/).length).toBeGreaterThan(0),
-    );
-    // The stub div must be present
-    expect(screen.getByTestId("engine-metrics-section")).toBeInTheDocument();
+    // Engine metrics tab trigger appears once available.
+    const engineTab = await screen.findByRole("tab", { name: /Engine Metrics|推理引擎指标/i });
+    await user.click(engineTab);
+    // Once the tab is active, the section mounts.
+    expect(await screen.findByTestId("engine-metrics-section")).toBeInTheDocument();
   });
 
   it("does not render <EngineMetricsSection> when prometheusUrl is missing", async () => {
