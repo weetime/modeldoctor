@@ -11,7 +11,7 @@ import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { format } from "date-fns";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { type Group, vizFor } from "./metric-viz.js";
+import { type ChartKind, type Group, vizFor } from "./metric-viz.js";
 import { useEngineMetrics } from "./useEngineMetrics.js";
 
 export interface EngineMetricsSectionProps {
@@ -24,15 +24,21 @@ export interface EngineMetricsSectionProps {
 
 const GROUP_ORDER: Group[] = ["topline", "latency", "throughput", "engine", "health"];
 
-// Topline is a row of compact stats/gauges so 3-up at md, 5-up only on very
-// wide screens. The other groups carry line/bar charts that need real width
-// to render readable timestamps + tooltips, so cap them at 2 columns.
-const GROUP_GRID_CLASS: Record<Group, string> = {
-  topline: "grid-cols-1 md:grid-cols-3 2xl:grid-cols-5",
-  latency: "grid-cols-1 lg:grid-cols-2",
-  throughput: "grid-cols-1 lg:grid-cols-2",
-  engine: "grid-cols-1 lg:grid-cols-2",
-  health: "grid-cols-1 lg:grid-cols-2",
+// Within a group, panels are sub-grouped by chart kind so cards of the same
+// height land on the same row. Mixing Stat (h=120) and Gauge (h=220) in one
+// row would force grid to stretch Stats to 220 — leaving big empty gutters
+// around the number. Kind order is "denser → taller" so the eye scans from
+// top-line numbers down to time-series detail.
+const KIND_ORDER: ChartKind[] = ["stat", "gauge", "line", "bar", "pie"];
+
+// Each kind picks columns that match its natural width. Stats are tiny and
+// can pack 4-up; gauges + line/bar charts need real width for axes/labels.
+const KIND_GRID_CLASS: Record<ChartKind, string> = {
+  stat: "grid-cols-2 md:grid-cols-3 xl:grid-cols-4",
+  gauge: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
+  line: "grid-cols-1 lg:grid-cols-2",
+  bar: "grid-cols-1 lg:grid-cols-2",
+  pie: "grid-cols-1 md:grid-cols-2",
 };
 
 function shiftIso(iso: string, deltaSeconds: number): string {
@@ -142,10 +148,18 @@ export function EngineMetricsSection({
                 {panels.length}
               </span>
             </summary>
-            <div className={`grid gap-3 px-3 pb-3 pt-1 ${GROUP_GRID_CLASS[group]}`}>
-              {panels.map((panel) => (
-                <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
-              ))}
+            <div className="space-y-3 px-3 pb-3 pt-1">
+              {KIND_ORDER.map((kind) => {
+                const subset = panels.filter((p) => vizFor(p.key).kind === kind);
+                if (subset.length === 0) return null;
+                return (
+                  <div key={kind} className={`grid gap-3 ${KIND_GRID_CLASS[kind]}`}>
+                    {subset.map((panel) => (
+                      <PanelCard key={panel.key} panel={panel} window={benchmarkWindow} />
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </details>
         );
