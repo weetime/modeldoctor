@@ -33,8 +33,10 @@ import type {
   ConnectionPublic,
   ConnectionWithSecret,
   ModalityCategory,
+  ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
+import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { Eye, EyeOff, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -78,11 +80,27 @@ const empty: Partial<ConnectionInput> = {
   queryParams: "",
   tokenizerHfId: "",
   prometheusUrl: null,
+  serverKind: null,
   tags: [],
 };
 
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
 const MAX_SUGGESTION_CHIPS = 8;
+
+const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> = [
+  { value: "vllm", label: ENGINE_DISPLAY_NAME.vllm },
+  { value: "sglang", label: ENGINE_DISPLAY_NAME.sglang },
+  { value: "tgi", label: ENGINE_DISPLAY_NAME.tgi },
+  { value: "trtllm", label: ENGINE_DISPLAY_NAME.trtllm },
+  { value: "mindie", label: ENGINE_DISPLAY_NAME.mindie },
+  { value: "lmdeploy", label: ENGINE_DISPLAY_NAME.lmdeploy },
+  { value: "tei", label: ENGINE_DISPLAY_NAME.tei },
+  { value: "infinity", label: ENGINE_DISPLAY_NAME.infinity },
+  { value: "llamacpp", label: ENGINE_DISPLAY_NAME.llamacpp },
+  { value: "comfyui", label: ENGINE_DISPLAY_NAME.comfyui },
+  { value: "higress", label: "Higress (Gateway)" },
+  { value: "generic", label: "Generic" },
+];
 
 const PRESET_TAGS = [
   "vLLM",
@@ -108,6 +126,7 @@ function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
     queryParams: c.queryParams,
     tokenizerHfId: c.tokenizerHfId ?? "",
     prometheusUrl: c.prometheusUrl ?? null,
+    serverKind: c.serverKind ?? null,
     category: c.category,
     tags: c.tags,
   };
@@ -204,6 +223,7 @@ export function ConnectionDialog({
           queryParams: values.queryParams,
           tokenizerHfId: values.tokenizerHfId.trim() || null,
           prometheusUrl: values.prometheusUrl ?? null,
+          serverKind: values.serverKind ?? null,
           category: values.category,
           tags: values.tags,
         };
@@ -226,6 +246,7 @@ export function ConnectionDialog({
           queryParams: values.queryParams,
           tokenizerHfId: values.tokenizerHfId.trim() || null,
           prometheusUrl: values.prometheusUrl ?? null,
+          serverKind: values.serverKind ?? null,
           category: values.category,
           tags: values.tags,
         });
@@ -576,6 +597,37 @@ export function ConnectionDialog({
                       </FormControl>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t("dialog.fields.tokenizerHfIdHelp")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="serverKind"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("dialog.fields.serverKindPlaceholder")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SERVER_KIND_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("dialog.fields.serverKindHelp")}
                       </p>
                       <FormMessage />
                     </FormItem>

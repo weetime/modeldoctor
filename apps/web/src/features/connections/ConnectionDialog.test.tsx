@@ -225,6 +225,19 @@ describe("ConnectionDialog (edit mode)", () => {
   });
 });
 
+describe("ConnectionDialog — serverKind dropdown", () => {
+  beforeEach(() => {
+    createMutate.mockClear();
+    updateMutate.mockClear();
+  });
+
+  it("renders the serverKind dropdown", () => {
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    // The label text is "Engine" (en-US) or "推理引擎" (zh-CN)
+    expect(screen.getAllByText(/^Engine$|^推理引擎$/i).length).toBeGreaterThan(0);
+  });
+});
+
 describe("ConnectionDialog (unified form stack)", () => {
   beforeEach(() => {
     createMutate.mockClear();

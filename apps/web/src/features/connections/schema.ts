@@ -1,4 +1,4 @@
-import { ModalityCategorySchema } from "@modeldoctor/contracts";
+import { ModalityCategorySchema, serverKindSchema } from "@modeldoctor/contracts";
 import { z } from "zod";
 
 const baseShape = {
@@ -12,6 +12,7 @@ const baseShape = {
   queryParams: z.string(),
   tokenizerHfId: z.string(),
   prometheusUrl: z.string().url().nullable().optional(),
+  serverKind: serverKindSchema.nullable().optional(),
   category: ModalityCategorySchema,
   tags: z
     .array(z.string().trim())
