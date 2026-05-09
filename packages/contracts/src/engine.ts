@@ -22,8 +22,12 @@ export const ENGINE_IDS = [
 export type EngineId = (typeof ENGINE_IDS)[number];
 
 /**
- * Display name for each engine, used in UI labels and tables.
- * Must have an entry for every EngineId.
+ * Display name to render anywhere an engine is identified across the app
+ * (Connection form dropdown, Engine Metrics section header, etc.). The
+ * deployment-recipes feature has its own ENGINES table in
+ * apps/web/.../deployment-recipes/data.ts with vendor-tagged variants
+ * ("ComfyUI / Diffusers" etc.) — those are intentionally scoped to that
+ * matrix view and do NOT need to match this map.
  */
 export const ENGINE_DISPLAY_NAME: Record<EngineId, string> = {
   vllm: "vLLM",
@@ -58,5 +62,7 @@ export const ENGINE_CAPABILITY: Record<EngineId, EngineCapability> = {
   tei: "embedding",
   infinity: "embedding",
   llamacpp: "generative",
+  // M2 placeholder: ComfyUI is diffusion, not autoregressive generation.
+  // Replace with a "diffusion" capability when Group C panels land.
   comfyui: "generative",
 };
