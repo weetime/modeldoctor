@@ -2,7 +2,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import type { Benchmark } from "@modeldoctor/contracts";
+import type { Benchmark, ScenarioId } from "@modeldoctor/contracts";
 import { useQueries } from "@tanstack/react-query";
 import { ArrowLeft, ListChecks } from "lucide-react";
 import { useMemo } from "react";
@@ -12,6 +12,13 @@ import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
 import { CompareGrid } from "./CompareGrid";
 import { CompareToolbar } from "./CompareToolbar";
+
+const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
+  inference: "benchmarkInference",
+  capacity: "benchmarkCapacity",
+  gateway: "benchmarkGateway",
+  "prefix-cache-validation": "benchmarkPrefixCache",
+};
 
 function parseIds(searchParams: URLSearchParams): string[] {
   const raw = searchParams.get("ids") ?? "";
@@ -23,6 +30,7 @@ function parseIds(searchParams: URLSearchParams): string[] {
 
 export function BenchmarkComparePage() {
   const { t } = useTranslation("benchmarks");
+  const { t: tSidebar } = useTranslation("sidebar");
   const [searchParams, setSearchParams] = useSearchParams();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
@@ -55,8 +63,16 @@ export function BenchmarkComparePage() {
   const failedCount = queries.filter((q) => q.isError).length;
   const isLoading = queries.some((q) => q.isLoading);
 
-  const backScenario = successfulBenchmarks[0]?.scenario ?? "gateway";
+  const backScenario = (successfulBenchmarks[0]?.scenario ?? "gateway") as ScenarioId;
   const backHref = `/benchmarks/${backScenario}`;
+  const breadcrumbs = [
+    { label: tSidebar("groups.benchmarks") },
+    {
+      label: tSidebar(`items.${SCENARIO_SIDEBAR_KEY[backScenario]}`),
+      to: backHref,
+    },
+    { label: t("compare.title") },
+  ];
 
   const tools = new Set(successfulBenchmarks.map((r) => r.tool));
   const isMixed = tools.size > 1;
@@ -100,7 +116,7 @@ export function BenchmarkComparePage() {
   if (ids.length < 2) {
     return (
       <>
-        <PageHeader title={t("compare.title")} />
+        <PageHeader title={t("compare.title")} breadcrumbs={breadcrumbs} />
         <EmptyState
           icon={ListChecks}
           title={t("compare.needTwoEmpty")}
@@ -130,19 +146,8 @@ export function BenchmarkComparePage() {
 
   return (
     <>
-      <PageHeader
-        title={t("compare.title")}
-        subtitle={subtitle}
-        rightSlot={
-          <Button asChild variant="ghost" size="sm">
-            <Link to={backHref}>
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              {t("compare.back")}
-            </Link>
-          </Button>
-        }
-      />
-      <div className="space-y-4 px-8 py-6">
+      <PageHeader title={t("compare.title")} subtitle={subtitle} breadcrumbs={breadcrumbs} />
+      <div className="space-y-6 px-8 py-6">
         {failedCount > 0 && (
           <Alert>
             <AlertDescription>

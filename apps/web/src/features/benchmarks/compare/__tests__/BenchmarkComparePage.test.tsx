@@ -168,15 +168,17 @@ describe("BenchmarkComparePage", () => {
     );
   });
 
-  it("back link points to /benchmarks/:scenario derived from loaded benchmarks", async () => {
+  it("breadcrumb scenario crumb points to /benchmarks/:scenario derived from loaded benchmarks", async () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce(makeBenchmark("a", "guidellm", 200, "inference"))
       .mockResolvedValueOnce(makeBenchmark("b", "guidellm", 180, "inference"));
     renderPage("/benchmarks/compare?ids=a,b");
     // Wait for the grid to render (both benchmarks loaded)
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
-    const backLink = screen.getByRole("link", { name: /Back to list|返回列表/ });
-    expect(backLink).toHaveAttribute("href", "/benchmarks/inference");
+    // Breadcrumb middle crumb is the scenario list link.
+    const nav = screen.getByRole("navigation", { name: /breadcrumb/i });
+    const link = nav.querySelector("a");
+    expect(link).toHaveAttribute("href", "/benchmarks/inference");
   });
 
   it("?baseline=none keeps None even when a Benchmark has baselineFor !== null", async () => {
