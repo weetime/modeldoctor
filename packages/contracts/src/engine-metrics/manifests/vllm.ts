@@ -1,0 +1,250 @@
+import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
+
+const M = "${model}";
+
+const metrics: EngineMetricSpec[] = [
+  // ---- topline ----
+  {
+    key: "success_rate",
+    group: "topline",
+    panel: "stat",
+    unit: "ratio",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum(rate(vllm:request_success_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:request_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+    thresholds: [
+      { at: 0.95, severity: "ok" },
+      { at: 0.9, severity: "warn" },
+      { at: 0, severity: "crit" },
+    ],
+  },
+  {
+    key: "active_requests",
+    group: "topline",
+    panel: "gauge",
+    unit: "count",
+    promql: [
+      { tag: "v1", expr: `sum(vllm:num_requests_running{model_name="${M}"})` },
+    ],
+  },
+  {
+    key: "system_efficiency",
+    group: "topline",
+    panel: "stat",
+    unit: "ratio",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum(rate(vllm:generation_tokens_total{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[1m])), 1)`,
+      },
+    ],
+  },
+  {
+    key: "ttft_p99",
+    group: "topline",
+    panel: "stat",
+    unit: "ms",
+    promql: [
+      {
+        tag: "v1",
+        expr: `histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="${M}"}[5m]))) * 1000`,
+      },
+    ],
+  },
+  {
+    key: "preemption_rate",
+    group: "topline",
+    panel: "stat",
+    unit: "rps",
+    promql: [
+      { tag: "v1", expr: `sum(rate(vllm:num_preemptions_total{model_name="${M}"}[1m]))` },
+    ],
+  },
+  // ---- latency ----
+  {
+    key: "e2e_latency",
+    group: "latency",
+    panel: "timeseries",
+    unit: "ms",
+    promql: [
+      {
+        tag: "v1",
+        expr: `histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+      },
+    ],
+  },
+  {
+    key: "stage_breakdown",
+    group: "latency",
+    panel: "timeseries",
+    unit: "ms",
+    promql: [
+      {
+        tag: "v1",
+        expr: `(sum(rate(vllm:time_in_prefill_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="${M}"}[1m])), 1)) * 1000 or (sum(rate(vllm:time_in_decode_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="${M}"}[1m])), 1)) * 1000`,
+      },
+    ],
+  },
+  {
+    key: "ttft_vs_tpot",
+    group: "latency",
+    panel: "timeseries",
+    unit: "ms",
+    promql: [
+      {
+        tag: "v1",
+        expr: `histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+      },
+    ],
+  },
+  // ---- throughput ----
+  {
+    key: "token_throughput_in",
+    group: "throughput",
+    panel: "timeseries",
+    unit: "tps",
+    promql: [
+      { tag: "v1", expr: `sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[1m]))` },
+    ],
+  },
+  {
+    key: "token_throughput_out",
+    group: "throughput",
+    panel: "timeseries",
+    unit: "tps",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum(rate(vllm:generation_tokens_total{model_name="${M}"}[1m]))`,
+      },
+    ],
+  },
+  {
+    key: "token_io_ratio",
+    group: "throughput",
+    panel: "stat",
+    unit: "ratio",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum(rate(vllm:generation_tokens_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+  },
+  {
+    key: "prefix_cache_savings",
+    group: "throughput",
+    panel: "gauge",
+    unit: "%",
+    promql: [
+      {
+        tag: "v1",
+        expr: `100 * sum(rate(vllm:prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+      {
+        tag: "v0",
+        expr: `100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+  },
+  {
+    key: "request_queue_time",
+    group: "throughput",
+    panel: "timeseries",
+    unit: "ms",
+    promql: [
+      {
+        tag: "v1",
+        expr: `histogram_quantile(0.5, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="${M}"}[1m]))) * 1000`,
+      },
+    ],
+  },
+  {
+    key: "request_length_heatmap",
+    group: "throughput",
+    panel: "heatmap",
+    unit: "count",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum by (le) (rate(vllm:request_prompt_tokens_bucket{model_name="${M}"}[1m]))`,
+      },
+    ],
+  },
+  // ---- engine ----
+  {
+    key: "kv_cache_usage",
+    group: "engine",
+    panel: "timeseries",
+    unit: "%",
+    promql: [
+      {
+        tag: "v1",
+        expr: `100 * vllm:gpu_cache_usage_perc{model_name="${M}"}`,
+      },
+    ],
+  },
+  {
+    key: "prefix_cache_hit_rate",
+    group: "engine",
+    panel: "gauge",
+    unit: "%",
+    promql: [
+      {
+        tag: "v1",
+        expr: `100 * sum(rate(vllm:prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+      {
+        tag: "v0",
+        expr: `100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+  },
+  {
+    key: "scheduler_state",
+    group: "engine",
+    panel: "timeseries",
+    unit: "count",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum(vllm:num_requests_running{model_name="${M}"}) or sum(vllm:num_requests_waiting{model_name="${M}"}) or sum(vllm:num_requests_swapped{model_name="${M}"})`,
+      },
+    ],
+  },
+  // ---- health ----
+  {
+    key: "python_gc_memory",
+    group: "health",
+    panel: "timeseries",
+    unit: "bytes",
+    promql: [
+      {
+        tag: "v1",
+        expr: `process_resident_memory_bytes{job=~".*vllm.*"} or python_gc_collections_total{job=~".*vllm.*",model_name="${M}"}`,
+      },
+    ],
+  },
+  {
+    key: "finish_reason",
+    group: "health",
+    panel: "timeseries",
+    unit: "rps",
+    promql: [
+      {
+        tag: "v1",
+        expr: `sum by (finished_reason) (rate(vllm:request_success_total{model_name="${M}"}[1m]))`,
+      },
+    ],
+  },
+];
+
+export const vllmManifest: EngineManifest = {
+  engineId: "vllm",
+  capability: "generative",
+  displayName: "vLLM (V0/V1)",
+  metrics,
+};

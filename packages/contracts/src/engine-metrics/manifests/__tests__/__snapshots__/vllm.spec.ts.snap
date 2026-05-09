@@ -1,0 +1,122 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] = `
+[
+  {
+    "exprs": [
+      "sum(rate(vllm:request_success_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:request_total{model_name="\${model}"}[5m])), 1)",
+    ],
+    "key": "success_rate",
+  },
+  {
+    "exprs": [
+      "sum(vllm:num_requests_running{model_name="test-model"})",
+    ],
+    "key": "active_requests",
+  },
+  {
+    "exprs": [
+      "sum(rate(vllm:generation_tokens_total{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name="\${model}"}[1m])), 1)",
+    ],
+    "key": "system_efficiency",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="test-model"}[5m]))) * 1000",
+    ],
+    "key": "ttft_p99",
+  },
+  {
+    "exprs": [
+      "sum(rate(vllm:num_preemptions_total{model_name="test-model"}[1m]))",
+    ],
+    "key": "preemption_rate",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.50, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+    ],
+    "key": "e2e_latency",
+  },
+  {
+    "exprs": [
+      "(sum(rate(vllm:time_in_prefill_seconds_sum{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000 or (sum(rate(vllm:time_in_decode_seconds_sum{model_name="\${model}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000",
+    ],
+    "key": "stage_breakdown",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.99, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:time_per_output_token_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+    ],
+    "key": "ttft_vs_tpot",
+  },
+  {
+    "exprs": [
+      "sum(rate(vllm:prompt_tokens_total{model_name="test-model"}[1m]))",
+    ],
+    "key": "token_throughput_in",
+  },
+  {
+    "exprs": [
+      "sum(rate(vllm:generation_tokens_total{model_name="test-model"}[1m]))",
+    ],
+    "key": "token_throughput_out",
+  },
+  {
+    "exprs": [
+      "sum(rate(vllm:generation_tokens_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name="\${model}"}[5m])), 1)",
+    ],
+    "key": "token_io_ratio",
+  },
+  {
+    "exprs": [
+      "100 * sum(rate(vllm:prefix_cache_hits_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+      "100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+    ],
+    "key": "prefix_cache_savings",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.5, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="test-model"}[1m]))) * 1000 or histogram_quantile(0.99, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name="\${model}"}[1m]))) * 1000",
+    ],
+    "key": "request_queue_time",
+  },
+  {
+    "exprs": [
+      "sum by (le) (rate(vllm:request_prompt_tokens_bucket{model_name="test-model"}[1m]))",
+    ],
+    "key": "request_length_heatmap",
+  },
+  {
+    "exprs": [
+      "100 * vllm:gpu_cache_usage_perc{model_name="test-model"}",
+    ],
+    "key": "kv_cache_usage",
+  },
+  {
+    "exprs": [
+      "100 * sum(rate(vllm:prefix_cache_hits_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+      "100 * sum(rate(vllm:gpu_prefix_cache_hits_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+    ],
+    "key": "prefix_cache_hit_rate",
+  },
+  {
+    "exprs": [
+      "sum(vllm:num_requests_running{model_name="test-model"}) or sum(vllm:num_requests_waiting{model_name="\${model}"}) or sum(vllm:num_requests_swapped{model_name="\${model}"})",
+    ],
+    "key": "scheduler_state",
+  },
+  {
+    "exprs": [
+      "process_resident_memory_bytes{job=~".*vllm.*"} or python_gc_collections_total{job=~".*vllm.*",model_name="test-model"}",
+    ],
+    "key": "python_gc_memory",
+  },
+  {
+    "exprs": [
+      "sum by (finished_reason) (rate(vllm:request_success_total{model_name="test-model"}[1m]))",
+    ],
+    "key": "finish_reason",
+  },
+]
+`;
