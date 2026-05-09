@@ -24,6 +24,7 @@ export interface DecryptedConnection {
   queryParams: string;
   category: ModalityCategory;
   tokenizerHfId: string | null;
+  prometheusUrl: string | null;
 }
 
 @Injectable()
@@ -147,6 +148,7 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory,
       tokenizerHfId: row.tokenizerHfId,
+      prometheusUrl: row.prometheusUrl,
     };
   }
 

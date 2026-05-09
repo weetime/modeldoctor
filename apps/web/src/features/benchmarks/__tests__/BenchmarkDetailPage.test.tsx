@@ -630,6 +630,35 @@ describe("BenchmarkDetailPage", () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}));
   });
 
+  it("renders stderr tail when status=failed and rawOutput.stderr is non-empty", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "failed",
+        statusMessage: "tool exited with code 137",
+        rawOutput: { stdout: "", stderr: "OSError: perf_analyzer not found", files: {} },
+      }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const toggle = await screen.findByText(/Show error output|查看错误输出/i);
+    expect(toggle).toBeInTheDocument();
+    toggle.click();
+    expect(await screen.findByText(/perf_analyzer not found/)).toBeInTheDocument();
+  });
+
+  it("renders empty-state copy when status=failed but stderr is empty", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "failed",
+        statusMessage: "tool exited with code 137",
+        rawOutput: { stdout: "", stderr: "", files: {} },
+      }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const toggle = await screen.findByText(/Show error output|查看错误输出/i);
+    toggle.click();
+    expect(screen.getByText(/No stderr captured|没有捕获到 stderr 输出/i)).toBeInTheDocument();
+  });
+
   it("renders Save-as-Template button when status is completed", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });

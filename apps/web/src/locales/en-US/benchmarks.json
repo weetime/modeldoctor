@@ -11,7 +11,8 @@
     "titleByScenario": {
       "inference": "New Inference Benchmark",
       "capacity": "New Capacity Plan",
-      "gateway": "New Gateway Test"
+      "gateway": "New Gateway Test",
+      "prefix-cache-validation": "New Prefix-cache Validation"
     },
     "subtitle": "Configure parameters, then submit",
     "sections": {
@@ -29,12 +30,14 @@
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
-      "genai-perf": "genai-perf"
+      "genai-perf": "genai-perf",
+      "prefix-cache-probe": "prefix-cache-probe"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
-      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings"
+      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings",
+      "prefix-cache-probe": "Validate Higress ai-load-balancer prefix stickiness; reports per-pod routing share + Prom hit rate"
     },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
@@ -132,6 +135,10 @@
     },
     "statusMessage": {
       "title": "Failure reason"
+    },
+    "failure": {
+      "toggleStderr": "Show error output (last 200 lines of stderr)",
+      "stderrEmpty": "No stderr captured"
     },
     "metrics": {
       "title": "Summary metrics",
@@ -277,7 +284,34 @@
       "throughput": "Throughput (req/s)"
     }
   },
+  "forms": {
+    "prefixCacheProbe": {
+      "promptSets": "Prompt sets",
+      "promptSetsHelp": "How many distinct long prefixes (~500 tokens each) to probe routing with",
+      "requestsPerSet": "Requests per set",
+      "maxTokens": "Max output tokens per request",
+      "promBackoffSec": "Prom scrape wait (s)",
+      "promBackoffSecHelp": "Prometheus default scrape is 15s; keep at least 18s of buffer",
+      "missingPromUrl": "This connection has no Prometheus URL — cannot run prefix-cache validation. Edit the connection to add one."
+    }
+  },
   "reports": {
+    "prefixCacheProbe": {
+      "stickiness": "Stickiness",
+      "deterministic": "Deterministic",
+      "deterministicYes": "Yes",
+      "deterministicNo": "No",
+      "perPodTitle": "Per-Pod Counts",
+      "perPodCols": { "pod": "Pod", "queries": "Queries", "hits": "Hits", "hitRate": "Hit rate" },
+      "promptSetsTitle": "Routing per Prompt Set",
+      "promptSetsCols": {
+        "label": "Set",
+        "dominantPod": "Dominant Pod",
+        "dominantPct": "Dominant %",
+        "totalRequests": "Total Requests"
+      },
+      "noQueries": "No prefix cache queries observed — vLLM may not have prefix caching enabled"
+    },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",

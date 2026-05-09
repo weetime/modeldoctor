@@ -11,6 +11,7 @@ const baseShape = {
   customHeaders: z.string(),
   queryParams: z.string(),
   tokenizerHfId: z.string(),
+  prometheusUrl: z.string().url().nullable().optional(),
   category: ModalityCategorySchema,
   tags: z
     .array(z.string().trim())

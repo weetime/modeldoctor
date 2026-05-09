@@ -14,7 +14,7 @@ export type CreateBenchmarkInput = {
   userId?: string | null;
   connectionId?: string | null;
   scenario: string;
-  tool: "guidellm" | "genai-perf" | "vegeta";
+  tool: "guidellm" | "genai-perf" | "vegeta" | "prefix-cache-probe";
   params: Prisma.InputJsonValue;
   name: string;
   description?: string | null;

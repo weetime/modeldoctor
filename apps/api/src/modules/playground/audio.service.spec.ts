@@ -13,6 +13,7 @@ function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnec
     queryParams: "",
     category: "audio",
     tokenizerHfId: null,
+    prometheusUrl: null,
     ...overrides,
   };
 }

@@ -8,6 +8,11 @@ export const genaiPerfParamsSchema = z.object({
   inputTokensStddev: z.number().int().min(0).default(0),
   outputTokensMean: z.number().int().positive().optional(),
   outputTokensStddev: z.number().int().min(0).default(0),
+  // Default true to get TTFT / inter-token-latency, which are the main
+  // reason to use genai-perf for inference benchmarks. The genai-perf 0.0.16
+  // SSE parser bug on usage-only final chunks
+  // (https://github.com/triton-inference-server/server/issues/8082) is patched
+  // in our runner image; see apps/benchmark-runner/images/genai-perf.Dockerfile.
   streaming: z.boolean().default(true),
   tokenizer: z.string().min(1).optional(),
 });

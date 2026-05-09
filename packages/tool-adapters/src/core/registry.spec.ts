@@ -16,9 +16,11 @@ describe("registry", () => {
     expect(byTool("genai-perf").name).toBe("genai-perf");
   });
 
-  it("allAdapters returns three adapters", () => {
+  it("allAdapters returns four adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(3);
-    expect(all.map((a) => a.name).sort()).toEqual(["genai-perf", "guidellm", "vegeta"].sort());
+    expect(all).toHaveLength(4);
+    expect(all.map((a) => a.name).sort()).toEqual(
+      ["genai-perf", "guidellm", "prefix-cache-probe", "vegeta"].sort(),
+    );
   });
 });

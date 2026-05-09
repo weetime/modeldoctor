@@ -37,6 +37,7 @@ function makeConn(): DecryptedConnection {
     queryParams: "",
     category: "image",
     tokenizerHfId: null,
+    prometheusUrl: null,
   };
 }
 

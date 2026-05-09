@@ -37,8 +37,12 @@ const rawThroughputSchema = z.object({
 const rawOutputSchema = z.object({
   request_throughput: rawThroughputSchema,
   request_latency: rawDistSchema,
-  time_to_first_token: rawDistSchema,
-  inter_token_latency: rawDistSchema,
+  // Streaming-only metrics. Non-streaming runs (default since the
+  // streaming=true → false flip) omit these because there's a single
+  // response chunk per request, so first-token and inter-token timings
+  // don't exist. Mapper produces a zeroed Dist for the typed schema.
+  time_to_first_token: rawDistSchema.optional(),
+  inter_token_latency: rawDistSchema.optional(),
   output_token_throughput: rawThroughputSchema,
   output_sequence_length: rawDistSchema,
   input_sequence_length: rawDistSchema,
@@ -59,37 +63,42 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
 
   let optionalTokenFlags = "";
   const optionalArgv: string[] = [];
-  let nextPos = 7; // $1-$6 are the six mandatory args; optional start at $7
+  // $1-$6 are the six mandatory args; optional start at $7. We always emit
+  // the braced form ${N} (not $N) because POSIX shell parses bare "$10" as
+  // "${1}0" — i.e. positional arg 1 followed by literal "0". Using ${N}
+  // is unambiguous for any N. Single-digit positions ($1..$9) work either
+  // way; we use the braced form everywhere here for consistency.
+  let nextPos = 7;
 
   if (params.inputTokensMean !== undefined) {
-    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-mean "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-mean "\${${nextPos}}"`;
     optionalArgv.push(String(params.inputTokensMean));
     nextPos++;
   }
   if (params.inputTokensStddev > 0) {
-    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-stddev "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --synthetic-input-tokens-stddev "\${${nextPos}}"`;
     optionalArgv.push(String(params.inputTokensStddev));
     nextPos++;
   }
   if (params.outputTokensMean !== undefined) {
-    optionalTokenFlags += ` \\\n    --output-tokens-mean "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --output-tokens-mean "\${${nextPos}}"`;
     optionalArgv.push(String(params.outputTokensMean));
     nextPos++;
   }
   if (params.outputTokensStddev > 0) {
-    optionalTokenFlags += ` \\\n    --output-tokens-stddev "$${nextPos}"`;
+    optionalTokenFlags += ` \\\n    --output-tokens-stddev "\${${nextPos}}"`;
     optionalArgv.push(String(params.outputTokensStddev));
     nextPos++;
   }
 
-  // Tokenizer: per-run override, then connection-level fallback. Omit flag
-  // when neither is set (tool default is to derive from `-m`).
-  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? undefined;
-  if (resolvedTokenizer) {
-    optionalTokenFlags += ` \\\n    --tokenizer "$${nextPos}"`;
-    optionalArgv.push(resolvedTokenizer);
-    nextPos++;
-  }
+  // Tokenizer: per-run override > connection-level override > connection.model.
+  // connection.model is the final fallback because vLLM/SGLang deployments
+  // typically set model to an HF tokenizer id (e.g. "Qwen/Qwen2.5-0.5B-Instruct").
+  // genai-perf 0.0.16 hard-requires --tokenizer, so we always emit the flag.
+  const resolvedTokenizer = params.tokenizer ?? connection.tokenizerHfId ?? connection.model;
+  optionalTokenFlags += ` \\\n    --tokenizer "\${${nextPos}}"`;
+  optionalArgv.push(resolvedTokenizer);
+  nextPos++;
 
   // $1 = model, $2 = baseUrl, $3 = endpointType,
   // $4 = numPrompts, $5 = concurrency, $6 = streaming ("true"|"false")
@@ -118,6 +127,9 @@ export function buildCommand(plan: BuildCommandPlan<GenaiPerfParams>): BuildComm
   // safe; the inconsistency is stylistic, not security-relevant.
   // Defense-in-depth: connection.apiKey is zod-refined to reject
   // control characters at input boundary (see contracts/connection.ts).
+  // `--endpoint-type chat` (combined with the OpenAI Authorization header
+  // below) is sufficient for OpenAI-compatible endpoints in genai-perf 0.0.16
+  // — that release doesn't have a `--service-kind` flag at all.
   const script = `set -e
 STREAMING=""
 if [ "$6" = "true" ]; then STREAMING="--streaming"; fi
@@ -128,7 +140,9 @@ genai-perf profile \\
     --header "Authorization: Bearer $OPENAI_API_KEY" \\
     $STREAMING${optionalTokenFlags} \\
     --profile-export-file profile_export.json
-find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\; && [ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure
+find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export_genai_perf.json \\;
+find artifacts -name profile_export.json -exec cp {} ./profile_export.json \\;
+[ -f ./profile_export_genai_perf.json ]`; // surface "no artifact produced" as a job failure, not a parser failure. profile_export.json (perf_analyzer raw, optional) is best-effort — its absence doesn't fail the run.
 
   return {
     argv: [
@@ -155,6 +169,12 @@ find artifacts -name profile_export_genai_perf.json -exec cp {} ./profile_export
       // the find-and-copy step in the script lifts this file out of the dynamic
       // artifact subdirectory into cwd where the runner can collect it.
       profile: "profile_export_genai_perf.json",
+      // perf_analyzer raw per-request timing (timestamps in ns). Used by
+      // benchmark-charts.service.ts to derive latency CDF / TTFT histogram.
+      // Best-effort: parseFinalReport doesn't depend on it; runner uploads
+      // only when the file exists. genai-perf may rename or restructure
+      // this in newer releases — we tolerate absence.
+      raw: "profile_export.json",
     },
   };
 }
@@ -191,7 +211,14 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
 type RawOutput = z.infer<typeof rawOutputSchema>;
 type RawDist = z.infer<typeof rawDistSchema>;
 
-function dist(o: RawDist): GenaiPerfReport["requestLatency"] {
+function dist(o: RawDist | undefined): GenaiPerfReport["requestLatency"] {
+  // For non-streaming runs, time_to_first_token / inter_token_latency are
+  // absent (no per-token breakdown possible with a single response chunk).
+  // Return a zeroed shape so downstream consumers can rely on the field
+  // being present; the unit="" sentinel signals "not measured".
+  if (!o) {
+    return { avg: 0, min: 0, max: 0, p50: 0, p90: 0, p95: 0, p99: 0, stddev: 0, unit: "" };
+  }
   return {
     avg: o.avg,
     min: o.min ?? 0,

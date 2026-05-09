@@ -140,6 +140,39 @@ describe("ConnectionDialog (create mode)", () => {
     const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
     expect(arg.tokenizerHfId).toBeNull();
   });
+
+  it("submits prometheusUrl when entered", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await fillBaseFields(user);
+
+    await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
+    await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
+
+    await user.type(screen.getByLabelText(/prometheus/i), "http://prom:9090");
+
+    await user.click(screen.getByRole("button", { name: /save|保存/i }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+    const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.prometheusUrl).toBe("http://prom:9090");
+  });
+
+  it("submits null when prometheusUrl left empty", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await fillBaseFields(user);
+
+    await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
+    await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
+
+    // Leave prometheusUrl field blank (default is null)
+    await user.click(screen.getByRole("button", { name: /save|保存/i }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+    const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.prometheusUrl).toBeNull();
+  });
 });
 
 describe("ConnectionDialog (edit mode)", () => {

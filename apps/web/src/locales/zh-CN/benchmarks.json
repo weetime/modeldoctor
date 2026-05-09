@@ -11,7 +11,8 @@
     "titleByScenario": {
       "inference": "新建推理性能基准",
       "capacity": "新建容量规划",
-      "gateway": "新建网关压测"
+      "gateway": "新建网关压测",
+      "prefix-cache-validation": "新建 Prefix-cache 验证"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -29,12 +30,14 @@
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
-      "genai-perf": "genai-perf"
+      "genai-perf": "genai-perf",
+      "prefix-cache-probe": "prefix-cache-probe"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
-      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings"
+      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings",
+      "prefix-cache-probe": "验证 Higress ai-load-balancer 同前缀粘性，输出 Pod 路由占比与 Prom 命中率"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
@@ -132,6 +135,10 @@
     },
     "statusMessage": {
       "title": "失败原因"
+    },
+    "failure": {
+      "toggleStderr": "查看错误输出（stderr 末尾 200 行）",
+      "stderrEmpty": "没有捕获到 stderr 输出"
     },
     "metrics": {
       "title": "汇总指标",
@@ -277,7 +284,34 @@
       "throughput": "吞吐 (req/s)"
     }
   },
+  "forms": {
+    "prefixCacheProbe": {
+      "promptSets": "前缀组数",
+      "promptSetsHelp": "用几个不同的长前缀（每个 ~500 token）做路由检测",
+      "requestsPerSet": "每组请求数",
+      "maxTokens": "每个请求最大输出 tokens",
+      "promBackoffSec": "Prometheus 抓取等待秒数",
+      "promBackoffSecHelp": "Prom 默认 15s 抓一次；最少留 18s 缓冲",
+      "missingPromUrl": "该连接未配置 Prometheus URL，无法运行 prefix-cache 验证。请在连接编辑里补上。"
+    }
+  },
   "reports": {
+    "prefixCacheProbe": {
+      "stickiness": "粘附率",
+      "deterministic": "确定性",
+      "deterministicYes": "是",
+      "deterministicNo": "否",
+      "perPodTitle": "每副本计数",
+      "perPodCols": { "pod": "Pod", "queries": "查询数", "hits": "命中数", "hitRate": "命中率" },
+      "promptSetsTitle": "每组路由结果",
+      "promptSetsCols": {
+        "label": "组",
+        "dominantPod": "主 Pod",
+        "dominantPct": "主 Pod 占比",
+        "totalRequests": "总请求数"
+      },
+      "noQueries": "未观察到 prefix cache 查询；vLLM 可能未开启 prefix caching"
+    },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
     "rangeLabel": "时间范围",

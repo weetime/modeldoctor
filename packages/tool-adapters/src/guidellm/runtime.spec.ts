@@ -14,6 +14,7 @@ const baseConn = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: null,
+  prometheusUrl: null,
 };
 
 const defaultParams = {
@@ -151,6 +152,7 @@ describe("guidellm.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: null,
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -184,6 +186,7 @@ describe("guidellm.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: null,
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -203,6 +206,7 @@ describe("guidellm.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: "Qwen/Connection",
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -220,6 +224,7 @@ describe("guidellm.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: "Qwen/Connection",
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });
@@ -237,6 +242,7 @@ describe("guidellm.buildCommand", () => {
         customHeaders: "",
         queryParams: "",
         tokenizerHfId: null,
+        prometheusUrl: null,
       },
       callback: { url: "http://cb", token: "t" },
     });

@@ -16,7 +16,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
-import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
+import {
+  migrateVegetaParams,
+  prefixCacheProbeReportSchema,
+} from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ArrowLeft, Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
@@ -42,6 +45,7 @@ import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
+import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
 
 /**
@@ -94,6 +98,13 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       return <CapacityReport benchmark={benchmark} />;
     case "gateway":
       return <GatewayReport benchmark={benchmark} />;
+    case "prefix-cache-validation": {
+      const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
+      const candidate = tagged && "data" in tagged ? tagged.data : tagged;
+      const parsed = prefixCacheProbeReportSchema.safeParse(candidate);
+      if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
+      return <PrefixCacheProbeReport data={parsed.data} />;
+    }
     default:
       return <UnknownReport benchmark={benchmark} />;
   }
@@ -278,6 +289,30 @@ export function BenchmarkDetailPage() {
             </AlertDescription>
           </Alert>
         )}
+        {benchmark.status === "failed" && (
+          <details className="mt-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+              {t("detail.failure.toggleStderr")}
+            </summary>
+            {(() => {
+              const stderr = (benchmark.rawOutput as { stderr?: string } | null)?.stderr ?? "";
+              if (!stderr.trim()) {
+                return (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("detail.failure.stderrEmpty")}
+                  </p>
+                );
+              }
+              const lines = stderr.split("\n");
+              const tail = lines.slice(-200).join("\n");
+              return (
+                <pre className="mt-2 max-h-80 overflow-auto rounded bg-background p-3 text-xs">
+                  {tail}
+                </pre>
+              );
+            })()}
+          </details>
+        )}
         {isTerminal ? (
           <>
             {benchmark.baselineId && (
@@ -294,10 +329,12 @@ export function BenchmarkDetailPage() {
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
               <ReportSection benchmark={benchmark} />
             </section>
-            <section>
-              <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
-              <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
-            </section>
+            {benchmark.tool !== "prefix-cache-probe" && (
+              <section>
+                <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
+                <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
+              </section>
+            )}
             <section>
               <BenchmarkDetailRawOutput
                 rawOutput={benchmark.rawOutput as Record<string, unknown> | null}

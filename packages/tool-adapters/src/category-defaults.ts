@@ -42,3 +42,17 @@ export const GUIDELLM_CATEGORY_DEFAULTS = {
   ModalityCategory,
   { apiType: GuidellmParams["apiType"] } | { unsupported: true }
 >;
+
+/**
+ * prefix-cache-probe targets any chat-compatible vLLM endpoint; the modality
+ * category doesn't restrict which connections are compatible. All categories
+ * are supported — the only actual gate is `prometheusUrl` presence, which the
+ * form checks separately and surfaces as a blocking alert.
+ */
+export const PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS = {
+  chat: {},
+  audio: {},
+  embeddings: {},
+  rerank: {},
+  image: {},
+} as const satisfies Record<ModalityCategory, Record<string, never>>;
