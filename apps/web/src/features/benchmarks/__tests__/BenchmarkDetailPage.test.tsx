@@ -62,6 +62,11 @@ vi.mock("@/components/charts", () => ({
       data-series-count={props.series.length}
     />
   ),
+  Stat: (props: { ariaLabel?: string; value: number | null; unit?: string }) => (
+    <div data-testid="stat" data-aria={props.ariaLabel}>
+      {props.value} {props.unit}
+    </div>
+  ),
   assignRunColors: () => ({}),
 }));
 

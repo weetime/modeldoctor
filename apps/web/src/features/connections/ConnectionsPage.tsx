@@ -144,10 +144,10 @@ export function ConnectionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>{t("table.model")}</TableHead>
                     <TableHead>{t("table.name")}</TableHead>
                     <TableHead>{t("table.apiBaseUrl")}</TableHead>
                     <TableHead>{t("table.apiKey")}</TableHead>
-                    <TableHead>{t("table.model")}</TableHead>
                     <TableHead>{t("table.category")}</TableHead>
                     <TableHead>{t("table.tags")}</TableHead>
                     <TableHead>{t("table.customHeaders")}</TableHead>
@@ -158,12 +158,12 @@ export function ConnectionsPage() {
                 <TableBody>
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="font-medium">{c.model}</TableCell>
+                      <TableCell className="text-muted-foreground">{c.name}</TableCell>
                       <TableCell className="font-mono text-xs">{c.baseUrl}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {c.apiKeyPreview}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{c.model}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {t(`dialog.categoryOptions.${c.category}`)}

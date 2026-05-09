@@ -333,9 +333,9 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex flex-col gap-0.5">
-                              <span className="text-foreground">{benchmark.connection.name}</span>
+                              <span className="text-foreground">{benchmark.connection.model}</span>
                               <span className="text-xs text-muted-foreground/70">
-                                {benchmark.connection.model}
+                                {benchmark.connection.name}
                               </span>
                             </div>
                           </TooltipTrigger>

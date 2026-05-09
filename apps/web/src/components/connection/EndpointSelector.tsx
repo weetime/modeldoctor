@@ -56,7 +56,8 @@ export function EndpointSelector({ selectedId, modified, onSelect }: EndpointSel
             <SelectItem value={MANUAL}>{t("endpoint.manual")}</SelectItem>
             {list.map((c) => (
               <SelectItem key={c.id} value={c.id}>
-                {c.name}
+                <span>{c.model}</span>
+                <span className="ml-2 text-xs text-muted-foreground">· {c.name}</span>
               </SelectItem>
             ))}
           </SelectContent>

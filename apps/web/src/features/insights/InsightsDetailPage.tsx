@@ -190,9 +190,9 @@ export function InsightsDetailPage() {
   return (
     <>
       <PageHeader
-        title={conn.data.name}
-        subtitle={`${conn.data.baseUrl} · ${conn.data.model} · ${conn.data.category}`}
-        breadcrumbs={breadcrumbs(conn.data.name)}
+        title={conn.data.model}
+        subtitle={`${conn.data.name} · ${conn.data.baseUrl} · ${conn.data.category}`}
+        breadcrumbs={breadcrumbs(conn.data.model)}
         rightSlot={
           <div className="flex items-center gap-2">
             <ProfileSelector

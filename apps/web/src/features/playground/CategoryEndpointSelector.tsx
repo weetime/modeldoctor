@@ -69,7 +69,8 @@ export function CategoryEndpointSelector({
                       : undefined
                   }
                 >
-                  {c.name}
+                  <span>{c.model}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">· {c.name}</span>
                 </SelectItem>
               );
             })
