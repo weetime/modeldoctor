@@ -8,15 +8,12 @@ export const genaiPerfParamsSchema = z.object({
   inputTokensStddev: z.number().int().min(0).default(0),
   outputTokensMean: z.number().int().positive().optional(),
   outputTokensStddev: z.number().int().min(0).default(0),
-  // Default false to match the working playbook
-  // (docs/superpowers/specs/...handoff §3 / ai-loadbalancer-benchmark-playbook).
-  // Streaming triggers a known parsing bug in genai-perf 0.0.16 against any
-  // OpenAI-spec endpoint that emits a usage-only final chunk
-  // (`"choices": []` + `usage`) — vLLM, Higress, and OpenAI itself when
-  // stream_options.include_usage is set all do this. Users who explicitly
-  // need TTFT / inter-token latency can flip this on at run time and accept
-  // the failure mode (which our stderr-tail surface makes diagnosable).
-  streaming: z.boolean().default(false),
+  // Default true to get TTFT / inter-token-latency, which are the main
+  // reason to use genai-perf for inference benchmarks. The genai-perf 0.0.16
+  // SSE parser bug on usage-only final chunks
+  // (https://github.com/triton-inference-server/server/issues/8082) is patched
+  // in our runner image; see apps/benchmark-runner/images/genai-perf.Dockerfile.
+  streaming: z.boolean().default(true),
   tokenizer: z.string().min(1).optional(),
 });
 export type GenaiPerfParams = z.infer<typeof genaiPerfParamsSchema>;
@@ -54,7 +51,7 @@ export const genaiPerfParamDefaults: Partial<GenaiPerfParams> = {
   endpointType: "chat",
   numPrompts: 100,
   concurrency: 1,
-  streaming: false,
+  streaming: true,
   inputTokensStddev: 0,
   outputTokensStddev: 0,
 };

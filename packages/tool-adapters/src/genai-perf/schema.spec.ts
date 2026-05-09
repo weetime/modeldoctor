@@ -17,7 +17,7 @@ describe("genaiPerfParamsSchema", () => {
     if (r.success) {
       expect(r.data.numPrompts).toBe(100);
       expect(r.data.concurrency).toBe(1);
-      expect(r.data.streaming).toBe(false);
+      expect(r.data.streaming).toBe(true);
     }
   });
 
