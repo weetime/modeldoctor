@@ -82,7 +82,22 @@ export function LineTimeseries({
             typeof v === "number" ? formatPanelValue(v, unit) : String(v),
         },
         legend: { type: "scroll", top: 0 },
-        xAxis: { type: "time" },
+        xAxis: {
+          type: "time",
+          axisLabel: {
+            // Compact HH:mm formatter — full timestamps don't fit on narrow
+            // panels and ECharts' default chains date+time without breaks.
+            formatter: {
+              year: "{yyyy}",
+              month: "{MMM}",
+              day: "{d}",
+              hour: "{HH}:{mm}",
+              minute: "{HH}:{mm}",
+              second: "{HH}:{mm}:{ss}",
+              millisecond: "{HH}:{mm}:{ss}",
+            },
+          },
+        },
         yAxis: { type: "value" },
         grid: { left: 56, right: 24, top: 56, bottom: 32 },
         series: ecSeries as EChartsOption["series"],

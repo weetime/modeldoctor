@@ -116,6 +116,10 @@ function withAxisDefaults(
   };
   a.axisLabel = {
     color: tokens.axisLabelColor,
+    // Drop labels that would overlap their neighbours instead of letting
+    // ECharts cram them into each other — fixes the squashed time-axis on
+    // narrow panels.
+    hideOverlap: true,
     ...((a.axisLabel ?? {}) as Record<string, unknown>),
   };
   const splitLine = (a.splitLine ?? {}) as Record<string, unknown>;
@@ -147,6 +151,10 @@ export function applyTheme(opt: EChartsOption, tokens: ChartTokens): EChartsOpti
     backgroundColor: tokens.tooltipBg,
     borderColor: tokens.tooltipBorder,
     borderWidth: 1,
+    // Keep the tooltip inside the chart's viewport — without `confine` ECharts
+    // overflows narrow panels (and gets clipped by the surrounding card's
+    // overflow boundaries).
+    confine: true,
     textStyle: {
       color: tokens.tooltipText,
       ...((userTooltip.textStyle ?? {}) as Record<string, unknown>),

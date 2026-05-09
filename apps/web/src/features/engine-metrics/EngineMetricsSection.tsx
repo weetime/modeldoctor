@@ -8,6 +8,7 @@ import {
 } from "@/components/charts";
 import type { EngineMetricsPanelResult, EngineMetricsSeries } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
+import { format } from "date-fns";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { type Group, vizFor } from "./metric-viz.js";
@@ -23,12 +24,15 @@ export interface EngineMetricsSectionProps {
 
 const GROUP_ORDER: Group[] = ["topline", "latency", "throughput", "engine", "health"];
 
+// Topline is a row of compact stats/gauges so 3-up at md, 5-up only on very
+// wide screens. The other groups carry line/bar charts that need real width
+// to render readable timestamps + tooltips, so cap them at 2 columns.
 const GROUP_GRID_CLASS: Record<Group, string> = {
-  topline: "grid-cols-1 md:grid-cols-2 lg:grid-cols-5",
-  latency: "grid-cols-1 md:grid-cols-3",
-  throughput: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
-  engine: "grid-cols-1 md:grid-cols-3",
-  health: "grid-cols-1 md:grid-cols-3",
+  topline: "grid-cols-1 md:grid-cols-3 2xl:grid-cols-5",
+  latency: "grid-cols-1 lg:grid-cols-2",
+  throughput: "grid-cols-1 lg:grid-cols-2",
+  engine: "grid-cols-1 lg:grid-cols-2",
+  health: "grid-cols-1 lg:grid-cols-2",
 };
 
 function shiftIso(iso: string, deltaSeconds: number): string {
@@ -109,8 +113,8 @@ export function EngineMetricsSection({
       <div className="text-xs text-muted-foreground">
         {t("section.subtitle", {
           engineName: ENGINE_DISPLAY_NAME[data.engineId],
-          from: data.window.from,
-          to: data.window.to,
+          from: format(new Date(data.window.from), "yyyy-MM-dd HH:mm:ss"),
+          to: format(new Date(data.window.to), "yyyy-MM-dd HH:mm:ss"),
         })}
       </div>
       {GROUP_ORDER.map((group) => {
@@ -166,8 +170,8 @@ function PanelCard({ panel, window: w }: PanelCardProps) {
     : false;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="mb-2 text-xs text-muted-foreground">{label}</div>
+    <div className="rounded-md border border-border bg-card p-3">
+      <div className="mb-2 text-xs font-medium text-muted-foreground">{label}</div>
       {viz.kind === "stat" && (
         <Stat
           ariaLabel={label}
