@@ -8,9 +8,13 @@ describe("vllm manifest", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("every metric has at least one PromQL variant", () => {
+  it("every metric has at least one PromQL variant; model-scoped metrics use the placeholder", () => {
+    // Process-level metrics (e.g. process_resident_memory_bytes) don't carry
+    // a model_name label, so they don't reference ${model}. Whitelist them.
+    const PROCESS_LEVEL = new Set(["python_gc_memory"]);
     for (const m of vllmManifest.metrics) {
       expect(m.promql.length).toBeGreaterThan(0);
+      if (PROCESS_LEVEL.has(m.key)) continue;
       for (const v of m.promql) {
         expect(v.expr).toMatch(/\$\{model\}/);
       }

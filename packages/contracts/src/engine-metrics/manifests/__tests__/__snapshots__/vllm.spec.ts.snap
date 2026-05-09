@@ -4,7 +4,7 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
 [
   {
     "exprs": [
-      "sum(rate(vllm:request_success_total{model_name="test-model"}[5m])) / clamp_min(sum(rate(vllm:request_total{model_name="\${model}"}[5m])), 1)",
+      "sum(rate(vllm:request_success_total{model_name="test-model",finished_reason!~"abort|error"}[5m])) / clamp_min(sum(rate(vllm:request_success_total{model_name="\${model}"}[5m])), 1)",
     ],
     "key": "success_rate",
   },
@@ -40,7 +40,7 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "label_replace((sum(rate(vllm:time_in_prefill_seconds_sum{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*") or label_replace((sum(rate(vllm:time_in_decode_seconds_sum{model_name="\${model}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")",
+      "label_replace((sum(rate(vllm:request_prefill_time_seconds_sum{model_name="test-model"}[1m])) / clamp_min(sum(rate(vllm:request_prefill_time_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*") or label_replace((sum(rate(vllm:request_decode_time_seconds_sum{model_name="\${model}"}[1m])) / clamp_min(sum(rate(vllm:request_decode_time_seconds_count{model_name="\${model}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")",
     ],
     "key": "stage_breakdown",
   },
@@ -89,6 +89,7 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
+      "clamp_max(100, 100 * vllm:kv_cache_usage_perc{model_name="test-model"})",
       "clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="test-model"})",
     ],
     "key": "kv_cache_usage",
@@ -102,13 +103,13 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "label_replace(sum(vllm:num_requests_running{model_name="test-model"}), "series", "running", "", ".*") or label_replace(sum(vllm:num_requests_waiting{model_name="\${model}"}), "series", "waiting", "", ".*") or label_replace(sum(vllm:num_requests_swapped{model_name="\${model}"}), "series", "swapped", "", ".*")",
+      "label_replace(sum(vllm:num_requests_running{model_name="test-model"}), "series", "running", "", ".*") or label_replace(sum(vllm:num_requests_waiting{model_name="\${model}"}), "series", "waiting", "", ".*")",
     ],
     "key": "scheduler_state",
   },
   {
     "exprs": [
-      "process_resident_memory_bytes{job=~".*vllm.*",model_name="test-model"}",
+      "process_resident_memory_bytes{job=~".*infer.*|.*vllm.*"}",
     ],
     "key": "python_gc_memory",
   },

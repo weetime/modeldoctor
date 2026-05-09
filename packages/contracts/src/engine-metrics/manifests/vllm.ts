@@ -15,7 +15,10 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `sum(rate(vllm:request_success_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(vllm:request_total{model_name="${M}"}[5m])), 1)`,
+        // vLLM V1 only emits successful completions (no failure counter); we
+        // approximate "success rate" as fraction of completions that ended
+        // for a meaningful reason vs aborted/errored.
+        expr: `sum(rate(vllm:request_success_total{model_name="${M}",finished_reason!~"abort|error"}[5m])) / clamp_min(sum(rate(vllm:request_success_total{model_name="${M}"}[5m])), 1)`,
       },
     ],
     thresholds: [
@@ -87,8 +90,8 @@ const metrics: EngineMetricSpec[] = [
       {
         tag: "v1",
         expr:
-          `label_replace((sum(rate(vllm:time_in_prefill_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_prefill_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*")` +
-          ` or label_replace((sum(rate(vllm:time_in_decode_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:time_in_decode_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")`,
+          `label_replace((sum(rate(vllm:request_prefill_time_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:request_prefill_time_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "prefill", "", ".*")` +
+          ` or label_replace((sum(rate(vllm:request_decode_time_seconds_sum{model_name="${M}"}[1m])) / clamp_min(sum(rate(vllm:request_decode_time_seconds_count{model_name="${M}"}[1m])), 1)) * 1000, "series", "decode", "", ".*")`,
       },
     ],
   },
@@ -189,6 +192,10 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
+        expr: `clamp_max(100, 100 * vllm:kv_cache_usage_perc{model_name="${M}"})`,
+      },
+      {
+        tag: "v0",
         expr: `clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="${M}"})`,
       },
     ],
@@ -218,9 +225,9 @@ const metrics: EngineMetricSpec[] = [
       {
         tag: "v1",
         expr:
+          // V1 vLLM does not expose num_requests_swapped; running + waiting only
           `label_replace(sum(vllm:num_requests_running{model_name="${M}"}), "series", "running", "", ".*")` +
-          ` or label_replace(sum(vllm:num_requests_waiting{model_name="${M}"}), "series", "waiting", "", ".*")` +
-          ` or label_replace(sum(vllm:num_requests_swapped{model_name="${M}"}), "series", "swapped", "", ".*")`,
+          ` or label_replace(sum(vllm:num_requests_waiting{model_name="${M}"}), "series", "waiting", "", ".*")`,
       },
     ],
   },
@@ -233,7 +240,10 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `process_resident_memory_bytes{job=~".*vllm.*",model_name="${M}"}`,
+        // process_resident_memory_bytes is process-level, no model_name label.
+        // Match any "infer-*" or "*vllm*" job — most kube deployments scrape
+        // vLLM under one of those names.
+        expr: `process_resident_memory_bytes{job=~".*infer.*|.*vllm.*"}`,
       },
     ],
   },
