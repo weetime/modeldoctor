@@ -54,6 +54,11 @@ export const sidebarGroups: SidebarGroup[] = [
       { to: "/benchmarks/inference", icon: Gauge, labelKey: "items.benchmarkInference" },
       { to: "/benchmarks/capacity", icon: Activity, labelKey: "items.benchmarkCapacity" },
       { to: "/benchmarks/gateway", icon: Network, labelKey: "items.benchmarkGateway" },
+      {
+        to: "/benchmarks/prefix-cache-validation",
+        icon: Layers,
+        labelKey: "items.benchmarkPrefixCache",
+      },
       { to: "/benchmarks/reports", icon: BarChart3, labelKey: "items.endpointReports" },
       { to: "/benchmark-templates", icon: Layers, labelKey: "items.benchmarkTemplates" },
     ],

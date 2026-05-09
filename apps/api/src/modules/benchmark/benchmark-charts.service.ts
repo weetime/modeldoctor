@@ -181,8 +181,7 @@ export class BenchmarkChartsService {
 
     return {
       latencyCdf: { samples: latencyMs },
-      ttftHistogram:
-        ttftMs.length > 0 ? { buckets: bucketize(ttftMs, HISTOGRAM_BIN_COUNT) } : null,
+      ttftHistogram: ttftMs.length > 0 ? { buckets: bucketize(ttftMs, HISTOGRAM_BIN_COUNT) } : null,
     };
   }
 }

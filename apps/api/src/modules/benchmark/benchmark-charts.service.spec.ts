@@ -89,8 +89,14 @@ describe("BenchmarkChartsService", () => {
       // Req 1: TTFT 100ms, total latency 250ms.
       // Req 2: TTFT 150ms, total latency 300ms.
       const raw = buildRawJson([
-        { timestamp: 1_000_000_000_000, response_timestamps: [1_000_100_000_000, 1_000_180_000_000, 1_000_250_000_000] },
-        { timestamp: 2_000_000_000_000, response_timestamps: [2_000_150_000_000, 2_000_220_000_000, 2_000_300_000_000] },
+        {
+          timestamp: 1_000_000_000_000,
+          response_timestamps: [1_000_100_000_000, 1_000_180_000_000, 1_000_250_000_000],
+        },
+        {
+          timestamp: 2_000_000_000_000,
+          response_timestamps: [2_000_150_000_000, 2_000_220_000_000, 2_000_300_000_000],
+        },
       ]);
       const result = svc.extract(makeRow("genai-perf", { raw }));
       expect(result.latencyCdf?.samples).toEqual([250, 300]);
