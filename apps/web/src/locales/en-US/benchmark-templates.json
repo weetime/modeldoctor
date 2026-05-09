@@ -13,7 +13,8 @@
     "tabs": {
       "inference": "Inference benchmark",
       "capacity": "Capacity planning",
-      "gateway": "Gateway load test"
+      "gateway": "Gateway load test",
+      "prefix-cache-validation": "Prefix-cache validation"
     },
     "filters": {
       "search": "Search name or description…",

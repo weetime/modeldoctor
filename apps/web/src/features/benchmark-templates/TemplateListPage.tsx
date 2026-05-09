@@ -20,6 +20,7 @@ const SCENARIO_TABS: { id: ScenarioId; labelKey: string }[] = [
   { id: "inference", labelKey: "list.tabs.inference" },
   { id: "capacity", labelKey: "list.tabs.capacity" },
   { id: "gateway", labelKey: "list.tabs.gateway" },
+  { id: "prefix-cache-validation", labelKey: "list.tabs.prefix-cache-validation" },
 ];
 
 export function TemplateListPage() {
