@@ -31,3 +31,20 @@ export type { QPSTimeseriesProps, QPSTimeseriesSeries } from "./QPSTimeseries";
 export { assignRunColors, useChartTokens } from "./_shared";
 export type { ChartTheme, DomainChartProps } from "./_shared";
 export type { ChartTokens } from "./theme";
+
+export { Stat } from "./Stat";
+export type { StatProps } from "./Stat";
+
+export { Gauge } from "./Gauge";
+export type { GaugeProps } from "./Gauge";
+
+export { LineTimeseries } from "./LineTimeseries";
+export type { LineTimeseriesProps, LineTimeseriesSeries } from "./LineTimeseries";
+
+export { BarChart as BarChartPanel } from "./BarChart";
+export type { BarChartProps, BarChartSeries } from "./BarChart";
+
+export { PieChart as PieChartPanel } from "./PieChart";
+export type { PieChartProps, PieDatum } from "./PieChart";
+
+export { formatPanelValue } from "./format-unit";
