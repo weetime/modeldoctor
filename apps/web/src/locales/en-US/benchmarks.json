@@ -11,7 +11,8 @@
     "titleByScenario": {
       "inference": "New Inference Benchmark",
       "capacity": "New Capacity Plan",
-      "gateway": "New Gateway Test"
+      "gateway": "New Gateway Test",
+      "prefix-cache-validation": "New Prefix-cache Validation"
     },
     "subtitle": "Configure parameters, then submit",
     "sections": {
@@ -29,12 +30,14 @@
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
-      "genai-perf": "genai-perf"
+      "genai-perf": "genai-perf",
+      "prefix-cache-probe": "prefix-cache-probe"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
-      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings"
+      "genai-perf": "NVIDIA inference perf tool; chat / embeddings / rankings",
+      "prefix-cache-probe": "Validate Higress ai-load-balancer prefix stickiness; reports per-pod routing share + Prom hit rate"
     },
     "errors": {
       "submitFailed": "Failed to submit benchmark"

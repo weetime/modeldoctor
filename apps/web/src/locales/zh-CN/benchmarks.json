@@ -11,7 +11,8 @@
     "titleByScenario": {
       "inference": "新建推理性能基准",
       "capacity": "新建容量规划",
-      "gateway": "新建网关压测"
+      "gateway": "新建网关压测",
+      "prefix-cache-validation": "新建 Prefix-cache 验证"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -29,12 +30,14 @@
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
-      "genai-perf": "genai-perf"
+      "genai-perf": "genai-perf",
+      "prefix-cache-probe": "prefix-cache-probe"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
-      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings"
+      "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings",
+      "prefix-cache-probe": "验证 Higress ai-load-balancer 同前缀粘性，输出 Pod 路由占比与 Prom 命中率"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
