@@ -329,10 +329,12 @@ export function BenchmarkDetailPage() {
               <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
               <ReportSection benchmark={benchmark} />
             </section>
-            <section>
-              <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
-              <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
-            </section>
+            {benchmark.tool !== "prefix-cache-probe" && (
+              <section>
+                <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
+                <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
+              </section>
+            )}
             <section>
               <BenchmarkDetailRawOutput
                 rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
