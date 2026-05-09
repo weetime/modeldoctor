@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Single source of truth for inference engine IDs.
  * Each engine must appear exactly once. New engines require changes here + tests.
@@ -66,3 +68,9 @@ export const ENGINE_CAPABILITY: Record<EngineId, EngineCapability> = {
   // Replace with a "diffusion" capability when Group C panels land.
   comfyui: "generative",
 };
+
+/**
+ * Zod schema for engine capability literals. Shared with engine-metrics
+ * to avoid silent drift if a third capability is added.
+ */
+export const engineCapabilitySchema = z.enum(["generative", "embedding"]);

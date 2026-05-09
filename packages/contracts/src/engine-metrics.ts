@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ENGINE_IDS, type EngineCapability, type EngineId } from "./engine.js";
+import { ENGINE_IDS, type EngineCapability, type EngineId, engineCapabilitySchema } from "./engine.js";
 
 export const panelKindSchema = z.enum(["stat", "gauge", "timeseries", "heatmap"]);
 export type PanelKind = z.infer<typeof panelKindSchema>;
@@ -88,7 +88,7 @@ const engineMetricsPanelResultSchema = z.object({
 
 export const engineMetricsSnapshotResponseSchema = z.object({
   engineId: z.enum(ENGINE_IDS),
-  capability: z.enum(["generative", "embedding"]),
+  capability: engineCapabilitySchema,
   window: z.object({
     from: z.string().datetime(),
     to: z.string().datetime(),
