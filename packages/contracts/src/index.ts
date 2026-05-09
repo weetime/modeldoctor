@@ -17,4 +17,5 @@ export * from "./benchmark.js";
 export * from "./benchmark-template.js";
 export * from "./diagnostics.js";
 export * from "./baseline.js";
+export * from "./engine.js";
 export * from "./insights/index.js";
