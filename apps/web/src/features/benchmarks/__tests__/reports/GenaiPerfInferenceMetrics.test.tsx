@@ -59,11 +59,13 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
 describe("GenaiPerfInferenceMetrics", () => {
   it("renders throughput + latency + sequence-length cards", () => {
     render(<GenaiPerfInferenceMetrics benchmark={makeBenchmark()} />);
-    expect(screen.getByText(/50.2/)).toBeInTheDocument();
+    // requestThroughput.avg = 50.2 rps → Stat formats as "50.2 rps"
+    expect(screen.getByText(/50\.2/)).toBeInTheDocument();
     // requestLatency and timeToFirstToken both have avg 12.5 → multiple elements
     expect(screen.getAllByText(/12.5/).length).toBeGreaterThan(0);
     expect(screen.getByText(/5.1/)).toBeInTheDocument();
-    expect(screen.getByText(/1200/)).toBeInTheDocument();
+    // outputTokenThroughput.avg = 1200 → formatPanelValue tps abbreviates to "1.2k tps"
+    expect(screen.getByText(/1\.2k/)).toBeInTheDocument();
     expect(screen.getByText(/256/)).toBeInTheDocument();
     expect(screen.getByText(/128/)).toBeInTheDocument();
   });

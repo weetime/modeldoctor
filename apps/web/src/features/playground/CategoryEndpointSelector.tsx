@@ -3,6 +3,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -11,12 +12,23 @@ import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts"
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+const NEW_CONNECTION = "__new__";
+
 export interface CategoryEndpointSelectorProps {
   category: ModalityCategory;
   selectedConnectionId: string | null;
   onSelect: (id: string | null) => void;
 }
 
+/**
+ * Playground connection picker. Uses the same 3-line SelectItem layout
+ * (model · name + baseUrl) and "+ New connection" affordance as
+ * `ConnectionPicker` (used in BenchmarkCreatePage), so all in-app picker
+ * surfaces look identical. The Playground-specific bits stay here:
+ *   - default-filter to the current modality category
+ *   - "show all" override toggle for cross-category selection
+ *   - mismatch warning banner when the user picks a different-category one
+ */
 export function CategoryEndpointSelector({
   category,
   selectedConnectionId,
@@ -24,6 +36,7 @@ export function CategoryEndpointSelector({
 }: CategoryEndpointSelectorProps) {
   const { t } = useTranslation("playground");
   const { t: tc } = useTranslation("connections");
+  const { t: tCommon } = useTranslation("common");
   const listQuery = useConnections();
   const list: ConnectionPublic[] = listQuery.data ?? [];
   const [showAll, setShowAll] = useState(false);
@@ -35,16 +48,28 @@ export function CategoryEndpointSelector({
   const mismatched = selected && selected.category !== category;
   const showAllId = useId();
 
+  function handleSelectValue(value: string) {
+    if (value === NEW_CONNECTION) {
+      // Use window.location instead of useNavigate so this component stays
+      // testable in isolation (no Router context required).
+      window.location.assign("/connections");
+      return;
+    }
+    onSelect(value || null);
+  }
+
   return (
     <div className="space-y-2">
-      <Select value={selectedConnectionId ?? ""} onValueChange={(v) => onSelect(v || null)}>
+      <Select value={selectedConnectionId ?? ""} onValueChange={handleSelectValue}>
         <SelectTrigger className="w-full">
           <SelectValue
             placeholder={t(
               visible.length === 0 ? "endpoint.noMatchingConnections" : "endpoint.pickConnection",
               { category: tc(`dialog.categoryOptions.${category}`) },
             )}
-          />
+          >
+            {selected ? selected.model : null}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {visible.length === 0 ? (
@@ -60,7 +85,7 @@ export function CategoryEndpointSelector({
                 <SelectItem
                   key={c.id}
                   value={c.id}
-                  className={mismatch ? "opacity-60" : ""}
+                  className={`py-2 ${mismatch ? "opacity-60" : ""}`}
                   title={
                     mismatch
                       ? t("endpoint.categoryMismatchHint", {
@@ -69,11 +94,22 @@ export function CategoryEndpointSelector({
                       : undefined
                   }
                 >
-                  {c.name}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-baseline gap-2 text-sm">
+                      <span className="font-medium">{c.model}</span>
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{c.name}</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-muted-foreground/70">
+                      {c.baseUrl}
+                    </div>
+                  </div>
                 </SelectItem>
               );
             })
           )}
+          <SelectSeparator />
+          <SelectItem value={NEW_CONNECTION}>{tCommon("endpoint.newConnection")}</SelectItem>
         </SelectContent>
       </Select>
 

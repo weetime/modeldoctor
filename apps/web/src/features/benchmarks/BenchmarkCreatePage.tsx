@@ -61,6 +61,8 @@ function SubmitRow({
 
 export function BenchmarkCreatePage() {
   const { t } = useTranslation("benchmarks");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tSidebar } = useTranslation("sidebar");
   const navigate = useNavigate();
   const createMut = useCreateBenchmark();
 
@@ -165,11 +167,27 @@ export function BenchmarkCreatePage() {
     }
   });
 
+  const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
+    inference: "benchmarkInference",
+    capacity: "benchmarkCapacity",
+    gateway: "benchmarkGateway",
+    "prefix-cache-validation": "benchmarkPrefixCache",
+  };
+  const breadcrumbs = [
+    { label: tSidebar("groups.benchmarks") },
+    {
+      label: tSidebar(`items.${SCENARIO_SIDEBAR_KEY[scenario]}`),
+      to: `/benchmarks/${scenario}`,
+    },
+    { label: tCommon("actions.create") },
+  ];
+
   return (
     <>
       <PageHeader
         title={t(`create.titleByScenario.${scenario}`)}
         subtitle={t("create.subtitle")}
+        breadcrumbs={breadcrumbs}
         rightSlot={<PrefillFromTemplatePopover scenario={scenario} onPick={applyTemplate} />}
       />
       <div className="space-y-6 px-8 py-6">

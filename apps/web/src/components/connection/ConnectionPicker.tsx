@@ -137,7 +137,7 @@ export function ConnectionPicker({
               {selectedConnectionId === MANUAL || (allowManual && !selectedConnectionId)
                 ? t("endpoint.manual")
                 : selectedConnectionId
-                  ? (connectionList.find((c) => c.id === selectedConnectionId)?.name ?? "")
+                  ? (connectionList.find((c) => c.id === selectedConnectionId)?.model ?? "")
                   : ""}
             </SelectValue>
           </SelectTrigger>
@@ -147,9 +147,9 @@ export function ConnectionPicker({
               <SelectItem key={c.id} value={c.id} className="py-2">
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-baseline gap-2 text-sm">
-                    <span className="font-medium">{c.name}</span>
+                    <span className="font-medium">{c.model}</span>
                     <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground">{c.model}</span>
+                    <span className="text-xs text-muted-foreground">{c.name}</span>
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
                 </div>

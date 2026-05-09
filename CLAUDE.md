@@ -86,6 +86,19 @@ Do NOT render `<PageHeader />` directly. Pass `title` / `subtitle` as props to `
 
 Reference: `apps/web/src/features/playground/chat/ChatPage.tsx`.
 
+### Breadcrumbs
+
+Detail / edit / create pages MUST pass `breadcrumbs` to `PageHeader`. List pages and top-level pages (Connections, Settings, Diagnostics, Debug, Playground, Dev) MUST NOT — empty/omitted breadcrumbs render no row.
+
+- **Shape:** `Array<{ label: string; to?: string }>` — three entries by convention: section, parent list, current page.
+- **First entry (section):** `tSidebar("groups.benchmarks")` etc. No `to` — it's a grouping label, not routable.
+- **Middle entry (parent list):** Always has `to` pointing at the list URL. Reuse the sidebar item label (`tSidebar("items.benchmarkInference")` etc.) so breadcrumb labels stay in sync with the nav.
+- **Last entry (current):** Plain label, no `to`. For detail pages, the entity name (`benchmark.name`, `tpl.name`, `connection.name`); for create pages, `tCommon("actions.create")`.
+- **Placement:** Inside `PageHeader`, immediately above the title. Single source of truth — do NOT also render a "Back to list" button in `rightSlot` (breadcrumbs absorb the nav role; `rightSlot` is for entity actions only: Re-run, Delete, Set baseline, etc.).
+- **Loading / 404 states:** Still render breadcrumbs with a placeholder for the last crumb (e.g. `t("edit.title")`). Don't drop the breadcrumb row in these states — it preserves spatial consistency.
+
+Reference: `apps/web/src/features/benchmarks/BenchmarkDetailPage.tsx` (`SCENARIO_SIDEBAR_KEY` map for scenario→sidebar key lookup).
+
 ### Mode tabs
 
 Mode tabs (different modes of the same feature — e.g. image generate/edit, audio TTS/STT, chat single/compare) MUST be passed via `PlaygroundShell`'s `tabs` / `activeTab` / `onTabChange` props. Do NOT render a bespoke tab row.

@@ -10,6 +10,7 @@ import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
 import enDeploymentRecipes from "@/locales/en-US/deployment-recipes.json";
 import enDiagnostics from "@/locales/en-US/diagnostics.json";
+import enEngineMetrics from "@/locales/en-US/engine-metrics.json";
 import enInsights from "@/locales/en-US/insights.json";
 import enPlayground from "@/locales/en-US/playground.json";
 import enSettings from "@/locales/en-US/settings.json";
@@ -22,6 +23,7 @@ import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
 import zhDeploymentRecipes from "@/locales/zh-CN/deployment-recipes.json";
 import zhDiagnostics from "@/locales/zh-CN/diagnostics.json";
+import zhEngineMetrics from "@/locales/zh-CN/engine-metrics.json";
 import zhInsights from "@/locales/zh-CN/insights.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
@@ -42,6 +44,7 @@ void i18n.use(initReactI18next).init({
       insights: enInsights,
       commands: enCommands,
       "deployment-recipes": enDeploymentRecipes,
+      "engine-metrics": enEngineMetrics,
     },
     "zh-CN": {
       common: zhCommon,
@@ -56,6 +59,7 @@ void i18n.use(initReactI18next).init({
       insights: zhInsights,
       commands: zhCommands,
       "deployment-recipes": zhDeploymentRecipes,
+      "engine-metrics": zhEngineMetrics,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -74,6 +78,7 @@ void i18n.use(initReactI18next).init({
     "insights",
     "commands",
     "deployment-recipes",
+    "engine-metrics",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

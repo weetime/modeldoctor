@@ -149,9 +149,9 @@ export function EndpointReportsPage() {
               <Card key={item.connection.id}>
                 <CardHeader className="space-y-1.5">
                   <div className="flex items-baseline gap-2">
-                    <h3 className="font-semibold leading-tight">{item.connection.name}</h3>
+                    <h3 className="font-semibold leading-tight">{item.connection.model}</h3>
                     <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground">{item.connection.model}</span>
+                    <span className="text-xs text-muted-foreground">{item.connection.name}</span>
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground/70">
                     {item.connection.baseUrl}

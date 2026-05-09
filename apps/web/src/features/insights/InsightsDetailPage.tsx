@@ -13,10 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
 import { useConnection, useUpdateConnection } from "@/features/connections/queries";
 import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
-import { ArrowLeft, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { AiDiagnosisCard } from "./AiDiagnosisCard";
 import { ProfileSelector } from "./ProfileSelector";
 import { RadarChart } from "./RadarChart";
@@ -43,6 +43,7 @@ function rangeToISO(range: EndpointReportRange): string {
 
 export function InsightsDetailPage() {
   const { t } = useTranslation("insights");
+  const { t: tSidebar } = useTranslation("sidebar");
   const { connectionId = "" } = useParams<{ connectionId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const range = getValidatedRange(searchParams.get("range"));
@@ -138,10 +139,16 @@ export function InsightsDetailPage() {
     );
   }, [runs]);
 
+  const breadcrumbs = (current: string) => [
+    { label: tSidebar("groups.benchmarks") },
+    { label: tSidebar("items.endpointReports"), to: "/benchmarks/reports" },
+    { label: current },
+  ];
+
   if ((conn.error as { status?: number } | null)?.status === 404) {
     return (
       <>
-        <PageHeader title={connectionId} />
+        <PageHeader title={connectionId} breadcrumbs={breadcrumbs(connectionId)} />
         <div className="px-8 py-6">
           <EmptyState icon={SearchX} title="404" body={t("detail.notFound")} />
         </div>
@@ -151,7 +158,7 @@ export function InsightsDetailPage() {
   if (conn.isLoading || profiles.isLoading) {
     return (
       <>
-        <PageHeader title="…" />
+        <PageHeader title="…" breadcrumbs={breadcrumbs("…")} />
         <div className="m-8 h-64 animate-pulse rounded-md border border-border bg-muted/30" />
       </>
     );
@@ -183,8 +190,9 @@ export function InsightsDetailPage() {
   return (
     <>
       <PageHeader
-        title={conn.data.name}
-        subtitle={`${conn.data.baseUrl} · ${conn.data.model} · ${conn.data.category}`}
+        title={conn.data.model}
+        subtitle={`${conn.data.name} · ${conn.data.baseUrl} · ${conn.data.category}`}
+        breadcrumbs={breadcrumbs(conn.data.model)}
         rightSlot={
           <div className="flex items-center gap-2">
             <ProfileSelector
@@ -219,12 +227,6 @@ export function InsightsDetailPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/benchmarks/reports">
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                {t("detail.backToIndex")}
-              </Link>
-            </Button>
           </div>
         }
       />

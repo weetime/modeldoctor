@@ -21,6 +21,7 @@ import { useCreateTemplate } from "./queries";
 export function TemplateCreatePage() {
   const { t } = useTranslation("benchmark-templates");
   const { t: tc } = useTranslation("common");
+  const { t: tSidebar } = useTranslation("sidebar");
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const user = useAuthStore((s) => s.user);
@@ -56,9 +57,19 @@ export function TemplateCreatePage() {
     }
   });
 
+  const breadcrumbs = [
+    { label: tSidebar("groups.benchmarks") },
+    { label: tSidebar("items.benchmarkTemplates"), to: "/benchmark-templates" },
+    { label: tc("actions.create") },
+  ];
+
   return (
     <>
-      <PageHeader title={t("create.title")} subtitle={t("create.subtitle")} />
+      <PageHeader
+        title={t("create.title")}
+        subtitle={t("create.subtitle")}
+        breadcrumbs={breadcrumbs}
+      />
       <div className="px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">

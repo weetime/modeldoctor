@@ -1,5 +1,5 @@
 import type { EChartsOption } from "echarts";
-import { BarChart, LineChart } from "echarts/charts";
+import { BarChart, GaugeChart, LineChart, PieChart } from "echarts/charts";
 import {
   DataZoomComponent,
   GridComponent,
@@ -16,6 +16,8 @@ import { type ChartTokens, applyTheme, getChartTokens } from "./theme";
 echarts.use([
   LineChart,
   BarChart,
+  GaugeChart,
+  PieChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,

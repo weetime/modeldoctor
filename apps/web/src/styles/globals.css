@@ -32,14 +32,16 @@
     --warning: 38 92% 50%;
     --radius: 0.5rem;
 
-    --chart-1: 232 56% 60%;
-    --chart-2: 199 70% 50%;
-    --chart-3: 150 50% 45%;
-    --chart-4: 36 75% 55%;
-    --chart-5: 338 60% 70%;
-    --chart-6: 58 60% 50%;
-    --chart-7: 0 65% 60%;
-    --chart-8: 225 65% 58%;
+    /* Grafana classic palette (light variant): higher saturation than the
+     * dark version so colors stay distinguishable on white backgrounds. */
+    --chart-1: 98 38% 46%;
+    --chart-2: 43 81% 47%;
+    --chart-3: 190 65% 50%;
+    --chart-4: 22 85% 48%;
+    --chart-5: 4 75% 47%;
+    --chart-6: 208 73% 44%;
+    --chart-7: 308 47% 45%;
+    --chart-8: 260 28% 42%;
   }
 
   .dark {
@@ -65,14 +67,18 @@
     --success: 152 65% 50%;
     --warning: 38 92% 55%;
 
-    --chart-1: 232 70% 70%;
-    --chart-2: 199 75% 60%;
-    --chart-3: 150 55% 55%;
-    --chart-4: 36 80% 65%;
-    --chart-5: 338 65% 75%;
-    --chart-6: 58 65% 60%;
-    --chart-7: 0 70% 70%;
-    --chart-8: 225 70% 70%;
+    /* Grafana classic palette — high-saturation 8-color set used by Grafana
+     * dashboards across the LLM-ops community. Hue distribution covers ~310°
+     * (max chromatic separation) so adjacent series stay distinguishable
+     * even on very dark backgrounds. */
+    --chart-1: 98 38% 56%; /* #7EB26D green */
+    --chart-2: 43 81% 57%; /* #EAB839 gold */
+    --chart-3: 190 65% 65%; /* #6ED0E0 cyan */
+    --chart-4: 22 85% 58%; /* #EF843C orange */
+    --chart-5: 4 75% 57%; /* #E24D42 red */
+    --chart-6: 208 73% 54%; /* #1F78C1 blue */
+    --chart-7: 308 47% 50%; /* #BA43A9 magenta */
+    --chart-8: 260 28% 50%; /* #705DA0 purple */
   }
 
   * {

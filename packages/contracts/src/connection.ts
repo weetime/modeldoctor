@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { ENGINE_IDS } from "./engine.js";
 import { ModalityCategorySchema } from "./modality.js";
 
-export const serverKindSchema = z.enum(["vllm", "sglang", "tgi", "higress", "generic"]);
+export const serverKindSchema = z.enum([...ENGINE_IDS, "higress", "generic"] as const);
 export type ServerKind = z.infer<typeof serverKindSchema>;
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */

@@ -24,7 +24,16 @@ export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark })
         <StatusBadge status={benchmark.status} />
       </Row>
       <Row label={t("detail.metadata.connection")}>
-        {benchmark.connection?.name ?? t("detail.metadata.connectionMissing")}
+        {benchmark.connection ? (
+          <div className="flex flex-col">
+            <span>{benchmark.connection.model}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {benchmark.connection.name} · {benchmark.connection.baseUrl}
+            </span>
+          </div>
+        ) : (
+          t("detail.metadata.connectionMissing")
+        )}
       </Row>
       <Row label={t("detail.metadata.createdAt")}>{fmtDate(benchmark.createdAt)}</Row>
       <Row label={t("detail.metadata.startedAt")}>{fmtDate(benchmark.startedAt)}</Row>

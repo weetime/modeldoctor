@@ -12,24 +12,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
-import type { Benchmark } from "@modeldoctor/contracts";
+import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
+import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
+import type { ScenarioId } from "@modeldoctor/contracts";
 import {
   migrateVegetaParams,
   prefixCacheProbeReportSchema,
 } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
+import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
-import { RequestDetailsSection } from "./RequestDetailsSection";
+import { RequestSetupSection } from "./RequestSetupSection";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
@@ -110,8 +113,82 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
   }
 }
 
+function BenchmarkDetailTabs({
+  benchmark,
+  connection,
+}: {
+  benchmark: Benchmark;
+  connection: ConnectionPublic | null;
+}) {
+  const { t } = useTranslation("benchmarks");
+  const showCharts = benchmark.tool !== "prefix-cache-probe";
+  const showEngineMetrics = Boolean(
+    connection?.prometheusUrl &&
+      connection.serverKind &&
+      benchmark.startedAt &&
+      benchmark.completedAt,
+  );
+  const [active, setActive] = useState<string>("overview");
+
+  return (
+    <Tabs value={active} onValueChange={setActive} className="w-full">
+      <TabsList>
+        <TabsTrigger value="overview">{t("detail.tabs.overview")}</TabsTrigger>
+        {showCharts && <TabsTrigger value="charts">{t("detail.charts.title")}</TabsTrigger>}
+        {showEngineMetrics && (
+          <TabsTrigger value="engine">{t("detail.engineMetrics.title")}</TabsTrigger>
+        )}
+        <TabsTrigger value="request">{t("detail.tabs.request")}</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
+        {benchmark.baselineId && (
+          <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
+        )}
+        <section>
+          <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
+          <ReportSection benchmark={benchmark} />
+        </section>
+      </TabsContent>
+
+      {showCharts && (
+        <TabsContent value="charts" className="space-y-6">
+          <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
+        </TabsContent>
+      )}
+
+      {showEngineMetrics && benchmark.startedAt && benchmark.completedAt && connection && (
+        <TabsContent value="engine" className="space-y-6">
+          <EngineMetricsSection
+            connectionId={connection.id}
+            startedAt={benchmark.startedAt}
+            finishedAt={benchmark.completedAt}
+          />
+        </TabsContent>
+      )}
+
+      <TabsContent value="request" className="space-y-6">
+        <RequestSetupSection benchmark={benchmark} />
+        <BenchmarkDetailRawOutput
+          rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
+          logs={benchmark.logs}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+/** Map scenario id → sidebar i18n key for breadcrumb labels. */
+const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
+  inference: "benchmarkInference",
+  capacity: "benchmarkCapacity",
+  gateway: "benchmarkGateway",
+  "prefix-cache-validation": "benchmarkPrefixCache",
+};
+
 export function BenchmarkDetailPage() {
   const { t } = useTranslation("benchmarks");
+  const { t: tSidebar } = useTranslation("sidebar");
   const { id } = useParams<{ id: string }>();
   const { data: benchmark, isLoading, isError, error } = useBenchmarkDetail(id ?? "");
   // Loaded eagerly so the rerun handler can substitute the current
@@ -211,11 +288,21 @@ export function BenchmarkDetailPage() {
     }
   }
 
+  const breadcrumbs = [
+    { label: tSidebar("groups.benchmarks") },
+    {
+      label: tSidebar(`items.${SCENARIO_SIDEBAR_KEY[benchmark.scenario as ScenarioId]}`),
+      to: `/benchmarks/${benchmark.scenario}`,
+    },
+    { label: benchmark.name },
+  ];
+
   return (
     <>
       <PageHeader
         title={benchmark.name}
         subtitle={subtitle}
+        breadcrumbs={breadcrumbs}
         rightSlot={
           <div className="flex items-center gap-2">
             {isTerminal &&
@@ -266,12 +353,6 @@ export function BenchmarkDetailPage() {
             <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
               {t("detail.delete.button")}
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to={`/benchmarks/${benchmark.scenario}`}>
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                {t("detail.back")}
-              </Link>
-            </Button>
           </div>
         }
       />
@@ -314,34 +395,7 @@ export function BenchmarkDetailPage() {
           </details>
         )}
         {isTerminal ? (
-          <>
-            {benchmark.baselineId && (
-              <section>
-                <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
-              </section>
-            )}
-            {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
-              <section>
-                <RequestDetailsSection benchmark={benchmark} />
-              </section>
-            )}
-            <section>
-              <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-              <ReportSection benchmark={benchmark} />
-            </section>
-            {benchmark.tool !== "prefix-cache-probe" && (
-              <section>
-                <h3 className="mb-3 text-sm font-semibold">{t("detail.charts.title")}</h3>
-                <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
-              </section>
-            )}
-            <section>
-              <BenchmarkDetailRawOutput
-                rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
-                logs={benchmark.logs}
-              />
-            </section>
-          </>
+          <BenchmarkDetailTabs benchmark={benchmark} connection={rerunConnection ?? null} />
         ) : (
           <RunningSection benchmark={benchmark} />
         )}

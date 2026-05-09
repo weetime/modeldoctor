@@ -59,17 +59,18 @@ describe("ConnectionPicker", () => {
     expect(screen.getByText("http://183.240.109.2:30888")).toBeInTheDocument();
   });
 
-  it("closed trigger renders only the connection name", async () => {
+  it("closed trigger renders only the model id", async () => {
     (useConnections as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [conn],
       isLoading: false,
     });
     render(withQc(<ConnectionPicker selectedConnectionId="c_1" onSelect={() => {}} />));
-    // Trigger contents (combobox name) should be only the connection name —
-    // no model, no baseUrl visible in the closed state.
+    // Trigger shows the model id (the first-class identifier in our system),
+    // not the connection alias or baseUrl. Full picker option still shows all
+    // three when the dropdown is open.
     const trigger = await screen.findByRole("combobox");
-    expect(trigger).toHaveTextContent("bge-by-mis-tei");
+    expect(trigger).toHaveTextContent("gen-studio_bge-m3-uZbs");
     expect(trigger.textContent).not.toContain("http://");
-    expect(trigger.textContent).not.toContain("gen-studio_bge-m3-uZbs");
+    expect(trigger.textContent).not.toContain("bge-by-mis-tei");
   });
 });

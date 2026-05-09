@@ -108,6 +108,12 @@
       }
     }
   },
+  "scenarioDescriptions": {
+    "inference": "TTFT / TPOT / 单次吞吐基线",
+    "capacity": "SLO 驱动的负载阶梯扫描",
+    "gateway": "Higress / API 链路 HTTP 性能",
+    "prefix-cache-validation": "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本"
+  },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
   "compareDisabledMixedTools": "对比需要相同 tool（{{summary}}）",
@@ -212,6 +218,41 @@
       "pending": "等待启动…",
       "title": "运行中…",
       "elapsed": "已耗时 {{sec}}s"
+    },
+    "engineMetrics": {
+      "title": "推理引擎指标"
+    },
+    "tabs": {
+      "overview": "概览",
+      "raw": "原始输出",
+      "request": "请求 · 响应"
+    },
+    "requestSetup": {
+      "title": "请求设置",
+      "runConfig": "运行配置",
+      "synthesizedHint": "请求体由 {{tool}} 在运行时按上述配置生成",
+      "params": {
+        "profile": "Profile",
+        "apiType": "API 类型",
+        "dataset": "数据集",
+        "rate": "速率",
+        "totalRequests": "总请求数",
+        "maxConcurrency": "最大并发",
+        "inputTokens": "输入 token 数",
+        "outputTokens": "输出 token 数",
+        "endpointType": "端点类型",
+        "streaming": "流式",
+        "on": "开",
+        "off": "关",
+        "numPrompts": "Prompt 数",
+        "concurrency": "并发",
+        "inputTokensDist": "输入 token (均值 ± 标准差)",
+        "outputTokensDist": "输出 token (均值 ± 标准差)",
+        "promptSets": "Prompt 集数",
+        "requestsPerSet": "每集请求数",
+        "maxTokens": "单请求最大 token",
+        "promBackoff": "Prometheus 回扫间隔"
+      }
     },
     "charts": {
       "title": "分布图",

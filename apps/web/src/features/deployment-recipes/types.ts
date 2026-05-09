@@ -1,16 +1,8 @@
-export type RecipeStatus = "native" | "partial" | "none";
+import type { EngineId } from "@modeldoctor/contracts";
 
-export type EngineId =
-  | "vllm"
-  | "sglang"
-  | "trtllm"
-  | "mindie"
-  | "lmdeploy"
-  | "tgi"
-  | "tei"
-  | "infinity"
-  | "llamacpp"
-  | "comfyui";
+export type { EngineId };
+
+export type RecipeStatus = "native" | "partial" | "none";
 
 export type CategoryId = "dense" | "moe" | "vlm" | "embedding" | "rerank" | "diffusion";
 

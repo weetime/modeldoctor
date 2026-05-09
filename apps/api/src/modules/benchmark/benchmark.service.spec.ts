@@ -156,6 +156,8 @@ const mockConnections: ConnectionService = {
     customHeaders: "{}",
     queryParams: "",
     tokenizerHfId: null,
+    prometheusUrl: null,
+    serverKind: null,
     category: "text" as const,
   })),
 } as unknown as ConnectionService;

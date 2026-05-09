@@ -1,0 +1,52 @@
+{
+  "section": {
+    "title": "Engine Metrics",
+    "subtitle": "{{engineName}} · live from Prometheus · {{from}} ~ {{to}}",
+    "notConfigured": "This connection has no Prometheus URL — set it in Connection settings.",
+    "missingServerKind": "Pick an inference engine in Connection settings.",
+    "promError": "Cannot reach Prometheus — check connection config or network."
+  },
+  "groups": {
+    "topline": "Top-line Summary",
+    "latency": "Latency & UX",
+    "throughput": "Token Throughput & Workload",
+    "engine": "Engine Internal",
+    "health": "System Health"
+  },
+  "sections": {
+    "kpi": "Key indicators",
+    "gauges": "Gauges",
+    "timeSeries": "Time series"
+  },
+  "metrics": {
+    "success_rate": { "label": "Success rate" },
+    "active_requests": { "label": "Active requests" },
+    "system_efficiency": { "label": "System efficiency" },
+    "ttft_p99": { "label": "TTFT P99" },
+    "preemption_rate": { "label": "Preemption rate" },
+    "e2e_latency": { "label": "E2E latency" },
+    "stage_breakdown": { "label": "Stage breakdown (Prefill/Decode)" },
+    "ttft_vs_tpot": { "label": "TTFT vs TPOT" },
+    "token_throughput_in": { "label": "Input throughput" },
+    "token_throughput_out": { "label": "Output throughput" },
+    "token_io_ratio": { "label": "Output/Input ratio" },
+    "prefix_cache_savings": { "label": "Prefix cache savings" },
+    "request_queue_time": { "label": "Request queue time" },
+    "request_length_heatmap": { "label": "Request length distribution" },
+    "kv_cache_usage": { "label": "KV cache usage" },
+    "prefix_cache_hit_rate": { "label": "Prefix cache hit rate" },
+    "scheduler_state": { "label": "Scheduler state" },
+    "python_gc_memory": { "label": "GC & memory" },
+    "finish_reason": { "label": "Finish reason" },
+    "request_latency_p99": { "label": "Request latency P99" },
+    "tokenize_rate": { "label": "Tokenize rate" },
+    "embedding_rate": { "label": "Embedding rate" },
+    "queue_metrics": { "label": "Queue metrics" }
+  },
+  "unavailable": {
+    "noData": "(not reported by this engine)",
+    "no_data": "(not reported by this engine)",
+    "prom_error": "(Prometheus unreachable)",
+    "not_supported": "(metric not supported)"
+  }
+}
