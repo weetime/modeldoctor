@@ -218,7 +218,35 @@
     },
     "tabs": {
       "overview": "Overview",
-      "raw": "Raw output"
+      "raw": "Raw output",
+      "request": "Request · Response"
+    },
+    "requestSetup": {
+      "title": "Request setup",
+      "runConfig": "Run config",
+      "synthesizedHint": "Request bodies are synthesized by {{tool}} at runtime from the config above",
+      "params": {
+        "profile": "Profile",
+        "apiType": "API type",
+        "dataset": "Dataset",
+        "rate": "Rate",
+        "totalRequests": "Total requests",
+        "maxConcurrency": "Max concurrency",
+        "inputTokens": "Input tokens",
+        "outputTokens": "Output tokens",
+        "endpointType": "Endpoint type",
+        "streaming": "Streaming",
+        "on": "on",
+        "off": "off",
+        "numPrompts": "Number of prompts",
+        "concurrency": "Concurrency",
+        "inputTokensDist": "Input tokens (mean ± stddev)",
+        "outputTokensDist": "Output tokens (mean ± stddev)",
+        "promptSets": "Prompt sets",
+        "requestsPerSet": "Requests per set",
+        "maxTokens": "Max tokens per request",
+        "promBackoff": "Prometheus backoff"
+      }
     },
     "charts": {
       "title": "Distributions",

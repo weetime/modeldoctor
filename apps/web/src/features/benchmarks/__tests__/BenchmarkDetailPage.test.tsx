@@ -152,7 +152,7 @@ describe("BenchmarkDetailPage", () => {
     mockUseConnection.mockReturnValue({ data: { ...defaultConnectionData } });
   });
 
-  it("renders metadata + Raw tab exposes raw output and logs toggles", async () => {
+  it("renders metadata + Request·Response tab exposes raw output and logs toggles", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark());
     const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
@@ -160,8 +160,8 @@ describe("BenchmarkDetailPage", () => {
     // Metadata renders the scenario id where the legacy "kind" used to live.
     expect(screen.getByText("inference")).toBeInTheDocument();
     expect(screen.getByText("guidellm")).toBeInTheDocument();
-    // Raw output and logs live under the "Raw" tab now — switch to it first.
-    await user.click(screen.getByRole("tab", { name: /Raw output|原始输出/i }));
+    // Raw output and logs live under the merged "Request · Response" tab now.
+    await user.click(screen.getByRole("tab", { name: /Request · Response|请求 · 响应/i }));
     expect(await screen.findByRole("button", { name: /Raw output|原始输出/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Logs|日志/i })).toBeInTheDocument();
   });

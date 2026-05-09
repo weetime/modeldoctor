@@ -32,7 +32,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
-import { RequestDetailsSection } from "./RequestDetailsSection";
+import { RequestSetupSection } from "./RequestSetupSection";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
@@ -138,15 +138,12 @@ function BenchmarkDetailTabs({
         {showEngineMetrics && (
           <TabsTrigger value="engine">{t("detail.engineMetrics.title")}</TabsTrigger>
         )}
-        <TabsTrigger value="raw">{t("detail.tabs.raw")}</TabsTrigger>
+        <TabsTrigger value="request">{t("detail.tabs.request")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
         {benchmark.baselineId && (
           <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
-        )}
-        {benchmark.scenario === "gateway" && benchmark.tool === "vegeta" && (
-          <RequestDetailsSection benchmark={benchmark} />
         )}
         <section>
           <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
@@ -170,7 +167,8 @@ function BenchmarkDetailTabs({
         </TabsContent>
       )}
 
-      <TabsContent value="raw" className="space-y-6">
+      <TabsContent value="request" className="space-y-6">
+        <RequestSetupSection benchmark={benchmark} />
         <BenchmarkDetailRawOutput
           rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
           logs={benchmark.logs}

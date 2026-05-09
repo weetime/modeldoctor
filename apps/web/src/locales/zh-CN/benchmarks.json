@@ -218,7 +218,35 @@
     },
     "tabs": {
       "overview": "概览",
-      "raw": "原始输出"
+      "raw": "原始输出",
+      "request": "请求 · 响应"
+    },
+    "requestSetup": {
+      "title": "请求设置",
+      "runConfig": "运行配置",
+      "synthesizedHint": "请求体由 {{tool}} 在运行时按上述配置生成",
+      "params": {
+        "profile": "Profile",
+        "apiType": "API 类型",
+        "dataset": "数据集",
+        "rate": "速率",
+        "totalRequests": "总请求数",
+        "maxConcurrency": "最大并发",
+        "inputTokens": "输入 token 数",
+        "outputTokens": "输出 token 数",
+        "endpointType": "端点类型",
+        "streaming": "流式",
+        "on": "开",
+        "off": "关",
+        "numPrompts": "Prompt 数",
+        "concurrency": "并发",
+        "inputTokensDist": "输入 token (均值 ± 标准差)",
+        "outputTokensDist": "输出 token (均值 ± 标准差)",
+        "promptSets": "Prompt 集数",
+        "requestsPerSet": "每集请求数",
+        "maxTokens": "单请求最大 token",
+        "promBackoff": "Prometheus 回扫间隔"
+      }
     },
     "charts": {
       "title": "分布图",
