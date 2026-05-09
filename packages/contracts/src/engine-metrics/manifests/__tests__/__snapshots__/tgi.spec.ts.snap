@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`tgi manifest > snapshot of rendered PromQL is stable 1`] = `
+[
+  {
+    "exprs": [
+      "sum(tgi_batch_current_size)",
+    ],
+    "key": "active_requests",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.99, sum by (le) (rate(tgi_request_inference_duration_bucket[5m]))) * 1000",
+    ],
+    "key": "ttft_p99",
+  },
+  {
+    "exprs": [
+      "label_replace(histogram_quantile(0.50, sum by (le) (rate(tgi_request_duration_bucket[1m]))) * 1000, "series", "p50", "", ".*") or label_replace(histogram_quantile(0.95, sum by (le) (rate(tgi_request_duration_bucket[1m]))) * 1000, "series", "p95", "", ".*") or label_replace(histogram_quantile(0.99, sum by (le) (rate(tgi_request_duration_bucket[1m]))) * 1000, "series", "p99", "", ".*")",
+    ],
+    "key": "e2e_latency",
+  },
+  {
+    "exprs": [
+      "label_replace((sum(rate(tgi_request_queue_duration_sum[1m])) / clamp_min(sum(rate(tgi_request_queue_duration_count[1m])), 1)) * 1000, "series", "queue", "", ".*") or label_replace((sum(rate(tgi_request_inference_duration_sum[1m])) / clamp_min(sum(rate(tgi_request_inference_duration_count[1m])), 1)) * 1000, "series", "inference", "", ".*")",
+    ],
+    "key": "stage_breakdown",
+  },
+  {
+    "exprs": [
+      "sum(rate(tgi_tokenize_total[1m]))",
+    ],
+    "key": "token_throughput_out",
+  },
+  {
+    "exprs": [
+      "histogram_quantile(0.99, sum by (le) (rate(tgi_request_queue_duration_bucket[1m]))) * 1000",
+    ],
+    "key": "request_queue_time",
+  },
+  {
+    "exprs": [
+      "label_replace(sum(tgi_batch_current_size), "series", "batch", "", ".*") or label_replace(sum(tgi_queue_size), "series", "queue", "", ".*")",
+    ],
+    "key": "scheduler_state",
+  },
+]
+`;
