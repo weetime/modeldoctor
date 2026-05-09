@@ -1,0 +1,47 @@
+{
+  "section": {
+    "title": "推理引擎指标",
+    "subtitle": "{{engineName}} · 实时来自 Prometheus · {{from}} ~ {{to}}",
+    "notConfigured": "此连接未配置 Prometheus URL — 前往连接设置补齐",
+    "missingServerKind": "请在连接设置中选择推理引擎类型",
+    "promError": "无法访问 Prometheus，请检查连接配置或网络可达性"
+  },
+  "groups": {
+    "topline": "概览",
+    "latency": "延迟与体验",
+    "throughput": "吞吐与负载",
+    "engine": "引擎内部",
+    "health": "系统健康"
+  },
+  "metrics": {
+    "success_rate": { "label": "成功率" },
+    "active_requests": { "label": "进行中请求" },
+    "system_efficiency": { "label": "系统效率" },
+    "ttft_p99": { "label": "TTFT P99" },
+    "preemption_rate": { "label": "抢占速率" },
+    "e2e_latency": { "label": "端到端延迟" },
+    "stage_breakdown": { "label": "阶段拆分（Prefill/Decode）" },
+    "ttft_vs_tpot": { "label": "TTFT vs TPOT" },
+    "token_throughput_in": { "label": "输入吞吐" },
+    "token_throughput_out": { "label": "输出吞吐" },
+    "token_io_ratio": { "label": "输入/输出比" },
+    "prefix_cache_savings": { "label": "Prefix Cache 节省" },
+    "request_queue_time": { "label": "请求队列时间" },
+    "request_length_heatmap": { "label": "请求长度分布" },
+    "kv_cache_usage": { "label": "KV Cache 利用率" },
+    "prefix_cache_hit_rate": { "label": "Prefix Cache 命中率" },
+    "scheduler_state": { "label": "调度器状态" },
+    "python_gc_memory": { "label": "GC 与内存" },
+    "finish_reason": { "label": "结束原因分布" },
+    "request_latency_p99": { "label": "请求延迟 P99" },
+    "tokenize_rate": { "label": "Token 化速率" },
+    "embedding_rate": { "label": "Embedding 速率" },
+    "queue_metrics": { "label": "队列指标" }
+  },
+  "unavailable": {
+    "noData": "（该引擎不上报此指标）",
+    "no_data": "（该引擎不上报此指标）",
+    "prom_error": "（Prometheus 暂时不可达）",
+    "not_supported": "（该引擎不支持此指标）"
+  }
+}
