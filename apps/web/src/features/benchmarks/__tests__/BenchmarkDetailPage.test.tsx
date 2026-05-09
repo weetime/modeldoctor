@@ -25,32 +25,25 @@ vi.mock("@/lib/api-client", () => {
 // api.get calls precisely, and the connection fetch would throw off those
 // counts. The rerun-related tests only care that migrateVegetaParams gets
 // the right model, which is covered separately.
+const mockUseConnection = vi.fn();
+
 vi.mock("@/features/connections/queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/connections/queries")>();
   return {
     ...actual,
-    useConnection: () => ({
-      data: {
-        id: "c1",
-        userId: "u_1",
-        name: "test-conn",
-        baseUrl: "http://x",
-        apiKeyPreview: "sk-...test",
-        model: "test-model",
-        customHeaders: "",
-        queryParams: "",
-        category: "chat" as const,
-        tags: [],
-        prometheusUrl: null,
-        serverKind: null,
-        tokenizerHfId: null,
-        createdAt: "2026-05-06T00:00:00.000Z",
-        updatedAt: "2026-05-06T00:00:00.000Z",
-      },
-    }),
+    useConnection: (...args: unknown[]) => mockUseConnection(...args),
     useRevealApiKey: () => ({ data: { apiKey: "sk-test-secret" } }),
   };
 });
+
+// Stub EngineMetricsSection to avoid real chart rendering + API calls in tests.
+vi.mock("@/features/engine-metrics/EngineMetricsSection", () => ({
+  EngineMetricsSection: ({ connectionId }: { connectionId: string }) => (
+    <div data-testid="engine-metrics-section" data-connection-id={connectionId}>
+      Engine Metrics
+    </div>
+  ),
+}));
 
 // ECharts uses canvas APIs not present in jsdom; stub the chart components
 // so the new RunChartsSection can render in this page test.
@@ -131,11 +124,32 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultConnectionData = {
+  id: "c1",
+  userId: "u_1",
+  name: "test-conn",
+  baseUrl: "http://x",
+  apiKeyPreview: "sk-...test",
+  model: "test-model",
+  customHeaders: "",
+  queryParams: "",
+  category: "chat" as const,
+  tags: [],
+  prometheusUrl: null as string | null,
+  serverKind: null as string | null,
+  tokenizerHfId: null,
+  createdAt: "2026-05-06T00:00:00.000Z",
+  updatedAt: "2026-05-06T00:00:00.000Z",
+  evaluationProfileId: null,
+  evaluationProfile: null,
+};
+
 describe("BenchmarkDetailPage", () => {
   beforeEach(() => {
     vi.mocked(api.get).mockReset();
     vi.mocked(api.post).mockReset();
     vi.mocked(api.del).mockReset();
+    mockUseConnection.mockReturnValue({ data: { ...defaultConnectionData } });
   });
 
   it("renders metadata, metrics, raw output toggle", async () => {
@@ -689,5 +703,46 @@ describe("BenchmarkDetailPage", () => {
     expect(
       screen.queryByRole("button", { name: /save as template|保存为模板/i }),
     ).not.toBeInTheDocument();
+  });
+
+  // ---- EngineMetricsSection mount ----
+
+  it("renders <EngineMetricsSection> when connection has prometheusUrl + serverKind", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "completed",
+        startedAt: "2026-04-30T12:00:01.000Z",
+        completedAt: "2026-04-30T12:00:30.000Z",
+      }),
+    );
+    mockUseConnection.mockReturnValue({
+      data: {
+        ...defaultConnectionData,
+        prometheusUrl: "http://prom:9090",
+        serverKind: "vllm",
+      },
+    });
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getAllByText(/Engine Metrics|推理引擎指标/).length).toBeGreaterThan(0),
+    );
+    // The stub div must be present
+    expect(screen.getByTestId("engine-metrics-section")).toBeInTheDocument();
+  });
+
+  it("does not render <EngineMetricsSection> when prometheusUrl is missing", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "completed",
+        startedAt: "2026-04-30T12:00:01.000Z",
+        completedAt: "2026-04-30T12:00:30.000Z",
+      }),
+    );
+    mockUseConnection.mockReturnValue({
+      data: { ...defaultConnectionData, prometheusUrl: null, serverKind: "vllm" },
+    });
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await screen.findByText("smoke");
+    expect(screen.queryByTestId("engine-metrics-section")).toBeNull();
   });
 });

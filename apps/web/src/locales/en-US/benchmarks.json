@@ -213,6 +213,9 @@
       "title": "Running…",
       "elapsed": "{{sec}}s elapsed"
     },
+    "engineMetrics": {
+      "title": "Engine Metrics"
+    },
     "charts": {
       "title": "Distributions",
       "latencyCdfTitle": "Latency CDF",

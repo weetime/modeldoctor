@@ -41,6 +41,7 @@ import {
   useCreateBenchmark,
   useDeleteBenchmark,
 } from "./queries";
+import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
 import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
@@ -335,6 +336,21 @@ export function BenchmarkDetailPage() {
                 <BenchmarkChartsSection benchmarkId={benchmark.id} tool={benchmark.tool} />
               </section>
             )}
+            {rerunConnection?.prometheusUrl &&
+              rerunConnection.serverKind &&
+              benchmark.startedAt &&
+              benchmark.completedAt && (
+                <section>
+                  <h3 className="mb-3 text-sm font-semibold">
+                    {t("detail.engineMetrics.title")}
+                  </h3>
+                  <EngineMetricsSection
+                    connectionId={rerunConnection.id}
+                    startedAt={benchmark.startedAt}
+                    finishedAt={benchmark.completedAt}
+                  />
+                </section>
+              )}
             <section>
               <BenchmarkDetailRawOutput
                 rawOutput={benchmark.rawOutput as Record<string, unknown> | null}

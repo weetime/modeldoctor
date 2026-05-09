@@ -213,6 +213,9 @@
       "title": "运行中…",
       "elapsed": "已耗时 {{sec}}s"
     },
+    "engineMetrics": {
+      "title": "推理引擎指标"
+    },
     "charts": {
       "title": "分布图",
       "latencyCdfTitle": "延迟分布 (CDF)",
