@@ -67,11 +67,31 @@ async def send_one(
         return False
 
 
-async def snapshot_prom(prom: str, metric: str) -> dict[str, int]:
+def _build_prom_query(metric_short: str, model: str) -> str:
+    """Build a PromQL query that handles both vLLM V0 and V1 metric names,
+    scoped to a single model_name to avoid cross-deployment pollution.
+
+    V0 (vLLM <= 0.8.x): vllm:gpu_prefix_cache_queries_total
+    V1 (vLLM 0.9+):     vllm:prefix_cache_queries_total
+
+    `or` returns the first non-empty side; in practice only one will match
+    for a given model_name, so this just makes the script forward/backward
+    compatible without configuration. Series with no model_name label
+    (legacy metrics) are excluded — that's intentional, we only want
+    counts for the model under test.
+    """
+    return (
+        f'vllm:{metric_short}{{model_name="{model}"}}'
+        f' or vllm:gpu_{metric_short}{{model_name="{model}"}}'
+    )
+
+
+async def snapshot_prom(prom: str, metric_short: str, model: str) -> dict[str, int]:
     """Returns {pod -> int(value)}. 'pod' label comes from kube-state-metrics
     relabel; if absent we fall back to 'instance'."""
+    query = _build_prom_query(metric_short, model)
     async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.get(f"{prom}/api/v1/query", params={"query": metric})
+        r = await client.get(f"{prom}/api/v1/query", params={"query": query})
         r.raise_for_status()
         result = r.json()["data"]["result"]
     out: dict[str, int] = {}
@@ -102,11 +122,8 @@ async def run_round(
     backoff: int,
 ) -> dict[str, Any]:
     """Sends `requests` same-prefix requests, returns per-pod delta."""
-    queries_metric = "vllm:gpu_prefix_cache_queries_total"
-    hits_metric = "vllm:gpu_prefix_cache_hits_total"
-
-    before_q = await snapshot_prom(prom, queries_metric)
-    before_h = await snapshot_prom(prom, hits_metric)
+    before_q = await snapshot_prom(prom, "prefix_cache_queries_total", model)
+    before_h = await snapshot_prom(prom, "prefix_cache_hits_total", model)
 
     tasks = [
         send_one(url, api_key, model, prompt, f"{label}-q{i}", max_tokens) for i in range(requests)
@@ -117,8 +134,8 @@ async def run_round(
     print(f"[probe] {label}: {succeeded}/{requests} succeeded; sleeping {backoff}s for Prom scrape")
     await asyncio.sleep(backoff)
 
-    after_q = await snapshot_prom(prom, queries_metric)
-    after_h = await snapshot_prom(prom, hits_metric)
+    after_q = await snapshot_prom(prom, "prefix_cache_queries_total", model)
+    after_h = await snapshot_prom(prom, "prefix_cache_hits_total", model)
 
     delta_q = diff_snapshots(before_q, after_q)
     delta_h = diff_snapshots(before_h, after_h)
