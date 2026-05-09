@@ -54,28 +54,26 @@ export class EngineMetricsService {
     const promBaseUrl = conn.prometheusUrl;
     const model = conn.model;
 
-    // Run panels sequentially so PromQL variant fall-through ordering is
-    // deterministic. Per-panel errors are isolated via try/catch (equivalent
-    // to Promise.allSettled semantics without concurrent interleaving).
-    const panels: EngineMetricsPanelResult[] = [];
-    for (const spec of manifest.metrics) {
-      try {
-        panels.push(
-          await this.runMetric(spec, { baseUrl: promBaseUrl, model, from, to, step }),
-        );
-      } catch (err) {
-        this.log.warn(`panel ${spec.key} threw: ${(err as Error).message}`);
-        panels.push({
-          key: spec.key,
-          group: spec.group,
-          panel: spec.panel,
-          unit: spec.unit,
-          unavailable: true,
-          reason: "prom_error",
-          series: [],
-        });
-      }
-    }
+    const settled = await Promise.allSettled(
+      manifest.metrics.map((spec) =>
+        this.runMetric(spec, { baseUrl: promBaseUrl, model, from, to, step }),
+      ),
+    );
+
+    const panels: EngineMetricsPanelResult[] = settled.map((r, i) => {
+      const spec = manifest.metrics[i];
+      if (r.status === "fulfilled") return r.value;
+      this.log.warn(`panel ${spec.key} threw: ${(r.reason as Error).message}`);
+      return {
+        key: spec.key,
+        group: spec.group,
+        panel: spec.panel,
+        unit: spec.unit,
+        unavailable: true,
+        reason: "prom_error",
+        series: [],
+      };
+    });
 
     return {
       engineId: manifest.engineId,

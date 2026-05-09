@@ -92,13 +92,29 @@ describe("EngineMetricsService", () => {
 
   it("falls through to second variant when first returns no_data", async () => {
     connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn());
-    promClient.queryRange
-      .mockResolvedValueOnce({ unavailable: true, reason: "no_data", series: [] })
-      .mockResolvedValueOnce({
+
+    // Default behavior: every panel returns one usable series.
+    // For the prefix_cache_savings panel specifically (which has 2 variants —
+    // v1 prefix_cache_*, v0 gpu_prefix_cache_*), simulate v1 having no data so
+    // we fall through to v0.
+    promClient.queryRange.mockImplementation(async (args: { query: string }) => {
+      if (args.query.includes("vllm:prefix_cache_") && !args.query.includes("vllm:gpu_prefix_cache_")) {
+        // v1 variant — pretend no data, force fallthrough
+        return { unavailable: true, reason: "no_data", series: [] };
+      }
+      if (args.query.includes("vllm:gpu_prefix_cache_")) {
+        // v0 variant — has data
+        return {
+          unavailable: false,
+          series: [{ samples: [[1715212800, 0.85]] }],
+        };
+      }
+      // All other panels: arbitrary success.
+      return {
         unavailable: false,
-        series: [{ samples: [[1715212800, 0.85]] }],
-      })
-      .mockResolvedValue({ unavailable: true, reason: "no_data", series: [] });
+        series: [{ samples: [[1715212800, 1]] }],
+      };
+    });
 
     const r = await svc.fetchSnapshot("u1", "c1", {
       from: "2026-05-09T00:00:00.000Z",
@@ -126,16 +142,24 @@ describe("EngineMetricsService", () => {
 
   it("isolates per-panel failures (Promise.allSettled)", async () => {
     connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn());
+    // The third metric in the array (system_efficiency) throws. Every other
+    // panel succeeds. The thrown panel should still come back, just marked
+    // unavailable with reason: prom_error.
     let n = 0;
-    promClient.queryRange.mockImplementation(async () => {
+    promClient.queryRange.mockImplementation(async (args: { query: string }) => {
       n++;
-      if (n === 3) throw new Error("boom");
+      if (args.query.includes("system_efficiency") || n === 3) {
+        throw new Error("boom");
+      }
       return { unavailable: false, series: [{ samples: [[1, 1]] }] };
     });
     const r = await svc.fetchSnapshot("u1", "c1", {
       from: "2026-05-09T00:00:00.000Z",
       to: "2026-05-09T00:01:00.000Z",
     });
+    // Note: this is a soft assertion — Promise.allSettled may dispatch all 19
+    // queries before the first throw lands; the n===3 trigger keeps it
+    // deterministic that exactly ONE panel throws.
     const unavailable = r.panels.filter((p) => p.unavailable);
     expect(unavailable).toHaveLength(1);
     expect(unavailable[0].reason).toBe("prom_error");
