@@ -49,3 +49,24 @@ test("Discover fills 5 fields from a vLLM-shaped endpoint", async ({ page }) => 
   // Suggested tag chip "vllm" rendered
   await expect(dialog.getByText("vllm", { exact: true })).toBeVisible();
 });
+
+test("Discover rejects AWS metadata URL with security warning", async ({ page }) => {
+  await page.goto("/connections");
+  await page
+    .getByRole("button", { name: /new connection|新建连接/i })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Name|^名称/i).fill("e2e-ssrf");
+  await dialog.getByLabel(/api base url/i).fill("http://169.254.169.254/latest");
+
+  await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
+
+  // Security/SSRF banner appears; Apply All button must NOT be rendered.
+  await expect(dialog.getByText(/security|安全/i)).toBeVisible({ timeout: 15_000 });
+  await expect(
+    dialog.getByRole("button", { name: /Apply All|一键应用/i }),
+  ).not.toBeVisible();
+});
