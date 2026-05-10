@@ -84,6 +84,11 @@
       "missingBaseUrl": "请先填写 baseUrl",
       "successPartial": "已检测到 {{filled}} 个字段，{{failed}} 个探测失败",
       "successAll": "已检测到 {{filled}} 个字段，请确认",
+      "showDetails": "展开明细",
+      "hideDetails": "收起",
+      "inferredHeading": "推断结果",
+      "failedProbesHeading": "失败的探测",
+      "noValue": "未检测到",
       "confidence": {
         "certain": "确定",
         "likely": "可能",

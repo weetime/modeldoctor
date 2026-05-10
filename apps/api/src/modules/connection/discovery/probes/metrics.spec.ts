@@ -40,15 +40,21 @@ describe("runMetricsProbe", () => {
     expect(r.data?.body.length).toBeLessThanOrEqual(64 * 1024);
   });
 
-  it("does NOT forward apiKey (most /metrics endpoints are unauthenticated)", async () => {
+  it("forwards apiKey AND extraHeaders (gateway-protected /metrics is real)", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response("metric 1", {
         status: 200,
         headers: { "content-type": "text/plain", "content-length": "8" },
       }),
     );
-    await runMetricsProbe({ baseUrl: "http://x", apiKey: "sk-1" });
+    await runMetricsProbe({
+      baseUrl: "http://gateway",
+      apiKey: "sk-1",
+      extraHeaders: { "x-higress-llm-model": "qwen-72b" },
+    });
     const init = fetchMock.mock.calls[0][1] as RequestInit;
-    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer sk-1");
+    expect(headers["x-higress-llm-model"]).toBe("qwen-72b");
   });
 });

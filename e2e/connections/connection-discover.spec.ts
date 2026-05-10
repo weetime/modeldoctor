@@ -37,7 +37,9 @@ test("Discover fills 5 fields from a vLLM-shaped endpoint", async ({ page }) => 
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
 
   // Wait for the success banner — auto-detected fields message
-  await expect(dialog.getByText(/Detected|已检测到/i)).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeVisible({
+    timeout: 15_000,
+  });
 
   // Apply All
   await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
@@ -48,8 +50,12 @@ test("Discover fills 5 fields from a vLLM-shaped endpoint", async ({ page }) => 
   // serverKind combobox displays "vLLM" as its selected label.
   await expect(dialog.getByRole("combobox").filter({ hasText: /^vLLM$/ })).toBeVisible();
 
-  // Suggested tag chip "vllm" rendered
-  await expect(dialog.getByText("vllm", { exact: true })).toBeVisible();
+  // Suggested tag chip "vllm" rendered — assert via the chip's remove-button
+  // aria-label (uniquely identifies the chip; sidesteps text-collision with
+  // the new details panel's serverKind value).
+  await expect(
+    dialog.getByRole("button", { name: /remove tag vllm|移除标签 vllm/i }),
+  ).toBeVisible();
 });
 
 test("Discover preserves user-edited model field in edit mode", async ({ page }) => {
@@ -124,7 +130,9 @@ test("Discover succeeds against a Higress-style gateway when customHeaders is se
     .getByLabel(/custom headers|自定义请求头/i)
     .fill("x-higress-llm-model: qwen-72b");
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
-  await expect(dialog.getByText(/Detected|已检测到/i)).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeVisible({
+    timeout: 15_000,
+  });
   await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
 
   await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("qwen-72b");

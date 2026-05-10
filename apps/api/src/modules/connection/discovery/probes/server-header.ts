@@ -7,6 +7,7 @@ export async function runServerHeaderProbe(
   const start = Date.now();
   try {
     const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/`, {
+      apiKey: ctx.apiKey,
       extraHeaders: ctx.extraHeaders,
     });
     return {

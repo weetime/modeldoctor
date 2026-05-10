@@ -345,6 +345,55 @@ describe("ConnectionSheet — Discover region", () => {
     });
   });
 
+  it("expandable details list inferred fields, evidence, and failed probes", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: {
+        durationMs: 100,
+        probesAttempted: 4,
+        probesFailed: [
+          { probe: "metrics", reason: "HTTP 404" },
+          { probe: "health", reason: "no health endpoint (tried /health and /healthz)" },
+        ],
+        warnings: ["apiKey was provided but /v1/models returned 401 — verify the key is valid"],
+      },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "metric prefix vllm:" },
+        models: { values: ["qwen-72b"], confidence: "certain", evidence: "/v1/models" },
+        category: { value: "chat", confidence: "guess", evidence: "default" },
+        suggestedTags: { values: ["vllm", "chat"], confidence: "guess", evidence: "kind+category" },
+        prometheusUrl: {
+          value: null,
+          confidence: "unknown",
+          evidence: "no /metrics",
+        },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+
+    // Banner renders summary line ("Detected N fields, M probes failed")
+    await waitFor(() => {
+      expect(screen.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeInTheDocument();
+    });
+
+    // Expand the details — find the <summary> via role
+    const summary = screen.getByText(/Show details|展开明细/i);
+    await user.click(summary);
+
+    // Inferred field rows: each evidence string should now be visible
+    expect(screen.getByText(/metric prefix vllm:/i)).toBeInTheDocument();
+    expect(screen.getByText("/v1/models")).toBeInTheDocument();
+    // Failed probe with reason
+    expect(screen.getByText(/metrics: HTTP 404/i)).toBeInTheDocument();
+    expect(screen.getByText(/no health endpoint/i)).toBeInTheDocument();
+    // Warning
+    expect(
+      screen.getByText(/apiKey was provided but \/v1\/models returned 401/i),
+    ).toBeInTheDocument();
+  });
+
   it("renders no-results banner when nothing inferred", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({

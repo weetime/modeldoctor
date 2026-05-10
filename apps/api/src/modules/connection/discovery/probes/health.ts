@@ -6,7 +6,10 @@ export async function runHealthProbe(ctx: ProbeCtx): Promise<ProbeResult<HealthP
   const base = ctx.baseUrl.replace(/\/+$/, "");
   for (const path of ["/health", "/healthz"] as const) {
     try {
-      const res = await safeFetch(`${base}${path}`, { extraHeaders: ctx.extraHeaders });
+      const res = await safeFetch(`${base}${path}`, {
+        apiKey: ctx.apiKey,
+        extraHeaders: ctx.extraHeaders,
+      });
       if (res.ok) {
         return { ok: true, durationMs: Date.now() - start, data: { path } };
       }

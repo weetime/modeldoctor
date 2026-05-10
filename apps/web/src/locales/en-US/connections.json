@@ -84,6 +84,11 @@
       "missingBaseUrl": "Please enter baseUrl first",
       "successPartial": "Detected {{filled}} fields, {{failed}} probes failed",
       "successAll": "Detected {{filled}} fields, please verify",
+      "showDetails": "Show details",
+      "hideDetails": "Hide",
+      "inferredHeading": "Inferred fields",
+      "failedProbesHeading": "Failed probes",
+      "noValue": "not detected",
       "confidence": {
         "certain": "certain",
         "likely": "likely",

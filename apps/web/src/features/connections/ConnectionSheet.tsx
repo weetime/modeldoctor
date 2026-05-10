@@ -503,6 +503,42 @@ export function ConnectionSheet({
 
                 <FormField
                   control={form.control}
+                  name="customHeaders"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.customHeaders")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder={t("dialog.fields.customHeadersPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="queryParams"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.queryParams")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder={t("dialog.fields.queryParamsPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
@@ -632,93 +668,59 @@ export function ConnectionSheet({
                   </p>
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="customHeaders"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dialog.fields.customHeaders")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={3}
-                          placeholder={t("dialog.fields.customHeadersPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="serverKind"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("dialog.fields.serverKindPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SERVER_KIND_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.serverKindHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="queryParams"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dialog.fields.queryParams")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={2}
-                          placeholder={t("dialog.fields.queryParamsPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="tokenizerHfId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          autoComplete="off"
-                          placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("dialog.fields.tokenizerHfIdHelp")}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="serverKind"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value ?? ""}
-                          onValueChange={(v) => field.onChange(v === "" ? null : v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("dialog.fields.serverKindPlaceholder")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SERVER_KIND_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("dialog.fields.serverKindHelp")}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="tokenizerHfId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.tokenizerHfIdHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -804,16 +806,127 @@ function DiscoverResultBanner({
         ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
         : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
+  // Each row in the details list: field label, displayed value, confidence chip,
+  // evidence string. We show a row for every probed field, including ones that
+  // came back empty — that's the diagnostic information users need when an
+  // endpoint partially responds.
+  const inferredRows: Array<{
+    key: string;
+    label: string;
+    value: string;
+    confidence: string;
+    evidence: string;
+  }> = [
+    {
+      key: "serverKind",
+      label: t("dialog.fields.serverKind"),
+      value: result.inferred.serverKind.value ?? t("dialog.discover.noValue"),
+      confidence: result.inferred.serverKind.confidence,
+      evidence: result.inferred.serverKind.evidence,
+    },
+    {
+      key: "models",
+      label: t("dialog.fields.model"),
+      value:
+        result.inferred.models.values.length > 0
+          ? result.inferred.models.values.join(", ")
+          : t("dialog.discover.noValue"),
+      confidence: result.inferred.models.confidence,
+      evidence: result.inferred.models.evidence,
+    },
+    {
+      key: "category",
+      label: t("dialog.fields.category"),
+      value: result.inferred.category.value
+        ? t(`dialog.categoryOptions.${result.inferred.category.value}`)
+        : t("dialog.discover.noValue"),
+      confidence: result.inferred.category.confidence,
+      evidence: result.inferred.category.evidence,
+    },
+    {
+      key: "tags",
+      label: t("dialog.fields.tags"),
+      value:
+        result.inferred.suggestedTags.values.length > 0
+          ? result.inferred.suggestedTags.values.join(", ")
+          : t("dialog.discover.noValue"),
+      confidence: result.inferred.suggestedTags.confidence,
+      evidence: result.inferred.suggestedTags.evidence,
+    },
+    {
+      key: "prometheusUrl",
+      label: t("dialog.fields.prometheusUrl"),
+      value: result.inferred.prometheusUrl.value ?? t("dialog.discover.noValue"),
+      confidence: result.inferred.prometheusUrl.confidence,
+      evidence: result.inferred.prometheusUrl.evidence,
+    },
+  ];
+
+  // Destructive variant defaults open — user needs to know WHY nothing matched.
+  const detailsDefaultOpen = variant === "destructive";
+
   return (
-    <div
-      className={`mt-3 flex items-start justify-between gap-3 rounded-md border p-3 text-sm ${colorClass}`}
-    >
-      <span className="flex-1">{message}</span>
-      {filledFields > 0 ? (
-        <Button type="button" size="sm" variant="outline" onClick={onApply}>
-          {t("dialog.discover.applyAll")}
-        </Button>
-      ) : null}
+    <div className={`mt-3 rounded-md border p-3 text-sm ${colorClass}`}>
+      <div className="flex items-start justify-between gap-3">
+        <span className="flex-1">{message}</span>
+        {filledFields > 0 ? (
+          <Button type="button" size="sm" variant="outline" onClick={onApply}>
+            {t("dialog.discover.applyAll")}
+          </Button>
+        ) : null}
+      </div>
+      <details className="mt-2 text-xs" open={detailsDefaultOpen}>
+        <summary className="cursor-pointer select-none opacity-80 hover:opacity-100">
+          {t("dialog.discover.showDetails")}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <section>
+            <div className="mb-1 font-medium opacity-80">
+              {t("dialog.discover.inferredHeading")}
+            </div>
+            <ul className="space-y-1">
+              {inferredRows.map((row) => (
+                <li key={row.key} className="flex flex-col gap-0.5">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-medium">{row.label}:</span>
+                    <span className="font-mono">{row.value}</span>
+                    <span className="rounded-full border border-current/30 px-1.5 py-px text-[10px] uppercase tracking-wide opacity-70">
+                      {t(`dialog.discover.confidence.${row.confidence}`)}
+                    </span>
+                  </div>
+                  <div className="pl-4 text-[11px] opacity-70">{row.evidence}</div>
+                </li>
+              ))}
+            </ul>
+          </section>
+          {result.health.probesFailed.length > 0 ? (
+            <section>
+              <div className="mb-1 font-medium opacity-80">
+                {t("dialog.discover.failedProbesHeading")}
+              </div>
+              <ul className="space-y-0.5 font-mono text-[11px]">
+                {result.health.probesFailed.map((p) => (
+                  <li key={`${p.probe}-${p.reason}`}>
+                    {p.probe}: {p.reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {result.health.warnings.length > 0 ? (
+            <section>
+              <div className="mb-1 font-medium opacity-80">
+                {t("dialog.discover.warningsTitle")}
+              </div>
+              <ul className="space-y-0.5 text-[11px]">
+                {result.health.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </div>
+      </details>
     </div>
   );
 }

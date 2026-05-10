@@ -6,9 +6,13 @@ const MAX_BODY_BYTES = 64 * 1024;
 export async function runMetricsProbe(ctx: ProbeCtx): Promise<ProbeResult<MetricsProbeData>> {
   const start = Date.now();
   try {
+    // /metrics is conventionally unauthenticated on a bare engine, but real-
+    // world deployments behind a gateway (Higress, Istio, internal proxies)
+    // often require the same auth as the inference path. Forward both apiKey
+    // AND extraHeaders so gated metrics endpoints work — bare engines simply
+    // ignore the unused Authorization header.
     const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/metrics`, {
-      // intentionally no apiKey — /metrics is conventionally unauthenticated.
-      // extraHeaders ARE forwarded so gateways can still route by header.
+      apiKey: ctx.apiKey,
       extraHeaders: ctx.extraHeaders,
     });
     if (!res.ok) {
