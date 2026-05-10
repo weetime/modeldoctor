@@ -3,9 +3,12 @@ import {
   type ConnectionRevealKeyResponse,
   type ConnectionWithSecret,
   type CreateConnection,
+  type DiscoverConnectionRequest,
+  type DiscoverConnectionResponse,
   type ListConnectionsResponse,
   type UpdateConnection,
   createConnectionSchema,
+  discoverConnectionRequestSchema,
   updateConnectionSchema,
 } from "@modeldoctor/contracts";
 import {
@@ -26,11 +29,15 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ConnectionService } from "./connection.service.js";
+import { DiscoveryService } from "./discovery/discovery.service.js";
 
 @Controller("connections")
 @UseGuards(JwtAuthGuard)
 export class ConnectionController {
-  constructor(private readonly service: ConnectionService) {}
+  constructor(
+    private readonly service: ConnectionService,
+    private readonly discoveryService: DiscoveryService,
+  ) {}
 
   @Get()
   list(@CurrentUser() user: JwtPayload): Promise<ListConnectionsResponse> {
@@ -57,6 +64,14 @@ export class ConnectionController {
     @Param("id") id: string,
   ): Promise<ConnectionRevealKeyResponse> {
     return this.service.revealApiKey(user.sub, id);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post("discover")
+  discover(
+    @Body(new ZodValidationPipe(discoverConnectionRequestSchema)) body: DiscoverConnectionRequest,
+  ): Promise<DiscoverConnectionResponse> {
+    return this.discoveryService.discover(body);
   }
 
   @Patch(":id")
