@@ -4,9 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ConnectionDialog,
-  type ConnectionDialogMode,
-} from "@/features/connections/ConnectionDialog";
+  ConnectionSheet,
+  type ConnectionSheetMode,
+} from "@/features/connections/ConnectionSheet";
 import { useConnection } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import type { ParsedCurl } from "@/lib/curl-parser";
@@ -66,7 +66,7 @@ export function EndpointPicker({
   const detailQuery = useConnection(selectedConnectionId);
   const selectedConn = detailQuery.data ?? null;
 
-  const [dialogState, setDialogState] = useState<ConnectionDialogMode | null>(null);
+  const [dialogState, setDialogState] = useState<ConnectionSheetMode | null>(null);
 
   const apiBaseUrlId = useId();
   const apiKeyId = useId();
@@ -158,7 +158,7 @@ export function EndpointPicker({
         triggerClassName="h-9 min-w-[200px] text-xs"
       />
 
-      <ConnectionDialog
+      <ConnectionSheet
         open={dialogState !== null}
         onOpenChange={(o) => {
           if (!o) setDialogState(null);

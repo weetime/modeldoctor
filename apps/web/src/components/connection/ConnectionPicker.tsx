@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ConnectionDialog,
-  type ConnectionDialogMode,
-} from "@/features/connections/ConnectionDialog";
+  ConnectionSheet,
+  type ConnectionSheetMode,
+} from "@/features/connections/ConnectionSheet";
 import { useConnections } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
@@ -74,7 +74,7 @@ export function ConnectionPicker({
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
-  const [dialogState, setDialogState] = useState<ConnectionDialogMode | null>(null);
+  const [dialogState, setDialogState] = useState<ConnectionSheetMode | null>(null);
   const [dialogPrefill, setDialogPrefill] = useState<Record<string, unknown> | undefined>(
     undefined,
   );
@@ -197,7 +197,7 @@ export function ConnectionPicker({
         </div>
       ) : null}
 
-      <ConnectionDialog
+      <ConnectionSheet
         open={dialogState !== null}
         onOpenChange={(o) => {
           if (!o) {

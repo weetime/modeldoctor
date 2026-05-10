@@ -12,8 +12,8 @@ vi.mock("@/features/connections/queries", () => ({
   useUpdateConnection: vi.fn(() => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false })),
 }));
 
-vi.mock("@/features/connections/ConnectionDialog", () => ({
-  ConnectionDialog: () => null,
+vi.mock("@/features/connections/ConnectionSheet", () => ({
+  ConnectionSheet: () => null,
 }));
 
 import { useConnections } from "@/features/connections/queries";

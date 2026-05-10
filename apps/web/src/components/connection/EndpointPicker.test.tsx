@@ -8,10 +8,10 @@ vi.mock("@/features/connections/queries", () => ({
   useConnections: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-// Mock ConnectionDialog so we can assert its props without rendering internals
+// Mock ConnectionSheet so we can assert its props without rendering internals
 const MockConnectionDialog = vi.fn();
-vi.mock("@/features/connections/ConnectionDialog", () => ({
-  ConnectionDialog: (props: Record<string, unknown>) => {
+vi.mock("@/features/connections/ConnectionSheet", () => ({
+  ConnectionSheet: (props: Record<string, unknown>) => {
     MockConnectionDialog(props);
     return null;
   },
