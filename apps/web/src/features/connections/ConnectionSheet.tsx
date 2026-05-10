@@ -205,19 +205,15 @@ export function ConnectionSheet({
     }
   };
 
-  const handleDiscover = async () => {
+  const runDiscover = async (rawBaseUrl: string, rawApiKey?: string, rawCustomHeaders?: string) => {
     setDiscoverError(null);
     setDiscoverResult(null);
-    const trimmedBaseUrl = baseUrlValue?.trim();
-    if (!trimmedBaseUrl) return;
-    const trimmedApiKey = apiKeyValue?.trim() || undefined;
-    const trimmedHeaders = customHeadersValue?.trim() || undefined;
+    const baseUrl = rawBaseUrl.trim();
+    if (!baseUrl) return;
+    const apiKey = rawApiKey?.trim() || undefined;
+    const customHeaders = rawCustomHeaders?.trim() || undefined;
     try {
-      const res = await discoverMut.mutateAsync({
-        baseUrl: trimmedBaseUrl,
-        apiKey: trimmedApiKey,
-        customHeaders: trimmedHeaders,
-      });
+      const res = await discoverMut.mutateAsync({ baseUrl, apiKey, customHeaders });
       setDiscoverResult(res);
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("dialog.discover.noResults");
@@ -231,6 +227,8 @@ export function ConnectionSheet({
       );
     }
   };
+
+  const handleDiscover = () => runDiscover(baseUrlValue ?? "", apiKeyValue, customHeadersValue);
 
   const onParseCurl = () => {
     const trimmed = curlInput.trim();
@@ -259,6 +257,14 @@ export function ConnectionSheet({
 
     const localized = filledKeys.map((k) => t(`dialog.fields.${k}`));
     toast.success(t("dialog.curl.filled", { fields: localized.join(", ") }));
+
+    // Auto-Discover after a successful parse: if the curl yielded a baseUrl,
+    // immediately probe it. Saves the user a second click (Parse → Discover).
+    // Uses patch values directly because react-hook-form setValue is async and
+    // form.watch wouldn't reflect the just-applied values within this tick.
+    if (patch.apiBaseUrl) {
+      void runDiscover(patch.apiBaseUrl, patch.apiKey, patch.customHeaders);
+    }
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -377,53 +383,23 @@ export function ConnectionSheet({
               </details>
 
               <FormSection>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel required>{t("dialog.fields.name")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            autoComplete="off"
-                            placeholder={t("dialog.fields.namePlaceholder")}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel required>{t("dialog.fields.category")}</FormLabel>
-                        <FormControl>
-                          <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                            <SelectTrigger aria-label={t("dialog.fields.category")}>
-                              <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CATEGORIES.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {t(`dialog.categoryOptions.${c}`)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {t("dialog.fields.categoryHelp")}
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>{t("dialog.fields.name")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          autoComplete="off"
+                          placeholder={t("dialog.fields.namePlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FormField
@@ -671,6 +647,34 @@ export function ConnectionSheet({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.category")}</FormLabel>
+                        <FormControl>
+                          <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                            <SelectTrigger aria-label={t("dialog.fields.category")}>
+                              <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CATEGORIES.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {t(`dialog.categoryOptions.${c}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.categoryHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="serverKind"
                     render={({ field }) => (
                       <FormItem>
@@ -699,7 +703,9 @@ export function ConnectionSheet({
                       </FormItem>
                     )}
                   />
+                </div>
 
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="tokenizerHfId"
@@ -720,33 +726,33 @@ export function ConnectionSheet({
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <FormField
-                  control={form.control}
-                  name="prometheusUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("dialog.fields.prometheusUrl")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="url"
-                          autoComplete="off"
-                          placeholder={t("dialog.fields.prometheusUrlPlaceholder")}
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.value === "" ? null : e.target.value)
-                          }
-                        />
-                      </FormControl>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("dialog.fields.prometheusUrlHelp")}
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="prometheusUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.prometheusUrl")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.prometheusUrlPlaceholder")}
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value === "" ? null : e.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.prometheusUrlHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 {submitError ? (
                   <p className="text-sm text-destructive">

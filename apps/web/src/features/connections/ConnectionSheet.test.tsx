@@ -258,6 +258,40 @@ describe("ConnectionSheet — Discover region", () => {
     expect(btn).toBeDisabled();
   });
 
+  it("auto-runs Discover after a successful Parse & fill from cURL", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["llama-3-8b"], confidence: "certain", evidence: "x" },
+        category: { value: "chat", confidence: "guess", evidence: "x" },
+        suggestedTags: { values: ["vllm"], confidence: "guess", evidence: "x" },
+        prometheusUrl: { value: "http://x.test", confidence: "likely", evidence: "x" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+
+    // Open the cURL import accordion + paste a curl
+    await user.click(screen.getByText(/Import from cURL|从 cURL 导入/i));
+    const curlBox = screen.getByPlaceholderText(/curl|^粘贴/i);
+    await user.click(curlBox);
+    // userEvent.type is slow on long strings; use paste-style via clipboard.
+    await user.paste(
+      `curl http://x.test/v1/chat/completions -H "Authorization: Bearer sk-1" -H "x-route: r1"`,
+    );
+    await user.click(screen.getByRole("button", { name: /Parse & fill|解析并填充/i }));
+
+    // Discover should have been triggered automatically with parsed values
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalledWith({
+        baseUrl: "http://x.test",
+        apiKey: "sk-1",
+        customHeaders: "x-route: r1",
+      });
+    });
+  });
+
   it("forwards customHeaders to the mutation (Higress routing case)", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
