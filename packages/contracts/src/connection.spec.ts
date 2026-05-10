@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createConnectionSchema, serverKindSchema } from "./connection.js";
+import {
+  createConnectionSchema,
+  discoverConnectionRequestSchema,
+  discoverConnectionResponseSchema,
+  inferenceConfidenceSchema,
+  serverKindSchema,
+} from "./connection.js";
 import { ENGINE_IDS } from "./engine.js";
 
 const validBase = {
@@ -86,12 +92,6 @@ describe("serverKindSchema after engine SSOT extraction", () => {
     expect(() => serverKindSchema.parse("nope")).toThrow();
   });
 });
-
-import {
-  discoverConnectionRequestSchema,
-  discoverConnectionResponseSchema,
-  inferenceConfidenceSchema,
-} from "./connection.js";
 
 describe("discoverConnectionRequestSchema", () => {
   it("accepts baseUrl-only input", () => {
