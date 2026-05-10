@@ -38,8 +38,8 @@ export interface ConnectionPickerProps {
   /**
    * Override the default curl-paste behavior. When provided, the parsed curl
    * is delivered to this callback and the picker does NOT open
-   * `ConnectionDialog`. When omitted (default), paste-curl opens
-   * `ConnectionDialog` with the parsed values prefilled — on save the new
+   * `ConnectionSheet`. When omitted (default), paste-curl opens
+   * `ConnectionSheet` with the parsed values prefilled — on save the new
    * connection's id is auto-selected via `onSelect`.
    */
   onCurlParsed?: (parsed: ParsedCurl) => void;
@@ -57,7 +57,7 @@ export interface ConnectionPickerProps {
  *
  * Curl-paste behavior is configurable: pass `onCurlParsed` to handle the
  * parsed curl yourself (e.g. to fill manual endpoint fields), or omit it to
- * use the default flow (open `ConnectionDialog` prefilled with the parsed
+ * use the default flow (open `ConnectionSheet` prefilled with the parsed
  * values; on save auto-select the new connection).
  */
 export function ConnectionPicker({
@@ -109,7 +109,7 @@ export function ConnectionPicker({
       return;
     }
 
-    // Default flow: open ConnectionDialog prefilled so the user saves the
+    // Default flow: open ConnectionSheet prefilled so the user saves the
     // curl into a new connection. On save we auto-select it.
     const { patch, filledKeys } = applyCurlToEndpoint(parsed);
     setDialogPrefill({
@@ -161,7 +161,7 @@ export function ConnectionPicker({
         </Select>
         {/* Inline cURL-paste button only when the consumer asked for the
          * onCurlParsed flow (endpoint diagnostics). The default path opens
-         * ConnectionDialog, which has its own cURL-paste section, so a
+         * ConnectionSheet, which has its own cURL-paste section, so a
          * second affordance here would be redundant. */}
         {onCurlParsed ? (
           <Button

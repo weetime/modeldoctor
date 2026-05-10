@@ -26,7 +26,7 @@ vi.mock("./queries", () => ({
   }),
 }));
 
-import { ConnectionDialog } from "./ConnectionDialog";
+import { ConnectionSheet } from "./ConnectionSheet";
 
 async function fillBaseFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/^name\b/i), "n1");
@@ -55,7 +55,7 @@ const EXISTING: ConnectionPublic = {
   evaluationProfile: null,
 };
 
-describe("ConnectionDialog (create mode)", () => {
+describe("ConnectionSheet (create mode)", () => {
   beforeEach(() => {
     createMutate.mockClear();
     updateMutate.mockClear();
@@ -63,7 +63,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("requires a category before save", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /save|保存/i }));
 
@@ -73,7 +73,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("creates a connection with selected category and entered tags", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
 
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
@@ -97,7 +97,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("removing a chip drops the tag", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     const tagInput = screen.getByLabelText(/^tags$/i);
     await user.type(tagInput, "x{Enter}");
     await user.type(tagInput, "y{Enter}");
@@ -110,7 +110,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("submits tokenizerHfId when filled", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
 
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
@@ -127,7 +127,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("submits null when tokenizerHfId left empty", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
 
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
@@ -143,7 +143,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("submits prometheusUrl when entered", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
 
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
@@ -160,7 +160,7 @@ describe("ConnectionDialog (create mode)", () => {
 
   it("submits null when prometheusUrl left empty", async () => {
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
 
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
@@ -175,7 +175,7 @@ describe("ConnectionDialog (create mode)", () => {
   });
 });
 
-describe("ConnectionDialog (edit mode)", () => {
+describe("ConnectionSheet (edit mode)", () => {
   beforeEach(() => {
     createMutate.mockClear();
     updateMutate.mockClear();
@@ -184,7 +184,7 @@ describe("ConnectionDialog (edit mode)", () => {
   it("disables apiKey field by default and OMITS apiKey from the PATCH body", async () => {
     const user = userEvent.setup();
     render(
-      <ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "edit", existing: EXISTING }} />,
+      <ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing: EXISTING }} />,
     );
 
     const apiKeyInput = screen.getByLabelText(/^api key$/i) as HTMLInputElement;
@@ -207,7 +207,7 @@ describe("ConnectionDialog (edit mode)", () => {
   it("Reset apiKey toggle enables the field and INCLUDES apiKey in PATCH body", async () => {
     const user = userEvent.setup();
     render(
-      <ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "edit", existing: EXISTING }} />,
+      <ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing: EXISTING }} />,
     );
 
     const checkbox = screen.getByRole("checkbox", { name: /reset api key|重新设置/i });
@@ -225,27 +225,27 @@ describe("ConnectionDialog (edit mode)", () => {
   });
 });
 
-describe("ConnectionDialog — serverKind dropdown", () => {
+describe("ConnectionSheet — serverKind dropdown", () => {
   beforeEach(() => {
     createMutate.mockClear();
     updateMutate.mockClear();
   });
 
   it("renders the serverKind dropdown", () => {
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     // The label text is "Engine" (en-US) or "推理引擎" (zh-CN)
     expect(screen.getAllByText(/^Engine$|^推理引擎$/i).length).toBeGreaterThan(0);
   });
 });
 
-describe("ConnectionDialog (unified form stack)", () => {
+describe("ConnectionSheet (unified form stack)", () => {
   beforeEach(() => {
     createMutate.mockClear();
     updateMutate.mockClear();
   });
 
   it("renders red asterisks on required fields (Name / API Base URL / API Key / Model / Category)", () => {
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
       wrapper: Wrapper,
     });
     const stars = screen.getAllByText("*", { selector: "span" });
@@ -255,7 +255,7 @@ describe("ConnectionDialog (unified form stack)", () => {
   it("shows required error under Name when blurred while empty", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
-    render(<ConnectionDialog open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
       wrapper: Wrapper,
     });
     const nameInput = screen.getByLabelText(/^Name/i);
