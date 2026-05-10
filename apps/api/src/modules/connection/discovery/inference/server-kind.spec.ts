@@ -1,9 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { InferenceConfidence } from "@modeldoctor/contracts";
 import { inferServerKind } from "./server-kind.js";
 import type {
   MetricsProbeData,
-  ModelsProbeData,
   ProbeResult,
   ServerHeaderProbeData,
 } from "../probes/index.js";
@@ -23,13 +22,7 @@ const okHeader = (
   data: { server, poweredBy },
 });
 
-const okModels = (raw: unknown, models: string[] = []): ProbeResult<ModelsProbeData> => ({
-  ok: true,
-  durationMs: 50,
-  data: { models, raw },
-});
-
-const failed = (): ProbeResult<unknown> => ({ ok: false, durationMs: 10, reason: "404" });
+const failed = <T = unknown>(): ProbeResult<T> => ({ ok: false, durationMs: 10, reason: "404" });
 
 describe("inferServerKind", () => {
   it("certain: vllm metric prefix detected", () => {
