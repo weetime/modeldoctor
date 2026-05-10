@@ -326,6 +326,88 @@ describe("ConnectionSheet — Discover region", () => {
   });
 });
 
+describe("ConnectionSheet — Apply All + dirty preservation", () => {
+  beforeEach(() => {
+    createMutate.mockClear();
+    updateMutate.mockClear();
+    discoverMutate.mockReset();
+    discoverIsPending = false;
+  });
+
+  it("Apply All fills inferred fields into create form", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["llama-3-8b"], confidence: "certain", evidence: "x" },
+        category: { value: "chat", confidence: "guess", evidence: "x" },
+        suggestedTags: { values: ["vllm", "chat"], confidence: "guess", evidence: "x" },
+        prometheusUrl: { value: "http://prom:9090", confidence: "likely", evidence: "x" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => screen.getByRole("button", { name: /Apply All|一键应用/i }));
+
+    await user.click(screen.getByRole("button", { name: /Apply All|一键应用/i }));
+
+    expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
+    expect(screen.getByLabelText(/prometheus/i)).toHaveValue("http://prom:9090");
+  });
+
+  it("Apply All preserves user-modified (dirty) model field in edit mode", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["server-suggested-model"], confidence: "certain", evidence: "x" },
+        category: { value: "chat", confidence: "guess", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
+      },
+    });
+    render(
+      <ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing: EXISTING }} />,
+    );
+
+    // User edits the model field manually before Discover
+    const modelInput = screen.getByLabelText(/^model\b/i);
+    await user.clear(modelInput);
+    await user.type(modelInput, "user-changed-model");
+
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => screen.getByRole("button", { name: /Apply All|一键应用/i }));
+    await user.click(screen.getByRole("button", { name: /Apply All|一键应用/i }));
+
+    // Model field stays at user-edited value (not overwritten by inferred "server-suggested-model")
+    expect(modelInput).toHaveValue("user-changed-model");
+  });
+
+  it("hides Apply button when nothing inferred", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: ["models", "metrics"], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "x" },
+        models: { values: [], confidence: "unknown", evidence: "x" },
+        category: { value: null, confidence: "unknown", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/手动填写|fill manually/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: /Apply All|一键应用/i })).not.toBeInTheDocument();
+  });
+});
+
 describe("ConnectionSheet (unified form stack)", () => {
   beforeEach(() => {
     createMutate.mockClear();

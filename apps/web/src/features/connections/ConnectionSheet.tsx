@@ -190,6 +190,28 @@ export function ConnectionSheet({
   const baseUrlValue = form.watch("apiBaseUrl");
   const apiKeyValue = form.watch("apiKey");
 
+  const handleApplyAll = () => {
+    if (!discoverResult) return;
+    const dirty = form.formState.dirtyFields as Record<string, boolean | undefined>;
+    const inf = discoverResult.inferred;
+
+    if (inf.serverKind.value && !dirty.serverKind) {
+      form.setValue("serverKind", inf.serverKind.value, { shouldDirty: false });
+    }
+    if (inf.models.values.length > 0 && !dirty.model) {
+      form.setValue("model", inf.models.values[0], { shouldDirty: false });
+    }
+    if (inf.category.value && !dirty.category) {
+      form.setValue("category", inf.category.value, { shouldDirty: false });
+    }
+    if (inf.suggestedTags.values.length > 0 && !dirty.tags) {
+      form.setValue("tags", inf.suggestedTags.values, { shouldDirty: false });
+    }
+    if (inf.prometheusUrl.value && !dirty.prometheusUrl) {
+      form.setValue("prometheusUrl", inf.prometheusUrl.value, { shouldDirty: false });
+    }
+  };
+
   const handleDiscover = async () => {
     setDiscoverError(null);
     setDiscoverResult(null);
@@ -458,7 +480,10 @@ export function ConnectionSheet({
                           </div>
                         ) : null}
                         {discoverResult && !discoverError ? (
-                          <DiscoverResultBanner result={discoverResult} />
+                          <DiscoverResultBanner
+                            result={discoverResult}
+                            onApply={handleApplyAll}
+                          />
                         ) : null}
                         <FormMessage />
                       </FormItem>
@@ -754,7 +779,13 @@ export function ConnectionSheet({
   );
 }
 
-function DiscoverResultBanner({ result }: { result: DiscoverConnectionResponse }) {
+function DiscoverResultBanner({
+  result,
+  onApply,
+}: {
+  result: DiscoverConnectionResponse;
+  onApply: () => void;
+}) {
   const { t } = useTranslation("connections");
   const filledFields = [
     result.inferred.serverKind.value,
@@ -782,8 +813,15 @@ function DiscoverResultBanner({ result }: { result: DiscoverConnectionResponse }
         : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
   return (
-    <div className={`mt-3 flex items-start gap-2 rounded-md border p-3 text-sm ${colorClass}`}>
-      <span>{message}</span>
+    <div
+      className={`mt-3 flex items-start justify-between gap-3 rounded-md border p-3 text-sm ${colorClass}`}
+    >
+      <span className="flex-1">{message}</span>
+      {filledFields > 0 ? (
+        <Button type="button" size="sm" variant="outline" onClick={onApply}>
+          {t("dialog.discover.applyAll")}
+        </Button>
+      ) : null}
     </div>
   );
 }
