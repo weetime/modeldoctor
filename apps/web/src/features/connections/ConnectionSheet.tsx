@@ -18,13 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
@@ -56,9 +50,7 @@ import {
  * shows the saved key preview); the user toggles "Reset apiKey" to send a
  * new value. With the toggle off, the PATCH body omits `apiKey` entirely.
  */
-export type ConnectionSheetMode =
-  | { kind: "create" }
-  | { kind: "edit"; existing: ConnectionPublic };
+export type ConnectionSheetMode = { kind: "create" } | { kind: "edit"; existing: ConnectionPublic };
 
 interface ConnectionSheetProps {
   open: boolean;
@@ -480,10 +472,7 @@ export function ConnectionSheet({
                           </div>
                         ) : null}
                         {discoverResult && !discoverError ? (
-                          <DiscoverResultBanner
-                            result={discoverResult}
-                            onApply={handleApplyAll}
-                          />
+                          <DiscoverResultBanner result={discoverResult} onApply={handleApplyAll} />
                         ) : null}
                         <FormMessage />
                       </FormItem>

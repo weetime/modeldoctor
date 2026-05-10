@@ -39,9 +39,9 @@ describe("inferTags", () => {
     expect(
       inferTags({ serverKind: null, category: null, models: ["model-gptq"] }).values,
     ).toContain("gptq");
-    expect(
-      inferTags({ serverKind: null, category: null, models: ["model-fp8"] }).values,
-    ).toContain("fp8");
+    expect(inferTags({ serverKind: null, category: null, models: ["model-fp8"] }).values).toContain(
+      "fp8",
+    );
     expect(
       inferTags({ serverKind: null, category: null, models: ["model-int4"] }).values,
     ).toContain("int4");

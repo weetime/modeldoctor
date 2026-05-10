@@ -1,8 +1,4 @@
-import type {
-  InferenceConfidence,
-  ModalityCategory,
-  ServerKind,
-} from "@modeldoctor/contracts";
+import type { InferenceConfidence, ModalityCategory, ServerKind } from "@modeldoctor/contracts";
 
 interface Inputs {
   serverKind: ServerKind | null;

@@ -3,10 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ConnectionSheet,
-  type ConnectionSheetMode,
-} from "@/features/connections/ConnectionSheet";
+import { ConnectionSheet, type ConnectionSheetMode } from "@/features/connections/ConnectionSheet";
 import { useConnection } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import type { ParsedCurl } from "@/lib/curl-parser";

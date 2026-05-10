@@ -267,7 +267,11 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "/v1/models" },
         category: { value: "chat", confidence: "guess", evidence: "default" },
         suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "..." },
-        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "engine exposes /metrics" },
+        prometheusUrl: {
+          value: "http://x",
+          confidence: "likely",
+          evidence: "engine exposes /metrics",
+        },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -308,7 +312,12 @@ describe("ConnectionSheet — Discover region", () => {
   it("renders no-results banner when nothing inferred", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
-      health: { durationMs: 50, probesAttempted: 4, probesFailed: ["models", "metrics"], warnings: [] },
+      health: {
+        durationMs: 50,
+        probesAttempted: 4,
+        probesFailed: ["models", "metrics"],
+        warnings: [],
+      },
       inferred: {
         serverKind: { value: null, confidence: "unknown", evidence: "no signal" },
         models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
@@ -389,7 +398,12 @@ describe("ConnectionSheet — Apply All + dirty preservation", () => {
   it("hides Apply button when nothing inferred", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
-      health: { durationMs: 50, probesAttempted: 4, probesFailed: ["models", "metrics"], warnings: [] },
+      health: {
+        durationMs: 50,
+        probesAttempted: 4,
+        probesFailed: ["models", "metrics"],
+        warnings: [],
+      },
       inferred: {
         serverKind: { value: null, confidence: "unknown", evidence: "x" },
         models: { values: [], confidence: "unknown", evidence: "x" },

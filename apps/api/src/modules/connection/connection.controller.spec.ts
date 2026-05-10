@@ -3,7 +3,6 @@ import type {
   ConnectionWithSecret,
   ListConnectionsResponse,
 } from "@modeldoctor/contracts";
-import { DiscoveryService } from "./discovery/discovery.service.js";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +10,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ConnectionController } from "./connection.controller.js";
 import { ConnectionService } from "./connection.service.js";
+import { DiscoveryService } from "./discovery/discovery.service.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures

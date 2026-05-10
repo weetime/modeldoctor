@@ -9,10 +9,10 @@ describe("runModelsProbe", () => {
 
   it("parses OpenAI-shape response", async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ data: [{ id: "llama-3-8b" }, { id: "mistral-7b" }] }),
-        { status: 200, headers: { "content-type": "application/json", "content-length": "60" } },
-      ),
+      new Response(JSON.stringify({ data: [{ id: "llama-3-8b" }, { id: "mistral-7b" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json", "content-length": "60" },
+      }),
     );
     const r = await runModelsProbe({ baseUrl: "http://x" });
     expect(r.ok).toBe(true);

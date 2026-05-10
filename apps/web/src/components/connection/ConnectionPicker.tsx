@@ -8,10 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ConnectionSheet,
-  type ConnectionSheetMode,
-} from "@/features/connections/ConnectionSheet";
+import { ConnectionSheet, type ConnectionSheetMode } from "@/features/connections/ConnectionSheet";
 import { useConnections } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";

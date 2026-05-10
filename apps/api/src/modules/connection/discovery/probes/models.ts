@@ -32,8 +32,13 @@ export async function runModelsProbe(ctx: ProbeCtx): Promise<ProbeResult<ModelsP
 }
 
 function extractModels(raw: unknown): string[] {
-  if (raw && typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data)) {
-    return ((raw as { data: Array<{ id?: unknown }> }).data)
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "data" in raw &&
+    Array.isArray((raw as { data: unknown }).data)
+  ) {
+    return (raw as { data: Array<{ id?: unknown }> }).data
       .map((m) => (typeof m?.id === "string" ? m.id : null))
       .filter((id): id is string => id !== null);
   }

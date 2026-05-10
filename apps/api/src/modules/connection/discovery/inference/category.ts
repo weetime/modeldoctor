@@ -1,4 +1,4 @@
-import type { ModalityCategory, InferenceConfidence } from "@modeldoctor/contracts";
+import type { InferenceConfidence, ModalityCategory } from "@modeldoctor/contracts";
 
 interface Inputs {
   models: string[];
@@ -18,9 +18,21 @@ interface InferredField {
  */
 const RULES: Array<{ pattern: RegExp; category: ModalityCategory; keyword: string }> = [
   { pattern: /\b(rerank|reranker)\b/, category: "rerank", keyword: "rerank" },
-  { pattern: /(?:^|[\W_])(embed|bge|e5-|gte-|m3e)/, category: "embeddings", keyword: "embed/bge/e5/gte/m3e" },
-  { pattern: /(flux|sd-|stable-diffusion|dall-?e|imagen)/, category: "image", keyword: "flux/sd/dall-e/imagen" },
-  { pattern: /(whisper|voxtral|tts|parakeet)/, category: "audio", keyword: "whisper/voxtral/tts/parakeet" },
+  {
+    pattern: /(?:^|[\W_])(embed|bge|e5-|gte-|m3e)/,
+    category: "embeddings",
+    keyword: "embed/bge/e5/gte/m3e",
+  },
+  {
+    pattern: /(flux|sd-|stable-diffusion|dall-?e|imagen)/,
+    category: "image",
+    keyword: "flux/sd/dall-e/imagen",
+  },
+  {
+    pattern: /(whisper|voxtral|tts|parakeet)/,
+    category: "audio",
+    keyword: "whisper/voxtral/tts/parakeet",
+  },
 ];
 
 export function inferCategory(inputs: Inputs): InferredField {

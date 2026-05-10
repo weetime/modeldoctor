@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { InferenceConfidence } from "@modeldoctor/contracts";
+import { describe, expect, it } from "vitest";
 import { inferCategory } from "./category.js";
 
 describe("inferCategory", () => {

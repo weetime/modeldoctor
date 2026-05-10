@@ -28,7 +28,10 @@ interface ParamRow {
   value: string;
 }
 
-function inferEndpoint(tool: BenchmarkTool, params: Record<string, unknown>): {
+function inferEndpoint(
+  tool: BenchmarkTool,
+  params: Record<string, unknown>,
+): {
   method: string;
   path: string;
 } {

@@ -9,10 +9,10 @@ const PROTOCOL_WHITELIST = new Set(["http:", "https:"]);
  * to defend against DNS rebinding.
  */
 const CLOUD_METADATA_HOSTS = new Set([
-  "169.254.169.254",          // AWS, OpenStack, Alibaba ECS
+  "169.254.169.254", // AWS, OpenStack, Alibaba ECS
   "metadata.google.internal", // GCP (resolves to 169.254.169.254 anyway, but block by name too)
-  "168.63.129.16",            // Azure WireServer
-  "100.100.100.200",          // Alibaba ECS metadata
+  "168.63.129.16", // Azure WireServer
+  "100.100.100.200", // Alibaba ECS metadata
 ]);
 
 export interface SafeUrlResult {

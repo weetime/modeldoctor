@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import type { InferenceConfidence } from "@modeldoctor/contracts";
-import { inferPrometheusUrl } from "./prometheus-url.js";
+import { describe, expect, it } from "vitest";
 import type { MetricsProbeData, ProbeResult } from "../probes/index.js";
+import { inferPrometheusUrl } from "./prometheus-url.js";
 
 const okMetrics = (body: string): ProbeResult<MetricsProbeData> => ({
   ok: true,

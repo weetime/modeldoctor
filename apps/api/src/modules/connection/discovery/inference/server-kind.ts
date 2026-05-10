@@ -1,7 +1,7 @@
 import {
   ENGINE_METRIC_NAMESPACE,
-  type ServerKind,
   type InferenceConfidence,
+  type ServerKind,
 } from "@modeldoctor/contracts";
 import type {
   MetricsProbeData,

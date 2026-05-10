@@ -10,18 +10,21 @@ vi.mock("./probes/metrics.js", () => ({ runMetricsProbe: vi.fn() }));
 vi.mock("./probes/health.js", () => ({ runHealthProbe: vi.fn() }));
 vi.mock("./probes/server-header.js", () => ({ runServerHeaderProbe: vi.fn() }));
 
-import { assertSafeUrl } from "./ssrf-guard.js";
 import { runHealthProbe } from "./probes/health.js";
 import { runMetricsProbe } from "./probes/metrics.js";
 import { runModelsProbe } from "./probes/models.js";
 import { runServerHeaderProbe } from "./probes/server-header.js";
+import { assertSafeUrl } from "./ssrf-guard.js";
 
 describe("DiscoveryService", () => {
   let service: DiscoveryService;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    vi.mocked(assertSafeUrl).mockResolvedValue({ safeUrl: new URL("http://x"), resolvedIp: "10.0.0.1" });
+    vi.mocked(assertSafeUrl).mockResolvedValue({
+      safeUrl: new URL("http://x"),
+      resolvedIp: "10.0.0.1",
+    });
     const module = await Test.createTestingModule({ providers: [DiscoveryService] }).compile();
     service = module.get(DiscoveryService);
   });

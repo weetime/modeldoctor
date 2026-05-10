@@ -8,10 +8,10 @@ import { inferPrometheusUrl } from "./inference/prometheus-url.js";
 import { inferServerKind } from "./inference/server-kind.js";
 import { inferTags } from "./inference/tags.js";
 import { runHealthProbe } from "./probes/health.js";
+import type { ProbeResult } from "./probes/index.js";
 import { runMetricsProbe } from "./probes/metrics.js";
 import { runModelsProbe } from "./probes/models.js";
 import { runServerHeaderProbe } from "./probes/server-header.js";
-import type { ProbeResult } from "./probes/index.js";
 import { assertSafeUrl } from "./ssrf-guard.js";
 
 @Injectable()

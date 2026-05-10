@@ -165,10 +165,7 @@ export function EngineMetricsSection({
         // surface the at-a-glance state above; the trend blocks are details
         // the user opens on demand.
         return (
-          <details
-            key={group}
-            className="group rounded-md border border-border bg-card/40"
-          >
+          <details key={group} className="group rounded-md border border-border bg-card/40">
             <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent/40">
               <span
                 aria-hidden
