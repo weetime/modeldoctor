@@ -70,6 +70,26 @@
       "filled": "Filled: {{fields}}",
       "empty": "Paste a curl command first",
       "invalid": "Could not extract parameters from curl command"
+    },
+    "discover": {
+      "button": "🔍 Discover",
+      "running": "Discovering…",
+      "applyAll": "Apply All",
+      "autoBadge": "auto",
+      "autoBadgeTooltip": "Auto-detected, please verify",
+      "evidence": "Evidence",
+      "warningsTitle": "Discovery warnings",
+      "noResults": "Could not identify endpoint, please fill manually",
+      "ssrfBlocked": "This address is not allowed for security reasons",
+      "missingBaseUrl": "Please enter baseUrl first",
+      "successPartial": "Detected {{filled}} fields, {{failed}} probes failed",
+      "successAll": "Detected {{filled}} fields, please verify",
+      "confidence": {
+        "certain": "certain",
+        "likely": "likely",
+        "guess": "guess",
+        "unknown": "unknown"
+      }
     }
   },
   "actions": {

@@ -70,6 +70,26 @@
       "filled": "已填充：{{fields}}",
       "empty": "请先粘贴 curl 命令",
       "invalid": "无法从 curl 命令中解析参数"
+    },
+    "discover": {
+      "button": "🔍 自动发现",
+      "running": "探测中…",
+      "applyAll": "一键应用",
+      "autoBadge": "自动",
+      "autoBadgeTooltip": "自动检测，请确认",
+      "evidence": "依据",
+      "warningsTitle": "探测警告",
+      "noResults": "无法识别端点信息，请手动填写",
+      "ssrfBlocked": "出于安全考虑，该地址不允许探测",
+      "missingBaseUrl": "请先填写 baseUrl",
+      "successPartial": "已检测到 {{filled}} 个字段，{{failed}} 个探测失败",
+      "successAll": "已检测到 {{filled}} 个字段，请确认",
+      "confidence": {
+        "certain": "确定",
+        "likely": "可能",
+        "guess": "猜测",
+        "unknown": "未知"
+      }
     }
   },
   "actions": {
