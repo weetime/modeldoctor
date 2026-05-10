@@ -14,6 +14,8 @@ const updateMutate = vi.fn(async (vars: { id: string; body: unknown }) => ({
   id: vars.id,
   ...(vars.body as object),
 }));
+const discoverMutate = vi.fn();
+let discoverIsPending = false;
 
 vi.mock("./queries", () => ({
   useCreateConnection: () => ({
@@ -23,6 +25,10 @@ vi.mock("./queries", () => ({
   useUpdateConnection: () => ({
     mutateAsync: updateMutate,
     isPending: false,
+  }),
+  useDiscoverConnection: () => ({
+    mutateAsync: discoverMutate,
+    isPending: discoverIsPending,
   }),
 }));
 
@@ -235,6 +241,88 @@ describe("ConnectionSheet — serverKind dropdown", () => {
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     // The label text is "Engine" (en-US) or "推理引擎" (zh-CN)
     expect(screen.getAllByText(/^Engine$|^推理引擎$/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe("ConnectionSheet — Discover region", () => {
+  beforeEach(() => {
+    createMutate.mockClear();
+    updateMutate.mockClear();
+    discoverMutate.mockReset();
+    discoverIsPending = false;
+  });
+
+  it("disables Discover button when baseUrl is empty", () => {
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    const btn = screen.getByRole("button", { name: /Discover|自动发现/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it("calls discover and renders success banner with auto badges on success", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "metric prefix vllm:" },
+        models: { values: ["llama-3-8b"], confidence: "certain", evidence: "/v1/models" },
+        category: { value: "chat", confidence: "guess", evidence: "default" },
+        suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "..." },
+        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "engine exposes /metrics" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+
+    await user.type(screen.getByLabelText(/api base url/i), "http://x");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalledWith({ baseUrl: "http://x", apiKey: undefined });
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/请确认|please verify/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows SSRF warning banner on Cloud-metadata error", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockRejectedValue(new Error("Cloud metadata endpoint blocked"));
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://169.254.169.254");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/安全|security/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic error banner on other failures", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockRejectedValue(new Error("Network error"));
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Network error/i)).toBeInTheDocument();
+    });
+  });
+
+  it("renders no-results banner when nothing inferred", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: ["models", "metrics"], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "no signal" },
+        models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
+        category: { value: null, confidence: "unknown", evidence: "no models" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/手动填写|fill manually/i)).toBeInTheDocument();
+    });
   });
 });
 

@@ -47,6 +47,7 @@ vi.mock("@/features/connections/queries", () => ({
   }),
   useCreateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDiscoverConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteConnection: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 

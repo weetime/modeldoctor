@@ -32,17 +32,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   ConnectionPublic,
   ConnectionWithSecret,
+  DiscoverConnectionResponse,
   ModalityCategory,
   ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
-import { Eye, EyeOff, X as XIcon } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useCreateConnection, useUpdateConnection } from "./queries";
+import { useCreateConnection, useDiscoverConnection, useUpdateConnection } from "./queries";
 import {
   type ConnectionInput,
   connectionInputCreateSchema,
@@ -152,6 +153,9 @@ export function ConnectionSheet({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [curlInput, setCurlInput] = useState("");
   const [tagDraft, setTagDraft] = useState("");
+  const [discoverResult, setDiscoverResult] = useState<DiscoverConnectionResponse | null>(null);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const discoverMut = useDiscoverConnection();
 
   const form = useForm<ConnectionInput>({
     resolver: zodResolver(isEdit ? connectionInputEditSchema : connectionInputCreateSchema),
@@ -172,6 +176,8 @@ export function ConnectionSheet({
     setResetApiKey(false);
     setCurlInput("");
     setTagDraft("");
+    setDiscoverResult(null);
+    setDiscoverError(null);
   }, [open, existing, initialValues]);
 
   // Re-validate when toggling the reset-apiKey switch in edit mode.
@@ -180,6 +186,34 @@ export function ConnectionSheet({
     if (!isEdit) return;
     form.trigger("apiKey").catch(() => {});
   }, [isEdit, form, resetApiKey]);
+
+  const baseUrlValue = form.watch("apiBaseUrl");
+  const apiKeyValue = form.watch("apiKey");
+
+  const handleDiscover = async () => {
+    setDiscoverError(null);
+    setDiscoverResult(null);
+    const trimmedBaseUrl = baseUrlValue?.trim();
+    if (!trimmedBaseUrl) return;
+    const trimmedApiKey = apiKeyValue?.trim() || undefined;
+    try {
+      const res = await discoverMut.mutateAsync({
+        baseUrl: trimmedBaseUrl,
+        apiKey: trimmedApiKey,
+      });
+      setDiscoverResult(res);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("dialog.discover.noResults");
+      setDiscoverError(
+        msg.toLowerCase().includes("cloud metadata") ||
+          msg.toLowerCase().includes("private") ||
+          msg.toLowerCase().includes("loopback") ||
+          msg.toLowerCase().includes("ssrf")
+          ? t("dialog.discover.ssrfBlocked")
+          : msg,
+      );
+    }
+  };
 
   const onParseCurl = () => {
     const trimmed = curlInput.trim();
@@ -391,6 +425,41 @@ export function ConnectionSheet({
                         <p className="mt-1 text-xs text-muted-foreground">
                           {t("dialog.fields.apiBaseUrlHelp")}
                         </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDiscover}
+                            disabled={!baseUrlValue?.trim() || discoverMut.isPending}
+                          >
+                            {discoverMut.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {t("dialog.discover.running")}
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                {t("dialog.discover.button")}
+                              </>
+                            )}
+                          </Button>
+                          {!baseUrlValue?.trim() ? (
+                            <span className="text-xs text-muted-foreground">
+                              {t("dialog.discover.missingBaseUrl")}
+                            </span>
+                          ) : null}
+                        </div>
+                        {discoverError ? (
+                          <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{discoverError}</span>
+                          </div>
+                        ) : null}
+                        {discoverResult && !discoverError ? (
+                          <DiscoverResultBanner result={discoverResult} />
+                        ) : null}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -682,5 +751,39 @@ export function ConnectionSheet({
         </Form>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function DiscoverResultBanner({ result }: { result: DiscoverConnectionResponse }) {
+  const { t } = useTranslation("connections");
+  const filledFields = [
+    result.inferred.serverKind.value,
+    result.inferred.models.values.length > 0 ? "x" : null,
+    result.inferred.category.value,
+    result.inferred.suggestedTags.values.length > 0 ? "x" : null,
+    result.inferred.prometheusUrl.value,
+  ].filter(Boolean).length;
+  const failedCount = result.health.probesFailed.length;
+  const variant: "destructive" | "warning" | "success" =
+    filledFields === 0 ? "destructive" : failedCount > 0 ? "warning" : "success";
+
+  const message =
+    variant === "destructive"
+      ? t("dialog.discover.noResults")
+      : variant === "warning"
+        ? t("dialog.discover.successPartial", { filled: filledFields, failed: failedCount })
+        : t("dialog.discover.successAll", { filled: filledFields });
+
+  const colorClass =
+    variant === "destructive"
+      ? "border-destructive/30 bg-destructive/10 text-destructive"
+      : variant === "warning"
+        ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
+        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+
+  return (
+    <div className={`mt-3 flex items-start gap-2 rounded-md border p-3 text-sm ${colorClass}`}>
+      <span>{message}</span>
+    </div>
   );
 }

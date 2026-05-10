@@ -51,10 +51,11 @@ const deleteMutate = vi.fn();
 vi.mock("./queries", () => ({
   useConnections: () => ({ data: seedList, isLoading: false, error: null }),
   useDeleteConnection: () => ({ mutate: deleteMutate, isPending: false }),
-  // ConnectionSheet imports useCreateConnection/useUpdateConnection;
+  // ConnectionSheet imports useCreateConnection/useUpdateConnection/useDiscoverConnection;
   // include stubs so the sheet renders if it ever opens.
   useCreateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDiscoverConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { ConnectionsPage } from "./ConnectionsPage";
