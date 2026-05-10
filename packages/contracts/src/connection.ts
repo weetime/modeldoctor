@@ -97,6 +97,14 @@ const inferredListFieldSchema = z.object({
 export const discoverConnectionRequestSchema = z.object({
   baseUrl: z.string().url(),
   apiKey: z.string().min(1).optional(),
+  /**
+   * Newline-separated `key: value` headers, propagated to every probe request.
+   * Required for gateways that route by custom header (Higress's
+   * `x-higress-llm-model`, internal proxies that need a project ID, etc.).
+   * Same string format as `ConnectionInput.customHeaders` so the form can
+   * round-trip the existing field into Discover unchanged.
+   */
+  customHeaders: z.string().optional(),
 });
 export type DiscoverConnectionRequest = z.infer<typeof discoverConnectionRequestSchema>;
 

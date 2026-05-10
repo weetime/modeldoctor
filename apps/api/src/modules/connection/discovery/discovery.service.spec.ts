@@ -102,6 +102,69 @@ describe("DiscoveryService", () => {
     );
   });
 
+  it("forwards parsed customHeaders to every probe (Higress routing)", async () => {
+    vi.mocked(runModelsProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 50,
+      data: { models: ["qwen-72b"], raw: { data: [{ id: "qwen-72b" }] } },
+    });
+    vi.mocked(runMetricsProbe).mockResolvedValue({ ok: false, durationMs: 50, reason: "HTTP 404" });
+    vi.mocked(runHealthProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 20,
+      data: { path: "/health" },
+    });
+    vi.mocked(runServerHeaderProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 25,
+      data: { server: null, poweredBy: null },
+    });
+
+    await service.discover({
+      baseUrl: "http://gateway:8000",
+      apiKey: "sk-test",
+      customHeaders: "x-higress-llm-model: qwen-72b\n# comment line\nX-Project-Id: p_123",
+    });
+
+    const expectedCtx = expect.objectContaining({
+      baseUrl: "http://gateway:8000",
+      apiKey: "sk-test",
+      extraHeaders: { "x-higress-llm-model": "qwen-72b", "X-Project-Id": "p_123" },
+    });
+    expect(runModelsProbe).toHaveBeenCalledWith(expectedCtx);
+    expect(runMetricsProbe).toHaveBeenCalledWith(expectedCtx);
+    expect(runHealthProbe).toHaveBeenCalledWith(expectedCtx);
+    expect(runServerHeaderProbe).toHaveBeenCalledWith(expectedCtx);
+  });
+
+  it("omits extraHeaders when customHeaders is empty / blank-only", async () => {
+    vi.mocked(runModelsProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 50,
+      data: { models: [], raw: { data: [] } },
+    });
+    vi.mocked(runMetricsProbe).mockResolvedValue({ ok: false, durationMs: 50, reason: "HTTP 404" });
+    vi.mocked(runHealthProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 20,
+      data: { path: "/health" },
+    });
+    vi.mocked(runServerHeaderProbe).mockResolvedValue({
+      ok: true,
+      durationMs: 25,
+      data: { server: null, poweredBy: null },
+    });
+
+    await service.discover({
+      baseUrl: "http://x",
+      customHeaders: "\n  \n# only comments\n",
+    });
+
+    expect(runModelsProbe).toHaveBeenCalledWith(
+      expect.objectContaining({ extraHeaders: undefined }),
+    );
+  });
+
   it("emits warning when /v1/models is 401 but /health is OK", async () => {
     vi.mocked(runModelsProbe).mockResolvedValue({
       ok: false,

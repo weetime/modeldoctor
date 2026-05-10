@@ -7,7 +7,9 @@ export async function runMetricsProbe(ctx: ProbeCtx): Promise<ProbeResult<Metric
   const start = Date.now();
   try {
     const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/metrics`, {
-      // intentionally no apiKey
+      // intentionally no apiKey — /metrics is conventionally unauthenticated.
+      // extraHeaders ARE forwarded so gateways can still route by header.
+      extraHeaders: ctx.extraHeaders,
     });
     if (!res.ok) {
       return { ok: false, durationMs: Date.now() - start, reason: `HTTP ${res.status}` };

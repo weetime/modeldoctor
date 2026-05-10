@@ -56,4 +56,42 @@ describe("safeFetch", () => {
     const headers = (call[1] as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBeUndefined();
   });
+
+  it("forwards extraHeaders to the request", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("[]", { status: 200 }));
+    await safeFetch("http://gateway", {
+      extraHeaders: { "x-higress-llm-model": "qwen-72b", "X-Project-Id": "p_123" },
+    });
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers["x-higress-llm-model"]).toBe("qwen-72b");
+    expect(headers["X-Project-Id"]).toBe("p_123");
+  });
+
+  it("apiKey-derived Authorization wins over Authorization in extraHeaders", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("[]", { status: 200 }));
+    await safeFetch("http://x", {
+      apiKey: "sk-canonical",
+      extraHeaders: { Authorization: "Bearer sk-from-curl-paste", authorization: "old-token" },
+    });
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer sk-canonical");
+    expect(headers.authorization).toBeUndefined();
+  });
+
+  it("drops reserved headers (Host, Content-Length, Connection) from extraHeaders", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("[]", { status: 200 }));
+    await safeFetch("http://x", {
+      extraHeaders: {
+        Host: "evil.example.com",
+        "content-length": "9999",
+        Connection: "close",
+        "X-Allowed": "yes",
+      },
+    });
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers.Host).toBeUndefined();
+    expect(headers["content-length"]).toBeUndefined();
+    expect(headers.Connection).toBeUndefined();
+    expect(headers["X-Allowed"]).toBe("yes");
+  });
 });

@@ -6,6 +6,7 @@ export async function runModelsProbe(ctx: ProbeCtx): Promise<ProbeResult<ModelsP
   try {
     const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/v1/models`, {
       apiKey: ctx.apiKey,
+      extraHeaders: ctx.extraHeaders,
     });
     if (!res.ok) {
       return { ok: false, durationMs: Date.now() - start, reason: `HTTP ${res.status}` };

@@ -117,6 +117,14 @@ describe("discoverConnectionRequestSchema", () => {
       discoverConnectionRequestSchema.parse({ baseUrl: "http://x", apiKey: "" }),
     ).toThrow();
   });
+
+  it("accepts customHeaders string (Higress routing case)", () => {
+    const r = discoverConnectionRequestSchema.parse({
+      baseUrl: "http://gateway:8000",
+      customHeaders: "x-higress-llm-model: qwen-72b\nX-Project-Id: p_123",
+    });
+    expect(r.customHeaders).toBe("x-higress-llm-model: qwen-72b\nX-Project-Id: p_123");
+  });
 });
 
 describe("inferenceConfidenceSchema", () => {

@@ -258,6 +258,38 @@ describe("ConnectionSheet — Discover region", () => {
     expect(btn).toBeDisabled();
   });
 
+  it("forwards customHeaders to the mutation (Higress routing case)", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["qwen-72b"], confidence: "certain", evidence: "x" },
+        category: { value: "chat", confidence: "guess", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+
+    await user.type(screen.getByLabelText(/api base url/i), "http://gateway:8000");
+    await user.type(screen.getByLabelText(/api key/i), "sk-test");
+    await user.type(
+      screen.getByLabelText(/custom headers|自定义请求头/i),
+      "x-higress-llm-model: qwen-72b",
+    );
+
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalledWith({
+        baseUrl: "http://gateway:8000",
+        apiKey: "sk-test",
+        customHeaders: "x-higress-llm-model: qwen-72b",
+      });
+    });
+  });
+
   it("calls discover and renders success banner with auto badges on success", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
@@ -280,7 +312,11 @@ describe("ConnectionSheet — Discover region", () => {
     await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
 
     await waitFor(() => {
-      expect(discoverMutate).toHaveBeenCalledWith({ baseUrl: "http://x", apiKey: undefined });
+      expect(discoverMutate).toHaveBeenCalledWith({
+        baseUrl: "http://x",
+        apiKey: undefined,
+        customHeaders: undefined,
+      });
     });
     await waitFor(() => {
       expect(screen.getByText(/请确认|please verify/i)).toBeInTheDocument();

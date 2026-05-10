@@ -6,7 +6,9 @@ export async function runServerHeaderProbe(
 ): Promise<ProbeResult<ServerHeaderProbeData>> {
   const start = Date.now();
   try {
-    const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/`);
+    const res = await safeFetch(`${ctx.baseUrl.replace(/\/+$/, "")}/`, {
+      extraHeaders: ctx.extraHeaders,
+    });
     return {
       ok: true,
       durationMs: Date.now() - start,

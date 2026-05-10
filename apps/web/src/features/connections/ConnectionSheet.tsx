@@ -181,6 +181,7 @@ export function ConnectionSheet({
 
   const baseUrlValue = form.watch("apiBaseUrl");
   const apiKeyValue = form.watch("apiKey");
+  const customHeadersValue = form.watch("customHeaders");
 
   const handleApplyAll = () => {
     if (!discoverResult) return;
@@ -210,10 +211,12 @@ export function ConnectionSheet({
     const trimmedBaseUrl = baseUrlValue?.trim();
     if (!trimmedBaseUrl) return;
     const trimmedApiKey = apiKeyValue?.trim() || undefined;
+    const trimmedHeaders = customHeadersValue?.trim() || undefined;
     try {
       const res = await discoverMut.mutateAsync({
         baseUrl: trimmedBaseUrl,
         apiKey: trimmedApiKey,
+        customHeaders: trimmedHeaders,
       });
       setDiscoverResult(res);
     } catch (e) {

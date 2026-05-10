@@ -3,6 +3,12 @@ export interface ProbeCtx {
   baseUrl: string;
   /** Optional Bearer token, forwarded by safeFetch. */
   apiKey?: string;
+  /**
+   * Caller-supplied gateway routing headers (e.g. Higress `x-higress-llm-model`).
+   * Forwarded verbatim to every probe request. Already parsed from the user-
+   * facing newline-separated string by DiscoveryService.
+   */
+  extraHeaders?: Record<string, string>;
 }
 
 export interface ProbeResult<T = unknown> {
