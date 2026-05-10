@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { assertSafeUrl } from "./ssrf-guard.js";
 
 vi.mock("node:dns/promises", () => ({
