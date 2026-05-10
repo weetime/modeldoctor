@@ -272,24 +272,26 @@ describe("ConnectionSheet — Discover region", () => {
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
 
-    // Open the cURL import accordion + paste a curl
+    // Open the cURL import accordion + paste a curl. There is no longer a
+    // "Parse & fill" button — the textarea auto-parses on change with a 400ms
+    // debounce, so we just paste and wait for Discover to fire.
     await user.click(screen.getByText(/Import from cURL|从 cURL 导入/i));
     const curlBox = screen.getByPlaceholderText(/curl|^粘贴/i);
     await user.click(curlBox);
-    // userEvent.type is slow on long strings; use paste-style via clipboard.
     await user.paste(
       `curl http://x.test/v1/chat/completions -H "Authorization: Bearer sk-1" -H "x-route: r1"`,
     );
-    await user.click(screen.getByRole("button", { name: /Parse & fill|解析并填充/i }));
 
-    // Discover should have been triggered automatically with parsed values
-    await waitFor(() => {
-      expect(discoverMutate).toHaveBeenCalledWith({
-        baseUrl: "http://x.test",
-        apiKey: "sk-1",
-        customHeaders: "x-route: r1",
-      });
-    });
+    await waitFor(
+      () => {
+        expect(discoverMutate).toHaveBeenCalledWith({
+          baseUrl: "http://x.test",
+          apiKey: "sk-1",
+          customHeaders: "x-route: r1",
+        });
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("forwards customHeaders to the mutation (Higress routing case)", async () => {
@@ -324,7 +326,7 @@ describe("ConnectionSheet — Discover region", () => {
     });
   });
 
-  it("calls discover and renders success banner with auto badges on success", async () => {
+  it("Discover success → silently auto-applies inferred fields (no banner)", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
       health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
@@ -345,16 +347,12 @@ describe("ConnectionSheet — Discover region", () => {
     await user.type(screen.getByLabelText(/api base url/i), "http://x");
     await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
 
+    // Auto-applies into the form — no "请确认" banner, no Apply button.
     await waitFor(() => {
-      expect(discoverMutate).toHaveBeenCalledWith({
-        baseUrl: "http://x",
-        apiKey: undefined,
-        customHeaders: undefined,
-      });
+      expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
     });
-    await waitFor(() => {
-      expect(screen.getByText(/请确认|please verify/i)).toBeInTheDocument();
-    });
+    expect(screen.queryByText(/请确认|please verify/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Apply All|一键应用/i })).not.toBeInTheDocument();
   });
 
   it("shows SSRF warning banner on Cloud-metadata error", async () => {
@@ -379,8 +377,10 @@ describe("ConnectionSheet — Discover region", () => {
     });
   });
 
-  it("expandable details list inferred fields, evidence, and failed probes", async () => {
+  it("zero-result banner: details list evidence + failed probes (always-open)", async () => {
     const user = userEvent.setup();
+    // Zero detected fields → banner is shown (success/partial cases auto-apply
+    // and surface a toast instead).
     discoverMutate.mockResolvedValue({
       health: {
         durationMs: 100,
@@ -392,40 +392,52 @@ describe("ConnectionSheet — Discover region", () => {
         warnings: ["apiKey was provided but /v1/models returned 401 — verify the key is valid"],
       },
       inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: "metric prefix vllm:" },
-        models: { values: ["qwen-72b"], confidence: "certain", evidence: "/v1/models" },
-        category: { value: "chat", confidence: "guess", evidence: "default" },
-        suggestedTags: { values: ["vllm", "chat"], confidence: "guess", evidence: "kind+category" },
-        prometheusUrl: {
-          value: null,
-          confidence: "unknown",
-          evidence: "no /metrics",
-        },
+        serverKind: { value: null, confidence: "unknown", evidence: "no metrics, no /v1/models" },
+        models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
+        category: { value: null, confidence: "unknown", evidence: "no models" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
     await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
 
-    // Banner renders summary line ("Detected N fields, M probes failed")
+    // Zero-result message visible
     await waitFor(() => {
-      expect(screen.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeInTheDocument();
+      expect(screen.getByText(/手动填写|fill manually/i)).toBeInTheDocument();
     });
 
-    // Expand the details — find the <summary> via role
-    const summary = screen.getByText(/Show details|展开明细/i);
-    await user.click(summary);
-
-    // Inferred field rows: each evidence string should now be visible
-    expect(screen.getByText(/metric prefix vllm:/i)).toBeInTheDocument();
-    expect(screen.getByText("/v1/models")).toBeInTheDocument();
-    // Failed probe with reason
+    // Details panel is open by default — evidence + probes + warnings visible
+    expect(screen.getByText(/no metrics, no \/v1\/models/i)).toBeInTheDocument();
     expect(screen.getByText(/metrics: HTTP 404/i)).toBeInTheDocument();
     expect(screen.getByText(/no health endpoint/i)).toBeInTheDocument();
-    // Warning
     expect(
       screen.getByText(/apiKey was provided but \/v1\/models returned 401/i),
     ).toBeInTheDocument();
+  });
+
+  it("zero-result banner can be dismissed via the X button", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "x" },
+        models: { values: [], confidence: "unknown", evidence: "x" },
+        category: { value: null, confidence: "unknown", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/手动填写|fill manually/i)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /Dismiss discover result|关闭探测结果/i }));
+    expect(screen.queryByText(/手动填写|fill manually/i)).not.toBeInTheDocument();
   });
 
   it("renders no-results banner when nothing inferred", async () => {
@@ -454,7 +466,7 @@ describe("ConnectionSheet — Discover region", () => {
   });
 });
 
-describe("ConnectionSheet — Apply All + dirty preservation", () => {
+describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
   beforeEach(() => {
     createMutate.mockClear();
     updateMutate.mockClear();
@@ -462,7 +474,7 @@ describe("ConnectionSheet — Apply All + dirty preservation", () => {
     discoverIsPending = false;
   });
 
-  it("Apply All fills inferred fields into create form", async () => {
+  it("auto-applies inferred fields into the create form (no button click)", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
       health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
@@ -477,15 +489,14 @@ describe("ConnectionSheet — Apply All + dirty preservation", () => {
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
     await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
-    await waitFor(() => screen.getByRole("button", { name: /Apply All|一键应用/i }));
 
-    await user.click(screen.getByRole("button", { name: /Apply All|一键应用/i }));
-
-    expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
+    });
     expect(screen.getByLabelText(/prometheus/i)).toHaveValue("http://prom:9090");
   });
 
-  it("Apply All preserves user-modified (dirty) model field in edit mode", async () => {
+  it("auto-apply preserves user-modified (dirty) model field in edit mode", async () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
       health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
@@ -507,37 +518,14 @@ describe("ConnectionSheet — Apply All + dirty preservation", () => {
     await user.type(modelInput, "user-changed-model");
 
     await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
-    await waitFor(() => screen.getByRole("button", { name: /Apply All|一键应用/i }));
-    await user.click(screen.getByRole("button", { name: /Apply All|一键应用/i }));
-
-    // Model field stays at user-edited value (not overwritten by inferred "server-suggested-model")
-    expect(modelInput).toHaveValue("user-changed-model");
-  });
-
-  it("hides Apply button when nothing inferred", async () => {
-    const user = userEvent.setup();
-    discoverMutate.mockResolvedValue({
-      health: {
-        durationMs: 50,
-        probesAttempted: 4,
-        probesFailed: ["models", "metrics"],
-        warnings: [],
-      },
-      inferred: {
-        serverKind: { value: null, confidence: "unknown", evidence: "x" },
-        models: { values: [], confidence: "unknown", evidence: "x" },
-        category: { value: null, confidence: "unknown", evidence: "x" },
-        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
-      },
-    });
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
-    await user.type(screen.getByLabelText(/api base url/i), "http://x.test");
-    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+    // Wait for the auto-apply to complete by asserting a non-dirty field WAS
+    // overwritten (serverKind dropdown shows the inferred label).
     await waitFor(() => {
-      expect(screen.getByText(/手动填写|fill manually/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/^vLLM$/i).length).toBeGreaterThan(0);
     });
-    expect(screen.queryByRole("button", { name: /Apply All|一键应用/i })).not.toBeInTheDocument();
+
+    // Dirty field stays at user-edited value (not overwritten).
+    expect(modelInput).toHaveValue("user-changed-model");
   });
 });
 

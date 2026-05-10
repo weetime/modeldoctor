@@ -33,7 +33,7 @@ import type {
 } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -183,11 +183,19 @@ export function ConnectionSheet({
   const apiKeyValue = form.watch("apiKey");
   const customHeadersValue = form.watch("customHeaders");
 
-  const handleApplyAll = () => {
-    if (!discoverResult) return;
-    const dirty = form.formState.dirtyFields as Record<string, boolean | undefined>;
-    const inf = discoverResult.inferred;
+  // -- Discover helpers ------------------------------------------------------
+  const countFilledFields = (r: DiscoverConnectionResponse): number =>
+    [
+      r.inferred.serverKind.value,
+      r.inferred.models.values.length > 0 ? "x" : null,
+      r.inferred.category.value,
+      r.inferred.suggestedTags.values.length > 0 ? "x" : null,
+      r.inferred.prometheusUrl.value,
+    ].filter(Boolean).length;
 
+  const applyDiscoverToForm = (r: DiscoverConnectionResponse) => {
+    const dirty = form.formState.dirtyFields as Record<string, boolean | undefined>;
+    const inf = r.inferred;
     if (inf.serverKind.value && !dirty.serverKind) {
       form.setValue("serverKind", inf.serverKind.value, { shouldDirty: false });
     }
@@ -214,7 +222,24 @@ export function ConnectionSheet({
     const customHeaders = rawCustomHeaders?.trim() || undefined;
     try {
       const res = await discoverMut.mutateAsync({ baseUrl, apiKey, customHeaders });
-      setDiscoverResult(res);
+
+      const filled = countFilledFields(res);
+      if (filled > 0) {
+        // Smart-fill pattern (Notion / Linear): apply silently, surface a
+        // toast confirmation, no inline banner. The form fields ARE the
+        // result. Dirty fields are preserved by applyDiscoverToForm.
+        applyDiscoverToForm(res);
+        const failed = res.health.probesFailed.length;
+        toast.success(
+          failed > 0
+            ? t("dialog.discover.successPartial", { filled, failed })
+            : t("dialog.discover.successAll", { filled }),
+        );
+      } else {
+        // Zero detected fields: keep the panel so user can read evidence
+        // and failed-probe reasons. Dismissable via the X button.
+        setDiscoverResult(res);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("dialog.discover.noResults");
       setDiscoverError(
@@ -229,20 +254,35 @@ export function ConnectionSheet({
   };
 
   const handleDiscover = () => runDiscover(baseUrlValue ?? "", apiKeyValue, customHeadersValue);
+  const dismissDiscoverFeedback = () => {
+    setDiscoverError(null);
+    setDiscoverResult(null);
+  };
 
-  const onParseCurl = () => {
-    const trimmed = curlInput.trim();
-    if (!trimmed) {
-      toast.error(t("dialog.curl.empty"));
-      return;
+  // -- Auto-parse cURL on textarea change ------------------------------------
+  const curlParseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastParsedCurl = useRef("");
+
+  // Reset the parsed-curl marker when the sheet is reopened so the same curl
+  // can be pasted again across opens.
+  useEffect(() => {
+    if (!open) {
+      lastParsedCurl.current = "";
+      if (curlParseTimer.current) {
+        clearTimeout(curlParseTimer.current);
+        curlParseTimer.current = null;
+      }
     }
+  }, [open]);
+
+  const autoParseCurl = (input: string) => {
+    const trimmed = input.trim();
+    if (!trimmed || trimmed === lastParsedCurl.current) return;
+
     const parsed = parseCurlCommand(trimmed);
     const { patch, filledKeys } = applyCurlToEndpoint(parsed);
-
-    if (filledKeys.length === 0) {
-      toast.error(t("dialog.curl.invalid"));
-      return;
-    }
+    if (filledKeys.length === 0) return; // not yet parseable; stay silent
+    lastParsedCurl.current = trimmed;
 
     const validatedKeys: ReadonlySet<EndpointKey> = new Set(["apiBaseUrl", "apiKey", "model"]);
     for (const key of filledKeys) {
@@ -255,16 +295,18 @@ export function ConnectionSheet({
       form.setValue(key, value, { shouldValidate: validatedKeys.has(key) });
     }
 
-    const localized = filledKeys.map((k) => t(`dialog.fields.${k}`));
-    toast.success(t("dialog.curl.filled", { fields: localized.join(", ") }));
-
-    // Auto-Discover after a successful parse: if the curl yielded a baseUrl,
-    // immediately probe it. Saves the user a second click (Parse → Discover).
-    // Uses patch values directly because react-hook-form setValue is async and
-    // form.watch wouldn't reflect the just-applied values within this tick.
     if (patch.apiBaseUrl) {
       void runDiscover(patch.apiBaseUrl, patch.apiKey, patch.customHeaders);
     }
+  };
+
+  const onCurlChange = (text: string) => {
+    setCurlInput(text);
+    if (curlParseTimer.current) clearTimeout(curlParseTimer.current);
+    // 400ms debounce: a paste fires once with full content (parses
+    // immediately on first stable tick); typing/pasting in chunks waits
+    // until the user is done.
+    curlParseTimer.current = setTimeout(() => autoParseCurl(text), 400);
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -372,13 +414,14 @@ export function ConnectionSheet({
                   <Textarea
                     rows={5}
                     value={curlInput}
-                    onChange={(e) => setCurlInput(e.target.value)}
+                    onChange={(e) => onCurlChange(e.target.value)}
                     placeholder={t("dialog.curl.placeholder")}
                     className="font-mono text-xs"
+                    aria-label={t("dialog.curl.import")}
                   />
-                  <Button type="button" size="sm" variant="outline" onClick={onParseCurl}>
-                    {t("dialog.curl.parse")}
-                  </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("dialog.curl.autoParseHint")}
+                  </p>
                 </div>
               </details>
 
@@ -731,11 +774,23 @@ export function ConnectionSheet({
               {discoverError ? (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{discoverError}</span>
+                  <span className="flex-1">{discoverError}</span>
+                  <button
+                    type="button"
+                    onClick={dismissDiscoverFeedback}
+                    aria-label={t("dialog.discover.dismiss")}
+                    className="opacity-70 hover:opacity-100"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
                 </div>
               ) : null}
               {discoverResult && !discoverError ? (
-                <DiscoverResultBanner result={discoverResult} onApply={handleApplyAll} />
+                <DiscoverResultBanner
+                  result={discoverResult}
+                  onClose={dismissDiscoverFeedback}
+                  closeLabel={t("dialog.discover.dismiss")}
+                />
               ) : null}
             </div>
 
@@ -775,38 +830,25 @@ export function ConnectionSheet({
   );
 }
 
+/**
+ * Persistent panel shown ONLY when Discover returned zero inferred fields.
+ * Success/partial cases auto-apply via toast and never reach this component
+ * — the form fields themselves are the result. This panel surfaces evidence
+ * + failed-probe reasons so the user can diagnose why nothing matched, then
+ * dismiss via the X button (or click Discover again with adjustments).
+ */
 function DiscoverResultBanner({
   result,
-  onApply,
+  onClose,
+  closeLabel,
 }: {
   result: DiscoverConnectionResponse;
-  onApply: () => void;
+  onClose: () => void;
+  closeLabel: string;
 }) {
   const { t } = useTranslation("connections");
-  const filledFields = [
-    result.inferred.serverKind.value,
-    result.inferred.models.values.length > 0 ? "x" : null,
-    result.inferred.category.value,
-    result.inferred.suggestedTags.values.length > 0 ? "x" : null,
-    result.inferred.prometheusUrl.value,
-  ].filter(Boolean).length;
-  const failedCount = result.health.probesFailed.length;
-  const variant: "destructive" | "warning" | "success" =
-    filledFields === 0 ? "destructive" : failedCount > 0 ? "warning" : "success";
-
-  const message =
-    variant === "destructive"
-      ? t("dialog.discover.noResults")
-      : variant === "warning"
-        ? t("dialog.discover.successPartial", { filled: filledFields, failed: failedCount })
-        : t("dialog.discover.successAll", { filled: filledFields });
-
-  const colorClass =
-    variant === "destructive"
-      ? "border-destructive/30 bg-destructive/10 text-destructive"
-      : variant === "warning"
-        ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
-        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  const message = t("dialog.discover.noResults");
+  const colorClass = "border-destructive/30 bg-destructive/10 text-destructive";
 
   // Each row in the details list: field label, displayed value, confidence chip,
   // evidence string. We show a row for every probed field, including ones that
@@ -864,20 +906,20 @@ function DiscoverResultBanner({
     },
   ];
 
-  // Destructive variant defaults open — user needs to know WHY nothing matched.
-  const detailsDefaultOpen = variant === "destructive";
-
   return (
     <div className={`rounded-md border p-3 text-sm ${colorClass}`}>
       <div className="flex items-start justify-between gap-3">
         <span className="flex-1">{message}</span>
-        {filledFields > 0 ? (
-          <Button type="button" size="sm" variant="outline" onClick={onApply}>
-            {t("dialog.discover.applyAll")}
-          </Button>
-        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={closeLabel}
+          className="opacity-70 hover:opacity-100"
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
       </div>
-      <details className="mt-2 text-xs" open={detailsDefaultOpen}>
+      <details className="mt-2 text-xs" open>
         <summary className="cursor-pointer select-none opacity-80 hover:opacity-100">
           {t("dialog.discover.showDetails")}
         </summary>

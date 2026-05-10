@@ -69,7 +69,8 @@
       "placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
       "filled": "已填充：{{fields}}",
       "empty": "请先粘贴 curl 命令",
-      "invalid": "无法从 curl 命令中解析参数"
+      "invalid": "无法从 curl 命令中解析参数",
+      "autoParseHint": "粘贴后自动解析并触发 Discover"
     },
     "discover": {
       "button": "🔍 自动发现",
@@ -89,6 +90,7 @@
       "inferredHeading": "推断结果",
       "failedProbesHeading": "失败的探测",
       "noValue": "未检测到",
+      "dismiss": "关闭探测结果",
       "confidence": {
         "certain": "确定",
         "likely": "可能",

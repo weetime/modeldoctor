@@ -36,23 +36,17 @@ test("Discover fills 5 fields from a vLLM-shaped endpoint", async ({ page }) => 
 
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
 
-  // Wait for the success banner — auto-detected fields message
-  await expect(dialog.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeVisible({
+  // Discover auto-applies on success — wait for the form fields to populate.
+  // No banner is shown for the success case (smart-fill pattern).
+  await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("llama-3-8b-instruct", {
     timeout: 15_000,
   });
-
-  // Apply All
-  await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
-
-  // Model field auto-filled
-  await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("llama-3-8b-instruct");
 
   // serverKind combobox displays "vLLM" as its selected label.
   await expect(dialog.getByRole("combobox").filter({ hasText: /^vLLM$/ })).toBeVisible();
 
   // Suggested tag chip "vllm" rendered — assert via the chip's remove-button
-  // aria-label (uniquely identifies the chip; sidesteps text-collision with
-  // the new details panel's serverKind value).
+  // aria-label (uniquely identifies the chip).
   await expect(
     dialog.getByRole("button", { name: /remove tag vllm|移除标签 vllm/i }),
   ).toBeVisible();
@@ -92,12 +86,13 @@ test("Discover preserves user-edited model field in edit mode", async ({ page })
   const modelInput = dialog.getByLabel(/^Model|^模型/i);
   await modelInput.fill("manually-typed-model");
 
-  // Trigger Discover.
+  // Trigger Discover. Auto-apply happens on success — wait for serverKind
+  // combobox to update (a non-dirty field that we can use as a "auto-apply
+  // completed" signal); then assert dirty model field stayed put.
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
-  await expect(dialog.getByRole("button", { name: /Apply All|一键应用/i })).toBeVisible({
+  await expect(dialog.getByRole("combobox").filter({ hasText: /^vLLM$/ })).toBeVisible({
     timeout: 15_000,
   });
-  await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
 
   // Model field MUST stay at user-typed value (server suggested "llama-3-8b-instruct").
   await expect(modelInput).toHaveValue("manually-typed-model");
@@ -118,24 +113,22 @@ test("Discover succeeds against a Higress-style gateway when customHeaders is se
   await dialog.getByLabel(/api base url/i).fill(higress.url);
   await dialog.getByLabel(/api key/i).fill("sk-higress");
 
-  // First attempt without customHeaders → all probes return 404 → no inferred fields
+  // First attempt without customHeaders → all probes return 404 → no inferred fields.
+  // Zero-result banner is shown (success cases skip the banner via auto-apply).
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
   await expect(dialog.getByText(/手动填写|fill manually/i)).toBeVisible({ timeout: 15_000 });
-  await expect(
-    dialog.getByRole("button", { name: /Apply All|一键应用/i }),
-  ).not.toBeVisible();
 
-  // Now add the routing header and re-Discover — should succeed.
+  // Dismiss the zero-result banner to reset state, then add the routing
+  // header and re-Discover — auto-apply fills the model field.
+  await dialog
+    .getByRole("button", { name: /Dismiss discover result|关闭探测结果/i })
+    .click();
   await dialog
     .getByLabel(/custom headers|自定义请求头/i)
     .fill("x-higress-llm-model: qwen-72b");
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
-  await expect(dialog.getByText(/Detected \d+ fields|已检测到 \d+ 个字段/i)).toBeVisible({
-    timeout: 15_000,
-  });
-  await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
 
-  await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("qwen-72b");
+  await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("qwen-72b", { timeout: 15_000 });
 });
 
 test("Discover rejects AWS metadata URL with security warning", async ({ page }) => {
@@ -152,9 +145,10 @@ test("Discover rejects AWS metadata URL with security warning", async ({ page })
 
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
 
-  // Security/SSRF banner appears; Apply All button must NOT be rendered.
+  // Security/SSRF banner appears with the dismiss button. Apply All never
+  // existed in the new UX — auto-apply replaced it; just assert the banner.
   await expect(dialog.getByText(/security|安全/i)).toBeVisible({ timeout: 15_000 });
   await expect(
-    dialog.getByRole("button", { name: /Apply All|一键应用/i }),
-  ).not.toBeVisible();
+    dialog.getByRole("button", { name: /Dismiss discover result|关闭探测结果/i }),
+  ).toBeVisible();
 });

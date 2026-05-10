@@ -69,7 +69,8 @@
       "placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
       "filled": "Filled: {{fields}}",
       "empty": "Paste a curl command first",
-      "invalid": "Could not extract parameters from curl command"
+      "invalid": "Could not extract parameters from curl command",
+      "autoParseHint": "Auto-parses and triggers Discover after paste"
     },
     "discover": {
       "button": "🔍 Discover",
@@ -89,6 +90,7 @@
       "inferredHeading": "Inferred fields",
       "failedProbesHeading": "Failed probes",
       "noValue": "not detected",
+      "dismiss": "Dismiss discover result",
       "confidence": {
         "certain": "certain",
         "likely": "likely",
