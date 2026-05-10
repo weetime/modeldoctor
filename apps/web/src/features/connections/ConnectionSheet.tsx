@@ -33,7 +33,7 @@ import type {
 } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -418,41 +418,6 @@ export function ConnectionSheet({
                         <p className="mt-1 text-xs text-muted-foreground">
                           {t("dialog.fields.apiBaseUrlHelp")}
                         </p>
-                        <div className="flex items-center gap-2 pt-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDiscover}
-                            disabled={!baseUrlValue?.trim() || discoverMut.isPending}
-                          >
-                            {discoverMut.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                {t("dialog.discover.running")}
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                {t("dialog.discover.button")}
-                              </>
-                            )}
-                          </Button>
-                          {!baseUrlValue?.trim() ? (
-                            <span className="text-xs text-muted-foreground">
-                              {t("dialog.discover.missingBaseUrl")}
-                            </span>
-                          ) : null}
-                        </div>
-                        {discoverError ? (
-                          <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                            <span>{discoverError}</span>
-                          </div>
-                        ) : null}
-                        {discoverResult && !discoverError ? (
-                          <DiscoverResultBanner result={discoverResult} onApply={handleApplyAll} />
-                        ) : null}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -762,6 +727,16 @@ export function ConnectionSheet({
                   </p>
                 ) : null}
               </FormSection>
+
+              {discoverError ? (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{discoverError}</span>
+                </div>
+              ) : null}
+              {discoverResult && !discoverError ? (
+                <DiscoverResultBanner result={discoverResult} onApply={handleApplyAll} />
+              ) : null}
             </div>
 
             <SheetFooter className="border-t border-border pt-3">
@@ -770,6 +745,27 @@ export function ConnectionSheet({
                 cancelLabel={tc("actions.cancel")}
                 submitLabel={tc("actions.save")}
                 pending={createMut.isPending || updateMut.isPending}
+                leading={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDiscover}
+                    disabled={!baseUrlValue?.trim() || discoverMut.isPending}
+                    title={!baseUrlValue?.trim() ? t("dialog.discover.missingBaseUrl") : undefined}
+                  >
+                    {discoverMut.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("dialog.discover.running")}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {t("dialog.discover.button")}
+                      </>
+                    )}
+                  </Button>
+                }
               />
             </SheetFooter>
           </form>
@@ -872,7 +868,7 @@ function DiscoverResultBanner({
   const detailsDefaultOpen = variant === "destructive";
 
   return (
-    <div className={`mt-3 rounded-md border p-3 text-sm ${colorClass}`}>
+    <div className={`rounded-md border p-3 text-sm ${colorClass}`}>
       <div className="flex items-start justify-between gap-3">
         <span className="flex-1">{message}</span>
         {filledFields > 0 ? (
@@ -887,23 +883,29 @@ function DiscoverResultBanner({
         </summary>
         <div className="mt-3 space-y-3">
           <section>
-            <div className="mb-1 font-medium opacity-80">
+            <div className="mb-1.5 font-medium opacity-80">
               {t("dialog.discover.inferredHeading")}
             </div>
-            <ul className="space-y-1">
+            {/*
+              Flat 4-column grid: label | value | confidence chip | evidence.
+              `max-content` for the first three keeps them tight; evidence
+              takes the remaining `1fr` and wraps if long. `items-baseline`
+              keeps text on a shared baseline even when the chip is taller.
+            */}
+            <dl className="grid grid-cols-[max-content_max-content_max-content_1fr] items-baseline gap-x-3 gap-y-1.5">
               {inferredRows.map((row) => (
-                <li key={row.key} className="flex flex-col gap-0.5">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">{row.label}:</span>
-                    <span className="font-mono">{row.value}</span>
+                <Fragment key={row.key}>
+                  <dt className="font-medium opacity-80">{row.label}:</dt>
+                  <dd className="break-all font-mono">{row.value}</dd>
+                  <dd>
                     <span className="rounded-full border border-current/30 px-1.5 py-px text-[10px] uppercase tracking-wide opacity-70">
                       {t(`dialog.discover.confidence.${row.confidence}`)}
                     </span>
-                  </div>
-                  <div className="pl-4 text-[11px] opacity-70">{row.evidence}</div>
-                </li>
+                  </dd>
+                  <dd className="text-[11px] opacity-70">{row.evidence}</dd>
+                </Fragment>
               ))}
-            </ul>
+            </dl>
           </section>
           {result.health.probesFailed.length > 0 ? (
             <section>
