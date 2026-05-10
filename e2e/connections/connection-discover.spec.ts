@@ -50,6 +50,51 @@ test("Discover fills 5 fields from a vLLM-shaped endpoint", async ({ page }) => 
   await expect(dialog.getByText("vllm", { exact: true })).toBeVisible();
 });
 
+test("Discover preserves user-edited model field in edit mode", async ({ page }) => {
+  // Seed an existing connection via the UI flow (auth uses an in-memory
+  // bearer token, not just cookies, so page.request can't reuse the session).
+  await page.goto("/connections");
+  await page
+    .getByRole("button", { name: /new connection|新建连接/i })
+    .first()
+    .click();
+  const create = page.getByRole("dialog");
+  await expect(create).toBeVisible();
+  await create.getByLabel(/^Name|^名称/i).fill("e2e-edit-discover");
+  await create.getByRole("combobox", { name: /category|分类/i }).click();
+  await page.getByRole("option", { name: /^chat$|^对话$/i }).click();
+  await create.getByLabel(/api base url/i).fill(mock.url);
+  await create.getByLabel(/api key/i).fill("sk-old");
+  await create.getByLabel(/^Model|^模型/i).fill("old-model");
+  await create.getByRole("button", { name: /^save$|^保存$/i }).click();
+  await expect(create).not.toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("cell", { name: "e2e-edit-discover", exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  // Open the row for editing via the row-level "Edit" button.
+  await page
+    .getByRole("button", { name: /^edit$|^编辑$/i })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+
+  // User manually changes the model field (pre-Discover edit).
+  const modelInput = dialog.getByLabel(/^Model|^模型/i);
+  await modelInput.fill("manually-typed-model");
+
+  // Trigger Discover.
+  await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
+  await expect(dialog.getByRole("button", { name: /Apply All|一键应用/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await dialog.getByRole("button", { name: /Apply All|一键应用/i }).click();
+
+  // Model field MUST stay at user-typed value (server suggested "llama-3-8b-instruct").
+  await expect(modelInput).toHaveValue("manually-typed-model");
+});
+
 test("Discover rejects AWS metadata URL with security warning", async ({ page }) => {
   await page.goto("/connections");
   await page
