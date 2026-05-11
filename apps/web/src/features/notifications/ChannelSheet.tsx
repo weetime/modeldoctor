@@ -1,13 +1,6 @@
 import { FormActions } from "@/components/common/form-actions";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Form,
   FormControl,
   FormField,
@@ -23,9 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Channel } from "@modeldoctor/contracts";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -38,12 +32,13 @@ interface Props {
   channel: Channel | null;
 }
 
-export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Element {
+export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Element {
   const { t } = useTranslation("notifications");
   const { t: tc } = useTranslation("common");
   const create = useCreateChannel();
   const update = useUpdateChannel();
   const testCh = useTestChannel();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<ChannelForm>({
     mode: "onTouched",
@@ -51,9 +46,9 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
     defaultValues: { type: "slack", name: "", url: "" },
   });
 
-  // Reset form when the channel being edited changes (or new channel mode).
   useEffect(() => {
     if (open) {
+      setSubmitError(null);
       form.reset({
         type: channel?.type ?? "slack",
         name: channel?.name ?? "",
@@ -63,26 +58,31 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
   }, [open, channel, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    if (channel) {
-      await update.mutateAsync({
-        id: channel.id,
-        body: { name: values.name, url: values.url || undefined },
-      });
-    } else {
-      await create.mutateAsync(values);
+    setSubmitError(null);
+    try {
+      if (channel) {
+        await update.mutateAsync({
+          id: channel.id,
+          body: { name: values.name, url: values.url || undefined },
+        });
+      } else {
+        await create.mutateAsync(values);
+      }
+      onOpenChange(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : tc("errors.unknown");
+      setSubmitError(msg);
     }
-    onOpenChange(false);
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{channel ? t("channel.editButton") : t("channel.newButton")}</DialogTitle>
-          <DialogDescription>{t("channel.form.url")}</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[640px]">
+        <SheetHeader>
+          <SheetTitle>{channel ? t("channel.editButton") : t("channel.newButton")}</SheetTitle>
+        </SheetHeader>
         <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} autoComplete="off" className="mt-4 space-y-4">
             <FormField
               control={form.control}
               name="type"
@@ -111,7 +111,7 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
                 <FormItem>
                   <FormLabel required>{t("channel.form.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} autoComplete="off" data-1p-ignore data-lpignore="true" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -124,12 +124,25 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
                 <FormItem>
                   <FormLabel required={!channel}>{t("channel.form.url")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("channel.form.urlPlaceholder")} />
+                    <Input
+                      {...field}
+                      placeholder={t("channel.form.urlPlaceholder")}
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {submitError ? (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {submitError}
+              </div>
+            ) : null}
+
             <FormActions
               onCancel={() => onOpenChange(false)}
               cancelLabel={tc("actions.cancel")}
@@ -154,7 +167,7 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
             />
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,6 +1,5 @@
 import { FormActions } from "@/components/common/form-actions";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -16,8 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useChannels, useCreateSubscription } from "./queries";
@@ -28,11 +28,12 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-export function SubscriptionDialog({ open, onOpenChange }: Props): JSX.Element {
+export function SubscriptionSheet({ open, onOpenChange }: Props): JSX.Element {
   const { t } = useTranslation("notifications");
   const { t: tc } = useTranslation("common");
   const { data: channels = [] } = useChannels();
   const create = useCreateSubscription();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<SubscriptionForm>({
     mode: "onTouched",
@@ -42,6 +43,7 @@ export function SubscriptionDialog({ open, onOpenChange }: Props): JSX.Element {
 
   useEffect(() => {
     if (open) {
+      setSubmitError(null);
       form.reset({
         channelId: "",
         eventType: "benchmark.completed",
@@ -51,22 +53,28 @@ export function SubscriptionDialog({ open, onOpenChange }: Props): JSX.Element {
   }, [open, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    await create.mutateAsync({
-      channelId: values.channelId,
-      eventType: values.eventType,
-      connectionId: values.connectionId || undefined,
-    });
-    onOpenChange(false);
+    setSubmitError(null);
+    try {
+      await create.mutateAsync({
+        channelId: values.channelId,
+        eventType: values.eventType,
+        connectionId: values.connectionId || undefined,
+      });
+      onOpenChange(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : tc("errors.unknown");
+      setSubmitError(msg);
+    }
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("subscription.newButton")}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[640px]">
+        <SheetHeader>
+          <SheetTitle>{t("subscription.newButton")}</SheetTitle>
+        </SheetHeader>
         <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="mt-4 space-y-4">
             <FormField
               control={form.control}
               name="channelId"
@@ -136,6 +144,13 @@ export function SubscriptionDialog({ open, onOpenChange }: Props): JSX.Element {
                 </FormItem>
               )}
             />
+
+            {submitError ? (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {submitError}
+              </div>
+            ) : null}
+
             <FormActions
               onCancel={() => onOpenChange(false)}
               cancelLabel={tc("actions.cancel")}
@@ -144,7 +159,7 @@ export function SubscriptionDialog({ open, onOpenChange }: Props): JSX.Element {
             />
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
