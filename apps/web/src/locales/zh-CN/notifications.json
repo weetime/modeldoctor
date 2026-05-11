@@ -18,10 +18,13 @@
     "form": {
       "type": "类型",
       "typeSlack": "Slack",
+      "typeFeishu": "飞书",
+      "typeDingtalk": "钉钉",
       "typeWebhook": "通用 Webhook",
       "name": "名称",
       "url": "Webhook URL",
-      "urlPlaceholder": "https://hooks.slack.com/services/..."
+      "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "keywordTip": "飞书/钉钉机器人需要至少一种安全设置。最简单是将「ModelDoctor」配置为自定义关键字（消息内容会带 [ModelDoctor] 前缀）。HMAC 加签留待 V2。"
     },
     "testSuccess": "测试发送成功",
     "testFailure": "测试发送失败：{{error}}"

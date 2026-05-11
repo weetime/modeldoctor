@@ -261,6 +261,8 @@ model LlmJudgeProvider {
 enum ChannelType {
   slack
   webhook
+  feishu
+  dingtalk
 }
 
 enum DeliveryStatus {

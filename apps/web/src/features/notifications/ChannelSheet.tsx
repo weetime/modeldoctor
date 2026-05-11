@@ -46,6 +46,9 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
     defaultValues: { type: "slack", name: "", url: "" },
   });
 
+  const currentType = form.watch("type");
+  const needsKeywordTip = currentType === "feishu" || currentType === "dingtalk";
+
   useEffect(() => {
     if (open) {
       setSubmitError(null);
@@ -96,6 +99,8 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="slack">{t("channel.form.typeSlack")}</SelectItem>
+                        <SelectItem value="feishu">{t("channel.form.typeFeishu")}</SelectItem>
+                        <SelectItem value="dingtalk">{t("channel.form.typeDingtalk")}</SelectItem>
                         <SelectItem value="webhook">{t("channel.form.typeWebhook")}</SelectItem>
                       </SelectContent>
                     </Select>
@@ -136,6 +141,12 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
                 </FormItem>
               )}
             />
+
+            {needsKeywordTip ? (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                {t("channel.form.keywordTip")}
+              </div>
+            ) : null}
 
             {submitError ? (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">

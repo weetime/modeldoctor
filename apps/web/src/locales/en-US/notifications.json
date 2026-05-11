@@ -18,10 +18,13 @@
     "form": {
       "type": "Type",
       "typeSlack": "Slack",
+      "typeFeishu": "Feishu (Lark)",
+      "typeDingtalk": "DingTalk",
       "typeWebhook": "Generic Webhook",
       "name": "Name",
       "url": "Webhook URL",
-      "urlPlaceholder": "https://hooks.slack.com/services/..."
+      "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "keywordTip": "Feishu / DingTalk bots require at least one security mode. Simplest: set \"ModelDoctor\" as the custom keyword (every message we send is prefixed with [ModelDoctor]). HMAC signing is deferred to V2."
     },
     "testSuccess": "Test message sent",
     "testFailure": "Test failed: {{error}}"
