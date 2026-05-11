@@ -64,15 +64,11 @@
     },
     "page": {
       "title": "通知通道",
-      "subtitle": "管理 Slack / 飞书 / 钉钉 / 通用 Webhook 通道与全局订阅",
+      "subtitle": "管理 Slack / 飞书 / 钉钉 / 通用 Webhook 通道及其订阅",
       "breadcrumb": "通知通道"
     },
     "channels": {
       "sectionTitle": "通道"
-    },
-    "global": {
-      "sectionTitle": "全局订阅 (跨所有连接)",
-      "empty": "暂无全局订阅。如需按连接配置告警，请去连接的「通知」标签页。"
     }
   }
 }

@@ -64,15 +64,11 @@
     },
     "page": {
       "title": "Notification channels",
-      "subtitle": "Manage Slack / Feishu / DingTalk / Generic Webhook channels and global subscriptions",
+      "subtitle": "Manage Slack / Feishu / DingTalk / Generic Webhook channels and their subscriptions",
       "breadcrumb": "Notification channels"
     },
     "channels": {
       "sectionTitle": "Channels"
-    },
-    "global": {
-      "sectionTitle": "Global subscriptions (across all connections)",
-      "empty": "No global subscriptions yet. To wire alerts per connection, go to the connection's Notifications tab."
     }
   }
 }
