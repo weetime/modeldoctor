@@ -4,14 +4,23 @@ import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { DiscoveryService } from "../connection/discovery/discovery.service.js";
 import { DiagnosticsService } from "../diagnostics/diagnostics.service.js";
+import { ChannelsService } from "../notifications/channels.service.js";
+import { DispatcherService } from "../notifications/dispatcher.service.js";
+import { SubscriptionsService } from "../notifications/subscriptions.service.js";
+import { registerCreateChannel } from "./tools/create-channel.tool.js";
 import { registerDiscoverConnection } from "./tools/discover-connection.tool.js";
 import { registerListBenchmarks } from "./tools/list-benchmarks.tool.js";
+import { registerListChannels } from "./tools/list-channels.tool.js";
 import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
+import { registerSubscribe } from "./tools/subscribe.tool.js";
+import { registerTestChannel } from "./tools/test-channel.tool.js";
+import { registerUnsubscribe } from "./tools/unsubscribe.tool.js";
 
 // Read api package version once at module load. Falls back to "0.0.0" if
 // package.json can't be resolved (shouldn't happen — Nest is run from a
@@ -41,6 +50,10 @@ export class McpService {
     private readonly connections: ConnectionService,
     private readonly benchmarks: BenchmarkService,
     private readonly diagnostics: DiagnosticsService,
+    private readonly channels: ChannelsService,
+    private readonly subscriptions: SubscriptionsService,
+    private readonly dispatcher: DispatcherService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async handleRequest(
@@ -54,17 +67,43 @@ export class McpService {
       { capabilities: { tools: {} } },
     );
 
-    const deps = {
+    const deps: McpToolDeps = {
       userId,
       discovery: this.discovery,
       connections: this.connections,
       benchmarks: this.benchmarks,
       diagnostics: this.diagnostics,
+      channels: this.channels,
+      subscriptions: this.subscriptions,
+      notificationsTest: async (channelId: string) => {
+        const rows = await this.channels.list(userId);
+        if (!rows.find((c) => c.id === channelId)) {
+          return { ok: false, error: "channel not found" };
+        }
+        const delivery = await this.prisma.notificationDelivery.create({
+          data: {
+            channelId,
+            eventType: "test",
+            payload: { message: "Test notification from ModelDoctor (MCP)" },
+          },
+        });
+        try {
+          await this.dispatcher.dispatchById(delivery.id);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: (e as Error).message };
+        }
+      },
     };
     registerDiscoverConnection(server, deps);
     registerListConnections(server, deps);
     registerListBenchmarks(server, deps);
     registerRunDiagnostics(server, deps);
+    registerListChannels(server, deps);
+    registerCreateChannel(server, deps);
+    registerSubscribe(server, deps);
+    registerUnsubscribe(server, deps);
+    registerTestChannel(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -91,4 +130,7 @@ export interface McpToolDeps {
   connections: ConnectionService;
   benchmarks: BenchmarkService;
   diagnostics: DiagnosticsService;
+  channels: ChannelsService;
+  subscriptions: SubscriptionsService;
+  notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }

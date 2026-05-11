@@ -1,13 +1,21 @@
 import { Module } from "@nestjs/common";
+import { DatabaseModule } from "../../database/database.module.js";
 import { BenchmarkModule } from "../benchmark/benchmark.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
 import { DiagnosticsModule } from "../diagnostics/diagnostics.module.js";
+import { NotificationsModule } from "../notifications/notifications.module.js";
 import { McpController } from "./mcp.controller.js";
 import { McpAuthGuard } from "./mcp.guard.js";
 import { McpService } from "./mcp.service.js";
 
 @Module({
-  imports: [ConnectionModule, BenchmarkModule, DiagnosticsModule],
+  imports: [
+    DatabaseModule,
+    ConnectionModule,
+    BenchmarkModule,
+    DiagnosticsModule,
+    NotificationsModule,
+  ],
   controllers: [McpController],
   providers: [McpService, McpAuthGuard],
 })
