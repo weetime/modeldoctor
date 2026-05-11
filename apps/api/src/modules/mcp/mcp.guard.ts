@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { type CanActivate, type ExecutionContext, Injectable } from "@nestjs/common";
 import { ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -45,15 +46,14 @@ export class McpAuthGuard implements CanActivate {
 }
 
 /**
- * Length-aware constant-time compare. We can't use `crypto.timingSafeEqual`
- * directly on differently-sized buffers (it throws); pad-or-truncate would
- * leak length. So compare lengths first, then byte-by-byte XOR.
+ * Constant-time compare for arbitrary-length strings. SHA-256s both inputs
+ * so the buffers handed to `crypto.timingSafeEqual` are always 32 bytes —
+ * which sidesteps both the "must be same length" precondition and any
+ * timing channel from the input lengths themselves. The hash collision risk
+ * for SHA-256 with random-ish bearer tokens is negligible.
  */
 function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
+  const ha = createHash("sha256").update(a, "utf8").digest();
+  const hb = createHash("sha256").update(b, "utf8").digest();
+  return timingSafeEqual(ha, hb);
 }

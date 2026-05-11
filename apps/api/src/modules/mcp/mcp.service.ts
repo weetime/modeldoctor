@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
@@ -10,6 +12,18 @@ import { registerDiscoverConnection } from "./tools/discover-connection.tool.js"
 import { registerListBenchmarks } from "./tools/list-benchmarks.tool.js";
 import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
+
+// Read api package version once at module load. Falls back to "0.0.0" if
+// package.json can't be resolved (shouldn't happen — Nest is run from a
+// resolvable apps/api/ — but defensive). CommonJS __dirname is available.
+const SERVER_VERSION = (() => {
+  try {
+    const raw = readFileSync(join(__dirname, "../../../package.json"), "utf8");
+    return (JSON.parse(raw) as { version?: string }).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+})();
 
 /**
  * Bootstraps a fresh McpServer instance per HTTP request (stateless mode).
@@ -36,7 +50,7 @@ export class McpService {
     body?: unknown,
   ): Promise<void> {
     const server = new McpServer(
-      { name: "modeldoctor", version: "0.1.0" },
+      { name: "modeldoctor", version: SERVER_VERSION },
       { capabilities: { tools: {} } },
     );
 

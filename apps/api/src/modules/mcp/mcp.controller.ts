@@ -1,4 +1,4 @@
-import { All, Controller, Req, Res, UseGuards } from "@nestjs/common";
+import { All, Controller, InternalServerErrorException, Req, Res, UseGuards } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { McpAuthGuard } from "./mcp.guard.js";
@@ -25,9 +25,9 @@ export class McpController {
     const userId = req.mcpUserId;
     if (!userId) {
       // McpAuthGuard sets mcpUserId on success; reaching here means the guard
-      // misbehaved. Fail closed.
-      res.status(500).json({ error: "MCP user context missing" });
-      return;
+      // misbehaved. Throw so the global exception filter renders the response
+      // (consistent logging + shape with the rest of the api).
+      throw new InternalServerErrorException("MCP user context missing");
     }
     await this.mcp.handleRequest(req, res, userId, req.body);
   }
