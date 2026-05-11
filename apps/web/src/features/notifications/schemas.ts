@@ -1,15 +1,30 @@
 import { z } from "zod";
 
-export const channelFormSchema = z.object({
+const baseShape = {
   type: z.enum(["slack", "webhook", "feishu", "dingtalk"]),
   name: z.string().min(1).max(100),
+  // Subscriptions baked into the channel form.
+  connectionIds: z.array(z.string()).default([]),
+  applyToAll: z.boolean().default(false),
+  events: z
+    .array(z.enum(["benchmark.completed", "benchmark.failed", "diagnostics.failed"]))
+    .default([]),
+};
+
+/** Create mode — URL is required. */
+export const channelFormCreateSchema = z.object({
+  ...baseShape,
   url: z.string().url(),
 });
-export type ChannelForm = z.infer<typeof channelFormSchema>;
 
-export const subscriptionFormSchema = z.object({
-  channelId: z.string().min(1),
-  eventType: z.enum(["benchmark.completed", "benchmark.failed", "diagnostics.failed"]),
-  connectionId: z.string().optional(),
+/** Edit mode — URL is optional. Empty string means "keep the existing URL".
+ *  Non-empty values are still validated as URLs. */
+export const channelFormEditSchema = z.object({
+  ...baseShape,
+  url: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^https?:\/\/.+/.test(v), { message: "validation.invalidUrl" }),
 });
-export type SubscriptionForm = z.infer<typeof subscriptionFormSchema>;
+
+export type ChannelForm = z.infer<typeof channelFormCreateSchema>;

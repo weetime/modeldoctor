@@ -52,5 +52,23 @@
     "resetStateDesc": "删除所有连接、表单数据与本地偏好，恢复初始状态。",
     "resetWarning": "将删除所有连接、表单数据、主题和语言偏好。确定继续？",
     "resetConfirm": "确认重置"
+  },
+  "notifications": {
+    "section": {
+      "title": "通知通道",
+      "subtitle": "Slack / 飞书 / 钉钉 / 通用 Webhook",
+      "manageButton": "管理 →",
+      "summaryCounts": "{{slack}} Slack · {{feishu}} 飞书 · {{dingtalk}} 钉钉 · {{webhook}} 通用 Webhook",
+      "subscriptionsCoverage": "{{withSubs}}/{{total}} 个连接配置了订阅",
+      "empty": "暂未配置任何通道。"
+    },
+    "page": {
+      "title": "通知通道",
+      "subtitle": "管理 Slack / 飞书 / 钉钉 / 通用 Webhook 通道及其订阅",
+      "breadcrumb": "通知通道"
+    },
+    "channels": {
+      "sectionTitle": "通道"
+    }
   }
 }

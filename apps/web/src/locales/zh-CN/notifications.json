@@ -16,6 +16,9 @@
     "testButton": "测试",
     "deleteButton": "删除",
     "form": {
+      "basicSection": "通道",
+      "subscriptionsSection": "订阅",
+      "subscriptionsHint": "勾选事件类型，然后选择要监听的连接（或开启「全部连接」），保存后将自动生成对应订阅。",
       "type": "类型",
       "typeSlack": "Slack",
       "typeFeishu": "飞书",
@@ -24,6 +27,18 @@
       "name": "名称",
       "url": "Webhook URL",
       "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "urlEditHint": "留空表示沿用已保存的 URL；填入新值才会替换。",
+      "events": "事件",
+      "eventOptions": {
+        "benchmark.completed": "Benchmark 完成",
+        "benchmark.failed": "Benchmark 失败",
+        "diagnostics.failed": "诊断失败"
+      },
+      "applyToAll": "全部连接",
+      "applyToAllHint": "事件来自任何连接时都通知本通道（也含将来新建的连接）",
+      "connections": "连接",
+      "connectionsDisabled": "「全部连接」已开启 — 无需勾选具体连接",
+      "connectionsEmpty": "暂无连接。先去连接库新建至少一个连接。",
       "keywordTip": "飞书/钉钉机器人需要至少一种安全设置。最简单是将「ModelDoctor」配置为自定义关键字（消息内容会带 [ModelDoctor] 前缀）。HMAC 加签留待 V2。",
       "webhookTip": "发送 ModelDoctor 原生 JSON 到任意 HTTP 端点。适合 webhook.site 调试、Zapier / n8n / 自建桥接服务。",
       "webhookPayloadHint": "POST Content-Type: application/json"

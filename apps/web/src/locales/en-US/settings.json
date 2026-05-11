@@ -52,5 +52,23 @@
     "resetStateDesc": "Removes every connection, every form value, and local preferences, restoring the initial state.",
     "resetWarning": "This deletes every connection, every form value, theme, and locale preference. Are you sure?",
     "resetConfirm": "Reset everything"
+  },
+  "notifications": {
+    "section": {
+      "title": "Notification channels",
+      "subtitle": "Slack / Feishu / DingTalk / Generic Webhook",
+      "manageButton": "Manage →",
+      "summaryCounts": "{{slack}} Slack · {{feishu}} Feishu · {{dingtalk}} DingTalk · {{webhook}} Generic Webhook",
+      "subscriptionsCoverage": "{{withSubs}}/{{total}} connections have subscriptions configured",
+      "empty": "No channels configured yet."
+    },
+    "page": {
+      "title": "Notification channels",
+      "subtitle": "Manage Slack / Feishu / DingTalk / Generic Webhook channels and their subscriptions",
+      "breadcrumb": "Notification channels"
+    },
+    "channels": {
+      "sectionTitle": "Channels"
+    }
   }
 }

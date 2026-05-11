@@ -16,6 +16,9 @@
     "testButton": "Test",
     "deleteButton": "Delete",
     "form": {
+      "basicSection": "Channel",
+      "subscriptionsSection": "Subscriptions",
+      "subscriptionsHint": "Pick the event types, then choose which connections to watch (or enable \"All connections\"). Saving wires the subscriptions automatically.",
       "type": "Type",
       "typeSlack": "Slack",
       "typeFeishu": "Feishu (Lark)",
@@ -24,6 +27,18 @@
       "name": "Name",
       "url": "Webhook URL",
       "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "urlEditHint": "Leave blank to keep the saved URL; only a new value replaces it.",
+      "events": "Events",
+      "eventOptions": {
+        "benchmark.completed": "Benchmark completed",
+        "benchmark.failed": "Benchmark failed",
+        "diagnostics.failed": "Diagnostics failed"
+      },
+      "applyToAll": "All connections",
+      "applyToAllHint": "Notify this channel when any event fires for any connection (including ones added later)",
+      "connections": "Connections",
+      "connectionsDisabled": "\"All connections\" is on — no per-connection selection needed",
+      "connectionsEmpty": "No connections yet. Add one in the Connections library first.",
       "keywordTip": "Feishu / DingTalk bots require at least one security mode. Simplest: set \"ModelDoctor\" as the custom keyword (every message we send is prefixed with [ModelDoctor]). HMAC signing is deferred to V2.",
       "webhookTip": "Posts ModelDoctor's native JSON to any HTTP endpoint. Good for webhook.site debugging, Zapier / n8n / self-hosted bridge services.",
       "webhookPayloadHint": "POST Content-Type: application/json"

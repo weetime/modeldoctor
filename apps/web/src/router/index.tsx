@@ -19,7 +19,6 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
-import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
@@ -27,6 +26,7 @@ import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage"
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
+import { SettingsNotificationsPage } from "@/features/settings/NotificationsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
@@ -75,8 +75,8 @@ export const routes: RouteObject[] = [
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
-          { path: "notifications", element: <NotificationsPage /> },
           { path: "settings", element: <SettingsPage /> },
+          { path: "settings/notifications", element: <SettingsNotificationsPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },
