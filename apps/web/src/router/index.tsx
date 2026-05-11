@@ -19,7 +19,6 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
-import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
@@ -75,7 +74,6 @@ export const routes: RouteObject[] = [
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
-          { path: "notifications", element: <NotificationsPage /> },
           { path: "settings", element: <SettingsPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
