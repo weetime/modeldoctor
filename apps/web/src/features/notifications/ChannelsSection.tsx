@@ -22,7 +22,7 @@ import type { Channel } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ChannelDialog } from "./ChannelDialog";
+import { ChannelSheet } from "./ChannelSheet";
 import { useChannels, useDeleteChannel, useTestChannel } from "./queries";
 
 export function ChannelsSection(): JSX.Element {
@@ -82,7 +82,7 @@ export function ChannelsSection(): JSX.Element {
         <Button onClick={() => setEditing(null)}>{t("channel.newButton")}</Button>
       </div>
 
-      <ChannelDialog
+      <ChannelSheet
         open={editing !== undefined}
         onOpenChange={(open) => !open && setEditing(undefined)}
         channel={editing ?? null}

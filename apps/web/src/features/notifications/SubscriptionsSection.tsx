@@ -21,7 +21,7 @@ import {
 import type { Subscription } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SubscriptionDialog } from "./SubscriptionDialog";
+import { SubscriptionSheet } from "./SubscriptionSheet";
 import { useDeleteSubscription, useSubscriptions } from "./queries";
 
 export function SubscriptionsSection(): JSX.Element {
@@ -66,7 +66,7 @@ export function SubscriptionsSection(): JSX.Element {
         <Button onClick={() => setCreating(true)}>{t("subscription.newButton")}</Button>
       </div>
 
-      <SubscriptionDialog open={creating} onOpenChange={setCreating} />
+      <SubscriptionSheet open={creating} onOpenChange={setCreating} />
 
       <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <AlertDialogContent>
