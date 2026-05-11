@@ -22,8 +22,7 @@ export function useChannels() {
 export function useCreateChannel() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CreateChannelRequest) =>
-      api.post<Channel>("/notifications/channels", body),
+    mutationFn: (body: CreateChannelRequest) => api.post<Channel>("/notifications/channels", body),
     onSuccess: () => qc.invalidateQueries({ queryKey: channelsKey }),
   });
 }

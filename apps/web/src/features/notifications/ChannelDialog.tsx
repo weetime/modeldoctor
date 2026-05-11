@@ -78,9 +78,7 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {channel ? t("channel.editButton") : t("channel.newButton")}
-          </DialogTitle>
+          <DialogTitle>{channel ? t("channel.editButton") : t("channel.newButton")}</DialogTitle>
           <DialogDescription>{t("channel.form.url")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -92,21 +90,13 @@ export function ChannelDialog({ open, onOpenChange, channel }: Props): JSX.Eleme
                 <FormItem>
                   <FormLabel required>{t("channel.form.type")}</FormLabel>
                   <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={!!channel}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange} disabled={!!channel}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="slack">
-                          {t("channel.form.typeSlack")}
-                        </SelectItem>
-                        <SelectItem value="webhook">
-                          {t("channel.form.typeWebhook")}
-                        </SelectItem>
+                        <SelectItem value="slack">{t("channel.form.typeSlack")}</SelectItem>
+                        <SelectItem value="webhook">{t("channel.form.typeWebhook")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormControl>

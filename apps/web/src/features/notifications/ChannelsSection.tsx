@@ -23,11 +23,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ChannelDialog } from "./ChannelDialog";
-import {
-  useChannels,
-  useDeleteChannel,
-  useTestChannel,
-} from "./queries";
+import { useChannels, useDeleteChannel, useTestChannel } from "./queries";
 
 export function ChannelsSection(): JSX.Element {
   const { t } = useTranslation("notifications");

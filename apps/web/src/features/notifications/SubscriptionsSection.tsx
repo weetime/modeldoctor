@@ -21,8 +21,8 @@ import {
 import type { Subscription } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDeleteSubscription, useSubscriptions } from "./queries";
 import { SubscriptionDialog } from "./SubscriptionDialog";
+import { useDeleteSubscription, useSubscriptions } from "./queries";
 
 export function SubscriptionsSection(): JSX.Element {
   const { t } = useTranslation("notifications");
@@ -40,9 +40,7 @@ export function SubscriptionsSection(): JSX.Element {
             <TableHead>{t("subscription.columns.channel")}</TableHead>
             <TableHead>{t("subscription.columns.eventType")}</TableHead>
             <TableHead>{t("subscription.columns.filter")}</TableHead>
-            <TableHead className="text-right">
-              {t("subscription.columns.actions")}
-            </TableHead>
+            <TableHead className="text-right">{t("subscription.columns.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -74,9 +72,7 @@ export function SubscriptionsSection(): JSX.Element {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("delete.subscriptionTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("delete.subscriptionDescription")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("delete.subscriptionDescription")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
