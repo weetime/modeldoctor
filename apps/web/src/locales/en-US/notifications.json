@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "Notifications",
+    "subtitle": "Configure Slack / Webhook channels and subscriptions"
+  },
+  "channel": {
+    "sectionTitle": "Channels",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "newButton": "+ New channel",
+    "editButton": "Edit",
+    "testButton": "Test",
+    "deleteButton": "Delete",
+    "form": {
+      "type": "Type",
+      "typeSlack": "Slack",
+      "typeWebhook": "Generic Webhook",
+      "name": "Name",
+      "url": "Webhook URL",
+      "urlPlaceholder": "https://hooks.slack.com/services/..."
+    },
+    "testSuccess": "Test message sent",
+    "testFailure": "Test failed: {{error}}"
+  },
+  "subscription": {
+    "sectionTitle": "Subscriptions",
+    "columns": {
+      "channel": "Channel",
+      "eventType": "Event",
+      "filter": "Filter",
+      "actions": "Actions"
+    },
+    "newButton": "+ New subscription",
+    "deleteButton": "Delete",
+    "form": {
+      "channel": "Channel",
+      "eventType": "Event type",
+      "connection": "Connection (optional)",
+      "events": {
+        "benchmark.completed": "Benchmark completed",
+        "benchmark.failed": "Benchmark failed",
+        "diagnostics.failed": "Diagnostics failed"
+      }
+    },
+    "filter": {
+      "anyConnection": "All connections",
+      "specific": "Connection: {{name}}"
+    }
+  },
+  "delete": {
+    "channelTitle": "Delete channel?",
+    "channelDescription": "All subscriptions and delivery records for this channel will be cascade-deleted. This cannot be undone.",
+    "subscriptionTitle": "Delete subscription?",
+    "subscriptionDescription": "This subscription will stop firing immediately.",
+    "cancel": "Cancel"
+  }
+}

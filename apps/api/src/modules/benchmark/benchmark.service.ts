@@ -26,6 +26,7 @@ import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
+import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
@@ -62,6 +63,7 @@ export class BenchmarkService {
     private readonly templates: BenchmarkTemplateRepository,
     private readonly baselines: BaselineService,
     private readonly prisma: PrismaService,
+    private readonly notify: NotifyService,
   ) {
     const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
       | string
@@ -245,6 +247,19 @@ export class BenchmarkService {
         statusMessage: msg.slice(0, 2048),
         completedAt: new Date(),
       });
+      if (row.userId) {
+        await this.notify.emit({
+          eventType: "benchmark.failed",
+          userId: row.userId,
+          connectionId: row.connectionId ?? undefined,
+          payload: {
+            benchmarkId: row.id,
+            name: row.name,
+            status: "failed",
+            reason: msg.slice(0, 2048),
+          },
+        });
+      }
       throw e;
     }
 

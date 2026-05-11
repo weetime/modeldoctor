@@ -56,7 +56,7 @@ describe("BenchmarkCallbackController", () => {
     vi.restoreAllMocks();
     repo = new MockBenchmarkRepo();
     sse = new SseHub();
-    ctrl = new BenchmarkCallbackController(repo as never, sse);
+    ctrl = new BenchmarkCallbackController(repo as never, sse, { emit: vi.fn() } as never);
   });
 
   it("/state running marks the row as running", async () => {

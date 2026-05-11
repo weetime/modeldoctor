@@ -8,6 +8,7 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PROBES, type ProbeCtx } from "../../integrations/probes/index.js";
 import type { DecryptedConnection } from "../connection/connection.service.js";
+import { NotifyService } from "../notifications/notify.service.js";
 import { DiagnosticsRepository } from "./diagnostics.repository.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
@@ -23,7 +24,10 @@ function parseHeaderLines(s: string | undefined): Record<string, string> {
 
 @Injectable()
 export class DiagnosticsService {
-  constructor(private readonly repo: DiagnosticsRepository) {}
+  constructor(
+    private readonly repo: DiagnosticsRepository,
+    private readonly notify: NotifyService,
+  ) {}
 
   private async executeProbes(
     conn: DecryptedConnection,
@@ -81,6 +85,18 @@ export class DiagnosticsService {
           failed: results.filter((r) => !r.pass).length,
         } as Prisma.InputJsonValue,
       });
+      if (!allPassed && userId) {
+        await this.notify.emit({
+          eventType: "diagnostics.failed",
+          userId,
+          connectionId: conn.id,
+          payload: {
+            runId: created.id,
+            connectionId: conn.id,
+            failingProbes: results.filter((r) => !r.pass).map((r) => r.probe),
+          },
+        });
+      }
       return { diagnosticsRunId: created.id, success: allPassed, results };
     } catch (err) {
       await this.repo.update(created.id, {
@@ -88,6 +104,18 @@ export class DiagnosticsService {
         statusMessage: err instanceof Error ? err.message : String(err),
         completedAt: new Date(),
       });
+      if (userId) {
+        await this.notify.emit({
+          eventType: "diagnostics.failed",
+          userId,
+          connectionId: conn.id,
+          payload: {
+            runId: created.id,
+            connectionId: conn.id,
+            error: (err instanceof Error ? err.message : String(err)).slice(0, 2048),
+          },
+        });
+      }
       throw err;
     }
   }

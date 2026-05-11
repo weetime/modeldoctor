@@ -1,6 +1,7 @@
 import {
   Activity,
   BarChart3,
+  Bell,
   Boxes,
   Bug,
   CheckCircle2,
@@ -96,6 +97,7 @@ export const sidebarGroups: SidebarGroup[] = [
  * from anywhere in the app. */
 export const sidebarPrimaryItems: SidebarItem[] = [
   { to: "/connections", icon: Database, labelKey: "items.connections" },
+  { to: "/notifications", icon: Bell, labelKey: "items.notifications" },
 ];
 
 export const sidebarUtilityItems: SidebarItem[] = [

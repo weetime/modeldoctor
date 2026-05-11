@@ -17,6 +17,10 @@ export interface SafeFetchOptions {
   maxBytes?: number;
   /** Max redirect hops before giving up. Default 3. */
   maxRedirects?: number;
+  /** HTTP method. Default "GET". */
+  method?: "GET" | "POST";
+  /** Request body (already serialized; caller sets content-type via extraHeaders). */
+  body?: string;
 }
 
 const DEFAULT_TIMEOUT = 5000;
@@ -69,8 +73,9 @@ export async function safeFetch(url: string, opts: SafeFetchOptions = {}): Promi
       if (hop > 0) await assertSafeUrl(currentUrl);
 
       const res = await fetch(currentUrl, {
-        method: "GET",
+        method: opts.method ?? "GET",
         headers,
+        body: opts.body,
         redirect: "manual",
         signal: controller.signal,
       });

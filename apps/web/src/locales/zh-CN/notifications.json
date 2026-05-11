@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "通知",
+    "subtitle": "配置 Slack / Webhook 通道与订阅"
+  },
+  "channel": {
+    "sectionTitle": "通道",
+    "columns": {
+      "name": "名称",
+      "type": "类型",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "newButton": "+ 新建通道",
+    "editButton": "编辑",
+    "testButton": "测试",
+    "deleteButton": "删除",
+    "form": {
+      "type": "类型",
+      "typeSlack": "Slack",
+      "typeWebhook": "通用 Webhook",
+      "name": "名称",
+      "url": "Webhook URL",
+      "urlPlaceholder": "https://hooks.slack.com/services/..."
+    },
+    "testSuccess": "测试发送成功",
+    "testFailure": "测试发送失败：{{error}}"
+  },
+  "subscription": {
+    "sectionTitle": "订阅",
+    "columns": {
+      "channel": "通道",
+      "eventType": "事件",
+      "filter": "过滤",
+      "actions": "操作"
+    },
+    "newButton": "+ 新建订阅",
+    "deleteButton": "删除",
+    "form": {
+      "channel": "通道",
+      "eventType": "事件类型",
+      "connection": "连接 (可选)",
+      "events": {
+        "benchmark.completed": "Benchmark 完成",
+        "benchmark.failed": "Benchmark 失败",
+        "diagnostics.failed": "诊断失败"
+      }
+    },
+    "filter": {
+      "anyConnection": "全部连接",
+      "specific": "连接：{{name}}"
+    }
+  },
+  "delete": {
+    "channelTitle": "删除通道？",
+    "channelDescription": "将级联删除该通道下的所有订阅和投递记录。此操作不可恢复。",
+    "subscriptionTitle": "删除订阅？",
+    "subscriptionDescription": "该订阅将立刻失效。",
+    "cancel": "取消"
+  }
+}

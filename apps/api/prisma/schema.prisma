@@ -16,14 +16,15 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  refreshTokens    RefreshToken[]
-  benchmarks       Benchmark[]
-  connections      Connection[]
-  baselines        Baseline[]
-  diagnosticsRuns  DiagnosticsRun[]
-  createdTemplates BenchmarkTemplate[] @relation("UserCreatedTemplates")
-  createdProfiles  EvaluationProfile[] @relation("UserCreatedProfiles")
-  llmJudgeProvider LlmJudgeProvider?
+  refreshTokens        RefreshToken[]
+  benchmarks           Benchmark[]
+  connections          Connection[]
+  baselines            Baseline[]
+  diagnosticsRuns      DiagnosticsRun[]
+  createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
+  createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
+  llmJudgeProvider     LlmJudgeProvider?
+  notificationChannels NotificationChannel[]
 
   @@index([email])
   @@map("users")
@@ -63,11 +64,11 @@ model Connection {
   userId        String   @map("user_id")
   name          String
   baseUrl       String   @map("base_url")
-  apiKeyCipher  String   @map("api_key_cipher")  // AES-256-GCM v1, see common/crypto/aes-gcm.ts
+  apiKeyCipher  String   @map("api_key_cipher") // AES-256-GCM v1, see common/crypto/aes-gcm.ts
   model         String
   customHeaders String   @default("") @map("custom_headers")
   queryParams   String   @default("") @map("query_params")
-  category      String   // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
+  category      String // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
   // Reserved for #60 Prometheus integration. Nullable on purpose: existing
@@ -102,8 +103,8 @@ model Benchmark {
   userId       String? @map("user_id")
   connectionId String? @map("connection_id")
 
-  scenario    String  // 'inference' | 'capacity' | 'gateway'
-  tool        String  // 'guidellm' | 'vegeta' | 'genai-perf'
+  scenario    String // 'inference' | 'capacity' | 'gateway'
+  tool        String // 'guidellm' | 'vegeta' | 'genai-perf'
   toolVersion String? @map("tool_version")
 
   name        String
@@ -120,9 +121,9 @@ model Benchmark {
   summaryMetrics Json? @map("summary_metrics")
   serverMetrics  Json? @map("server_metrics")
 
-  templateId          String? @map("template_id")
-  parentBenchmarkId   String? @map("parent_benchmark_id")
-  baselineId          String? @map("baseline_id")
+  templateId        String? @map("template_id")
+  parentBenchmarkId String? @map("parent_benchmark_id")
+  baselineId        String? @map("baseline_id")
 
   logs String? @db.Text
 
@@ -174,14 +175,14 @@ model BenchmarkTemplate {
 }
 
 model DiagnosticsRun {
-  id            String  @id @default(cuid())
-  userId        String? @map("user_id")
-  connectionId  String? @map("connection_id")
+  id           String  @id @default(cuid())
+  userId       String? @map("user_id")
+  connectionId String? @map("connection_id")
 
   status        String
-  statusMessage String? @map("status_message") @db.Text
+  statusMessage String?  @map("status_message") @db.Text
   probes        String[]
-  pathOverride  Json    @default("{}") @map("path_override")
+  pathOverride  Json     @default("{}") @map("path_override")
   results       Json
   summary       Json
 
@@ -198,14 +199,14 @@ model DiagnosticsRun {
 }
 
 model Baseline {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id")
-  benchmarkId     String   @unique @map("benchmark_id")
-  name            String
-  description     String?  @db.Text
-  tags            String[] @default([])
-  templateId      String?  @map("template_id")
-  active          Boolean  @default(true)
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  benchmarkId String   @unique @map("benchmark_id")
+  name        String
+  description String?  @db.Text
+  tags        String[] @default([])
+  templateId  String?  @map("template_id")
+  active      Boolean  @default(true)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -221,15 +222,15 @@ model Baseline {
 }
 
 model EvaluationProfile {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String  @id @default(cuid())
+  slug        String  @unique
   name        String
-  nameKey     String?  @map("name_key")
-  description String?  @db.Text
-  isBuiltin   Boolean  @default(false) @map("is_builtin")
-  createdBy   String?  @map("created_by")
+  nameKey     String? @map("name_key")
+  description String? @db.Text
+  isBuiltin   Boolean @default(false) @map("is_builtin")
+  createdBy   String? @map("created_by")
   rules       Json
-  source      String?  @db.Text
+  source      String? @db.Text
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -242,12 +243,12 @@ model EvaluationProfile {
 }
 
 model LlmJudgeProvider {
-  id            String   @id @default(cuid())
-  userId        String   @unique @map("user_id")
-  baseUrl       String   @map("base_url")
-  apiKeyCipher  String   @map("api_key_cipher")
-  model         String
-  enabled       Boolean  @default(true)
+  id           String  @id @default(cuid())
+  userId       String  @unique @map("user_id")
+  baseUrl      String  @map("base_url")
+  apiKeyCipher String  @map("api_key_cipher")
+  model        String
+  enabled      Boolean @default(true)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -255,4 +256,63 @@ model LlmJudgeProvider {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("llm_judge_providers")
+}
+
+enum ChannelType {
+  slack
+  webhook
+}
+
+enum DeliveryStatus {
+  pending
+  sent
+  failed
+}
+
+model NotificationChannel {
+  id        String      @id @default(cuid())
+  userId    String      @map("user_id")
+  type      ChannelType
+  name      String
+  config    Json
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions NotificationSubscription[]
+  deliveries    NotificationDelivery[]
+
+  @@index([userId])
+  @@map("notification_channels")
+}
+
+model NotificationSubscription {
+  id        String   @id @default(cuid())
+  channelId String   @map("channel_id")
+  eventType String   @map("event_type")
+  filter    Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  channel NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, eventType])
+  @@map("notification_subscriptions")
+}
+
+model NotificationDelivery {
+  id          String         @id @default(cuid())
+  channelId   String         @map("channel_id")
+  eventType   String         @map("event_type")
+  payload     Json
+  status      DeliveryStatus @default(pending)
+  attempts    Int            @default(0)
+  lastError   String?        @map("last_error")
+  nextRetryAt DateTime?      @map("next_retry_at") @db.Timestamptz(3)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  sentAt      DateTime?      @map("sent_at") @db.Timestamptz(3)
+
+  channel NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@map("notification_deliveries")
 }

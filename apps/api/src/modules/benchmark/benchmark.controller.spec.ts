@@ -7,6 +7,7 @@ import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
+import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
@@ -108,6 +109,7 @@ describe("BenchmarkController", () => {
           provide: BaselineService,
           useValue: { existsById: vi.fn(async () => false) },
         },
+        { provide: NotifyService, useValue: { emit: vi.fn() } },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -501,6 +503,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
           provide: BaselineService,
           useValue: { existsById: vi.fn(async () => false) },
         },
+        { provide: NotifyService, useValue: { emit: vi.fn() } },
       ],
     })
       .overrideGuard(JwtAuthGuard)
