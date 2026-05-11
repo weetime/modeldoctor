@@ -28,6 +28,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
+import { NotificationsSettingsSection } from "./NotificationsSettingsSection";
 import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
 
 export function SettingsPage() {
@@ -101,6 +102,8 @@ export function SettingsPage() {
               }
             />
           </SettingSection>
+
+          <NotificationsSettingsSection />
 
           <SettingSection title={t("ai.title")} description={t("ai.description")}>
             <AiDiagnosisSection />
