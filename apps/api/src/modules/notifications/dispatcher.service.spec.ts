@@ -1,15 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import * as adapters from "./adapters/index.js";
 import { ChannelsService } from "./channels.service.js";
@@ -23,7 +14,8 @@ describe("DispatcherService", () => {
   let prisma: PrismaService;
   let userId: string;
   let channelId: string;
-  let dispatchSpy: ReturnType<typeof vi.spyOn>;
+  // biome-ignore lint/suspicious/noExplicitAny: spy generic on a re-exported fn
+  let dispatchSpy: any;
 
   beforeAll(async () => {
     const mod = await Test.createTestingModule({

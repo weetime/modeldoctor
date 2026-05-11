@@ -45,8 +45,6 @@ export class NotifyService {
         payload: input.payload as Prisma.InputJsonValue,
       })),
     });
-    this.log.log(
-      `Queued ${matched.length} deliveries for ${input.eventType} user=${input.userId}`,
-    );
+    this.log.log(`Queued ${matched.length} deliveries for ${input.eventType} user=${input.userId}`);
   }
 }
