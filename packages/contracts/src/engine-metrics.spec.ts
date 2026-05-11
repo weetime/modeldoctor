@@ -5,6 +5,8 @@ import {
   panelUnitSchema,
 } from "./engine-metrics.js";
 
+import { ENGINE_METRIC_NAMESPACE } from "./engine-metrics/manifests/index.js";
+
 describe("engine-metrics zod schemas", () => {
   it("panelUnitSchema accepts ms/s/%/ratio/tps/rps/count/bytes", () => {
     for (const v of ["ms", "s", "%", "ratio", "tps", "rps", "count", "bytes"]) {
@@ -60,5 +62,21 @@ describe("engine-metrics zod schemas", () => {
     });
     expect(ok.panels).toHaveLength(3);
     expect(ok.panels[2].thresholds).toHaveLength(3);
+  });
+});
+
+describe("ENGINE_METRIC_NAMESPACE", () => {
+  it("maps each supported engine to its Prometheus prefix", () => {
+    expect(ENGINE_METRIC_NAMESPACE.vllm).toBe("vllm:");
+    expect(ENGINE_METRIC_NAMESPACE.sglang).toBe("sglang:");
+    expect(ENGINE_METRIC_NAMESPACE.tgi).toBe("tgi_");
+    expect(ENGINE_METRIC_NAMESPACE.tei).toBe("te_");
+    expect(ENGINE_METRIC_NAMESPACE.mindie).toBe("mindie:");
+  });
+
+  it("covers exactly the supported engines", () => {
+    expect(Object.keys(ENGINE_METRIC_NAMESPACE).sort()).toEqual(
+      ["mindie", "sglang", "tei", "tgi", "vllm"].sort(),
+    );
   });
 });

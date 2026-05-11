@@ -77,3 +77,50 @@ export const connectionRevealKeyResponseSchema = z.object({
   apiKey: z.string().min(1),
 });
 export type ConnectionRevealKeyResponse = z.infer<typeof connectionRevealKeyResponseSchema>;
+
+export const inferenceConfidenceSchema = z.enum(["certain", "likely", "guess", "unknown"]);
+export type InferenceConfidence = z.infer<typeof inferenceConfidenceSchema>;
+
+const inferredFieldSchema = <V extends z.ZodTypeAny>(value: V) =>
+  z.object({
+    value: value.nullable(),
+    confidence: inferenceConfidenceSchema,
+    evidence: z.string(),
+  });
+
+const inferredListFieldSchema = z.object({
+  values: z.array(z.string()),
+  confidence: inferenceConfidenceSchema,
+  evidence: z.string(),
+});
+
+export const discoverConnectionRequestSchema = z.object({
+  baseUrl: z.string().url(),
+  apiKey: z.string().min(1).optional(),
+  /**
+   * Newline-separated `key: value` headers, propagated to every probe request.
+   * Required for gateways that route by custom header (Higress's
+   * `x-higress-llm-model`, internal proxies that need a project ID, etc.).
+   * Same string format as `ConnectionInput.customHeaders` so the form can
+   * round-trip the existing field into Discover unchanged.
+   */
+  customHeaders: z.string().optional(),
+});
+export type DiscoverConnectionRequest = z.infer<typeof discoverConnectionRequestSchema>;
+
+export const discoverConnectionResponseSchema = z.object({
+  health: z.object({
+    durationMs: z.number().int().min(0),
+    probesAttempted: z.number().int().min(0),
+    probesFailed: z.array(z.object({ probe: z.string(), reason: z.string() })),
+    warnings: z.array(z.string()),
+  }),
+  inferred: z.object({
+    serverKind: inferredFieldSchema(serverKindSchema),
+    models: inferredListFieldSchema,
+    category: inferredFieldSchema(ModalityCategorySchema),
+    suggestedTags: inferredListFieldSchema,
+    prometheusUrl: inferredFieldSchema(z.string().url()),
+  }),
+});
+export type DiscoverConnectionResponse = z.infer<typeof discoverConnectionResponseSchema>;

@@ -132,12 +132,7 @@ export function TemplateForm({ mode, isAdmin, displayScenario, displayTool }: Te
                 </SelectTrigger>
                 <SelectContent>
                   {(
-                    [
-                      "inference",
-                      "capacity",
-                      "gateway",
-                      "prefix-cache-validation",
-                    ] as ScenarioId[]
+                    ["inference", "capacity", "gateway", "prefix-cache-validation"] as ScenarioId[]
                   ).map((sid) => (
                     <SelectItem key={sid} value={sid}>
                       {t(`list.tabs.${sid}`)}

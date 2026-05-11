@@ -32,7 +32,7 @@ import { format } from "date-fns";
 import { Database, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConnectionDialog, type ConnectionDialogMode } from "./ConnectionDialog";
+import { ConnectionSheet, type ConnectionSheetMode } from "./ConnectionSheet";
 import { useConnections, useDeleteConnection } from "./queries";
 
 export function ConnectionsPage() {
@@ -59,7 +59,7 @@ export function ConnectionsPage() {
     return true;
   });
 
-  const [dialogMode, setDialogMode] = useState<ConnectionDialogMode | null>(null);
+  const [dialogMode, setDialogMode] = useState<ConnectionSheetMode | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ConnectionPublic | null>(null);
 
   const isLoading = listQuery.isLoading;
@@ -215,7 +215,7 @@ export function ConnectionsPage() {
       </div>
 
       {dialogMode ? (
-        <ConnectionDialog
+        <ConnectionSheet
           open
           onOpenChange={(o) => {
             if (!o) setDialogMode(null);

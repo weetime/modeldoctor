@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConnectionDialog } from "@/features/connections/ConnectionDialog";
+import { ConnectionSheet } from "@/features/connections/ConnectionSheet";
 import { useConnections } from "@/features/connections/queries";
 import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
@@ -92,7 +92,7 @@ export function EndpointSelector({ selectedId, modified, onSelect }: EndpointSel
       >
         <Plus className="h-4 w-4" />
       </Button>
-      <ConnectionDialog
+      <ConnectionSheet
         open={createOpen}
         onOpenChange={setCreateOpen}
         mode={{ kind: "create" }}

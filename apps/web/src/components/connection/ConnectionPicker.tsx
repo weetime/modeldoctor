@@ -8,10 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ConnectionDialog,
-  type ConnectionDialogMode,
-} from "@/features/connections/ConnectionDialog";
+import { ConnectionSheet, type ConnectionSheetMode } from "@/features/connections/ConnectionSheet";
 import { useConnections } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
@@ -38,8 +35,8 @@ export interface ConnectionPickerProps {
   /**
    * Override the default curl-paste behavior. When provided, the parsed curl
    * is delivered to this callback and the picker does NOT open
-   * `ConnectionDialog`. When omitted (default), paste-curl opens
-   * `ConnectionDialog` with the parsed values prefilled — on save the new
+   * `ConnectionSheet`. When omitted (default), paste-curl opens
+   * `ConnectionSheet` with the parsed values prefilled — on save the new
    * connection's id is auto-selected via `onSelect`.
    */
   onCurlParsed?: (parsed: ParsedCurl) => void;
@@ -57,7 +54,7 @@ export interface ConnectionPickerProps {
  *
  * Curl-paste behavior is configurable: pass `onCurlParsed` to handle the
  * parsed curl yourself (e.g. to fill manual endpoint fields), or omit it to
- * use the default flow (open `ConnectionDialog` prefilled with the parsed
+ * use the default flow (open `ConnectionSheet` prefilled with the parsed
  * values; on save auto-select the new connection).
  */
 export function ConnectionPicker({
@@ -74,7 +71,7 @@ export function ConnectionPicker({
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
-  const [dialogState, setDialogState] = useState<ConnectionDialogMode | null>(null);
+  const [dialogState, setDialogState] = useState<ConnectionSheetMode | null>(null);
   const [dialogPrefill, setDialogPrefill] = useState<Record<string, unknown> | undefined>(
     undefined,
   );
@@ -109,7 +106,7 @@ export function ConnectionPicker({
       return;
     }
 
-    // Default flow: open ConnectionDialog prefilled so the user saves the
+    // Default flow: open ConnectionSheet prefilled so the user saves the
     // curl into a new connection. On save we auto-select it.
     const { patch, filledKeys } = applyCurlToEndpoint(parsed);
     setDialogPrefill({
@@ -161,7 +158,7 @@ export function ConnectionPicker({
         </Select>
         {/* Inline cURL-paste button only when the consumer asked for the
          * onCurlParsed flow (endpoint diagnostics). The default path opens
-         * ConnectionDialog, which has its own cURL-paste section, so a
+         * ConnectionSheet, which has its own cURL-paste section, so a
          * second affordance here would be redundant. */}
         {onCurlParsed ? (
           <Button
@@ -197,7 +194,7 @@ export function ConnectionPicker({
         </div>
       ) : null}
 
-      <ConnectionDialog
+      <ConnectionSheet
         open={dialogState !== null}
         onOpenChange={(o) => {
           if (!o) {

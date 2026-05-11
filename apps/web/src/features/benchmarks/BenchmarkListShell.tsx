@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocaleStore } from "@/stores/locale-store";
 import type {
   Benchmark,
   BenchmarkStatus,
@@ -38,7 +39,6 @@ import type {
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, zhCN } from "date-fns/locale";
-import { useLocaleStore } from "@/stores/locale-store";
 import {
   ArrowRight,
   Copy as CopyIcon,

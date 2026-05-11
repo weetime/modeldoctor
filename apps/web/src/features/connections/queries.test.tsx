@@ -7,6 +7,7 @@ import {
   useConnections,
   useCreateConnection,
   useDeleteConnection,
+  useDiscoverConnection,
   useUpdateConnection,
 } from "./queries";
 
@@ -97,5 +98,47 @@ describe("useDeleteConnection", () => {
     const { result } = renderHook(() => useDeleteConnection(), { wrapper: wrap() });
     await result.current.mutateAsync("c1");
     expect(api.del).toHaveBeenCalledWith("/api/connections/c1");
+  });
+});
+
+describe("useDiscoverConnection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("posts to /api/connections/discover and returns the response", async () => {
+    const fakeResponse = {
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "ok" },
+        models: { values: ["llama-3-8b"], confidence: "certain", evidence: "ok" },
+        category: { value: "chat", confidence: "guess", evidence: "default" },
+        suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "ok" },
+        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "ok" },
+      },
+    };
+    (api.post as any).mockResolvedValue(fakeResponse);
+    const { result } = renderHook(() => useDiscoverConnection(), { wrapper: wrap() });
+    const r = await result.current.mutateAsync({ baseUrl: "http://x", apiKey: "sk-test" });
+    expect(api.post).toHaveBeenCalledWith("/api/connections/discover", {
+      baseUrl: "http://x",
+      apiKey: "sk-test",
+    });
+    expect(r.inferred.serverKind.value).toBe("vllm");
+  });
+
+  it("works with baseUrl-only (no apiKey)", async () => {
+    (api.post as any).mockResolvedValue({
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "no signal" },
+        models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
+        category: { value: null, confidence: "unknown", evidence: "no models" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
+      },
+    });
+    const { result } = renderHook(() => useDiscoverConnection(), { wrapper: wrap() });
+    await result.current.mutateAsync({ baseUrl: "http://x" });
+    expect(api.post).toHaveBeenCalledWith("/api/connections/discover", { baseUrl: "http://x" });
   });
 });

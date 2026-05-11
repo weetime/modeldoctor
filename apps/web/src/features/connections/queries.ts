@@ -4,6 +4,8 @@ import type {
   ConnectionRevealKeyResponse,
   ConnectionWithSecret,
   CreateConnection,
+  DiscoverConnectionRequest,
+  DiscoverConnectionResponse,
   ListConnectionsResponse,
   UpdateConnection,
 } from "@modeldoctor/contracts";
@@ -64,5 +66,12 @@ export function useRevealApiKey(id: string | null | undefined) {
     queryFn: () => api.get<ConnectionRevealKeyResponse>(`/api/connections/${id}/reveal-key`),
     // apiKey doesn't change unless the user rotates it — cache aggressively.
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDiscoverConnection() {
+  return useMutation({
+    mutationFn: (input: DiscoverConnectionRequest) =>
+      api.post<DiscoverConnectionResponse>("/api/connections/discover", input),
   });
 }

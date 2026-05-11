@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createConnectionSchema, serverKindSchema } from "./connection.js";
+import {
+  createConnectionSchema,
+  discoverConnectionRequestSchema,
+  discoverConnectionResponseSchema,
+  inferenceConfidenceSchema,
+  serverKindSchema,
+} from "./connection.js";
 import { ENGINE_IDS } from "./engine.js";
 
 const validBase = {
@@ -84,5 +90,88 @@ describe("serverKindSchema after engine SSOT extraction", () => {
 
   it("rejects unknown values", () => {
     expect(() => serverKindSchema.parse("nope")).toThrow();
+  });
+});
+
+describe("discoverConnectionRequestSchema", () => {
+  it("accepts baseUrl-only input", () => {
+    const r = discoverConnectionRequestSchema.parse({ baseUrl: "http://10.0.0.1:8000" });
+    expect(r.baseUrl).toBe("http://10.0.0.1:8000");
+    expect(r.apiKey).toBeUndefined();
+  });
+
+  it("accepts baseUrl + apiKey", () => {
+    const r = discoverConnectionRequestSchema.parse({
+      baseUrl: "https://api.openai.com",
+      apiKey: "sk-test",
+    });
+    expect(r.apiKey).toBe("sk-test");
+  });
+
+  it("rejects non-URL baseUrl", () => {
+    expect(() => discoverConnectionRequestSchema.parse({ baseUrl: "not-a-url" })).toThrow();
+  });
+
+  it("rejects empty apiKey", () => {
+    expect(() =>
+      discoverConnectionRequestSchema.parse({ baseUrl: "http://x", apiKey: "" }),
+    ).toThrow();
+  });
+
+  it("accepts customHeaders string (Higress routing case)", () => {
+    const r = discoverConnectionRequestSchema.parse({
+      baseUrl: "http://gateway:8000",
+      customHeaders: "x-higress-llm-model: qwen-72b\nX-Project-Id: p_123",
+    });
+    expect(r.customHeaders).toBe("x-higress-llm-model: qwen-72b\nX-Project-Id: p_123");
+  });
+});
+
+describe("inferenceConfidenceSchema", () => {
+  it.each(["certain", "likely", "guess", "unknown"] as const)("accepts %s", (v) => {
+    expect(inferenceConfidenceSchema.parse(v)).toBe(v);
+  });
+
+  it("rejects unknown value", () => {
+    expect(() => inferenceConfidenceSchema.parse("maybe")).toThrow();
+  });
+});
+
+describe("discoverConnectionResponseSchema", () => {
+  it("parses a complete response", () => {
+    const valid = {
+      health: {
+        durationMs: 1234,
+        probesAttempted: 4,
+        probesFailed: [{ probe: "metrics", reason: "404" }],
+        warnings: [],
+      },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "metric prefix" },
+        models: { values: ["llama-3-8b"], confidence: "certain", evidence: "/v1/models" },
+        category: { value: "chat", confidence: "guess", evidence: "default" },
+        suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "..." },
+        prometheusUrl: {
+          value: "http://10.0.0.1:8000",
+          confidence: "likely",
+          evidence: "engine exposes /metrics directly",
+        },
+      },
+    };
+    expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();
+  });
+
+  it("accepts unknown values as null", () => {
+    const valid = {
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "no signal" },
+        models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
+        category: { value: null, confidence: "unknown", evidence: "no models" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
+        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
+      },
+    };
+    expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();
   });
 });

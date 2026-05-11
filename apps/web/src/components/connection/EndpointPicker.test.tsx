@@ -8,11 +8,11 @@ vi.mock("@/features/connections/queries", () => ({
   useConnections: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-// Mock ConnectionDialog so we can assert its props without rendering internals
-const MockConnectionDialog = vi.fn();
-vi.mock("@/features/connections/ConnectionDialog", () => ({
-  ConnectionDialog: (props: Record<string, unknown>) => {
-    MockConnectionDialog(props);
+// Mock ConnectionSheet so we can assert its props without rendering internals
+const MockConnectionSheet = vi.fn();
+vi.mock("@/features/connections/ConnectionSheet", () => ({
+  ConnectionSheet: (props: Record<string, unknown>) => {
+    MockConnectionSheet(props);
     return null;
   },
 }));
@@ -46,7 +46,7 @@ const SAMPLE_ENDPOINT = {
 describe("EndpointPicker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    MockConnectionDialog.mockClear();
+    MockConnectionSheet.mockClear();
   });
 
   it("renders fields read-only after a connection is selected", () => {
@@ -73,7 +73,7 @@ describe("EndpointPicker", () => {
     expect(modelInput).toHaveAttribute("readonly");
   });
 
-  it("Edit button opens ConnectionDialog in edit mode with the existing connection", () => {
+  it("Edit button opens ConnectionSheet in edit mode with the existing connection", () => {
     (useConnection as ReturnType<typeof vi.fn>).mockReturnValue({
       data: SAMPLE,
       isLoading: false,
@@ -88,15 +88,15 @@ describe("EndpointPicker", () => {
     );
     // Click the "Edit this connection" button
     fireEvent.click(screen.getByText(/Edit this connection|编辑此连接/i));
-    // ConnectionDialog should have been called with mode={ kind: "edit", existing: SAMPLE }
-    expect(MockConnectionDialog).toHaveBeenCalledWith(
+    // ConnectionSheet should have been called with mode={ kind: "edit", existing: SAMPLE }
+    expect(MockConnectionSheet).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: { kind: "edit", existing: SAMPLE },
       }),
     );
   });
 
-  it("Save-as button opens ConnectionDialog in create mode prefilled without apiKey", () => {
+  it("Save-as button opens ConnectionSheet in create mode prefilled without apiKey", () => {
     (useConnection as ReturnType<typeof vi.fn>).mockReturnValue({
       data: SAMPLE,
       isLoading: false,
@@ -112,7 +112,7 @@ describe("EndpointPicker", () => {
     // Click the "Save as new connection" button
     fireEvent.click(screen.getByText(/Save as new connection|另存为新连接/i));
     // Find the call where open=true (initial render emits open=false)
-    const allCalls = MockConnectionDialog.mock.calls as Array<[Record<string, unknown>]>;
+    const allCalls = MockConnectionSheet.mock.calls as Array<[Record<string, unknown>]>;
     const callWithOpen = allCalls.find((call) => call[0]?.open === true);
     expect(callWithOpen).toBeDefined();
     const props = (callWithOpen as [Record<string, unknown>])[0];

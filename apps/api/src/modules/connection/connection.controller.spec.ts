@@ -10,6 +10,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ConnectionController } from "./connection.controller.js";
 import { ConnectionService } from "./connection.service.js";
+import { DiscoveryService } from "./discovery/discovery.service.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -73,7 +74,10 @@ describe("ConnectionController", () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [ConnectionController],
-      providers: [{ provide: ConnectionService, useValue: svc }],
+      providers: [
+        { provide: ConnectionService, useValue: svc },
+        { provide: DiscoveryService, useValue: { discover: vi.fn() } },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
@@ -239,7 +243,10 @@ describe("ConnectionController.revealKey", () => {
     svc = makeMockService();
     const moduleRef = await Test.createTestingModule({
       controllers: [ConnectionController],
-      providers: [{ provide: ConnectionService, useValue: svc }],
+      providers: [
+        { provide: ConnectionService, useValue: svc },
+        { provide: DiscoveryService, useValue: { discover: vi.fn() } },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
@@ -263,5 +270,42 @@ describe("ConnectionController.revealKey", () => {
   it("propagates NotFoundException for unknown ids", async () => {
     svc.revealApiKey.mockRejectedValue(new NotFoundException());
     await expect(controller.revealKey(USER, "c_404")).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe("ConnectionController.discover", () => {
+  let controller: ConnectionController;
+  let discovery: { discover: ReturnType<typeof vi.fn> };
+
+  beforeEach(async () => {
+    discovery = { discover: vi.fn() };
+    const module = await Test.createTestingModule({
+      controllers: [ConnectionController],
+      providers: [
+        { provide: ConnectionService, useValue: {} },
+        { provide: DiscoveryService, useValue: discovery },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+    controller = module.get(ConnectionController);
+  });
+
+  it("forwards request body to DiscoveryService and returns its response", async () => {
+    const fake = {
+      health: { durationMs: 100, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "ok" },
+        models: { values: ["m"], confidence: "certain", evidence: "ok" },
+        category: { value: "chat", confidence: "guess", evidence: "default" },
+        suggestedTags: { values: ["vllm"], confidence: "guess", evidence: "ok" },
+        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "ok" },
+      },
+    };
+    discovery.discover.mockResolvedValue(fake);
+    const r = await controller.discover({ baseUrl: "http://x" });
+    expect(discovery.discover).toHaveBeenCalledWith({ baseUrl: "http://x" });
+    expect(r).toEqual(fake);
   });
 });

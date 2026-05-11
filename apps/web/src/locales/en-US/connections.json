@@ -69,7 +69,34 @@
       "placeholder": "curl http://example/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-…\" \\\n  -d '{…}'",
       "filled": "Filled: {{fields}}",
       "empty": "Paste a curl command first",
-      "invalid": "Could not extract parameters from curl command"
+      "invalid": "Could not extract parameters from curl command",
+      "autoParseHint": "Auto-parses and triggers Discover after paste"
+    },
+    "discover": {
+      "button": "🔍 Discover",
+      "running": "Discovering…",
+      "applyAll": "Apply All",
+      "autoBadge": "auto",
+      "autoBadgeTooltip": "Auto-detected, please verify",
+      "evidence": "Evidence",
+      "warningsTitle": "Discovery warnings",
+      "noResults": "Could not identify endpoint, please fill manually",
+      "ssrfBlocked": "This address is not allowed for security reasons",
+      "missingBaseUrl": "Please enter baseUrl first",
+      "successPartial": "Detected {{filled}} fields, {{failed}} probes failed",
+      "successAll": "Detected {{filled}} fields, please verify",
+      "showDetails": "Show details",
+      "hideDetails": "Hide",
+      "inferredHeading": "Inferred fields",
+      "failedProbesHeading": "Failed probes",
+      "noValue": "not detected",
+      "dismiss": "Dismiss discover result",
+      "confidence": {
+        "certain": "certain",
+        "likely": "likely",
+        "guess": "guess",
+        "unknown": "unknown"
+      }
     }
   },
   "actions": {
