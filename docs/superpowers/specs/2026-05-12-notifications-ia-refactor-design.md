@@ -1,216 +1,146 @@
-# Notifications IA Refactor — Design
+# Notifications IA Refactor — Design (as-built)
 
-Status: draft → ready to implement
+Status: shipped
 Owner: weetime
-Branch: `feat/notifications-ia-refactor` (stacks on `feat/notifications-feishu-dingtalk` / PR #170)
+Branch: `feat/notifications-ia-refactor` → PR #171
 Tracking issue: #152
 
 ## Goal
 
-Reorganise the V1 notifications surface from a standalone top-level
-`/notifications` page (channels + subscriptions on one screen) into a
-**producer-attached** model that mirrors Datadog / Linear / Sentry:
-
-- **Channels** (where can we send) live in **Settings**
-- **Subscriptions** (which connection's events go where) live on **the Connection**
+Reorganise the V1 notifications surface so **a channel is the unit of
+management**. Channels live under Settings; each channel's subscriptions
+(which connections, which events) are configured inside the same Sheet.
 
 Backend, contracts, MCP tools, schema, encryption, dispatcher — all unchanged.
 
-## Why
+## Why this shape
 
-`/notifications` co-located two different abstractions:
-1. Channel CRUD = global config ("we can post to these places")
-2. Subscriptions = business rules ("this connection's failures go here")
+We considered three industry-standard placements (Grafana / Sentry / Datadog
+/ Linear) and started with a Datadog-style split: channels in Settings,
+subscriptions on the Connection. That separation made sense in theory but in
+review surfaced two real complaints: (1) too many places to look at to
+answer "who gets pinged for this connection", and (2) a global-subscriptions
+sub-table felt orphaned.
 
-Mixing them on one page hides per-connection alert routing in a generic table
-and forces users to translate connectionId UUIDs in a flat list. Industry
-convergence (see comparison below) is to split them.
-
-| Product | Channels | Subscriptions |
-|---------|----------|--------------|
-| Grafana | Settings → Contact points | Notification policies (label tree) |
-| Sentry | Settings → Integrations | Project → Alert rules |
-| Datadog | Settings → Integrations | Per-monitor inline (`@slack-x`) |
-| Linear | Settings → Workspace integrations | Personal Settings → matrix |
-| PagerDuty | Settings + Integrations | Per-service escalation policy |
-
-**Common thread:** channels are global config in Settings, alert rules attach
-to the producer.
+Pivoted mid-implementation to: **everything for a channel lives in the
+channel's Sheet**. Adding a Slack hook and saying "fire for benchmark.failed
+across these 3 connections" is one form, one save.
 
 ## Design
 
 ### Sidebar
 
-Remove the top-rail `🔔 Notifications` entry. Connections stays where it is.
+Top-rail `🔔 Notifications` removed. Connections + Settings remain.
 
-### Settings landing page (`/settings`)
+### `/settings` — summary card
 
-Add a new `SettingSection` summarising channel usage with a "管理 →" button
-that links to the new sub-route:
+A `SettingSection` named "通知通道" with channel-type counts and a
+"subscriptions coverage" line (e.g. "5/12 connections have subscriptions").
+"管理 →" button navigates to `/settings/notifications`.
 
-```
-通知通道
-  Slack: 2 个 · 飞书: 1 个 · 钉钉: 1 个 · 通用 Webhook: 0 个
-  5/12 个连接配置了订阅                                        [ 管理 → ]
-```
+### `/settings/notifications` — list page
 
-The counts come from `useChannels()` + `useSubscriptions()` already exported
-from `apps/web/src/features/notifications/queries.ts` — no new endpoints.
+Follows our list-page conventions (see CLAUDE.md):
 
-### `/settings/notifications` (new sub-route)
+- `PageHeader` with breadcrumbs `Settings › 通知通道`
+- `+ New channel` button in `PageHeader` `rightSlot`
+- Table columns: name (clickable, opens edit Sheet) · type · created · actions
+- Actions cell: `Test` text button + `Pencil` icon + `Trash2` icon
+- Delete uses `AlertDialog` confirm
 
-A dedicated page with two stacked sections:
+### `ChannelSheet` — one Sheet, two sections
 
-1. **通道** — same CRUD table that lives on `/notifications` today. Reuse
-   `ChannelSheet` verbatim.
-2. **全局订阅 (跨所有连接)** — subscriptions where `filter.connectionId` is
-   null. Small table + "+ 新建订阅" Sheet that constrains form to omit
-   connection.
+**Section 1: Channel** — type / name / URL (existing fields).
 
-Page must follow CLAUDE.md page conventions: `PageHeader` with breadcrumbs
-`Settings › 通知通道`, body `<div className="px-8 py-6 space-y-6">`,
-sections via `FormSection`.
+**Section 2: Subscriptions** — collapses what used to be "subscriptions
+page":
 
-### ConnectionSheet — new "通知" Tab
+- Event checkboxes (Benchmark completed / Benchmark failed / Diagnostics failed)
+- "All connections" Switch
+  - On: backend rows with `connectionId=null` (one per checked event)
+  - Off: per-connection multi-select via scrollable checkbox list
+- Connection checkbox list is disabled when "All connections" is on
+- Tip block: explains Feishu/DingTalk keyword requirement when relevant
+  channel type is selected; for `webhook`, shows a code-block sample of the
+  outbound payload
 
-`ConnectionSheet` (the existing right-side edit drawer) currently renders one
-flat form. Add a `Tabs` row at the top with:
+### Save semantics
 
-- **基础信息** — current form (default tab)
-- **通知** — new section, render only in `edit` mode (creation flow has no
-  channel/subscription context yet)
+On submit:
 
-Notification tab content:
+1. Create or PATCH the channel itself (PATCH skips the URL field when blank,
+   so existing URL is preserved).
+2. Diff intended `(connectionId | null, eventType)` pairs against the
+   channel's current subscription rows.
+3. Issue create + delete subscription requests **in parallel**.
 
-```
-通道                  事件                       操作
-─────────────────────────────────────────────────────
-weetime (Slack)       Benchmark 完成,失败       编辑 删除
-luck (钉钉)           诊断失败                  编辑 删除
+### Open/edit semantics
 
-[ + 添加订阅 ]
-```
+- Form syncs **once** per (sheet-open transition, channel.id) tuple.
+  Subsequent background refetches of subscriptions do not wipe in-flight
+  edits.
+- Edit mode waits for `useSubscriptions().isSuccess` before seeding the
+  Subscriptions section, so the cold-start race (subs query unsettled when
+  Sheet first opens) doesn't pre-fill with an empty selection.
+- URL field uses a split schema:
+  - Create: `z.string().url()` required.
+  - Edit: optional; empty = keep existing. Placeholder shows the masked URL.
 
-"事件" cell groups multiple subscription rows that share the same channel,
-so the UI shows one logical row per (connection, channel) pair even though
-the backend stores N rows.
+### Form validation
 
-### "+ 添加订阅" Sheet (nested or inline)
+Two zod schemas in `apps/web/src/features/notifications/schemas.ts`:
 
-Single combined form, multi-event:
+- `channelFormCreateSchema` — full validation.
+- `channelFormEditSchema` — URL becomes optional with a refine that still
+  validates non-empty values as URLs.
 
-```
-通道 *        [▼ 单选 dropdown — all channels for this user ]
-事件 *        ☑ Benchmark 完成
-              ☑ Benchmark 失败
-              ☐ 诊断失败
-```
-
-On submit: backend creates **N rows** of `NotificationSubscription`, one per
-checked event type, all with `channelId` = selected + `filter.connectionId` =
-current connection.
-
-Backend supports this with N sequential `POST /api/notifications/subscriptions`
-calls (cheaper than adding a bulk endpoint for V1.5; backend stays unchanged).
-
-### Edit semantics
-
-V1.5 still does **not support edit** — the "编辑" action on the per-channel
-group row pre-fills the same Sheet with current event selection; on save it
-**diffs and applies**:
-
-- Events checked-now-but-not-before → POST create
-- Events checked-before-but-not-now → DELETE
-- Events checked-in-both → no-op
-
-Frontend computes the diff; backend stays primitive. Acceptable for V1.5 since
-each rule is at most 3 events.
-
-Alternative considered: "delete-and-recreate" on edit. Rejected because it
-leaves a transient empty state visible to the user; diff is cleaner.
-
-### Connections list — 🔔 column
-
-Add a column between "Tags" and "Actions":
-
-```
-🔔 订阅
-   3   (3 subscriptions → click jumps to this connection's notifications tab)
-   —   (zero — render em-dash, not 0)
-```
-
-Source: `useSubscriptions()` grouped by `connectionId`. Adding this column
-doesn't change the list endpoint — frontend joins client-side.
-
-### Routes
-
-| Old | New |
-|-----|-----|
-| `/notifications` | ❌ removed; route returns 404 if anyone hits it |
-| `/connections/:id` doesn't exist | unchanged — edit still goes through Sheet |
-| — | `/settings/notifications` (new) |
-
-`/notifications` deletion is safe: zero users in production, the page just
-moves its content to two new locations.
+`useForm`'s resolver switches at mount time based on `!!channel`.
 
 ## Backend / API contract
 
-**Zero changes** to:
-- Prisma schema
-- REST endpoints (`/api/notifications/...`)
-- DTOs / zod schemas
-- MCP tools
-- AES-GCM encryption
-- Dispatcher / adapter logic
-- e2e tests
-
-The frontend just consumes the same hooks from different places.
+**Zero changes.** Same Prisma schema, same REST endpoints, same MCP tools.
+Frontend now issues many subscription POSTs/DELETEs in parallel at save
+time instead of one-at-a-time from a dedicated subscription form.
 
 ## i18n
 
-- `sidebar:items.notifications` removed
-- New keys under `settings:` namespace:
-  - `notifications.section.title` ("通知通道")
-  - `notifications.section.subtitle`
-  - `notifications.section.manageButton` ("管理 →")
-  - `notifications.section.summary.{slack,feishu,dingtalk,webhook}` count templates
-  - `notifications.page.title`, `notifications.page.breadcrumb`
-  - `notifications.globalSubscription.*` (table headers, empty state)
-- New keys under `connections:` namespace:
-  - `dialog.tabs.basic`, `dialog.tabs.notifications`
-  - `dialog.notifications.empty`
-  - `dialog.notifications.addButton`
-  - `dialog.notifications.columns.{channel,events,actions}`
-  - `dialog.notifications.subscriptionsCount` (for the 🔔 column)
-- Existing `notifications:` namespace stays (Sheets still use its strings)
+- `sidebar:items.notifications` removed.
+- `settings:notifications.section.*` (summary card)
+- `settings:notifications.page.*` (sub-route header + breadcrumb)
+- `notifications:channel.form.{basicSection,subscriptionsSection,subscriptionsHint,events,eventOptions.*,applyToAll,applyToAllHint,connections,connectionsDisabled,connectionsEmpty,urlEditHint}`
 
-## Tests
+## Removed components
 
-- Web: `apps/web/src/features/settings/...` — new component test for the
-  Settings notifications summary section
-- Web: `ConnectionSheet` test extended to cover Tab switching + notifications
-  tab empty state
-- No new API tests needed (backend unchanged)
-- Browser e2e: optional — out of V1.5 scope unless user requests
+- `apps/web/src/features/notifications/{NotificationsPage,ChannelsSection,SubscriptionsSection,SubscriptionSheet}.tsx`
+- Top-rail `/notifications` route + `Bell` sidebar icon
 
-## Open questions resolved
+Files retained in `features/notifications/`:
 
-| Question | Resolution |
-|----------|-----------|
-| Subscription home | ConnectionSheet Tab |
-| Settings channel layout | Independent sub-route `/settings/notifications` |
-| Global subscriptions | Same sub-route, second section |
-| Bulk create form | Yes — single Sheet, multi-event checkbox |
-| Edit support | Yes — frontend diff into create+delete |
+- `ChannelSheet.tsx` — now also hosts the subscriptions form section
+- `queries.ts` / `schemas.ts` — hooks + zod schemas
 
-## Risks / non-goals
+## Non-goals
 
-- **Risk**: ConnectionSheet was already large; adding a Tab + sub-Sheet may
-  feel cramped at narrow widths. Mitigation: Tab uses shadcn `Tabs` primitive;
-  notifications section uses ≤ 1 sub-table. If width becomes painful, V2 can
-  promote to a real `/connections/:id` detail page.
-- **Non-goal**: No backend bulk endpoint. N sequential POSTs is fine at V1
-  scale.
-- **Non-goal**: No drag-to-reorder / priority / severity routing — that's
-  Grafana territory, V2 if ever.
-- **Non-goal**: `/connections/:id` detail page. Reuse ConnectionSheet.
+- Per-connection subscription view (the channel is the unit; if a user wants
+  "show all alerts for this connection", that's a future inverse-lookup view).
+- Bulk subscription import.
+- HMAC signing for outbound webhooks (V2).
+- Custom event-payload templates (V2).
+- Drag-to-reorder, priority, severity routing — Grafana territory.
+
+## Risks
+
+- **Cold-start race on first sheet open**: mitigated by gating the form sync
+  on `subsQuery.isSuccess` in edit mode.
+- **Parallel mutation invalidation churn**: `Promise.all` of N create +
+  M delete fires N+M `onSuccess` callbacks → N+M invalidations of the
+  `["notifications", "subscriptions"]` query key. React-Query coalesces
+  identical invalidations within a tick, so this is fine in practice; a
+  follow-up could batch via a single `optimisticUpdate` if it ever stutters
+  visibly.
+
+## Out of scope
+
+- E2E coverage for the Sheet's Subscriptions section. Existing
+  notifications.e2e-spec.ts still covers the dispatcher / adapter path
+  end-to-end; the IA refactor is pure UI.

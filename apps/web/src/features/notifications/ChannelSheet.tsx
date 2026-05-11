@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { useConnections } from "@/features/connections/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Channel } from "@modeldoctor/contracts";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -65,7 +65,8 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
   const testCh = useTestChannel();
   const createSub = useCreateSubscription();
   const delSub = useDeleteSubscription();
-  const { data: subscriptions = [] } = useSubscriptions();
+  const subsQuery = useSubscriptions();
+  const subscriptions = subsQuery.data ?? [];
   const { data: connections = [] } = useConnections();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -95,10 +96,26 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
     [subscriptions, channel],
   );
 
-  // Reset form when the sheet opens. In edit mode, derive selectors from
-  // existing subscription rows.
+  // Track which (sheet-open, channel) tuple we've already seeded the form
+  // with. Without this, every background refetch of `subscriptions`
+  // (window-focus, mutation invalidations, etc.) would re-run `form.reset`
+  // and wipe the user's in-flight edits. We sync exactly once per open
+  // session: when the sheet first opens AND the subscriptions query has
+  // settled (so edit-mode pre-fill sees real rows, not the empty default).
+  // biome-ignore lint/suspicious/noExplicitAny: ref typing
+  const syncedKey = useRef<string | null>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      syncedKey.current = null;
+      return;
+    }
+    const key = channel?.id ?? "__new__";
+    // For edit mode, wait until subs query has loaded at least once;
+    // otherwise we'd pre-fill from `[]` and never re-sync (background
+    // refetches are intentionally ignored once we've synced).
+    if (channel && !subsQuery.isSuccess) return;
+    if (syncedKey.current === key) return;
+    syncedKey.current = key;
     setSubmitError(null);
     if (!channel) {
       form.reset({
@@ -124,7 +141,7 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
       connectionIds: hasGlobalRow ? [] : connIds,
       events,
     });
-  }, [open, channel, existingSubs, form]);
+  }, [open, channel?.id, channel?.type, channel?.name, subsQuery.isSuccess, existingSubs, form]);
 
   /** Compute the set of subscription keys the user wants. */
   const intendedKeys = useMemo<SubKey[]>(() => {
@@ -170,20 +187,28 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
           s.id,
         );
       }
+      // Issue creates + deletes in parallel — subscription rows are
+      // independent, so the cartesian product can be N×M for large channels.
+      // Sequential awaits would scale badly past a handful of changes.
+      const creates: Promise<unknown>[] = [];
       for (const [k, sub] of want) {
         if (!have.has(k)) {
-          await createSub.mutateAsync({
-            channelId,
-            eventType: sub.eventType,
-            connectionId: sub.connectionId ?? undefined,
-          });
+          creates.push(
+            createSub.mutateAsync({
+              channelId,
+              eventType: sub.eventType,
+              connectionId: sub.connectionId ?? undefined,
+            }),
+          );
         }
       }
+      const deletes: Promise<unknown>[] = [];
       for (const [k, id] of have) {
         if (!want.has(k)) {
-          await delSub.mutateAsync(id);
+          deletes.push(delSub.mutateAsync(id));
         }
       }
+      await Promise.all([...creates, ...deletes]);
 
       onOpenChange(false);
     } catch (e) {

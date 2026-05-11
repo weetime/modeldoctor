@@ -45,7 +45,6 @@ export function SettingsNotificationsPage(): JSX.Element {
   };
 
   const breadcrumbs = [
-    { label: tSidebar("items.settings") },
     { label: tSidebar("items.settings"), to: "/settings" },
     { label: t("notifications.page.breadcrumb") },
   ];
