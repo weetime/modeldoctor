@@ -7,6 +7,6 @@ import { DiscoveryService } from "./discovery/discovery.service.js";
 @Module({
   controllers: [ConnectionController],
   providers: [PrismaService, ConnectionService, DiscoveryService],
-  exports: [ConnectionService],
+  exports: [ConnectionService, DiscoveryService],
 })
 export class ConnectionModule {}

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.21",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@modeldoctor/contracts": "workspace:*",
     "@modeldoctor/tool-adapters": "workspace:*",
     "@nestjs/common": "^11.1.19",

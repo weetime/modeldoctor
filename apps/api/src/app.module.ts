@@ -23,6 +23,7 @@ import { EngineMetricsModule } from "./modules/engine-metrics/engine-metrics.mod
 import { HealthModule } from "./modules/health/health.module.js";
 import { InsightsModule } from "./modules/insights/insights.module.js";
 import { LlmJudgeModule } from "./modules/llm-judge/llm-judge.module.js";
+import { McpModule } from "./modules/mcp/mcp.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
@@ -80,6 +81,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     UsersModule,
     AuthModule,
     BaselineModule,
+    McpModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
     }),

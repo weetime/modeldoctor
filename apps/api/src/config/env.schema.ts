@@ -85,6 +85,15 @@ export const EnvSchema = z
     // to the in-cluster ServiceAccount automatically.
     KUBECONFIG: z.string().optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
+
+    // --- MCP server (V1) ---
+    // Both must be set together to enable /mcp. When either is unset the
+    // MCP route returns 503 ("not configured"). See apps/api/.env.example
+    // and apps/api/src/modules/mcp/README.md for bootstrap instructions.
+    MCP_BEARER_TOKEN: z.string().min(32).optional(),
+    // User ids are Prisma cuid()s, not UUIDs — just require a non-empty
+    // string and let the first tool call surface a 404 if it doesn't match.
+    MCP_USER_ID: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "test" && !env.DATABASE_URL) {
