@@ -83,11 +83,13 @@ describe("Notifications e2e", () => {
     expect(reloaded?.status).toBe("sent");
   });
 
-  it("test endpoint returns ok=false when channel does not exist", async () => {
+  it("test endpoint returns 404 when channel does not exist", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/notifications/channels/does-not-exist/test")
       .set("Authorization", `Bearer ${token}`);
-    // Controller raises BadRequest before creating the delivery row.
-    expect([400, 404]).toContain(res.status);
+    // DispatcherService.testChannel throws NotFoundException for unknown
+    // (or cross-user) channel ids; the controller re-raises so callers see a
+    // distinct 404, not a swallowed { ok: false }.
+    expect(res.status).toBe(404);
   });
 });

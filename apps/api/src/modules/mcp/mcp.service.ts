@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../database/prisma.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { DiscoveryService } from "../connection/discovery/discovery.service.js";
@@ -53,7 +52,6 @@ export class McpService {
     private readonly channels: ChannelsService,
     private readonly subscriptions: SubscriptionsService,
     private readonly dispatcher: DispatcherService,
-    private readonly prisma: PrismaService,
   ) {}
 
   async handleRequest(
@@ -76,19 +74,12 @@ export class McpService {
       channels: this.channels,
       subscriptions: this.subscriptions,
       notificationsTest: async (channelId: string) => {
-        const rows = await this.channels.list(userId);
-        if (!rows.find((c) => c.id === channelId)) {
-          return { ok: false, error: "channel not found" };
-        }
-        const delivery = await this.prisma.notificationDelivery.create({
-          data: {
-            channelId,
-            eventType: "test",
-            payload: { message: "Test notification from ModelDoctor (MCP)" },
-          },
-        });
         try {
-          await this.dispatcher.dispatchById(delivery.id);
+          await this.dispatcher.testChannel(
+            userId,
+            channelId,
+            "Test notification from ModelDoctor (MCP)",
+          );
           return { ok: true };
         } catch (e) {
           return { ok: false, error: (e as Error).message };

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../database/prisma.service.js";
 import { dispatchToChannel } from "./adapters/index.js";
@@ -105,5 +105,33 @@ export class DispatcherService {
     const row = await this.prisma.notificationDelivery.findUnique({ where: { id } });
     if (!row) throw new Error(`Delivery ${id} not found`);
     await this.processOne(row, new Date());
+  }
+
+  /**
+   * Synchronous test path used by both the REST controller and the MCP tool.
+   * Verifies channel ownership, inserts a one-shot outbox row, and runs it
+   * through the same `processOne` path the cron uses — so a successful test
+   * proves end-to-end that channel + adapter + URL are correctly wired.
+   *
+   * Throws `NotFoundException` if the channel doesn't exist or belongs to a
+   * different user; lets adapter errors propagate so callers can decide
+   * whether to surface them (REST swallows + returns `{ ok: false, error }`;
+   * MCP does the same to fit the tool-result shape).
+   */
+  async testChannel(userId: string, channelId: string, message: string): Promise<void> {
+    const channel = await this.prisma.notificationChannel.findFirst({
+      where: { id: channelId, userId },
+    });
+    if (!channel) {
+      throw new NotFoundException(`Channel '${channelId}' not found`);
+    }
+    const delivery = await this.prisma.notificationDelivery.create({
+      data: {
+        channelId,
+        eventType: "test",
+        payload: { message },
+      },
+    });
+    await this.dispatchById(delivery.id);
   }
 }

@@ -1,17 +1,6 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { PrismaService } from "../../database/prisma.service.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ChannelsService } from "./channels.service.js";
 import { DispatcherService } from "./dispatcher.service.js";
@@ -31,7 +20,6 @@ export class NotificationsController {
     private readonly channels: ChannelsService,
     private readonly subscriptions: SubscriptionsService,
     private readonly dispatcher: DispatcherService,
-    private readonly prisma: PrismaService,
   ) {}
 
   @Get("channels")
@@ -64,19 +52,14 @@ export class NotificationsController {
 
   @Post("channels/:id/test")
   async test(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
-    const rows = await this.channels.list(user.sub);
-    if (!rows.find((c) => c.id === id)) throw new BadRequestException("Channel not found");
-    const delivery = await this.prisma.notificationDelivery.create({
-      data: {
-        channelId: id,
-        eventType: "test",
-        payload: { message: "Test notification from ModelDoctor" },
-      },
-    });
     try {
-      await this.dispatcher.dispatchById(delivery.id);
+      await this.dispatcher.testChannel(user.sub, id, "Test notification from ModelDoctor");
       return { ok: true };
     } catch (e) {
+      // Re-raise NotFoundException so the controller returns a 404 instead of
+      // swallowing it as ok=false (channel-not-found is an auth/identity
+      // problem, not a transient delivery failure).
+      if ((e as { status?: number }).status === 404) throw e;
       return { ok: false, error: (e as Error).message };
     }
   }
