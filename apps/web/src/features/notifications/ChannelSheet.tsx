@@ -35,7 +35,7 @@ import {
   useTestChannel,
   useUpdateChannel,
 } from "./queries";
-import { type ChannelForm, channelFormSchema } from "./schemas";
+import { type ChannelForm, channelFormCreateSchema, channelFormEditSchema } from "./schemas";
 
 const EVENTS = ["benchmark.completed", "benchmark.failed", "diagnostics.failed"] as const;
 type EventType = (typeof EVENTS)[number];
@@ -71,7 +71,7 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
 
   const form = useForm<ChannelForm>({
     mode: "onTouched",
-    resolver: zodResolver(channelFormSchema),
+    resolver: zodResolver(channel ? channelFormEditSchema : channelFormCreateSchema),
     defaultValues: {
       type: "slack",
       name: "",
@@ -270,12 +270,17 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder={t("channel.form.urlPlaceholder")}
+                        placeholder={channel?.urlMasked ?? t("channel.form.urlPlaceholder")}
                         autoComplete="off"
                         data-1p-ignore
                         data-lpignore="true"
                       />
                     </FormControl>
+                    {channel ? (
+                      <p className="text-xs text-muted-foreground">
+                        {t("channel.form.urlEditHint")}
+                      </p>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

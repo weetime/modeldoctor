@@ -1,19 +1,30 @@
 import { z } from "zod";
 
-export const channelFormSchema = z.object({
+const baseShape = {
   type: z.enum(["slack", "webhook", "feishu", "dingtalk"]),
   name: z.string().min(1).max(100),
-  url: z.string().url(),
-  // The set of connection IDs this channel should notify on. Empty list +
-  // applyToAll=false means "no subscriptions". applyToAll=true means
-  // "every event of every (current AND future) connection" — stored as
-  // a single subscription row per event with connectionId=null.
+  // Subscriptions baked into the channel form.
   connectionIds: z.array(z.string()).default([]),
   applyToAll: z.boolean().default(false),
-  // Event types this channel is wired to. The cartesian product of
-  // (connections × events) is materialised as backend subscription rows.
   events: z
     .array(z.enum(["benchmark.completed", "benchmark.failed", "diagnostics.failed"]))
     .default([]),
+};
+
+/** Create mode — URL is required. */
+export const channelFormCreateSchema = z.object({
+  ...baseShape,
+  url: z.string().url(),
 });
-export type ChannelForm = z.infer<typeof channelFormSchema>;
+
+/** Edit mode — URL is optional. Empty string means "keep the existing URL".
+ *  Non-empty values are still validated as URLs. */
+export const channelFormEditSchema = z.object({
+  ...baseShape,
+  url: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^https?:\/\/.+/.test(v), { message: "validation.invalidUrl" }),
+});
+
+export type ChannelForm = z.infer<typeof channelFormCreateSchema>;

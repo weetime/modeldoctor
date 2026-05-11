@@ -27,6 +27,7 @@
       "name": "Name",
       "url": "Webhook URL",
       "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "urlEditHint": "Leave blank to keep the saved URL; only a new value replaces it.",
       "events": "Events",
       "eventOptions": {
         "benchmark.completed": "Benchmark completed",

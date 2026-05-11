@@ -27,6 +27,7 @@
       "name": "名称",
       "url": "Webhook URL",
       "urlPlaceholder": "https://hooks.slack.com/services/...",
+      "urlEditHint": "留空表示沿用已保存的 URL；填入新值才会替换。",
       "events": "事件",
       "eventOptions": {
         "benchmark.completed": "Benchmark 完成",
