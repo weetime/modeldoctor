@@ -48,6 +48,7 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
 
   const currentType = form.watch("type");
   const needsKeywordTip = currentType === "feishu" || currentType === "dingtalk";
+  const showWebhookTip = currentType === "webhook";
 
   useEffect(() => {
     if (open) {
@@ -145,6 +146,25 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
             {needsKeywordTip ? (
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                 {t("channel.form.keywordTip")}
+              </div>
+            ) : null}
+
+            {showWebhookTip ? (
+              <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <div>{t("channel.form.webhookTip")}</div>
+                <div className="font-mono text-[11px]">{t("channel.form.webhookPayloadHint")}</div>
+                <pre className="overflow-x-auto rounded bg-background/60 p-2 font-mono text-[11px] leading-relaxed">{`{
+  "eventType": "benchmark.completed",
+  "payload": {
+    "benchmarkId": "ckxxx...",
+    "name": "...",
+    "status": "completed",
+    "scenario": "inference",
+    "tool": "guidellm",
+    "connectionId": "ckyyy...",
+    "summaryMetrics": { ... }
+  }
+}`}</pre>
               </div>
             ) : null}
 

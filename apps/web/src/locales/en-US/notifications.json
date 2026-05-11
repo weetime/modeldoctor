@@ -24,7 +24,9 @@
       "name": "Name",
       "url": "Webhook URL",
       "urlPlaceholder": "https://hooks.slack.com/services/...",
-      "keywordTip": "Feishu / DingTalk bots require at least one security mode. Simplest: set \"ModelDoctor\" as the custom keyword (every message we send is prefixed with [ModelDoctor]). HMAC signing is deferred to V2."
+      "keywordTip": "Feishu / DingTalk bots require at least one security mode. Simplest: set \"ModelDoctor\" as the custom keyword (every message we send is prefixed with [ModelDoctor]). HMAC signing is deferred to V2.",
+      "webhookTip": "Posts ModelDoctor's native JSON to any HTTP endpoint. Good for webhook.site debugging, Zapier / n8n / self-hosted bridge services.",
+      "webhookPayloadHint": "POST Content-Type: application/json"
     },
     "testSuccess": "Test message sent",
     "testFailure": "Test failed: {{error}}"
