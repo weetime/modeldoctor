@@ -198,4 +198,19 @@ describe("safeFetch", () => {
     expect(r.status).toBe(200);
     expect(await r.text()).toBe("hello");
   });
+
+  it("forwards method + body and content-type header for POST", async () => {
+    fetchMock.mockImplementationOnce(async (_url: string, init?: RequestInit) => {
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe('{"hello":"world"}');
+      expect((init?.headers as Record<string, string>)["content-type"]).toBe("application/json");
+      return new Response("", { status: 200 });
+    });
+    const res = await safeFetch("http://10.0.0.1/post", {
+      method: "POST",
+      body: '{"hello":"world"}',
+      extraHeaders: { "content-type": "application/json" },
+    });
+    expect(res.status).toBe(200);
+  });
 });
