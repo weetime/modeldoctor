@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const channelTypeSchema = z.enum(["slack", "webhook"]);
+export const channelTypeSchema = z.enum(["slack", "webhook", "feishu", "dingtalk"]);
 export const eventTypeSchema = z.enum([
   "benchmark.completed",
   "benchmark.failed",

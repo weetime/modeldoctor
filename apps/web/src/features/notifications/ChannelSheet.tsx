@@ -46,6 +46,10 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
     defaultValues: { type: "slack", name: "", url: "" },
   });
 
+  const currentType = form.watch("type");
+  const needsKeywordTip = currentType === "feishu" || currentType === "dingtalk";
+  const showWebhookTip = currentType === "webhook";
+
   useEffect(() => {
     if (open) {
       setSubmitError(null);
@@ -96,6 +100,8 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="slack">{t("channel.form.typeSlack")}</SelectItem>
+                        <SelectItem value="feishu">{t("channel.form.typeFeishu")}</SelectItem>
+                        <SelectItem value="dingtalk">{t("channel.form.typeDingtalk")}</SelectItem>
                         <SelectItem value="webhook">{t("channel.form.typeWebhook")}</SelectItem>
                       </SelectContent>
                     </Select>
@@ -136,6 +142,31 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
                 </FormItem>
               )}
             />
+
+            {needsKeywordTip ? (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                {t("channel.form.keywordTip")}
+              </div>
+            ) : null}
+
+            {showWebhookTip ? (
+              <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                <div>{t("channel.form.webhookTip")}</div>
+                <div className="font-mono text-[11px]">{t("channel.form.webhookPayloadHint")}</div>
+                <pre className="overflow-x-auto rounded bg-background/60 p-2 font-mono text-[11px] leading-relaxed">{`{
+  "eventType": "benchmark.completed",
+  "payload": {
+    "benchmarkId": "ckxxx...",
+    "name": "...",
+    "status": "completed",
+    "scenario": "inference",
+    "tool": "guidellm",
+    "connectionId": "ckyyy...",
+    "summaryMetrics": { ... }
+  }
+}`}</pre>
+              </div>
+            ) : null}
 
             {submitError ? (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">

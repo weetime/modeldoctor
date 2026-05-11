@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const channelFormSchema = z.object({
-  type: z.enum(["slack", "webhook"]),
+  type: z.enum(["slack", "webhook", "feishu", "dingtalk"]),
   name: z.string().min(1).max(100),
   url: z.string().url(),
 });

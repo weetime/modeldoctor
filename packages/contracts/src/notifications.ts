@@ -1,4 +1,4 @@
-export type ChannelType = "slack" | "webhook";
+export type ChannelType = "slack" | "webhook" | "feishu" | "dingtalk";
 export type NotificationEventType =
   | "benchmark.completed"
   | "benchmark.failed"
