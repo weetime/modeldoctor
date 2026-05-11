@@ -25,6 +25,7 @@ import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
+import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
@@ -74,6 +75,7 @@ export const routes: RouteObject[] = [
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
+          { path: "notifications", element: <NotificationsPage /> },
           { path: "settings", element: <SettingsPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },

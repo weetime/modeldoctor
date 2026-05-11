@@ -20,6 +20,7 @@
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",
     "connections": "Connections",
+    "notifications": "Notifications",
     "settings": "Settings",
     "devCharts": "Dev Charts",
     "deploymentRecipes": "Deployment Recipes"
