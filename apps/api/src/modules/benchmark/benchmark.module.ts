@@ -6,6 +6,7 @@ import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineModule } from "../baseline/baseline.module.js";
 import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
+import { NotificationsModule } from "../notifications/notifications.module.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
@@ -15,7 +16,13 @@ import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 
 @Module({
-  imports: [ConfigModule, ConnectionModule, BenchmarkTemplateModule, BaselineModule],
+  imports: [
+    ConfigModule,
+    ConnectionModule,
+    BenchmarkTemplateModule,
+    BaselineModule,
+    NotificationsModule,
+  ],
   controllers: [BenchmarkController, BenchmarkCallbackController],
   providers: [
     PrismaService,

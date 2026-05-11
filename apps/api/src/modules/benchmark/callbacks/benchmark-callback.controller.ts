@@ -22,6 +22,7 @@ import type { Prisma } from "@prisma/client";
 import { Public } from "../../../common/decorators/public.decorator.js";
 import { HmacCallbackGuard } from "../../../common/hmac/hmac-callback.guard.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
+import { NotifyService } from "../../notifications/notify.service.js";
 import { BenchmarkRepository } from "../benchmark.repository.js";
 import { SseHub } from "../sse/sse-hub.service.js";
 
@@ -34,6 +35,7 @@ export class BenchmarkCallbackController {
   constructor(
     private readonly benchmarks: BenchmarkRepository,
     private readonly sse: SseHub,
+    private readonly notify: NotifyService,
   ) {}
 
   @Post("state")
@@ -141,5 +143,23 @@ export class BenchmarkCallbackController {
       } as Prisma.InputJsonValue,
     });
     this.sse.close(id);
+
+    if (row.userId) {
+      await this.notify.emit({
+        eventType: finalState === "completed" ? "benchmark.completed" : "benchmark.failed",
+        userId: row.userId,
+        connectionId: row.connectionId ?? undefined,
+        payload: {
+          benchmarkId: row.id,
+          name: row.name,
+          status: finalState,
+          scenario: row.scenario,
+          tool: row.tool,
+          connectionId: row.connectionId,
+          summaryMetrics: summary,
+          message,
+        },
+      });
+    }
   }
 }

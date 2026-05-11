@@ -184,6 +184,7 @@ function build(
     (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
     (baselineSvc ?? new MockBaselineService()) as unknown as BaselineService,
     { connection: { findMany: vi.fn() } } as never,
+    { emit: vi.fn() } as never,
   );
 }
 
@@ -812,6 +813,7 @@ describe("BenchmarkService.getByConnectionReports", () => {
       {} as never, // templates — not used
       {} as never, // baselines — not used
       prisma as never,
+      { emit: vi.fn() } as never, // notify — not used
     );
   }
 

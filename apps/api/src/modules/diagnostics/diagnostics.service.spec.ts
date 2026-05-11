@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import type { DecryptedConnection } from "../connection/connection.service.js";
+import { NotifyService } from "../notifications/notify.service.js";
 import { DiagnosticsRepository } from "./diagnostics.repository.js";
 import { DiagnosticsService } from "./diagnostics.service.js";
 
@@ -55,6 +56,7 @@ describe("DiagnosticsService", () => {
         DiagnosticsService,
         DiagnosticsRepository,
         PrismaService,
+        { provide: NotifyService, useValue: { emit: vi.fn() } },
         {
           provide: ConfigService,
           useValue: {
