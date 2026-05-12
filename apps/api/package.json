@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "description": "ModelDoctor API (NestJS)",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "build": "nest build",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:status": "prisma migrate status",
+    "db:seed": "prisma db seed",
     "db:setup:test": "createdb modeldoctor_test 2>&1 | grep -v 'already exists' || true; psql -d modeldoctor_test -c \"GRANT ALL ON SCHEMA public TO modeldoctor; ALTER DATABASE modeldoctor_test OWNER TO modeldoctor;\" && DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test prisma migrate deploy",
     "db:studio": "prisma studio",
     "start": "node dist/main.js",
@@ -67,6 +71,7 @@
     "pino-pretty": "^11",
     "supertest": "^7",
     "testcontainers": "^11.14.0",
+    "tsx": "^4.20.0",
     "unplugin-swc": "^1",
     "vite-tsconfig-paths": "^5",
     "vitest": "^2"
