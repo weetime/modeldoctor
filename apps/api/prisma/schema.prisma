@@ -97,8 +97,8 @@ model Connection {
   evaluationProfileId String?            @map("evaluation_profile_id")
   evaluationProfile   EvaluationProfile? @relation("ConnectionEvaluationProfile", fields: [evaluationProfileId], references: [id], onDelete: SetNull)
 
-  evalRunsAsA EvaluationRun[] @relation("EvalEndpointA")
-  evalRunsAsB EvaluationRun[] @relation("EvalEndpointB")
+  evaluationRunsAsEndpointA EvaluationRun[] @relation("EvalEndpointA")
+  evaluationRunsAsEndpointB EvaluationRun[] @relation("EvalEndpointB")
 
   @@unique([userId, name])
   @@index([userId])
@@ -378,6 +378,7 @@ model EvaluationRun {
   finishedAt          DateTime?             @map("finished_at") @db.Timestamptz(3)
   errorMessage        String?               @map("error_message")
   createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   evaluation  Evaluation            @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
