@@ -43,14 +43,9 @@ export const UpdateProfileRequestSchema = z.object({
     .max(256 * 1024)
     .nullable()
     .optional()
-    .refine(
-      (v) =>
-        v == null ||
-        v === "" ||
-        v.startsWith("data:image/") ||
-        /^https?:\/\//.test(v),
-      { message: "avatarUrl must be a data:image/* URL or http(s) URL" },
-    ),
+    .refine((v) => v == null || v === "" || v.startsWith("data:image/") || /^https?:\/\//.test(v), {
+      message: "avatarUrl must be a data:image/* URL or http(s) URL",
+    }),
 });
 export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
 

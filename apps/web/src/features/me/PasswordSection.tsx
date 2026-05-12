@@ -1,3 +1,4 @@
+import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -8,7 +9,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { FormSection } from "@/components/common/form-section";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChangePasswordRequestSchema } from "@modeldoctor/contracts";
 import { useForm } from "react-hook-form";

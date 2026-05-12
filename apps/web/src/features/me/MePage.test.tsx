@@ -1,10 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { I18nextProvider } from "react-i18next";
-import { MemoryRouter } from "react-router-dom";
 import i18n from "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth-store";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it } from "vitest";
 import { MePage } from "./MePage";
 
 function renderIt() {

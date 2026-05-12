@@ -9,15 +9,17 @@ import { LlmJudgeService } from "./llm-judge.service.js";
 const TEST_KEY_B64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
 
 // Helper to build a realistic DB row
-function makeRow(overrides: Partial<{
-  id: string;
-  baseUrl: string;
-  apiKeyCipher: string;
-  model: string;
-  enabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}> = {}) {
+function makeRow(
+  overrides: Partial<{
+    id: string;
+    baseUrl: string;
+    apiKeyCipher: string;
+    model: string;
+    enabled: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = {},
+) {
   return {
     id: "row-1",
     baseUrl: "https://x",
@@ -118,7 +120,13 @@ describe("LlmJudgeService", () => {
     const updateSpy = vi.mocked(prisma.llmJudgeProvider.update);
     const savedCipher = (updateSpy.mock.calls[0][0].data as { apiKeyCipher: string }).apiKeyCipher;
     vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(
-      makeRow({ id: "row-1", baseUrl: "https://b", model: "m2", enabled: false, apiKeyCipher: savedCipher }),
+      makeRow({
+        id: "row-1",
+        baseUrl: "https://b",
+        model: "m2",
+        enabled: false,
+        apiKeyCipher: savedCipher,
+      }),
     );
 
     const dec = await svc.getDecrypted();
@@ -127,9 +135,7 @@ describe("LlmJudgeService", () => {
     expect(dec?.apiKey).toBe("k2");
 
     // update must have been called with the matching row id
-    expect(updateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "row-1" } }),
-    );
+    expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "row-1" } }));
   });
 
   // -------------------------------------------------------------------------

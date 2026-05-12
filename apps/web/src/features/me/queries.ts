@@ -1,6 +1,10 @@
 import { api } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
-import type { ChangePasswordRequest, PublicUser, UpdateProfileRequest } from "@modeldoctor/contracts";
+import type {
+  ChangePasswordRequest,
+  PublicUser,
+  UpdateProfileRequest,
+} from "@modeldoctor/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const AUTH_ME_KEY = ["auth", "me"] as const;

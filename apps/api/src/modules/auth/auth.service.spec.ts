@@ -74,7 +74,14 @@ function makeService() {
 describe("AuthService.issueNewSession (register/login)", () => {
   it("creates a refresh token whose familyId equals its own id (chain root)", async () => {
     const { service, prisma } = makeService();
-    const publicUser = { id: "u1", email: "u@x", roles: ["user"], displayName: null, avatarUrl: null, createdAt: "iso" };
+    const publicUser = {
+      id: "u1",
+      email: "u@x",
+      roles: ["user"],
+      displayName: null,
+      avatarUrl: null,
+      createdAt: "iso",
+    };
 
     await service.issueNewSession(publicUser);
 
@@ -116,9 +123,14 @@ describe("AuthService.issueNewSession (register/login)", () => {
     const spy = vi.spyOn(service, "issueNewSession" as keyof AuthService);
     users.findByEmail = vi.fn().mockResolvedValue(null);
     users.countAll = vi.fn().mockResolvedValue(0);
-    users.create = vi
-      .fn()
-      .mockResolvedValue({ id: "u1", email: "u@x", roles: ["admin"], displayName: null, avatarUrl: null, createdAt: "iso" });
+    users.create = vi.fn().mockResolvedValue({
+      id: "u1",
+      email: "u@x",
+      roles: ["admin"],
+      displayName: null,
+      avatarUrl: null,
+      createdAt: "iso",
+    });
     await service.register("u@x", "Password1!");
     expect(spy).toHaveBeenCalledTimes(1);
 
@@ -135,7 +147,14 @@ describe("AuthService.issueNewSession (register/login)", () => {
 
   it("runs chain-root insert inside a $transaction (atomicity contract)", async () => {
     const { service, prisma } = makeService();
-    const publicUser = { id: "u1", email: "u@x", roles: ["user"], displayName: null, avatarUrl: null, createdAt: "iso" };
+    const publicUser = {
+      id: "u1",
+      email: "u@x",
+      roles: ["user"],
+      displayName: null,
+      avatarUrl: null,
+      createdAt: "iso",
+    };
 
     await service.issueNewSession(publicUser);
 
