@@ -137,12 +137,12 @@ export class SavedComparesService {
     const evaluationRunIds = sc.evaluationRunIds ?? [];
     const hydratedEvaluationRuns: HydratedEvaluationRunRef[] = [];
     if (evaluationRunIds.length > 0) {
-      const evalRuns = await this.prisma.evaluationRun.findMany({
+      const evaluationRuns = await this.prisma.evaluationRun.findMany({
         where: { id: { in: evaluationRunIds }, userId },
       });
-      const evalRunById = new Map(evalRuns.map((r) => [r.id, r]));
+      const evaluationRunById = new Map(evaluationRuns.map((r) => [r.id, r]));
       for (const rid of evaluationRunIds) {
-        const r = evalRunById.get(rid);
+        const r = evaluationRunById.get(rid);
         if (!r) {
           hydratedEvaluationRuns.push({ id: rid, stageLabel: labels[rid] ?? "?", missing: true });
         } else {

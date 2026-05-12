@@ -18,7 +18,7 @@ import { useCreateRun, useEvaluations } from "./queries";
 export function RunCreatePage() {
   const nav = useNavigate();
   const { t } = useTranslation("quality-gate");
-  const evals = useEvaluations();
+  const evaluations = useEvaluations();
   const conns = useConnections();
   const create = useCreateRun();
   const [evaluationId, setEvalId] = useState<string | undefined>();
@@ -37,7 +37,7 @@ export function RunCreatePage() {
             <SelectValue placeholder={t("runs.form.evaluationPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {evals.data?.map((e) => (
+            {evaluations.data?.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name} ({e.totalSamples})
               </SelectItem>
