@@ -26,15 +26,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-export function SettingsNotificationsPage(): JSX.Element {
-  const { t } = useTranslation("settings");
+export function MeNotificationsPage(): JSX.Element {
+  const { t: tMe } = useTranslation("me");
   const { t: tn } = useTranslation("notifications");
   const { t: tc } = useTranslation("common");
-  const { t: tSidebar } = useTranslation("sidebar");
   const { data = [] } = useChannels();
   const del = useDeleteChannel();
   const testCh = useTestChannel();
-  // `undefined` = sheet closed; `null` = create-new; Channel = edit.
   const [editing, setEditing] = useState<Channel | null | undefined>(undefined);
   const [toDelete, setToDelete] = useState<Channel | null>(null);
 
@@ -45,15 +43,15 @@ export function SettingsNotificationsPage(): JSX.Element {
   };
 
   const breadcrumbs = [
-    { label: tSidebar("items.settings"), to: "/settings" },
-    { label: t("notifications.page.breadcrumb") },
+    { label: tMe("page.title"), to: "/me" },
+    { label: tMe("notifications.page.breadcrumb") },
   ];
 
   return (
     <>
       <PageHeader
-        title={t("notifications.page.title")}
-        subtitle={t("notifications.page.subtitle")}
+        title={tMe("notifications.page.title")}
+        subtitle={tMe("notifications.page.subtitle")}
         breadcrumbs={breadcrumbs}
         rightSlot={
           <Button size="sm" onClick={() => setEditing(null)}>

@@ -1,0 +1,38 @@
+{
+  "page": {
+    "title": "个人中心",
+    "subtitle": "个人账号资料与密码"
+  },
+  "profile": {
+    "title": "个人资料",
+    "description": "在应用中展示的身份信息。",
+    "email": "邮箱",
+    "displayName": "显示名",
+    "displayNamePlaceholder": "请输入显示名",
+    "avatar": "头像",
+    "avatarHint": "支持 PNG / JPG，单文件不超过 200KB。",
+    "avatarUpload": "上传图片",
+    "avatarRemove": "移除",
+    "save": "保存资料",
+    "saveSuccess": "资料已更新"
+  },
+  "password": {
+    "title": "密码",
+    "description": "修改登录密码。",
+    "current": "当前密码",
+    "next": "新密码",
+    "confirm": "确认新密码",
+    "submit": "更新密码",
+    "success": "密码已更新",
+    "errorMismatch": "两次输入的新密码不一致",
+    "errorSame": "新密码不能与当前密码相同",
+    "errorWrong": "当前密码不正确"
+  },
+  "notifications": {
+    "page": {
+      "title": "通知",
+      "subtitle": "属于你账号的渠道与事件订阅。",
+      "breadcrumb": "通知"
+    }
+  }
+}

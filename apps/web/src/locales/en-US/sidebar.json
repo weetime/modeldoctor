@@ -21,6 +21,8 @@
     "diagnostics": "Endpoint Health",
     "connections": "Connections",
     "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
     "devCharts": "Dev Charts",
     "deploymentRecipes": "Deployment Recipes"
   }

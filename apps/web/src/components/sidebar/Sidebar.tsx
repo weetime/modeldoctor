@@ -132,6 +132,71 @@ function ThemeRow({ railCollapsed }: { railCollapsed: boolean }) {
   );
 }
 
+function initialsFor(email: string, displayName: string | null): string {
+  const src = displayName?.trim() || email;
+  return src.slice(0, 2).toUpperCase();
+}
+
+function UserPanel({ railCollapsed }: { railCollapsed: boolean }) {
+  const { t: tSidebar } = useTranslation("sidebar");
+  const user = useAuthStore((s) => s.user);
+  if (!user) return null;
+  const label = user.displayName?.trim() || user.email;
+
+  const avatar = (
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+      {user.avatarUrl ? (
+        <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        initialsFor(user.email, user.displayName)
+      )}
+    </div>
+  );
+
+  const trigger = (
+    <DropdownMenuTrigger asChild>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full items-center rounded-md text-sm",
+          "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-3 py-1.5",
+        )}
+        aria-label={label}
+      >
+        {avatar}
+        {railCollapsed ? null : (
+          <span className="min-w-0 flex-1 truncate text-left text-xs">{label}</span>
+        )}
+      </button>
+    </DropdownMenuTrigger>
+  );
+
+  return (
+    <div className="border-b border-border px-2 py-2">
+      <DropdownMenu>
+        {railCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+            <TooltipContent side="right">{label}</TooltipContent>
+          </Tooltip>
+        ) : (
+          trigger
+        )}
+        <DropdownMenuContent side="top" align="start" className="min-w-[10rem]">
+          <DropdownMenuItem asChild>
+            <NavLink to="/me">{tSidebar("items.profile")}</NavLink>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout} className="gap-2">
+            <LogOut className="h-4 w-4" />
+            <span>{tSidebar("items.logout")}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 async function handleLogout() {
   // Clear the in-memory store first: otherwise a parallel 401 anywhere in the
   // app could trigger silent-refresh and re-hydrate the session while the
@@ -251,45 +316,7 @@ export function Sidebar() {
 
       <Separator />
 
-      {userEmail ? (
-        <div
-          className={cn(
-            "flex items-center border-b border-border",
-            railCollapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2",
-          )}
-        >
-          {railCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  aria-label="Logout"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                >
-                  <LogOut className="h-4 w-4" strokeWidth={1.5} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{userEmail}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <>
-              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                {userEmail}
-              </span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label="Logout"
-                title="Logout"
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={1.5} />
-              </button>
-            </>
-          )}
-        </div>
-      ) : null}
+      {userEmail ? <UserPanel railCollapsed={railCollapsed} /> : null}
 
       <div className="flex flex-col gap-px px-2 py-3">
         <ThemeRow railCollapsed={railCollapsed} />

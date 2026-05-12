@@ -1,0 +1,38 @@
+{
+  "page": {
+    "title": "Profile",
+    "subtitle": "Your account profile and password"
+  },
+  "profile": {
+    "title": "Profile",
+    "description": "Identity displayed across the app.",
+    "email": "Email",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "avatar": "Avatar",
+    "avatarHint": "PNG / JPG up to 200KB.",
+    "avatarUpload": "Upload image",
+    "avatarRemove": "Remove",
+    "save": "Save profile",
+    "saveSuccess": "Profile updated"
+  },
+  "password": {
+    "title": "Password",
+    "description": "Change the password used to sign in.",
+    "current": "Current password",
+    "next": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Update password",
+    "success": "Password updated",
+    "errorMismatch": "New passwords do not match",
+    "errorSame": "New password must differ from the current one",
+    "errorWrong": "Current password is incorrect"
+  },
+  "notifications": {
+    "page": {
+      "title": "Notifications",
+      "subtitle": "Channels and event subscriptions for your account.",
+      "breadcrumb": "Notifications"
+    }
+  }
+}

@@ -2,7 +2,14 @@ import { useAuthStore } from "@/stores/auth-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startAccessTokenScheduler } from "./access-token-scheduler";
 
-const mockUser = { id: "u1", email: "u@x", roles: ["user"], createdAt: new Date().toISOString() };
+const mockUser = {
+  id: "u1",
+  email: "u@x",
+  roles: ["user"],
+  displayName: null,
+  avatarUrl: null,
+  createdAt: new Date().toISOString(),
+};
 
 describe("startAccessTokenScheduler", () => {
   beforeEach(() => {

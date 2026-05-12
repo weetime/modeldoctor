@@ -21,6 +21,8 @@
     "diagnostics": "端点检测",
     "connections": "连接",
     "settings": "设置",
+    "profile": "个人中心",
+    "logout": "退出登录",
     "devCharts": "图表调试",
     "deploymentRecipes": "部署示例"
   }
