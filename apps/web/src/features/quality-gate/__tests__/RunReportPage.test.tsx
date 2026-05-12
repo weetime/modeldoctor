@@ -1,0 +1,58 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RunReportPage } from "../RunReportPage";
+
+const mockRun = {
+  id: "r1",
+  userId: "u1",
+  evaluationId: "e1",
+  evaluationVersion: 1,
+  evaluationSnapshot: { samples: [] },
+  endpointAId: "a",
+  endpointBId: null,
+  gateConfig: { passRateMin: 0.9 },
+  status: "COMPLETED" as const,
+  gateResult: "PASSED" as const,
+  aggregateMetrics: {
+    passRateA: 0.95,
+    bothPassCount: 0,
+    bothFailCount: 0,
+    totalErrors: 0,
+    judgeCallCount: 0,
+  },
+  processedSamples: 1,
+  totalSamples: 1,
+  startedAt: "2026-05-12T00:00:00Z",
+  finishedAt: "2026-05-12T00:00:01Z",
+  errorMessage: null,
+  createdAt: "2026-05-12T00:00:00Z",
+};
+const mockSamples = { items: [], total: 0, page: 1, pageSize: 500 };
+
+vi.mock("../queries", () => ({
+  useRun: () => ({ data: mockRun }),
+  useCancelRun: () => ({ mutate: vi.fn() }),
+  useRunSamples: () => ({ data: mockSamples }),
+}));
+
+function wrap() {
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/quality-gate/runs/r1"]}>
+        <Routes>
+          <Route path="/quality-gate/runs/:id" element={<RunReportPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+describe("RunReportPage", () => {
+  it("renders gate badge for PASSED", () => {
+    render(wrap());
+    // GateStatusBadge renders exact text "通过" for PASSED
+    expect(screen.getAllByText(/通过/).length).toBeGreaterThan(0);
+  });
+});
