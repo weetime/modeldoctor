@@ -8,6 +8,7 @@ const TINY_PNG_DATA_URL =
 describe("/api/me (e2e)", () => {
   let ctx: E2EContext;
   let token: string;
+  let refreshCookie: string;
   const email = `me-${Date.now()}@test.local`;
   const password = "Password1!";
 
@@ -15,6 +16,8 @@ describe("/api/me (e2e)", () => {
     ctx = await bootE2E();
     const reg = await registerUser(ctx.app, email, password);
     token = reg.token;
+    refreshCookie = reg.cookies.find((c) => c.startsWith("md_refresh=")) ?? "";
+    expect(refreshCookie).toMatch(/^md_refresh=/);
   }, 120_000);
 
   afterAll(async () => {
@@ -77,8 +80,8 @@ describe("/api/me (e2e)", () => {
       .expect(401);
   });
 
-  // ── 6. POST /api/me/password → 204, then login with new password succeeds ──
-  it("POST /api/me/password → 204 with correct currentPassword; new password accepted on login", async () => {
+  // ── 6. POST /api/me/password → 204, login w/ new pw works, OLD refresh revoked ──
+  it("POST /api/me/password → 204 + new password logs in + old refresh cookie now rejected", async () => {
     const newPassword = "NewPassword2@";
 
     await request(ctx.app.getHttpServer())
@@ -94,5 +97,12 @@ describe("/api/me (e2e)", () => {
       .expect(201);
 
     expect(loginRes.body.user.email).toBe(email);
+
+    // The refresh cookie issued at registration time must now be rejected —
+    // sessions established with the OLD password are revoked on change.
+    await request(ctx.app.getHttpServer())
+      .post("/api/auth/refresh")
+      .set("Cookie", refreshCookie)
+      .expect(401);
   });
 });

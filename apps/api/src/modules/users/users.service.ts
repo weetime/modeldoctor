@@ -78,7 +78,16 @@ export class UsersService {
       throw new BadRequestException("New password must differ from the current one");
     }
     const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
-    await this.prisma.user.update({ where: { id }, data: { passwordHash } });
-    // Note: refresh tokens are intentionally NOT revoked here — out of scope for V1.
+    const now = new Date();
+    // Update the hash AND revoke every live refresh-token family atomically.
+    // Any session that authenticated with the OLD password is now denied at
+    // the next /refresh (its row's revoked_at is set).
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { passwordHash } }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+    ]);
   }
 }
