@@ -26,6 +26,8 @@ interface MessageComposerProps {
   sendLabelOverride?: string;
   /** When set, seed the input with `chat.composer.demoPrompt` once per browser. */
   demoSeedKey?: string;
+  /** When set, pre-fill the draft textarea with this text (e.g. from reproduce flow). */
+  initialDraft?: string;
 }
 
 export function MessageComposer({
@@ -39,15 +41,18 @@ export function MessageComposer({
   disabledReason,
   sendLabelOverride,
   demoSeedKey,
+  initialDraft,
 }: MessageComposerProps) {
   const { t } = useTranslation("playground");
   // First-visit demo prompt seed (chat only — opted in by ChatPage). Done
   // inside useState's lazy initializer so the seeded value survives React
   // Strict Mode's dev-only double-mount: consumeDemoSeed memoises its
   // decision per page-load, so both mount cycles agree on the same answer.
-  const [draft, setDraft] = useState<string>(() =>
-    demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "",
-  );
+  // initialDraft (from reproduce flow) takes priority over demo seed.
+  const [draft, setDraft] = useState<string>(() => {
+    if (initialDraft) return initialDraft;
+    return demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "";
+  });
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);

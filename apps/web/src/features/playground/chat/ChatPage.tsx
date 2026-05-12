@@ -6,8 +6,9 @@ import type {
   PlaygroundChatRequest,
   PlaygroundChatResponse,
 } from "@modeldoctor/contracts";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
@@ -22,9 +23,11 @@ import {
 import { ChatParams } from "./ChatParams";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
+import { ReproduceBanner } from "./ReproduceBanner";
 import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
+import { qgApi } from "@/features/quality-gate/api";
 
 /**
  * Walk message content parts, store each binary part as a Blob in IDB, and
@@ -74,6 +77,55 @@ export function ChatPage() {
   const chatModeTabs = useChatModeTabs();
   const slice = useChatStore();
   const { data: conn } = useConnection(slice.selectedConnectionId);
+
+  // Reproduce flow: ?from=evaluation&runId=<id>&sampleId=<id>&endpoint=A|B
+  const [searchParams] = useSearchParams();
+  const [reproduceMeta, setReproduceMeta] = useState<{
+    runId: string;
+    sampleId: string;
+    expected: string;
+    initialDraft: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const from = searchParams.get("from");
+    if (from !== "evaluation") return;
+    const runId = searchParams.get("runId");
+    const sampleId = searchParams.get("sampleId");
+    const endpointParam = searchParams.get("endpoint"); // "A" | "B"
+    if (!runId || !sampleId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const run = await qgApi.getRun(runId);
+        if (cancelled) return;
+        const samples = run.evaluationSnapshot.samples as Array<{
+          id: string;
+          prompt: string;
+          expected: string;
+        }>;
+        const sample = samples.find((s) => s.id === sampleId);
+        if (!sample) return;
+        // Select the connection corresponding to the endpoint param.
+        const connId = endpointParam === "B" ? run.endpointBId : run.endpointAId;
+        if (connId) {
+          useChatStore.getState().setSelected(connId);
+        }
+        setReproduceMeta({
+          runId,
+          sampleId,
+          expected: sample.expected,
+          initialDraft: sample.prompt,
+        });
+      } catch (e) {
+        console.warn("reproduce setup failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   const canSend = !!slice.selectedConnectionId;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");
@@ -244,6 +296,15 @@ export function ChatPage() {
       }
     >
       <div className="flex min-h-0 flex-1 flex-col">
+        {reproduceMeta && (
+          <div className="px-6 pt-4">
+            <ReproduceBanner
+              runId={reproduceMeta.runId}
+              sampleId={reproduceMeta.sampleId}
+              expected={reproduceMeta.expected}
+            />
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto">
           <MessageList messages={slice.messages} />
           {slice.error ? (
@@ -262,6 +323,7 @@ export function ChatPage() {
           disabled={!canSend}
           disabledReason={disabledReason}
           demoSeedKey="chat"
+          initialDraft={reproduceMeta?.initialDraft}
         />
       </div>
     </PlaygroundShell>
