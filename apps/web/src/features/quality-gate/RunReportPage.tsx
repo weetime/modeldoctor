@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { useState } from "react";
@@ -11,10 +12,10 @@ import { useCancelRun, useRun, useRunSamples } from "./queries";
 export function RunReportPage() {
   const { id = "" } = useParams();
   const { t } = useTranslation("quality-gate");
+  const { t: tSidebar } = useTranslation("sidebar");
   const { data: run } = useRun(id, { pollWhileRunning: true });
   const cancel = useCancelRun(id);
   const [openSampleId, setOpenSampleId] = useState<string | null>(null);
-  // Load all samples once (paged in table; for drawer lookup we re-fetch the full list)
   const allSamples = useRunSamples(run?.status === "COMPLETED" ? id : undefined, {
     filter: "all",
     pageSize: 500,
@@ -27,24 +28,38 @@ export function RunReportPage() {
 
   if (!run) return null;
 
+  const breadcrumbs = [
+    { label: tSidebar("groups.qualityGate") },
+    { label: tSidebar("items.qualityGateRuns"), to: "/quality-gate/runs" },
+    { label: run.id.slice(0, 12) },
+  ];
+
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t("runs.report.title")}</h1>
-        {run.status === "RUNNING" && (
-          <Button variant="outline" onClick={() => cancel.mutate()}>
-            {t("runs.report.cancel")}
-          </Button>
-        )}
-      </div>
-      <RunOverview run={run} />
-      {run.status === "COMPLETED" && <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />}
-      <SampleDetailDrawer
-        runId={run.id}
-        row={sampleRow}
-        snapshotSamples={snapshotSamples}
-        onClose={() => setOpenSampleId(null)}
+    <>
+      <PageHeader
+        title={t("runs.report.title")}
+        subtitle={t("runs.report.subtitle")}
+        breadcrumbs={breadcrumbs}
+        rightSlot={
+          run.status === "RUNNING" ? (
+            <Button variant="outline" onClick={() => cancel.mutate()}>
+              {t("runs.report.cancel")}
+            </Button>
+          ) : undefined
+        }
       />
-    </div>
+      <div className="px-8 py-6 space-y-6">
+        <RunOverview run={run} />
+        {run.status === "COMPLETED" && (
+          <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />
+        )}
+        <SampleDetailDrawer
+          runId={run.id}
+          row={sampleRow}
+          snapshotSamples={snapshotSamples}
+          onClose={() => setOpenSampleId(null)}
+        />
+      </div>
+    </>
   );
 }

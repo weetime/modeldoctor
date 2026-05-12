@@ -2,6 +2,7 @@
   "nav": { "title": "Quality Gate" },
   "evaluations": {
     "title": "Evaluation Sets",
+    "subtitle": "Manage evaluation samples and judge rules; every run references a snapshot of one set.",
     "create": "New Evaluation Set",
     "empty": "No evaluation sets yet",
     "col": { "name": "Name", "samples": "Samples", "updatedAt": "Updated" },
@@ -12,8 +13,16 @@
       "importJson": "Import from JSON",
       "importCsv": "Import from CSV",
       "save": "Save",
+      "cancel": "Cancel",
       "jsonParseError": "Failed to parse JSON",
-      "newTitle": "New Evaluation Set"
+      "saveError": "Save failed: {{message}}",
+      "newTitle": "New Evaluation Set",
+      "editTitle": "Edit Evaluation Set",
+      "createSubtitle": "Add samples and pick a judge; references from runs are by snapshot.",
+      "editSubtitle": "Update the evaluation set; saving creates a new version.",
+      "sectionBasics": "Basics",
+      "sectionSamples": "Samples",
+      "validationError": "Sample #{{idx}}: {{message}}"
     }
   },
   "samples": {
@@ -42,10 +51,12 @@
   },
   "runs": {
     "title": "Evaluation Runs",
+    "subtitle": "Execute evaluation sets against endpoints, compare baseline vs. new, and rule on pass / warning / fail.",
     "create": "New Run",
     "empty": "No runs yet",
     "report": {
       "title": "Run Report",
+      "subtitle": "Per-sample judging detail, aggregate metrics, and gate verdict.",
       "cancel": "Cancel",
       "playgroundReproduceB": "Reproduce B in Playground",
       "expected": "Expected",
@@ -63,7 +74,11 @@
       "endpointBNone": "No comparison",
       "endpointPlaceholder": "Select",
       "trigger": "Run Evaluation",
-      "newTitle": "New Run"
+      "newTitle": "New Run",
+      "newSubtitle": "Pick an evaluation set and endpoints; the run starts immediately.",
+      "saveError": "Failed to start: {{message}}",
+      "sectionTarget": "Target",
+      "sectionGate": "Gate rules"
     },
     "status": {
       "pending": "Pending",

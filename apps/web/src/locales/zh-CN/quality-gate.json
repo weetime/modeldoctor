@@ -2,6 +2,7 @@
   "nav": { "title": "质量门" },
   "evaluations": {
     "title": "评测集",
+    "subtitle": "管理评测样本与判分规则；任意运行都引用某一个评测集快照。",
     "create": "新建评测集",
     "empty": "还没有评测集",
     "col": { "name": "名称", "samples": "样本数", "updatedAt": "更新时间" },
@@ -12,8 +13,16 @@
       "importJson": "从 JSON 导入",
       "importCsv": "从 CSV 导入",
       "save": "保存",
+      "cancel": "取消",
       "jsonParseError": "JSON 解析失败",
-      "newTitle": "新建评测集"
+      "saveError": "保存失败：{{message}}",
+      "newTitle": "新建评测集",
+      "editTitle": "编辑评测集",
+      "createSubtitle": "添加样本并选择判分器；保存后可在评测运行中引用。",
+      "editSubtitle": "更新评测集内容；保存会创建新的版本号。",
+      "sectionBasics": "基本信息",
+      "sectionSamples": "样本",
+      "validationError": "请检查样本 #{{idx}}：{{message}}"
     }
   },
   "samples": {
@@ -42,10 +51,12 @@
   },
   "runs": {
     "title": "评测运行",
+    "subtitle": "在指定端点上执行评测集，比对基线与新版本，并按门禁规则判定通过/警告/失败。",
     "create": "新建评测运行",
     "empty": "还没有评测运行",
     "report": {
       "title": "评测运行报告",
+      "subtitle": "查看每个样本的判分明细、聚合指标与门禁结果。",
       "cancel": "取消",
       "playgroundReproduceB": "在 Playground 复现 B",
       "expected": "期望",
@@ -63,7 +74,11 @@
       "endpointBNone": "不对比",
       "endpointPlaceholder": "选择",
       "trigger": "触发评测",
-      "newTitle": "新建评测运行"
+      "newTitle": "新建评测运行",
+      "newSubtitle": "选择评测集与端点；保存后立即开始执行并跳转到报告页。",
+      "saveError": "触发失败：{{message}}",
+      "sectionTarget": "评测目标",
+      "sectionGate": "门禁规则"
     },
     "status": {
       "pending": "等待中",
