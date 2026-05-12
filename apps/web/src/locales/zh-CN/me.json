@@ -10,7 +10,7 @@
     "displayName": "显示名",
     "displayNamePlaceholder": "请输入显示名",
     "avatar": "头像",
-    "avatarHint": "支持 PNG / JPG，单文件不超过 200KB。",
+    "avatarHint": "支持 PNG / JPG，单文件不超过 192KB。",
     "avatarUpload": "上传图片",
     "avatarRemove": "移除",
     "save": "保存资料",

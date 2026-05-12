@@ -10,7 +10,7 @@
     "displayName": "Display name",
     "displayNamePlaceholder": "Your name",
     "avatar": "Avatar",
-    "avatarHint": "PNG / JPG up to 200KB.",
+    "avatarHint": "PNG / JPG up to 192KB.",
     "avatarUpload": "Upload image",
     "avatarRemove": "Remove",
     "save": "Save profile",
