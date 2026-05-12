@@ -20,8 +20,20 @@ export interface HydratedBenchmarkRef {
   createdAt?: string;
 }
 
+export interface HydratedEvaluationRunRef {
+  id: string;
+  stageLabel: string;
+  missing: boolean;
+  // Present when missing === false:
+  status?: string;
+  gateResult?: string | null;
+  aggregateMetrics?: unknown;
+  createdAt?: string;
+}
+
 export interface HydratedSavedCompare extends SavedCompare {
   benchmarks: HydratedBenchmarkRef[];
+  evaluationRuns: HydratedEvaluationRunRef[];
 }
 
 @Injectable()
@@ -33,6 +45,7 @@ export class SavedComparesService {
     userId: string;
     name: string;
     benchmarkIds: string[];
+    evaluationRunIds: string[];
     stageLabels: unknown;
     baselineId: string | null;
     context: string | null;
@@ -46,6 +59,7 @@ export class SavedComparesService {
       userId: row.userId,
       name: row.name,
       benchmarkIds: row.benchmarkIds,
+      evaluationRunIds: row.evaluationRunIds,
       stageLabels: row.stageLabels as Record<string, string>,
       baselineId: row.baselineId,
       context: row.context,
@@ -60,11 +74,16 @@ export class SavedComparesService {
     if (new Set(body.benchmarkIds).size !== body.benchmarkIds.length) {
       throw new BadRequestException("benchmarkIds must be unique");
     }
+    const evaluationRunIds = body.evaluationRunIds ?? [];
+    if (new Set(evaluationRunIds).size !== evaluationRunIds.length) {
+      throw new BadRequestException("evaluationRunIds must be unique");
+    }
     const row = await this.prisma.savedCompare.create({
       data: {
         userId,
         name: body.name,
         benchmarkIds: body.benchmarkIds,
+        evaluationRunIds,
         stageLabels: body.stageLabels,
         baselineId: body.baselineId ?? null,
         context: body.context ?? null,
@@ -91,13 +110,15 @@ export class SavedComparesService {
   async getHydrated(userId: string, id: string): Promise<HydratedSavedCompare | null> {
     const sc = await this.get(userId, id);
     if (!sc) return null;
+    const labels = sc.stageLabels;
+
+    // Hydrate benchmark runs
     const benchmarks = await this.prisma.benchmark.findMany({
       where: { id: { in: sc.benchmarkIds } },
     });
-    const byId = new Map(benchmarks.map((b) => [b.id, b]));
-    const labels = sc.stageLabels;
-    const hydrated: HydratedBenchmarkRef[] = sc.benchmarkIds.map((bid) => {
-      const b = byId.get(bid);
+    const benchmarkById = new Map(benchmarks.map((b) => [b.id, b]));
+    const hydratedBenchmarks: HydratedBenchmarkRef[] = sc.benchmarkIds.map((bid) => {
+      const b = benchmarkById.get(bid);
       if (!b) return { id: bid, stageLabel: labels[bid] ?? "?", missing: true };
       return {
         id: b.id,
@@ -111,7 +132,34 @@ export class SavedComparesService {
         createdAt: b.createdAt.toISOString(),
       };
     });
-    return { ...sc, benchmarks: hydrated };
+
+    // Hydrate evaluation runs (owner-scoped)
+    const evaluationRunIds = sc.evaluationRunIds ?? [];
+    const hydratedEvaluationRuns: HydratedEvaluationRunRef[] = [];
+    if (evaluationRunIds.length > 0) {
+      const evalRuns = await this.prisma.evaluationRun.findMany({
+        where: { id: { in: evaluationRunIds }, userId },
+      });
+      const evalRunById = new Map(evalRuns.map((r) => [r.id, r]));
+      for (const rid of evaluationRunIds) {
+        const r = evalRunById.get(rid);
+        if (!r) {
+          hydratedEvaluationRuns.push({ id: rid, stageLabel: labels[rid] ?? "?", missing: true });
+        } else {
+          hydratedEvaluationRuns.push({
+            id: r.id,
+            stageLabel: labels[rid] ?? "?",
+            missing: false,
+            status: r.status,
+            gateResult: r.gateResult,
+            aggregateMetrics: r.aggregateMetrics,
+            createdAt: r.createdAt.toISOString(),
+          });
+        }
+      }
+    }
+
+    return { ...sc, benchmarks: hydratedBenchmarks, evaluationRuns: hydratedEvaluationRuns };
   }
 
   async update(userId: string, id: string, body: UpdateSavedCompareRequest): Promise<SavedCompare> {

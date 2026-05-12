@@ -132,6 +132,23 @@ export class CompareSynthesizeService {
       const bl = sc.benchmarks.find((b) => b.id === sc.baselineId);
       if (bl) lines.push(`Baseline stage: ${bl.stageLabel}`);
     }
+    if (sc.evaluationRuns && sc.evaluationRuns.length > 0) {
+      lines.push(`Quality (evaluation) results (${sc.evaluationRuns.length}):`);
+      for (const r of sc.evaluationRuns) {
+        if (r.missing) {
+          lines.push(`- [${r.stageLabel}] (data deleted)`);
+          continue;
+        }
+        const m = r.aggregateMetrics as Record<string, unknown> | null;
+        lines.push(
+          `- [${r.stageLabel}]: gate ${r.gateResult ?? r.status ?? "n/a"}, ` +
+            `pass rate ${m?.passRateB != null ? m.passRateB : (m?.passRateA ?? "n/a")}, ` +
+            `regression count ${m?.regressionCount ?? "n/a"}, ` +
+            `judge avg ${m?.judgeAvgB != null ? m.judgeAvgB : (m?.judgeAvgA ?? "n/a")}, ` +
+            `errors ${m?.totalErrors ?? 0}`,
+        );
+      }
+    }
     lines.push(
       locale === "en-US"
         ? "Respond strictly as JSON matching the schema."

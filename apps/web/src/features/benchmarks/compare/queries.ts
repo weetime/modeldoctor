@@ -21,7 +21,28 @@ interface HydratedBenchmarkRef {
   createdAt?: string;
 }
 
-export type HydratedSavedCompare = SavedCompare & { benchmarks: HydratedBenchmarkRef[] };
+interface HydratedEvaluationRunRef {
+  id: string;
+  stageLabel: string;
+  missing: boolean;
+  status?: string;
+  gateResult?: string | null;
+  aggregateMetrics?: {
+    passRateA?: number;
+    passRateB?: number;
+    judgeAvgA?: number;
+    judgeAvgB?: number;
+    regressionCount?: number;
+    improvementCount?: number;
+    totalErrors?: number;
+  } | null;
+  createdAt?: string;
+}
+
+export type HydratedSavedCompare = SavedCompare & {
+  benchmarks: HydratedBenchmarkRef[];
+  evaluationRuns: HydratedEvaluationRunRef[];
+};
 
 export const savedCompareKeys = {
   all: ["saved-compares"] as const,

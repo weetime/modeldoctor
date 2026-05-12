@@ -11,6 +11,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { GateStatusBadge } from "@/features/quality-gate/components/GateStatusBadge";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
 import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
 import { useState } from "react";
@@ -144,6 +146,38 @@ export function SavedCompareDetailPage() {
           context={sc.context}
           environmentLines={environmentLines}
         />
+        {sc.evaluationRuns && sc.evaluationRuns.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-2">质量评测</h3>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+              {sc.evaluationRuns.map((r) => (
+                <Card key={r.id} className="p-3 space-y-2">
+                  <GateStatusBadge
+                    status={(r.status ?? "PENDING") as import("@modeldoctor/contracts").RunStatus}
+                    gateResult={(r.gateResult ?? null) as import("@modeldoctor/contracts").GateResult | null}
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    {sc.stageLabels[r.id] ?? r.id.slice(0, 8)}
+                  </div>
+                  <div className="text-sm">
+                    通过率 A:{" "}
+                    {r.aggregateMetrics?.passRateA != null
+                      ? (r.aggregateMetrics.passRateA * 100).toFixed(1) + "%"
+                      : "—"}
+                  </div>
+                  {r.aggregateMetrics?.passRateB != null && (
+                    <div className="text-sm">
+                      通过率 B: {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
+                    </div>
+                  )}
+                  {r.aggregateMetrics?.regressionCount != null && (
+                    <div className="text-sm">回归: {r.aggregateMetrics.regressionCount}</div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
         <AiAnalysisPanel
           narrative={narrative}
           onGenerate={() => void generate()}
