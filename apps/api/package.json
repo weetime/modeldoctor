@@ -13,7 +13,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:status": "prisma migrate status",
     "db:seed": "prisma db seed",
-    "db:setup:test": "createdb modeldoctor_test 2>&1 | grep -v 'already exists' || true; psql -d modeldoctor_test -c \"GRANT ALL ON SCHEMA public TO modeldoctor; ALTER DATABASE modeldoctor_test OWNER TO modeldoctor;\" && DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test prisma migrate deploy",
+    "db:setup:test": "createdb modeldoctor_test 2>&1 | grep -v 'already exists' || true; psql -d modeldoctor_test -c \"GRANT ALL ON SCHEMA public TO modeldoctor; ALTER DATABASE modeldoctor_test OWNER TO modeldoctor;\" && DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test prisma migrate deploy && DATABASE_URL=postgresql://modeldoctor:modeldoctor@localhost:5432/modeldoctor_test prisma db seed",
     "db:studio": "prisma studio",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
