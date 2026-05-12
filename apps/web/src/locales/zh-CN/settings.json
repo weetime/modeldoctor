@@ -16,8 +16,8 @@
     "buildMode": "构建模式"
   },
   "ai": {
-    "title": "AI 智能诊断",
-    "description": "连接自定义 LLM 评判提供商，API Key 会加密存储。",
+    "title": "AI 智能诊断（全局）",
+    "description": "本实例所有用户共享的 LLM 评判提供商，用于 AI 辅助洞察；API Key 会加密存储。",
     "enabled": "启用",
     "baseUrl": "Base URL",
     "model": "模型",
