@@ -41,7 +41,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
 
   beforeEach(async () => {
     await prisma.benchmark.deleteMany();
-    await prisma.llmJudgeProvider.deleteMany({ where: { userId } });
+    await prisma.llmJudgeProvider.deleteMany();
     await prisma.connection.deleteMany({ where: { userId } });
   });
 
@@ -120,7 +120,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
       },
     });
     // Note: beforeEach already wiped llmJudgeProvider; explicitly confirm clean state
-    await prisma.llmJudgeProvider.deleteMany({ where: { userId } });
+    await prisma.llmJudgeProvider.deleteMany();
     await request(ctx.app.getHttpServer())
       .post(`/api/insights/${conn.id}/synthesize`)
       .set("Authorization", `Bearer ${token}`)
