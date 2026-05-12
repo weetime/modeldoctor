@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Mic, Paperclip, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { consumeDemoSeed } from "../_shared/demo-seed";
@@ -53,6 +53,11 @@ export function MessageComposer({
     if (initialDraft) return initialDraft;
     return demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "";
   });
+  useEffect(() => {
+    if (initialDraft && initialDraft.length > 0) {
+      setDraft(initialDraft);
+    }
+  }, [initialDraft]);
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
