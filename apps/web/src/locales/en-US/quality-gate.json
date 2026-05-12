@@ -124,6 +124,7 @@
   "playground": {
     "bannerTitle": "Reproduced from evaluation · sample #{{suffix}}",
     "bannerExpectedPrefix": "Expected: ",
-    "backToReport": "Back to report"
+    "backToReport": "Back to report",
+    "reproduceFailedToast": "Failed to load reproduce context"
   }
 }

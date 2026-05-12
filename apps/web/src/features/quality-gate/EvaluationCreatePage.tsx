@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { EvaluationSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EvaluationSampleEditor } from "./components/EvaluationSampleEditor";
@@ -31,7 +32,7 @@ export function EvaluationCreatePage() {
     try {
       payload = JSON.parse(text);
     } catch {
-      alert(t("evaluations.form.jsonParseError"));
+      toast.error(t("evaluations.form.jsonParseError"));
       return;
     }
     const res = await importIt.mutateAsync({

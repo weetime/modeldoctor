@@ -124,6 +124,7 @@
   "playground": {
     "bannerTitle": "复现自评测 · 样本 #{{suffix}}",
     "bannerExpectedPrefix": "期望：",
-    "backToReport": "返回评测报告"
+    "backToReport": "返回评测报告",
+    "reproduceFailedToast": "复现上下文加载失败"
   }
 }

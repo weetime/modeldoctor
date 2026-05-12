@@ -74,6 +74,7 @@ export async function rehydrateChatBlobs(
 
 export function ChatPage() {
   const { t } = useTranslation("playground");
+  const { t: tQg } = useTranslation("quality-gate");
   const chatModeTabs = useChatModeTabs();
   const slice = useChatStore();
   const { data: conn } = useConnection(slice.selectedConnectionId);
@@ -119,7 +120,7 @@ export function ChatPage() {
           initialDraft: sample.prompt,
         });
       } catch (e) {
-        console.warn("reproduce setup failed", e);
+        toast.error(tQg("playground.reproduceFailedToast", "Failed to load reproduce context"));
       }
     })();
     return () => {
