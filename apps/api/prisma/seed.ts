@@ -575,9 +575,15 @@ async function seedBuiltInEvaluations(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log("Seeding system user...");
-  await seedSystemUser();
-  console.log("  ✓ system seed user upserted");
+  // Skip QG demo seed in test env: the seeded system user pre-occupies the
+  // users table and breaks "first registered user → admin" auth e2e assertions.
+  // QG e2e creates its own evaluation via API, so the demo seed isn't needed
+  // for testing.
+  if (process.env.NODE_ENV !== "test") {
+    console.log("Seeding system user...");
+    await seedSystemUser();
+    console.log("  ✓ system seed user upserted");
+  }
 
   console.log("Seeding evaluation_profiles...");
   await seedEvaluationProfiles();
@@ -587,9 +593,15 @@ async function main(): Promise<void> {
   await seedBenchmarkTemplates();
   console.log(`  ✓ ${BENCHMARK_TEMPLATES.length} official benchmark templates upserted`);
 
-  console.log("Seeding built-in evaluations...");
-  await seedBuiltInEvaluations();
-  console.log("  ✓ built-in evaluation sets upserted");
+  // Skip QG demo seed in test env: the seeded system user pre-occupies the
+  // users table and breaks "first registered user → admin" auth e2e assertions.
+  // QG e2e creates its own evaluation via API, so the demo seed isn't needed
+  // for testing.
+  if (process.env.NODE_ENV !== "test") {
+    console.log("Seeding built-in evaluations...");
+    await seedBuiltInEvaluations();
+    console.log("  ✓ built-in evaluation sets upserted");
+  }
 }
 
 main()
