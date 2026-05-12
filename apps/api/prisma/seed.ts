@@ -23,7 +23,7 @@
  * with `DELETE FROM ... WHERE id = '...'` (seed.ts only inserts/updates).
  */
 
-import { profileRulesSchema } from "@modeldoctor/contracts";
+import { evaluationSampleSchema, profileRulesSchema } from "@modeldoctor/contracts";
 import {
   applyScenarioConstraints,
   genaiPerfParamsSchema,
@@ -551,7 +551,7 @@ const builtInEvaluationSamples = [
       passThreshold: 3,
     },
   },
-];
+].map((s) => evaluationSampleSchema.parse(s));
 
 async function seedBuiltInEvaluations(): Promise<void> {
   const demoEval = await prisma.evaluation.upsert({
