@@ -325,6 +325,59 @@
       "throughput": "Throughput (req/s)"
     }
   },
+  "savedCompare": {
+    "saveButton": "Save comparison",
+    "savedListLink": "Saved comparisons",
+    "dialog": {
+      "title": "Save as a shareable report",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Qwen3 + KV Cache shootout",
+      "stageLabelsTitle": "Stage labels",
+      "stageLabelsHint": "Short label per run (A / Y-CPU). Appears as the X axis on charts.",
+      "contextLabel": "Test environment & context (optional)",
+      "contextPlaceholder": "Hardware, image tags, motivation, known issues…",
+      "submit": "Save and view",
+      "cancel": "Cancel"
+    },
+    "list": {
+      "title": "Saved comparisons",
+      "empty": "No saved comparisons yet. Click \"Save comparison\" on the Compare page.",
+      "columnName": "Name",
+      "columnRuns": "Runs",
+      "columnCreated": "Created",
+      "columnActions": "Actions"
+    },
+    "detail": {
+      "regenerate": "Regenerate AI analysis",
+      "export": "Export HTML",
+      "editName": "Edit name",
+      "editContext": "Edit context",
+      "deleteTitle": "Delete this report",
+      "deleteBody": "This cannot be undone.",
+      "missingBenchmark": "Data deleted"
+    },
+    "report": {
+      "sectionTldr": "Overview / TL;DR",
+      "sectionMatrix": "Test matrix",
+      "sectionGrid": "Key metrics",
+      "sectionCharts": "Charts",
+      "sectionAnalysis": "Analysis",
+      "sectionConclusion": "Conclusion & recommendation",
+      "sectionEnv": "Test environment",
+      "chartQpsTitle": "QPS",
+      "chartErrTitle": "Error rate",
+      "chartTtftTitle": "TTFT percentiles (ms)",
+      "chartE2eTitle": "e2e latency percentiles (ms)",
+      "chartExtraTitle": "Cache hit / extra metrics",
+      "narrativeMissing": "AI analysis not generated yet.",
+      "generateButton": "Generate AI analysis"
+    },
+    "errors": {
+      "providerMissing": "LLM provider not configured",
+      "providerGoSettings": "Go to settings",
+      "synthFailed": "Failed to generate AI analysis"
+    }
+  },
   "forms": {
     "prefixCacheProbe": {
       "promptSets": "Prompt sets",
