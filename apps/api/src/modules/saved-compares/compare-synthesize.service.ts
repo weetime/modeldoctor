@@ -97,6 +97,21 @@ export class CompareSynthesizeService {
         ),
       )
       .digest("hex");
+    const evalRunsDigest = createHash("sha256")
+      .update(
+        JSON.stringify(
+          (sc.evaluationRuns ?? []).map((r) => ({
+            id: r.id,
+            gateResult: r.gateResult ?? null,
+            metrics: r.missing
+              ? null
+              : createHash("sha256")
+                  .update(JSON.stringify(r.aggregateMetrics ?? {}))
+                  .digest("hex"),
+          })),
+        ),
+      )
+      .digest("hex");
     return createHash("sha256")
       .update(
         JSON.stringify({
@@ -105,6 +120,7 @@ export class CompareSynthesizeService {
           stageLabels: sc.stageLabels,
           context: sc.context,
           runsDigest,
+          evalRunsDigest,
           locale,
         }),
       )
@@ -114,7 +130,9 @@ export class CompareSynthesizeService {
   private buildUserPrompt(sc: HydratedSavedCompare, locale: string): string {
     const lines: string[] = [];
     if (sc.context) lines.push(`Context: ${sc.context}`);
-    lines.push(`Runs (${sc.benchmarks.length}):`);
+    if (sc.benchmarks.length > 0) {
+      lines.push(`Runs (${sc.benchmarks.length}):`);
+    }
     for (const b of sc.benchmarks) {
       if (b.missing) {
         lines.push(`- [${b.stageLabel}] (data deleted)`);
