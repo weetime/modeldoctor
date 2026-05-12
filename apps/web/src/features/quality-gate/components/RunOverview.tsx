@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { EvaluationRun } from "@modeldoctor/contracts";
 import { Card } from "@/components/ui/card";
 import { GateStatusBadge } from "./GateStatusBadge";
@@ -10,6 +11,7 @@ function num(n: number | undefined) {
 }
 
 export function RunOverview({ run }: { run: EvaluationRun }) {
+  const { t } = useTranslation("quality-gate");
   const m = run.aggregateMetrics;
   const wallClock =
     run.startedAt && run.finishedAt
@@ -27,29 +29,29 @@ export function RunOverview({ run }: { run: EvaluationRun }) {
       {m && (
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <div className="text-xs text-muted-foreground">通过率 A</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.passRateA")}</div>
             <div className="text-2xl">{pct(m.passRateA)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">通过率 B</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.passRateB")}</div>
             <div className="text-2xl">{pct(m.passRateB)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">回归 / 改善</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.regressionImprovement")}</div>
             <div className="text-2xl">
               {m.regressionCount ?? "—"} / {m.improvementCount ?? "—"}
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Judge 均分 A</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.judgeAvgA")}</div>
             <div className="text-2xl">{num(m.judgeAvgA)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Judge 均分 B</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.judgeAvgB")}</div>
             <div className="text-2xl">{num(m.judgeAvgB)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Judge 调用次数</div>
+            <div className="text-xs text-muted-foreground">{t("report.metrics.judgeCallCount")}</div>
             <div className="text-2xl">{m.judgeCallCount}</div>
           </div>
         </div>

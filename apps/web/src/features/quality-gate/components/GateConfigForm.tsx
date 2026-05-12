@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { GateConfig } from "@modeldoctor/contracts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ export function GateConfigForm({
   onChange: (v: GateConfig) => void;
   dual: boolean;
 }) {
+  const { t } = useTranslation("quality-gate");
   const enabled = (k: keyof GateConfig) => value[k] != null;
   const toggle = (k: keyof GateConfig, defaultVal: number) => {
     if (enabled(k)) onChange({ ...value, [k]: undefined });
@@ -24,7 +26,7 @@ export function GateConfigForm({
           checked={enabled("passRateMin")}
           onCheckedChange={() => toggle("passRateMin", 0.9)}
         />
-        <Label>通过率下限 / passRateMin</Label>
+        <Label>{t("gate.passRateMin")}</Label>
         <Input
           type="number"
           min="0"
@@ -42,7 +44,7 @@ export function GateConfigForm({
             checked={enabled("regressionMax")}
             onCheckedChange={() => toggle("regressionMax", 3)}
           />
-          <Label>回归数上限 / regressionMax</Label>
+          <Label>{t("gate.regressionMax")}</Label>
           <Input
             type="number"
             min="0"
@@ -59,7 +61,7 @@ export function GateConfigForm({
           checked={enabled("judgeScoreMin")}
           onCheckedChange={() => toggle("judgeScoreMin", 4)}
         />
-        <Label>Judge 均分下限 / judgeScoreMin</Label>
+        <Label>{t("gate.judgeScoreMin")}</Label>
         <Input
           type="number"
           min="0"

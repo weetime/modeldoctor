@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { JudgeConfig } from "@modeldoctor/contracts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ interface JudgeConfigEditorProps {
 }
 
 export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
+  const { t } = useTranslation("quality-gate");
+
   const setKind = (k: JudgeConfig["kind"]) => {
     if (k === "exact-match") onChange({ kind: "exact-match" });
     else if (k === "contains") onChange({ kind: "contains", substrings: [], mode: "all" });
@@ -27,23 +30,23 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label htmlFor="qg-judge-kind">判分器 / Kind</Label>
+        <Label htmlFor="qg-judge-kind">{t("judges.kindLabel")}</Label>
         <Select value={value.kind} onValueChange={(k) => setKind(k as JudgeConfig["kind"])}>
           <SelectTrigger id="qg-judge-kind">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="exact-match">exact-match — 精确匹配</SelectItem>
-            <SelectItem value="contains">contains — 关键词包含</SelectItem>
-            <SelectItem value="regex">regex — 正则</SelectItem>
-            <SelectItem value="llm-judge">llm-judge — LLM 评分</SelectItem>
+            <SelectItem value="exact-match">{t("judges.exact-match")}</SelectItem>
+            <SelectItem value="contains">{t("judges.contains")}</SelectItem>
+            <SelectItem value="regex">{t("judges.regex")}</SelectItem>
+            <SelectItem value="llm-judge">{t("judges.llm-judge")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {value.kind === "exact-match" && (
         <div className="flex items-center gap-3">
-          <Label htmlFor="qg-cs">区分大小写 / case sensitive</Label>
+          <Label htmlFor="qg-cs">{t("judges.caseSensitive")}</Label>
           <Switch
             id="qg-cs"
             checked={value.caseSensitive === true}
@@ -55,7 +58,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
       {value.kind === "contains" && (
         <>
           <div className="space-y-1">
-            <Label htmlFor="qg-subs">子串列表（逗号分隔）/ substrings</Label>
+            <Label htmlFor="qg-subs">{t("judges.substringsLabel")}</Label>
             <Input
               id="qg-subs"
               value={value.substrings.join(", ")}
@@ -71,7 +74,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="qg-mode">模式 / mode</Label>
+            <Label htmlFor="qg-mode">{t("judges.modeLabel")}</Label>
             <Select
               value={value.mode}
               onValueChange={(m) => onChange({ ...value, mode: m as "all" | "any" })}
@@ -80,8 +83,8 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部命中 / all</SelectItem>
-                <SelectItem value="any">任意命中 / any</SelectItem>
+                <SelectItem value="all">{t("judges.modeAll")}</SelectItem>
+                <SelectItem value="any">{t("judges.modeAny")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -91,7 +94,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
       {value.kind === "regex" && (
         <>
           <div className="space-y-1">
-            <Label htmlFor="qg-pat">模式 / pattern</Label>
+            <Label htmlFor="qg-pat">{t("judges.patternLabel")}</Label>
             <Input
               id="qg-pat"
               value={value.pattern}
@@ -99,7 +102,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="qg-flags">flags（可选）</Label>
+            <Label htmlFor="qg-flags">{t("judges.flagsLabel")}</Label>
             <Input
               id="qg-flags"
               value={value.flags ?? ""}
@@ -112,17 +115,17 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
       {value.kind === "llm-judge" && (
         <>
           <div className="space-y-1">
-            <Label htmlFor="qg-rubric">评分准则 / rubric</Label>
+            <Label htmlFor="qg-rubric">{t("judges.rubricLabel")}</Label>
             <Textarea
               id="qg-rubric"
               rows={4}
               value={value.rubric}
               onChange={(e) => onChange({ ...value, rubric: e.target.value })}
-              placeholder="判断助手是否..."
+              placeholder={t("judges.rubricPlaceholder")}
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="qg-scale">分制 / scale</Label>
+            <Label htmlFor="qg-scale">{t("judges.scaleLabel")}</Label>
             <Select
               value={value.scale}
               onValueChange={(s) =>
@@ -140,7 +143,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="qg-thr">passThreshold（默认按 scale 推断）</Label>
+            <Label htmlFor="qg-thr">{t("judges.thresholdLabel")}</Label>
             <Input
               id="qg-thr"
               type="number"

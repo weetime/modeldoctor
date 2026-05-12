@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import { useCancelRun, useRun, useRunSamples } from "./queries";
@@ -9,6 +10,7 @@ import { SamplesTable } from "./components/SamplesTable";
 
 export function RunReportPage() {
   const { id = "" } = useParams();
+  const { t } = useTranslation("quality-gate");
   const { data: run } = useRun(id, { pollWhileRunning: true });
   const cancel = useCancelRun(id);
   const [openSampleId, setOpenSampleId] = useState<string | null>(null);
@@ -29,10 +31,10 @@ export function RunReportPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">评测运行报告</h1>
+        <h1 className="text-xl font-semibold">{t("runs.report.title")}</h1>
         {run.status === "RUNNING" && (
           <Button variant="outline" onClick={() => cancel.mutate()}>
-            取消
+            {t("runs.report.cancel")}
           </Button>
         )}
       </div>

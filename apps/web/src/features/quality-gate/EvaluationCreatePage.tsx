@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { EvaluationSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const blank = (idx: number): EvaluationSample => ({
 
 export function EvaluationCreatePage() {
   const nav = useNavigate();
+  const { t } = useTranslation("quality-gate");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [samples, setSamples] = useState<EvaluationSample[]>([blank(0)]);
@@ -29,7 +31,7 @@ export function EvaluationCreatePage() {
     try {
       payload = JSON.parse(text);
     } catch {
-      alert("JSON 解析失败");
+      alert(t("evaluations.form.jsonParseError"));
       return;
     }
     const res = await importIt.mutateAsync({
@@ -50,17 +52,23 @@ export function EvaluationCreatePage() {
 
   return (
     <div className="p-6 max-w-3xl space-y-4">
-      <h1 className="text-xl font-semibold">新建评测集</h1>
+      <h1 className="text-xl font-semibold">{t("evaluations.form.newTitle")}</h1>
 
-      <Input placeholder="名称" value={name} onChange={(e) => setName(e.target.value)} />
+      <Input
+        placeholder={t("evaluations.form.namePlaceholder")}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
       <Textarea
-        placeholder="描述（可选）"
+        placeholder={t("evaluations.form.descriptionPlaceholder")}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => setSamples([...samples, blank(samples.length)])}>添加样本</Button>
+        <Button onClick={() => setSamples([...samples, blank(samples.length)])}>
+          {t("evaluations.form.addSample")}
+        </Button>
         <label className="inline-flex">
           <input
             type="file"
@@ -69,7 +77,7 @@ export function EvaluationCreatePage() {
             onChange={(e) => e.target.files && handleJsonImport(e.target.files[0])}
           />
           <Button variant="outline" asChild>
-            <span>从 JSON 导入</span>
+            <span>{t("evaluations.form.importJson")}</span>
           </Button>
         </label>
         <label className="inline-flex">
@@ -80,7 +88,7 @@ export function EvaluationCreatePage() {
             onChange={(e) => e.target.files && handleCsvImport(e.target.files[0])}
           />
           <Button variant="outline" asChild>
-            <span>从 CSV 导入</span>
+            <span>{t("evaluations.form.importCsv")}</span>
           </Button>
         </label>
       </div>
@@ -108,7 +116,7 @@ export function EvaluationCreatePage() {
           nav(`/quality-gate/evaluations/${res.id}`);
         }}
       >
-        保存
+        {t("evaluations.form.save")}
       </Button>
     </div>
   );

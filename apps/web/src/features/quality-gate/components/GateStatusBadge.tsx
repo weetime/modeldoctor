@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { GateResult, RunStatus } from "@modeldoctor/contracts";
 import { Badge } from "@/components/ui/badge";
 
@@ -8,12 +9,14 @@ export function GateStatusBadge({
   status: RunStatus;
   gateResult: GateResult | null;
 }) {
-  if (status === "PENDING") return <Badge variant="outline">等待中</Badge>;
-  if (status === "RUNNING") return <Badge variant="default">运行中</Badge>;
-  if (status === "CANCELLED") return <Badge variant="outline">已取消</Badge>;
-  if (status === "FAILED") return <Badge variant="destructive">失败</Badge>;
+  const { t } = useTranslation("quality-gate");
+
+  if (status === "PENDING") return <Badge variant="outline">{t("runs.status.pending")}</Badge>;
+  if (status === "RUNNING") return <Badge variant="default">{t("runs.status.running")}</Badge>;
+  if (status === "CANCELLED") return <Badge variant="outline">{t("runs.status.cancelled")}</Badge>;
+  if (status === "FAILED") return <Badge variant="destructive">{t("runs.status.failed")}</Badge>;
   if (gateResult === "PASSED")
-    return <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-transparent">通过</Badge>;
-  if (gateResult === "WARNING") return <Badge variant="warning">警告</Badge>;
-  return <Badge variant="destructive">未通过</Badge>;
+    return <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-transparent">{t("runs.gateResult.passed")}</Badge>;
+  if (gateResult === "WARNING") return <Badge variant="warning">{t("runs.gateResult.warning")}</Badge>;
+  return <Badge variant="destructive">{t("runs.gateResult.failed")}</Badge>;
 }

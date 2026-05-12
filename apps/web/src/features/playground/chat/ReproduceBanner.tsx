@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 
@@ -10,15 +11,17 @@ export function ReproduceBanner({
   sampleId: string;
   expected: string;
 }) {
+  const { t } = useTranslation("quality-gate");
+
   return (
     <Alert>
-      <AlertTitle>复现自评测 · 样本 #{sampleId.slice(-6)}</AlertTitle>
+      <AlertTitle>{t("playground.bannerTitle", { suffix: sampleId.slice(-6) })}</AlertTitle>
       <AlertDescription>
-        期望：{expected.slice(0, 120)}
+        {t("playground.bannerExpectedPrefix")}{expected.slice(0, 120)}
         {expected.length > 120 ? "…" : ""}
         {" · "}
         <Link className="underline" to={`/quality-gate/runs/${runId}`}>
-          返回评测报告
+          {t("playground.backToReport")}
         </Link>
       </AlertDescription>
     </Alert>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { SampleFilter } from "@modeldoctor/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,13 +20,6 @@ const FILTERS: SampleFilter[] = [
   "both-pass",
   "both-fail",
 ];
-const FILTER_LABEL: Record<SampleFilter, string> = {
-  all: "全部",
-  regression: "回归",
-  improvement: "改善",
-  "both-pass": "都过",
-  "both-fail": "都挂",
-};
 
 export function SamplesTable({
   runId,
@@ -34,6 +28,7 @@ export function SamplesTable({
   runId: string;
   onOpenSample: (sampleId: string) => void;
 }) {
+  const { t } = useTranslation("quality-gate");
   const [filter, setFilter] = useState<SampleFilter>("regression");
   const [page, setPage] = useState(1);
   const { data } = useRunSamples(runId, { filter, page, pageSize: 20 });
@@ -51,19 +46,19 @@ export function SamplesTable({
               setPage(1);
             }}
           >
-            {FILTER_LABEL[f]}
+            {t(`report.filters.${f}`)}
           </Button>
         ))}
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12">#</TableHead>
-            <TableHead>A 答案预览</TableHead>
-            <TableHead className="w-24">delta</TableHead>
-            <TableHead className="w-20">A 通过</TableHead>
-            <TableHead className="w-20">B 通过</TableHead>
-            <TableHead className="w-32 text-right">操作</TableHead>
+            <TableHead className="w-12">{t("report.samplesTable.headers.index")}</TableHead>
+            <TableHead>{t("report.samplesTable.headers.answerPreview")}</TableHead>
+            <TableHead className="w-24">{t("report.samplesTable.headers.delta")}</TableHead>
+            <TableHead className="w-20">{t("report.samplesTable.headers.passedA")}</TableHead>
+            <TableHead className="w-20">{t("report.samplesTable.headers.passedB")}</TableHead>
+            <TableHead className="w-32 text-right">{t("report.samplesTable.headers.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -92,7 +87,7 @@ export function SamplesTable({
                   variant="ghost"
                   onClick={() => onOpenSample(s.id)}
                 >
-                  详情
+                  {t("report.sampleDrawer.detail")}
                 </Button>
               </TableCell>
             </TableRow>
@@ -107,7 +102,7 @@ export function SamplesTable({
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
           >
-            上一页
+            {t("report.samplesTable.prevPage")}
           </Button>
           <Button
             size="sm"
@@ -115,7 +110,7 @@ export function SamplesTable({
             disabled={page * data.pageSize >= data.total}
             onClick={() => setPage(page + 1)}
           >
-            下一页
+            {t("report.samplesTable.nextPage")}
           </Button>
         </div>
       )}

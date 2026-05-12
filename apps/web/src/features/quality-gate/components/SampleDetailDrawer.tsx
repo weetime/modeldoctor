@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ export function SampleDetailDrawer({
   snapshotSamples: EvaluationSample[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation("quality-gate");
   if (!row) return null;
   const snapshot = snapshotSamples.find((s) => s.id === row.sampleId);
 
@@ -26,19 +28,21 @@ export function SampleDetailDrawer({
     <Sheet open={!!row} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>样本 #{row.sampleIdx + 1}</SheetTitle>
+          <SheetTitle>
+            {t("report.sampleDrawer.title")} #{row.sampleIdx + 1}
+          </SheetTitle>
         </SheetHeader>
         <div className="space-y-4 pt-4 text-sm">
           {snapshot && (
             <>
               <div>
-                <div className="font-medium mb-1">题面</div>
+                <div className="font-medium mb-1">{t("samples.promptLabel")}</div>
                 <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
                   {snapshot.prompt}
                 </pre>
               </div>
               <div>
-                <div className="font-medium mb-1">期望</div>
+                <div className="font-medium mb-1">{t("runs.report.expected")}</div>
                 <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
                   {snapshot.expected}
                 </pre>
@@ -47,45 +51,45 @@ export function SampleDetailDrawer({
           )}
           <div>
             <div className="font-medium mb-1">
-              A 答案 {row.resultA.judge.passed ? "✓" : "✗"}
+              {t("runs.report.answerA")} {row.resultA.judge.passed ? "✓" : "✗"}
             </div>
             <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
-              {row.resultA.call.rawAnswer || "(空)"}
+              {row.resultA.call.rawAnswer || t("runs.report.emptyAnswer")}
             </pre>
             {row.resultA.judge.reason && (
               <div className="text-muted-foreground mt-1">
-                Judge: {row.resultA.judge.reason}
+                {t("runs.report.judgePrefix")}: {row.resultA.judge.reason}
               </div>
             )}
             {row.resultA.call.error && (
               <div className="text-destructive mt-1">
-                错误: {row.resultA.call.error}
+                {t("runs.report.errorPrefix")}: {row.resultA.call.error}
               </div>
             )}
           </div>
           {row.resultB && (
             <div>
               <div className="font-medium mb-1">
-                B 答案 {row.resultB.judge.passed ? "✓" : "✗"}
+                {t("runs.report.answerB")} {row.resultB.judge.passed ? "✓" : "✗"}
               </div>
               <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
-                {row.resultB.call.rawAnswer || "(空)"}
+                {row.resultB.call.rawAnswer || t("runs.report.emptyAnswer")}
               </pre>
               {row.resultB.judge.reason && (
                 <div className="text-muted-foreground mt-1">
-                  Judge: {row.resultB.judge.reason}
+                  {t("runs.report.judgePrefix")}: {row.resultB.judge.reason}
                 </div>
               )}
               {row.resultB.call.error && (
                 <div className="text-destructive mt-1">
-                  错误: {row.resultB.call.error}
+                  {t("runs.report.errorPrefix")}: {row.resultB.call.error}
                 </div>
               )}
               <Link
                 to={`/playground/chat?from=evaluation&runId=${runId}&sampleId=${row.id}&endpoint=B`}
               >
                 <Button size="sm" variant="outline" className="mt-2">
-                  在 Playground 复现 B
+                  {t("runs.report.playgroundReproduceB")}
                 </Button>
               </Link>
             </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { EvaluationSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { useEvaluation, useUpdateEvaluation } from "./queries";
 
 export function EvaluationDetailPage() {
   const { id = "" } = useParams();
+  const { t } = useTranslation("quality-gate");
   const { data } = useEvaluation(id);
   const update = useUpdateEvaluation(id);
   const [name, setName] = useState("");
@@ -45,7 +47,7 @@ export function EvaluationDetailPage() {
           ])
         }
       >
-        添加样本
+        {t("evaluations.form.addSample")}
       </Button>
 
       <div className="space-y-3">
@@ -63,7 +65,7 @@ export function EvaluationDetailPage() {
       <Button
         onClick={() => update.mutate({ name, description: description || null, samples })}
       >
-        保存
+        {t("evaluations.form.save")}
       </Button>
     </div>
   );

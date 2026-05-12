@@ -1,0 +1,129 @@
+{
+  "nav": { "title": "质量门" },
+  "evaluations": {
+    "title": "评测集",
+    "create": "新建评测集",
+    "empty": "还没有评测集",
+    "col": { "name": "名称", "samples": "样本数", "updatedAt": "更新时间" },
+    "form": {
+      "namePlaceholder": "名称",
+      "descriptionPlaceholder": "描述（可选）",
+      "addSample": "添加样本",
+      "importJson": "从 JSON 导入",
+      "importCsv": "从 CSV 导入",
+      "save": "保存",
+      "jsonParseError": "JSON 解析失败",
+      "newTitle": "新建评测集"
+    }
+  },
+  "samples": {
+    "promptLabel": "题面 / prompt",
+    "expectedLabel": "期望答案 / expected",
+    "remove": "删除",
+    "indexPrefix": "#"
+  },
+  "judges": {
+    "kindLabel": "判分器 / Kind",
+    "exact-match": "exact-match — 精确匹配",
+    "contains": "contains — 关键词包含",
+    "regex": "regex — 正则",
+    "llm-judge": "llm-judge — LLM 评分",
+    "caseSensitive": "区分大小写 / case sensitive",
+    "substringsLabel": "子串列表（逗号分隔）/ substrings",
+    "modeLabel": "模式 / mode",
+    "modeAll": "全部命中 / all",
+    "modeAny": "任意命中 / any",
+    "patternLabel": "模式 / pattern",
+    "flagsLabel": "flags（可选）",
+    "rubricLabel": "评分准则 / rubric",
+    "rubricPlaceholder": "判断助手是否...",
+    "scaleLabel": "分制 / scale",
+    "thresholdLabel": "passThreshold（默认按 scale 推断）"
+  },
+  "runs": {
+    "title": "评测运行",
+    "create": "新建评测运行",
+    "empty": "还没有评测运行",
+    "report": {
+      "title": "评测运行报告",
+      "cancel": "取消",
+      "playgroundReproduceB": "在 Playground 复现 B",
+      "expected": "期望",
+      "answerA": "A 答案",
+      "answerB": "B 答案",
+      "errorPrefix": "错误",
+      "judgePrefix": "Judge",
+      "emptyAnswer": "(空)"
+    },
+    "form": {
+      "evaluationLabel": "评测集",
+      "evaluationPlaceholder": "选择评测集",
+      "endpointA": "Endpoint A（基线）",
+      "endpointB": "Endpoint B（新版本，可选）",
+      "endpointBNone": "不对比",
+      "endpointPlaceholder": "选择",
+      "trigger": "触发评测",
+      "newTitle": "新建评测运行"
+    },
+    "status": {
+      "pending": "等待中",
+      "running": "运行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" }
+  },
+  "report": {
+    "filters": {
+      "all": "全部",
+      "regression": "回归",
+      "improvement": "改善",
+      "both-pass": "都过",
+      "both-fail": "都挂"
+    },
+    "metrics": {
+      "passRateA": "通过率 A",
+      "passRateB": "通过率 B",
+      "regressionImprovement": "回归 / 改善",
+      "judgeAvgA": "Judge 均分 A",
+      "judgeAvgB": "Judge 均分 B",
+      "judgeCallCount": "Judge 调用次数"
+    },
+    "samplesTable": {
+      "headers": {
+        "index": "#",
+        "answerPreview": "A 答案预览",
+        "delta": "delta",
+        "passedA": "A 通过",
+        "passedB": "B 通过",
+        "actions": "操作"
+      },
+      "prevPage": "上一页",
+      "nextPage": "下一页"
+    },
+    "sampleDrawer": { "title": "样本", "detail": "详情" }
+  },
+  "gate": {
+    "passRateMin": "通过率下限 / passRateMin",
+    "regressionMax": "回归数上限 / regressionMax",
+    "judgeScoreMin": "Judge 均分下限 / judgeScoreMin"
+  },
+  "detail": {
+    "actions": { "detail": "详情" },
+    "delete": {
+      "button": "删除",
+      "title": "删除 {{name}}？",
+      "description": "此操作不可撤销。如有关联评测运行将被拒绝。",
+      "descriptionRun": "此操作不可撤销。",
+      "cancel": "取消",
+      "confirm": "删除"
+    }
+  },
+  "common": { "loading": "加载中…", "actions": "操作" },
+  "playground": {
+    "bannerTitle": "复现自评测 · 样本 #{{suffix}}",
+    "bannerExpectedPrefix": "期望：",
+    "backToReport": "返回评测报告"
+  }
+}
