@@ -27,6 +27,8 @@ model User {
   createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
   notificationChannels NotificationChannel[]
   savedCompares        SavedCompare[]
+  evaluations          Evaluation[]
+  evaluationRuns       EvaluationRun[]
 
   @@index([email])
   @@map("users")
@@ -94,6 +96,9 @@ model Connection {
 
   evaluationProfileId String?            @map("evaluation_profile_id")
   evaluationProfile   EvaluationProfile? @relation("ConnectionEvaluationProfile", fields: [evaluationProfileId], references: [id], onDelete: SetNull)
+
+  evalRunsAsA EvaluationRun[] @relation("EvalEndpointA")
+  evalRunsAsB EvaluationRun[] @relation("EvalEndpointB")
 
   @@unique([userId, name])
   @@index([userId])
@@ -335,4 +340,92 @@ model SavedCompare {
 
   @@index([userId, createdAt])
   @@map("saved_compares")
+}
+
+model Evaluation {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  name         String
+  description  String?
+  version      Int      @default(1)
+  samples      Json
+  totalSamples Int      @default(0) @map("total_samples")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs EvaluationRun[]
+
+  @@index([userId, createdAt])
+  @@map("evaluations")
+}
+
+model EvaluationRun {
+  id                  String                @id @default(cuid())
+  userId              String                @map("user_id")
+  evaluationId        String                @map("evaluation_id")
+  evaluationVersion   Int                   @map("evaluation_version")
+  evaluationSnapshot  Json                  @map("evaluation_snapshot")
+  endpointAId         String                @map("endpoint_a_id")
+  endpointBId         String?               @map("endpoint_b_id")
+  gateConfig          Json                  @map("gate_config")
+  status              EvaluationRunStatus   @default(PENDING)
+  gateResult          EvaluationGateResult? @map("gate_result")
+  aggregateMetrics    Json?                 @map("aggregate_metrics")
+  processedSamples    Int                   @default(0) @map("processed_samples")
+  totalSamples        Int                   @map("total_samples")
+  startedAt           DateTime?             @map("started_at") @db.Timestamptz(3)
+  finishedAt          DateTime?             @map("finished_at") @db.Timestamptz(3)
+  errorMessage        String?               @map("error_message")
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  evaluation  Evaluation            @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
+  endpointA   Connection            @relation("EvalEndpointA", fields: [endpointAId], references: [id], onDelete: Restrict)
+  endpointB   Connection?           @relation("EvalEndpointB", fields: [endpointBId], references: [id], onDelete: Restrict)
+  samples     EvaluationRunSample[]
+
+  @@index([userId, createdAt])
+  @@index([evaluationId])
+  @@index([status])
+  @@map("evaluation_runs")
+}
+
+model EvaluationRunSample {
+  id          String      @id @default(cuid())
+  runId       String      @map("run_id")
+  sampleId    String      @map("sample_id")
+  sampleIdx   Int         @map("sample_idx")
+  resultA     Json        @map("result_a")
+  resultB     Json?       @map("result_b")
+  delta       SampleDelta
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  run EvaluationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([runId, delta])
+  @@map("evaluation_run_samples")
+}
+
+enum EvaluationRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EvaluationGateResult {
+  PASSED
+  WARNING
+  FAILED
+}
+
+enum SampleDelta {
+  REGRESSION
+  IMPROVEMENT
+  BOTH_PASS
+  BOTH_FAIL
+  NA
 }
