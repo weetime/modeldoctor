@@ -48,4 +48,22 @@ describe("EvaluationsService", () => {
     const svc = new EvaluationsService(r as never);
     await expect(svc.parseCsv("prompt,expected,judgeKind\nQ,A,wat")).rejects.toThrow();
   });
+
+  it("parseCsv preserves newlines inside quoted fields (RFC-4180)", async () => {
+    const svc = new EvaluationsService(repoMock() as never);
+    const csv =
+      'prompt,expected,judgeKind\n"line one\nline two","ok","exact-match"\n"single","ok2","exact-match"';
+    const samples = await svc.parseCsv(csv);
+    expect(samples.length).toBe(2);
+    expect(samples[0].prompt).toBe("line one\nline two");
+    expect(samples[1].prompt).toBe("single");
+  });
+
+  it("parseCsv matches headers case-insensitively", async () => {
+    const svc = new EvaluationsService(repoMock() as never);
+    const csv = "Prompt,Expected,JudgeKind\nQ,A,exact-match";
+    const samples = await svc.parseCsv(csv);
+    expect(samples.length).toBe(1);
+    expect(samples[0].prompt).toBe("Q");
+  });
 });

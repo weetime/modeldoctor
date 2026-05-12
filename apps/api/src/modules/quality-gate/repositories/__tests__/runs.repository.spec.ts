@@ -104,6 +104,7 @@ describe("RunsRepository", () => {
     );
     expect(updated.status).toBe("COMPLETED");
     expect(updated.gateResult).toBe("PASSED");
+    expect(updated.processedSamples).toBe(updated.totalSamples);
   });
 
   it("saveSample writes row visible via paginated query with filter", async () => {

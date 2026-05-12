@@ -111,6 +111,10 @@ export class RunsRepository {
     metrics: AggregateMetrics,
     gate: GateOutcome,
   ): Promise<EvaluationRun> {
+    const existing = await this.prisma.evaluationRun.findUniqueOrThrow({
+      where: { id },
+      select: { totalSamples: true },
+    });
     const row = await this.prisma.evaluationRun.update({
       where: { id },
       data: {
@@ -118,6 +122,7 @@ export class RunsRepository {
         finishedAt: new Date(),
         aggregateMetrics: metrics as unknown as object,
         gateResult: gate.result as GateResult,
+        processedSamples: existing.totalSamples,
       },
     });
     return this.toDto(row);

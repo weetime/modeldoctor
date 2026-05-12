@@ -42,10 +42,10 @@ export class EvaluationsService {
   }
 
   async parseCsv(csv: string): Promise<EvaluationSample[]> {
-    const lines = csv.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (lines.length < 2) throw new Error("CSV requires at least a header and one data row");
-    const header = this.splitCsvRow(lines[0]).map((h) => h.trim());
-    const idx = (k: string) => header.indexOf(k);
+    const rows = this.parseCsvRows(csv);
+    if (rows.length < 2) throw new Error("CSV requires at least a header and one data row");
+    const header = rows[0].map((h) => h.trim());
+    const idx = (k: string) => header.findIndex((h) => h.toLowerCase() === k.toLowerCase());
     const ip = idx("prompt");
     const ie = idx("expected");
     const ik = idx("judgeKind");
@@ -57,8 +57,8 @@ export class EvaluationsService {
       );
 
     const out: EvaluationSample[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const row = this.splitCsvRow(lines[i]);
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
       const kind = row[ik]?.trim();
       const cfgRaw = ic >= 0 ? row[ic] : "";
       let cfg: unknown;
@@ -94,15 +94,23 @@ export class EvaluationsService {
     return out;
   }
 
-  // Minimal RFC-4180-ish CSV splitter (handles quoted commas and "" escapes).
-  private splitCsvRow(line: string): string[] {
-    const cells: string[] = [];
+  // RFC-4180 CSV parser: handles quoted fields with embedded commas/newlines and "" escapes.
+  private parseCsvRows(csv: string): string[][] {
+    const rows: string[][] = [];
     let cur = "";
+    let row: string[] = [];
     let inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
+    const finishRow = () => {
+      row.push(cur);
+      cur = "";
+      // Skip rows that are entirely empty (e.g. trailing newline).
+      if (row.length > 1 || row[0].length > 0) rows.push(row);
+      row = [];
+    };
+    for (let i = 0; i < csv.length; i++) {
+      const ch = csv[i];
       if (inQ) {
-        if (ch === '"' && line[i + 1] === '"') {
+        if (ch === '"' && csv[i + 1] === '"') {
           cur += '"';
           i++;
         } else if (ch === '"') {
@@ -110,19 +118,20 @@ export class EvaluationsService {
         } else {
           cur += ch;
         }
+      } else if (ch === '"') {
+        inQ = true;
+      } else if (ch === ",") {
+        row.push(cur);
+        cur = "";
+      } else if (ch === "\r" || ch === "\n") {
+        if (ch === "\r" && csv[i + 1] === "\n") i++;
+        finishRow();
       } else {
-        if (ch === ",") {
-          cells.push(cur);
-          cur = "";
-        } else if (ch === '"') {
-          inQ = true;
-        } else {
-          cur += ch;
-        }
+        cur += ch;
       }
     }
-    cells.push(cur);
-    return cells;
+    if (cur.length > 0 || row.length > 0) finishRow();
+    return rows;
   }
 
   private normalize(body: CreateEvaluationRequest): CreateEvaluationRequest {

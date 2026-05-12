@@ -16,14 +16,16 @@ export function EvaluationDetailPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [samples, setSamples] = useState<EvaluationSample[]>([]);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (data) {
+    if (data && !initialized) {
       setName(data.name);
       setDescription(data.description ?? "");
       setSamples(data.samples);
+      setInitialized(true);
     }
-  }, [data]);
+  }, [data, initialized]);
 
   if (!data) return null;
 
