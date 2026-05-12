@@ -2,13 +2,19 @@ import { z } from "zod";
 import type { ToolName } from "./core/interface.js";
 import { allAdapters, byTool } from "./core/registry.js";
 
-export type ScenarioId = "inference" | "capacity" | "gateway" | "prefix-cache-validation";
+export type ScenarioId =
+  | "inference"
+  | "capacity"
+  | "gateway"
+  | "prefix-cache-validation"
+  | "kv-cache-stress";
 
 export const scenarioIdSchema = z.enum([
   "inference",
   "capacity",
   "gateway",
   "prefix-cache-validation",
+  "kv-cache-stress",
 ]);
 
 export interface ScenarioConfig {
@@ -20,7 +26,8 @@ export interface ScenarioConfig {
     | "InferenceReport"
     | "CapacityReport"
     | "GatewayReport"
-    | "PrefixCacheProbeReport";
+    | "PrefixCacheProbeReport"
+    | "KvCacheStressReport";
 }
 
 export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
@@ -60,6 +67,14 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     tools: ["prefix-cache-probe"],
     paramsConstraints: {},
     reportComponent: "PrefixCacheProbeReport",
+  },
+  "kv-cache-stress": {
+    label: "KV cache 后端压测",
+    description:
+      "多轮对话压测,触发 prefix-cache 驱逐,对比不同 KV 卸载后端(LMCache / YRCache / etc.)的 QPS、TTFT、Prefix Cache Savings",
+    tools: ["kv-cache-stress"],
+    paramsConstraints: {},
+    reportComponent: "KvCacheStressReport",
   },
 };
 

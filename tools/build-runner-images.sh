@@ -40,7 +40,7 @@ fi
 
 echo "==> Building runner images at tag :$TAG"
 
-for tool in guidellm vegeta genai-perf prefix-cache-probe; do
+for tool in guidellm vegeta genai-perf prefix-cache-probe kv-cache-stress; do
   image="md-runner-${tool}:${TAG}"
   echo "==> docker build $image"
   docker build \
@@ -56,6 +56,7 @@ if [[ "$IMPORT" == "true" ]]; then
     "md-runner-vegeta:${TAG}" \
     "md-runner-genai-perf:${TAG}" \
     "md-runner-prefix-cache-probe:${TAG}" \
+    "md-runner-kv-cache-stress:${TAG}" \
     -c "$K3D_CLUSTER"
 fi
 
@@ -65,3 +66,4 @@ echo "RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:${TAG}"
 echo "RUNNER_IMAGE_VEGETA=md-runner-vegeta:${TAG}"
 echo "RUNNER_IMAGE_GENAI_PERF=md-runner-genai-perf:${TAG}"
 echo "RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:${TAG}"
+echo "RUNNER_IMAGE_KV_CACHE_STRESS=md-runner-kv-cache-stress:${TAG}"

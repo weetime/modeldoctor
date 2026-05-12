@@ -18,6 +18,7 @@ import type { EngineMeta, EngineRecipe, ModelEntry, RecipeStatus } from "./types
 
 export const ENGINES: EngineMeta[] = [
   { id: "vllm", name: "vLLM", vendor: "UC Berkeley" },
+  { id: "vllm-ascend", name: "vLLM-Ascend", vendor: "Huawei Ascend × vLLM" },
   { id: "sglang", name: "SGLang", vendor: "LMSYS" },
   { id: "trtllm", name: "TensorRT-LLM", vendor: "NVIDIA" },
   { id: "mindie", name: "MindIE", vendor: "Huawei Ascend" },
@@ -35,6 +36,12 @@ export const ENGINES: EngineMeta[] = [
 
 const native = (r: Omit<EngineRecipe, "status">): EngineRecipe => ({ status: "native", ...r });
 const partial = (r: Omit<EngineRecipe, "status">): EngineRecipe => ({ status: "partial", ...r });
+// `community` = 非官方上游发布。内部构建镜像 + hot-patch / 厂商发布但需自维护
+// 的搭配走这条。本仓 vllm-ascend × {LMCache, YRCache} 两份方案即此例。
+const community = (r: Omit<EngineRecipe, "status">): EngineRecipe => ({
+  status: "community",
+  ...r,
+});
 
 // Common HF cache volume snippet — single source of truth.
 const HF_VOL = "-v $HOME/.cache/huggingface:/root/.cache/huggingface";
@@ -145,6 +152,127 @@ export const MODELS: ModelEntry[] = [
         tooltip: "GGUF 量化版本,本地 CPU/Metal/ROCm 都行",
         notes: "70B 推荐 Q4_K_M(~40GB)+ mmap;长上下文用 -c 32768。",
         docUrl: "https://github.com/ggml-org/llama.cpp",
+      }),
+    },
+  },
+  // -------- KV cache offload 实战配方 ----------------------------------------
+  // 这两行是同一个底层模型(Qwen3-32B)+ 同一引擎(vllm-ascend)+ 不同 KV
+  // cache 后端的对比配方。源自 theriseunion/repots 2026-05-10/05-11 在
+  // Atlas 800I A2 / 8×910B4 实测得出的两套生产可用方案,作 `kv-cache-stress`
+  // benchmark scenario 的目标参考。两条 recipe 都是 `community` 状态:镜像内部
+  // 构建 + vLLM 0.18 / yrcache 1.5.0 兼容性 hot-patch,不在上游 release。
+  {
+    id: "qwen3-32b-lmcache",
+    name: "Qwen3-32B + LMCache CPU offload",
+    category: "dense",
+    meta: "阿里 · 单 pod KV 卸载(生产推荐)",
+    engines: {
+      "vllm-ascend": community({
+        minVersion: "0.18.0rc1",
+        image: "swr.cn-north-4.myhuaweicloud.com/inference-engines/vllm-ascend:v0.18.0rc1-lmcache",
+        tooltip: "vllm-ascend 0.18 + LMCache 0.4.2 · CPU 100GB 卸载 · QPS 3.75 / TTFT p90 2.3s",
+        command: `# StatefulSet 关键 args / env / volumeMounts:
+# vLLM 启动参数:
+#   --kv-transfer-config '{"kv_connector":"LMCacheAscendConnectorV1Dynamic", ...}'
+#   --disable-hybrid-kv-cache-manager     # HMA 与 KV connector 不兼容,必加
+# 环境变量:
+#   PROMETHEUS_MULTIPROC_DIR=/tmp/lmcache_prometheus   # 必须,否则 lmcache:* 指标看不见
+#   LMCACHE_CHUNK_SIZE=256
+#   LMCACHE_LOCAL_CPU=True
+#   LMCACHE_MAX_LOCAL_CPU_SIZE=100                     # GB,建议 25-50% 主机内存
+# Volume:
+#   prom-multiproc (emptyDir) -> /tmp/lmcache_prometheus
+#     LMCache 不会自己 mkdir,目录必须由 K8s 预挂载
+# 完整 yaml: theriseunion/repots:2026-05-10-qwen3-lmcache-ascend-benchmark/patches/03-c-on-cpu.yaml`,
+        params: [
+          {
+            key: "PROMETHEUS_MULTIPROC_DIR",
+            value: "/tmp/lmcache_prometheus",
+            desc: "必须,跨 TP worker 聚合 metrics;LMCache 不自建目录",
+          },
+          {
+            key: "LMCACHE_MAX_LOCAL_CPU_SIZE",
+            value: "100 (GB)",
+            desc: "建议 25-50% 主机内存,1 TB 内存机器经验值 100",
+          },
+          {
+            key: "LMCACHE_CHUNK_SIZE",
+            value: "256",
+            desc: "block 粒度,与 vLLM block_size 协调",
+          },
+          {
+            key: "--disable-hybrid-kv-cache-manager",
+            value: "(flag)",
+            desc: "HMA 与 KV connector 不兼容,必加,否则启动直接 panic",
+          },
+        ],
+        resource: "Atlas 800I A2 · 8×910B4 / TP=4 · 32 GB HBM × 4 · 100 GB host RAM",
+        notes:
+          "实测 QPS 3.75 / TTFT p90 2.3 s / err 0% / Prefix Cache Savings 85% — 单 pod 场景综合最优。如需跨 pod 共享 KV,见 Qwen3-32B + YRCache 行。",
+        docUrl:
+          "https://github.com/theriseunion/repots/tree/main/2026-05-10-qwen3-lmcache-ascend-benchmark",
+      }),
+    },
+  },
+  {
+    id: "qwen3-32b-yrcache",
+    name: "Qwen3-32B + YRCache 三层缓存",
+    category: "dense",
+    meta: "阿里 · 跨 pod KV 共享(CPU + Disk + NFS)",
+    engines: {
+      "vllm-ascend": community({
+        minVersion: "0.18.0rc1",
+        image:
+          "swr.cn-north-4.myhuaweicloud.com/inference-engines/vllm-ascend:v0.18.0rc1-yrcache-1.5.0",
+        tooltip:
+          "vllm-ascend 0.18 + YRCache 1.5.0 三层(CPU/Disk/Redis 元数据/NFS)· QPS 3.39 / err 9-13%",
+        command: `# YRCache 跑通有 3 个前置:
+# 1) 部署专用无认证 Redis(YRCache wheel 无 redis_password 字段,接不上生产 Redis):
+#    Deployment yrcache-redis · image quanzhenglong.com/camp/redis:8.2.0 · '--protected-mode no'
+# 2) 准备数据后端(任选):hostPath 大盘 /apps/yrcache,或 NFS PVC /mnt/yrfs
+# 3) **hot-patch yrcache 1.5.0 的 vLLM 0.18 兼容性 bug**(KVConnectorFactory.create_connector
+#    第 3 参数 vLLM 0.18 改成 kv_cache_config,yrcache 1.5.0 仍按 local_rank 解析):
+#    ConfigMap yrcache-connector-fix,subPath 挂修复版 yrcache_connector.py 覆盖镜像内 buggy 版本
+#    修复源:theriseunion/repots:2026-05-11-qwen3-yrcache-ascend-benchmark/patches/yrcache_connector_patched.py
+#
+# StatefulSet 关键 args / env / volumeMounts:
+#   --kv-transfer-config '{"kv_connector":"YRCacheConnector", ...}'
+#   --disable-hybrid-kv-cache-manager
+# 环境变量:
+#   YRCACHE_CONFIG_FILE=/etc/yrcache.yaml
+# Volume:
+#   yrcache-config (ConfigMap)  -> /etc/yrcache.yaml         # 注意 log_level=2 必加
+#   yrcache-disk (hostPath)     -> /apps/yrcache             # 本地盘 tier
+#   yrcache-shared (NFS PVC)    -> /mnt/yrfs                 # 可选,跨 pod 共享 tier
+#   yrcache-connector-fix       -> 镜像内 yrcache_connector.py (subPath)`,
+        params: [
+          {
+            key: "log_level (yrcache.yaml)",
+            value: "2 (warning)",
+            desc: "**必调**:默认 3 INFO 把 worker 打死,err 率额外 +5 pp",
+          },
+          {
+            key: "metric_level (yrcache.yaml)",
+            value: "1 (batch only)",
+            desc: "默认 3 太细,会拖慢请求",
+          },
+          {
+            key: "shared_storage_cache_config.redis_host",
+            value: "yrcache-redis.<ns>.svc",
+            desc: "**必须无认证 Redis**;wheel 没 redis_password 字段",
+          },
+          {
+            key: "shared_storage_cache_config.storage_path",
+            value: "/apps/yrcache 或 /mnt/yrfs",
+            desc: "本地盘或 NFS;NFS 走跨 pod 共享场景",
+          },
+        ],
+        resource:
+          "Atlas 800I A2 · 8×910B4 / TP=4 · 100 GB host RAM · 300+ GB disk · (可选)500 GB NFS",
+        notes:
+          "Y-FULL 实测 QPS 3.39 / TTFT p90 2.06 s / Prefix Cache Savings 89% · err 率 9-13%(LMCache 0%)。接受 err 率 trade-off 才推荐;唯一支持跨 pod 共享 KV 的方案。yrcache 1.5.0 wheel 与 vLLM 0.18 KVConnectorFactory 不兼容,部署前必须打 hot-patch。",
+        docUrl:
+          "https://github.com/theriseunion/repots/tree/main/2026-05-11-qwen3-yrcache-ascend-benchmark",
       }),
     },
   },

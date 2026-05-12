@@ -24,6 +24,7 @@
     "profile": "个人中心",
     "logout": "退出登录",
     "devCharts": "图表调试",
-    "deploymentRecipes": "部署示例"
+    "deploymentRecipes": "部署示例",
+    "benchmarkKvCacheStress": "KV cache 压测"
   }
 }

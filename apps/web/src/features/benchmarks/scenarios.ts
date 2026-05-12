@@ -1,5 +1,5 @@
 import { SCENARIOS, type ScenarioId } from "@modeldoctor/tool-adapters/schemas";
-import { Activity, Gauge, Layers, type LucideIcon, Network } from "lucide-react";
+import { Activity, Database, Gauge, Layers, type LucideIcon, Network } from "lucide-react";
 
 /**
  * Lucide icon for each scenario, consumed by the sidebar in Phase 14.
@@ -10,6 +10,7 @@ export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
   capacity: Activity,
   gateway: Network,
   "prefix-cache-validation": Layers,
+  "kv-cache-stress": Database,
 };
 
 export { SCENARIOS, type ScenarioId };

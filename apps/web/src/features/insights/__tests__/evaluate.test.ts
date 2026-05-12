@@ -89,13 +89,20 @@ describe("compositeScore", () => {
         capacity: null,
         gateway: null,
         "prefix-cache-validation": null,
+        "kv-cache-stress": null,
       }),
     ).toBeNull();
   });
 
   it("equal-weight average over present scenarios, rounded", () => {
     expect(
-      compositeScore({ inference: 90, capacity: 70, gateway: 80, "prefix-cache-validation": null }),
+      compositeScore({
+        inference: 90,
+        capacity: 70,
+        gateway: 80,
+        "prefix-cache-validation": null,
+        "kv-cache-stress": null,
+      }),
     ).toBe(80);
   });
 
@@ -106,6 +113,7 @@ describe("compositeScore", () => {
         capacity: null,
         gateway: 70,
         "prefix-cache-validation": null,
+        "kv-cache-stress": null,
       }),
     ).toBe(80);
   });

@@ -24,9 +24,11 @@
   "status": {
     "native": "原生支持",
     "partial": "部分 / 实验",
+    "community": "社区构建",
     "none": "不支持",
     "ariaNative": "原生支持,点击查看详情",
     "ariaPartial": "部分支持,点击查看详情",
+    "ariaCommunity": "社区构建(非上游官方),点击查看详情",
     "ariaNone": "不支持"
   },
   "empty": {

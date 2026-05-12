@@ -59,6 +59,11 @@ export const sidebarGroups: SidebarGroup[] = [
         icon: Layers,
         labelKey: "items.benchmarkPrefixCache",
       },
+      {
+        to: "/benchmarks/kv-cache-stress",
+        icon: Database,
+        labelKey: "items.benchmarkKvCacheStress",
+      },
       { to: "/benchmarks/reports", icon: BarChart3, labelKey: "items.endpointReports" },
       { to: "/benchmark-templates", icon: Layers, labelKey: "items.benchmarkTemplates" },
     ],

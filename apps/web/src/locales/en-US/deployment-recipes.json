@@ -24,9 +24,11 @@
   "status": {
     "native": "Native",
     "partial": "Partial / experimental",
+    "community": "Community build",
     "none": "Not supported",
     "ariaNative": "Native support · click for details",
     "ariaPartial": "Partial support · click for details",
+    "ariaCommunity": "Community build (not upstream) · click for details",
     "ariaNone": "Not supported"
   },
   "empty": {

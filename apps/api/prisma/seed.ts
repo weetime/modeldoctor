@@ -28,6 +28,7 @@ import {
   applyScenarioConstraints,
   genaiPerfParamsSchema,
   guidellmParamsSchema,
+  kvCacheStressParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -178,12 +179,13 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints("inference", tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "genai-perf";
+type Tool = "guidellm" | "genai-perf" | "kv-cache-stress";
+type SeedScenario = "inference" | "kv-cache-stress";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
   description: string;
-  scenario: "inference";
+  scenario: SeedScenario;
   tool: Tool;
   config: unknown;
   tags: string[];
@@ -388,6 +390,49 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     },
     tags: ["agent", "tool-use", "production-trace", "mooncake", "long-input"],
   },
+  // -------------------------------------------------------------------------
+  // KV cache stress · 2 个官方 baseline 模板
+  //
+  // 锚定 theriseunion/repots 2026-05-10(LMCache)/ 2026-05-11(YRCache) 实测:
+  // Qwen3-32B + Atlas 800I A2 / 8×910B4。两个模板的 `config` 故意完全一致 ——
+  // 同一工作负载 / 不同后端的"控制变量"对比方法论,用户跑两次后直接走 Compare
+  // 视图看 delta。本模板**只**包含 kv-cache-stress adapter 的 params,
+  // backend 切换由 deployment-recipes 文档化,本模板假设 backend 已部署。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_official_kv_cache_lmcache_cpu_baseline",
+    name: "KV Cache · LMCache CPU baseline",
+    description:
+      "对齐 2026-05-10 实测:Qwen3-32B + LMCache CPU 100 GB,200 sessions × 4 轮多轮对话,工作集 ~400K token 强制驱逐 HBM。预期 QPS ~3.75 / TTFT p90 ~2.3 s / Prefix Cache Savings 85% / err 0%(Atlas 800I A2 · 8×910B4)。",
+    scenario: "kv-cache-stress",
+    tool: "kv-cache-stress",
+    config: {
+      numSessions: 200,
+      turns: 4,
+      concurrency: 25,
+      maxTokens: 50,
+      durationSec: 600,
+      systemPromptSeed: "scn",
+    },
+    tags: ["kv-cache", "lmcache", "baseline", "multi-turn", "qwen3-32b"],
+  },
+  {
+    id: "tpl_official_kv_cache_yrcache_full_baseline",
+    name: "KV Cache · YRCache 三层缓存 baseline",
+    description:
+      "对齐 2026-05-11 实测:Qwen3-32B + YRCache(CPU 100 GB + Local Disk + Redis 元数据 + NFS 数据),200 sessions × 4 轮。预期 QPS ~3.39 / TTFT p90 ~2.1 s / Prefix Cache Savings 89% / err 9-13%(Atlas 800I A2 · 8×910B4)。接受 err 率 trade-off 才推荐使用;生产强烈建议先跑 LMCache baseline 对比。",
+    scenario: "kv-cache-stress",
+    tool: "kv-cache-stress",
+    config: {
+      numSessions: 200,
+      turns: 4,
+      concurrency: 25,
+      maxTokens: 50,
+      durationSec: 600,
+      systemPromptSeed: "scn",
+    },
+    tags: ["kv-cache", "yrcache", "baseline", "multi-turn", "qwen3-32b", "shared-tier"],
+  },
   {
     id: "tpl_official_embeddings_high_throughput",
     name: "嵌入服务高吞吐",
@@ -448,15 +493,23 @@ async function seedEvaluationProfiles(): Promise<void> {
 
 async function seedBenchmarkTemplates(): Promise<void> {
   for (const t of BENCHMARK_TEMPLATES) {
-    const base = t.tool === "guidellm" ? guidellmParamsSchema : genaiPerfParamsSchema;
+    // Pick the per-tool zod base schema. Each adapter owns its own
+    // params schema; we route by tool name (not scenario) because some
+    // tools are scenario-polymorphic.
+    const base =
+      t.tool === "guidellm"
+        ? guidellmParamsSchema
+        : t.tool === "genai-perf"
+          ? genaiPerfParamsSchema
+          : kvCacheStressParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
-    // (inference, genai-perf) this is a no-op — the scenario's
-    // paramsConstraints map has no genai-perf entry, so
-    // applyScenarioConstraints returns the bare adapter schema and
-    // re-parses the same shape. We still call it so the invariant
-    // "all official templates round-trip through scenario constraints"
-    // holds regardless of tool.
+    // (inference, genai-perf) and (kv-cache-stress, kv-cache-stress)
+    // this is a no-op — those scenarios' paramsConstraints maps have
+    // no entry for the given tool, so applyScenarioConstraints returns
+    // the bare adapter schema and re-parses the same shape. We still
+    // call it so the invariant "all official templates round-trip
+    // through scenario constraints" holds regardless of tool.
     const validatedConfig = applyScenarioConstraints(t.scenario, t.tool).parse(validatedBase);
     await prisma.benchmarkTemplate.upsert({
       where: { id: t.id },
