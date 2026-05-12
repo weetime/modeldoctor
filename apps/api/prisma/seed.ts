@@ -23,13 +23,13 @@
  * with `DELETE FROM ... WHERE id = '...'` (seed.ts only inserts/updates).
  */
 
-import { Prisma, PrismaClient } from "@prisma/client";
 import { profileRulesSchema } from "@modeldoctor/contracts";
 import {
   applyScenarioConstraints,
   genaiPerfParamsSchema,
   guidellmParamsSchema,
 } from "@modeldoctor/tool-adapters";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -80,7 +80,8 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
         ...COMMON_THROUGHPUT_AND_CAPACITY_CHECKS,
       },
     },
-    source: "基于 OpenAI Console / Anthropic Playground 公开 SLO + vLLM 官方 benchmark 中位数（vLLM v0.6.x release notes）综合得出的 chatbot 中庸默认。",
+    source:
+      "基于 OpenAI Console / Anthropic Playground 公开 SLO + vLLM 官方 benchmark 中位数（vLLM v0.6.x release notes）综合得出的 chatbot 中庸默认。",
   },
   {
     id: "clxprofchatbot0000000000",
@@ -100,7 +101,8 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
       },
       axisWeights: { responsiveness: 1.5 },
     },
-    source: "Chatbot 用户对首字延迟的主观感知阈值（<300ms 优秀, <800ms 可接受）。基于 OpenAI Playground 实测 + Anthropic Console SLO。",
+    source:
+      "Chatbot 用户对首字延迟的主观感知阈值（<300ms 优秀, <800ms 可接受）。基于 OpenAI Playground 实测 + Anthropic Console SLO。",
   },
   {
     id: "clxprofrag00000000000000",
@@ -119,7 +121,8 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
         ...COMMON_THROUGHPUT_AND_CAPACITY_CHECKS,
       },
     },
-    source: "RAG 场景：用户预期检索阶段延迟，TTFT 阈值放宽至 1500ms warn / 3000ms crit。LangSmith / Pinecone 公开 RAG benchmark 数据。",
+    source:
+      "RAG 场景：用户预期检索阶段延迟，TTFT 阈值放宽至 1500ms warn / 3000ms crit。LangSmith / Pinecone 公开 RAG benchmark 数据。",
   },
   {
     id: "clxprofcodecomp000000000",
@@ -139,7 +142,8 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
       },
       axisWeights: { responsiveness: 2.0 },
     },
-    source: "Code completion：响应慢于打字节奏即不可用。Cursor / Copilot 公开数据：TTFT <100ms 优秀, <200ms 可接受。",
+    source:
+      "Code completion：响应慢于打字节奏即不可用。Cursor / Copilot 公开数据：TTFT <100ms 优秀, <200ms 可接受。",
   },
   {
     id: "clxproflongform000000000",
@@ -189,7 +193,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_chat_standard",
     name: "通用对话 · 标准",
-    description: "通用对话基线，对齐 GuideLLM 上游 chat.json（input 512 / output 256）。10 RPS 泊松、1000 次请求，先看 TTFT/TPOT p95 水位。",
+    description:
+      "通用对话基线，对齐 GuideLLM 上游 chat.json（input 512 / output 256）。10 RPS 泊松、1000 次请求，先看 TTFT/TPOT p95 水位。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -210,7 +215,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_rag_standard",
     name: "RAG · 检索增强",
-    description: "检索增强对话形状，对齐 GuideLLM 上游 rag.json（input 4096 / output 512）。5 RPS 泊松、500 次请求，长输入压 TTFT/prefill。",
+    description:
+      "检索增强对话形状，对齐 GuideLLM 上游 rag.json（input 4096 / output 512）。5 RPS 泊松、500 次请求，长输入压 TTFT/prefill。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -231,7 +237,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_vllm_default_baseline",
     name: "vLLM 兼容基线（约定值）",
-    description: "对齐 vLLM RandomDataset 代码常量 input=1024 / output=128。注意这是约定值不是真实分布——仅用于跨工具横评对账。",
+    description:
+      "对齐 vLLM RandomDataset 代码常量 input=1024 / output=128。注意这是约定值不是真实分布——仅用于跨工具横评对账。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -252,7 +259,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_production_chat_azure_2024",
     name: "生产对话流量（Azure 2024）",
-    description: "锚定 Azure LLM Inference Trace 2024 conv（p50 input 967 / p50 output 41）。input 1000 / output 100，30 RPS 泊松对齐单实例量级。",
+    description:
+      "锚定 Azure LLM Inference Trace 2024 conv（p50 input 967 / p50 output 41）。input 1000 / output 100，30 RPS 泊松对齐单实例量级。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -273,7 +281,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_copilot_code_completion_azure_2024",
     name: "Copilot 代码补全（Azure 2024）",
-    description: "锚定 Azure 2024 code 服务（p50 input 1976 / p50 output 9）。极短输出、几乎纯 prefill，重点看 TTFT p99（补全要早于下一键）。",
+    description:
+      "锚定 Azure 2024 code 服务（p50 input 1976 / p50 output 9）。极短输出、几乎纯 prefill，重点看 TTFT p99（补全要早于下一键）。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -294,7 +303,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_long_doc_summarization",
     name: "长文档摘要",
-    description: "长文档摘要：input 8000 / output 500，synchronous 顺序发送 200 次。主测 TTFT + KV 内存余量——长上下文常 OOM 而不是慢。",
+    description:
+      "长文档摘要：input 8000 / output 500，synchronous 顺序发送 200 次。主测 TTFT + KV 内存余量——长上下文常 OOM 而不是慢。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -315,7 +325,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_long_context_chat_mooncake",
     name: "长上下文对话（Mooncake）",
-    description: "锚定 Mooncake FAST'25 conv trace（p50 6909 / 350，40% prefix-cache 命中）。input 6000 / output 350。注意：我们 stateless 重放测不到 KV 复用收益，TTFT 是悲观上界。",
+    description:
+      "锚定 Mooncake FAST'25 conv trace（p50 6909 / 350，40% prefix-cache 命中）。input 6000 / output 350。注意：我们 stateless 重放测不到 KV 复用收益，TTFT 是悲观上界。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -336,7 +347,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_reasoning_output_heavy",
     name: "推理 · 输出密集（CoT）",
-    description: "推理/长 CoT 形态：input 300 / output 1500（全集唯一 output > input）。覆盖 o1、R1 类推理模型，主测 TPOT 与输出 tok/s（decode-bound）。",
+    description:
+      "推理/长 CoT 形态：input 300 / output 1500（全集唯一 output > input）。覆盖 o1、R1 类推理模型，主测 TPOT 与输出 tok/s（decode-bound）。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -357,7 +369,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_agent_tool_use_mooncake",
     name: "Agent · Tool 调用（Mooncake）",
-    description: "锚定 Mooncake tool&agent trace（p50 6346 / 30，p95 600——bimodal）。input 6000 / output 50，长 system prompt + 短 JSON 输出。",
+    description:
+      "锚定 Mooncake tool&agent trace（p50 6346 / 30，p95 600——bimodal）。input 6000 / output 50，长 system prompt + 短 JSON 输出。",
     scenario: "inference",
     tool: "guidellm",
     config: {
@@ -378,7 +391,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_embeddings_high_throughput",
     name: "嵌入服务高吞吐",
-    description: "嵌入服务压测：endpoint=embeddings，input 256 tokens，并发 64、2000 次请求。无生成、非流式，主测 RPS 与 p99 latency。",
+    description:
+      "嵌入服务压测：endpoint=embeddings，input 256 tokens，并发 64、2000 次请求。无生成、非流式，主测 RPS 与 p99 latency。",
     scenario: "inference",
     tool: "genai-perf",
     config: {
@@ -399,14 +413,22 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
 
 async function seedEvaluationProfiles(): Promise<void> {
   for (const p of EVALUATION_PROFILES) {
-    profileRulesSchema.parse(p.rules);
+    // Use the zod-parsed result, not the raw input, so that any future
+    // `.transform()` / `.default()` on profileRulesSchema is preserved
+    // when the row hits the DB.
+    const validatedRules = profileRulesSchema.parse(p.rules);
+    // Keyed by `slug` (not `id`) because slug is the domain-stable
+    // identifier and is uniquely constrained; this also avoids a
+    // unique-violation if someone manually reset `id` while keeping
+    // slug stable. `update` deliberately omits `id` and `slug` (both
+    // immutable post-create).
     await prisma.evaluationProfile.upsert({
       where: { slug: p.slug },
       update: {
         name: p.name,
         nameKey: p.nameKey,
         description: p.description,
-        rules: p.rules as Prisma.InputJsonValue,
+        rules: validatedRules as Prisma.InputJsonValue,
         source: p.source,
         isBuiltin: true,
       },
@@ -416,7 +438,7 @@ async function seedEvaluationProfiles(): Promise<void> {
         name: p.name,
         nameKey: p.nameKey,
         description: p.description,
-        rules: p.rules as Prisma.InputJsonValue,
+        rules: validatedRules as Prisma.InputJsonValue,
         source: p.source,
         isBuiltin: true,
       },
@@ -427,10 +449,15 @@ async function seedEvaluationProfiles(): Promise<void> {
 async function seedBenchmarkTemplates(): Promise<void> {
   for (const t of BENCHMARK_TEMPLATES) {
     const base = t.tool === "guidellm" ? guidellmParamsSchema : genaiPerfParamsSchema;
-    base.parse(t.config);
-    if (t.tool === "guidellm") {
-      applyScenarioConstraints(t.scenario, "guidellm").parse(t.config);
-    }
+    const validatedBase = base.parse(t.config);
+    // Apply scenario-level constraints uniformly across tools. For
+    // (inference, genai-perf) this is a no-op — the scenario's
+    // paramsConstraints map has no genai-perf entry, so
+    // applyScenarioConstraints returns the bare adapter schema and
+    // re-parses the same shape. We still call it so the invariant
+    // "all official templates round-trip through scenario constraints"
+    // holds regardless of tool.
+    const validatedConfig = applyScenarioConstraints(t.scenario, t.tool).parse(validatedBase);
     await prisma.benchmarkTemplate.upsert({
       where: { id: t.id },
       update: {
@@ -438,7 +465,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
         description: t.description,
         scenario: t.scenario,
         tool: t.tool,
-        config: t.config as Prisma.InputJsonValue,
+        config: validatedConfig as Prisma.InputJsonValue,
         tags: t.tags,
         isOfficial: true,
       },
@@ -448,7 +475,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
         description: t.description,
         scenario: t.scenario,
         tool: t.tool,
-        config: t.config as Prisma.InputJsonValue,
+        config: validatedConfig as Prisma.InputJsonValue,
         tags: t.tags,
         isOfficial: true,
       },

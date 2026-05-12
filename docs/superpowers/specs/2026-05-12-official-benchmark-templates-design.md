@@ -1,8 +1,8 @@
-# 官方基准测试模板 v1 — 调研 + 规格 (research-only)
+# 官方基准测试模板 v1 — 调研 · 规格 · 实现
 
-**Status:** Draft · 2026-05-12
+**Status:** Implemented · 2026-05-12 · PR #172
 **Branch:** `docs/official-benchmark-templates`
-**Driver:** `benchmark_templates` 表目前 0 行官方模板；用户进 inference 场景没有可选预置，每次都得从零填表。这份文档先把"大模型真实生产负载长什么样 → 我们的 adapter 能/不能表达什么 → 该出哪些官方模板"打通，**只交付调研 + 规格表，不写代码、不写 seed、不动 DB**。审过之后再决定怎么落盘。
+**Driver:** `benchmark_templates` 表目前 0 行官方模板；用户进 inference 场景没有可选预置，每次都得从零填表。这份文档把"大模型真实生产负载长什么样 → 我们的 adapter 能/不能表达什么 → 该出哪些官方模板"打通，并在 **同一个 PR** 里把 10 个模板 + 5 个已有 evaluation_profiles 内置一起迁到 Prisma `seed.ts` 模式（industry-standard：schema 走 migration、数据走 seed）。本文档原本是 research-only，在审过模板规格后用户决定直接实施，于是合并入同一 PR。
 
 ---
 
@@ -27,17 +27,20 @@
 
 ## 2. Scope
 
-**In:**
+**In (这个 PR 实施)：**
 - 主流大模型测试工具的官方推荐参数综述（GuideLLM / GenAI-Perf / vLLM bench / LLMPerf / MLPerf Inference）
 - 真实生产 trace 的实测 token 分布（Azure 2023/2024、Mooncake FAST'25、BurstGPT、DistServe 代理数据集）
 - 我们当前 adapter knob set 与上面两者的差距分析（"我们能表达什么、不能表达什么"）
-- **10 个 inference scenario 官方模板的完整规格表**：`scenario / tool / config (经 schema 校验) / tags / name 中英 / description 中英 / 主测 KPI / 证据来源`
+- **10 个 inference scenario 官方模板**：完整规格表 + 通过 `apps/api/prisma/seed.ts` 入库（每条 config 跑过 adapter zod schema + `applyScenarioConstraints("inference", tool)` 校验）
+- **5 个已有 evaluation_profiles 内置也迁过来**：原来 INSERT 在 `20260507063541_..._llm_judge` migration 里，这次一起搬到 seed.ts、那条 migration 改成纯 schema
+- 配套：`package.json#prisma.seed = "tsx prisma/seed.ts"`、`db:seed` script、CLAUDE.md 新章节 "Seeding built-in / official content"
+- 测试 DB bootstrap：`vitest globalSetup` 在 `prisma migrate deploy` 之后追加 `prisma db seed`，让 `pnpm -r test` 看到内置数据；`db:setup:test` script 也对齐
 
-**Out (本文档不做)：**
-- 把模板写进 Prisma seed / migration（等本文档通过审阅之后另起 PR）
+**Out (本 PR 不做，挂 §8 v2 清单)：**
 - 新增 scenario id（RAG/多轮等只作为 inference 下的预置，不改代码）
-- 新增 adapter 或 adapter knob（gap 分析里会列，但都进 v2 工作清单）
-- capacity / gateway / prefix-cache-validation 三个 scenario 的官方模板（用户在脑暴中明确仅覆盖 inference）
+- 新增 adapter 或 adapter knob（gap 分析里会列，都进 v2 工作清单）
+- capacity / gateway / prefix-cache-validation 三个 scenario 的官方模板（脑暴中明确仅覆盖 inference）
+- `name_key` / `description_key` 列让 official 模板支持 en-US（v1 zh-CN-only）
 
 ---
 
@@ -554,16 +557,27 @@ DEFAULT_OUTPUT_LEN = 128
 
 ---
 
-## 9. 落盘策略（本 PR 不实施）
+## 9. 落盘（本 PR 实施）
 
-审过本文档后，下一个 PR 的标准动作：
+最终落地形态（和原方案的差异都在 review 期间和用户对齐过）：
 
-1. 新建 `apps/api/prisma/seed/official-templates.ts`，import `BenchmarkTemplate` zod schema，导出 10 个 const，**每个都过 `benchmarkTemplateSchema.parse` + `applyScenarioConstraints("inference", tool).parse(config)` 双校验**。
-2. Prisma migration（`pnpm prisma migrate dev --create-only`）执行 `INSERT … ON CONFLICT DO UPDATE` upsert（用 `name` + `isOfficial=true` 做唯一键，或加一个 `slug` 字段——这是一个开放设计选择，留给执行 PR 决定）。
-3. i18n key 入 `apps/web/src/locales/{zh-CN,en-US}/benchmark-templates.json` 的 `official.<slug>.{name,description}` 命名空间，列表渲染时用 i18n key 替换 DB 里的 `name/description`（DB 里存 fallback 文案）。
-4. e2e 增一条 `apps/api/test/e2e/benchmark-template.e2e-spec.ts` 用例：seed 跑完之后 `GET /api/benchmark-templates?isOfficial=true` 应该返回 10 条，每条的 `config` 都过 adapter schema 校验。
+1. **`apps/api/prisma/seed.ts`**（不是 `seed/official-templates.ts` 子目录——Prisma 默认 `package.json#prisma.seed` 期望单文件入口）。文件里同时定义 `EVALUATION_PROFILES`（5 条）+ `BENCHMARK_TEMPLATES`（10 条）。
+2. **不用单独的 INSERT migration**——这是和原方案的核心差异。之前打算"empty migration + 手写 INSERT"，user 提出后改成业内标准 seed.ts 模式：schema 走 migration、数据走 seed，互不混合。
+3. **Idempotent upsert 凭稳定标识符**：
+   - `benchmark_templates`：`where: { id: 'tpl_official_<slug>' }`
+   - `evaluation_profiles`：`where: { slug: '...' }`（slug 是该表的域稳定键，有 unique 索引）
+4. **每条 row 入库前走 zod**：模板过 `guidellm|genai-perf paramsSchema` + `applyScenarioConstraints(scenario, tool)`；profile rules 过 `profileRulesSchema`。如果哪条 seed 数据违反 schema，seed 直接抛错——构建时发现，不让脏数据进库。
+5. **触发时机**：
+   - dev：`pnpm prisma migrate dev / reset` 后 Prisma 自动跑 seed（package.json hook）
+   - test：`apps/api/test/setup/global-setup.mts` 在 `migrate deploy` 后显式跑 `prisma db seed`
+   - prod：deploy pipeline 需要在 `prisma migrate deploy` 后显式跑 `pnpm prisma db seed`（Prisma 故意不让 deploy 自动 seed）
+6. **i18n（v2 推迟）**：原计划同时入 `official.<slug>.{name,description}` i18n key。现状 v1 只存 zh-CN 到 DB 字段；en-US 用户暂时看到中文。要做完整 i18n 需要：(a) 给 `benchmark_templates` 加 `name_key` / `description_key` 列（对齐 `evaluation_profiles.name_key` 既有模式）、(b) FE 列表用 `t(nameKey, fallback=name)`、(c) locale 文件加 `official.*` 命名空间。挂 §8 第 1 条。
+7. **测试**：
+   - `apps/api/src/modules/insights/evaluation-profile.service.spec.ts` 原本断言"5 个内置存在"——globalSetup 加 `prisma db seed` 之后仍然过
+   - `pnpm -F @modeldoctor/api test` 本地 74 文件 / 546 测试全过
+   - 没加专门的 "official templates exist after seed" e2e 用例（globalSetup 已经保证了，再写一条就是自我引用）
 
-**安全网**：seed 用 idempotent upsert（不是 truncate-insert），重复跑不会脏数据；用户自建模板和官方模板用 `isOfficial` 区分，seed 永不动 `isOfficial=false` 的行。
+**安全网**：upsert 用稳定 id/slug、`isBuiltin`/`isOfficial=true` 强制写死、`update` 块永不覆盖 `id`/`slug`。用户自建模板（`isOfficial=false`、`createdBy!=null`）和官方模板分隔得很清楚，seed 永不动 `isOfficial=false` 的行。
 
 ---
 
