@@ -83,14 +83,10 @@ async def session_run(
     max_tokens: int,
     seed: str,
 ) -> list[tuple]:
-    history: list[dict[str, str]] = [
-        {"role": "system", "content": make_scenario(sess_id, seed)}
-    ]
+    history: list[dict[str, str]] = [{"role": "system", "content": make_scenario(sess_id, seed)}]
     rows: list[tuple] = []
     for turn in range(turns):
-        history.append(
-            {"role": "user", "content": QUESTIONS[turn % len(QUESTIONS)]}
-        )
+        history.append({"role": "user", "content": QUESTIONS[turn % len(QUESTIONS)]})
         body = {
             "model": model,
             "messages": history,
@@ -105,9 +101,7 @@ async def session_run(
         pt = 0
         ct = 0
         try:
-            async with client.stream(
-                "POST", base_path, json=body, timeout=120
-            ) as resp:
+            async with client.stream("POST", base_path, json=body, timeout=120) as resp:
                 if resp.status_code != 200:
                     rows.append(
                         (
@@ -133,10 +127,7 @@ async def session_run(
                     except Exception:
                         continue
                     if d.get("choices"):
-                        delta = (
-                            d["choices"][0].get("delta", {}).get("content", "")
-                            or ""
-                        )
+                        delta = d["choices"][0].get("delta", {}).get("content", "") or ""
                         if delta and ttft is None:
                             ttft = time.time() - t0
                         content += delta
@@ -145,9 +136,7 @@ async def session_run(
                         ct = d["usage"].get("completion_tokens", ct)
             elapsed = time.time() - t0
             history.append({"role": "assistant", "content": content})
-            rows.append(
-                ("ok", sess_id, turn, pt, ct, ttft or 0.0, elapsed)
-            )
+            rows.append(("ok", sess_id, turn, pt, ct, ttft or 0.0, elapsed))
         except Exception as e:
             elapsed = time.time() - t0
             rows.append(
@@ -186,9 +175,7 @@ async def worker(
         path = "/v1/chat/completions"
         while time.time() < deadline:
             sess_id = random.randrange(num_sessions)
-            rows = await session_run(
-                client, path, model, sess_id, turns, max_tokens, seed
-            )
+            rows = await session_run(client, path, model, sess_id, turns, max_tokens, seed)
             async with lock:
                 results.extend(rows)
 
@@ -253,9 +240,7 @@ async def snapshot_prom_all(prom: str | None, model: str) -> dict[str, int]:
     return out
 
 
-async def scrape_backend_counters(
-    base_url: str, api_key: str
-) -> tuple[str, dict[str, float]]:
+async def scrape_backend_counters(base_url: str, api_key: str) -> tuple[str, dict[str, float]]:
     """Scrape vLLM /metrics and pull lmcache:* / yrcache_* counters.
     Returns (nameGuess, {metric_name_with_labels: value}). Aggregates across
     label sets per metric name (summing) to match the diff scripts shipped
@@ -308,13 +293,9 @@ async def scrape_backend_counters(
 async def main_async(args: argparse.Namespace) -> int:
     api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
-        print("[stress] WARN: OPENAI_API_KEY not set; sending unauthenticated",
-              file=sys.stderr)
+        print("[stress] WARN: OPENAI_API_KEY not set; sending unauthenticated", file=sys.stderr)
 
-    print(
-        f"BASE_URL={args.base_url}  MODEL={args.model}  API_KEY="
-        f"{'set' if api_key else 'unset'}"
-    )
+    print(f"BASE_URL={args.base_url}  MODEL={args.model}  API_KEY={'set' if api_key else 'unset'}")
     print(
         f"NUM_SESSIONS={args.num_sessions}  TURNS={args.turns}  "
         f"CONCURRENCY={args.concurrency}  MAX_TOKENS={args.max_tokens}  "
@@ -356,9 +337,7 @@ async def main_async(args: argparse.Namespace) -> int:
     # Optional post-bench Prom snapshot.
     prom_after = await snapshot_prom_all(args.prom_url, args.model)
 
-    backend_name, backend_counters = await scrape_backend_counters(
-        args.base_url, api_key
-    )
+    backend_name, backend_counters = await scrape_backend_counters(args.base_url, api_key)
 
     ok_rows = [r for r in results if r[0] == "ok"]
     err_count = len(results) - len(ok_rows)
@@ -382,8 +361,7 @@ async def main_async(args: argparse.Namespace) -> int:
         )
         delta_pt = max(
             0,
-            prom_after.get("prompt_tokens_total", 0)
-            - prom_before.get("prompt_tokens_total", 0),
+            prom_after.get("prompt_tokens_total", 0) - prom_before.get("prompt_tokens_total", 0),
         )
         delta_cached = max(
             0,
@@ -398,9 +376,7 @@ async def main_async(args: argparse.Namespace) -> int:
         if delta_q > 0:
             prom_block["hbmHitRatePct"] = round(100.0 * delta_h / delta_q, 2)
         if delta_pt > 0:
-            prom_block["prefixCacheSavingsPct"] = round(
-                100.0 * delta_cached / delta_pt, 2
-            )
+            prom_block["prefixCacheSavingsPct"] = round(100.0 * delta_cached / delta_pt, 2)
         prom_block["promptTokensTotalDelta"] = delta_pt
         prom_block["generationTokensTotalDelta"] = delta_gen
 
@@ -449,27 +425,24 @@ async def main_async(args: argparse.Namespace) -> int:
     )
     print(f"backend.nameGuess  = {report['backend']['nameGuess']}")
     if prom_block.get("prefixCacheSavingsPct") is not None:
-        print(
-            f"prefix_cache_savings_pct = {prom_block['prefixCacheSavingsPct']}"
-        )
+        print(f"prefix_cache_savings_pct = {prom_block['prefixCacheSavingsPct']}")
 
     return 0
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--base-url", required=True,
-                   help="OpenAI-compatible base URL (no /v1/...)")
+    p.add_argument("--base-url", required=True, help="OpenAI-compatible base URL (no /v1/...)")
     p.add_argument("--model", required=True)
     p.add_argument("--num-sessions", type=int, required=True)
     p.add_argument("--turns", type=int, required=True)
     p.add_argument("--concurrency", type=int, required=True)
     p.add_argument("--max-tokens", type=int, required=True)
-    p.add_argument("--duration", type=int, required=True,
-                   help="bench wall-clock seconds")
+    p.add_argument("--duration", type=int, required=True, help="bench wall-clock seconds")
     p.add_argument("--system-prompt-seed", required=True)
-    p.add_argument("--prom-url", default=None,
-                   help="Optional Prometheus base URL for delta snapshot")
+    p.add_argument(
+        "--prom-url", default=None, help="Optional Prometheus base URL for delta snapshot"
+    )
     p.add_argument("--out", default="result.json")
     args = p.parse_args()
     return asyncio.run(main_async(args))
