@@ -87,7 +87,7 @@ export class SynthesizeService {
     connectionId: string,
     body: SynthesizeRequest,
   ): Promise<SynthesizeResponse> {
-    const provider = await this.judge.getDecrypted(userId);
+    const provider = await this.judge.getDecrypted();
     if (!provider || !provider.enabled)
       throw new NotFoundException("LLM provider not configured or disabled");
 

@@ -4,6 +4,8 @@ export const PublicUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   roles: z.array(z.string()),
+  displayName: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
   createdAt: z.string(), // ISO
 });
 export type PublicUser = z.infer<typeof PublicUserSchema>;
@@ -30,3 +32,25 @@ export type AuthTokenResponse = z.infer<typeof AuthTokenResponseSchema>;
 
 export const MeResponseSchema = PublicUserSchema;
 export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+// Profile updates. Both fields optional — server only mutates what's sent.
+// avatarUrl accepts either an external URL or a base64 data URL (PNG/JPEG/WebP).
+// Cap data URLs at 256KB total string length to bound the row size.
+export const UpdateProfileRequestSchema = z.object({
+  displayName: z.string().trim().min(1).max(60).nullable().optional(),
+  avatarUrl: z
+    .string()
+    .max(256 * 1024)
+    .nullable()
+    .optional()
+    .refine((v) => v == null || v === "" || v.startsWith("data:image/") || /^https?:\/\//.test(v), {
+      message: "avatarUrl must be a data:image/* URL or http(s) URL",
+    }),
+});
+export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
+
+export const ChangePasswordRequestSchema = z.object({
+  currentPassword: z.string().min(8).max(200),
+  newPassword: z.string().min(8).max(200),
+});
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;

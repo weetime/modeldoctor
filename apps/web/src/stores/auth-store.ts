@@ -9,6 +9,7 @@ interface AuthState {
   accessTokenExpiresAt: string | null;
   user: PublicUser | null;
   setAuth: (accessToken: string, user: PublicUser, accessTokenExpiresAt: string) => void;
+  setUser: (user: PublicUser) => void;
   clear: () => void;
 }
 
@@ -20,5 +21,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   setAuth: (accessToken, user, accessTokenExpiresAt) =>
     set({ accessToken, user, accessTokenExpiresAt }),
+  setUser: (user) => set({ user }),
   clear: () => set({ accessToken: null, user: null, accessTokenExpiresAt: null }),
 }));

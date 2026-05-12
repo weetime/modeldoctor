@@ -16,8 +16,8 @@
     "buildMode": "Build mode"
   },
   "ai": {
-    "title": "AI Diagnostics",
-    "description": "Connect a custom LLM judge provider. API keys are stored encrypted.",
+    "title": "AI Diagnostics (Global)",
+    "description": "Workspace-wide LLM judge provider used by AI-assisted insights. Shared across every user in this installation. API keys are stored encrypted.",
     "enabled": "Enabled",
     "baseUrl": "Base URL",
     "model": "Model",

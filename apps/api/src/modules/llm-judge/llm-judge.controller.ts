@@ -9,10 +9,8 @@ import {
   upsertLlmJudgeProviderSchema,
 } from "@modeldoctor/contracts";
 import { Body, Controller, Delete, Get, HttpCode, Post, Put, UseGuards } from "@nestjs/common";
-import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
-import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "./llm-judge.service.js";
 
@@ -22,34 +20,31 @@ export class LlmJudgeController {
   constructor(private readonly svc: LlmJudgeService) {}
 
   @Get("provider")
-  async get(@CurrentUser() user: JwtPayload) {
-    const p = await this.svc.getPublic(user.sub);
+  async get() {
+    const p = await this.svc.getPublic();
     return p ? llmJudgeProviderPublicSchema.parse(p) : null;
   }
 
   @Put("provider")
   async put(
-    @CurrentUser() user: JwtPayload,
     @Body(new ZodValidationPipe(upsertLlmJudgeProviderSchema)) body: UpsertLlmJudgeProvider,
   ) {
-    return this.svc.upsert(user.sub, body);
+    return this.svc.upsert(body);
   }
 
   @Delete("provider")
   @HttpCode(204)
-  async del(@CurrentUser() user: JwtPayload) {
-    await this.svc.delete(user.sub);
+  async del() {
+    await this.svc.delete();
   }
 
   @Post("test")
   async test(
-    @CurrentUser() user: JwtPayload,
     @Body(new ZodValidationPipe(testLlmJudgeRequestSchema)) body: TestLlmJudgeRequest,
   ): Promise<TestLlmJudgeResponse> {
-    // Resolve apiKey: prefer the request body, otherwise decrypt the saved provider's key.
     let apiKey = body.apiKey;
     if (!apiKey) {
-      const saved = await this.svc.getDecrypted(user.sub);
+      const saved = await this.svc.getDecrypted();
       if (!saved) {
         return testLlmJudgeResponseSchema.parse({
           ok: false,

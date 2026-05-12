@@ -5,6 +5,8 @@ const mockUser = {
   id: "user-1",
   email: "test@example.com",
   roles: ["user"],
+  displayName: null,
+  avatarUrl: null,
   createdAt: new Date().toISOString(),
 };
 

@@ -18,6 +18,10 @@ import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
+import { MeLayout } from "@/features/me/MeLayout";
+import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
+import { ProfilePage } from "@/features/me/ProfilePage";
+import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -26,7 +30,6 @@ import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage"
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
-import { SettingsNotificationsPage } from "@/features/settings/NotificationsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
 import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
@@ -75,8 +78,18 @@ export const routes: RouteObject[] = [
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
+          {
+            path: "me",
+            element: <MeLayout />,
+            children: [
+              { index: true, element: <Navigate to="/me/profile" replace /> },
+              { path: "profile", element: <ProfilePage /> },
+              { path: "security", element: <SecurityPage /> },
+              { path: "notifications", element: <MeNotificationsPage /> },
+            ],
+          },
           { path: "settings", element: <SettingsPage /> },
-          { path: "settings/notifications", element: <SettingsNotificationsPage /> },
+          { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },
