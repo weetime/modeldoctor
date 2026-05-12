@@ -39,7 +39,7 @@ describe("/api/saved-compares (e2e)", () => {
 
   beforeEach(async () => {
     await prisma.savedCompare.deleteMany();
-    await prisma.llmJudgeProvider.deleteMany({ where: { userId } });
+    await prisma.llmJudgeProvider.deleteMany();
     await prisma.benchmark.deleteMany({ where: { userId } });
     const b1 = await prisma.benchmark.create({
       data: {

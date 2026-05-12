@@ -38,7 +38,7 @@ export class CompareSynthesizeService {
     const sc = await this.svc.getHydrated(userId, id);
     if (!sc) throw new NotFoundException("SavedCompare not found");
 
-    const provider = await this.llmJudge.getDecrypted(userId);
+    const provider = await this.llmJudge.getDecrypted();
     if (!provider || !provider.enabled) {
       throw new ServiceUnavailableException("LLM provider not configured");
     }
