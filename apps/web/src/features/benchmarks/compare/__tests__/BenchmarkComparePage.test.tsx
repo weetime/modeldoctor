@@ -21,6 +21,29 @@ vi.mock("@/lib/api-client", () => {
 import { api } from "@/lib/api-client";
 import { BenchmarkComparePage } from "../BenchmarkComparePage";
 
+/**
+ * Wires `api.get(url)` to a per-id Benchmark map: any `/api/benchmarks/{id}`
+ * call resolves with the matching benchmark (or rejects with `errors[id]`),
+ * and the AI judge provider call always resolves to `null` (disabled). This
+ * isolates the test from call-ordering when the page also fires
+ * `useLlmJudgeProvider` for the AiAnalysisPanel gating.
+ */
+function mockApiGet(
+  benchmarks: Record<string, Benchmark>,
+  errors: Record<string, Error & { status?: number }> = {},
+) {
+  vi.mocked(api.get).mockImplementation(async (url: string) => {
+    if (url === "/api/llm-judge/provider") return null as never;
+    const m = url.match(/\/api\/benchmarks\/([^/]+)$/);
+    if (m) {
+      const id = m[1];
+      if (errors[id]) throw errors[id];
+      if (benchmarks[id]) return benchmarks[id] as never;
+    }
+    return null as never;
+  });
+}
+
 function makeBenchmark(
   id: string,
   tool: Benchmark["tool"] = "guidellm",
@@ -86,6 +109,10 @@ function renderPage(initialUrl: string) {
 describe("BenchmarkComparePage", () => {
   beforeEach(() => {
     vi.mocked(api.get).mockReset();
+    // Default: every test fires `useLlmJudgeProvider` (always-enabled query in
+    // the page). Stub it to `null` so non-happy-path tests that don't call
+    // `mockApiGet` don't see "Query data cannot be undefined" warnings.
+    mockApiGet({});
   });
 
   it("renders empty state when only one id", () => {
@@ -94,31 +121,30 @@ describe("BenchmarkComparePage", () => {
   });
 
   it("happy path: renders grid for 2 same-tool benchmarks", async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce(makeBenchmark("a"))
-      .mockResolvedValueOnce(makeBenchmark("b"));
+    mockApiGet({ a: makeBenchmark("a"), b: makeBenchmark("b") });
     renderPage("/benchmarks/compare?ids=a,b");
-    // Run name "a" appears in BOTH the toolbar <option> and the grid <TableHead>;
-    // same for "b". Using getAllByText to disambiguate.
+    // Run name "a" appears in the toolbar <option>, the grid <TableHead>,
+    // AND now in the ReportSections test-matrix table — using getAllByText
+    // to handle multiple occurrences. Same for "b".
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
     expect(screen.getAllByText("b").length).toBeGreaterThan(0);
   });
 
   it("happy path: renders grid for 4 same-tool benchmarks", async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce(makeBenchmark("a"))
-      .mockResolvedValueOnce(makeBenchmark("b"))
-      .mockResolvedValueOnce(makeBenchmark("c"))
-      .mockResolvedValueOnce(makeBenchmark("d"));
+    mockApiGet({
+      a: makeBenchmark("a"),
+      b: makeBenchmark("b"),
+      c: makeBenchmark("c"),
+      d: makeBenchmark("d"),
+    });
     renderPage("/benchmarks/compare?ids=a,b,c,d");
-    // Run name appears in BOTH toolbar <option> and grid <TableHead>.
+    // Run name appears in toolbar <option>, grid <TableHead>, and the
+    // ReportSections test-matrix row.
     await waitFor(() => expect(screen.getAllByText("d").length).toBeGreaterThan(0));
   });
 
   it("shows mixed-tools alert and no grid when tools differ", async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce(makeBenchmark("a", "guidellm"))
-      .mockResolvedValueOnce(makeBenchmark("b", "vegeta"));
+    mockApiGet({ a: makeBenchmark("a", "guidellm"), b: makeBenchmark("b", "vegeta") });
     renderPage("/benchmarks/compare?ids=a,b");
     await waitFor(() =>
       expect(
@@ -130,9 +156,10 @@ describe("BenchmarkComparePage", () => {
   it("shows mixed-scenarios alert and no grid when scenarios differ", async () => {
     // inference + gateway is the canonical cross-scenario case (each uses a
     // different tool, but the scenario gate fires first regardless).
-    vi.mocked(api.get)
-      .mockResolvedValueOnce(makeBenchmark("a", "guidellm", 200, "inference"))
-      .mockResolvedValueOnce(makeBenchmark("b", "vegeta", 200, "gateway"));
+    mockApiGet({
+      a: makeBenchmark("a", "guidellm", 200, "inference"),
+      b: makeBenchmark("b", "vegeta", 200, "gateway"),
+    });
     renderPage("/benchmarks/compare?ids=a,b");
     await waitFor(() =>
       expect(
@@ -140,8 +167,8 @@ describe("BenchmarkComparePage", () => {
       ).toBeInTheDocument(),
     );
     // Grid headers (the run name "a" / "b") would appear ≥1 time inside
-    // the table when rendered. Toolbar is also suppressed on mixed scenarios,
-    // so neither "a" nor "b" should appear anywhere on the page.
+    // the table when rendered. Toolbar + ReportSections are also suppressed on
+    // mixed scenarios, so neither "a" nor "b" should appear anywhere on the page.
     expect(screen.queryByText("a")).not.toBeInTheDocument();
     expect(screen.queryByText("b")).not.toBeInTheDocument();
   });
@@ -159,7 +186,7 @@ describe("BenchmarkComparePage", () => {
   it("shows partial alert when one of the benchmarks 404s", async () => {
     const err = new Error("not found") as Error & { status: number };
     err.status = 404;
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark("a")).mockRejectedValueOnce(err);
+    mockApiGet({ a: makeBenchmark("a") }, { b: err });
     renderPage("/benchmarks/compare?ids=a,b");
     // Alert reports the lost benchmark; with only 1 surviving the >=2 gate
     // keeps the grid hidden — only the alert + page header should show.
@@ -169,9 +196,10 @@ describe("BenchmarkComparePage", () => {
   });
 
   it("breadcrumb scenario crumb points to /benchmarks/:scenario derived from loaded benchmarks", async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce(makeBenchmark("a", "guidellm", 200, "inference"))
-      .mockResolvedValueOnce(makeBenchmark("b", "guidellm", 180, "inference"));
+    mockApiGet({
+      a: makeBenchmark("a", "guidellm", 200, "inference"),
+      b: makeBenchmark("b", "guidellm", 180, "inference"),
+    });
     renderPage("/benchmarks/compare?ids=a,b");
     // Wait for the grid to render (both benchmarks loaded)
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
@@ -186,7 +214,7 @@ describe("BenchmarkComparePage", () => {
     // baselineFor-non-null Benchmark and override the user's None choice.
     const a = makeBenchmark("a", "guidellm");
     a.baselineFor = { id: "b_1", name: "anchor", createdAt: "2026-05-01T00:00:00.000Z" };
-    vi.mocked(api.get).mockResolvedValueOnce(a).mockResolvedValueOnce(makeBenchmark("b"));
+    mockApiGet({ a, b: makeBenchmark("b") });
     renderPage("/benchmarks/compare?ids=a,b&baseline=none");
     // Toolbar dropdown is the visible signal: with None selected the
     // Select trigger shows the first item ("None (no verdict)" /

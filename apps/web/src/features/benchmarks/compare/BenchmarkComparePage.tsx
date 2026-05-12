@@ -2,16 +2,33 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useLlmJudgeProvider } from "@/features/settings/queries";
 import type { Benchmark, ScenarioId } from "@modeldoctor/contracts";
 import { useQueries } from "@tanstack/react-query";
 import { ArrowLeft, ListChecks } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
-import { CompareGrid } from "./CompareGrid";
+import { AiAnalysisPanel } from "./AiAnalysisPanel";
 import { CompareToolbar } from "./CompareToolbar";
+import { type ReportRun, ReportSections } from "./ReportSections";
+import { SaveCompareDialog } from "./SaveCompareDialog";
+
+function extractParamsSummary(params: unknown): {
+  workload?: string;
+  concurrency?: number;
+  duration?: number;
+} {
+  if (!params || typeof params !== "object") return {};
+  const p = params as Record<string, unknown>;
+  return {
+    workload: typeof p.workload === "string" ? p.workload : undefined,
+    concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
+    duration: typeof p.duration === "number" ? p.duration : undefined,
+  };
+}
 
 const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   inference: "benchmarkInference",
@@ -32,6 +49,8 @@ export function BenchmarkComparePage() {
   const { t } = useTranslation("benchmarks");
   const { t: tSidebar } = useTranslation("sidebar");
   const [searchParams, setSearchParams] = useSearchParams();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const provider = useLlmJudgeProvider();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
   //   - missing            → "user hasn't chosen yet, fall back to inferred default"
@@ -144,6 +163,19 @@ export function BenchmarkComparePage() {
         })
       : "";
 
+  const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
+    id: b.id,
+    stageLabel: b.name ?? `R${i + 1}`,
+    tool: b.tool,
+    scenario: b.scenario,
+    summaryMetrics: b.summaryMetrics,
+    benchmark: b,
+    paramsSummary: extractParamsSummary(b.params),
+  }));
+  const environmentLines = successfulBenchmarks.map(
+    (b) => `${b.name ?? b.id} · ${b.tool} · ${b.scenario}`,
+  );
+
   return (
     <>
       <PageHeader title={t("compare.title")} subtitle={subtitle} breadcrumbs={breadcrumbs} />
@@ -183,7 +215,32 @@ export function BenchmarkComparePage() {
               baselineId={defaultBaseline}
               onBaselineChange={handleBaselineChange}
             />
-            <CompareGrid runs={successfulBenchmarks} baselineId={defaultBaseline} />
+            <div className="flex items-center justify-between">
+              <Button variant="outline" asChild>
+                <Link to="/benchmarks/compare/saved">{t("savedCompare.savedListLink")}</Link>
+              </Button>
+              <Button onClick={() => setSaveOpen(true)}>{t("savedCompare.saveButton")}</Button>
+            </div>
+            <ReportSections
+              runs={reportRuns}
+              baselineId={defaultBaseline}
+              narrative={null}
+              context={null}
+              environmentLines={environmentLines}
+            />
+            <AiAnalysisPanel
+              narrative={null}
+              onGenerate={() => setSaveOpen(true)}
+              canGenerate={!!provider.data?.enabled}
+              isGenerating={false}
+            />
+            <SaveCompareDialog
+              open={saveOpen}
+              onOpenChange={setSaveOpen}
+              runs={successfulBenchmarks.map((r) => ({ id: r.id, name: r.name, tool: r.tool }))}
+              baselineId={defaultBaseline}
+              context=""
+            />
           </>
         )}
       </div>
