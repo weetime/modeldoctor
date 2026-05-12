@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import pLimit from "p-limit";
 import type { JudgeConfig } from "@modeldoctor/contracts";
 import type { EndpointCaller } from "../endpoint-caller.js";
@@ -27,7 +27,7 @@ export class QualityGateRunExecutor implements OnModuleInit {
   constructor(
     private readonly repo: RunsRepository,
     private readonly endpointCaller: EndpointCaller,
-    private readonly judges: JudgeRegistry,
+    @Inject("JUDGE_REGISTRY") private readonly judges: JudgeRegistry,
   ) {}
 
   async onModuleInit() {
