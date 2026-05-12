@@ -10,9 +10,9 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { z } from "zod";
 import {
   type CreateEvaluationRequest,
-  type ImportEvaluationRequest,
   type UpdateEvaluationRequest,
   createEvaluationRequestSchema,
   importEvaluationRequestSchema,
@@ -23,6 +23,11 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js"
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
 import { EvaluationsService } from "../services/evaluations.service.js";
+
+const importBodySchema = z.object({
+  name: z.string().min(1).max(200),
+  import: importEvaluationRequestSchema,
+});
 
 @Controller("quality-gate/evaluations")
 @UseGuards(JwtAuthGuard)
@@ -67,9 +72,8 @@ export class EvaluationsController {
   @Post("import")
   importSet(
     @CurrentUser() user: JwtPayload,
-    @Body() body: { name: string; import: ImportEvaluationRequest },
+    @Body(new ZodValidationPipe(importBodySchema)) body: z.infer<typeof importBodySchema>,
   ) {
-    const parsed = importEvaluationRequestSchema.parse(body.import);
-    return this.svc.import(user.sub, body.name, parsed);
+    return this.svc.import(user.sub, body.name, body.import);
   }
 }

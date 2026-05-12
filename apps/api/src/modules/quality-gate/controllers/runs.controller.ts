@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -59,6 +60,7 @@ export class RunsController {
   }
 
   @Delete(":id")
+  @HttpCode(204)
   remove(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.svc.delete(user.sub, id);
   }
