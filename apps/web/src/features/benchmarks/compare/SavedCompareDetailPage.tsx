@@ -41,6 +41,7 @@ export function SavedCompareDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const { t } = useTranslation("benchmarks");
   const { t: tSidebar } = useTranslation("sidebar");
+  const { t: tQg } = useTranslation("quality-gate");
   const navigate = useNavigate();
   const query = useSavedCompare(id);
   const provider = useLlmJudgeProvider();
@@ -148,7 +149,7 @@ export function SavedCompareDetailPage() {
         />
         {sc.evaluationRuns && sc.evaluationRuns.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-sm font-medium mb-2">质量评测</h3>
+            <h3 className="text-sm font-medium mb-2">{tQg("savedCompare.section")}</h3>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
               {sc.evaluationRuns.map((r) => (
                 <Card key={r.id} className="p-3 space-y-2">
@@ -162,18 +163,18 @@ export function SavedCompareDetailPage() {
                     {sc.stageLabels[r.id] ?? r.id.slice(0, 8)}
                   </div>
                   <div className="text-sm">
-                    通过率 A:{" "}
+                    {tQg("savedCompare.passRateA")}:{" "}
                     {r.aggregateMetrics?.passRateA != null
                       ? `${(r.aggregateMetrics.passRateA * 100).toFixed(1)}%`
-                      : "—"}
+                      : tQg("savedCompare.unknown")}
                   </div>
                   {r.aggregateMetrics?.passRateB != null && (
                     <div className="text-sm">
-                      通过率 B: {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
+                      {tQg("savedCompare.passRateB")}: {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
                     </div>
                   )}
                   {r.aggregateMetrics?.regressionCount != null && (
-                    <div className="text-sm">回归: {r.aggregateMetrics.regressionCount}</div>
+                    <div className="text-sm">{tQg("savedCompare.regression")}: {r.aggregateMetrics.regressionCount}</div>
                   )}
                 </Card>
               ))}

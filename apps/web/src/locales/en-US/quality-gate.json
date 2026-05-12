@@ -120,6 +120,13 @@
       "confirm": "Delete"
     }
   },
+  "savedCompare": {
+    "section": "Quality Evaluations",
+    "passRateA": "Pass Rate A",
+    "passRateB": "Pass Rate B",
+    "regression": "Regressions",
+    "unknown": "—"
+  },
   "common": { "loading": "Loading…", "actions": "Actions" },
   "playground": {
     "bannerTitle": "Reproduced from evaluation · sample #{{suffix}}",

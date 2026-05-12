@@ -120,6 +120,13 @@
       "confirm": "删除"
     }
   },
+  "savedCompare": {
+    "section": "质量评测",
+    "passRateA": "通过率 A",
+    "passRateB": "通过率 B",
+    "regression": "回归",
+    "unknown": "—"
+  },
   "common": { "loading": "加载中…", "actions": "操作" },
   "playground": {
     "bannerTitle": "复现自评测 · 样本 #{{suffix}}",
