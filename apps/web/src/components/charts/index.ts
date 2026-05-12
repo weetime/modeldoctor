@@ -44,6 +44,9 @@ export type { LineTimeseriesProps, LineTimeseriesSeries } from "./LineTimeseries
 export { BarChart as BarChartPanel } from "./BarChart";
 export type { BarChartProps, BarChartSeries } from "./BarChart";
 
+export { StageBarChart } from "./StageBarChart";
+export type { StageBarChartProps, StageBarDatum, StageBarSeries } from "./StageBarChart";
+
 export { PieChart as PieChartPanel } from "./PieChart";
 export type { PieChartProps, PieDatum } from "./PieChart";
 

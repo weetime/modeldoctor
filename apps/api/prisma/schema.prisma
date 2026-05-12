@@ -26,6 +26,7 @@ model User {
   createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
   createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
   notificationChannels NotificationChannel[]
+  savedCompares        SavedCompare[]
 
   @@index([email])
   @@map("users")
@@ -315,4 +316,23 @@ model NotificationDelivery {
 
   @@index([status, nextRetryAt])
   @@map("notification_deliveries")
+}
+
+model SavedCompare {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  name         String
+  benchmarkIds String[]  @map("benchmark_ids")
+  stageLabels  Json      @map("stage_labels")
+  baselineId   String?   @map("baseline_id")
+  context      String?   @db.Text
+  narrative    Json?
+  narrativeAt  DateTime? @map("narrative_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("saved_compares")
 }

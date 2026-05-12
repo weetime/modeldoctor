@@ -12,6 +12,8 @@ import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInference
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
+import { SavedCompareDetailPage } from "@/features/benchmarks/compare/SavedCompareDetailPage";
+import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DeploymentRecipesPage } from "@/features/deployment-recipes";
 import { DevChartsPage } from "@/features/dev-charts";
@@ -67,6 +69,8 @@ export const routes: RouteObject[] = [
             element: <BenchmarkPrefixCachePage />,
           },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
+          { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
+          { path: "benchmarks/compare/saved/:id", element: <SavedCompareDetailPage /> },
           { path: "benchmarks/reports", element: <EndpointReportsPage /> },
           { path: "benchmarks/reports/:connectionId", element: <RedirectToInsights /> },
           { path: "insights/:connectionId", element: <InsightsDetailPage /> },

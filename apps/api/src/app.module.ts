@@ -26,6 +26,7 @@ import { LlmJudgeModule } from "./modules/llm-judge/llm-judge.module.js";
 import { McpModule } from "./modules/mcp/mcp.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
+import { SavedComparesModule } from "./modules/saved-compares/saved-compares.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
@@ -70,6 +71,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     }),
     HealthModule,
     InsightsModule,
+    SavedComparesModule,
     LlmJudgeModule,
     DebugProxyModule,
     DiagnosticsModule,

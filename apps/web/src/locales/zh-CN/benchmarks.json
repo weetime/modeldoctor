@@ -325,6 +325,59 @@
       "throughput": "吞吐 (req/s)"
     }
   },
+  "savedCompare": {
+    "saveButton": "保存对比",
+    "savedListLink": "历史对比",
+    "dialog": {
+      "title": "保存为可分享对比报告",
+      "nameLabel": "名称",
+      "namePlaceholder": "如：Qwen3 + KV Cache 横评",
+      "stageLabelsTitle": "档位标签",
+      "stageLabelsHint": "给每个 run 一个简短标签（如 A / Y-CPU），会出现在图表 X 轴与表头",
+      "contextLabel": "测试环境与上下文（可选）",
+      "contextPlaceholder": "硬件、镜像版本、为什么对比、已知踩坑……",
+      "submit": "保存并跳转",
+      "cancel": "取消"
+    },
+    "list": {
+      "title": "已保存的对比",
+      "empty": "尚无已保存的对比。在 Compare 页点击「保存对比」开始。",
+      "columnName": "名称",
+      "columnRuns": "run 数",
+      "columnCreated": "创建时间",
+      "columnActions": "操作"
+    },
+    "detail": {
+      "regenerate": "重新生成 AI 分析",
+      "export": "导出 HTML",
+      "editName": "编辑名称",
+      "editContext": "编辑上下文",
+      "deleteTitle": "删除该对比报告",
+      "deleteBody": "此操作不可撤销。",
+      "missingBenchmark": "数据已删除"
+    },
+    "report": {
+      "sectionTldr": "概述 / TL;DR",
+      "sectionMatrix": "测试矩阵",
+      "sectionGrid": "关键指标对比",
+      "sectionCharts": "图表",
+      "sectionAnalysis": "分析",
+      "sectionConclusion": "结论与选型建议",
+      "sectionEnv": "测试环境",
+      "chartQpsTitle": "QPS",
+      "chartErrTitle": "错误率",
+      "chartTtftTitle": "TTFT 分位（ms）",
+      "chartE2eTitle": "e2e 延迟分位（ms）",
+      "chartExtraTitle": "缓存命中 / 额外指标",
+      "narrativeMissing": "尚未生成 AI 分析。",
+      "generateButton": "生成 AI 分析"
+    },
+    "errors": {
+      "providerMissing": "未配置 LLM 服务",
+      "providerGoSettings": "前往设置",
+      "synthFailed": "生成 AI 分析失败"
+    }
+  },
   "forms": {
     "prefixCacheProbe": {
       "promptSets": "前缀组数",
