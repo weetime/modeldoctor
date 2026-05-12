@@ -13,6 +13,8 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   roles        String[] @default([])
+  displayName  String?  @map("display_name")
+  avatarUrl    String?  @map("avatar_url") @db.Text
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -23,7 +25,6 @@ model User {
   diagnosticsRuns      DiagnosticsRun[]
   createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
   createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
-  llmJudgeProvider     LlmJudgeProvider?
   notificationChannels NotificationChannel[]
 
   @@index([email])
@@ -244,7 +245,6 @@ model EvaluationProfile {
 
 model LlmJudgeProvider {
   id           String  @id @default(cuid())
-  userId       String  @unique @map("user_id")
   baseUrl      String  @map("base_url")
   apiKeyCipher String  @map("api_key_cipher")
   model        String
@@ -252,8 +252,6 @@ model LlmJudgeProvider {
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("llm_judge_providers")
 }
