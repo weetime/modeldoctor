@@ -31,6 +31,13 @@ function StatusBadge({ status }: { status: EngineRecipe["status"] }) {
       </span>
     );
   }
+  if (status === "community") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-400">
+        ★ {t("status.community")}
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
       {t("status.none")}

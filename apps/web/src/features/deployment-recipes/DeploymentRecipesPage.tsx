@@ -80,6 +80,26 @@ function StatusPill({
     );
   }
 
+  if (status === "community") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        className={cn(
+          base,
+          "border border-indigo-200/70 bg-indigo-50 text-indigo-700",
+          "hover:border-indigo-300 hover:bg-indigo-100",
+          "dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-400 dark:hover:bg-indigo-950/60",
+          (active || highlight) &&
+            "ring-2 ring-indigo-400/60 ring-offset-1 ring-offset-background dark:ring-indigo-500/60",
+        )}
+      >
+        ★
+      </button>
+    );
+  }
+
   return (
     <span
       aria-label={ariaLabel}
@@ -226,7 +246,7 @@ export function DeploymentRecipesPage() {
         const matches = eng.name.toLowerCase().includes(q) || eng.vendor.toLowerCase().includes(q);
         if (!matches) return false;
         const status = getRecipe(m, eng.id)?.status;
-        return status === "native" || status === "partial";
+        return status === "native" || status === "partial" || status === "community";
       });
     });
   }, [category, query, visibleEngines]);
@@ -394,6 +414,15 @@ export function DeploymentRecipesPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <StatusPill
+              status="community"
+              active={false}
+              highlight={false}
+              ariaLabel={t("status.ariaCommunity")}
+            />
+            <span>{t("status.community")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <StatusPill
               status="none"
               active={false}
               highlight={false}
@@ -483,7 +512,9 @@ function ModelRow({
             ? t("status.ariaNative")
             : status === "partial"
               ? t("status.ariaPartial")
-              : t("status.ariaNone");
+              : status === "community"
+                ? t("status.ariaCommunity")
+                : t("status.ariaNone");
 
         const cell = (
           <StatusPill

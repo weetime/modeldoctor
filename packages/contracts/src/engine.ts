@@ -6,6 +6,7 @@ import { z } from "zod";
  */
 export const ENGINE_IDS = [
   "vllm",
+  "vllm-ascend",
   "sglang",
   "trtllm",
   "mindie",
@@ -33,6 +34,7 @@ export type EngineId = (typeof ENGINE_IDS)[number];
  */
 export const ENGINE_DISPLAY_NAME: Record<EngineId, string> = {
   vllm: "vLLM",
+  "vllm-ascend": "vLLM-Ascend",
   sglang: "SGLang",
   trtllm: "TensorRT-LLM",
   mindie: "MindIE",
@@ -56,6 +58,7 @@ export type EngineCapability = "generative" | "embedding";
  */
 export const ENGINE_CAPABILITY: Record<EngineId, EngineCapability> = {
   vllm: "generative",
+  "vllm-ascend": "generative",
   sglang: "generative",
   trtllm: "generative",
   mindie: "generative",

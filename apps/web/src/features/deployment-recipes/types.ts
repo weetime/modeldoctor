@@ -2,7 +2,18 @@ import type { EngineId } from "@modeldoctor/contracts";
 
 export type { EngineId };
 
-export type RecipeStatus = "native" | "partial" | "none";
+/**
+ * Recipe support status.
+ *
+ * - `native`    upstream-supported, ships in the engine vendor's release
+ * - `partial`   upstream supports the model but with caveats (kernel
+ *               compatibility, slower path, etc.)
+ * - `community` not upstream — the recipe ships an internally-built image,
+ *               a hot-patch, or both. The UI labels these clearly so
+ *               operators know the maintenance burden falls on us
+ * - `none`     known not to work; the cell stays empty / dimmed
+ */
+export type RecipeStatus = "native" | "partial" | "community" | "none";
 
 export type CategoryId = "dense" | "moe" | "vlm" | "embedding" | "rerank" | "diffusion";
 
