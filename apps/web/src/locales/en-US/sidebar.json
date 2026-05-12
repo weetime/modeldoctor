@@ -2,6 +2,7 @@
   "groups": {
     "playground": "Playground",
     "benchmarks": "Benchmarks",
+    "qualityGate": "Quality Gate",
     "diagnostics": "Diagnostics",
     "dev": "Developer"
   },
@@ -17,6 +18,8 @@
     "benchmarkPrefixCache": "Prefix-cache Validation",
     "endpointReports": "Test Insights",
     "benchmarkTemplates": "Test Templates",
+    "qualityGateEvaluations": "Evaluations",
+    "qualityGateRuns": "Runs",
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",
     "connections": "Connections",
