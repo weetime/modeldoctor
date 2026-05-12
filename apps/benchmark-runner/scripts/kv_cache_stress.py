@@ -124,7 +124,7 @@ async def session_run(
                         break
                     try:
                         d = json.loads(p)
-                    except Exception:
+                    except json.JSONDecodeError:
                         continue
                     if d.get("choices"):
                         delta = d["choices"][0].get("delta", {}).get("content", "") or ""
@@ -138,7 +138,15 @@ async def session_run(
             history.append({"role": "assistant", "content": content})
             rows.append(("ok", sess_id, turn, pt, ct, ttft or 0.0, elapsed))
         except Exception as e:
+            # Session-level safety net: a 600s bench must not die because
+            # one turn raised an unexpected exception. We deliberately
+            # keep the catch wide so the worker keeps producing rows for
+            # the remaining sessions, but log the type for forensics.
             elapsed = time.time() - t0
+            print(
+                f"[session_run] sess={sess_id} turn={turn} caught {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
             rows.append(
                 (
                     f"err_exc:{type(e).__name__}",
@@ -217,7 +225,14 @@ async def snapshot_prom_counter(prom: str, metric: str, model: str) -> int:
         if not result:
             return 0
         return int(float(result[0]["value"][1]))
-    except Exception as e:
+    except (
+        httpx.RequestError,
+        httpx.HTTPStatusError,
+        json.JSONDecodeError,
+        IndexError,
+        KeyError,
+        ValueError,
+    ) as e:
         print(f"[prom] failed to query {metric}: {e}", file=sys.stderr)
         return 0
 
@@ -252,7 +267,7 @@ async def scrape_backend_counters(base_url: str, api_key: str) -> tuple[str, dic
             r = await client.get(url)
             r.raise_for_status()
         body = r.text
-    except Exception as e:
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
         print(f"[backend] failed to scrape /metrics: {e}", file=sys.stderr)
         return "unknown", {}
 
