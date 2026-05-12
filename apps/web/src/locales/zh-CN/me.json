@@ -1,7 +1,12 @@
 {
   "page": {
     "title": "个人中心",
-    "subtitle": "个人账号资料与密码"
+    "subtitle": "个人账号资料、密码与通知"
+  },
+  "nav": {
+    "profile": "个人资料",
+    "security": "密码",
+    "notifications": "通知"
   },
   "profile": {
     "title": "个人资料",

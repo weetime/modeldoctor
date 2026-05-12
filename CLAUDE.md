@@ -144,3 +144,20 @@ All forms (page-style and dialog-style alike) follow the unified shadcn `<Form>`
 - **Dialog-style** when: ≤ 5 fields (or all same-category), no sub-form, submit stays in the originating list/detail context. Examples: `ConnectionDialog`, `SetBaselineDialog`.
 
 Field-count is a guideline, not a hard rule — final call is "needs sections / sub-form / deep-link".
+
+### Multi-section settings pages (User Center, etc.)
+
+Pages whose body is a **set of related but independently-saved forms** (Profile, Password, Notifications, …) MUST NOT stack every section vertically on a single route — that produces a very tall page where the bottom forms are out of reach and unrelated sections compete for context.
+
+Instead, use a **layout route with a left-rail sub-nav**:
+
+- One `<PageHeader>` at the top (rendered by the layout) with the section's umbrella title — e.g. `me:page.title`.
+- Body splits into:
+  - **Left rail (`w-48 shrink-0`):** vertical `<NavLink>` list of sub-pages. Active item gets the same `bg-accent/50 text-foreground` styling as the main sidebar.
+  - **Right pane (`flex-1 min-w-0`):** `<Outlet />` renders the active sub-page — typically a single `<FormSection>` with that sub-page's fields.
+- **Sub-routes deep-link:** each section is a real route (e.g. `/me/profile`, `/me/security`, `/me/notifications`), so the URL identifies the active panel and back/forward navigation works.
+- **Default index:** the bare parent path (`/me`) MUST redirect to the canonical first child (`/me/profile` for user center).
+- **Sub-pages DON'T render their own `<PageHeader>`** — the layout owns the title. Sub-pages render their body directly (one `<FormSection>` is the common shape).
+- **Sub-page action buttons** (e.g. "+ New channel" on `/me/notifications`) live as a top-right row inside the right pane, NOT in the layout's `rightSlot` — the layout's header is shared across all sub-pages and shouldn't show per-sub-page actions.
+
+Reference: `apps/web/src/features/me/MeLayout.tsx`.

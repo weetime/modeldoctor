@@ -3,6 +3,11 @@
     "title": "Profile",
     "subtitle": "Your account profile and password"
   },
+  "nav": {
+    "profile": "Profile",
+    "security": "Password",
+    "notifications": "Notifications"
+  },
   "profile": {
     "title": "Profile",
     "description": "Identity displayed across the app.",

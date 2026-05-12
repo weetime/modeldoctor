@@ -173,7 +173,7 @@ function UserPanel({ railCollapsed }: { railCollapsed: boolean }) {
   );
 
   return (
-    <div className="border-b border-border px-2 py-2">
+    <div className="border-t border-border px-2 py-2">
       <DropdownMenu>
         {railCollapsed ? (
           <Tooltip>
@@ -316,14 +316,14 @@ export function Sidebar() {
 
       <Separator />
 
-      {userEmail ? <UserPanel railCollapsed={railCollapsed} /> : null}
-
       <div className="flex flex-col gap-px px-2 py-3">
         <ThemeRow railCollapsed={railCollapsed} />
         {sidebarUtilityItems.map((item) => (
           <ItemRow key={item.to} item={item} t={(k) => t(k)} railCollapsed={railCollapsed} />
         ))}
       </div>
+
+      {userEmail ? <UserPanel railCollapsed={railCollapsed} /> : null}
     </aside>
   );
 }

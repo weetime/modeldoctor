@@ -18,8 +18,10 @@ import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
+import { MeLayout } from "@/features/me/MeLayout";
 import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
-import { MePage } from "@/features/me/MePage";
+import { ProfilePage } from "@/features/me/ProfilePage";
+import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -76,8 +78,16 @@ export const routes: RouteObject[] = [
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },
-          { path: "me", element: <MePage /> },
-          { path: "me/notifications", element: <MeNotificationsPage /> },
+          {
+            path: "me",
+            element: <MeLayout />,
+            children: [
+              { index: true, element: <Navigate to="/me/profile" replace /> },
+              { path: "profile", element: <ProfilePage /> },
+              { path: "security", element: <SecurityPage /> },
+              { path: "notifications", element: <MeNotificationsPage /> },
+            ],
+          },
           { path: "settings", element: <SettingsPage /> },
           { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
