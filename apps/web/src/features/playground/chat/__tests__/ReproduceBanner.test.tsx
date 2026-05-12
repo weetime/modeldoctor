@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import "@/lib/i18n";
 import { ReproduceBanner } from "../ReproduceBanner";
 
 describe("ReproduceBanner", () => {
@@ -10,9 +11,9 @@ describe("ReproduceBanner", () => {
         <ReproduceBanner runId="r1abc" sampleId="s1xyz9876" expected="The capital is Paris" />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/样本 #/)).toBeInTheDocument();
+    expect(screen.getByText(/sample #/)).toBeInTheDocument();
     expect(screen.getByText(/Paris/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /返回评测报告/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Back to report/ })).toHaveAttribute(
       "href",
       "/quality-gate/runs/r1abc",
     );

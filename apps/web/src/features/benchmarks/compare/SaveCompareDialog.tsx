@@ -50,6 +50,7 @@ export function SaveCompareDialog({
     const sc = await create.mutateAsync({
       name: name.trim(),
       benchmarkIds: runs.map((r) => r.id),
+      evaluationRunIds: [],
       stageLabels: Object.fromEntries(runs.map((r) => [r.id, labels[r.id].trim()])),
       baselineId: baselineId ?? undefined,
       context: ctx.trim() || undefined,

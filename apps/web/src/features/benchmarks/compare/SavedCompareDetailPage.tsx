@@ -154,7 +154,9 @@ export function SavedCompareDetailPage() {
                 <Card key={r.id} className="p-3 space-y-2">
                   <GateStatusBadge
                     status={(r.status ?? "PENDING") as import("@modeldoctor/contracts").RunStatus}
-                    gateResult={(r.gateResult ?? null) as import("@modeldoctor/contracts").GateResult | null}
+                    gateResult={
+                      (r.gateResult ?? null) as import("@modeldoctor/contracts").GateResult | null
+                    }
                   />
                   <div className="text-xs text-muted-foreground">
                     {sc.stageLabels[r.id] ?? r.id.slice(0, 8)}
@@ -162,7 +164,7 @@ export function SavedCompareDetailPage() {
                   <div className="text-sm">
                     通过率 A:{" "}
                     {r.aggregateMetrics?.passRateA != null
-                      ? (r.aggregateMetrics.passRateA * 100).toFixed(1) + "%"
+                      ? `${(r.aggregateMetrics.passRateA * 100).toFixed(1)}%`
                       : "—"}
                   </div>
                   {r.aggregateMetrics?.passRateB != null && (
