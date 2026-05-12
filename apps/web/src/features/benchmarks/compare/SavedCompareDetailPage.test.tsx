@@ -36,7 +36,10 @@ vi.mock("@/lib/api-client", () => ({
               tool: "guidellm",
               scenario: "inference",
               params: {},
-              summaryMetrics: { tool: "guidellm", data: { ttft: { p50: 100, p90: 200, p99: 500 } } },
+              summaryMetrics: {
+                tool: "guidellm",
+                data: { ttft: { p50: 100, p90: 200, p99: 500 } },
+              },
               createdAt: "2026-05-12T00:00:00.000Z",
             },
             {
@@ -56,7 +59,7 @@ vi.mock("@/lib/api-client", () => ({
       if (path === "/api/llm-judge-providers/active") {
         return { id: "p", enabled: true };
       }
-      throw new Error("unmocked: " + path);
+      throw new Error(`unmocked: ${path}`);
     }),
     post: vi.fn(),
     patch: vi.fn(),
@@ -71,10 +74,7 @@ describe("SavedCompareDetailPage", () => {
       <MemoryRouter initialEntries={["/benchmarks/compare/saved/sc1"]}>
         <QueryClientProvider client={qc}>
           <Routes>
-            <Route
-              path="/benchmarks/compare/saved/:id"
-              element={<SavedCompareDetailPage />}
-            />
+            <Route path="/benchmarks/compare/saved/:id" element={<SavedCompareDetailPage />} />
           </Routes>
         </QueryClientProvider>
       </MemoryRouter>,

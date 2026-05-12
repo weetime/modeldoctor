@@ -75,8 +75,7 @@ export interface PromptMetricsSummary {
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
   const tool = t?.tool;
-  const ttftKey =
-    tool === "guidellm" ? "ttft" : tool === "genai-perf" ? "timeToFirstToken" : null;
+  const ttftKey = tool === "guidellm" ? "ttft" : tool === "genai-perf" ? "timeToFirstToken" : null;
   const e2eKey =
     tool === "guidellm"
       ? "e2eLatency"

@@ -24,13 +24,7 @@ describe("SaveCompareDialog", () => {
   it("renders one stage-label input per run", () => {
     render(
       wrap(
-        <SaveCompareDialog
-          open
-          onOpenChange={() => {}}
-          runs={runs}
-          baselineId="r1"
-          context=""
-        />,
+        <SaveCompareDialog open onOpenChange={() => {}} runs={runs} baselineId="r1" context="" />,
       ),
     );
     expect(screen.getByLabelText(/run-a/)).toBeInTheDocument();
@@ -41,13 +35,7 @@ describe("SaveCompareDialog", () => {
     const u = userEvent.setup();
     render(
       wrap(
-        <SaveCompareDialog
-          open
-          onOpenChange={() => {}}
-          runs={runs}
-          baselineId="r1"
-          context=""
-        />,
+        <SaveCompareDialog open onOpenChange={() => {}} runs={runs} baselineId="r1" context="" />,
       ),
     );
     const submit = screen.getByRole("button", { name: /保存|save/i });

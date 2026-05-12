@@ -10,8 +10,8 @@ describe("metrics readers", () => {
   it("reads vegeta error rate as 1 - success/100", () => {
     const m = { tool: "vegeta", data: { success: 91.3 } };
     const r = readErrorRate(m);
-    expect(r).not.toBeNull();
-    expect(r!).toBeCloseTo(0.087, 4);
+    if (r === null) throw new Error("readErrorRate should not return null");
+    expect(r).toBeCloseTo(0.087, 4);
   });
 
   it("returns null when summary metrics missing", () => {

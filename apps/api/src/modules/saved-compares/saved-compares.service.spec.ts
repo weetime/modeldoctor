@@ -83,8 +83,8 @@ describe("SavedComparesService", () => {
       },
     });
     const hydrated = await svc.getHydrated(userId, sc.id);
-    expect(hydrated).not.toBeNull();
-    expect(hydrated!.benchmarks).toHaveLength(3);
-    expect(hydrated!.benchmarks[2]).toMatchObject({ id: "deleted-id", missing: true });
+    if (!hydrated) throw new Error("hydrated should not be null");
+    expect(hydrated.benchmarks).toHaveLength(3);
+    expect(hydrated.benchmarks[2]).toMatchObject({ id: "deleted-id", missing: true });
   });
 });

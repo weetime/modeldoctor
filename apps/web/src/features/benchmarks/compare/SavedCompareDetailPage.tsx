@@ -17,13 +17,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { AiAnalysisPanel } from "./AiAnalysisPanel";
-import { ReportSections, type ReportRun } from "./ReportSections";
+import { type ReportRun, ReportSections } from "./ReportSections";
 import { exportPageAsHtml } from "./exportHtml";
-import {
-  useDeleteSavedCompare,
-  useSavedCompare,
-  useSynthesizeSavedCompare,
-} from "./queries";
+import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 
 function extractParamsSummary(params: unknown): {
   workload?: string;
@@ -72,8 +68,8 @@ export function SavedCompareDetailPage() {
       : ({
           id: b.id,
           name: b.name ?? null,
-          tool: b.tool!,
-          scenario: b.scenario!,
+          tool: b.tool ?? "",
+          scenario: b.scenario ?? "",
           summaryMetrics: b.summaryMetrics,
           params: b.params,
         } as Benchmark),
@@ -118,7 +114,9 @@ export function SavedCompareDetailPage() {
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">{t("compare.delete", { defaultValue: "Delete" })}</Button>
+                <Button variant="destructive">
+                  {t("compare.delete", { defaultValue: "Delete" })}
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>

@@ -114,11 +114,7 @@ export class SavedComparesService {
     return { ...sc, benchmarks: hydrated };
   }
 
-  async update(
-    userId: string,
-    id: string,
-    body: UpdateSavedCompareRequest,
-  ): Promise<SavedCompare> {
+  async update(userId: string, id: string, body: UpdateSavedCompareRequest): Promise<SavedCompare> {
     const existing = await this.get(userId, id);
     if (!existing) throw new NotFoundException("SavedCompare not found");
     const row = await this.prisma.savedCompare.update({

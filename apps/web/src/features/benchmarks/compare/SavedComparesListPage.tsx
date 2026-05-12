@@ -54,38 +54,49 @@ export function SavedComparesListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("savedCompare.list.columnName")}</TableHead>
-                  <TableHead className="w-20 text-right">{t("savedCompare.list.columnRuns")}</TableHead>
+                  <TableHead className="w-20 text-right">
+                    {t("savedCompare.list.columnRuns")}
+                  </TableHead>
                   <TableHead className="w-48">{t("savedCompare.list.columnCreated")}</TableHead>
-                  <TableHead className="w-32 text-right">{t("savedCompare.list.columnActions")}</TableHead>
+                  <TableHead className="w-32 text-right">
+                    {t("savedCompare.list.columnActions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Link className="text-primary hover:underline" to={`/benchmarks/compare/saved/${item.id}`}>
+                      <Link
+                        className="text-primary hover:underline"
+                        to={`/benchmarks/compare/saved/${item.id}`}
+                      >
                         {item.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{item.benchmarkIds.length}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {item.benchmarkIds.length}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(item.createdAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="ghost" size="sm">
                         <Link to={`/benchmarks/compare/saved/${item.id}`}>
-                          {tCommon("actions.detail", { defaultValue: "详情" })}
+                          {tCommon("actions.detail")}
                         </Link>
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm">
-                            {tCommon("actions.delete", { defaultValue: "删除" })}
+                            {tCommon("actions.delete")}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>{t("savedCompare.detail.deleteTitle")}</AlertDialogTitle>
+                            <AlertDialogTitle>
+                              {t("savedCompare.detail.deleteTitle")}
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
                               {t("savedCompare.detail.deleteBody")}
                             </AlertDialogDescription>

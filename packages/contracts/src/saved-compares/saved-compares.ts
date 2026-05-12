@@ -11,7 +11,7 @@ export const savedCompareSchema = z.object({
   stageLabels: stageLabelsSchema,
   baselineId: z.string().nullable(),
   context: z.string().nullable(),
-  narrative: z.unknown().nullable(),       // shape lives in compare-narrative.ts; kept loose here
+  narrative: z.unknown().nullable(), // shape lives in compare-narrative.ts; kept loose here
   narrativeAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
