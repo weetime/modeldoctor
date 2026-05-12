@@ -20,6 +20,7 @@ import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSec
 import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
 import type { ScenarioId } from "@modeldoctor/contracts";
 import {
+  kvCacheStressReportSchema,
   migrateVegetaParams,
   prefixCacheProbeReportSchema,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -48,6 +49,7 @@ import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
+import { KvCacheStressReport } from "./reports/KvCacheStressReport";
 import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
 
@@ -107,6 +109,13 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       const parsed = prefixCacheProbeReportSchema.safeParse(candidate);
       if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
       return <PrefixCacheProbeReport data={parsed.data} />;
+    }
+    case "kv-cache-stress": {
+      const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
+      const candidate = tagged && "data" in tagged ? tagged.data : tagged;
+      const parsed = kvCacheStressReportSchema.safeParse(candidate);
+      if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
+      return <KvCacheStressReport data={parsed.data} />;
     }
     default:
       return <UnknownReport benchmark={benchmark} />;
@@ -184,6 +193,7 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   capacity: "benchmarkCapacity",
   gateway: "benchmarkGateway",
   "prefix-cache-validation": "benchmarkPrefixCache",
+  "kv-cache-stress": "benchmarkKvCacheStress",
 };
 
 export function BenchmarkDetailPage() {

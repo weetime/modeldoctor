@@ -7,6 +7,7 @@ const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
   "genai-perf": "RUNNER_IMAGE_GENAI_PERF",
   vegeta: "RUNNER_IMAGE_VEGETA",
   "prefix-cache-probe": "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
+  "kv-cache-stress": "RUNNER_IMAGE_KV_CACHE_STRESS",
 };
 
 /**

@@ -65,6 +65,7 @@ export const EnvSchema = z
     RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     RUNNER_IMAGE_PREFIX_CACHE_PROBE: z.string().min(1).optional(),
+    RUNNER_IMAGE_KV_CACHE_STRESS: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
     // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
     // counting (passed as --processor). Set this when the target gateway
@@ -137,6 +138,7 @@ export const EnvSchema = z
         "RUNNER_IMAGE_VEGETA",
         "RUNNER_IMAGE_GENAI_PERF",
         "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
+        "RUNNER_IMAGE_KV_CACHE_STRESS",
       ] as const;
       for (const key of perToolImages) {
         if (!env[key]) {

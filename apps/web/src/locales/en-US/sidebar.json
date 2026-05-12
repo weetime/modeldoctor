@@ -24,6 +24,7 @@
     "profile": "Profile",
     "logout": "Logout",
     "devCharts": "Dev Charts",
-    "deploymentRecipes": "Deployment Recipes"
+    "deploymentRecipes": "Deployment Recipes",
+    "benchmarkKvCacheStress": "KV Cache Stress"
   }
 }

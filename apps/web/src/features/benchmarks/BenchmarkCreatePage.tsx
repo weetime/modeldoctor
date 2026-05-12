@@ -172,6 +172,7 @@ export function BenchmarkCreatePage() {
     capacity: "benchmarkCapacity",
     gateway: "benchmarkGateway",
     "prefix-cache-validation": "benchmarkPrefixCache",
+    "kv-cache-stress": "benchmarkKvCacheStress",
   };
   const breadcrumbs = [
     { label: tSidebar("groups.benchmarks") },

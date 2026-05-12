@@ -9,13 +9,18 @@ import {
 } from "./scenarios.js";
 
 describe("SCENARIOS constant", () => {
-  it("declares inference, capacity, gateway, prefix-cache-validation", () => {
+  it("declares all known scenarios", () => {
     expect(Object.keys(SCENARIOS).sort()).toEqual([
       "capacity",
       "gateway",
       "inference",
+      "kv-cache-stress",
       "prefix-cache-validation",
     ]);
+  });
+
+  it("kv-cache-stress scenario lists kv-cache-stress only", () => {
+    expect(SCENARIOS["kv-cache-stress"].tools).toEqual(["kv-cache-stress"]);
   });
 
   it("inference scenario lists guidellm and genai-perf", () => {

@@ -13,7 +13,13 @@ describe("ScoreBanner", () => {
     r(
       <ScoreBanner
         composite={87}
-        perScenario={{ inference: 92, capacity: 75, gateway: 82, "prefix-cache-validation": null }}
+        perScenario={{
+          inference: 92,
+          capacity: 75,
+          gateway: 82,
+          "prefix-cache-validation": null,
+          "kv-cache-stress": null,
+        }}
         totalChecks={18}
         totalRuns={25}
         rangeDays={30}
@@ -34,6 +40,7 @@ describe("ScoreBanner", () => {
           capacity: null,
           gateway: null,
           "prefix-cache-validation": null,
+          "kv-cache-stress": null,
         }}
         totalChecks={0}
         totalRuns={0}
@@ -52,6 +59,7 @@ describe("ScoreBanner", () => {
           capacity: null,
           gateway: null,
           "prefix-cache-validation": null,
+          "kv-cache-stress": null,
         }}
         totalChecks={7}
         totalRuns={5}

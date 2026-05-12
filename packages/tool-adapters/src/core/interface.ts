@@ -4,7 +4,12 @@ import type { z } from "zod";
 // superset (additionally `'e2e'` and `'custom'`) — those don't go through
 // ToolAdapter and follow their own codepaths. ToolName covers exactly the
 // adapters the registry knows about.
-export type ToolName = "guidellm" | "genai-perf" | "vegeta" | "prefix-cache-probe";
+export type ToolName =
+  | "guidellm"
+  | "genai-perf"
+  | "vegeta"
+  | "prefix-cache-probe"
+  | "kv-cache-stress";
 
 // ── Progress events (uniform across tools) ────────────────────────────
 export type ProgressEvent =
@@ -16,6 +21,7 @@ import type { GenaiPerfReport } from "../genai-perf/schema.js";
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
+import type { KvCacheStressReport } from "../kv-cache-stress/schema.js";
 import type { PrefixCacheProbeReport } from "../prefix-cache-probe/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
@@ -24,7 +30,8 @@ export type ToolReport =
   | { tool: "guidellm"; data: GuidellmReport }
   | { tool: "genai-perf"; data: GenaiPerfReport }
   | { tool: "vegeta"; data: VegetaReport }
-  | { tool: "prefix-cache-probe"; data: PrefixCacheProbeReport };
+  | { tool: "prefix-cache-probe"; data: PrefixCacheProbeReport }
+  | { tool: "kv-cache-stress"; data: KvCacheStressReport };
 
 // ── buildCommand inputs ───────────────────────────────────────────────
 export interface BuildCommandPlan<TParams = unknown> {

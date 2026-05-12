@@ -16,11 +16,15 @@ describe("registry", () => {
     expect(byTool("genai-perf").name).toBe("genai-perf");
   });
 
-  it("allAdapters returns four adapters", () => {
+  it("byTool('kv-cache-stress') returns the kv-cache-stress adapter", () => {
+    expect(byTool("kv-cache-stress").name).toBe("kv-cache-stress");
+  });
+
+  it("allAdapters returns five adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(4);
+    expect(all).toHaveLength(5);
     expect(all.map((a) => a.name).sort()).toEqual(
-      ["genai-perf", "guidellm", "prefix-cache-probe", "vegeta"].sort(),
+      ["genai-perf", "guidellm", "kv-cache-stress", "prefix-cache-probe", "vegeta"].sort(),
     );
   });
 });

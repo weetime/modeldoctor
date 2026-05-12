@@ -39,6 +39,14 @@ export {
   type PrefixCacheProbeReport,
 } from "./prefix-cache-probe/schema.js";
 
+export {
+  kvCacheStressParamsSchema,
+  kvCacheStressReportSchema,
+  kvCacheStressParamDefaults,
+  type KvCacheStressParams,
+  type KvCacheStressReport,
+} from "./kv-cache-stress/schema.js";
+
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
 
@@ -59,4 +67,5 @@ export {
   GUIDELLM_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
+  KV_CACHE_STRESS_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";
