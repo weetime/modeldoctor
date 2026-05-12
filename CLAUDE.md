@@ -44,9 +44,20 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 - Vitest 2 across the workspace. `apps/web/src/test/setup.ts` MUST use the explicit `expect.extend(matchers)` form (importing `@testing-library/jest-dom/matchers`); the side-effect `import "@testing-library/jest-dom/vitest"` does not extend `expect` under Vitest 2.
 - `apps/api/tsconfig.json` `include` must stay narrow (`["src/**/*"]`).
 
+## Seeding built-in / official content
+
+Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via **`apps/api/prisma/seed.ts`** (Prisma's blessed seed pattern), NOT via INSERT statements inside migrations. Each row is validated through the relevant zod schema (`profileRulesSchema` from `@modeldoctor/contracts`; `guidellmParamsSchema` / `genaiPerfParamsSchema` + `applyScenarioConstraints` from `@modeldoctor/tool-adapters`) before `prisma.<model>.upsert` by stable `id` / `slug`.
+
+- **Auto-runs** after `prisma migrate dev` and `prisma migrate reset` (Prisma reads `package.json#prisma.seed`).
+- **Prod / CI**: `prisma migrate deploy` does **not** auto-seed by design — deploy pipeline must invoke `pnpm prisma db seed` after `migrate deploy`.
+- **Adding a new built-in / official row**: append to `EVALUATION_PROFILES` or `BENCHMARK_TEMPLATES` in `seed.ts` with a fresh stable id/slug, then `pnpm -F @modeldoctor/api db:seed` to verify upsert.
+- **Editing**: change the seed object in place — next seed run UPDATEs.
+- **Removing**: delete from seed.ts AND ship a one-off migration with `DELETE FROM ... WHERE id = '...'` (seed.ts only upserts, never deletes).
+- **Migrations are schema-only**. Never put `INSERT`/`UPDATE`/`DELETE` of business data in a migration — only schema changes plus the data fixups required by those schema changes (e.g., backfilling a new column from an old one).
+
 ## Insights & AI judge
 
-- `evaluation_profiles` is read-only via API; new built-in profiles are added by Prisma migration only.
+- `evaluation_profiles` is read-only via API; built-ins live in seed.ts (see above section).
 - `llm_judge_providers` reuses `CONNECTION_API_KEY_ENCRYPTION_KEY` (no separate env var).
 - `POST /api/insights/:connectionId/synthesize` is synchronous (5-30s); cache is in-memory LRU on the API process. Do not rely on consistency across multi-replica deploys.
 - AI narrative is zh-CN only for V1.
