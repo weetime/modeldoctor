@@ -3,7 +3,8 @@ import type {
   SavedCompare,
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
 
 export interface HydratedBenchmarkRef {
@@ -57,7 +58,7 @@ export class SavedComparesService {
 
   async create(userId: string, body: CreateSavedCompareRequest): Promise<SavedCompare> {
     if (new Set(body.benchmarkIds).size !== body.benchmarkIds.length) {
-      throw new ForbiddenException("benchmarkIds must be unique");
+      throw new BadRequestException("benchmarkIds must be unique");
     }
     const row = await this.prisma.savedCompare.create({
       data: {
@@ -141,7 +142,7 @@ export class SavedComparesService {
   async setNarrative(id: string, narrative: unknown, generatedAt: Date): Promise<void> {
     await this.prisma.savedCompare.update({
       where: { id },
-      data: { narrative, narrativeAt: generatedAt },
+      data: { narrative: narrative as Prisma.InputJsonValue, narrativeAt: generatedAt },
     });
   }
 }
