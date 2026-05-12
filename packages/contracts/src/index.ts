@@ -23,3 +23,4 @@ export * from "./saved-compares/index.js";
 export * from "./engine-metrics.js";
 export * from "./engine-metrics/manifests/index.js";
 export * from "./notifications.js";
+export * from "./quality-gate/index.js";
