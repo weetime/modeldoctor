@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
 import type {
   CreateEvaluationRequest,
   Evaluation,
   EvaluationSample,
   UpdateEvaluationRequest,
 } from "@modeldoctor/contracts";
+import { Injectable } from "@nestjs/common";
 import type { PrismaClient } from "@prisma/client";
 
 @Injectable()
@@ -12,7 +12,10 @@ export class EvaluationsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async list(userId: string): Promise<Evaluation[]> {
-    const rows = await this.prisma.evaluation.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
+    const rows = await this.prisma.evaluation.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
     return rows.map(this.toDto);
   }
 
@@ -53,7 +56,10 @@ export class EvaluationsRepository {
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    const owned = await this.prisma.evaluation.findFirst({ where: { id, userId }, select: { id: true } });
+    const owned = await this.prisma.evaluation.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
     if (!owned) throw new Error(`evaluation ${id} not found`);
     await this.prisma.evaluation.delete({ where: { id } });
   }

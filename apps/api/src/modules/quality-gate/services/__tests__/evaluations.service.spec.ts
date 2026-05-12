@@ -5,7 +5,9 @@ const userId = "u1";
 
 function repoMock() {
   return {
-    create: vi.fn().mockResolvedValue({ id: "e1", userId, name: "x", samples: [], totalSamples: 0 }),
+    create: vi
+      .fn()
+      .mockResolvedValue({ id: "e1", userId, name: "x", samples: [], totalSamples: 0 }),
     list: vi.fn().mockResolvedValue([]),
     findById: vi.fn(),
     update: vi.fn(),
@@ -17,7 +19,12 @@ describe("EvaluationsService", () => {
   it("create calls repo and returns dto", async () => {
     const r = repoMock();
     const svc = new EvaluationsService(r as never);
-    const out = await svc.create(userId, { name: "x", samples: [{ id: "s0", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }] });
+    const out = await svc.create(userId, {
+      name: "x",
+      samples: [
+        { id: "s0", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+      ],
+    });
     expect(out.id).toBe("e1");
     expect(r.create).toHaveBeenCalledWith(userId, expect.objectContaining({ name: "x" }));
   });

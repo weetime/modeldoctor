@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
 import type { CreateRunRequest, EvaluationRun, ListRunsQuery } from "@modeldoctor/contracts";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { RunsRepository } from "../repositories/runs.repository.js";
 import type { EvaluationsService } from "./evaluations.service.js";
 import type { QualityGateRunExecutor } from "./run-executor.service.js";
-import type { RunsRepository } from "../repositories/runs.repository.js";
 
 interface ConnectionsLike {
   findById(id: string, userId: string): Promise<{ id: string } | null>;

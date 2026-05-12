@@ -1,5 +1,5 @@
-import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 export function ReproduceBanner({
@@ -17,7 +17,8 @@ export function ReproduceBanner({
     <Alert>
       <AlertTitle>{t("playground.bannerTitle", { suffix: sampleId.slice(-6) })}</AlertTitle>
       <AlertDescription>
-        {t("playground.bannerExpectedPrefix")}{expected.slice(0, 120)}
+        {t("playground.bannerExpectedPrefix")}
+        {expected.slice(0, 120)}
         {expected.length > 120 ? "…" : ""}
         {" · "}
         <Link className="underline" to={`/quality-gate/runs/${runId}`}>

@@ -1,8 +1,8 @@
-import { useTranslation } from "react-i18next";
-import type { GateConfig } from "@modeldoctor/contracts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import type { GateConfig } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 
 export function GateConfigForm({
   value,

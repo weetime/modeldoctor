@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import type { EvaluationSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { EvaluationSample } from "@modeldoctor/contracts";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import { EvaluationSampleEditor } from "./components/EvaluationSampleEditor";
 import { useEvaluation, useUpdateEvaluation } from "./queries";
 
@@ -62,9 +62,7 @@ export function EvaluationDetailPage() {
         ))}
       </div>
 
-      <Button
-        onClick={() => update.mutate({ name, description: description || null, samples })}
-      >
+      <Button onClick={() => update.mutate({ name, description: description || null, samples })}>
         {t("evaluations.form.save")}
       </Button>
     </div>

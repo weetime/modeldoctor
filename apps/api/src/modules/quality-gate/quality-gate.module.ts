@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
-import { chatCompletion } from "../insights/llm-client.js";
+import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionModule } from "../connection/connection.module.js";
 import { ConnectionService } from "../connection/connection.service.js";
+import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeModule } from "../llm-judge/llm-judge.module.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
-import { PrismaService } from "../../database/prisma.service.js";
 import { EvaluationsController } from "./controllers/evaluations.controller.js";
 import { RunsController } from "./controllers/runs.controller.js";
 import { EndpointCaller } from "./endpoint-caller.js";
-import { createJudgeRegistry, type JudgeRegistry } from "./judges/registry.js";
+import { type JudgeRegistry, createJudgeRegistry } from "./judges/registry.js";
 import { EvaluationsRepository } from "./repositories/evaluations.repository.js";
 import { RunsRepository } from "./repositories/runs.repository.js";
 import { EvaluationsService } from "./services/evaluations.service.js";

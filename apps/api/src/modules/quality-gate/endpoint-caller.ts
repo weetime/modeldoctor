@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import type { EndpointCallResult } from "@modeldoctor/contracts";
+import { Injectable } from "@nestjs/common";
 
 interface ConnectionsServiceLike {
   findByIdWithDecryptedKey(

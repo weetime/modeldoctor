@@ -26,17 +26,31 @@ export function aggregateMetrics(rows: SampleRow[], judgeCallCount: number): Agg
   }
   const dual = rows.some((r) => r.resultB != null);
 
-  let passA = 0, passB = 0, errors = 0, bothPass = 0, bothFail = 0, reg = 0, imp = 0;
-  let scoreSumA = 0, scoreNA = 0;
-  let scoreSumB = 0, scoreNB = 0;
+  let passA = 0;
+  let passB = 0;
+  let errors = 0;
+  let bothPass = 0;
+  let bothFail = 0;
+  let reg = 0;
+  let imp = 0;
+  let scoreSumA = 0;
+  let scoreNA = 0;
+  let scoreSumB = 0;
+  let scoreNB = 0;
   for (const r of rows) {
     if (r.resultA.call.error) errors++;
     if (r.resultA.judge.passed) passA++;
-    if (typeof r.resultA.judge.score === "number") { scoreSumA += r.resultA.judge.score; scoreNA++; }
+    if (typeof r.resultA.judge.score === "number") {
+      scoreSumA += r.resultA.judge.score;
+      scoreNA++;
+    }
     if (r.resultB) {
       if (r.resultB.call.error) errors++;
       if (r.resultB.judge.passed) passB++;
-      if (typeof r.resultB.judge.score === "number") { scoreSumB += r.resultB.judge.score; scoreNB++; }
+      if (typeof r.resultB.judge.score === "number") {
+        scoreSumB += r.resultB.judge.score;
+        scoreNB++;
+      }
       if (r.resultA.judge.passed && r.resultB.judge.passed) bothPass++;
       else if (!r.resultA.judge.passed && !r.resultB.judge.passed) bothFail++;
       else if (r.resultA.judge.passed) reg++;

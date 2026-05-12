@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createEvaluationRequestSchema, evaluationSampleSchema, evaluationSchema } from "../evaluations.js";
+import {
+  createEvaluationRequestSchema,
+  evaluationSampleSchema,
+  evaluationSchema,
+} from "../evaluations.js";
 
 describe("evaluationSampleSchema", () => {
   it("requires prompt, expected, and judgeConfig", () => {
@@ -29,7 +33,9 @@ describe("createEvaluationRequestSchema", () => {
       }));
     expect(() => createEvaluationRequestSchema.parse({ name: "x", samples: [] })).toThrow();
     expect(() => createEvaluationRequestSchema.parse({ name: "x", samples: make(501) })).toThrow();
-    expect(createEvaluationRequestSchema.parse({ name: "x", samples: make(1) }).samples.length).toBe(1);
+    expect(
+      createEvaluationRequestSchema.parse({ name: "x", samples: make(1) }).samples.length,
+    ).toBe(1);
   });
 });
 

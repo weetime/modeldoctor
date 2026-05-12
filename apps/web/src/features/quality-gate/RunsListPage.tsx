@@ -1,6 +1,3 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +9,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,8 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useDeleteRun, useRuns } from "./queries";
+import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
 import { GateStatusBadge } from "./components/GateStatusBadge";
+import { useDeleteRun, useRuns } from "./queries";
 
 export function RunsListPage() {
   const nav = useNavigate();
@@ -56,10 +56,7 @@ export function RunsListPage() {
             {items.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Link
-                    className="text-primary hover:underline"
-                    to={`/quality-gate/runs/${r.id}`}
-                  >
+                  <Link className="text-primary hover:underline" to={`/quality-gate/runs/${r.id}`}>
                     {r.id.slice(0, 12)}
                   </Link>
                 </TableCell>

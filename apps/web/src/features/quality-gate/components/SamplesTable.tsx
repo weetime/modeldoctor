@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import type { SampleFilter } from "@modeldoctor/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,15 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { SampleFilter } from "@modeldoctor/contracts";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useRunSamples } from "../queries";
 
-const FILTERS: SampleFilter[] = [
-  "all",
-  "regression",
-  "improvement",
-  "both-pass",
-  "both-fail",
-];
+const FILTERS: SampleFilter[] = ["all", "regression", "improvement", "both-pass", "both-fail"];
 
 export function SamplesTable({
   runId,
@@ -58,7 +52,9 @@ export function SamplesTable({
             <TableHead className="w-24">{t("report.samplesTable.headers.delta")}</TableHead>
             <TableHead className="w-20">{t("report.samplesTable.headers.passedA")}</TableHead>
             <TableHead className="w-20">{t("report.samplesTable.headers.passedB")}</TableHead>
-            <TableHead className="w-32 text-right">{t("report.samplesTable.headers.actions")}</TableHead>
+            <TableHead className="w-32 text-right">
+              {t("report.samplesTable.headers.actions")}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,24 +65,14 @@ export function SamplesTable({
                 {s.resultA.call.rawAnswer.slice(0, 80)}
               </TableCell>
               <TableCell>
-                <Badge
-                  variant={
-                    s.delta === "REGRESSION" ? "destructive" : "outline"
-                  }
-                >
+                <Badge variant={s.delta === "REGRESSION" ? "destructive" : "outline"}>
                   {s.delta}
                 </Badge>
               </TableCell>
               <TableCell>{s.resultA.judge.passed ? "✓" : "✗"}</TableCell>
-              <TableCell>
-                {s.resultB ? (s.resultB.judge.passed ? "✓" : "✗") : "—"}
-              </TableCell>
+              <TableCell>{s.resultB ? (s.resultB.judge.passed ? "✓" : "✗") : "—"}</TableCell>
               <TableCell className="text-right">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onOpenSample(s.id)}
-                >
+                <Button size="sm" variant="ghost" onClick={() => onOpenSample(s.id)}>
                   {t("report.sampleDrawer.detail")}
                 </Button>
               </TableCell>

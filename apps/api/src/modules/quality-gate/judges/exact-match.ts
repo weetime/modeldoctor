@@ -14,6 +14,9 @@ export const exactMatchJudge: Judge<Config> = {
       return v;
     };
     const passed = norm(ctx.answer) === norm(ctx.expected);
-    return { passed, reason: passed ? "exact match" : `expected "${ctx.expected}", got "${ctx.answer}"` };
+    return {
+      passed,
+      reason: passed ? "exact match" : `expected "${ctx.expected}", got "${ctx.answer}"`,
+    };
   },
 };

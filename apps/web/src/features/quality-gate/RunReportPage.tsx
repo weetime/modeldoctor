@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
-import { useCancelRun, useRun, useRunSamples } from "./queries";
+import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
 import { SamplesTable } from "./components/SamplesTable";
+import { useCancelRun, useRun, useRunSamples } from "./queries";
 
 export function RunReportPage() {
   const { id = "" } = useParams();
@@ -15,16 +15,15 @@ export function RunReportPage() {
   const cancel = useCancelRun(id);
   const [openSampleId, setOpenSampleId] = useState<string | null>(null);
   // Load all samples once (paged in table; for drawer lookup we re-fetch the full list)
-  const allSamples = useRunSamples(
-    run?.status === "COMPLETED" ? id : undefined,
-    { filter: "all", pageSize: 500 },
-  );
+  const allSamples = useRunSamples(run?.status === "COMPLETED" ? id : undefined, {
+    filter: "all",
+    pageSize: 500,
+  });
   const sampleRow: RunSample | null = openSampleId
     ? (allSamples.data?.items.find((s) => s.id === openSampleId) ?? null)
     : null;
-  const snapshotSamples: EvaluationSample[] = (
-    run?.evaluationSnapshot.samples ?? []
-  ) as EvaluationSample[];
+  const snapshotSamples: EvaluationSample[] = (run?.evaluationSnapshot.samples ??
+    []) as EvaluationSample[];
 
   if (!run) return null;
 
@@ -39,9 +38,7 @@ export function RunReportPage() {
         )}
       </div>
       <RunOverview run={run} />
-      {run.status === "COMPLETED" && (
-        <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />
-      )}
+      {run.status === "COMPLETED" && <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />}
       <SampleDetailDrawer
         runId={run.id}
         row={sampleRow}

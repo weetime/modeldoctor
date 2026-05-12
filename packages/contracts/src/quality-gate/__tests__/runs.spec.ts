@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createRunRequestSchema, gateConfigSchema, runStatusSchema, gateResultSchema } from "../runs.js";
+import {
+  createRunRequestSchema,
+  gateConfigSchema,
+  gateResultSchema,
+  runStatusSchema,
+} from "../runs.js";
 
 describe("gateConfigSchema", () => {
   it("requires at least one threshold", () => {
@@ -13,11 +18,22 @@ describe("gateConfigSchema", () => {
 describe("createRunRequestSchema", () => {
   it("requires evaluationId + endpointAId + gateConfig", () => {
     expect(() => createRunRequestSchema.parse({})).toThrow();
-    expect(createRunRequestSchema.parse({ evaluationId: "e", endpointAId: "a", gateConfig: { passRateMin: 0.9 } })).toBeTruthy();
+    expect(
+      createRunRequestSchema.parse({
+        evaluationId: "e",
+        endpointAId: "a",
+        gateConfig: { passRateMin: 0.9 },
+      }),
+    ).toBeTruthy();
   });
   it("rejects A == B", () => {
     expect(() =>
-      createRunRequestSchema.parse({ evaluationId: "e", endpointAId: "x", endpointBId: "x", gateConfig: { passRateMin: 0.9 } }),
+      createRunRequestSchema.parse({
+        evaluationId: "e",
+        endpointAId: "x",
+        endpointBId: "x",
+        gateConfig: { passRateMin: 0.9 },
+      }),
     ).toThrow(/different/);
   });
 });

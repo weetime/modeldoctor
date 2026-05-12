@@ -3,10 +3,19 @@ import { endpointCallResultSchema, listRunSamplesQuerySchema } from "../run-samp
 
 describe("endpointCallResultSchema", () => {
   it("accepts success shape", () => {
-    expect(endpointCallResultSchema.parse({ rawAnswer: "hi", latencyMs: 200, tokensIn: 5, tokensOut: 1 })).toMatchObject({ latencyMs: 200 });
+    expect(
+      endpointCallResultSchema.parse({
+        rawAnswer: "hi",
+        latencyMs: 200,
+        tokensIn: 5,
+        tokensOut: 1,
+      }),
+    ).toMatchObject({ latencyMs: 200 });
   });
   it("accepts error shape", () => {
-    expect(endpointCallResultSchema.parse({ rawAnswer: "", latencyMs: 0, error: "timeout" })).toMatchObject({ error: "timeout" });
+    expect(
+      endpointCallResultSchema.parse({ rawAnswer: "", latencyMs: 0, error: "timeout" }),
+    ).toMatchObject({ error: "timeout" });
   });
 });
 

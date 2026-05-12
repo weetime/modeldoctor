@@ -35,8 +35,7 @@ export const qgApi = {
   },
   getRun: (id: string) => api.get<EvaluationRun>(`/api/quality-gate/runs/${id}`),
   createRun: (body: CreateRunRequest) => api.post<EvaluationRun>("/api/quality-gate/runs", body),
-  cancelRun: (id: string) =>
-    api.post<{ ok: true }>(`/api/quality-gate/runs/${id}/cancel`, {}),
+  cancelRun: (id: string) => api.post<{ ok: true }>(`/api/quality-gate/runs/${id}/cancel`, {}),
   deleteRun: (id: string) => api.del<void>(`/api/quality-gate/runs/${id}`),
 
   listSamples: (runId: string, q: Partial<ListRunSamplesQuery>) => {

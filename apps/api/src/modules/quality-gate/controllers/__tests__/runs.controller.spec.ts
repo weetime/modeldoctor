@@ -83,7 +83,12 @@ describe("RunsController", () => {
     svc.get.mockResolvedValue(run);
     repo.listSamples.mockResolvedValue(samplesResponse);
 
-    const q: import("@modeldoctor/contracts").ListRunSamplesQuery = { page: 1, pageSize: 20, filter: "all", sortBy: "idx" };
+    const q: import("@modeldoctor/contracts").ListRunSamplesQuery = {
+      page: 1,
+      pageSize: 20,
+      filter: "all",
+      sortBy: "idx",
+    };
     const result = await controller.samples(USER, "run-3", q);
 
     // Ownership check must happen first
@@ -96,7 +101,12 @@ describe("RunsController", () => {
   it("GET /:id/samples — propagates 404 when ownership check fails", async () => {
     svc.get.mockRejectedValue(new NotFoundException("run not-mine not found"));
 
-    const q: import("@modeldoctor/contracts").ListRunSamplesQuery = { page: 1, pageSize: 20, filter: "all", sortBy: "idx" };
+    const q: import("@modeldoctor/contracts").ListRunSamplesQuery = {
+      page: 1,
+      pageSize: 20,
+      filter: "all",
+      sortBy: "idx",
+    };
     await expect(controller.samples(USER, "not-mine", q)).rejects.toThrow(NotFoundException);
     // repo.listSamples must NOT be called if ownership check threw
     expect(repo.listSamples).not.toHaveBeenCalled();

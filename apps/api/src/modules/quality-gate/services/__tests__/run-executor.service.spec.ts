@@ -18,13 +18,22 @@ function buildMocks() {
   return { repo, caller, judge };
 }
 
-const sample = (i: number) => ({ id: `s${i}`, idx: i, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" as const } });
+const sample = (i: number) => ({
+  id: `s${i}`,
+  idx: i,
+  prompt: "Q",
+  expected: "A",
+  judgeConfig: { kind: "exact-match" as const },
+});
 
 describe("QualityGateRunExecutor", () => {
   it("happy path runs through samples and marks COMPLETED with metrics", async () => {
     const m = buildMocks();
     m.repo.findFullRun.mockResolvedValue({
-      id: "r1", userId: "u1", endpointAId: "a", endpointBId: null,
+      id: "r1",
+      userId: "u1",
+      endpointAId: "a",
+      endpointBId: null,
       evaluationSnapshot: { samples: [sample(0), sample(1), sample(2)] },
       gateConfig: { passRateMin: 0.9 },
     });
@@ -43,7 +52,10 @@ describe("QualityGateRunExecutor", () => {
   it("dual-endpoint mode calls both A and B per sample", async () => {
     const m = buildMocks();
     m.repo.findFullRun.mockResolvedValue({
-      id: "r2", userId: "u1", endpointAId: "a", endpointBId: "b",
+      id: "r2",
+      userId: "u1",
+      endpointAId: "a",
+      endpointBId: "b",
       evaluationSnapshot: { samples: [sample(0), sample(1)] },
       gateConfig: { passRateMin: 0.9 },
     });
@@ -56,15 +68,20 @@ describe("QualityGateRunExecutor", () => {
   it("cancel stops issuing further calls and marks CANCELLED", async () => {
     const m = buildMocks();
     m.repo.findFullRun.mockResolvedValue({
-      id: "r3", userId: "u1", endpointAId: "a", endpointBId: null,
+      id: "r3",
+      userId: "u1",
+      endpointAId: "a",
+      endpointBId: null,
       evaluationSnapshot: { samples: Array.from({ length: 20 }, (_, i) => sample(i)) },
       gateConfig: { passRateMin: 0.9 },
     });
-    m.caller.call.mockImplementation(async (_id: string, _userId: string, _q: string, signal: AbortSignal) => {
-      await new Promise((r) => setTimeout(r, 30));
-      if (signal.aborted) return { rawAnswer: "", latencyMs: 0, error: "cancelled" };
-      return { rawAnswer: "x", latencyMs: 1 };
-    });
+    m.caller.call.mockImplementation(
+      async (_id: string, _userId: string, _q: string, signal: AbortSignal) => {
+        await new Promise((r) => setTimeout(r, 30));
+        if (signal.aborted) return { rawAnswer: "", latencyMs: 0, error: "cancelled" };
+        return { rawAnswer: "x", latencyMs: 1 };
+      },
+    );
     const ex = new QualityGateRunExecutor(m.repo as never, m.caller as never, m.judge as never);
     const p = ex.start("r3");
     await new Promise((r) => setTimeout(r, 10));

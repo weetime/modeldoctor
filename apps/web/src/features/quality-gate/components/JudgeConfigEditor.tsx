@@ -1,5 +1,3 @@
-import { useTranslation } from "react-i18next";
-import type { JudgeConfig } from "@modeldoctor/contracts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import type { JudgeConfig } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 
 interface JudgeConfigEditorProps {
   value: JudgeConfig;
@@ -128,9 +128,7 @@ export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
             <Label htmlFor="qg-scale">{t("judges.scaleLabel")}</Label>
             <Select
               value={value.scale}
-              onValueChange={(s) =>
-                onChange({ ...value, scale: s as "0-1" | "0-5" | "pass-fail" })
-              }
+              onValueChange={(s) => onChange({ ...value, scale: s as "0-1" | "0-5" | "pass-fail" })}
             >
               <SelectTrigger id="qg-scale">
                 <SelectValue />

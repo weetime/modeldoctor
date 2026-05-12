@@ -22,7 +22,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 const buildOk = (content: string) => ({
   ok: true,
-  json: async () => ({ choices: [{ message: { content } }], usage: { prompt_tokens: 4, completion_tokens: 3 } }),
+  json: async () => ({
+    choices: [{ message: { content } }],
+    usage: { prompt_tokens: 4, completion_tokens: 3 },
+  }),
 });
 
 describe("EndpointCaller", () => {

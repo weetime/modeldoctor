@@ -1,5 +1,3 @@
-import { Injectable } from "@nestjs/common";
-import { customAlphabet } from "nanoid";
 import {
   type CreateEvaluationRequest,
   type Evaluation,
@@ -9,6 +7,8 @@ import {
   evaluationSampleSchema,
   judgeConfigSchema,
 } from "@modeldoctor/contracts";
+import { Injectable } from "@nestjs/common";
+import { customAlphabet } from "nanoid";
 import type { EvaluationsRepository } from "../repositories/evaluations.repository.js";
 
 const newSampleId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 12);
@@ -27,7 +27,9 @@ export class EvaluationsService {
     return this.repo.create(userId, this.normalize(body));
   }
   update(userId: string, id: string, body: UpdateEvaluationRequest) {
-    const normalized: UpdateEvaluationRequest = body.samples ? { ...body, samples: this.assignIds(body.samples) } : body;
+    const normalized: UpdateEvaluationRequest = body.samples
+      ? { ...body, samples: this.assignIds(body.samples) }
+      : body;
     return this.repo.update(userId, id, normalized);
   }
   delete(userId: string, id: string) {
@@ -44,8 +46,15 @@ export class EvaluationsService {
     if (lines.length < 2) throw new Error("CSV requires at least a header and one data row");
     const header = this.splitCsvRow(lines[0]).map((h) => h.trim());
     const idx = (k: string) => header.indexOf(k);
-    const ip = idx("prompt"), ie = idx("expected"), ik = idx("judgeKind"), ic = idx("judgeConfig"), it = idx("tags");
-    if (ip < 0 || ie < 0 || ik < 0) throw new Error("CSV must include columns: prompt, expected, judgeKind (judgeConfig and tags optional)");
+    const ip = idx("prompt");
+    const ie = idx("expected");
+    const ik = idx("judgeKind");
+    const ic = idx("judgeConfig");
+    const it = idx("tags");
+    if (ip < 0 || ie < 0 || ik < 0)
+      throw new Error(
+        "CSV must include columns: prompt, expected, judgeKind (judgeConfig and tags optional)",
+      );
 
     const out: EvaluationSample[] = [];
     for (let i = 1; i < lines.length; i++) {
@@ -62,14 +71,23 @@ export class EvaluationsService {
       } else {
         cfg = { kind };
       }
-      const judgeConfig = judgeConfigSchema.parse({ ...((cfg as object) || {}), kind: (cfg as { kind?: string }).kind ?? kind });
+      const judgeConfig = judgeConfigSchema.parse({
+        ...((cfg as object) || {}),
+        kind: (cfg as { kind?: string }).kind ?? kind,
+      });
       const sample = evaluationSampleSchema.parse({
         id: newSampleId(),
         idx: i - 1,
         prompt: row[ip] ?? "",
         expected: row[ie] ?? "",
         judgeConfig,
-        tags: it >= 0 && row[it] ? row[it].split(",").map((t) => t.trim()).filter(Boolean) : undefined,
+        tags:
+          it >= 0 && row[it]
+            ? row[it]
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : undefined,
       });
       out.push(sample);
     }
@@ -79,7 +97,8 @@ export class EvaluationsService {
   // Minimal RFC-4180-ish CSV splitter (handles quoted commas and "" escapes).
   private splitCsvRow(line: string): string[] {
     const cells: string[] = [];
-    let cur = "", inQ = false;
+    let cur = "";
+    let inQ = false;
     for (let i = 0; i < line.length; i++) {
       const ch = line[i];
       if (inQ) {

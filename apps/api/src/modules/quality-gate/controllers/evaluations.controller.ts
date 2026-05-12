@@ -1,4 +1,11 @@
 import {
+  type CreateEvaluationRequest,
+  type UpdateEvaluationRequest,
+  createEvaluationRequestSchema,
+  importEvaluationRequestSchema,
+  updateEvaluationRequestSchema,
+} from "@modeldoctor/contracts";
+import {
   Body,
   Controller,
   Delete,
@@ -11,13 +18,6 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import {
-  type CreateEvaluationRequest,
-  type UpdateEvaluationRequest,
-  createEvaluationRequestSchema,
-  importEvaluationRequestSchema,
-  updateEvaluationRequestSchema,
-} from "@modeldoctor/contracts";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";

@@ -1,6 +1,6 @@
+import type { JudgeConfig } from "@modeldoctor/contracts";
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import pLimit from "p-limit";
-import type { JudgeConfig } from "@modeldoctor/contracts";
 import type { EndpointCaller } from "../endpoint-caller.js";
 import { computeGateResult } from "../gate/compute-gate-result.js";
 import { aggregateMetrics, computeDelta } from "../gate/sample-aggregation.js";
@@ -16,7 +16,15 @@ interface FullRun {
   userId: string;
   endpointAId: string;
   endpointBId: string | null;
-  evaluationSnapshot: { samples: Array<{ id: string; idx: number; prompt: string; expected: string; judgeConfig: JudgeConfig }> };
+  evaluationSnapshot: {
+    samples: Array<{
+      id: string;
+      idx: number;
+      prompt: string;
+      expected: string;
+      judgeConfig: JudgeConfig;
+    }>;
+  };
   gateConfig: import("@modeldoctor/contracts").GateConfig;
 }
 
@@ -54,15 +62,29 @@ export class QualityGateRunExecutor implements OnModuleInit {
             if (ac.signal.aborted) return;
             const [callA, callB] = await Promise.all([
               this.endpointCaller.call(run.endpointAId, run.userId, s.prompt, ac.signal),
-              run.endpointBId ? this.endpointCaller.call(run.endpointBId, run.userId, s.prompt, ac.signal) : Promise.resolve(null),
+              run.endpointBId
+                ? this.endpointCaller.call(run.endpointBId, run.userId, s.prompt, ac.signal)
+                : Promise.resolve(null),
             ]);
             if (ac.signal.aborted) return;
-            const judgedA = await judgeLimit(() => this.judges.apply(s.judgeConfig, { question: s.prompt, expected: s.expected, answer: callA.rawAnswer }));
+            const judgedA = await judgeLimit(() =>
+              this.judges.apply(s.judgeConfig, {
+                question: s.prompt,
+                expected: s.expected,
+                answer: callA.rawAnswer,
+              }),
+            );
             if (s.judgeConfig.kind === "llm-judge") judgeCalls++;
             const judgedB =
               callB == null
                 ? null
-                : await judgeLimit(() => this.judges.apply(s.judgeConfig, { question: s.prompt, expected: s.expected, answer: callB.rawAnswer }));
+                : await judgeLimit(() =>
+                    this.judges.apply(s.judgeConfig, {
+                      question: s.prompt,
+                      expected: s.expected,
+                      answer: callB.rawAnswer,
+                    }),
+                  );
             if (callB != null && s.judgeConfig.kind === "llm-judge") judgeCalls++;
             const delta = computeDelta(judgedA, judgedB);
             await this.repo.saveSample({
@@ -70,11 +92,12 @@ export class QualityGateRunExecutor implements OnModuleInit {
               sampleId: s.id,
               sampleIdx: s.idx,
               resultA: { call: callA, judge: judgedA },
-              resultB: callB ? { call: callB, judge: judgedB! } : null,
+              resultB: callB != null && judgedB != null ? { call: callB, judge: judgedB } : null,
               delta,
             });
             processed++;
-            if (processed % PROGRESS_INTERVAL === 0) await this.repo.updateProgress(runId, processed);
+            if (processed % PROGRESS_INTERVAL === 0)
+              await this.repo.updateProgress(runId, processed);
           }),
         ),
       );

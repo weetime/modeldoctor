@@ -1,4 +1,12 @@
 import {
+  type CreateRunRequest,
+  type ListRunSamplesQuery,
+  type ListRunsQuery,
+  createRunRequestSchema,
+  listRunSamplesQuerySchema,
+  listRunsQuerySchema,
+} from "@modeldoctor/contracts";
+import {
   Body,
   Controller,
   Delete,
@@ -9,14 +17,6 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import {
-  type CreateRunRequest,
-  type ListRunSamplesQuery,
-  type ListRunsQuery,
-  createRunRequestSchema,
-  listRunSamplesQuerySchema,
-  listRunsQuerySchema,
-} from "@modeldoctor/contracts";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";

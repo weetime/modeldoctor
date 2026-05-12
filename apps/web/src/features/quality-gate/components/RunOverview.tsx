@@ -1,6 +1,6 @@
-import { useTranslation } from "react-i18next";
-import type { EvaluationRun } from "@modeldoctor/contracts";
 import { Card } from "@/components/ui/card";
+import type { EvaluationRun } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 import { GateStatusBadge } from "./GateStatusBadge";
 
 function pct(n: number | undefined) {
@@ -37,7 +37,9 @@ export function RunOverview({ run }: { run: EvaluationRun }) {
             <div className="text-2xl">{pct(m.passRateB)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">{t("report.metrics.regressionImprovement")}</div>
+            <div className="text-xs text-muted-foreground">
+              {t("report.metrics.regressionImprovement")}
+            </div>
             <div className="text-2xl">
               {m.regressionCount ?? "—"} / {m.improvementCount ?? "—"}
             </div>
@@ -51,14 +53,14 @@ export function RunOverview({ run }: { run: EvaluationRun }) {
             <div className="text-2xl">{num(m.judgeAvgB)}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">{t("report.metrics.judgeCallCount")}</div>
+            <div className="text-xs text-muted-foreground">
+              {t("report.metrics.judgeCallCount")}
+            </div>
             <div className="text-2xl">{m.judgeCallCount}</div>
           </div>
         </div>
       )}
-      {run.errorMessage && (
-        <div className="text-destructive text-sm">{run.errorMessage}</div>
-      )}
+      {run.errorMessage && <div className="text-destructive text-sm">{run.errorMessage}</div>}
     </Card>
   );
 }

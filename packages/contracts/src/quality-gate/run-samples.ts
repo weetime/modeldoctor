@@ -36,7 +36,13 @@ export const runSampleSchema = z.object({
 });
 export type RunSample = z.infer<typeof runSampleSchema>;
 
-export const sampleFilterSchema = z.enum(["all", "regression", "improvement", "both-pass", "both-fail"]);
+export const sampleFilterSchema = z.enum([
+  "all",
+  "regression",
+  "improvement",
+  "both-pass",
+  "both-fail",
+]);
 export type SampleFilter = z.infer<typeof sampleFilterSchema>;
 
 export const listRunSamplesQuerySchema = z.object({

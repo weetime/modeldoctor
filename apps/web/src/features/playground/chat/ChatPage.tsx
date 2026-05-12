@@ -1,4 +1,5 @@
 import { useConnection } from "@/features/connections/queries";
+import { qgApi } from "@/features/quality-gate/api";
 import { ApiError, api } from "@/lib/api-client";
 import { playgroundFetchStream } from "@/lib/playground-stream";
 import type {
@@ -27,7 +28,6 @@ import { ReproduceBanner } from "./ReproduceBanner";
 import { type AttachedFile, buildContentParts } from "./attachments";
 import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
-import { qgApi } from "@/features/quality-gate/api";
 
 /**
  * Walk message content parts, store each binary part as a Blob in IDB, and

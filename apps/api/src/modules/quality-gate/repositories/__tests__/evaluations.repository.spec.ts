@@ -1,6 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
-import { type TestDatabase, startPostgres } from "../../../../../test/helpers/postgres-container.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  type TestDatabase,
+  startPostgres,
+} from "../../../../../test/helpers/postgres-container.js";
 import { EvaluationsRepository } from "../evaluations.repository.js";
 
 let db: TestDatabase;
@@ -11,7 +14,9 @@ let userId: string;
 beforeAll(async () => {
   db = await startPostgres();
   prisma = new PrismaClient({ datasources: { db: { url: db.url } } });
-  const user = await prisma.user.create({ data: { email: `qg-${Date.now()}@test`, passwordHash: "x", roles: [] } });
+  const user = await prisma.user.create({
+    data: { email: `qg-${Date.now()}@test`, passwordHash: "x", roles: [] },
+  });
   userId = user.id;
   repo = new EvaluationsRepository(prisma);
 }, 180_000);
@@ -31,7 +36,11 @@ const sample = (idx: number) => ({
 
 describe("EvaluationsRepository", () => {
   it("creates an evaluation and reads it back", async () => {
-    const created = await repo.create(userId, { name: "set1", description: null, samples: [sample(0), sample(1)] });
+    const created = await repo.create(userId, {
+      name: "set1",
+      description: null,
+      samples: [sample(0), sample(1)],
+    });
     expect(created.totalSamples).toBe(2);
     const fetched = await repo.findById(userId, created.id);
     expect(fetched?.id).toBe(created.id);

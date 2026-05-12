@@ -7,7 +7,13 @@ export type RunStatus = z.infer<typeof runStatusSchema>;
 export const gateResultSchema = z.enum(["PASSED", "WARNING", "FAILED"]);
 export type GateResult = z.infer<typeof gateResultSchema>;
 
-export const sampleDeltaSchema = z.enum(["REGRESSION", "IMPROVEMENT", "BOTH_PASS", "BOTH_FAIL", "NA"]);
+export const sampleDeltaSchema = z.enum([
+  "REGRESSION",
+  "IMPROVEMENT",
+  "BOTH_PASS",
+  "BOTH_FAIL",
+  "NA",
+]);
 export type SampleDelta = z.infer<typeof sampleDeltaSchema>;
 
 export const gateConfigSchema = z

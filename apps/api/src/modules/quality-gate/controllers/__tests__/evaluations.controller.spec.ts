@@ -112,7 +112,11 @@ describe("EvaluationsController", () => {
 
     const result = await controller.importSet(USER, body as never);
 
-    expect(svc.import).toHaveBeenCalledWith(USER.sub, "imported-eval", expect.objectContaining({ format: "json" }));
+    expect(svc.import).toHaveBeenCalledWith(
+      USER.sub,
+      "imported-eval",
+      expect.objectContaining({ format: "json" }),
+    );
     expect(result).toEqual(created);
   });
 });

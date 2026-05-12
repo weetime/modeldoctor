@@ -170,11 +170,14 @@ export function SavedCompareDetailPage() {
                   </div>
                   {r.aggregateMetrics?.passRateB != null && (
                     <div className="text-sm">
-                      {tQg("savedCompare.passRateB")}: {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
+                      {tQg("savedCompare.passRateB")}:{" "}
+                      {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
                     </div>
                   )}
                   {r.aggregateMetrics?.regressionCount != null && (
-                    <div className="text-sm">{tQg("savedCompare.regression")}: {r.aggregateMetrics.regressionCount}</div>
+                    <div className="text-sm">
+                      {tQg("savedCompare.regression")}: {r.aggregateMetrics.regressionCount}
+                    </div>
                   )}
                 </Card>
               ))}

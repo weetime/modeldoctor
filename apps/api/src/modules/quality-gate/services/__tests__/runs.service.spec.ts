@@ -9,7 +9,14 @@ function build() {
     deleteRun: vi.fn(),
   };
   const evaluationsRepo = {
-    get: vi.fn().mockResolvedValue({ id: "e1", userId: "u1", version: 2, samples: [{ id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }] }),
+    get: vi.fn().mockResolvedValue({
+      id: "e1",
+      userId: "u1",
+      version: 2,
+      samples: [
+        { id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+      ],
+    }),
   };
   const connections = { findById: vi.fn().mockResolvedValue({ id: "c", userId: "u1" }) };
   const executor = { start: vi.fn(), cancel: vi.fn() };
@@ -20,20 +27,43 @@ describe("RunsService", () => {
   it("rejects when evaluation not owned by user", async () => {
     const m = build();
     m.evaluationsRepo.get.mockResolvedValueOnce(null);
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
-    await expect(svc.create("u1", { evaluationId: "x", endpointAId: "c", gateConfig: { passRateMin: 0.9 } })).rejects.toThrow();
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
+    await expect(
+      svc.create("u1", { evaluationId: "x", endpointAId: "c", gateConfig: { passRateMin: 0.9 } }),
+    ).rejects.toThrow();
   });
   it("create snapshots evaluation samples and fires executor", async () => {
     const m = build();
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
-    const r = await svc.create("u1", { evaluationId: "e1", endpointAId: "c", gateConfig: { passRateMin: 0.9 } });
-    expect(m.repo.createPending).toHaveBeenCalledWith(expect.objectContaining({ evaluationVersion: 2 }));
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
+    const r = await svc.create("u1", {
+      evaluationId: "e1",
+      endpointAId: "c",
+      gateConfig: { passRateMin: 0.9 },
+    });
+    expect(m.repo.createPending).toHaveBeenCalledWith(
+      expect.objectContaining({ evaluationVersion: 2 }),
+    );
     expect(m.executor.start).toHaveBeenCalledWith("r1");
     expect(r.id).toBe("r1");
   });
   it("cancel forwards to executor when run owned by user", async () => {
     const m = build();
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await svc.cancel("u1", "r1");
     expect(m.executor.cancel).toHaveBeenCalledWith("r1");
   });

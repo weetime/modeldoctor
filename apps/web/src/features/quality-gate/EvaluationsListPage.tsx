@@ -1,6 +1,3 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +9,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
 import { useDeleteEvaluation, useEvaluations } from "./queries";
 
 export function EvaluationsListPage() {
@@ -32,7 +32,9 @@ export function EvaluationsListPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t("evaluations.title")}</h1>
-        <Button onClick={() => nav("/quality-gate/evaluations/new")}>{t("evaluations.create")}</Button>
+        <Button onClick={() => nav("/quality-gate/evaluations/new")}>
+          {t("evaluations.create")}
+        </Button>
       </div>
 
       {isLoading ? (
@@ -78,7 +80,9 @@ export function EvaluationsListPage() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>{t("detail.delete.title", { name: e.name })}</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          {t("detail.delete.title", { name: e.name })}
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
                           {t("detail.delete.description")}
                         </AlertDialogDescription>

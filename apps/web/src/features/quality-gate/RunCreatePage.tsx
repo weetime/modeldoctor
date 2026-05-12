@@ -1,7 +1,3 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import type { GateConfig } from "@modeldoctor/contracts";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,6 +8,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnections } from "@/features/connections/queries";
+import type { GateConfig } from "@modeldoctor/contracts";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { GateConfigForm } from "./components/GateConfigForm";
 import { useCreateRun, useEvaluations } from "./queries";
 
@@ -90,9 +90,10 @@ export function RunCreatePage() {
       <Button
         disabled={!evaluationId || !endpointAId}
         onClick={async () => {
+          if (!evaluationId || !endpointAId) return;
           const run = await create.mutateAsync({
-            evaluationId: evaluationId!,
-            endpointAId: endpointAId!,
+            evaluationId,
+            endpointAId,
             endpointBId,
             gateConfig: gate,
           });

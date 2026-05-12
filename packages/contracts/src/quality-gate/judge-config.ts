@@ -42,7 +42,11 @@ export const judgeConfigSchema = baseUnion.superRefine((cfg, ctx) => {
     }
   }
   if (cfg.kind === "llm-judge" && cfg.passThreshold != null) {
-    const bounds: Record<string, [number, number]> = { "0-1": [0, 1], "0-5": [0, 5], "pass-fail": [0, 1] };
+    const bounds: Record<string, [number, number]> = {
+      "0-1": [0, 1],
+      "0-5": [0, 5],
+      "pass-fail": [0, 1],
+    };
     const [lo, hi] = bounds[cfg.scale];
     if (cfg.passThreshold < lo || cfg.passThreshold > hi) {
       ctx.addIssue({
@@ -56,6 +60,8 @@ export const judgeConfigSchema = baseUnion.superRefine((cfg, ctx) => {
 
 export type JudgeConfig = z.infer<typeof judgeConfigSchema>;
 
-export function defaultPassThreshold(scale: Extract<JudgeConfig, { kind: "llm-judge" }>["scale"]): number {
+export function defaultPassThreshold(
+  scale: Extract<JudgeConfig, { kind: "llm-judge" }>["scale"],
+): number {
   return scale === "0-1" ? 0.5 : scale === "0-5" ? 3 : 0.5;
 }

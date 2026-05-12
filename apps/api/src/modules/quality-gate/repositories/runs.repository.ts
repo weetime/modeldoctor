@@ -1,10 +1,15 @@
-import { Injectable } from "@nestjs/common";
 import type {
-  AggregateMetrics, EvaluationRun, GateResult, ListRunSamplesQuery,
-  ListRunSamplesResponse, ListRunsQuery, RunSample,
+  AggregateMetrics,
+  EvaluationRun,
+  GateResult,
+  ListRunSamplesQuery,
+  ListRunSamplesResponse,
+  ListRunsQuery,
+  RunSample,
 } from "@modeldoctor/contracts";
+import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import type { PrismaClient, EvaluationRunStatus } from "@prisma/client";
+import type { EvaluationRunStatus, PrismaClient } from "@prisma/client";
 import type { GateOutcome } from "../gate/compute-gate-result.js";
 
 export interface CreatePendingInput {
@@ -52,8 +57,15 @@ export class RunsRepository {
     return row ? this.toDto(row) : null;
   }
 
-  async list(userId: string, q: ListRunsQuery): Promise<{ items: EvaluationRun[]; total: number; page: number; pageSize: number }> {
-    const where = { userId, ...(q.status ? { status: q.status as EvaluationRunStatus } : {}), ...(q.evaluationId ? { evaluationId: q.evaluationId } : {}) };
+  async list(
+    userId: string,
+    q: ListRunsQuery,
+  ): Promise<{ items: EvaluationRun[]; total: number; page: number; pageSize: number }> {
+    const where = {
+      userId,
+      ...(q.status ? { status: q.status as EvaluationRunStatus } : {}),
+      ...(q.evaluationId ? { evaluationId: q.evaluationId } : {}),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.evaluationRun.count({ where }),
       this.prisma.evaluationRun.findMany({
@@ -67,22 +79,38 @@ export class RunsRepository {
   }
 
   async markRunning(id: string) {
-    return this.prisma.evaluationRun.update({ where: { id }, data: { status: "RUNNING", startedAt: new Date() } });
+    return this.prisma.evaluationRun.update({
+      where: { id },
+      data: { status: "RUNNING", startedAt: new Date() },
+    });
   }
 
   async updateProgress(id: string, processed: number) {
-    return this.prisma.evaluationRun.update({ where: { id }, data: { processedSamples: processed } });
+    return this.prisma.evaluationRun.update({
+      where: { id },
+      data: { processedSamples: processed },
+    });
   }
 
   async markCancelled(id: string) {
-    return this.prisma.evaluationRun.update({ where: { id }, data: { status: "CANCELLED", finishedAt: new Date() } });
+    return this.prisma.evaluationRun.update({
+      where: { id },
+      data: { status: "CANCELLED", finishedAt: new Date() },
+    });
   }
 
   async markFailed(id: string, message: string) {
-    return this.prisma.evaluationRun.update({ where: { id }, data: { status: "FAILED", finishedAt: new Date(), errorMessage: message } });
+    return this.prisma.evaluationRun.update({
+      where: { id },
+      data: { status: "FAILED", finishedAt: new Date(), errorMessage: message },
+    });
   }
 
-  async markCompleted(id: string, metrics: AggregateMetrics, gate: GateOutcome): Promise<EvaluationRun> {
+  async markCompleted(
+    id: string,
+    metrics: AggregateMetrics,
+    gate: GateOutcome,
+  ): Promise<EvaluationRun> {
     const row = await this.prisma.evaluationRun.update({
       where: { id },
       data: {
@@ -121,7 +149,12 @@ export class RunsRepository {
     const orderBy = { sampleIdx: "asc" as const };
     const [total, rows] = await Promise.all([
       this.prisma.evaluationRunSample.count({ where }),
-      this.prisma.evaluationRunSample.findMany({ where, orderBy, skip: (q.page - 1) * q.pageSize, take: q.pageSize }),
+      this.prisma.evaluationRunSample.findMany({
+        where,
+        orderBy,
+        skip: (q.page - 1) * q.pageSize,
+        take: q.pageSize,
+      }),
     ]);
     return {
       items: rows.map(
@@ -145,21 +178,34 @@ export class RunsRepository {
   async sampleRowsForAggregate(runId: string) {
     const rows = await this.prisma.evaluationRunSample.findMany({ where: { runId } });
     return rows.map((r) => ({
-      resultA: r.resultA as { call: { error?: string }; judge: { passed: boolean; score?: number } },
-      resultB: r.resultB as { call: { error?: string }; judge: { passed: boolean; score?: number } } | null,
+      resultA: r.resultA as {
+        call: { error?: string };
+        judge: { passed: boolean; score?: number };
+      },
+      resultB: r.resultB as {
+        call: { error?: string };
+        judge: { passed: boolean; score?: number };
+      } | null,
     }));
   }
 
   async sweepRunningOnBoot(): Promise<number> {
     const r = await this.prisma.evaluationRun.updateMany({
       where: { status: { in: ["PENDING", "RUNNING"] } },
-      data: { status: "FAILED", errorMessage: "server restarted, retrigger to resume", finishedAt: new Date() },
+      data: {
+        status: "FAILED",
+        errorMessage: "server restarted, retrigger to resume",
+        finishedAt: new Date(),
+      },
     });
     return r.count;
   }
 
   async deleteRun(userId: string, id: string) {
-    const owned = await this.prisma.evaluationRun.findFirst({ where: { id, userId }, select: { id: true } });
+    const owned = await this.prisma.evaluationRun.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
     if (!owned) throw new Error(`run ${id} not found`);
     await this.prisma.evaluationRun.delete({ where: { id } });
   }
@@ -172,17 +218,36 @@ export class RunsRepository {
       userId: row.userId,
       endpointAId: row.endpointAId,
       endpointBId: row.endpointBId,
-      evaluationSnapshot: row.evaluationSnapshot as { samples: Array<{ id: string; idx: number; prompt: string; expected: string; judgeConfig: import("@modeldoctor/contracts").JudgeConfig }> },
+      evaluationSnapshot: row.evaluationSnapshot as {
+        samples: Array<{
+          id: string;
+          idx: number;
+          prompt: string;
+          expected: string;
+          judgeConfig: import("@modeldoctor/contracts").JudgeConfig;
+        }>;
+      },
       gateConfig: row.gateConfig as import("@modeldoctor/contracts").GateConfig,
     };
   }
 
   private toDto = (row: {
-    id: string; userId: string; evaluationId: string; evaluationVersion: number;
-    evaluationSnapshot: unknown; endpointAId: string; endpointBId: string | null;
-    gateConfig: unknown; status: EvaluationRunStatus; gateResult: GateResult | null;
-    aggregateMetrics: unknown; processedSamples: number; totalSamples: number;
-    startedAt: Date | null; finishedAt: Date | null; errorMessage: string | null;
+    id: string;
+    userId: string;
+    evaluationId: string;
+    evaluationVersion: number;
+    evaluationSnapshot: unknown;
+    endpointAId: string;
+    endpointBId: string | null;
+    gateConfig: unknown;
+    status: EvaluationRunStatus;
+    gateResult: GateResult | null;
+    aggregateMetrics: unknown;
+    processedSamples: number;
+    totalSamples: number;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+    errorMessage: string | null;
     createdAt: Date;
   }): EvaluationRun => ({
     id: row.id,

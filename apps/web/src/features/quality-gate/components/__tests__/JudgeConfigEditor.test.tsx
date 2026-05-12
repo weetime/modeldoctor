@@ -1,7 +1,7 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
-import i18n from "@/lib/i18n";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { JudgeConfigEditor } from "../JudgeConfigEditor";
 
 beforeAll(async () => {
@@ -30,9 +30,7 @@ describe("JudgeConfigEditor", () => {
   });
 
   it("regex kind shows pattern input", () => {
-    wrap(
-      <JudgeConfigEditor value={{ kind: "regex", pattern: "^a$" }} onChange={() => {}} />,
-    );
+    wrap(<JudgeConfigEditor value={{ kind: "regex", pattern: "^a$" }} onChange={() => {}} />);
     expect(screen.getByDisplayValue("^a$")).toBeInTheDocument();
   });
 
