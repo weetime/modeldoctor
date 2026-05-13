@@ -360,6 +360,7 @@ model Evaluation {
   baselineRun EvaluationRun?  @relation("EvalBaseline", fields: [baselineRunId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  @@index([baselineRunId])
   @@map("evaluations")
 }
 
