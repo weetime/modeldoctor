@@ -21,6 +21,8 @@ export const qgApi = {
   updateEvaluation: (id: string, body: UpdateEvaluationRequest) =>
     api.patch<Evaluation>(`/api/quality-gate/evaluations/${id}`, body),
   deleteEvaluation: (id: string) => api.del<void>(`/api/quality-gate/evaluations/${id}`),
+  duplicateEvaluation: (id: string) =>
+    api.post<Evaluation>(`/api/quality-gate/evaluations/${id}/duplicate`, {}),
   importEvaluation: (body: { name: string; import: ImportEvaluationRequest }) =>
     api.post<Evaluation>("/api/quality-gate/evaluations/import", body),
 

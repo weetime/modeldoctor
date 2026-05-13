@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ArrowRight, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
@@ -112,37 +113,39 @@ export function RunsListPage() {
                     {r.processedSamples}/{r.totalSamples}
                   </TableCell>
                   <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => nav(`/quality-gate/runs/${r.id}`)}
-                    >
-                      {t("detail.actions.detail")}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          {t("detail.delete.button")}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t("detail.delete.title", { name: r.id.slice(0, 12) })}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t("detail.delete.descriptionRun")}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t("detail.delete.cancel")}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => del.mutate(r.id)}>
-                            {t("detail.delete.confirm")}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  <TableCell className="text-right">
+                    <div className="inline-flex items-center gap-1">
+                      <Button asChild variant="ghost" size="sm" className="gap-1">
+                        <Link to={`/quality-gate/runs/${r.id}`}>
+                          <ArrowRight className="h-4 w-4" />
+                          <span>{t("detail.actions.detail")}</span>
+                        </Link>
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-1 text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                            <span>{t("detail.delete.button")}</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t("detail.delete.title", { name: r.id.slice(0, 12) })}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t("detail.delete.descriptionRun")}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t("detail.delete.cancel")}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => del.mutate(r.id)}>
+                              {t("detail.delete.confirm")}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

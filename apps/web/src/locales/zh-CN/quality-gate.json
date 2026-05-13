@@ -48,7 +48,21 @@
     "promptLabel": "题面 / prompt",
     "expectedLabel": "期望答案 / expected",
     "remove": "删除",
-    "indexPrefix": "#"
+    "indexPrefix": "#",
+    "col": {
+      "idx": "#",
+      "prompt": "题面预览",
+      "judge": "判分器",
+      "actions": "操作"
+    },
+    "editAction": "编辑",
+    "deleteAction": "删除",
+    "addAction": "添加样本",
+    "editorTitle": "编辑样本 #{{idx}}",
+    "addTitle": "添加样本",
+    "done": "完成",
+    "emptyPreview": "（未填写题面）",
+    "empty": "还没有样本"
   },
   "judges": {
     "kindLabel": "判分器",
@@ -207,6 +221,13 @@
       "cancel": "取消",
       "confirm": "删除"
     }
+  },
+  "official": {
+    "badge": "官方",
+    "readOnlyHint": "这是平台内置的官方评测集，只读。如需修改样本或钉 baseline，请先「复制为我的」生成可编辑副本。",
+    "duplicateButton": "复制为我的",
+    "duplicateSuccess": "已复制为「{{name}}」",
+    "duplicateError": "复制失败：{{message}}"
   },
   "savedCompare": {
     "section": "质量评测",

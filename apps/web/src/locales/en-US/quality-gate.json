@@ -48,7 +48,21 @@
     "promptLabel": "Prompt",
     "expectedLabel": "Expected",
     "remove": "Remove",
-    "indexPrefix": "#"
+    "indexPrefix": "#",
+    "col": {
+      "idx": "#",
+      "prompt": "Prompt preview",
+      "judge": "Judge",
+      "actions": "Actions"
+    },
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "addAction": "Add sample",
+    "editorTitle": "Edit sample #{{idx}}",
+    "addTitle": "Add sample",
+    "done": "Done",
+    "emptyPreview": "(empty prompt)",
+    "empty": "No samples yet"
   },
   "judges": {
     "kindLabel": "Judge / Kind",
@@ -207,6 +221,13 @@
       "cancel": "Cancel",
       "confirm": "Delete"
     }
+  },
+  "official": {
+    "badge": "Official",
+    "readOnlyHint": "This is a platform built-in evaluation set, read-only. Use \"Copy to mine\" to make an editable copy if you want to change samples or pin a baseline.",
+    "duplicateButton": "Copy to mine",
+    "duplicateSuccess": "Copied as \"{{name}}\"",
+    "duplicateError": "Copy failed: {{message}}"
   },
   "savedCompare": {
     "section": "Quality Evaluations",

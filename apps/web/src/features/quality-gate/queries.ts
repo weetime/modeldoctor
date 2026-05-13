@@ -57,6 +57,14 @@ export function useDeleteEvaluation() {
   });
 }
 
+export function useDuplicateEvaluation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: qgApi.duplicateEvaluation,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY.evaluations }),
+  });
+}
+
 export function useImportEvaluation() {
   const qc = useQueryClient();
   return useMutation({

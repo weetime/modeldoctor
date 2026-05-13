@@ -9,6 +9,7 @@ import { EvaluationsListPage } from "../EvaluationsListPage";
 vi.mock("../queries", () => ({
   useEvaluations: vi.fn(),
   useDeleteEvaluation: () => ({ mutate: vi.fn() }),
+  useDuplicateEvaluation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 import { useEvaluations } from "../queries";
 
@@ -27,6 +28,32 @@ function Provider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const userEval = {
+  id: "e1",
+  userId: "u1",
+  name: "Demo",
+  description: null,
+  version: 1,
+  samples: [],
+  totalSamples: 4,
+  isOfficial: false,
+  createdAt: "2026-05-12T00:00:00Z",
+  updatedAt: "2026-05-12T00:00:00Z",
+};
+
+const officialEval = {
+  id: "e2",
+  userId: "usr_system_seed_00000000000",
+  name: "Built-in",
+  description: "official zh-CN demo",
+  version: 1,
+  samples: [],
+  totalSamples: 8,
+  isOfficial: true,
+  createdAt: "2026-05-12T00:00:00Z",
+  updatedAt: "2026-05-12T00:00:00Z",
+};
+
 describe("EvaluationsListPage", () => {
   it("shows empty state when no items", () => {
     (useEvaluations as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -37,21 +64,9 @@ describe("EvaluationsListPage", () => {
     expect(screen.getByText(/还没有评测集/)).toBeInTheDocument();
   });
 
-  it("renders rows with detail link", () => {
+  it("renders rows with detail link and sample count", () => {
     (useEvaluations as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: [
-        {
-          id: "e1",
-          userId: "u1",
-          name: "Demo",
-          description: null,
-          version: 1,
-          samples: [],
-          totalSamples: 4,
-          createdAt: "2026-05-12T00:00:00Z",
-          updatedAt: "2026-05-12T00:00:00Z",
-        },
-      ],
+      data: [userEval],
       isLoading: false,
     });
     render(<EvaluationsListPage />, { wrapper: Provider });
@@ -60,25 +75,24 @@ describe("EvaluationsListPage", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
-  it("delete button opens AlertDialog with name in title", () => {
+  it("delete button opens AlertDialog with name in title (user-owned row)", () => {
     (useEvaluations as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: [
-        {
-          id: "e1",
-          userId: "u1",
-          name: "Demo",
-          description: null,
-          version: 1,
-          samples: [],
-          totalSamples: 1,
-          createdAt: "2026-05-12T00:00:00Z",
-          updatedAt: "2026-05-12T00:00:00Z",
-        },
-      ],
+      data: [userEval],
       isLoading: false,
     });
     render(<EvaluationsListPage />, { wrapper: Provider });
-    fireEvent.click(screen.getByRole("button", { name: "删除" }));
+    fireEvent.click(screen.getByRole("button", { name: /删除/ }));
     expect(screen.getByText(/删除 Demo？/)).toBeInTheDocument();
+  });
+
+  it("renders official badge and shows Copy button instead of Delete on official rows", () => {
+    (useEvaluations as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [officialEval],
+      isLoading: false,
+    });
+    render(<EvaluationsListPage />, { wrapper: Provider });
+    expect(screen.getByText("官方")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /复制为我的/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /删除/ })).not.toBeInTheDocument();
   });
 });
