@@ -60,11 +60,7 @@ export function RunReportPage() {
             )}
             {run.status === "COMPLETED" && (
               <>
-                <PinBaselineButton
-                  evaluationId={run.evaluationId}
-                  runId={run.id}
-                  gateResult={run.gateResult}
-                />
+                <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
                 <Button variant="outline" size="sm" asChild>
                   <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
                     {t("runs.report.addToCompareButton")}

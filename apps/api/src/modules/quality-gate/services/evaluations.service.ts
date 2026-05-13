@@ -198,11 +198,11 @@ export class EvaluationsService {
       if (run.status !== "COMPLETED") {
         throw new BadRequestException(`run ${runId} must be COMPLETED to be pinned as baseline`);
       }
-      if (run.gateResult === "FAILED") {
-        throw new BadRequestException(
-          `run ${runId} failed its gate verdict and cannot be pinned as baseline`,
-        );
-      }
+      // Gate verdict (PASSED / WARNING / FAILED) intentionally not checked here.
+      // Baseline is a user-chosen comparison reference, not a "known-good" marker —
+      // industry mainstream (LangSmith / Braintrust / Vellum) lets users pin any
+      // completed run, including ones that didn't meet the gate, so they can
+      // track movement away from a known-broken state.
     }
 
     return this.repo.update(userId, evaluationId, { baselineRunId: runId });

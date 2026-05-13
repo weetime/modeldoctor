@@ -149,7 +149,7 @@ describe("setBaseline", () => {
     await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(/run .* not found/);
   });
 
-  it("rejects when run has FAILED gate verdict", async () => {
+  it("allows pinning a completed run regardless of gate verdict (industry-aligned)", async () => {
     const { repo, runsRepo } = build();
     runsRepo.findById.mockResolvedValueOnce({
       id: runId,
@@ -159,9 +159,9 @@ describe("setBaseline", () => {
       gateResult: "FAILED",
     });
     const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(
-      /failed its gate verdict/,
-    );
+    const out = await svc.setBaseline(userId, evaluationId, runId);
+    expect(out.baselineRunId).toBe(runId);
+    expect(repo.update).toHaveBeenCalledWith(userId, evaluationId, { baselineRunId: runId });
   });
 });
 
