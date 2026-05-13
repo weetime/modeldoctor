@@ -4,7 +4,7 @@ import type {
   ListRunSamplesQuery,
   ListRunsQuery,
 } from "@modeldoctor/contracts";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConnectionService } from "../../connection/connection.service.js";
 import { RunsRepository } from "../repositories/runs.repository.js";
 import { EvaluationsService } from "./evaluations.service.js";
@@ -54,6 +54,33 @@ export class RunsService {
       if (!connB) throw new NotFoundException(`endpointB connection ${body.endpointBId} not found`);
     }
 
+    // Resolve baseline:
+    // undefined → use evaluation.baselineRunId (pin)
+    // null      → explicit skip, no baseline
+    // string    → validate + use that run
+    let baselineRunIdAtExecution: string | null = null;
+    if (body.baselineRunIdOverride === undefined) {
+      baselineRunIdAtExecution = evaluation.baselineRunId ?? null;
+    } else if (body.baselineRunIdOverride === null) {
+      baselineRunIdAtExecution = null;
+    } else {
+      const override = await this.repo.findById(userId, body.baselineRunIdOverride);
+      if (!override) {
+        throw new NotFoundException(`baseline run ${body.baselineRunIdOverride} not found`);
+      }
+      if (override.evaluationId !== evaluation.id) {
+        throw new BadRequestException(
+          `baseline run ${body.baselineRunIdOverride} belongs to a different evaluation`,
+        );
+      }
+      if (override.status !== "COMPLETED") {
+        throw new BadRequestException(
+          `baseline run ${body.baselineRunIdOverride} must be COMPLETED`,
+        );
+      }
+      baselineRunIdAtExecution = override.id;
+    }
+
     const pending = await this.repo.createPending({
       userId,
       evaluationId: evaluation.id,
@@ -62,6 +89,7 @@ export class RunsService {
       endpointAId: body.endpointAId,
       endpointBId: body.endpointBId ?? null,
       gateConfig: body.gateConfig,
+      baselineRunIdAtExecution,
     });
 
     // Fire and forget; executor runs async, controller returns immediately.

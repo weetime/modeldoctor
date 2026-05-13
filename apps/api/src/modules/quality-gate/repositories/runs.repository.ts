@@ -21,6 +21,7 @@ export interface CreatePendingInput {
   endpointAId: string;
   endpointBId?: string | null;
   gateConfig: object;
+  baselineRunIdAtExecution?: string | null;
 }
 
 export interface SaveSampleInput {
@@ -48,6 +49,7 @@ export class RunsRepository {
         endpointBId: input.endpointBId ?? null,
         gateConfig: input.gateConfig,
         totalSamples: total,
+        baselineRunIdAtExecution: input.baselineRunIdAtExecution ?? null,
       },
     });
     return this.toDto(row);
@@ -251,6 +253,7 @@ export class RunsRepository {
     aggregateMetrics: unknown;
     processedSamples: number;
     totalSamples: number;
+    baselineRunIdAtExecution: string | null;
     startedAt: Date | null;
     finishedAt: Date | null;
     errorMessage: string | null;
@@ -269,6 +272,7 @@ export class RunsRepository {
     aggregateMetrics: row.aggregateMetrics as EvaluationRun["aggregateMetrics"],
     processedSamples: row.processedSamples,
     totalSamples: row.totalSamples,
+    baselineRunIdAtExecution: row.baselineRunIdAtExecution,
     startedAt: row.startedAt?.toISOString() ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
     errorMessage: row.errorMessage,
