@@ -52,6 +52,7 @@
     "col": {
       "idx": "#",
       "prompt": "题面预览",
+      "expected": "期望预览",
       "judge": "判分器",
       "actions": "操作"
     },

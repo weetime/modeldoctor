@@ -79,7 +79,8 @@ export function SamplesTableEditor({ name, readOnly = false, trailingActions }: 
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">{t("samples.col.idx")}</TableHead>
-                <TableHead>{t("samples.col.prompt")}</TableHead>
+                <TableHead className="w-2/5">{t("samples.col.prompt")}</TableHead>
+                <TableHead className="w-2/5">{t("samples.col.expected")}</TableHead>
                 <TableHead className="w-32">{t("samples.col.judge")}</TableHead>
                 {!readOnly && (
                   <TableHead className="w-40 text-right">{t("samples.col.actions")}</TableHead>
@@ -90,10 +91,13 @@ export function SamplesTableEditor({ name, readOnly = false, trailingActions }: 
               {fields.map((f, i) => {
                 const s = samples[i];
                 const promptPreview = s?.prompt?.trim();
+                const expectedPreview = s?.expected?.trim();
                 return (
                   <TableRow key={f.id}>
-                    <TableCell className="text-muted-foreground tabular-nums">{i + 1}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums align-top">
+                      {i + 1}
+                    </TableCell>
+                    <TableCell className="align-top">
                       {promptPreview ? (
                         <span className="line-clamp-2 text-sm">{promptPreview}</span>
                       ) : (
@@ -102,13 +106,22 @@ export function SamplesTableEditor({ name, readOnly = false, trailingActions }: 
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-top">
+                      {expectedPreview ? (
+                        <span className="line-clamp-2 text-sm text-muted-foreground">
+                          {expectedPreview}
+                        </span>
+                      ) : (
+                        <span className="text-sm italic text-muted-foreground/70">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top">
                       <Badge variant="outline" className="font-mono text-xs">
                         {s?.judgeConfig?.kind ?? "—"}
                       </Badge>
                     </TableCell>
                     {!readOnly && (
-                      <TableCell className="text-right">
+                      <TableCell className="text-right align-top">
                         <div className="inline-flex items-center gap-1">
                           <Button
                             type="button"
