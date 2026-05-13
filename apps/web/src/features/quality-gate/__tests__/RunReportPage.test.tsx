@@ -28,6 +28,7 @@ const mockRun = {
   totalSamples: 1,
   startedAt: "2026-05-12T00:00:00Z",
   finishedAt: "2026-05-12T00:00:01Z",
+  baselineRunIdAtExecution: null,
   errorMessage: null,
   createdAt: "2026-05-12T00:00:00Z",
 };
@@ -37,6 +38,8 @@ vi.mock("../queries", () => ({
   useRun: () => ({ data: mockRun }),
   useCancelRun: () => ({ mutate: vi.fn() }),
   useRunSamples: () => ({ data: mockSamples }),
+  useEvaluation: () => ({ data: { id: "e1", baselineRunId: null } }),
+  useSetBaseline: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {

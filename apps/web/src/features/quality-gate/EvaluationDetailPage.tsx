@@ -1,6 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,21 +18,17 @@ import {
   type UpdateEvaluationRequest,
   updateEvaluationRequestSchema,
 } from "@modeldoctor/contracts";
+import { Copy, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { EvaluationSampleEditor } from "./components/EvaluationSampleEditor";
-import { useEvaluation, useUpdateEvaluation } from "./queries";
+import { PinnedBaselineCard } from "./components/PinnedBaselineCard";
+import { SamplesTableEditor } from "./components/SamplesTableEditor";
+import { useDuplicateEvaluation, useEvaluation, useUpdateEvaluation } from "./queries";
 
 type FormShape = Required<Pick<UpdateEvaluationRequest, "name" | "description" | "samples">>;
-
-const blankSample: FormShape["samples"][number] = {
-  prompt: "",
-  expected: "",
-  judgeConfig: { kind: "exact-match" },
-};
 
 export function EvaluationDetailPage() {
   const { id = "" } = useParams();
@@ -40,6 +37,7 @@ export function EvaluationDetailPage() {
   const { t: tSidebar } = useTranslation("sidebar");
   const { data } = useEvaluation(id);
   const update = useUpdateEvaluation(id);
+  const duplicate = useDuplicateEvaluation();
   const [initialized, setInitialized] = useState(false);
 
   const form = useForm<FormShape>({
@@ -47,7 +45,6 @@ export function EvaluationDetailPage() {
     mode: "onChange",
     defaultValues: { name: "", description: null, samples: [] },
   });
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "samples" });
 
   useEffect(() => {
     if (data && !initialized) {
@@ -69,6 +66,16 @@ export function EvaluationDetailPage() {
     }
   });
 
+  async function handleDuplicate() {
+    try {
+      const copy = await duplicate.mutateAsync(id);
+      toast.success(t("official.duplicateSuccess", { name: copy.name }));
+      nav(`/quality-gate/evaluations/${copy.id}`);
+    } catch (err) {
+      toast.error(t("official.duplicateError", { message: (err as Error).message }));
+    }
+  }
+
   const breadcrumbs = [
     { label: tSidebar("groups.qualityGate") },
     {
@@ -78,9 +85,6 @@ export function EvaluationDetailPage() {
     { label: data?.name ?? t("evaluations.form.editTitle") },
   ];
 
-  // Loading / 404: still render PageHeader + breadcrumbs (with a placeholder
-  // for the entity name) so spatial layout stays consistent. Body becomes
-  // a skeleton card while data arrives.
   if (!data) {
     return (
       <>
@@ -96,76 +100,98 @@ export function EvaluationDetailPage() {
     );
   }
 
+  const isOfficial = data.isOfficial;
+
   return (
     <>
       <PageHeader
         title={data.name}
         subtitle={t("evaluations.form.editSubtitle")}
         breadcrumbs={breadcrumbs}
+        rightSlot={
+          isOfficial ? (
+            <Button onClick={handleDuplicate} disabled={duplicate.isPending}>
+              <Copy className="mr-1 h-4 w-4" />
+              {t("official.duplicateButton")}
+            </Button>
+          ) : undefined
+        }
       />
-      <div className="space-y-6 px-8 py-6">
-        <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-6">
-            <FormSection title={t("evaluations.form.sectionBasics")}>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>{t("evaluations.form.nameLabel")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder={t("evaluations.form.namePlaceholder")} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("evaluations.form.descriptionLabel")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder={t("evaluations.form.descriptionPlaceholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </FormSection>
+      <Form {...form}>
+        <form onSubmit={onSubmit}>
+          <div className="space-y-6 px-8 py-6 pb-24">
+            {isOfficial && (
+              <Alert>
+                <ShieldCheck className="h-4 w-4" />
+                <AlertDescription>{t("official.readOnlyHint")}</AlertDescription>
+              </Alert>
+            )}
+            {data.baselineRunId && (
+              <PinnedBaselineCard evaluationId={data.id} baselineRunId={data.baselineRunId} />
+            )}
+            <fieldset
+              disabled={isOfficial}
+              className="space-y-6 disabled:opacity-100 disabled:cursor-default"
+            >
+              <FormSection title={t("evaluations.form.sectionBasics")}>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>{t("evaluations.form.nameLabel")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          readOnly={isOfficial}
+                          placeholder={t("evaluations.form.namePlaceholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("evaluations.form.descriptionLabel")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          readOnly={isOfficial}
+                          value={field.value ?? ""}
+                          placeholder={t("evaluations.form.descriptionPlaceholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </FormSection>
 
-            <FormSection title={t("evaluations.form.sectionSamples")}>
-              <Button type="button" onClick={() => append(blankSample)}>
-                {t("evaluations.form.addSample")}
-              </Button>
+              <FormSection title={t("evaluations.form.sectionSamples")}>
+                <SamplesTableEditor name="samples" readOnly={isOfficial} />
+              </FormSection>
+            </fieldset>
+          </div>
 
-              <div className="space-y-3">
-                {fields.map((f, i) => (
-                  <EvaluationSampleEditor
-                    key={f.id}
-                    namePrefix={`samples.${i}`}
-                    index={i}
-                    onRemove={() => remove(i)}
-                  />
-                ))}
+          {!isOfficial && (
+            <div className="sticky bottom-0 left-0 right-0 z-10 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="px-8 py-3">
+                <FormActions
+                  onCancel={() => nav("/quality-gate/evaluations")}
+                  cancelLabel={t("evaluations.form.cancel")}
+                  submitLabel={t("evaluations.form.save")}
+                  disabled={!form.formState.isValid}
+                  pending={update.isPending}
+                />
               </div>
-            </FormSection>
-
-            <FormActions
-              onCancel={() => nav("/quality-gate/evaluations")}
-              cancelLabel={t("evaluations.form.cancel")}
-              submitLabel={t("evaluations.form.save")}
-              disabled={!form.formState.isValid}
-              pending={update.isPending}
-            />
-          </form>
-        </Form>
-      </div>
+            </div>
+          )}
+        </form>
+      </Form>
     </>
   );
 }

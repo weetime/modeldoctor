@@ -41,14 +41,31 @@ export const aggregateMetricsSchema = z.object({
 });
 export type AggregateMetrics = z.infer<typeof aggregateMetricsSchema>;
 
+export const connectionRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  model: z.string(),
+  baseUrl: z.string(),
+});
+export type ConnectionRef = z.infer<typeof connectionRefSchema>;
+
+export const evaluationRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type EvaluationRef = z.infer<typeof evaluationRefSchema>;
+
 export const evaluationRunSchema = z.object({
   id: z.string(),
   userId: z.string(),
   evaluationId: z.string(),
   evaluationVersion: z.number().int().positive(),
   evaluationSnapshot: z.object({ samples: z.array(evaluationSampleSchema) }),
+  evaluation: evaluationRefSchema.nullable(),
   endpointAId: z.string(),
   endpointBId: z.string().nullable(),
+  endpointA: connectionRefSchema.nullable(),
+  endpointB: connectionRefSchema.nullable(),
   gateConfig: gateConfigSchema,
   status: runStatusSchema,
   gateResult: gateResultSchema.nullable(),
@@ -57,6 +74,7 @@ export const evaluationRunSchema = z.object({
   totalSamples: z.number().int().nonnegative(),
   startedAt: z.string().datetime().nullable(),
   finishedAt: z.string().datetime().nullable(),
+  baselineRunIdAtExecution: z.string().nullable(),
   errorMessage: z.string().nullable(),
   createdAt: z.string().datetime(),
 });
@@ -67,17 +85,27 @@ export const createRunRequestSchema = z
     evaluationId: z.string(),
     endpointAId: z.string(),
     endpointBId: z.string().optional(),
+    baselineRunIdOverride: z.string().nullable().optional(),
     gateConfig: gateConfigSchema,
   })
   .refine((r) => r.endpointBId == null || r.endpointBId !== r.endpointAId, {
-    message: "endpointAId and endpointBId must be different",
+    message: "validation.endpointABMustDiffer",
     path: ["endpointBId"],
+  })
+  .refine((r) => !(r.endpointBId != null && r.baselineRunIdOverride != null), {
+    message: "validation.runDualVsBaselineExclusive",
+    path: ["baselineRunIdOverride"],
   });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
 export const listRunsQuerySchema = z.object({
   status: runStatusSchema.optional(),
+  gateResult: gateResultSchema.optional(),
   evaluationId: z.string().optional(),
+  endpointId: z.string().optional(),
+  search: z.string().optional(),
+  createdAfter: z.string().datetime().optional(),
+  createdBefore: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });

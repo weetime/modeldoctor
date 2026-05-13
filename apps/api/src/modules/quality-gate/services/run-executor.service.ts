@@ -26,6 +26,7 @@ interface FullRun {
     }>;
   };
   gateConfig: import("@modeldoctor/contracts").GateConfig;
+  baselineRunIdAtExecution?: string | null;
 }
 
 @Injectable()
@@ -55,17 +56,25 @@ export class QualityGateRunExecutor implements OnModuleInit {
       let processed = 0;
       let judgeCalls = 0;
 
+      // Snapshot-locked baseline: load once at start (mid-flight repins won't affect this run)
+      const baselineSamplesById = run.baselineRunIdAtExecution
+        ? await this.repo.loadCompletedSamplesById(run.baselineRunIdAtExecution)
+        : new Map<string, { resultA: unknown }>();
+      const baselineMode = run.baselineRunIdAtExecution != null;
+
       const samples = run.evaluationSnapshot.samples;
       await Promise.all(
         samples.map((s) =>
           sampleLimit(async () => {
             if (ac.signal.aborted) return;
-            const [callA, callB] = await Promise.all([
-              this.endpointCaller.call(run.endpointAId, run.userId, s.prompt, ac.signal),
-              run.endpointBId
-                ? this.endpointCaller.call(run.endpointBId, run.userId, s.prompt, ac.signal)
-                : Promise.resolve(null),
-            ]);
+
+            // 1. Today's call (always endpointAId)
+            const callA = await this.endpointCaller.call(
+              run.endpointAId,
+              run.userId,
+              s.prompt,
+              ac.signal,
+            );
             if (ac.signal.aborted) return;
             const judgedA = await judgeLimit(() =>
               this.judges.apply(s.judgeConfig, {
@@ -75,18 +84,53 @@ export class QualityGateRunExecutor implements OnModuleInit {
               }),
             );
             if (s.judgeConfig.kind === "llm-judge") judgeCalls++;
-            const judgedB =
-              callB == null
-                ? null
-                : await judgeLimit(() =>
-                    this.judges.apply(s.judgeConfig, {
-                      question: s.prompt,
-                      expected: s.expected,
-                      answer: callB.rawAnswer,
-                    }),
-                  );
-            if (callB != null && s.judgeConfig.kind === "llm-judge") judgeCalls++;
-            const delta = computeDelta(judgedA, judgedB);
+
+            // 2. B side: either baseline lookup or endpointBId call
+            let callB: typeof callA | null = null;
+            let judgedB: typeof judgedA | null = null;
+            if (baselineMode) {
+              const baseRow = baselineSamplesById.get(s.id);
+              if (baseRow && (baseRow.resultA as { call?: unknown; judge?: unknown })?.call) {
+                const baselineResultA = baseRow.resultA as {
+                  call: typeof callA;
+                  judge: typeof judgedA;
+                };
+                callB = baselineResultA.call;
+                judgedB = baselineResultA.judge;
+              }
+              // else: sample missing in baseline → keep B null → delta=NA
+            } else if (run.endpointBId) {
+              const result = await this.endpointCaller.call(
+                run.endpointBId,
+                run.userId,
+                s.prompt,
+                ac.signal,
+              );
+              callB = result;
+              if (!ac.signal.aborted) {
+                judgedB = await judgeLimit(() =>
+                  this.judges.apply(s.judgeConfig, {
+                    question: s.prompt,
+                    expected: s.expected,
+                    answer: result.rawAnswer,
+                  }),
+                );
+                if (s.judgeConfig.kind === "llm-judge") judgeCalls++;
+              }
+            }
+
+            // 3. Delta — semantic always "A=baseline, B=candidate"
+            //    Dual mode: A=baselineEndpoint, B=candidateEndpoint → computeDelta(judgedA, judgedB) ✓
+            //    Baseline mode: storage has resultA=today, resultB=baseline.resultA.
+            //                   baseline=B (storage), candidate=A (today) → computeDelta(judgedB, judgedA)
+            //    When baseline sample is missing (judgedB=null), delta=NA without calling computeDelta
+            //    (computeDelta's null-check is on its second arg, not first).
+            const delta = baselineMode
+              ? judgedB != null
+                ? computeDelta(judgedB, judgedA)
+                : "NA"
+              : computeDelta(judgedA, judgedB);
+
             await this.repo.saveSample({
               runId,
               sampleId: s.id,

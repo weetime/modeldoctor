@@ -57,11 +57,31 @@ export function useDeleteEvaluation() {
   });
 }
 
+export function useDuplicateEvaluation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: qgApi.duplicateEvaluation,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY.evaluations }),
+  });
+}
+
 export function useImportEvaluation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: qgApi.importEvaluation,
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY.evaluations }),
+  });
+}
+
+export function useSetBaseline(evaluationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string | null) =>
+      qgApi.updateEvaluation(evaluationId, { baselineRunId: runId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY.evaluation(evaluationId) });
+      qc.invalidateQueries({ queryKey: KEY.evaluations });
+    },
   });
 }
 
@@ -112,6 +132,17 @@ export function useDeleteRun() {
   return useMutation({
     mutationFn: (id: string) => qgApi.deleteRun(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["quality-gate", "runs"] }),
+  });
+}
+
+export function useEvaluationRunsByIds(ids: string[]) {
+  return useQuery({
+    queryKey: ["quality-gate", "runs-by-ids", ids.slice().sort().join(",")],
+    queryFn: async () => {
+      const results = await Promise.all(ids.map((id) => qgApi.getRun(id)));
+      return results;
+    },
+    enabled: ids.length > 0,
   });
 }
 

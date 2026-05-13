@@ -17,11 +17,11 @@ import {
   type CreateEvaluationRequest,
   createEvaluationRequestSchema,
 } from "@modeldoctor/contracts";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { EvaluationSampleEditor } from "./components/EvaluationSampleEditor";
+import { SamplesTableEditor } from "./components/SamplesTableEditor";
 import { useCreateEvaluation, useImportEvaluation } from "./queries";
 
 const blankSample: CreateEvaluationRequest["samples"][number] = {
@@ -47,7 +47,6 @@ export function EvaluationCreatePage() {
       samples: [blankSample],
     },
   });
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "samples" });
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -100,6 +99,33 @@ export function EvaluationCreatePage() {
     { label: tCommon("actions.create") },
   ];
 
+  const importButtons = (
+    <>
+      <label className="inline-flex">
+        <input
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(e) => e.target.files && handleJsonImport(e.target.files[0])}
+        />
+        <Button type="button" variant="outline" size="sm" asChild>
+          <span>{t("evaluations.form.importJson")}</span>
+        </Button>
+      </label>
+      <label className="inline-flex">
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          hidden
+          onChange={(e) => e.target.files && handleCsvImport(e.target.files[0])}
+        />
+        <Button type="button" variant="outline" size="sm" asChild>
+          <span>{t("evaluations.form.importCsv")}</span>
+        </Button>
+      </label>
+    </>
+  );
+
   return (
     <>
       <PageHeader
@@ -107,9 +133,9 @@ export function EvaluationCreatePage() {
         subtitle={t("evaluations.form.createSubtitle")}
         breadcrumbs={breadcrumbs}
       />
-      <div className="space-y-6 px-8 py-6">
-        <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={onSubmit}>
+          <div className="space-y-6 px-8 py-6 pb-24">
             <FormSection title={t("evaluations.form.sectionBasics")}>
               <FormField
                 control={form.control}
@@ -144,56 +170,23 @@ export function EvaluationCreatePage() {
             </FormSection>
 
             <FormSection title={t("evaluations.form.sectionSamples")}>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={() => append(blankSample)}>
-                  {t("evaluations.form.addSample")}
-                </Button>
-                <label className="inline-flex">
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    hidden
-                    onChange={(e) => e.target.files && handleJsonImport(e.target.files[0])}
-                  />
-                  <Button type="button" variant="outline" asChild>
-                    <span>{t("evaluations.form.importJson")}</span>
-                  </Button>
-                </label>
-                <label className="inline-flex">
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    hidden
-                    onChange={(e) => e.target.files && handleCsvImport(e.target.files[0])}
-                  />
-                  <Button type="button" variant="outline" asChild>
-                    <span>{t("evaluations.form.importCsv")}</span>
-                  </Button>
-                </label>
-              </div>
-
-              <div className="space-y-3">
-                {fields.map((f, i) => (
-                  <EvaluationSampleEditor
-                    key={f.id}
-                    namePrefix={`samples.${i}`}
-                    index={i}
-                    onRemove={() => remove(i)}
-                  />
-                ))}
-              </div>
+              <SamplesTableEditor name="samples" trailingActions={importButtons} />
             </FormSection>
+          </div>
 
-            <FormActions
-              onCancel={() => nav("/quality-gate/evaluations")}
-              cancelLabel={t("evaluations.form.cancel")}
-              submitLabel={t("evaluations.form.save")}
-              disabled={!form.formState.isValid}
-              pending={create.isPending}
-            />
-          </form>
-        </Form>
-      </div>
+          <div className="sticky bottom-0 left-0 right-0 z-10 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="px-8 py-3">
+              <FormActions
+                onCancel={() => nav("/quality-gate/evaluations")}
+                cancelLabel={t("evaluations.form.cancel")}
+                submitLabel={t("evaluations.form.save")}
+                disabled={!form.formState.isValid}
+                pending={create.isPending}
+              />
+            </div>
+          </div>
+        </form>
+      </Form>
     </>
   );
 }

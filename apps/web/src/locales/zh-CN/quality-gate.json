@@ -8,9 +8,23 @@
     "col": { "name": "名称", "samples": "样本数", "updatedAt": "更新时间" },
     "runsCol": {
       "id": "运行 ID",
+      "evaluation": "评测集",
+      "endpoint": "端点",
       "status": "状态",
       "progress": "进度",
-      "createdAt": "创建时间"
+      "createdAt": "创建时间",
+      "evaluationMissing": "（已删除）",
+      "endpointMissing": "（连接已删除）"
+    },
+    "baseline": {
+      "cardTitle": "📌 Pinned Baseline",
+      "view": "查看 run",
+      "change": "更改…",
+      "unpin": "解钉",
+      "loading": "加载中…",
+      "unpinConfirmTitle": "解钉 baseline?",
+      "unpinConfirmBody": "本评测集后续 run 将默认不带 baseline 对比。",
+      "unpinConfirmAction": "解钉"
     },
     "form": {
       "nameLabel": "名称",
@@ -38,7 +52,22 @@
     "promptLabel": "题面 / prompt",
     "expectedLabel": "期望答案 / expected",
     "remove": "删除",
-    "indexPrefix": "#"
+    "indexPrefix": "#",
+    "col": {
+      "idx": "#",
+      "prompt": "题面预览",
+      "expected": "期望预览",
+      "judge": "判分器",
+      "actions": "操作"
+    },
+    "editAction": "编辑",
+    "deleteAction": "删除",
+    "addAction": "添加样本",
+    "editorTitle": "编辑样本 #{{idx}}",
+    "addTitle": "添加样本",
+    "done": "完成",
+    "emptyPreview": "（未填写题面）",
+    "empty": "还没有样本"
   },
   "judges": {
     "kindLabel": "判分器",
@@ -83,13 +112,45 @@
         "NA": "—"
       },
       "passLabel": "通过",
-      "failLabel": "未通过"
+      "failLabel": "未通过",
+      "pinButton": "📌 钉为 baseline",
+      "pinnedBadge": "📌 已钉为 baseline",
+      "unpinButton": "解钉",
+      "replaceConfirmTitle": "替换 baseline?",
+      "replaceConfirmBody": "当前 baseline: Run #{{currentId}}\n将替换为: 本 run\n\n之前用旧 baseline 跑过的对比结果保留不变。",
+      "replaceConfirmAction": "替换 baseline",
+      "unpinConfirmTitle": "解钉 baseline?",
+      "unpinConfirmBody": "本评测集后续 run 将默认不带 baseline 对比。",
+      "unpinConfirmAction": "解钉",
+      "passRateCurrent": "通过率 (本次)",
+      "passRateBaseline": "通过率 (baseline)",
+      "judgeAvgCurrent": "Judge 均分 (本次)",
+      "judgeAvgBaseline": "Judge 均分 (baseline)",
+      "baselineModeBanner": "📌 与 baseline 对比: Run #{{runId}}",
+      "baselineViewLink": "查看 baseline →",
+      "pinSuccessToast": "已钉为 baseline",
+      "unpinSuccessToast": "已解钉",
+      "pinErrorToast": "操作失败: {{message}}",
+      "addToCompareButton": "📊 加入对比",
+      "endpointsTitle": "端点信息",
+      "endpointAColumn": "Endpoint A",
+      "endpointBColumn": "Endpoint B",
+      "endpointMissing": "（连接已删除）",
+      "gateRulesTitle": "门禁规则",
+      "gateRulesNone": "未配置门禁阈值",
+      "gateRuleStatusPass": "通过",
+      "gateRuleStatusFail": "未通过",
+      "gateRulePassRateMin": "通过率下限",
+      "gateRuleRegressionMax": "回归数上限",
+      "gateRuleJudgeScoreMin": "Judge 均分下限",
+      "gateRuleActual": "实际"
     },
     "form": {
       "evaluationLabel": "评测集",
       "evaluationPlaceholder": "选择评测集",
-      "endpointA": "Endpoint A（基线）",
-      "endpointB": "Endpoint B（新版本，可选）",
+      "evaluationPinHint": "📌 标记的评测集已钉了 baseline run，本次运行会自动与其对比；可在选择后改用其它 baseline 或跳过",
+      "endpointA": "Endpoint",
+      "endpointB": "对照端点",
       "endpointBNone": "不对比",
       "endpointPlaceholder": "选择",
       "trigger": "触发评测",
@@ -97,7 +158,23 @@
       "newSubtitle": "选择评测集与端点；保存后立即开始执行并跳转到报告页。",
       "saveError": "触发失败：{{message}}",
       "sectionTarget": "评测目标",
-      "sectionGate": "门禁规则"
+      "sectionGate": "门禁规则",
+      "baselineBanner": "📌 与 baseline 对比",
+      "baselineBannerBody": "将与 Run #{{runId}} ({{date}} {{verdict}}) 对比",
+      "baselineChangeButton": "更换 baseline",
+      "baselineSkipButton": "移除 baseline",
+      "baselineSkippedHint": "已移除 baseline，本次单端点运行不做对比。",
+      "baselineRestoreButton": "恢复 baseline",
+      "endpointBAdd": "+ 同时跑另一个端点对比（双端点 A/B 模式）",
+      "endpointBRemove": "移除对照端点",
+      "baselinePickerTitle": "选择 baseline run",
+      "baselinePickerDescription": "选择同一评测集的某次已完成 run 作为本次对比的基线（不会修改钉住的 baseline）。",
+      "baselinePickerEmpty": "该评测集还没有已完成的 run",
+      "baselinePickerConfirm": "使用此 run",
+      "baselinePickerColumnId": "Run ID",
+      "baselinePickerColumnCreatedAt": "时间",
+      "baselinePickerColumnVerdict": "门禁结果",
+      "maxRegressionsDisabledHint": "钉一个 baseline run 后可启用"
     },
     "status": {
       "pending": "等待中",
@@ -106,7 +183,28 @@
       "failed": "失败",
       "cancelled": "已取消"
     },
-    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" }
+    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" },
+    "selection": {
+      "count": "已选 {{count}}",
+      "compareSelected": "📊 对比所选",
+      "clear": "取消选择",
+      "needTwo": "至少选择 2 个 run 才能对比"
+    },
+    "filters": {
+      "any": "全部",
+      "status": "状态",
+      "gateResult": "门禁结果",
+      "evaluation": "评测集",
+      "endpoint": "端点",
+      "search": "搜索 run id 或评测集名",
+      "clear": "清除过滤"
+    },
+    "passRate": {
+      "label": "通过率",
+      "running": "{{processed}}/{{total}}",
+      "completed": "{{passed}}/{{total}} · {{pct}}",
+      "unknown": "—"
+    }
   },
   "report": {
     "filters": {
@@ -131,6 +229,8 @@
         "delta": "delta",
         "passedA": "A 通过",
         "passedB": "B 通过",
+        "passedCurrent": "本次通过",
+        "passedBaseline": "baseline 通过",
         "actions": "操作"
       },
       "prevPage": "上一页",
@@ -153,6 +253,13 @@
       "cancel": "取消",
       "confirm": "删除"
     }
+  },
+  "official": {
+    "badge": "官方",
+    "readOnlyHint": "这是平台内置的官方评测集，只读。如需修改样本或钉 baseline，请先「复制为我的」生成可编辑副本。",
+    "duplicateButton": "复制为我的",
+    "duplicateSuccess": "已复制为「{{name}}」",
+    "duplicateError": "复制失败：{{message}}"
   },
   "savedCompare": {
     "section": "质量评测",

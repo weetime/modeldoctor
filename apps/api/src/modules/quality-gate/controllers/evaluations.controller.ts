@@ -76,4 +76,9 @@ export class EvaluationsController {
   ) {
     return this.svc.import(user.sub, body.name, body.import);
   }
+
+  @Post(":id/duplicate")
+  duplicate(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
+    return this.svc.duplicate(user.sub, id);
+  }
 }

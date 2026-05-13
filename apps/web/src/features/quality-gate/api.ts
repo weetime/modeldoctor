@@ -21,13 +21,20 @@ export const qgApi = {
   updateEvaluation: (id: string, body: UpdateEvaluationRequest) =>
     api.patch<Evaluation>(`/api/quality-gate/evaluations/${id}`, body),
   deleteEvaluation: (id: string) => api.del<void>(`/api/quality-gate/evaluations/${id}`),
+  duplicateEvaluation: (id: string) =>
+    api.post<Evaluation>(`/api/quality-gate/evaluations/${id}/duplicate`, {}),
   importEvaluation: (body: { name: string; import: ImportEvaluationRequest }) =>
     api.post<Evaluation>("/api/quality-gate/evaluations/import", body),
 
   listRuns: (q: Partial<ListRunsQuery>) => {
     const usp = new URLSearchParams();
     if (q.status) usp.set("status", q.status);
+    if (q.gateResult) usp.set("gateResult", q.gateResult);
     if (q.evaluationId) usp.set("evaluationId", q.evaluationId);
+    if (q.endpointId) usp.set("endpointId", q.endpointId);
+    if (q.search) usp.set("search", q.search);
+    if (q.createdAfter) usp.set("createdAfter", q.createdAfter);
+    if (q.createdBefore) usp.set("createdBefore", q.createdBefore);
     if (q.page !== undefined) usp.set("page", String(q.page));
     if (q.pageSize !== undefined) usp.set("pageSize", String(q.pageSize));
     const qs = usp.toString();

@@ -21,6 +21,7 @@ export interface CreatePendingInput {
   endpointAId: string;
   endpointBId?: string | null;
   gateConfig: object;
+  baselineRunIdAtExecution?: string | null;
 }
 
 export interface SaveSampleInput {
@@ -48,13 +49,18 @@ export class RunsRepository {
         endpointBId: input.endpointBId ?? null,
         gateConfig: input.gateConfig,
         totalSamples: total,
+        baselineRunIdAtExecution: input.baselineRunIdAtExecution ?? null,
       },
+      include: RUN_INCLUDE,
     });
     return this.toDto(row);
   }
 
   async findById(userId: string, id: string): Promise<EvaluationRun | null> {
-    const row = await this.prisma.evaluationRun.findFirst({ where: { id, userId } });
+    const row = await this.prisma.evaluationRun.findFirst({
+      where: { id, userId },
+      include: RUN_INCLUDE,
+    });
     return row ? this.toDto(row) : null;
   }
 
@@ -62,10 +68,27 @@ export class RunsRepository {
     userId: string,
     q: ListRunsQuery,
   ): Promise<{ items: EvaluationRun[]; total: number; page: number; pageSize: number }> {
-    const where = {
+    const createdAt: Prisma.DateTimeFilter = {};
+    if (q.createdAfter) createdAt.gte = new Date(q.createdAfter);
+    if (q.createdBefore) createdAt.lte = new Date(q.createdBefore);
+
+    const where: Prisma.EvaluationRunWhereInput = {
       userId,
       ...(q.status ? { status: q.status as EvaluationRunStatus } : {}),
+      ...(q.gateResult ? { gateResult: q.gateResult } : {}),
       ...(q.evaluationId ? { evaluationId: q.evaluationId } : {}),
+      ...(q.endpointId
+        ? { OR: [{ endpointAId: q.endpointId }, { endpointBId: q.endpointId }] }
+        : {}),
+      ...(q.createdAfter || q.createdBefore ? { createdAt } : {}),
+      ...(q.search
+        ? {
+            OR: [
+              { id: { startsWith: q.search } },
+              { evaluation: { name: { contains: q.search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
     };
     const [total, rows] = await Promise.all([
       this.prisma.evaluationRun.count({ where }),
@@ -74,6 +97,7 @@ export class RunsRepository {
         orderBy: { createdAt: "desc" },
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
+        include: RUN_INCLUDE,
       }),
     ]);
     return { items: rows.map(this.toDto), total, page: q.page, pageSize: q.pageSize };
@@ -125,6 +149,7 @@ export class RunsRepository {
         gateResult: gate.result as GateResult,
         processedSamples: existing.totalSamples,
       },
+      include: RUN_INCLUDE,
     });
     return this.toDto(row);
   }
@@ -217,7 +242,18 @@ export class RunsRepository {
   }
 
   async findFullRun(id: string) {
-    const row = await this.prisma.evaluationRun.findUnique({ where: { id } });
+    const row = await this.prisma.evaluationRun.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        endpointAId: true,
+        endpointBId: true,
+        evaluationSnapshot: true,
+        gateConfig: true,
+        baselineRunIdAtExecution: true,
+      },
+    });
     if (!row) return null;
     return {
       id: row.id,
@@ -234,44 +270,83 @@ export class RunsRepository {
         }>;
       },
       gateConfig: row.gateConfig as import("@modeldoctor/contracts").GateConfig,
+      baselineRunIdAtExecution: row.baselineRunIdAtExecution,
     };
   }
 
-  private toDto = (row: {
-    id: string;
-    userId: string;
-    evaluationId: string;
-    evaluationVersion: number;
-    evaluationSnapshot: unknown;
-    endpointAId: string;
-    endpointBId: string | null;
-    gateConfig: unknown;
-    status: EvaluationRunStatus;
-    gateResult: GateResult | null;
-    aggregateMetrics: unknown;
-    processedSamples: number;
-    totalSamples: number;
-    startedAt: Date | null;
-    finishedAt: Date | null;
-    errorMessage: string | null;
-    createdAt: Date;
-  }): EvaluationRun => ({
+  /** Load all samples of a completed run, indexed by sampleId. Used by the
+   * executor in baseline mode to fetch the reference sample for each id. */
+  async loadCompletedSamplesById(
+    runId: string,
+  ): Promise<Map<string, { resultA: unknown; resultB: unknown }>> {
+    const rows = await this.prisma.evaluationRunSample.findMany({
+      where: { runId },
+      select: { sampleId: true, resultA: true, resultB: true },
+    });
+    const map = new Map<string, { resultA: unknown; resultB: unknown }>();
+    for (const r of rows) {
+      map.set(r.sampleId, { resultA: r.resultA, resultB: r.resultB });
+    }
+    return map;
+  }
+
+  private toDto = (row: RunRowWithEndpoints): EvaluationRun => ({
     id: row.id,
     userId: row.userId,
     evaluationId: row.evaluationId,
     evaluationVersion: row.evaluationVersion,
     evaluationSnapshot: row.evaluationSnapshot as EvaluationRun["evaluationSnapshot"],
+    evaluation: row.evaluation ? { id: row.evaluation.id, name: row.evaluation.name } : null,
     endpointAId: row.endpointAId,
     endpointBId: row.endpointBId,
+    endpointA: row.endpointA ? toConnectionRef(row.endpointA) : null,
+    endpointB: row.endpointB ? toConnectionRef(row.endpointB) : null,
     gateConfig: row.gateConfig as EvaluationRun["gateConfig"],
     status: row.status as EvaluationRun["status"],
     gateResult: row.gateResult,
     aggregateMetrics: row.aggregateMetrics as EvaluationRun["aggregateMetrics"],
     processedSamples: row.processedSamples,
     totalSamples: row.totalSamples,
+    baselineRunIdAtExecution: row.baselineRunIdAtExecution,
     startedAt: row.startedAt?.toISOString() ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
     errorMessage: row.errorMessage,
     createdAt: row.createdAt.toISOString(),
   });
+}
+
+const RUN_INCLUDE = {
+  evaluation: { select: { id: true, name: true } },
+  endpointA: { select: { id: true, name: true, model: true, baseUrl: true } },
+  endpointB: { select: { id: true, name: true, model: true, baseUrl: true } },
+} satisfies Prisma.EvaluationRunInclude;
+
+type ConnectionRow = { id: string; name: string; model: string; baseUrl: string };
+type EvaluationRow = { id: string; name: string };
+type RunRowWithEndpoints = {
+  id: string;
+  userId: string;
+  evaluationId: string;
+  evaluationVersion: number;
+  evaluationSnapshot: unknown;
+  evaluation: EvaluationRow | null;
+  endpointAId: string;
+  endpointBId: string | null;
+  endpointA: ConnectionRow | null;
+  endpointB: ConnectionRow | null;
+  gateConfig: unknown;
+  status: EvaluationRunStatus;
+  gateResult: GateResult | null;
+  aggregateMetrics: unknown;
+  processedSamples: number;
+  totalSamples: number;
+  baselineRunIdAtExecution: string | null;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+};
+
+function toConnectionRef(c: ConnectionRow) {
+  return { id: c.id, name: c.name, model: c.model, baseUrl: c.baseUrl };
 }

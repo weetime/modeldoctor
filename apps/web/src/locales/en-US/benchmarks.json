@@ -117,6 +117,7 @@
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
+  "compareDisabledNeedTwoRuns": "Select at least 2 runs to compare",
   "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
   "empty": {
     "title": "No benchmarks yet",
@@ -289,6 +290,11 @@
     }
   },
   "compare": {
+    "autoLabel": {
+      "latest": "Latest",
+      "previous": "Previous",
+      "older": "Earlier"
+    },
     "title": "Compare Benchmarks",
     "subtitle": "{{n}} benchmarks · {{tool}}",
     "back": "Back to list",

@@ -8,9 +8,23 @@
     "col": { "name": "Name", "samples": "Samples", "updatedAt": "Updated" },
     "runsCol": {
       "id": "Run ID",
+      "evaluation": "Evaluation",
+      "endpoint": "Endpoint",
       "status": "Status",
       "progress": "Progress",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "evaluationMissing": "(deleted)",
+      "endpointMissing": "(connection deleted)"
+    },
+    "baseline": {
+      "cardTitle": "📌 Pinned Baseline",
+      "view": "View run",
+      "change": "Change…",
+      "unpin": "Unpin",
+      "loading": "Loading…",
+      "unpinConfirmTitle": "Unpin baseline?",
+      "unpinConfirmBody": "Future runs of this evaluation will default to no baseline comparison.",
+      "unpinConfirmAction": "Unpin"
     },
     "form": {
       "nameLabel": "Name",
@@ -38,7 +52,22 @@
     "promptLabel": "Prompt",
     "expectedLabel": "Expected",
     "remove": "Remove",
-    "indexPrefix": "#"
+    "indexPrefix": "#",
+    "col": {
+      "idx": "#",
+      "prompt": "Prompt preview",
+      "expected": "Expected preview",
+      "judge": "Judge",
+      "actions": "Actions"
+    },
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "addAction": "Add sample",
+    "editorTitle": "Edit sample #{{idx}}",
+    "addTitle": "Add sample",
+    "done": "Done",
+    "emptyPreview": "(empty prompt)",
+    "empty": "No samples yet"
   },
   "judges": {
     "kindLabel": "Judge / Kind",
@@ -83,13 +112,45 @@
         "NA": "—"
       },
       "passLabel": "Pass",
-      "failLabel": "Fail"
+      "failLabel": "Fail",
+      "pinButton": "📌 Set as baseline",
+      "pinnedBadge": "📌 Pinned baseline",
+      "unpinButton": "Unpin",
+      "replaceConfirmTitle": "Replace baseline?",
+      "replaceConfirmBody": "Current baseline: Run #{{currentId}}\nWill be replaced by: this run\n\nPrevious comparisons against the old baseline are preserved.",
+      "replaceConfirmAction": "Replace baseline",
+      "unpinConfirmTitle": "Unpin baseline?",
+      "unpinConfirmBody": "Future runs of this evaluation will run single-endpoint by default.",
+      "unpinConfirmAction": "Unpin",
+      "passRateCurrent": "Pass Rate (current)",
+      "passRateBaseline": "Pass Rate (baseline)",
+      "judgeAvgCurrent": "Judge Avg (current)",
+      "judgeAvgBaseline": "Judge Avg (baseline)",
+      "baselineModeBanner": "📌 Compared against Run #{{runId}}",
+      "baselineViewLink": "View baseline →",
+      "pinSuccessToast": "Pinned as baseline",
+      "unpinSuccessToast": "Unpinned",
+      "pinErrorToast": "Operation failed: {{message}}",
+      "addToCompareButton": "📊 Add to Compare",
+      "endpointsTitle": "Endpoints",
+      "endpointAColumn": "Endpoint A",
+      "endpointBColumn": "Endpoint B",
+      "endpointMissing": "(connection deleted)",
+      "gateRulesTitle": "Gate rules",
+      "gateRulesNone": "No gate thresholds configured",
+      "gateRuleStatusPass": "passed",
+      "gateRuleStatusFail": "failed",
+      "gateRulePassRateMin": "Min pass rate",
+      "gateRuleRegressionMax": "Max regressions",
+      "gateRuleJudgeScoreMin": "Min judge score",
+      "gateRuleActual": "Actual"
     },
     "form": {
       "evaluationLabel": "Evaluation Set",
       "evaluationPlaceholder": "Select an evaluation set",
-      "endpointA": "Endpoint A (baseline)",
-      "endpointB": "Endpoint B (new version, optional)",
+      "evaluationPinHint": "📌 marks evaluation sets that already have a pinned baseline run — this run will auto-compare against it. You can switch to a different baseline or skip after selecting.",
+      "endpointA": "Endpoint",
+      "endpointB": "Comparison Endpoint",
       "endpointBNone": "No comparison",
       "endpointPlaceholder": "Select",
       "trigger": "Run Evaluation",
@@ -97,7 +158,23 @@
       "newSubtitle": "Pick an evaluation set and endpoints; the run starts immediately.",
       "saveError": "Failed to start: {{message}}",
       "sectionTarget": "Target",
-      "sectionGate": "Gate rules"
+      "sectionGate": "Gate rules",
+      "baselineBanner": "📌 Compare against baseline",
+      "baselineBannerBody": "Will compare against Run #{{runId}} ({{date}} {{verdict}})",
+      "baselineChangeButton": "Change baseline",
+      "baselineSkipButton": "Remove baseline",
+      "baselineSkippedHint": "Baseline removed; running single-endpoint without comparison.",
+      "baselineRestoreButton": "Restore baseline",
+      "endpointBAdd": "+ Run a second endpoint side-by-side (A/B dual mode)",
+      "endpointBRemove": "Remove second endpoint",
+      "baselinePickerTitle": "Pick a baseline run",
+      "baselinePickerDescription": "Choose a completed run of the same evaluation as the comparison reference (does not change the pinned baseline).",
+      "baselinePickerEmpty": "No completed runs yet for this evaluation",
+      "baselinePickerConfirm": "Use this run",
+      "baselinePickerColumnId": "Run ID",
+      "baselinePickerColumnCreatedAt": "Created",
+      "baselinePickerColumnVerdict": "Gate result",
+      "maxRegressionsDisabledHint": "Pin a baseline run to enable"
     },
     "status": {
       "pending": "Pending",
@@ -106,7 +183,28 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
-    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" }
+    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" },
+    "selection": {
+      "count": "Selected {{count}}",
+      "compareSelected": "📊 Compare selected",
+      "clear": "Clear",
+      "needTwo": "Select at least 2 runs to compare"
+    },
+    "filters": {
+      "any": "Any",
+      "status": "Status",
+      "gateResult": "Gate result",
+      "evaluation": "Evaluation",
+      "endpoint": "Endpoint",
+      "search": "Search by run id or evaluation",
+      "clear": "Clear"
+    },
+    "passRate": {
+      "label": "Pass Rate",
+      "running": "{{processed}}/{{total}}",
+      "completed": "{{passed}}/{{total}} · {{pct}}",
+      "unknown": "—"
+    }
   },
   "report": {
     "filters": {
@@ -131,6 +229,8 @@
         "delta": "Delta",
         "passedA": "A Passed",
         "passedB": "B Passed",
+        "passedCurrent": "Current passed",
+        "passedBaseline": "Baseline passed",
         "actions": "Actions"
       },
       "prevPage": "Previous",
@@ -153,6 +253,13 @@
       "cancel": "Cancel",
       "confirm": "Delete"
     }
+  },
+  "official": {
+    "badge": "Official",
+    "readOnlyHint": "This is a platform built-in evaluation set, read-only. Use \"Copy to mine\" to make an editable copy if you want to change samples or pin a baseline.",
+    "duplicateButton": "Copy to mine",
+    "duplicateSuccess": "Copied as \"{{name}}\"",
+    "duplicateError": "Copy failed: {{message}}"
   },
   "savedCompare": {
     "section": "Quality Evaluations",

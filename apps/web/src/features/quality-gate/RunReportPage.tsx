@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { PinBaselineButton } from "./components/PinBaselineButton";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
 import { SamplesTable } from "./components/SamplesTable";
-import { useCancelRun, useRun, useRunSamples } from "./queries";
+import { useCancelRun, useRun } from "./queries";
 
 export function RunReportPage() {
   const { id = "" } = useParams();
@@ -15,14 +16,7 @@ export function RunReportPage() {
   const { t: tSidebar } = useTranslation("sidebar");
   const { data: run } = useRun(id, { pollWhileRunning: true });
   const cancel = useCancelRun(id);
-  const [openSampleId, setOpenSampleId] = useState<string | null>(null);
-  const allSamples = useRunSamples(run?.status === "COMPLETED" ? id : undefined, {
-    filter: "all",
-    pageSize: 500,
-  });
-  const sampleRow: RunSample | null = openSampleId
-    ? (allSamples.data?.items.find((s) => s.id === openSampleId) ?? null)
-    : null;
+  const [openSample, setOpenSample] = useState<RunSample | null>(null);
   const snapshotSamples: EvaluationSample[] = (run?.evaluationSnapshot.samples ??
     []) as EvaluationSample[];
 
@@ -48,6 +42,9 @@ export function RunReportPage() {
     );
   }
 
+  const baselineMode = run.baselineRunIdAtExecution != null;
+  const hasComparison = baselineMode || run.endpointBId != null;
+
   return (
     <>
       <PageHeader
@@ -55,23 +52,40 @@ export function RunReportPage() {
         subtitle={t("runs.report.subtitle")}
         breadcrumbs={breadcrumbs}
         rightSlot={
-          run.status === "RUNNING" ? (
-            <Button variant="outline" onClick={() => cancel.mutate()}>
-              {t("runs.report.cancel")}
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {run.status === "RUNNING" && (
+              <Button variant="outline" onClick={() => cancel.mutate()}>
+                {t("runs.report.cancel")}
+              </Button>
+            )}
+            {run.status === "COMPLETED" && (
+              <>
+                <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
+                    {t("runs.report.addToCompareButton")}
+                  </Link>
+                </Button>
+              </>
+            )}
+          </div>
         }
       />
       <div className="px-8 py-6 space-y-6">
         <RunOverview run={run} />
         {run.status === "COMPLETED" && (
-          <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />
+          <SamplesTable
+            runId={run.id}
+            baselineMode={baselineMode}
+            hasComparison={hasComparison}
+            onOpenSample={setOpenSample}
+          />
         )}
         <SampleDetailDrawer
           runId={run.id}
-          row={sampleRow}
+          row={openSample}
           snapshotSamples={snapshotSamples}
-          onClose={() => setOpenSampleId(null)}
+          onClose={() => setOpenSample(null)}
         />
       </div>
     </>
