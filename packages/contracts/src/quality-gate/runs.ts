@@ -75,13 +75,10 @@ export const createRunRequestSchema = z
     message: "validation.endpointABMustDiffer",
     path: ["endpointBId"],
   })
-  .refine(
-    (r) => !(r.endpointBId != null && r.baselineRunIdOverride != null),
-    {
-      message: "validation.runDualVsBaselineExclusive",
-      path: ["baselineRunIdOverride"],
-    },
-  );
+  .refine((r) => !(r.endpointBId != null && r.baselineRunIdOverride != null), {
+    message: "validation.runDualVsBaselineExclusive",
+    path: ["baselineRunIdOverride"],
+  });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
 export const listRunsQuerySchema = z.object({
