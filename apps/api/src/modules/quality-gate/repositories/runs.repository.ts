@@ -219,7 +219,18 @@ export class RunsRepository {
   }
 
   async findFullRun(id: string) {
-    const row = await this.prisma.evaluationRun.findUnique({ where: { id } });
+    const row = await this.prisma.evaluationRun.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        endpointAId: true,
+        endpointBId: true,
+        evaluationSnapshot: true,
+        gateConfig: true,
+        baselineRunIdAtExecution: true,
+      },
+    });
     if (!row) return null;
     return {
       id: row.id,
@@ -236,7 +247,24 @@ export class RunsRepository {
         }>;
       },
       gateConfig: row.gateConfig as import("@modeldoctor/contracts").GateConfig,
+      baselineRunIdAtExecution: row.baselineRunIdAtExecution,
     };
+  }
+
+  /** Load all samples of a completed run, indexed by sampleId. Used by the
+   * executor in baseline mode to fetch the reference sample for each id. */
+  async loadCompletedSamplesById(
+    runId: string,
+  ): Promise<Map<string, { resultA: unknown; resultB: unknown }>> {
+    const rows = await this.prisma.evaluationRunSample.findMany({
+      where: { runId },
+      select: { sampleId: true, resultA: true, resultB: true },
+    });
+    const map = new Map<string, { resultA: unknown; resultB: unknown }>();
+    for (const r of rows) {
+      map.set(r.sampleId, { resultA: r.resultA, resultB: r.resultB });
+    }
+    return map;
   }
 
   private toDto = (row: {
