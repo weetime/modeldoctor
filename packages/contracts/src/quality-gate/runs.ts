@@ -49,12 +49,19 @@ export const connectionRefSchema = z.object({
 });
 export type ConnectionRef = z.infer<typeof connectionRefSchema>;
 
+export const evaluationRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+export type EvaluationRef = z.infer<typeof evaluationRefSchema>;
+
 export const evaluationRunSchema = z.object({
   id: z.string(),
   userId: z.string(),
   evaluationId: z.string(),
   evaluationVersion: z.number().int().positive(),
   evaluationSnapshot: z.object({ samples: z.array(evaluationSampleSchema) }),
+  evaluation: evaluationRefSchema.nullable(),
   endpointAId: z.string(),
   endpointBId: z.string().nullable(),
   endpointA: connectionRefSchema.nullable(),

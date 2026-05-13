@@ -85,11 +85,13 @@ export function RunsListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8" />
-                <TableHead>{t("evaluations.runsCol.id")}</TableHead>
-                <TableHead>{t("evaluations.runsCol.status")}</TableHead>
-                <TableHead>{t("evaluations.runsCol.progress")}</TableHead>
-                <TableHead>{t("evaluations.runsCol.createdAt")}</TableHead>
-                <TableHead className="text-right">{tCommon("table.actions")}</TableHead>
+                <TableHead className="w-32">{t("evaluations.runsCol.id")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.evaluation")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.endpoint")}</TableHead>
+                <TableHead className="w-32">{t("evaluations.runsCol.status")}</TableHead>
+                <TableHead className="w-20">{t("evaluations.runsCol.progress")}</TableHead>
+                <TableHead className="w-48">{t("evaluations.runsCol.createdAt")}</TableHead>
+                <TableHead className="w-44 text-right">{tCommon("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -100,19 +102,50 @@ export function RunsListPage() {
                   </TableCell>
                   <TableCell>
                     <Link
-                      className="text-primary hover:underline"
+                      className="font-mono text-primary hover:underline"
                       to={`/quality-gate/runs/${r.id}`}
                     >
                       {r.id.slice(0, 12)}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <GateStatusBadge status={r.status} gateResult={r.gateResult} />
+                    {r.evaluation ? (
+                      <Link
+                        className="hover:text-primary hover:underline"
+                        to={`/quality-gate/evaluations/${r.evaluation.id}`}
+                      >
+                        {r.evaluation.name}
+                      </Link>
+                    ) : (
+                      <span className="italic text-muted-foreground">
+                        {t("evaluations.runsCol.evaluationMissing")}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
+                    {r.endpointA ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm">{r.endpointA.model}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {r.endpointA.name}
+                          {r.endpointB ? ` · vs ${r.endpointB.model}` : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="italic text-muted-foreground">
+                        {t("evaluations.runsCol.endpointMissing")}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <GateStatusBadge status={r.status} gateResult={r.gateResult} />
+                  </TableCell>
+                  <TableCell className="tabular-nums">
                     {r.processedSamples}/{r.totalSamples}
                   </TableCell>
-                  <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex items-center gap-1">
                       <Button asChild variant="ghost" size="sm" className="gap-1">

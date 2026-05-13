@@ -279,6 +279,7 @@ export class RunsRepository {
     evaluationId: row.evaluationId,
     evaluationVersion: row.evaluationVersion,
     evaluationSnapshot: row.evaluationSnapshot as EvaluationRun["evaluationSnapshot"],
+    evaluation: row.evaluation ? { id: row.evaluation.id, name: row.evaluation.name } : null,
     endpointAId: row.endpointAId,
     endpointBId: row.endpointBId,
     endpointA: row.endpointA ? toConnectionRef(row.endpointA) : null,
@@ -298,17 +299,20 @@ export class RunsRepository {
 }
 
 const RUN_INCLUDE = {
+  evaluation: { select: { id: true, name: true } },
   endpointA: { select: { id: true, name: true, model: true, baseUrl: true } },
   endpointB: { select: { id: true, name: true, model: true, baseUrl: true } },
 } satisfies Prisma.EvaluationRunInclude;
 
 type ConnectionRow = { id: string; name: string; model: string; baseUrl: string };
+type EvaluationRow = { id: string; name: string };
 type RunRowWithEndpoints = {
   id: string;
   userId: string;
   evaluationId: string;
   evaluationVersion: number;
   evaluationSnapshot: unknown;
+  evaluation: EvaluationRow | null;
   endpointAId: string;
   endpointBId: string | null;
   endpointA: ConnectionRow | null;
