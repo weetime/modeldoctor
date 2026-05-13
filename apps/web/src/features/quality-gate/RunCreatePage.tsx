@@ -69,12 +69,21 @@ export function RunCreatePage() {
         : baselineOverride;
   const baselineModeActive = effectiveBaselineId !== null;
 
-  // Auto-clear endpointB if user enters baseline mode (and vice versa)
+  // Single-endpoint is the default (industry mainstream: LangSmith / Braintrust
+  // / Vellum all default to a single experiment / run, and add comparison
+  // post-hoc). Dual-endpoint is opt-in via a + button.
+  const [showEndpointB, setShowEndpointB] = useState(false);
+
+  // Entering baseline mode (eval has pin, override !== null) forces single-
+  // endpoint: clear any B value AND collapse the B section.
   useEffect(() => {
-    if (baselineModeActive && endpointBId) {
-      form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
+    if (baselineModeActive) {
+      if (endpointBId) {
+        form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
+      }
+      if (showEndpointB) setShowEndpointB(false);
     }
-  }, [baselineModeActive, endpointBId, form]);
+  }, [baselineModeActive, endpointBId, form, showEndpointB]);
 
   // Auto-clear B when A is changed to the same connection (prevents the
   // schema refine "endpointAId !== endpointBId" from blocking the form
@@ -127,12 +136,16 @@ export function RunCreatePage() {
                         <SelectContent>
                           {evaluations.data?.map((e) => (
                             <SelectItem key={e.id} value={e.id}>
+                              {e.baselineRunId ? "📌 " : ""}
                               {e.name} ({e.totalSamples})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {t("runs.form.evaluationPinHint")}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -172,8 +185,24 @@ export function RunCreatePage() {
                 </div>
               )}
               {baselineOverride === null && pinnedBaselineId && (
-                <div className="text-xs text-muted-foreground">
-                  {t("runs.form.baselineSkippedHint")}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {t("runs.form.baselineSkippedHint")}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() =>
+                      form.setValue("baselineRunIdOverride", undefined, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    {t("runs.form.baselineRestoreButton")}
+                  </Button>
                 </div>
               )}
 
@@ -195,14 +224,33 @@ export function RunCreatePage() {
                     </FormItem>
                   )}
                 />
-                {/* endpointB hidden in baseline mode */}
-                {!baselineModeActive && (
+                {/* Endpoint B is opt-in: only render when user explicitly added it
+                    via "+ Add comparison endpoint" AND we're not in baseline mode
+                    (the contract refine forbids endpointB + baseline together). */}
+                {!baselineModeActive && showEndpointB && (
                   <FormField
                     control={form.control}
                     name="endpointBId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("runs.form.endpointB")}</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>{t("runs.form.endpointB")}</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              form.setValue("endpointBId", undefined, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
+                              setShowEndpointB(false);
+                            }}
+                          >
+                            {t("runs.form.endpointBRemove")}
+                          </Button>
+                        </div>
                         <FormControl>
                           <ConnectionPicker
                             selectedConnectionId={field.value ?? null}
@@ -217,6 +265,17 @@ export function RunCreatePage() {
                   />
                 )}
               </div>
+              {!baselineModeActive && !showEndpointB && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowEndpointB(true)}
+                >
+                  {t("runs.form.endpointBAdd")}
+                </Button>
+              )}
             </FormSection>
 
             <FormSection title={t("runs.form.sectionGate")}>
