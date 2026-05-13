@@ -93,6 +93,8 @@
     "apiKeyControlChar": "API Key 不能包含控制字符",
     "apiKeyTrim": "API Key 不能含首尾空白",
     "compareMinRuns": "对比至少需要 2 个 run（基准 + 评测合计）",
-    "compareMaxRuns": "对比最多包含 10 个 run（基准 + 评测合计）"
+    "compareMaxRuns": "对比最多包含 10 个 run（基准 + 评测合计）",
+    "runDualVsBaselineExclusive": "双端点对比与历史 baseline 对比不能同时启用",
+    "endpointABMustDiffer": "Endpoint A 和 Endpoint B 不能选择同一个连接"
   }
 }

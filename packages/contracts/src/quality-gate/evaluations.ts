@@ -29,6 +29,7 @@ export const evaluationSchema = z.object({
   version: z.number().int().positive(),
   samples: z.array(evaluationSampleSchema),
   totalSamples: z.number().int().nonnegative(),
+  baselineRunId: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -45,6 +46,7 @@ export const updateEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   samples: z.array(evaluationSampleInputSchema).min(1).max(500).optional(),
+  baselineRunId: z.string().nullable().optional(),
 });
 export type UpdateEvaluationRequest = z.infer<typeof updateEvaluationRequestSchema>;
 

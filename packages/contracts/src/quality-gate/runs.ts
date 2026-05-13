@@ -57,6 +57,7 @@ export const evaluationRunSchema = z.object({
   totalSamples: z.number().int().nonnegative(),
   startedAt: z.string().datetime().nullable(),
   finishedAt: z.string().datetime().nullable(),
+  baselineRunIdAtExecution: z.string().nullable(),
   errorMessage: z.string().nullable(),
   createdAt: z.string().datetime(),
 });
@@ -67,12 +68,20 @@ export const createRunRequestSchema = z
     evaluationId: z.string(),
     endpointAId: z.string(),
     endpointBId: z.string().optional(),
+    baselineRunIdOverride: z.string().nullable().optional(),
     gateConfig: gateConfigSchema,
   })
   .refine((r) => r.endpointBId == null || r.endpointBId !== r.endpointAId, {
-    message: "endpointAId and endpointBId must be different",
+    message: "validation.endpointABMustDiffer",
     path: ["endpointBId"],
-  });
+  })
+  .refine(
+    (r) => !(r.endpointBId != null && r.baselineRunIdOverride !== null),
+    {
+      message: "validation.runDualVsBaselineExclusive",
+      path: ["baselineRunIdOverride"],
+    },
+  );
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
 export const listRunsQuerySchema = z.object({
