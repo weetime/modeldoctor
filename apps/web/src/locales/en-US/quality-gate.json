@@ -254,6 +254,9 @@
       "confirm": "Delete"
     }
   },
+  "rowActions": {
+    "more": "More"
+  },
   "official": {
     "badge": "Official",
     "readOnlyHint": "This is a platform built-in evaluation set, read-only. Use \"Copy to mine\" to make an editable copy if you want to change samples or pin a baseline.",

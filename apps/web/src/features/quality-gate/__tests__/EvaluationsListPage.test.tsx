@@ -1,6 +1,7 @@
 import i18n from "@/lib/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -75,14 +76,16 @@ describe("EvaluationsListPage", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
-  it("delete button opens AlertDialog with name in title (user-owned row)", () => {
+  it("delete option in More menu opens AlertDialog with name in title (user-owned row)", async () => {
     (useEvaluations as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [userEval],
       isLoading: false,
     });
     render(<EvaluationsListPage />, { wrapper: Provider });
-    fireEvent.click(screen.getByRole("button", { name: /删除/ }));
-    expect(screen.getByText(/删除 Demo？/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /更多/ }));
+    const menuItem = await screen.findByRole("menuitem", { name: /删除/ });
+    await userEvent.click(menuItem);
+    expect(await screen.findByText(/删除 Demo？/)).toBeInTheDocument();
   });
 
   it("renders official badge and shows Copy button instead of Delete on official rows", () => {

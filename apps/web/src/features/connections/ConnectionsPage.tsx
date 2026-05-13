@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
+import { RelativeTime } from "@/components/common/relative-time";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +13,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -28,8 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
-import { format } from "date-fns";
-import { Database, Pencil, Trash2 } from "lucide-react";
+import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectionSheet, type ConnectionSheetMode } from "./ConnectionSheet";
@@ -81,11 +87,11 @@ export function ConnectionsPage() {
 
       <div className="px-8 py-6">
         {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
-            ))}
-          </div>
+          <div
+            role="status"
+            aria-label="loading"
+            className="h-64 animate-pulse rounded-md border border-border bg-muted/30"
+          />
         ) : error ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error instanceof Error ? error.message : tc("errors.unknown")}
@@ -140,7 +146,7 @@ export function ConnectionsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="rounded-lg border border-border bg-card">
+            <div className="rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -152,13 +158,21 @@ export function ConnectionsPage() {
                     <TableHead>{t("table.tags")}</TableHead>
                     <TableHead>{t("table.customHeaders")}</TableHead>
                     <TableHead>{t("table.createdAt")}</TableHead>
-                    <TableHead className="w-[120px] text-right">{t("table.actions")}</TableHead>
+                    <TableHead className="w-24 text-center">{t("table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.model}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          type="button"
+                          className="text-left hover:text-primary hover:underline"
+                          onClick={() => setDialogMode({ kind: "edit", existing: c })}
+                        >
+                          {c.model}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{c.name}</TableCell>
                       <TableCell className="font-mono text-xs">{c.baseUrl}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
@@ -184,26 +198,42 @@ export function ConnectionsPage() {
                       <TableCell className="text-xs text-muted-foreground">
                         {c.customHeaders ? `${c.customHeaders.split("\n")[0]}…` : "—"}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(c.createdAt), "yyyy-MM-dd HH:mm")}
+                      <TableCell>
+                        <RelativeTime date={c.createdAt} />
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("actions.edit")}
-                          onClick={() => setDialogMode({ kind: "edit", existing: c })}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("actions.delete")}
-                          onClick={() => setPendingDelete(c)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <TableCell className="text-center">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("actions.edit")}
+                            title={t("actions.edit")}
+                            onClick={() => setDialogMode({ kind: "edit", existing: c })}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={tc("table.actions")}
+                                title={tc("table.actions")}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setPendingDelete(c)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                {t("actions.delete")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
