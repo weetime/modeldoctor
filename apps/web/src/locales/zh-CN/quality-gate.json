@@ -254,6 +254,9 @@
       "confirm": "删除"
     }
   },
+  "rowActions": {
+    "more": "更多"
+  },
   "official": {
     "badge": "官方",
     "readOnlyHint": "这是平台内置的官方评测集，只读。如需修改样本或钉 baseline，请先「复制为我的」生成可编辑副本。",
