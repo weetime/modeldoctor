@@ -8,15 +8,19 @@ import {
   evaluationSampleSchema,
   judgeConfigSchema,
 } from "@modeldoctor/contracts";
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
 import { EvaluationsRepository } from "../repositories/evaluations.repository.js";
+import { RunsRepository } from "../repositories/runs.repository.js";
 
 const newSampleId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 12);
 
 @Injectable()
 export class EvaluationsService {
-  constructor(private readonly repo: EvaluationsRepository) {}
+  constructor(
+    private readonly repo: EvaluationsRepository,
+    private readonly runsRepo: RunsRepository,
+  ) {}
 
   list(userId: string) {
     return this.repo.list(userId);
@@ -141,5 +145,23 @@ export class EvaluationsService {
 
   private assignIds(samples: EvaluationSampleInput[]): EvaluationSample[] {
     return samples.map((s, i) => ({ ...s, id: s.id || newSampleId(), idx: i }));
+  }
+
+  async setBaseline(userId: string, evaluationId: string, runId: string | null) {
+    const evaluation = await this.repo.findById(userId, evaluationId);
+    if (!evaluation) throw new NotFoundException(`evaluation ${evaluationId} not found`);
+
+    if (runId !== null) {
+      const run = await this.runsRepo.findById(userId, runId);
+      if (!run) throw new NotFoundException(`run ${runId} not found`);
+      if (run.evaluationId !== evaluationId) {
+        throw new BadRequestException(`run ${runId} belongs to a different evaluation`);
+      }
+      if (run.status !== "COMPLETED") {
+        throw new BadRequestException(`run ${runId} must be COMPLETED to be pinned as baseline`);
+      }
+    }
+
+    return this.repo.update(userId, evaluationId, { baselineRunId: runId });
   }
 }

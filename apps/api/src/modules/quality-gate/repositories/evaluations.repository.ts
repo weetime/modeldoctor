@@ -4,7 +4,8 @@ import type {
   EvaluationSample,
   UpdateEvaluationRequest,
 } from "@modeldoctor/contracts";
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../../database/prisma.service.js";
 
 @Injectable()
@@ -38,20 +39,28 @@ export class EvaluationsRepository {
   }
 
   async update(userId: string, id: string, body: UpdateEvaluationRequest): Promise<Evaluation> {
-    const existing = await this.prisma.evaluation.findFirst({ where: { id, userId } });
-    if (!existing) throw new Error(`evaluation ${id} not found`);
-    const newSamples = body.samples ?? (existing.samples as unknown as EvaluationSample[]);
-    const samplesChanged = body.samples != null;
-    const row = await this.prisma.evaluation.update({
-      where: { id },
-      data: {
-        name: body.name ?? existing.name,
-        description: body.description !== undefined ? body.description : existing.description,
-        samples: newSamples as unknown as object,
-        totalSamples: newSamples.length,
-        version: samplesChanged ? existing.version + 1 : existing.version,
-      },
+    const existing = await this.prisma.evaluation.findFirst({
+      where: { id, userId },
+      select: { version: true, name: true, description: true, samples: true },
     });
+    if (!existing) throw new NotFoundException(`evaluation ${id} not found`);
+
+    const data: Prisma.EvaluationUpdateInput = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.description !== undefined) data.description = body.description;
+    if (body.samples !== undefined) {
+      data.samples = body.samples as unknown as Prisma.InputJsonValue;
+      data.version = existing.version + 1;
+      data.totalSamples = body.samples.length;
+    }
+    if (body.baselineRunId !== undefined) {
+      data.baselineRun =
+        body.baselineRunId === null
+          ? { disconnect: true }
+          : { connect: { id: body.baselineRunId } };
+    }
+
+    const row = await this.prisma.evaluation.update({ where: { id }, data });
     return this.toDto(row);
   }
 
@@ -72,6 +81,7 @@ export class EvaluationsRepository {
     version: number;
     samples: unknown;
     totalSamples: number;
+    baselineRunId: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Evaluation => ({
@@ -82,6 +92,7 @@ export class EvaluationsRepository {
     version: row.version,
     samples: row.samples as EvaluationSample[],
     totalSamples: row.totalSamples,
+    baselineRunId: row.baselineRunId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   });
