@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import type { GateResult } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -18,9 +19,13 @@ import { useEvaluation, useSetBaseline } from "../queries";
 interface Props {
   evaluationId: string;
   runId: string;
+  /** Run's gate verdict — used to block pinning runs that failed the gate.
+   * Always allow the unpin path though, in case a now-FAILED run was pinned
+   * before this validation was added. */
+  gateResult: GateResult | null;
 }
 
-export function PinBaselineButton({ evaluationId, runId }: Props) {
+export function PinBaselineButton({ evaluationId, runId, gateResult }: Props) {
   const { t } = useTranslation("quality-gate");
   const evaluation = useEvaluation(evaluationId);
   const setBaseline = useSetBaseline(evaluationId);
@@ -30,6 +35,7 @@ export function PinBaselineButton({ evaluationId, runId }: Props) {
   const currentPin = evaluation.data?.baselineRunId ?? null;
   const isThisPinned = currentPin === runId;
   const hasOtherPin = currentPin !== null && !isThisPinned;
+  const canPin = gateResult !== "FAILED";
 
   async function pin(target: string | null, successKey: string) {
     try {
@@ -65,6 +71,13 @@ export function PinBaselineButton({ evaluationId, runId }: Props) {
         </AlertDialog>
       </div>
     );
+  }
+
+  // Pin / Replace paths require a passable gate verdict; if this run failed
+  // the gate, fall through to render nothing (the Unpin path above already
+  // handled the edge case where a now-FAILED run was previously pinned).
+  if (!canPin) {
+    return null;
   }
 
   if (hasOtherPin) {

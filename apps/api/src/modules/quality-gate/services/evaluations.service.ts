@@ -160,6 +160,11 @@ export class EvaluationsService {
       if (run.status !== "COMPLETED") {
         throw new BadRequestException(`run ${runId} must be COMPLETED to be pinned as baseline`);
       }
+      if (run.gateResult === "FAILED") {
+        throw new BadRequestException(
+          `run ${runId} failed its gate verdict and cannot be pinned as baseline`,
+        );
+      }
     }
 
     return this.repo.update(userId, evaluationId, { baselineRunId: runId });

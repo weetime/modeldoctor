@@ -29,7 +29,7 @@ describe("PinBaselineButton", () => {
     (useEvaluation as never as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { id: "e1", baselineRunId: null },
     });
-    render(<PinBaselineButton evaluationId="e1" runId="r1" />, { wrapper: P });
+    render(<PinBaselineButton evaluationId="e1" runId="r1" gateResult="PASSED" />, { wrapper: P });
     expect(screen.getByRole("button", { name: /钉为 baseline/ })).toBeInTheDocument();
   });
 
@@ -37,7 +37,7 @@ describe("PinBaselineButton", () => {
     (useEvaluation as never as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { id: "e1", baselineRunId: "r1" },
     });
-    render(<PinBaselineButton evaluationId="e1" runId="r1" />, { wrapper: P });
+    render(<PinBaselineButton evaluationId="e1" runId="r1" gateResult="PASSED" />, { wrapper: P });
     expect(screen.getByText(/已钉为 baseline/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /解钉/ })).toBeInTheDocument();
   });
@@ -46,7 +46,26 @@ describe("PinBaselineButton", () => {
     (useEvaluation as never as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { id: "e1", baselineRunId: "other-run" },
     });
-    render(<PinBaselineButton evaluationId="e1" runId="r1" />, { wrapper: P });
+    render(<PinBaselineButton evaluationId="e1" runId="r1" gateResult="PASSED" />, { wrapper: P });
     expect(screen.getByRole("button", { name: /钉为 baseline/ })).toBeInTheDocument();
+  });
+
+  it("renders nothing when gate verdict is FAILED and run is not pinned", () => {
+    (useEvaluation as never as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { id: "e1", baselineRunId: null },
+    });
+    const { container } = render(
+      <PinBaselineButton evaluationId="e1" runId="r1" gateResult="FAILED" />,
+      { wrapper: P },
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("still allows unpin when this run is pinned but now has FAILED gate", () => {
+    (useEvaluation as never as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { id: "e1", baselineRunId: "r1" },
+    });
+    render(<PinBaselineButton evaluationId="e1" runId="r1" gateResult="FAILED" />, { wrapper: P });
+    expect(screen.getByRole("button", { name: /解钉/ })).toBeInTheDocument();
   });
 });
