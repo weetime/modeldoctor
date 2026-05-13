@@ -28,21 +28,26 @@ async function waitForRunStatus(
   ctx: E2EContext,
   token: string,
   runId: string,
-  expected: string,
+  expected: string | string[],
   timeoutMs: number,
 ) {
+  const expectedSet = new Set(Array.isArray(expected) ? expected : [expected]);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const r = await request(ctx.app.getHttpServer())
       .get(`/api/quality-gate/runs/${runId}`)
       .set("Authorization", `Bearer ${token}`);
-    if (r.body.status === expected) return r.body;
-    if (["FAILED", "CANCELLED"].includes(r.body.status) && r.body.status !== expected) {
-      throw new Error(`run ${runId} finished with ${r.body.status}, expected ${expected}`);
+    if (expectedSet.has(r.body.status)) return r.body;
+    if (["FAILED", "CANCELLED"].includes(r.body.status) && !expectedSet.has(r.body.status)) {
+      throw new Error(
+        `run ${runId} finished with ${r.body.status}, expected one of: ${[...expectedSet].join(", ")}`,
+      );
     }
     await new Promise((res) => setTimeout(res, 500));
   }
-  throw new Error(`run ${runId} did not reach ${expected} within ${timeoutMs}ms`);
+  throw new Error(
+    `run ${runId} did not reach one of [${[...expectedSet].join(", ")}] within ${timeoutMs}ms`,
+  );
 }
 
 describe("Quality Gate e2e", () => {
@@ -124,19 +129,15 @@ describe("baseline pin flow", () => {
       })
       .expect(201);
 
-    // Wait for executor to complete (endpoint unreachable → FAILED or COMPLETED)
-    // Accept FAILED as well since port-1 connections are unreachable in the test env
-    const baselineTerminal = await (async () => {
-      const deadline = Date.now() + 30_000;
-      while (Date.now() < deadline) {
-        const r = await request(ctx.app.getHttpServer())
-          .get(`/api/quality-gate/runs/${baselineRun.body.id}`)
-          .set("Authorization", `Bearer ${token}`);
-        if (["COMPLETED", "FAILED"].includes(r.body.status)) return r.body;
-        await new Promise((res) => setTimeout(res, 500));
-      }
-      throw new Error(`baseline run did not reach terminal within 30s`);
-    })();
+    // Wait for executor to complete. Accept FAILED as well — port-1 connections
+    // are unreachable in the test env, so the executor errors per sample.
+    const baselineTerminal = await waitForRunStatus(
+      ctx,
+      token,
+      baselineRun.body.id,
+      ["COMPLETED", "FAILED"],
+      30_000,
+    );
     expect(["COMPLETED", "FAILED"]).toContain(baselineTerminal.status);
 
     // 3. Pin this run as baseline
@@ -165,18 +166,13 @@ describe("baseline pin flow", () => {
       .expect(201);
     expect(newRun.body.baselineRunIdAtExecution).toBe(baselineRun.body.id);
 
-    // Wait for terminal (accept FAILED for unreachable endpoint)
-    const finalRun = await (async () => {
-      const deadline = Date.now() + 30_000;
-      while (Date.now() < deadline) {
-        const r = await request(ctx.app.getHttpServer())
-          .get(`/api/quality-gate/runs/${newRun.body.id}`)
-          .set("Authorization", `Bearer ${token}`);
-        if (["COMPLETED", "FAILED"].includes(r.body.status)) return r.body;
-        await new Promise((res) => setTimeout(res, 500));
-      }
-      throw new Error(`new run did not reach terminal within 30s`);
-    })();
+    const finalRun = await waitForRunStatus(
+      ctx,
+      token,
+      newRun.body.id,
+      ["COMPLETED", "FAILED"],
+      30_000,
+    );
 
     // Sanity: status is terminal + gateResult is populated when run reaches COMPLETED
     expect(["COMPLETED", "FAILED"]).toContain(finalRun.status);
@@ -202,18 +198,7 @@ describe("baseline pin flow", () => {
       .send({ evaluationId: ev2.body.id, endpointAId: connId, gateConfig: { passRateMin: 0.5 } })
       .expect(201);
 
-    // Wait for terminal
-    await (async () => {
-      const deadline = Date.now() + 30_000;
-      while (Date.now() < deadline) {
-        const r = await request(ctx.app.getHttpServer())
-          .get(`/api/quality-gate/runs/${baselineRun.body.id}`)
-          .set("Authorization", `Bearer ${token}`);
-        if (["COMPLETED", "FAILED"].includes(r.body.status)) return r.body;
-        await new Promise((res) => setTimeout(res, 500));
-      }
-      throw new Error(`baseline run did not reach terminal within 30s`);
-    })();
+    await waitForRunStatus(ctx, token, baselineRun.body.id, ["COMPLETED", "FAILED"], 30_000);
 
     await request(ctx.app.getHttpServer())
       .patch(`/api/quality-gate/evaluations/${ev2.body.id}`)

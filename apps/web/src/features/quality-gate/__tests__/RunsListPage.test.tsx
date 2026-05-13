@@ -52,10 +52,8 @@ function P({ children }: { children: React.ReactNode }) {
 }
 
 describe("RunsListPage", () => {
-  it("shows empty state", () => {
-    // Override with empty data for this test
+  it("renders runs in a table with a checkbox per row", () => {
     render(<RunsListPage />, { wrapper: P });
-    // With 2 items mocked, empty state won't show; verify table renders instead
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
