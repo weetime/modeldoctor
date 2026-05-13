@@ -8,14 +8,28 @@ function judgeFail() {
   return { passed: false };
 }
 
-function buildExecutor(overrides: {
-  baselineRunIdAtExecution?: string | null;
-  baselineSamples?: Map<string, { resultA: unknown }>;
-  endpointAReturns?: Array<{ rawAnswer: string; latencyMs: number }>;
-} = {}) {
+function buildExecutor(
+  overrides: {
+    baselineRunIdAtExecution?: string | null;
+    baselineSamples?: Map<string, { resultA: unknown }>;
+    endpointAReturns?: Array<{ rawAnswer: string; latencyMs: number }>;
+  } = {},
+) {
   const samples = [
-    { id: "s0", idx: 0, prompt: "Q1", expected: "A", judgeConfig: { kind: "exact-match" as const } },
-    { id: "s1", idx: 1, prompt: "Q2", expected: "B", judgeConfig: { kind: "exact-match" as const } },
+    {
+      id: "s0",
+      idx: 0,
+      prompt: "Q1",
+      expected: "A",
+      judgeConfig: { kind: "exact-match" as const },
+    },
+    {
+      id: "s1",
+      idx: 1,
+      prompt: "Q2",
+      expected: "B",
+      judgeConfig: { kind: "exact-match" as const },
+    },
   ];
   const repo = {
     findFullRun: vi.fn().mockResolvedValue({
@@ -27,9 +41,7 @@ function buildExecutor(overrides: {
       gateConfig: { passRateMin: 0.5 },
       baselineRunIdAtExecution: overrides.baselineRunIdAtExecution ?? null,
     }),
-    loadCompletedSamplesById: vi
-      .fn()
-      .mockResolvedValue(overrides.baselineSamples ?? new Map()),
+    loadCompletedSamplesById: vi.fn().mockResolvedValue(overrides.baselineSamples ?? new Map()),
     markRunning: vi.fn(),
     saveSample: vi.fn(),
     updateProgress: vi.fn(),
@@ -43,7 +55,10 @@ function buildExecutor(overrides: {
     call: vi.fn(async (_id, _u, prompt) => {
       const idx = prompt === "Q1" ? 0 : 1;
       return (
-        overrides.endpointAReturns?.[idx] ?? { rawAnswer: prompt === "Q1" ? "A" : "B", latencyMs: 10 }
+        overrides.endpointAReturns?.[idx] ?? {
+          rawAnswer: prompt === "Q1" ? "A" : "B",
+          latencyMs: 10,
+        }
       );
     }),
   };

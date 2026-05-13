@@ -79,10 +79,17 @@ describe("RunsService", () => {
       id: "e1",
       userId: "u1",
       version: 2,
-      samples: [{ id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }],
+      samples: [
+        { id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+      ],
       baselineRunId: "pinned-run",
     });
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await svc.create("u1", {
       evaluationId: "e1",
       endpointAId: "c",
@@ -99,10 +106,17 @@ describe("RunsService", () => {
       id: "e1",
       userId: "u1",
       version: 2,
-      samples: [{ id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }],
+      samples: [
+        { id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+      ],
       baselineRunId: "pinned-run",
     });
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await svc.create("u1", {
       evaluationId: "e1",
       endpointAId: "c",
@@ -122,7 +136,12 @@ describe("RunsService", () => {
       evaluationId: "e1",
       status: "COMPLETED",
     });
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await svc.create("u1", {
       evaluationId: "e1",
       endpointAId: "c",
@@ -143,7 +162,12 @@ describe("RunsService", () => {
       evaluationId: "e1",
       status: "RUNNING",
     });
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await expect(
       svc.create("u1", {
         evaluationId: "e1",
@@ -160,10 +184,17 @@ describe("RunsService", () => {
       id: "e1",
       userId: "u1",
       version: 2,
-      samples: [{ id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }],
+      samples: [
+        { id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+      ],
       baselineRunId: "pinned-run",
     });
-    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+    );
     await svc.create("u1", {
       evaluationId: "e1",
       endpointAId: "a",

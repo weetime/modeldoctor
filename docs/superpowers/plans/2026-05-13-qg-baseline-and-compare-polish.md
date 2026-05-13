@@ -1147,17 +1147,17 @@ async start(runId: string): Promise<void> {
             }
           }
 
-          // 3. Delta — semantic always "A=baseline, B=candidate"
-          //    Dual mode:    A=baselineEndpoint, B=candidateEndpoint (existing)
-          //    Baseline mode: A=baselineRun.resultA, B=todayCall
-          //                   → so we call computeDelta(judgedB_actually_baseline, judgedA_actually_today)
-          //                   wait — let's reread to avoid confusion:
-          //    In our storage: resultA always = today's call, resultB = (dual: candidate / baseline: baseline's resultA)
-          //    computeDelta expects (baseline_judge, candidate_judge).
-          //    Dual: baseline=A, candidate=B → computeDelta(judgedA, judgedB) ✓
-          //    Baseline mode: baseline=B (we stored it there), candidate=A (today) → computeDelta(judgedB, judgedA)
+          // 3. Delta — semantic always "A=baseline, B=candidate" for computeDelta.
+          //    Storage invariant: resultA = today's call (preserves endpointAId → resultA).
+          //    Dual mode:     A=baselineEndpoint, B=candidateEndpoint → computeDelta(judgedA, judgedB)
+          //    Baseline mode: resultA=today (candidate), resultB=baseline.resultA → computeDelta(judgedB, judgedA)
+          //    Null-guard: computeDelta's null check is on its 2nd arg; in baseline mode the
+          //    baseline judge sits on judgedB, so if judgedB is null (missing baseline sample)
+          //    we must short-circuit to "NA" before calling.
           const delta = baselineMode
-            ? computeDelta(judgedB, judgedA)
+            ? judgedB != null
+              ? computeDelta(judgedB, judgedA)
+              : "NA"
             : computeDelta(judgedA, judgedB);
 
           await this.repo.saveSample({

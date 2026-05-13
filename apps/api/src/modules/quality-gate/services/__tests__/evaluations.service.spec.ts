@@ -138,17 +138,13 @@ describe("setBaseline", () => {
       status: "RUNNING",
     });
     const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(
-      /must be COMPLETED/,
-    );
+    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(/must be COMPLETED/);
   });
 
   it("rejects when run not found / not owned", async () => {
     const { repo, runsRepo } = build();
     runsRepo.findById.mockResolvedValueOnce(null);
     const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(
-      /run .* not found/,
-    );
+    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(/run .* not found/);
   });
 });
