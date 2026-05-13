@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type CreateRunRequest, createRunRequestSchema } from "@modeldoctor/contracts";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +37,7 @@ export function RunCreatePage() {
 
   const form = useForm<CreateRunRequest>({
     resolver: zodResolver(createRunRequestSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: {
       evaluationId: "",
       endpointAId: "",
@@ -46,6 +47,15 @@ export function RunCreatePage() {
   });
   const endpointBId = form.watch("endpointBId");
   const endpointAId = form.watch("endpointAId");
+
+  // Auto-clear B when A is changed to the same connection (prevents the
+  // schema refine "endpointAId !== endpointBId" from blocking the form
+  // without any visible signal in the UI).
+  useEffect(() => {
+    if (endpointAId && endpointBId && endpointAId === endpointBId) {
+      form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [endpointAId, endpointBId, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -127,6 +137,7 @@ export function RunCreatePage() {
                           selectedConnectionId={field.value ?? null}
                           onSelect={(id) => field.onChange(id ?? undefined)}
                           allowManual={false}
+                          excludeIds={endpointAId ? [endpointAId] : undefined}
                         />
                       </FormControl>
                       <FormMessage />

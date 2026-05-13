@@ -44,6 +44,9 @@ export interface ConnectionPickerProps {
   className?: string;
   /** Class for the `<SelectTrigger>` — useful for sizing inside form fields. */
   triggerClassName?: string;
+  /** Hide these connection ids from the dropdown (used to avoid picking the
+   * same endpoint twice in dual-endpoint flows like QG Run create). */
+  excludeIds?: string[];
 }
 
 /**
@@ -64,10 +67,14 @@ export function ConnectionPicker({
   onCurlParsed,
   className,
   triggerClassName,
+  excludeIds,
 }: ConnectionPickerProps) {
   const { t } = useTranslation("common");
   const listQuery = useConnections();
-  const connectionList: ConnectionPublic[] = listQuery.data ?? [];
+  const fullList: ConnectionPublic[] = listQuery.data ?? [];
+  const connectionList: ConnectionPublic[] = excludeIds?.length
+    ? fullList.filter((c) => !excludeIds.includes(c.id))
+    : fullList;
 
   const [curlOpen, setCurlOpen] = useState(false);
   const [curlText, setCurlText] = useState("");
