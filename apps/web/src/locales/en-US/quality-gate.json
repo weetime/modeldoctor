@@ -83,7 +83,25 @@
         "NA": "—"
       },
       "passLabel": "Pass",
-      "failLabel": "Fail"
+      "failLabel": "Fail",
+      "pinButton": "📌 Set as baseline",
+      "pinnedBadge": "📌 Pinned baseline",
+      "unpinButton": "Unpin",
+      "replaceConfirmTitle": "Replace baseline?",
+      "replaceConfirmBody": "Current baseline: Run #{{currentId}}\nWill be replaced by: this run\n\nPrevious comparisons against the old baseline are preserved.",
+      "replaceConfirmAction": "Replace baseline",
+      "unpinConfirmTitle": "Unpin baseline?",
+      "unpinConfirmBody": "Future runs of this evaluation will run single-endpoint by default.",
+      "unpinConfirmAction": "Unpin",
+      "passRateCurrent": "Pass Rate (current)",
+      "passRateBaseline": "Pass Rate (baseline)",
+      "judgeAvgCurrent": "Judge Avg (current)",
+      "judgeAvgBaseline": "Judge Avg (baseline)",
+      "baselineModeBanner": "📌 Compared against Run #{{runId}}",
+      "baselineViewLink": "View baseline →",
+      "pinSuccessToast": "Pinned as baseline",
+      "unpinSuccessToast": "Unpinned",
+      "pinErrorToast": "Operation failed: {{message}}"
     },
     "form": {
       "evaluationLabel": "Evaluation Set",
@@ -144,6 +162,8 @@
         "delta": "Delta",
         "passedA": "A Passed",
         "passedB": "B Passed",
+        "passedCurrent": "Current passed",
+        "passedBaseline": "Baseline passed",
         "actions": "Actions"
       },
       "prevPage": "Previous",

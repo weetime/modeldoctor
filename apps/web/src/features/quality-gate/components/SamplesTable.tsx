@@ -43,9 +43,11 @@ const FILTERS: SampleFilter[] = ["all", "regression", "improvement", "both-pass"
 
 export function SamplesTable({
   runId,
+  baselineMode,
   onOpenSample,
 }: {
   runId: string;
+  baselineMode: boolean;
   onOpenSample: (sampleId: string) => void;
 }) {
   const { t } = useTranslation("quality-gate");
@@ -76,8 +78,16 @@ export function SamplesTable({
             <TableHead className="w-12">{t("report.samplesTable.headers.index")}</TableHead>
             <TableHead>{t("report.samplesTable.headers.answerPreview")}</TableHead>
             <TableHead className="w-24">{t("report.samplesTable.headers.delta")}</TableHead>
-            <TableHead className="w-20">{t("report.samplesTable.headers.passedA")}</TableHead>
-            <TableHead className="w-20">{t("report.samplesTable.headers.passedB")}</TableHead>
+            <TableHead className="w-20">
+              {baselineMode
+                ? t("report.samplesTable.headers.passedCurrent")
+                : t("report.samplesTable.headers.passedA")}
+            </TableHead>
+            <TableHead className="w-20">
+              {baselineMode
+                ? t("report.samplesTable.headers.passedBaseline")
+                : t("report.samplesTable.headers.passedB")}
+            </TableHead>
             <TableHead className="w-32 text-right">
               {t("report.samplesTable.headers.actions")}
             </TableHead>

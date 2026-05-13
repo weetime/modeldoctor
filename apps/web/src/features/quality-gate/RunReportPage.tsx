@@ -4,6 +4,7 @@ import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { PinBaselineButton } from "./components/PinBaselineButton";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
 import { SamplesTable } from "./components/SamplesTable";
@@ -55,17 +56,26 @@ export function RunReportPage() {
         subtitle={t("runs.report.subtitle")}
         breadcrumbs={breadcrumbs}
         rightSlot={
-          run.status === "RUNNING" ? (
-            <Button variant="outline" onClick={() => cancel.mutate()}>
-              {t("runs.report.cancel")}
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {run.status === "RUNNING" && (
+              <Button variant="outline" onClick={() => cancel.mutate()}>
+                {t("runs.report.cancel")}
+              </Button>
+            )}
+            {run.status === "COMPLETED" && (
+              <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
+            )}
+          </div>
         }
       />
       <div className="px-8 py-6 space-y-6">
         <RunOverview run={run} />
         {run.status === "COMPLETED" && (
-          <SamplesTable runId={run.id} onOpenSample={setOpenSampleId} />
+          <SamplesTable
+            runId={run.id}
+            baselineMode={run.baselineRunIdAtExecution != null}
+            onOpenSample={setOpenSampleId}
+          />
         )}
         <SampleDetailDrawer
           runId={run.id}
