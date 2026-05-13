@@ -1,5 +1,5 @@
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -10,151 +10,221 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { JudgeConfig } from "@modeldoctor/contracts";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 interface JudgeConfigEditorProps {
-  value: JudgeConfig;
-  onChange: (v: JudgeConfig) => void;
+  /** Dot path inside the parent form (e.g. `samples.0.judgeConfig`). */
+  namePrefix: string;
 }
 
-export function JudgeConfigEditor({ value, onChange }: JudgeConfigEditorProps) {
-  const { t } = useTranslation("quality-gate");
+const KIND_DEFAULTS: Record<JudgeConfig["kind"], JudgeConfig> = {
+  "exact-match": { kind: "exact-match" },
+  contains: { kind: "contains", substrings: [], mode: "all" },
+  regex: { kind: "regex", pattern: "" },
+  "llm-judge": { kind: "llm-judge", rubric: "", scale: "0-5" },
+};
 
-  const setKind = (k: JudgeConfig["kind"]) => {
-    if (k === "exact-match") onChange({ kind: "exact-match" });
-    else if (k === "contains") onChange({ kind: "contains", substrings: [], mode: "all" });
-    else if (k === "regex") onChange({ kind: "regex", pattern: "" });
-    else onChange({ kind: "llm-judge", rubric: "", scale: "0-5" });
-  };
+export function JudgeConfigEditor({ namePrefix }: JudgeConfigEditorProps) {
+  const { t } = useTranslation("quality-gate");
+  const { control, setValue } = useFormContext();
+  const kind = useWatch({ control, name: `${namePrefix}.kind` }) as JudgeConfig["kind"];
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
-        <Label htmlFor="qg-judge-kind">{t("judges.kindLabel")}</Label>
-        <Select value={value.kind} onValueChange={(k) => setKind(k as JudgeConfig["kind"])}>
-          <SelectTrigger id="qg-judge-kind">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="exact-match">{t("judges.exact-match")}</SelectItem>
-            <SelectItem value="contains">{t("judges.contains")}</SelectItem>
-            <SelectItem value="regex">{t("judges.regex")}</SelectItem>
-            <SelectItem value="llm-judge">{t("judges.llm-judge")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <FormField
+        control={control}
+        name={`${namePrefix}.kind`}
+        render={() => (
+          <FormItem>
+            <FormLabel required>{t("judges.kindLabel")}</FormLabel>
+            <FormControl>
+              <Select
+                value={kind}
+                onValueChange={(k) =>
+                  setValue(namePrefix, KIND_DEFAULTS[k as JudgeConfig["kind"]], {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exact-match">{t("judges.exact-match")}</SelectItem>
+                  <SelectItem value="contains">{t("judges.contains")}</SelectItem>
+                  <SelectItem value="regex">{t("judges.regex")}</SelectItem>
+                  <SelectItem value="llm-judge">{t("judges.llm-judge")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-      {value.kind === "exact-match" && (
-        <div className="flex items-center gap-3">
-          <Label htmlFor="qg-cs">{t("judges.caseSensitive")}</Label>
-          <Switch
-            id="qg-cs"
-            checked={value.caseSensitive === true}
-            onCheckedChange={(b) => onChange({ ...value, caseSensitive: b })}
+      {kind === "exact-match" && (
+        <FormField
+          control={control}
+          name={`${namePrefix}.caseSensitive`}
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-3 space-y-0">
+              <FormControl>
+                <Switch checked={field.value === true} onCheckedChange={field.onChange} />
+              </FormControl>
+              <FormLabel>{t("judges.caseSensitive")}</FormLabel>
+            </FormItem>
+          )}
+        />
+      )}
+
+      {kind === "contains" && (
+        <>
+          <FormField
+            control={control}
+            name={`${namePrefix}.substrings`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("judges.substringsLabel")}</FormLabel>
+                <FormControl>
+                  <Input
+                    value={(field.value as string[] | undefined)?.join(", ") ?? ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-      )}
-
-      {value.kind === "contains" && (
-        <>
-          <div className="space-y-1">
-            <Label htmlFor="qg-subs">{t("judges.substringsLabel")}</Label>
-            <Input
-              id="qg-subs"
-              value={value.substrings.join(", ")}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  substrings: e.target.value
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                })
-              }
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="qg-mode">{t("judges.modeLabel")}</Label>
-            <Select
-              value={value.mode}
-              onValueChange={(m) => onChange({ ...value, mode: m as "all" | "any" })}
-            >
-              <SelectTrigger id="qg-mode">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("judges.modeAll")}</SelectItem>
-                <SelectItem value="any">{t("judges.modeAny")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormField
+            control={control}
+            name={`${namePrefix}.mode`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("judges.modeLabel")}</FormLabel>
+                <FormControl>
+                  <Select value={field.value ?? "all"} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("judges.modeAll")}</SelectItem>
+                      <SelectItem value="any">{t("judges.modeAny")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </>
       )}
 
-      {value.kind === "regex" && (
+      {kind === "regex" && (
         <>
-          <div className="space-y-1">
-            <Label htmlFor="qg-pat">{t("judges.patternLabel")}</Label>
-            <Input
-              id="qg-pat"
-              value={value.pattern}
-              onChange={(e) => onChange({ ...value, pattern: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="qg-flags">{t("judges.flagsLabel")}</Label>
-            <Input
-              id="qg-flags"
-              value={value.flags ?? ""}
-              onChange={(e) => onChange({ ...value, flags: e.target.value || undefined })}
-            />
-          </div>
+          <FormField
+            control={control}
+            name={`${namePrefix}.pattern`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("judges.patternLabel")}</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`${namePrefix}.flags`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("judges.flagsLabel")}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </>
       )}
 
-      {value.kind === "llm-judge" && (
+      {kind === "llm-judge" && (
         <>
-          <div className="space-y-1">
-            <Label htmlFor="qg-rubric">{t("judges.rubricLabel")}</Label>
-            <Textarea
-              id="qg-rubric"
-              rows={4}
-              value={value.rubric}
-              onChange={(e) => onChange({ ...value, rubric: e.target.value })}
-              placeholder={t("judges.rubricPlaceholder")}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="qg-scale">{t("judges.scaleLabel")}</Label>
-            <Select
-              value={value.scale}
-              onValueChange={(s) => onChange({ ...value, scale: s as "0-1" | "0-5" | "pass-fail" })}
-            >
-              <SelectTrigger id="qg-scale">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0-1">0–1</SelectItem>
-                <SelectItem value="0-5">0–5</SelectItem>
-                <SelectItem value="pass-fail">pass/fail</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="qg-thr">{t("judges.thresholdLabel")}</Label>
-            <Input
-              id="qg-thr"
-              type="number"
-              step="0.1"
-              value={value.passThreshold ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  passThreshold: e.target.value ? Number(e.target.value) : undefined,
-                })
-              }
-            />
-          </div>
+          <FormField
+            control={control}
+            name={`${namePrefix}.rubric`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("judges.rubricLabel")}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={4}
+                    value={field.value ?? ""}
+                    placeholder={t("judges.rubricPlaceholder")}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`${namePrefix}.scale`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("judges.scaleLabel")}</FormLabel>
+                <FormControl>
+                  <Select value={field.value ?? "0-5"} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-1">0–1</SelectItem>
+                      <SelectItem value="0-5">0–5</SelectItem>
+                      <SelectItem value="pass-fail">pass/fail</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`${namePrefix}.passThreshold`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("judges.thresholdLabel")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                    }
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </>
       )}
     </div>

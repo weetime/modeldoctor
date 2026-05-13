@@ -16,6 +16,7 @@
       "cancel": "取消",
       "jsonParseError": "JSON 解析失败",
       "saveError": "保存失败：{{message}}",
+      "saveSuccess": "已保存",
       "newTitle": "新建评测集",
       "editTitle": "编辑评测集",
       "createSubtitle": "添加样本并选择判分器；保存后可在评测运行中引用。",

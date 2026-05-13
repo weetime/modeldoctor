@@ -1,58 +1,84 @@
 import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { type ReactNode } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { I18nextProvider } from "react-i18next";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { JudgeConfigEditor } from "../JudgeConfigEditor";
 
 beforeAll(async () => {
   await i18n.changeLanguage("zh-CN");
 });
 
-function wrap(ui: React.ReactElement) {
-  return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
+function Harness({
+  defaultValues,
+  children,
+}: {
+  defaultValues: object;
+  children: ReactNode;
+}) {
+  const form = useForm({ defaultValues });
+  return (
+    <I18nextProvider i18n={i18n}>
+      <FormProvider {...form}>{children}</FormProvider>
+    </I18nextProvider>
+  );
 }
 
 describe("JudgeConfigEditor", () => {
   it("renders exact-match fields by default", () => {
-    wrap(<JudgeConfigEditor value={{ kind: "exact-match" }} onChange={() => {}} />);
-    // Selector visible (label or text indicating discriminator)
+    render(
+      <Harness defaultValues={{ judgeConfig: { kind: "exact-match" } }}>
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
+    );
     expect(screen.getByText(/exact-match/i)).toBeInTheDocument();
   });
 
   it("contains kind shows substrings input", () => {
-    wrap(
-      <JudgeConfigEditor
-        value={{ kind: "contains", substrings: ["x"], mode: "all" }}
-        onChange={() => {}}
-      />,
+    render(
+      <Harness
+        defaultValues={{ judgeConfig: { kind: "contains", substrings: ["x"], mode: "all" } }}
+      >
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
     );
     expect(screen.getByDisplayValue("x")).toBeInTheDocument();
   });
 
   it("regex kind shows pattern input", () => {
-    wrap(<JudgeConfigEditor value={{ kind: "regex", pattern: "^a$" }} onChange={() => {}} />);
+    render(
+      <Harness defaultValues={{ judgeConfig: { kind: "regex", pattern: "^a$" } }}>
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
+    );
     expect(screen.getByDisplayValue("^a$")).toBeInTheDocument();
   });
 
   it("llm-judge surfaces rubric textarea and scale selector", () => {
-    wrap(
-      <JudgeConfigEditor
-        value={{ kind: "llm-judge", rubric: "rubric ten chars", scale: "0-5" }}
-        onChange={() => {}}
-      />,
+    render(
+      <Harness
+        defaultValues={{
+          judgeConfig: { kind: "llm-judge", rubric: "rubric ten chars", scale: "0-5" },
+        }}
+      >
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
     );
     expect(screen.getByDisplayValue("rubric ten chars")).toBeInTheDocument();
   });
 
-  it("changing kind via the selector calls onChange with a blank config of new kind", () => {
-    const onChange = vi.fn();
-    wrap(<JudgeConfigEditor value={{ kind: "exact-match" }} onChange={onChange} />);
-    // Open the Select trigger (combobox role)
+  it("changing kind via the selector resets to defaults for the new kind", () => {
+    render(
+      <Harness defaultValues={{ judgeConfig: { kind: "exact-match" } }}>
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
+    );
     const trigger = screen.getByRole("combobox");
     fireEvent.click(trigger);
-    // Pick the "contains" option
     const containsOption = screen.getByRole("option", { name: /contains/i });
     fireEvent.click(containsOption);
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ kind: "contains" }));
+    // After switching to "contains", the substrings input should be visible
+    expect(screen.getByText(/substrings/i)).toBeInTheDocument();
   });
 });

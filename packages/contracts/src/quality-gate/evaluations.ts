@@ -12,6 +12,15 @@ export const evaluationSampleSchema = z.object({
 });
 export type EvaluationSample = z.infer<typeof evaluationSampleSchema>;
 
+// Request shape: `id` and `idx` are assigned server-side via assignIds(), so
+// callers can omit them. The persisted/response shape (evaluationSampleSchema)
+// keeps both required.
+export const evaluationSampleInputSchema = evaluationSampleSchema.extend({
+  id: z.string().max(64).optional(),
+  idx: z.number().int().nonnegative().optional(),
+});
+export type EvaluationSampleInput = z.infer<typeof evaluationSampleInputSchema>;
+
 export const evaluationSchema = z.object({
   id: z.string(),
   userId: z.string(),
@@ -28,14 +37,14 @@ export type Evaluation = z.infer<typeof evaluationSchema>;
 export const createEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
-  samples: z.array(evaluationSampleSchema).min(1).max(500),
+  samples: z.array(evaluationSampleInputSchema).min(1).max(500),
 });
 export type CreateEvaluationRequest = z.infer<typeof createEvaluationRequestSchema>;
 
 export const updateEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
-  samples: z.array(evaluationSampleSchema).min(1).max(500).optional(),
+  samples: z.array(evaluationSampleInputSchema).min(1).max(500).optional(),
 });
 export type UpdateEvaluationRequest = z.infer<typeof updateEvaluationRequestSchema>;
 
@@ -44,10 +53,10 @@ export const listEvaluationsResponseSchema = z.object({
 });
 export type ListEvaluationsResponse = z.infer<typeof listEvaluationsResponseSchema>;
 
-// Import payload (JSON form) — same as samples
+// Import payload (JSON form) — same as samples; id/idx assigned server-side.
 export const importEvaluationJsonSchema = z.object({
   format: z.literal("json"),
-  payload: z.array(evaluationSampleSchema).min(1).max(500),
+  payload: z.array(evaluationSampleInputSchema).min(1).max(500),
 });
 // CSV import: columns prompt | expected | judgeKind | judgeConfig(JSON) | tags(comma)
 // The CSV parser turns rows into the same EvaluationSample shape before validation.

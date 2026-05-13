@@ -1,78 +1,88 @@
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { GateConfig } from "@modeldoctor/contracts";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-export function GateConfigForm({
-  value,
-  onChange,
-  dual,
-}: {
-  value: GateConfig;
-  onChange: (v: GateConfig) => void;
+interface Props {
+  /** Dot path of the GateConfig object in the parent form (e.g. `gateConfig`). */
+  namePrefix: string;
   dual: boolean;
-}) {
+}
+
+type Key = keyof GateConfig;
+
+const DEFAULTS: Record<Key, number> = {
+  passRateMin: 0.9,
+  regressionMax: 3,
+  judgeScoreMin: 4,
+};
+
+const STEP: Record<Key, { min: number; max?: number; step: number }> = {
+  passRateMin: { min: 0, max: 1, step: 0.05 },
+  regressionMax: { min: 0, step: 1 },
+  judgeScoreMin: { min: 0, max: 5, step: 0.5 },
+};
+
+function Row({
+  namePrefix,
+  fieldKey,
+  label,
+}: { namePrefix: string; fieldKey: Key; label: string }) {
+  const { control, setValue } = useFormContext();
+  const value = useWatch({ control, name: `${namePrefix}.${fieldKey}` }) as number | undefined;
+  const enabled = value != null;
+  const { min, max, step } = STEP[fieldKey];
+
+  return (
+    <div className="flex items-center gap-3">
+      <Switch
+        checked={enabled}
+        onCheckedChange={(b) =>
+          setValue(`${namePrefix}.${fieldKey}`, b ? DEFAULTS[fieldKey] : undefined, {
+            shouldDirty: true,
+            shouldValidate: true,
+          })
+        }
+      />
+      <FormField
+        control={control}
+        name={`${namePrefix}.${fieldKey}`}
+        render={({ field }) => (
+          <FormItem className="flex flex-1 items-center gap-3 space-y-0">
+            <FormLabel className="flex-1">{label}</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                min={min}
+                max={max}
+                step={step}
+                className="w-24"
+                disabled={!enabled}
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                }
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
+
+export function GateConfigForm({ namePrefix, dual }: Props) {
   const { t } = useTranslation("quality-gate");
-  const enabled = (k: keyof GateConfig) => value[k] != null;
-  const toggle = (k: keyof GateConfig, defaultVal: number) => {
-    if (enabled(k)) onChange({ ...value, [k]: undefined });
-    else onChange({ ...value, [k]: defaultVal });
-  };
   return (
     <div className="space-y-3 max-w-md">
-      <div className="flex items-center gap-3">
-        <Switch
-          checked={enabled("passRateMin")}
-          onCheckedChange={() => toggle("passRateMin", 0.9)}
-        />
-        <Label>{t("gate.passRateMin")}</Label>
-        <Input
-          type="number"
-          min="0"
-          max="1"
-          step="0.05"
-          className="w-24"
-          disabled={!enabled("passRateMin")}
-          value={value.passRateMin ?? ""}
-          onChange={(e) => onChange({ ...value, passRateMin: Number(e.target.value) })}
-        />
-      </div>
+      <Row namePrefix={namePrefix} fieldKey="passRateMin" label={t("gate.passRateMin")} />
       {dual && (
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={enabled("regressionMax")}
-            onCheckedChange={() => toggle("regressionMax", 3)}
-          />
-          <Label>{t("gate.regressionMax")}</Label>
-          <Input
-            type="number"
-            min="0"
-            step="1"
-            className="w-24"
-            disabled={!enabled("regressionMax")}
-            value={value.regressionMax ?? ""}
-            onChange={(e) => onChange({ ...value, regressionMax: Number(e.target.value) })}
-          />
-        </div>
+        <Row namePrefix={namePrefix} fieldKey="regressionMax" label={t("gate.regressionMax")} />
       )}
-      <div className="flex items-center gap-3">
-        <Switch
-          checked={enabled("judgeScoreMin")}
-          onCheckedChange={() => toggle("judgeScoreMin", 4)}
-        />
-        <Label>{t("gate.judgeScoreMin")}</Label>
-        <Input
-          type="number"
-          min="0"
-          max="5"
-          step="0.5"
-          className="w-24"
-          disabled={!enabled("judgeScoreMin")}
-          value={value.judgeScoreMin ?? ""}
-          onChange={(e) => onChange({ ...value, judgeScoreMin: Number(e.target.value) })}
-        />
-      </div>
+      <Row namePrefix={namePrefix} fieldKey="judgeScoreMin" label={t("gate.judgeScoreMin")} />
     </div>
   );
 }

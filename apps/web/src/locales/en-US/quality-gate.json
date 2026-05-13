@@ -16,6 +16,7 @@
       "cancel": "Cancel",
       "jsonParseError": "Failed to parse JSON",
       "saveError": "Save failed: {{message}}",
+      "saveSuccess": "Saved",
       "newTitle": "New Evaluation Set",
       "editTitle": "Edit Evaluation Set",
       "createSubtitle": "Add samples and pick a judge; references from runs are by snapshot.",
