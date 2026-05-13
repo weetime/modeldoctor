@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { PrismaService } from "../../../../database/prisma.service.js";
 import {
   type TestDatabase,
   startPostgres,
@@ -18,7 +19,11 @@ beforeAll(async () => {
     data: { email: `qg-${Date.now()}@test`, passwordHash: "x", roles: [] },
   });
   userId = user.id;
-  repo = new EvaluationsRepository(prisma);
+  // The repo accepts PrismaService (Nest provider), but for integration
+  // tests we instantiate a bare PrismaClient against testcontainers.
+  // PrismaService extends PrismaClient so the runtime behaviour is identical;
+  // cast through unknown to satisfy the structural-typing check.
+  repo = new EvaluationsRepository(prisma as unknown as PrismaService);
 }, 180_000);
 
 afterAll(async () => {

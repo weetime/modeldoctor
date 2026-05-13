@@ -14,14 +14,18 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRunSamples } from "../queries";
 
-function deltaVariant(delta: SampleDelta): "destructive" | "default" | "secondary" | "outline" {
+function deltaVariant(
+  delta: SampleDelta,
+): "default" | "destructive" | "outline" | "success" | "warning" {
   switch (delta) {
     case "REGRESSION":
       return "destructive";
     case "IMPROVEMENT":
-      return "default";
+      return "success";
     case "BOTH_PASS":
-      return "secondary";
+      return "default";
+    case "BOTH_FAIL":
+      return "warning";
     default:
       return "outline";
   }

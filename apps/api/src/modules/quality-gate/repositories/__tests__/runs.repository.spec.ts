@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { PrismaService } from "../../../../database/prisma.service.js";
 import {
   type TestDatabase,
   startPostgres,
@@ -54,7 +55,9 @@ beforeAll(async () => {
     },
   });
   evalId = e.id;
-  repo = new RunsRepository(prisma);
+  // Cast: tests instantiate bare PrismaClient against testcontainers;
+  // the repo type expects the Nest PrismaService (which extends PrismaClient).
+  repo = new RunsRepository(prisma as unknown as PrismaService);
 }, 180_000);
 
 afterAll(async () => {
