@@ -26,6 +26,7 @@ import { useDeleteEvaluation, useEvaluations } from "./queries";
 export function EvaluationsListPage() {
   const nav = useNavigate();
   const { t } = useTranslation("quality-gate");
+  const { t: tCommon } = useTranslation("common");
   const { data, isLoading } = useEvaluations();
   const del = useDeleteEvaluation();
 
@@ -42,7 +43,7 @@ export function EvaluationsListPage() {
       />
       <div className="px-8 py-6 space-y-6">
         {isLoading ? (
-          <div className="text-muted-foreground">{t("common.loading")}</div>
+          <div className="text-muted-foreground">{tCommon("table.loading")}</div>
         ) : !data || data.length === 0 ? (
           <div className="text-muted-foreground">{t("evaluations.empty")}</div>
         ) : (
@@ -52,7 +53,7 @@ export function EvaluationsListPage() {
                 <TableHead>{t("evaluations.col.name")}</TableHead>
                 <TableHead>{t("evaluations.col.samples")}</TableHead>
                 <TableHead>{t("evaluations.col.updatedAt")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
+                <TableHead className="text-right">{tCommon("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

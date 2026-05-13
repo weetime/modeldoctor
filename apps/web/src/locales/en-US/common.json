@@ -75,6 +75,10 @@
     "network": "Network error",
     "required": "This field is required"
   },
+  "table": {
+    "loading": "Loading…",
+    "actions": "Actions"
+  },
   "validation": {
     "required": "This field is required",
     "invalidType": "Invalid type",

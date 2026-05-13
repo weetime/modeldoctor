@@ -61,13 +61,26 @@ export interface HydratedBenchmarkRef {
   createdAt?: string;
 }
 
+/** Subset of EvaluationRun.aggregateMetrics surfaced in the hydrated
+ * saved-compare response. Kept narrower than the storage type so the UI
+ * can render fields directly without unknown-narrowing dance. */
+export interface HydratedEvaluationAggregateMetrics {
+  passRateA?: number;
+  passRateB?: number;
+  judgeAvgA?: number;
+  judgeAvgB?: number;
+  regressionCount?: number;
+  improvementCount?: number;
+  totalErrors?: number;
+}
+
 export interface HydratedEvaluationRunRef {
   id: string;
   stageLabel: string;
   missing: boolean;
   status?: string;
   gateResult?: string | null;
-  aggregateMetrics?: unknown;
+  aggregateMetrics?: HydratedEvaluationAggregateMetrics | null;
   createdAt?: string;
 }
 

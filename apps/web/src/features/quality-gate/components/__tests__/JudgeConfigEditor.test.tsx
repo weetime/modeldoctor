@@ -32,7 +32,8 @@ describe("JudgeConfigEditor", () => {
         <JudgeConfigEditor namePrefix="judgeConfig" />
       </Harness>,
     );
-    expect(screen.getByText(/exact-match/i)).toBeInTheDocument();
+    // Kind dropdown shows the localized label for exact-match
+    expect(screen.getByText("精确匹配")).toBeInTheDocument();
   });
 
   it("contains kind shows substrings input", () => {
@@ -76,9 +77,9 @@ describe("JudgeConfigEditor", () => {
     );
     const trigger = screen.getByRole("combobox");
     fireEvent.click(trigger);
-    const containsOption = screen.getByRole("option", { name: /contains/i });
+    const containsOption = screen.getByRole("option", { name: "关键词包含" });
     fireEvent.click(containsOption);
-    // After switching to "contains", the substrings input should be visible
-    expect(screen.getByText(/substrings/i)).toBeInTheDocument();
+    // After switching to "contains", the substrings input label should appear
+    expect(screen.getByText(/子串列表/)).toBeInTheDocument();
   });
 });

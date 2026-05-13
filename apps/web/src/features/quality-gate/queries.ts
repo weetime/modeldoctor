@@ -22,7 +22,7 @@ export function useEvaluations() {
 
 export function useEvaluation(id: string | undefined) {
   return useQuery({
-    queryKey: KEY.evaluation(id ?? ""),
+    queryKey: id ? KEY.evaluation(id) : ["quality-gate", "evaluations", "disabled"],
     // biome-ignore lint/style/noNonNullAssertion: enabled gates this
     queryFn: () => qgApi.getEvaluation(id!),
     enabled: !!id,
@@ -76,7 +76,7 @@ export function useRuns(filter: Partial<Parameters<typeof qgApi.listRuns>[0]> = 
 
 export function useRun(id: string | undefined, opts?: { pollWhileRunning?: boolean }) {
   return useQuery({
-    queryKey: KEY.run(id ?? ""),
+    queryKey: id ? KEY.run(id) : ["quality-gate", "runs", "disabled"],
     // biome-ignore lint/style/noNonNullAssertion: enabled gates this
     queryFn: () => qgApi.getRun(id!),
     enabled: !!id,
@@ -122,7 +122,7 @@ export function useRunSamples(
   filter: Partial<Parameters<typeof qgApi.listSamples>[1]> = {},
 ) {
   return useQuery({
-    queryKey: KEY.samples(runId ?? "", filter),
+    queryKey: runId ? KEY.samples(runId, filter) : ["quality-gate", "samples", "disabled", filter],
     // biome-ignore lint/style/noNonNullAssertion: enabled gates this
     queryFn: () => qgApi.listSamples(runId!, filter),
     enabled: !!runId,

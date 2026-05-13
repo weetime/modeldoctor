@@ -75,6 +75,10 @@
     "network": "网络错误",
     "required": "此项必填"
   },
+  "table": {
+    "loading": "加载中…",
+    "actions": "操作"
+  },
   "validation": {
     "required": "此项为必填",
     "invalidType": "类型不正确",

@@ -6,9 +6,17 @@
     "create": "新建评测集",
     "empty": "还没有评测集",
     "col": { "name": "名称", "samples": "样本数", "updatedAt": "更新时间" },
+    "runsCol": {
+      "id": "运行 ID",
+      "status": "状态",
+      "progress": "进度",
+      "createdAt": "创建时间"
+    },
     "form": {
-      "namePlaceholder": "名称",
-      "descriptionPlaceholder": "描述（可选）",
+      "nameLabel": "名称",
+      "namePlaceholder": "输入评测集名称",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "（可选）描述这个评测集的用途",
       "addSample": "添加样本",
       "importJson": "从 JSON 导入",
       "importCsv": "从 CSV 导入",
@@ -33,22 +41,22 @@
     "indexPrefix": "#"
   },
   "judges": {
-    "kindLabel": "判分器 / Kind",
-    "exact-match": "exact-match — 精确匹配",
-    "contains": "contains — 关键词包含",
-    "regex": "regex — 正则",
-    "llm-judge": "llm-judge — LLM 评分",
-    "caseSensitive": "区分大小写 / case sensitive",
-    "substringsLabel": "子串列表（逗号分隔）/ substrings",
-    "modeLabel": "模式 / mode",
-    "modeAll": "全部命中 / all",
-    "modeAny": "任意命中 / any",
-    "patternLabel": "模式 / pattern",
-    "flagsLabel": "flags（可选）",
-    "rubricLabel": "评分准则 / rubric",
+    "kindLabel": "判分器",
+    "exact-match": "精确匹配",
+    "contains": "关键词包含",
+    "regex": "正则",
+    "llm-judge": "LLM 评分",
+    "caseSensitive": "区分大小写",
+    "substringsLabel": "子串列表（逗号分隔）",
+    "modeLabel": "模式",
+    "modeAll": "全部命中",
+    "modeAny": "任意命中",
+    "patternLabel": "模式",
+    "flagsLabel": "Flags（可选）",
+    "rubricLabel": "评分准则",
     "rubricPlaceholder": "判断助手是否...",
-    "scaleLabel": "分制 / scale",
-    "thresholdLabel": "passThreshold（默认按 scale 推断）"
+    "scaleLabel": "分制",
+    "thresholdLabel": "通过阈值（不填则按分制推断）"
   },
   "runs": {
     "title": "评测运行",
@@ -153,7 +161,6 @@
     "regression": "回归",
     "unknown": "—"
   },
-  "common": { "loading": "加载中…", "actions": "操作" },
   "playground": {
     "bannerTitle": "复现自评测 · 样本 #{{suffix}}",
     "bannerExpectedPrefix": "期望：",

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
-import { type E2EContext, bootE2E, registerUser } from "./helpers/app.js";
+import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
 let ctx: E2EContext;
 let token: string;

@@ -40,7 +40,7 @@ export function EvaluationCreatePage() {
 
   const form = useForm<CreateEvaluationRequest>({
     resolver: zodResolver(createEvaluationRequestSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: {
       name: "",
       description: null,
@@ -116,9 +116,9 @@ export function EvaluationCreatePage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>{t("evaluations.form.namePlaceholder")}</FormLabel>
+                    <FormLabel required>{t("evaluations.form.nameLabel")}</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder={t("evaluations.form.namePlaceholder")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -129,9 +129,13 @@ export function EvaluationCreatePage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("evaluations.form.descriptionPlaceholder")}</FormLabel>
+                    <FormLabel>{t("evaluations.form.descriptionLabel")}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} value={field.value ?? ""} />
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder={t("evaluations.form.descriptionPlaceholder")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

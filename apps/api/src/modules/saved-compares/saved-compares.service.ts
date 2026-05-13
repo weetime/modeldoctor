@@ -126,7 +126,7 @@ export class SavedComparesService {
             missing: false,
             status: r.status,
             gateResult: r.gateResult,
-            aggregateMetrics: r.aggregateMetrics,
+            aggregateMetrics: r.aggregateMetrics as HydratedEvaluationRunRef["aggregateMetrics"],
             createdAt: r.createdAt.toISOString(),
           });
         }

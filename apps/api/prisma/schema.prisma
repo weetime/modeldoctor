@@ -347,7 +347,7 @@ model Evaluation {
   id           String   @id @default(cuid())
   userId       String   @map("user_id")
   name         String
-  description  String?
+  description  String?  @db.Text
   version      Int      @default(1)
   samples      Json
   totalSamples Int      @default(0) @map("total_samples")
@@ -377,7 +377,7 @@ model EvaluationRun {
   totalSamples        Int                   @map("total_samples")
   startedAt           DateTime?             @map("started_at") @db.Timestamptz(3)
   finishedAt          DateTime?             @map("finished_at") @db.Timestamptz(3)
-  errorMessage        String?               @map("error_message")
+  errorMessage        String?               @map("error_message") @db.Text
   createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 

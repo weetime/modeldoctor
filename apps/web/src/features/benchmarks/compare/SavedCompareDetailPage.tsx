@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GateStatusBadge } from "@/features/quality-gate/components/GateStatusBadge";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
-import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
+import type { Benchmark, CompareNarrative, GateResult, RunStatus } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -154,10 +154,8 @@ export function SavedCompareDetailPage() {
               {sc.evaluationRuns.map((r) => (
                 <Card key={r.id} className="p-3 space-y-2">
                   <GateStatusBadge
-                    status={(r.status ?? "PENDING") as import("@modeldoctor/contracts").RunStatus}
-                    gateResult={
-                      (r.gateResult ?? null) as import("@modeldoctor/contracts").GateResult | null
-                    }
+                    status={(r.status ?? "PENDING") as RunStatus}
+                    gateResult={(r.gateResult ?? null) as GateResult | null}
                   />
                   <div className="text-xs text-muted-foreground">
                     {sc.stageLabels[r.id] ?? r.id.slice(0, 8)}

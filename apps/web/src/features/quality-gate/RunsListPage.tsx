@@ -27,6 +27,7 @@ import { useDeleteRun, useRuns } from "./queries";
 export function RunsListPage() {
   const nav = useNavigate();
   const { t } = useTranslation("quality-gate");
+  const { t: tCommon } = useTranslation("common");
   const { data, isLoading } = useRuns({});
   const del = useDeleteRun();
   const items = data?.items ?? [];
@@ -42,18 +43,18 @@ export function RunsListPage() {
       />
       <div className="px-8 py-6 space-y-6">
         {isLoading ? (
-          <div className="text-muted-foreground">{t("common.loading")}</div>
+          <div className="text-muted-foreground">{tCommon("table.loading")}</div>
         ) : items.length === 0 ? (
           <div className="text-muted-foreground">{t("runs.empty")}</div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("evaluations.col.name")}</TableHead>
-                <TableHead>{t("runs.status.running")}</TableHead>
-                <TableHead>{t("evaluations.col.samples")}</TableHead>
-                <TableHead>{t("evaluations.col.updatedAt")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.id")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.status")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.progress")}</TableHead>
+                <TableHead>{t("evaluations.runsCol.createdAt")}</TableHead>
+                <TableHead className="text-right">{tCommon("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

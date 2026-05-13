@@ -6,9 +6,17 @@
     "create": "New Evaluation Set",
     "empty": "No evaluation sets yet",
     "col": { "name": "Name", "samples": "Samples", "updatedAt": "Updated" },
+    "runsCol": {
+      "id": "Run ID",
+      "status": "Status",
+      "progress": "Progress",
+      "createdAt": "Created"
+    },
     "form": {
-      "namePlaceholder": "Name",
-      "descriptionPlaceholder": "Description (optional)",
+      "nameLabel": "Name",
+      "namePlaceholder": "Enter an evaluation set name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "(optional) Describe what this set is for",
       "addSample": "Add sample",
       "importJson": "Import from JSON",
       "importCsv": "Import from CSV",
@@ -153,7 +161,6 @@
     "regression": "Regressions",
     "unknown": "—"
   },
-  "common": { "loading": "Loading…", "actions": "Actions" },
   "playground": {
     "bannerTitle": "Reproduced from evaluation · sample #{{suffix}}",
     "bannerExpectedPrefix": "Expected: ",

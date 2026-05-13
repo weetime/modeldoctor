@@ -44,7 +44,7 @@ export function EvaluationDetailPage() {
 
   const form = useForm<FormShape>({
     resolver: zodResolver(updateEvaluationRequestSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: { name: "", description: null, samples: [] },
   });
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "samples" });
@@ -96,9 +96,9 @@ export function EvaluationDetailPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>{t("evaluations.form.namePlaceholder")}</FormLabel>
+                    <FormLabel required>{t("evaluations.form.nameLabel")}</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder={t("evaluations.form.namePlaceholder")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -109,9 +109,13 @@ export function EvaluationDetailPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("evaluations.form.descriptionPlaceholder")}</FormLabel>
+                    <FormLabel>{t("evaluations.form.descriptionLabel")}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} value={field.value ?? ""} />
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder={t("evaluations.form.descriptionPlaceholder")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

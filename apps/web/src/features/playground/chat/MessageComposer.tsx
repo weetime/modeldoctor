@@ -53,8 +53,18 @@ export function MessageComposer({
     if (initialDraft) return initialDraft;
     return demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "";
   });
+  // Track the last applied initialDraft so we only re-seed when the prop
+  // actually changes value (e.g. user navigates to a different sample). If
+  // the parent re-renders with the same initialDraft, we won't clobber any
+  // edits the user has made since the initial seed.
+  const lastAppliedInitialDraft = useRef(initialDraft);
   useEffect(() => {
-    if (initialDraft && initialDraft.length > 0) {
+    if (
+      initialDraft &&
+      initialDraft.length > 0 &&
+      initialDraft !== lastAppliedInitialDraft.current
+    ) {
+      lastAppliedInitialDraft.current = initialDraft;
       setDraft(initialDraft);
     }
   }, [initialDraft]);

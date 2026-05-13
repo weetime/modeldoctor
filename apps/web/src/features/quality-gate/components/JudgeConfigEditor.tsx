@@ -18,6 +18,10 @@ interface JudgeConfigEditorProps {
   namePrefix: string;
 }
 
+// Defaults applied when the user switches the judge kind. We seed each
+// branch with the minimum content needed to pass its zod schema so the
+// form is not immediately invalid the moment kind changes; the user can
+// still edit any field after the switch.
 const KIND_DEFAULTS: Record<JudgeConfig["kind"], JudgeConfig> = {
   "exact-match": { kind: "exact-match" },
   contains: { kind: "contains", substrings: [], mode: "all" },
