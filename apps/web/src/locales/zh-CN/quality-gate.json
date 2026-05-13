@@ -97,7 +97,20 @@
       "newSubtitle": "选择评测集与端点；保存后立即开始执行并跳转到报告页。",
       "saveError": "触发失败：{{message}}",
       "sectionTarget": "评测目标",
-      "sectionGate": "门禁规则"
+      "sectionGate": "门禁规则",
+      "baselineBanner": "📌 与 baseline 对比",
+      "baselineBannerBody": "将与 Run #{{runId}} ({{date}} {{verdict}}) 对比",
+      "baselineChangeButton": "更换 baseline",
+      "baselineSkipButton": "跳过 baseline",
+      "baselineSkippedHint": "已忽略本评测集的 baseline，本次单端点运行",
+      "baselinePickerTitle": "选择 baseline run",
+      "baselinePickerDescription": "选择同一评测集的某次已完成 run 作为本次对比的基线（不会修改钉住的 baseline）。",
+      "baselinePickerEmpty": "该评测集还没有已完成的 run",
+      "baselinePickerConfirm": "使用此 run",
+      "baselinePickerColumnId": "Run ID",
+      "baselinePickerColumnCreatedAt": "时间",
+      "baselinePickerColumnVerdict": "门禁结果",
+      "maxRegressionsDisabledHint": "钉一个 baseline run 后可启用"
     },
     "status": {
       "pending": "等待中",

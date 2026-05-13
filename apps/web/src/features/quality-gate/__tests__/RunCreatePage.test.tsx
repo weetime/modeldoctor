@@ -11,6 +11,8 @@ const mockConnections = [{ id: "c1", name: "endpoint-a" }];
 
 vi.mock("../queries", () => ({
   useEvaluations: () => ({ data: mockEvaluations }),
+  useEvaluation: () => ({ data: null }),
+  useRuns: () => ({ data: { items: [] } }),
   useCreateRun: () => ({
     mutateAsync: vi.fn().mockResolvedValue({ id: "r1" }),
     isPending: false,

@@ -2,6 +2,7 @@ import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -19,13 +20,14 @@ import {
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type CreateRunRequest, createRunRequestSchema } from "@modeldoctor/contracts";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { BaselinePickerDialog } from "./components/BaselinePickerDialog";
 import { GateConfigForm } from "./components/GateConfigForm";
-import { useCreateRun, useEvaluations } from "./queries";
+import { useCreateRun, useEvaluation, useEvaluations } from "./queries";
 
 export function RunCreatePage() {
   const nav = useNavigate();
@@ -42,11 +44,37 @@ export function RunCreatePage() {
       evaluationId: "",
       endpointAId: "",
       endpointBId: undefined,
+      baselineRunIdOverride: undefined,
       gateConfig: { passRateMin: 0.9 },
     },
   });
-  const endpointBId = form.watch("endpointBId");
+
+  const evaluationId = form.watch("evaluationId");
   const endpointAId = form.watch("endpointAId");
+  const endpointBId = form.watch("endpointBId");
+  const baselineOverride = form.watch("baselineRunIdOverride");
+
+  const evaluation = useEvaluation(evaluationId || undefined);
+  const pinnedBaselineId = evaluation.data?.baselineRunId ?? null;
+
+  // Effective baseline = pin unless explicitly overridden:
+  //  override === undefined → use pin
+  //  override === null      → skip (no baseline)
+  //  override is string     → use that
+  const effectiveBaselineId =
+    baselineOverride === undefined
+      ? pinnedBaselineId
+      : baselineOverride === null
+        ? null
+        : baselineOverride;
+  const baselineModeActive = effectiveBaselineId !== null;
+
+  // Auto-clear endpointB if user enters baseline mode (and vice versa)
+  useEffect(() => {
+    if (baselineModeActive && endpointBId) {
+      form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [baselineModeActive, endpointBId, form]);
 
   // Auto-clear B when A is changed to the same connection (prevents the
   // schema refine "endpointAId !== endpointBId" from blocking the form
@@ -56,6 +84,8 @@ export function RunCreatePage() {
       form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
     }
   }, [endpointAId, endpointBId, form]);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -108,6 +138,45 @@ export function RunCreatePage() {
                 )}
               />
 
+              {/* Baseline banner — only when evaluation has pin AND override !== null */}
+              {evaluationId && pinnedBaselineId && baselineOverride !== null && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm space-y-2">
+                  <div className="font-medium">{t("runs.form.baselineBanner")}</div>
+                  <div className="text-muted-foreground">
+                    {t("runs.form.baselineBannerBody", {
+                      runId: effectiveBaselineId?.slice(0, 12),
+                      date: "",
+                      verdict: "",
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPickerOpen(true)}
+                    >
+                      {t("runs.form.baselineChangeButton")}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        form.setValue("baselineRunIdOverride", null, { shouldDirty: true })
+                      }
+                    >
+                      {t("runs.form.baselineSkipButton")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {baselineOverride === null && pinnedBaselineId && (
+                <div className="text-xs text-muted-foreground">
+                  {t("runs.form.baselineSkippedHint")}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -126,29 +195,40 @@ export function RunCreatePage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="endpointBId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("runs.form.endpointB")}</FormLabel>
-                      <FormControl>
-                        <ConnectionPicker
-                          selectedConnectionId={field.value ?? null}
-                          onSelect={(id) => field.onChange(id ?? undefined)}
-                          allowManual={false}
-                          excludeIds={endpointAId ? [endpointAId] : undefined}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* endpointB hidden in baseline mode */}
+                {!baselineModeActive && (
+                  <FormField
+                    control={form.control}
+                    name="endpointBId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("runs.form.endpointB")}</FormLabel>
+                        <FormControl>
+                          <ConnectionPicker
+                            selectedConnectionId={field.value ?? null}
+                            onSelect={(id) => field.onChange(id ?? undefined)}
+                            allowManual={false}
+                            excludeIds={endpointAId ? [endpointAId] : undefined}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </FormSection>
 
             <FormSection title={t("runs.form.sectionGate")}>
-              <GateConfigForm namePrefix="gateConfig" dual={!!endpointBId && !!endpointAId} />
+              <GateConfigForm
+                namePrefix="gateConfig"
+                dual={(!!endpointBId && !!endpointAId) || baselineModeActive}
+                maxRegressionsDisabledHint={
+                  !endpointBId && !baselineModeActive
+                    ? t("runs.form.maxRegressionsDisabledHint")
+                    : undefined
+                }
+              />
             </FormSection>
 
             <FormActions
@@ -160,6 +240,19 @@ export function RunCreatePage() {
             />
           </form>
         </Form>
+
+        <BaselinePickerDialog
+          evaluationId={evaluationId}
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          initialRunId={effectiveBaselineId}
+          onPick={(runId) =>
+            form.setValue("baselineRunIdOverride", runId, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        />
       </div>
     </>
   );

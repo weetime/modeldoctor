@@ -97,7 +97,20 @@
       "newSubtitle": "Pick an evaluation set and endpoints; the run starts immediately.",
       "saveError": "Failed to start: {{message}}",
       "sectionTarget": "Target",
-      "sectionGate": "Gate rules"
+      "sectionGate": "Gate rules",
+      "baselineBanner": "📌 Compare against baseline",
+      "baselineBannerBody": "Will compare against Run #{{runId}} ({{date}} {{verdict}})",
+      "baselineChangeButton": "Change baseline",
+      "baselineSkipButton": "Skip baseline",
+      "baselineSkippedHint": "Ignoring this evaluation's baseline for this run",
+      "baselinePickerTitle": "Pick a baseline run",
+      "baselinePickerDescription": "Choose a completed run of the same evaluation as the comparison reference (does not change the pinned baseline).",
+      "baselinePickerEmpty": "No completed runs yet for this evaluation",
+      "baselinePickerConfirm": "Use this run",
+      "baselinePickerColumnId": "Run ID",
+      "baselinePickerColumnCreatedAt": "Created",
+      "baselinePickerColumnVerdict": "Gate result",
+      "maxRegressionsDisabledHint": "Pin a baseline run to enable"
     },
     "status": {
       "pending": "Pending",
