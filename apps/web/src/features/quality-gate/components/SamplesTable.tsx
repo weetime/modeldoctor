@@ -8,10 +8,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { SampleFilter } from "@modeldoctor/contracts";
+import type { SampleDelta, SampleFilter } from "@modeldoctor/contracts";
+import { Check, Minus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRunSamples } from "../queries";
+
+function deltaVariant(delta: SampleDelta): "destructive" | "default" | "secondary" | "outline" {
+  switch (delta) {
+    case "REGRESSION":
+      return "destructive";
+    case "IMPROVEMENT":
+      return "default";
+    case "BOTH_PASS":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
+
+function PassIcon({ passed }: { passed: boolean }) {
+  return passed ? (
+    <Check className="h-4 w-4 text-emerald-500" aria-label="pass" />
+  ) : (
+    <X className="h-4 w-4 text-destructive" aria-label="fail" />
+  );
+}
 
 const FILTERS: SampleFilter[] = ["all", "regression", "improvement", "both-pass", "both-fail"];
 
@@ -65,12 +87,18 @@ export function SamplesTable({
                 {s.resultA.call.rawAnswer.slice(0, 80)}
               </TableCell>
               <TableCell>
-                <Badge variant={s.delta === "REGRESSION" ? "destructive" : "outline"}>
-                  {s.delta}
-                </Badge>
+                <Badge variant={deltaVariant(s.delta)}>{t(`report.delta.${s.delta}`)}</Badge>
               </TableCell>
-              <TableCell>{s.resultA.judge.passed ? "✓" : "✗"}</TableCell>
-              <TableCell>{s.resultB ? (s.resultB.judge.passed ? "✓" : "✗") : "—"}</TableCell>
+              <TableCell>
+                <PassIcon passed={s.resultA.judge.passed} />
+              </TableCell>
+              <TableCell>
+                {s.resultB ? (
+                  <PassIcon passed={s.resultB.judge.passed} />
+                ) : (
+                  <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <Button size="sm" variant="ghost" onClick={() => onOpenSample(s.id)}>
                   {t("report.sampleDrawer.detail")}

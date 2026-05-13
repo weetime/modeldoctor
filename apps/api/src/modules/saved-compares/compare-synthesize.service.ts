@@ -129,14 +129,30 @@ export class CompareSynthesizeService {
   }
 
   private buildUserPrompt(sc: HydratedSavedCompare, locale: string): string {
+    const zh = locale !== "en-US";
+    const L = {
+      context: zh ? "背景" : "Context",
+      runs: zh ? "基准运行" : "Runs",
+      deleted: zh ? "(数据已删除)" : "(data deleted)",
+      baseline: zh ? "基线阶段" : "Baseline stage",
+      qualityHeader: zh ? "质量评测结果" : "Quality (evaluation) results",
+      gate: zh ? "门禁" : "gate",
+      passRate: zh ? "通过率" : "pass rate",
+      regressionCount: zh ? "回归数" : "regression count",
+      judgeAvg: zh ? "判分均值" : "judge avg",
+      errors: zh ? "错误数" : "errors",
+      jsonReminder: zh
+        ? "严格按 JSON schema 输出。"
+        : "Respond strictly as JSON matching the schema.",
+    };
     const lines: string[] = [];
-    if (sc.context) lines.push(`Context: ${sc.context}`);
+    if (sc.context) lines.push(`${L.context}: ${sc.context}`);
     if (sc.benchmarks.length > 0) {
-      lines.push(`Runs (${sc.benchmarks.length}):`);
+      lines.push(`${L.runs} (${sc.benchmarks.length}):`);
     }
     for (const b of sc.benchmarks) {
       if (b.missing) {
-        lines.push(`- [${b.stageLabel}] (data deleted)`);
+        lines.push(`- [${b.stageLabel}] ${L.deleted}`);
         continue;
       }
       const m = summarizeForPrompt(b.summaryMetrics);
@@ -149,30 +165,26 @@ export class CompareSynthesizeService {
     }
     if (sc.baselineId) {
       const bl = sc.benchmarks.find((b) => b.id === sc.baselineId);
-      if (bl) lines.push(`Baseline stage: ${bl.stageLabel}`);
+      if (bl) lines.push(`${L.baseline}: ${bl.stageLabel}`);
     }
     if (sc.evaluationRuns && sc.evaluationRuns.length > 0) {
-      lines.push(`Quality (evaluation) results (${sc.evaluationRuns.length}):`);
+      lines.push(`${L.qualityHeader} (${sc.evaluationRuns.length}):`);
       for (const r of sc.evaluationRuns) {
         if (r.missing) {
-          lines.push(`- [${r.stageLabel}] (data deleted)`);
+          lines.push(`- [${r.stageLabel}] ${L.deleted}`);
           continue;
         }
         const m = r.aggregateMetrics as Record<string, unknown> | null;
         lines.push(
-          `- [${r.stageLabel}]: gate ${r.gateResult ?? r.status ?? "n/a"}, ` +
-            `pass rate ${m?.passRateB != null ? m.passRateB : (m?.passRateA ?? "n/a")}, ` +
-            `regression count ${m?.regressionCount ?? "n/a"}, ` +
-            `judge avg ${m?.judgeAvgB != null ? m.judgeAvgB : (m?.judgeAvgA ?? "n/a")}, ` +
-            `errors ${m?.totalErrors ?? 0}`,
+          `- [${r.stageLabel}]: ${L.gate} ${r.gateResult ?? r.status ?? "n/a"}, ` +
+            `${L.passRate} ${m?.passRateB != null ? m.passRateB : (m?.passRateA ?? "n/a")}, ` +
+            `${L.regressionCount} ${m?.regressionCount ?? "n/a"}, ` +
+            `${L.judgeAvg} ${m?.judgeAvgB != null ? m.judgeAvgB : (m?.judgeAvgA ?? "n/a")}, ` +
+            `${L.errors} ${m?.totalErrors ?? 0}`,
         );
       }
     }
-    lines.push(
-      locale === "en-US"
-        ? "Respond strictly as JSON matching the schema."
-        : "严格按 JSON schema 输出。",
-    );
+    lines.push(L.jsonReminder);
     return lines.join("\n");
   }
 

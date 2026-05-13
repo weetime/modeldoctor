@@ -59,13 +59,23 @@
       "title": "评测运行报告",
       "subtitle": "查看每个样本的判分明细、聚合指标与门禁结果。",
       "cancel": "取消",
+      "playgroundReproduceA": "在 Playground 复现 A",
       "playgroundReproduceB": "在 Playground 复现 B",
       "expected": "期望",
       "answerA": "A 答案",
       "answerB": "B 答案",
       "errorPrefix": "错误",
-      "judgePrefix": "Judge",
-      "emptyAnswer": "(空)"
+      "judgePrefix": "判分",
+      "emptyAnswer": "(空)",
+      "delta": {
+        "REGRESSION": "回归",
+        "IMPROVEMENT": "改善",
+        "BOTH_PASS": "都通过",
+        "BOTH_FAIL": "都未通过",
+        "NA": "—"
+      },
+      "passLabel": "通过",
+      "failLabel": "未通过"
     },
     "form": {
       "evaluationLabel": "评测集",

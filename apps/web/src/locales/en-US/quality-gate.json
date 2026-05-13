@@ -59,13 +59,23 @@
       "title": "Run Report",
       "subtitle": "Per-sample judging detail, aggregate metrics, and gate verdict.",
       "cancel": "Cancel",
+      "playgroundReproduceA": "Reproduce A in Playground",
       "playgroundReproduceB": "Reproduce B in Playground",
       "expected": "Expected",
       "answerA": "Answer A",
       "answerB": "Answer B",
       "errorPrefix": "Error",
       "judgePrefix": "Judge",
-      "emptyAnswer": "(empty)"
+      "emptyAnswer": "(empty)",
+      "delta": {
+        "REGRESSION": "Regression",
+        "IMPROVEMENT": "Improvement",
+        "BOTH_PASS": "Both passed",
+        "BOTH_FAIL": "Both failed",
+        "NA": "—"
+      },
+      "passLabel": "Pass",
+      "failLabel": "Fail"
     },
     "form": {
       "evaluationLabel": "Evaluation Set",

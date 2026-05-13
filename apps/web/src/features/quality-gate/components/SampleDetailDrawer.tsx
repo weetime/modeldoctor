@@ -1,8 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
+import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+
+function PassIcon({ passed }: { passed: boolean }) {
+  return passed ? (
+    <Check className="h-4 w-4 text-emerald-500" aria-label="pass" />
+  ) : (
+    <X className="h-4 w-4 text-destructive" aria-label="fail" />
+  );
+}
 
 export function SampleDetailDrawer({
   runId,
@@ -45,8 +54,9 @@ export function SampleDetailDrawer({
             </>
           )}
           <div>
-            <div className="font-medium mb-1">
-              {t("runs.report.answerA")} {row.resultA.judge.passed ? "✓" : "✗"}
+            <div className="font-medium mb-1 flex items-center gap-2">
+              <span>{t("runs.report.answerA")}</span>
+              <PassIcon passed={row.resultA.judge.passed} />
             </div>
             <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
               {row.resultA.call.rawAnswer || t("runs.report.emptyAnswer")}
@@ -61,11 +71,19 @@ export function SampleDetailDrawer({
                 {t("runs.report.errorPrefix")}: {row.resultA.call.error}
               </div>
             )}
+            <Link
+              to={`/playground/chat?from=evaluation&runId=${runId}&sampleId=${row.id}&endpoint=A`}
+            >
+              <Button size="sm" variant="outline" className="mt-2">
+                {t("runs.report.playgroundReproduceA")}
+              </Button>
+            </Link>
           </div>
           {row.resultB && (
             <div>
-              <div className="font-medium mb-1">
-                {t("runs.report.answerB")} {row.resultB.judge.passed ? "✓" : "✗"}
+              <div className="font-medium mb-1 flex items-center gap-2">
+                <span>{t("runs.report.answerB")}</span>
+                <PassIcon passed={row.resultB.judge.passed} />
               </div>
               <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
                 {row.resultB.call.rawAnswer || t("runs.report.emptyAnswer")}
