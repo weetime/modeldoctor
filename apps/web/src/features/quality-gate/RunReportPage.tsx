@@ -41,7 +41,7 @@ export function RunReportPage() {
           subtitle={t("runs.report.subtitle")}
           breadcrumbs={breadcrumbs}
         />
-        <div className="px-8 py-6">
+        <div className="space-y-6 px-8 py-6">
           <div className="h-64 animate-pulse rounded-md border border-border bg-muted/30" />
         </div>
       </>

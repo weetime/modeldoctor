@@ -89,7 +89,7 @@ export function EvaluationDetailPage() {
           subtitle={t("evaluations.form.editSubtitle")}
           breadcrumbs={breadcrumbs}
         />
-        <div className="px-8 py-6">
+        <div className="space-y-6 px-8 py-6">
           <div className="h-64 animate-pulse rounded-md border border-border bg-muted/30" />
         </div>
       </>
@@ -103,7 +103,7 @@ export function EvaluationDetailPage() {
         subtitle={t("evaluations.form.editSubtitle")}
         breadcrumbs={breadcrumbs}
       />
-      <div className="px-8 py-6">
+      <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <FormSection title={t("evaluations.form.sectionBasics")}>

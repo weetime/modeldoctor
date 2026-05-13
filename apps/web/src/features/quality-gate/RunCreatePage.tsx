@@ -79,7 +79,7 @@ export function RunCreatePage() {
         subtitle={t("runs.form.newSubtitle")}
         breadcrumbs={breadcrumbs}
       />
-      <div className="px-8 py-6">
+      <div className="space-y-6 px-8 py-6">
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <FormSection title={t("runs.form.sectionTarget")}>
