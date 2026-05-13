@@ -78,7 +78,23 @@ export function EvaluationDetailPage() {
     { label: data?.name ?? t("evaluations.form.editTitle") },
   ];
 
-  if (!data) return null;
+  // Loading / 404: still render PageHeader + breadcrumbs (with a placeholder
+  // for the entity name) so spatial layout stays consistent. Body becomes
+  // a skeleton card while data arrives.
+  if (!data) {
+    return (
+      <>
+        <PageHeader
+          title={t("evaluations.form.editTitle")}
+          subtitle={t("evaluations.form.editSubtitle")}
+          breadcrumbs={breadcrumbs}
+        />
+        <div className="px-8 py-6">
+          <div className="h-64 animate-pulse rounded-md border border-border bg-muted/30" />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

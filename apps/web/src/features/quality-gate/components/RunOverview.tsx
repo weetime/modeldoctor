@@ -27,7 +27,7 @@ export function RunOverview({ run }: { run: EvaluationRun }) {
         </span>
       </div>
       {m && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <div>
             <div className="text-xs text-muted-foreground">{t("report.metrics.passRateA")}</div>
             <div className="text-2xl">{pct(m.passRateA)}</div>

@@ -41,13 +41,13 @@ export function SampleDetailDrawer({
             <>
               <div>
                 <div className="font-medium mb-1">{t("samples.promptLabel")}</div>
-                <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
+                <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded-md">
                   {snapshot.prompt}
                 </pre>
               </div>
               <div>
                 <div className="font-medium mb-1">{t("runs.report.expected")}</div>
-                <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
+                <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded-md">
                   {snapshot.expected}
                 </pre>
               </div>
@@ -58,7 +58,7 @@ export function SampleDetailDrawer({
               <span>{t("runs.report.answerA")}</span>
               <PassIcon passed={row.resultA.judge.passed} />
             </div>
-            <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
+            <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded-md">
               {row.resultA.call.rawAnswer || t("runs.report.emptyAnswer")}
             </pre>
             {row.resultA.judge.reason && (
@@ -85,7 +85,7 @@ export function SampleDetailDrawer({
                 <span>{t("runs.report.answerB")}</span>
                 <PassIcon passed={row.resultB.judge.passed} />
               </div>
-              <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded">
+              <pre className="whitespace-pre-wrap text-xs bg-muted p-2 rounded-md">
                 {row.resultB.call.rawAnswer || t("runs.report.emptyAnswer")}
               </pre>
               {row.resultB.judge.reason && (

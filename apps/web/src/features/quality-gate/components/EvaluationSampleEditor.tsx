@@ -17,7 +17,7 @@ export function EvaluationSampleEditor({ namePrefix, index, onRemove }: Props) {
   const { control } = useFormContext();
 
   return (
-    <div className="rounded border p-3 space-y-3">
+    <div className="rounded-md border p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
           {t("samples.indexPrefix")}

@@ -26,13 +26,27 @@ export function RunReportPage() {
   const snapshotSamples: EvaluationSample[] = (run?.evaluationSnapshot.samples ??
     []) as EvaluationSample[];
 
-  if (!run) return null;
-
   const breadcrumbs = [
     { label: tSidebar("groups.qualityGate") },
     { label: tSidebar("items.qualityGateRuns"), to: "/quality-gate/runs" },
-    { label: run.id.slice(0, 12) },
+    { label: run ? run.id.slice(0, 12) : t("runs.report.title") },
   ];
+
+  // Loading / 404: keep breadcrumbs row stable, skeleton for the body.
+  if (!run) {
+    return (
+      <>
+        <PageHeader
+          title={t("runs.report.title")}
+          subtitle={t("runs.report.subtitle")}
+          breadcrumbs={breadcrumbs}
+        />
+        <div className="px-8 py-6">
+          <div className="h-64 animate-pulse rounded-md border border-border bg-muted/30" />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
