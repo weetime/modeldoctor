@@ -76,7 +76,7 @@ export const createRunRequestSchema = z
     path: ["endpointBId"],
   })
   .refine(
-    (r) => !(r.endpointBId != null && r.baselineRunIdOverride !== null),
+    (r) => !(r.endpointBId != null && r.baselineRunIdOverride != null),
     {
       message: "validation.runDualVsBaselineExclusive",
       path: ["baselineRunIdOverride"],
