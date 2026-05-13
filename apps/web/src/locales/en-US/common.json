@@ -75,6 +75,10 @@
     "network": "Network error",
     "required": "This field is required"
   },
+  "table": {
+    "loading": "Loading…",
+    "actions": "Actions"
+  },
   "validation": {
     "required": "This field is required",
     "invalidType": "Invalid type",
@@ -87,6 +91,8 @@
     "invalidFormat": "Invalid format",
     "invalidEnum": "Please select a valid option",
     "apiKeyControlChar": "API key must not contain control characters",
-    "apiKeyTrim": "API key must not have leading or trailing whitespace"
+    "apiKeyTrim": "API key must not have leading or trailing whitespace",
+    "compareMinRuns": "A compare requires at least 2 runs (benchmarks + evaluations combined)",
+    "compareMaxRuns": "A compare can include at most 10 runs (benchmarks + evaluations combined)"
   }
 }

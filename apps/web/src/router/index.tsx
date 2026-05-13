@@ -32,6 +32,12 @@ import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
+import { EvaluationCreatePage } from "@/features/quality-gate/EvaluationCreatePage";
+import { EvaluationDetailPage } from "@/features/quality-gate/EvaluationDetailPage";
+import { EvaluationsListPage } from "@/features/quality-gate/EvaluationsListPage";
+import { RunCreatePage } from "@/features/quality-gate/RunCreatePage";
+import { RunReportPage } from "@/features/quality-gate/RunReportPage";
+import { RunsListPage } from "@/features/quality-gate/RunsListPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
@@ -84,6 +90,16 @@ export const routes: RouteObject[] = [
           { path: "benchmark-templates", element: <TemplateListPage /> },
           { path: "benchmark-templates/new", element: <TemplateCreatePage /> },
           { path: "benchmark-templates/:id", element: <TemplateEditPage /> },
+          {
+            path: "quality-gate",
+            element: <Navigate to="/quality-gate/evaluations" replace />,
+          },
+          { path: "quality-gate/evaluations", element: <EvaluationsListPage /> },
+          { path: "quality-gate/evaluations/new", element: <EvaluationCreatePage /> },
+          { path: "quality-gate/evaluations/:id", element: <EvaluationDetailPage /> },
+          { path: "quality-gate/runs", element: <RunsListPage /> },
+          { path: "quality-gate/runs/new", element: <RunCreatePage /> },
+          { path: "quality-gate/runs/:id", element: <RunReportPage /> },
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "connections", element: <ConnectionsPage /> },

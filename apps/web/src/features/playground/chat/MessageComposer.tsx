@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Mic, Paperclip, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { consumeDemoSeed } from "../_shared/demo-seed";
@@ -26,6 +26,8 @@ interface MessageComposerProps {
   sendLabelOverride?: string;
   /** When set, seed the input with `chat.composer.demoPrompt` once per browser. */
   demoSeedKey?: string;
+  /** When set, pre-fill the draft textarea with this text (e.g. from reproduce flow). */
+  initialDraft?: string;
 }
 
 export function MessageComposer({
@@ -39,15 +41,33 @@ export function MessageComposer({
   disabledReason,
   sendLabelOverride,
   demoSeedKey,
+  initialDraft,
 }: MessageComposerProps) {
   const { t } = useTranslation("playground");
   // First-visit demo prompt seed (chat only — opted in by ChatPage). Done
   // inside useState's lazy initializer so the seeded value survives React
   // Strict Mode's dev-only double-mount: consumeDemoSeed memoises its
   // decision per page-load, so both mount cycles agree on the same answer.
-  const [draft, setDraft] = useState<string>(() =>
-    demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "",
-  );
+  // initialDraft (from reproduce flow) takes priority over demo seed.
+  const [draft, setDraft] = useState<string>(() => {
+    if (initialDraft) return initialDraft;
+    return demoSeedKey && consumeDemoSeed(demoSeedKey) ? t("chat.composer.demoPrompt") : "";
+  });
+  // Track the last applied initialDraft so we only re-seed when the prop
+  // actually changes value (e.g. user navigates to a different sample). If
+  // the parent re-renders with the same initialDraft, we won't clobber any
+  // edits the user has made since the initial seed.
+  const lastAppliedInitialDraft = useRef(initialDraft);
+  useEffect(() => {
+    if (
+      initialDraft &&
+      initialDraft.length > 0 &&
+      initialDraft !== lastAppliedInitialDraft.current
+    ) {
+      lastAppliedInitialDraft.current = initialDraft;
+      setDraft(initialDraft);
+    }
+  }, [initialDraft]);
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);

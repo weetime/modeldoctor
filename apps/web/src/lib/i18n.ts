@@ -15,6 +15,7 @@ import enInsights from "@/locales/en-US/insights.json";
 import enMe from "@/locales/en-US/me.json";
 import enNotifications from "@/locales/en-US/notifications.json";
 import enPlayground from "@/locales/en-US/playground.json";
+import enQualityGate from "@/locales/en-US/quality-gate.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
 import zhBenchmarkTemplates from "@/locales/zh-CN/benchmark-templates.json";
@@ -30,6 +31,7 @@ import zhInsights from "@/locales/zh-CN/insights.json";
 import zhMe from "@/locales/zh-CN/me.json";
 import zhNotifications from "@/locales/zh-CN/notifications.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
+import zhQualityGate from "@/locales/zh-CN/quality-gate.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
 
@@ -51,6 +53,7 @@ void i18n.use(initReactI18next).init({
       "engine-metrics": enEngineMetrics,
       notifications: enNotifications,
       me: enMe,
+      "quality-gate": enQualityGate,
     },
     "zh-CN": {
       common: zhCommon,
@@ -68,6 +71,7 @@ void i18n.use(initReactI18next).init({
       "engine-metrics": zhEngineMetrics,
       notifications: zhNotifications,
       me: zhMe,
+      "quality-gate": zhQualityGate,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -89,6 +93,7 @@ void i18n.use(initReactI18next).init({
     "engine-metrics",
     "notifications",
     "me",
+    "quality-gate",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

@@ -2,6 +2,7 @@
   "groups": {
     "playground": "Playground",
     "benchmarks": "基准测试",
+    "qualityGate": "质量门",
     "diagnostics": "诊断",
     "dev": "开发工具"
   },
@@ -17,6 +18,8 @@
     "benchmarkPrefixCache": "Prefix-cache 验证",
     "endpointReports": "测试洞察",
     "benchmarkTemplates": "测试模板",
+    "qualityGateEvaluations": "评测方案",
+    "qualityGateRuns": "评测运行",
     "requestDebug": "请求调试",
     "diagnostics": "端点检测",
     "connections": "连接",

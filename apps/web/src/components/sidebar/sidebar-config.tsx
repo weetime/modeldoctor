@@ -16,6 +16,7 @@ import {
   Network,
   Rocket,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -66,6 +67,18 @@ export const sidebarGroups: SidebarGroup[] = [
       },
       { to: "/benchmarks/reports", icon: BarChart3, labelKey: "items.endpointReports" },
       { to: "/benchmark-templates", icon: Layers, labelKey: "items.benchmarkTemplates" },
+    ],
+  },
+  {
+    id: "quality-gate",
+    labelKey: "groups.qualityGate",
+    items: [
+      {
+        to: "/quality-gate/evaluations",
+        icon: ShieldCheck,
+        labelKey: "items.qualityGateEvaluations",
+      },
+      { to: "/quality-gate/runs", icon: CheckCircle2, labelKey: "items.qualityGateRuns" },
     ],
   },
   {

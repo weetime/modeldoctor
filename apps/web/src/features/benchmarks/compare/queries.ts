@@ -3,25 +3,14 @@ import type {
   CompareSynthesizeRequest,
   CompareSynthesizeResponse,
   CreateSavedCompareRequest,
+  HydratedSavedCompare,
   ListSavedComparesResponse,
   SavedCompare,
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface HydratedBenchmarkRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  name?: string | null;
-  tool?: string;
-  scenario?: string;
-  summaryMetrics?: unknown;
-  params?: unknown;
-  createdAt?: string;
-}
-
-export type HydratedSavedCompare = SavedCompare & { benchmarks: HydratedBenchmarkRef[] };
+export type { HydratedSavedCompare };
 
 export const savedCompareKeys = {
   all: ["saved-compares"] as const,

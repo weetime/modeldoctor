@@ -23,7 +23,7 @@
  * with `DELETE FROM ... WHERE id = '...'` (seed.ts only inserts/updates).
  */
 
-import { profileRulesSchema } from "@modeldoctor/contracts";
+import { evaluationSampleSchema, profileRulesSchema } from "@modeldoctor/contracts";
 import {
   applyScenarioConstraints,
   genaiPerfParamsSchema,
@@ -33,6 +33,31 @@ import {
 import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+// ---------------------------------------------------------------------------
+// System seed user
+//
+// Built-in evaluation sets are owned by this system user so the FK
+// constraint on evaluations.user_id is satisfied in every environment.
+// The account is not meant for human login — it has no password hash that
+// can pass bcrypt verification.
+// ---------------------------------------------------------------------------
+
+const SEED_SYSTEM_USER_ID = "usr_system_seed_00000000000";
+
+async function seedSystemUser(): Promise<void> {
+  await prisma.user.upsert({
+    where: { id: SEED_SYSTEM_USER_ID },
+    update: {},
+    create: {
+      id: SEED_SYSTEM_USER_ID,
+      email: "system-seed@modeldoctor.internal",
+      passwordHash: "!locked", // deliberately invalid — cannot be used to log in
+      roles: ["system"],
+      displayName: "System Seed",
+    },
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Evaluation profiles (5 built-ins)
@@ -536,7 +561,83 @@ async function seedBenchmarkTemplates(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Quality Gate built-in evaluation sets
+// ---------------------------------------------------------------------------
+
+const builtInEvaluationSamples = [
+  {
+    id: "smp_qg_demo_01",
+    idx: 0,
+    prompt: "客户问：你们退货流程是多久？请用一句话回答。",
+    expected: "通常 7 个工作日内完成退款。",
+    judgeConfig: { kind: "contains", substrings: ["7", "退"], mode: "all", caseSensitive: false },
+  },
+  {
+    id: "smp_qg_demo_02",
+    idx: 1,
+    prompt: "翻译为英文：你好世界",
+    expected: "Hello, world",
+    judgeConfig: { kind: "exact-match", caseSensitive: false, trim: true },
+  },
+  {
+    id: "smp_qg_demo_03",
+    idx: 2,
+    prompt: "用 JSON 返回客户姓名'张三'和年龄 30，仅输出 JSON 对象不加 markdown。",
+    expected: '{"name":"张三","age":30}',
+    judgeConfig: {
+      kind: "regex",
+      pattern: "\"name\"\\s*:\\s*\"张三\".*\"age\"\\s*:\\s*30",
+      flags: "s",
+    },
+  },
+  {
+    id: "smp_qg_demo_04",
+    idx: 3,
+    prompt: "客户抱怨快递太慢，请安抚客户并给出补救建议（2-3 句）。",
+    expected: "认可客户不满；说明已加急；给出补偿（券或加速）；语气真诚。",
+    judgeConfig: {
+      kind: "llm-judge",
+      rubric:
+        "判断助手是否：(1) 表达了对客户不满的认可/共情，(2) 给出了具体的补救行动（加急/补偿/沟通），(3) 语气真诚不敷衍。三项都满足给 5 分；满足两项给 3-4 分；满足一项给 1-2 分；都没满足给 0 分。",
+      scale: "0-5",
+      passThreshold: 3,
+    },
+  },
+].map((s) => evaluationSampleSchema.parse(s));
+
+async function seedBuiltInEvaluations(): Promise<void> {
+  const demoEval = await prisma.evaluation.upsert({
+    where: { id: "eval_builtin_qg_demo_zh_customer" },
+    update: {
+      name: "中文客服 QA 示例",
+      description: "覆盖 exact-match / contains / regex / llm-judge 四种判分器的演示评测集。",
+      samples: builtInEvaluationSamples,
+      totalSamples: builtInEvaluationSamples.length,
+    },
+    create: {
+      id: "eval_builtin_qg_demo_zh_customer",
+      userId: SEED_SYSTEM_USER_ID,
+      name: "中文客服 QA 示例",
+      description: "覆盖 exact-match / contains / regex / llm-judge 四种判分器的演示评测集。",
+      samples: builtInEvaluationSamples,
+      totalSamples: builtInEvaluationSamples.length,
+    },
+  });
+  console.log(`Seeded evaluation: ${demoEval.id}`);
+}
+
 async function main(): Promise<void> {
+  // Skip QG demo seed in test env: the seeded system user pre-occupies the
+  // users table and breaks "first registered user → admin" auth e2e assertions.
+  // QG e2e creates its own evaluation via API, so the demo seed isn't needed
+  // for testing.
+  if (process.env.NODE_ENV !== "test") {
+    console.log("Seeding system user...");
+    await seedSystemUser();
+    console.log("  ✓ system seed user upserted");
+  }
+
   console.log("Seeding evaluation_profiles...");
   await seedEvaluationProfiles();
   console.log(`  ✓ ${EVALUATION_PROFILES.length} built-in evaluation profiles upserted`);
@@ -544,6 +645,16 @@ async function main(): Promise<void> {
   console.log("Seeding benchmark_templates...");
   await seedBenchmarkTemplates();
   console.log(`  ✓ ${BENCHMARK_TEMPLATES.length} official benchmark templates upserted`);
+
+  // Skip QG demo seed in test env: the seeded system user pre-occupies the
+  // users table and breaks "first registered user → admin" auth e2e assertions.
+  // QG e2e creates its own evaluation via API, so the demo seed isn't needed
+  // for testing.
+  if (process.env.NODE_ENV !== "test") {
+    console.log("Seeding built-in evaluations...");
+    await seedBuiltInEvaluations();
+    console.log("  ✓ built-in evaluation sets upserted");
+  }
 }
 
 main()

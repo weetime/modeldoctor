@@ -1,0 +1,170 @@
+{
+  "nav": { "title": "Quality Gate" },
+  "evaluations": {
+    "title": "Evaluation Sets",
+    "subtitle": "Manage evaluation samples and judge rules; every run references a snapshot of one set.",
+    "create": "New Evaluation Set",
+    "empty": "No evaluation sets yet",
+    "col": { "name": "Name", "samples": "Samples", "updatedAt": "Updated" },
+    "runsCol": {
+      "id": "Run ID",
+      "status": "Status",
+      "progress": "Progress",
+      "createdAt": "Created"
+    },
+    "form": {
+      "nameLabel": "Name",
+      "namePlaceholder": "Enter an evaluation set name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "(optional) Describe what this set is for",
+      "addSample": "Add sample",
+      "importJson": "Import from JSON",
+      "importCsv": "Import from CSV",
+      "save": "Save",
+      "cancel": "Cancel",
+      "jsonParseError": "Failed to parse JSON",
+      "saveError": "Save failed: {{message}}",
+      "saveSuccess": "Saved",
+      "newTitle": "New Evaluation Set",
+      "editTitle": "Edit Evaluation Set",
+      "createSubtitle": "Add samples and pick a judge; references from runs are by snapshot.",
+      "editSubtitle": "Update the evaluation set; saving creates a new version.",
+      "sectionBasics": "Basics",
+      "sectionSamples": "Samples",
+      "validationError": "Sample #{{idx}}: {{message}}"
+    }
+  },
+  "samples": {
+    "promptLabel": "Prompt",
+    "expectedLabel": "Expected",
+    "remove": "Remove",
+    "indexPrefix": "#"
+  },
+  "judges": {
+    "kindLabel": "Judge / Kind",
+    "exact-match": "exact-match",
+    "contains": "contains",
+    "regex": "regex",
+    "llm-judge": "llm-judge",
+    "caseSensitive": "Case sensitive",
+    "substringsLabel": "Substrings (comma-separated)",
+    "modeLabel": "Mode",
+    "modeAll": "All",
+    "modeAny": "Any",
+    "patternLabel": "Pattern",
+    "flagsLabel": "Flags (optional)",
+    "rubricLabel": "Rubric",
+    "rubricPlaceholder": "Score the assistant if it…",
+    "scaleLabel": "Scale",
+    "thresholdLabel": "Pass threshold (defaults by scale)"
+  },
+  "runs": {
+    "title": "Evaluation Runs",
+    "subtitle": "Execute evaluation sets against endpoints, compare baseline vs. new, and rule on pass / warning / fail.",
+    "create": "New Run",
+    "empty": "No runs yet",
+    "report": {
+      "title": "Run Report",
+      "subtitle": "Per-sample judging detail, aggregate metrics, and gate verdict.",
+      "cancel": "Cancel",
+      "playgroundReproduceA": "Reproduce A in Playground",
+      "playgroundReproduceB": "Reproduce B in Playground",
+      "expected": "Expected",
+      "answerA": "Answer A",
+      "answerB": "Answer B",
+      "errorPrefix": "Error",
+      "judgePrefix": "Judge",
+      "emptyAnswer": "(empty)",
+      "delta": {
+        "REGRESSION": "Regression",
+        "IMPROVEMENT": "Improvement",
+        "BOTH_PASS": "Both passed",
+        "BOTH_FAIL": "Both failed",
+        "NA": "—"
+      },
+      "passLabel": "Pass",
+      "failLabel": "Fail"
+    },
+    "form": {
+      "evaluationLabel": "Evaluation Set",
+      "evaluationPlaceholder": "Select an evaluation set",
+      "endpointA": "Endpoint A (baseline)",
+      "endpointB": "Endpoint B (new version, optional)",
+      "endpointBNone": "No comparison",
+      "endpointPlaceholder": "Select",
+      "trigger": "Run Evaluation",
+      "newTitle": "New Run",
+      "newSubtitle": "Pick an evaluation set and endpoints; the run starts immediately.",
+      "saveError": "Failed to start: {{message}}",
+      "sectionTarget": "Target",
+      "sectionGate": "Gate rules"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" }
+  },
+  "report": {
+    "filters": {
+      "all": "All",
+      "regression": "Regression",
+      "improvement": "Improvement",
+      "both-pass": "Both Passed",
+      "both-fail": "Both Failed"
+    },
+    "metrics": {
+      "passRateA": "Pass Rate A",
+      "passRateB": "Pass Rate B",
+      "regressionImprovement": "Regression / Improvement",
+      "judgeAvgA": "Judge Avg A",
+      "judgeAvgB": "Judge Avg B",
+      "judgeCallCount": "Judge Calls"
+    },
+    "samplesTable": {
+      "headers": {
+        "index": "#",
+        "answerPreview": "Answer A Preview",
+        "delta": "Delta",
+        "passedA": "A Passed",
+        "passedB": "B Passed",
+        "actions": "Actions"
+      },
+      "prevPage": "Previous",
+      "nextPage": "Next"
+    },
+    "sampleDrawer": { "title": "Sample", "detail": "Details" }
+  },
+  "gate": {
+    "passRateMin": "Min Pass Rate",
+    "regressionMax": "Max Regressions",
+    "judgeScoreMin": "Min Judge Score"
+  },
+  "detail": {
+    "actions": { "detail": "Details" },
+    "delete": {
+      "button": "Delete",
+      "title": "Delete {{name}}?",
+      "description": "Cannot be undone. Will be blocked if any evaluation run still references this set.",
+      "descriptionRun": "Cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "savedCompare": {
+    "section": "Quality Evaluations",
+    "passRateA": "Pass Rate A",
+    "passRateB": "Pass Rate B",
+    "regression": "Regressions",
+    "unknown": "—"
+  },
+  "playground": {
+    "bannerTitle": "Reproduced from evaluation · sample #{{suffix}}",
+    "bannerExpectedPrefix": "Expected: ",
+    "backToReport": "Back to report",
+    "reproduceFailedToast": "Failed to load reproduce context"
+  }
+}

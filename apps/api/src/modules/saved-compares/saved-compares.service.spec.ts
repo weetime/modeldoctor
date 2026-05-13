@@ -57,6 +57,7 @@ describe("SavedComparesService", () => {
     const sc = await svc.create(userId, {
       name: "Study A",
       benchmarkIds: runIds,
+      evaluationRunIds: [],
       stageLabels: { [runIds[0]]: "A", [runIds[1]]: "B" },
     });
     expect(sc.name).toBe("Study A");
@@ -67,6 +68,7 @@ describe("SavedComparesService", () => {
     const sc = await svc.create(userId, {
       name: "n",
       benchmarkIds: runIds,
+      evaluationRunIds: [],
       stageLabels: { [runIds[0]]: "A", [runIds[1]]: "B" },
     });
     expect(await svc.get(otherUserId, sc.id)).toBeNull();
@@ -76,6 +78,7 @@ describe("SavedComparesService", () => {
     const sc = await svc.create(userId, {
       name: "n",
       benchmarkIds: [...runIds, "deleted-id"],
+      evaluationRunIds: [],
       stageLabels: {
         [runIds[0]]: "A",
         [runIds[1]]: "B",
