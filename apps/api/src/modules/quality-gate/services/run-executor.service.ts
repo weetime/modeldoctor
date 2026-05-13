@@ -100,18 +100,19 @@ export class QualityGateRunExecutor implements OnModuleInit {
               }
               // else: sample missing in baseline → keep B null → delta=NA
             } else if (run.endpointBId) {
-              callB = await this.endpointCaller.call(
+              const result = await this.endpointCaller.call(
                 run.endpointBId,
                 run.userId,
                 s.prompt,
                 ac.signal,
               );
-              if (callB && !ac.signal.aborted) {
+              callB = result;
+              if (!ac.signal.aborted) {
                 judgedB = await judgeLimit(() =>
                   this.judges.apply(s.judgeConfig, {
                     question: s.prompt,
                     expected: s.expected,
-                    answer: callB!.rawAnswer,
+                    answer: result.rawAnswer,
                   }),
                 );
                 if (s.judgeConfig.kind === "llm-judge") judgeCalls++;
