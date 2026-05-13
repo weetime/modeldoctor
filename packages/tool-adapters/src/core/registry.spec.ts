@@ -24,11 +24,16 @@ describe("registry", () => {
     expect(byTool("evalscope").name).toBe("evalscope");
   });
 
-  it("allAdapters returns six adapters", () => {
+  it("byTool('aiperf') returns the aiperf adapter", () => {
+    expect(byTool("aiperf").name).toBe("aiperf");
+  });
+
+  it("allAdapters returns seven adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(6);
+    expect(all).toHaveLength(7);
     expect(all.map((a) => a.name).sort()).toEqual(
       [
+        "aiperf",
         "evalscope",
         "genai-perf",
         "guidellm",

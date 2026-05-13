@@ -55,6 +55,14 @@ export {
   type EvalscopeReport,
 } from "./evalscope/schema.js";
 
+export {
+  aiperfParamsSchema,
+  aiperfReportSchema,
+  aiperfParamDefaults,
+  type AiperfParams,
+  type AiperfReport,
+} from "./aiperf/schema.js";
+
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
 
@@ -77,4 +85,5 @@ export {
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   EVALSCOPE_CATEGORY_DEFAULTS,
+  AIPERF_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";

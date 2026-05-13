@@ -20,7 +20,8 @@ export type CreateBenchmarkInput = {
     | "vegeta"
     | "prefix-cache-probe"
     | "kv-cache-stress"
-    | "evalscope";
+    | "evalscope"
+    | "aiperf";
   params: Prisma.InputJsonValue;
   name: string;
   description?: string | null;

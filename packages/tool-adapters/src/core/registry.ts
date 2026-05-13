@@ -1,3 +1,4 @@
+import { aiperfAdapter } from "../aiperf/index.js";
 import { evalscopeAdapter } from "../evalscope/index.js";
 import { genaiPerfAdapter } from "../genai-perf/index.js";
 import { guidellmAdapter } from "../guidellm/index.js";
@@ -14,6 +15,7 @@ const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
   "prefix-cache-probe": prefixCacheProbeAdapter,
   "kv-cache-stress": kvCacheStressAdapter,
   evalscope: evalscopeAdapter,
+  aiperf: aiperfAdapter,
 };
 
 export function byTool(tool: ToolName): ToolAdapter {

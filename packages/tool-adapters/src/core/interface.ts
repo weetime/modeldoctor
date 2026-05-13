@@ -10,13 +10,15 @@ export type ToolName =
   | "vegeta"
   | "prefix-cache-probe"
   | "kv-cache-stress"
-  | "evalscope";
+  | "evalscope"
+  | "aiperf";
 
 // ── Progress events (uniform across tools) ────────────────────────────
 export type ProgressEvent =
   | { kind: "progress"; pct: number; currentRequests?: number; message?: string }
   | { kind: "log"; level: "info" | "warn" | "error"; line: string };
 
+import type { AiperfReport } from "../aiperf/schema.js";
 import type { EvalscopeReport } from "../evalscope/schema.js";
 import type { GenaiPerfReport } from "../genai-perf/schema.js";
 // ── Forward-declare per-tool report types (filled in Task 1.4 / 1.5 / 1.6) ──
@@ -34,7 +36,8 @@ export type ToolReport =
   | { tool: "vegeta"; data: VegetaReport }
   | { tool: "prefix-cache-probe"; data: PrefixCacheProbeReport }
   | { tool: "kv-cache-stress"; data: KvCacheStressReport }
-  | { tool: "evalscope"; data: EvalscopeReport };
+  | { tool: "evalscope"; data: EvalscopeReport }
+  | { tool: "aiperf"; data: AiperfReport };
 
 // ── buildCommand inputs ───────────────────────────────────────────────
 export interface BuildCommandPlan<TParams = unknown> {

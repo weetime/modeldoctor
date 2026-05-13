@@ -1,4 +1,5 @@
 import type { ModalityCategory } from "@modeldoctor/contracts";
+import type { AiperfParams } from "./aiperf/schema.js";
 import type { EvalscopeParams } from "./evalscope/schema.js";
 import type { GenaiPerfParams } from "./genai-perf/schema.js";
 import type { GuidellmParams } from "./guidellm/schema.js";
@@ -88,4 +89,20 @@ export const EVALSCOPE_CATEGORY_DEFAULTS = {
 } as const satisfies Record<
   ModalityCategory,
   { apiPath: EvalscopeParams["apiPath"] } | { unsupported: true }
+>;
+
+/**
+ * AIPerf currently targets chat/completions only in this app. Embedding /
+ * rerank / image / audio are out of scope for the inference scenario where
+ * AIPerf is offered — same posture as evalscope / guidellm.
+ */
+export const AIPERF_CATEGORY_DEFAULTS = {
+  chat: { endpointType: "chat" },
+  audio: { unsupported: true },
+  embeddings: { unsupported: true },
+  rerank: { unsupported: true },
+  image: { unsupported: true },
+} as const satisfies Record<
+  ModalityCategory,
+  { endpointType: AiperfParams["endpointType"] } | { unsupported: true }
 >;

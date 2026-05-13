@@ -26,8 +26,9 @@ describe("SCENARIOS constant", () => {
     ]);
   });
 
-  it("inference scenario lists guidellm, genai-perf, and evalscope", () => {
+  it("inference scenario lists guidellm, genai-perf, evalscope, and aiperf", () => {
     expect([...SCENARIOS.inference.tools].sort()).toEqual([
+      "aiperf",
       "evalscope",
       "genai-perf",
       "guidellm",

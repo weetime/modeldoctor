@@ -32,13 +32,18 @@
       "vegeta": "vegeta",
       "genai-perf": "genai-perf",
       "prefix-cache-probe": "prefix-cache-probe",
-      "kv-cache-stress": "kv-cache-stress"
+      "kv-cache-stress": "kv-cache-stress",
+      "evalscope": "evalscope",
+      "aiperf": "aiperf"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
       "genai-perf": "NVIDIA 推理性能工具，支持 chat / embeddings / rankings",
-      "prefix-cache-probe": "验证 Higress ai-load-balancer 同前缀粘性，输出 Pod 路由占比与 Prom 命中率"
+      "prefix-cache-probe": "验证 Higress ai-load-balancer 同前缀粘性，输出 Pod 路由占比与 Prom 命中率",
+      "kv-cache-stress": "长 prompt 冷/暖双轮 KV cache 压测（已弃用，建议使用 evalscope）",
+      "evalscope": "Modelscope 出品的推理性能工具，支持 chat / completions 与 prefix-cache 命中率统计",
+      "aiperf": "NVIDIA AIPerf：genai-perf 继任者，主流 LLM 推理性能基准"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
