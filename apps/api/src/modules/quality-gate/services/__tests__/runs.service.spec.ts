@@ -153,4 +153,25 @@ describe("RunsService", () => {
       }),
     ).rejects.toThrow(/must be COMPLETED/);
   });
+
+  it("create with endpointBId forces baselineRunIdAtExecution=null even if evaluation has a pin", async () => {
+    const m = build();
+    m.evaluationsRepo.get.mockResolvedValue({
+      id: "e1",
+      userId: "u1",
+      version: 2,
+      samples: [{ id: "s", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }],
+      baselineRunId: "pinned-run",
+    });
+    const svc = new RunsService(m.repo as never, m.evaluationsRepo as never, m.connections as never, m.executor as never);
+    await svc.create("u1", {
+      evaluationId: "e1",
+      endpointAId: "a",
+      endpointBId: "b",
+      gateConfig: { passRateMin: 0.9 },
+    });
+    expect(m.repo.createPending).toHaveBeenCalledWith(
+      expect.objectContaining({ baselineRunIdAtExecution: null, endpointBId: "b" }),
+    );
+  });
 });

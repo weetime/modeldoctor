@@ -58,8 +58,16 @@ export class RunsService {
     // undefined → use evaluation.baselineRunId (pin)
     // null      → explicit skip, no baseline
     // string    → validate + use that run
+    //
+    // Dual mode wins over baseline. When endpointBId is set, baseline is forced null
+    // regardless of pin or implicit fallback. Contract-level mutex catches explicit
+    // string overrides; this guard catches the implicit "evaluation has a pin"
+    // fallback path that would otherwise silently activate baseline mode and make
+    // the executor ignore endpointBId.
     let baselineRunIdAtExecution: string | null = null;
-    if (body.baselineRunIdOverride === undefined) {
+    if (body.endpointBId) {
+      baselineRunIdAtExecution = null;
+    } else if (body.baselineRunIdOverride === undefined) {
       baselineRunIdAtExecution = evaluation.baselineRunId ?? null;
     } else if (body.baselineRunIdOverride === null) {
       baselineRunIdAtExecution = null;
