@@ -8,7 +8,7 @@ import { PinBaselineButton } from "./components/PinBaselineButton";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
 import { SamplesTable } from "./components/SamplesTable";
-import { useCancelRun, useRun, useRunSamples } from "./queries";
+import { useCancelRun, useRun } from "./queries";
 
 export function RunReportPage() {
   const { id = "" } = useParams();
@@ -16,14 +16,7 @@ export function RunReportPage() {
   const { t: tSidebar } = useTranslation("sidebar");
   const { data: run } = useRun(id, { pollWhileRunning: true });
   const cancel = useCancelRun(id);
-  const [openSampleId, setOpenSampleId] = useState<string | null>(null);
-  const allSamples = useRunSamples(run?.status === "COMPLETED" ? id : undefined, {
-    filter: "all",
-    pageSize: 500,
-  });
-  const sampleRow: RunSample | null = openSampleId
-    ? (allSamples.data?.items.find((s) => s.id === openSampleId) ?? null)
-    : null;
+  const [openSample, setOpenSample] = useState<RunSample | null>(null);
   const snapshotSamples: EvaluationSample[] = (run?.evaluationSnapshot.samples ??
     []) as EvaluationSample[];
 
@@ -48,6 +41,9 @@ export function RunReportPage() {
       </>
     );
   }
+
+  const baselineMode = run.baselineRunIdAtExecution != null;
+  const hasComparison = baselineMode || run.endpointBId != null;
 
   return (
     <>
@@ -84,15 +80,16 @@ export function RunReportPage() {
         {run.status === "COMPLETED" && (
           <SamplesTable
             runId={run.id}
-            baselineMode={run.baselineRunIdAtExecution != null}
-            onOpenSample={setOpenSampleId}
+            baselineMode={baselineMode}
+            hasComparison={hasComparison}
+            onOpenSample={setOpenSample}
           />
         )}
         <SampleDetailDrawer
           runId={run.id}
-          row={sampleRow}
+          row={openSample}
           snapshotSamples={snapshotSamples}
-          onClose={() => setOpenSampleId(null)}
+          onClose={() => setOpenSample(null)}
         />
       </div>
     </>

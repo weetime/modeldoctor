@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { SampleDelta, SampleFilter } from "@modeldoctor/contracts";
+import type { RunSample, SampleDelta, SampleFilter } from "@modeldoctor/contracts";
 import { Check, Minus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,50 +44,59 @@ const FILTERS: SampleFilter[] = ["all", "regression", "improvement", "both-pass"
 export function SamplesTable({
   runId,
   baselineMode,
+  hasComparison,
   onOpenSample,
 }: {
   runId: string;
   baselineMode: boolean;
-  onOpenSample: (sampleId: string) => void;
+  /** True when there is a B side to compare against (baseline run or endpoint B). */
+  hasComparison: boolean;
+  onOpenSample: (sample: RunSample) => void;
 }) {
   const { t } = useTranslation("quality-gate");
-  const [filter, setFilter] = useState<SampleFilter>("regression");
+  const [filter, setFilter] = useState<SampleFilter>("all");
   const [page, setPage] = useState(1);
   const { data } = useRunSamples(runId, { filter, page, pageSize: 20 });
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map((f) => (
-          <Button
-            key={f}
-            variant={f === filter ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setFilter(f);
-              setPage(1);
-            }}
-          >
-            {t(`report.filters.${f}`)}
-          </Button>
-        ))}
-      </div>
+      {hasComparison && (
+        <div className="flex gap-2 flex-wrap">
+          {FILTERS.map((f) => (
+            <Button
+              key={f}
+              variant={f === filter ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setFilter(f);
+                setPage(1);
+              }}
+            >
+              {t(`report.filters.${f}`)}
+            </Button>
+          ))}
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-12">{t("report.samplesTable.headers.index")}</TableHead>
             <TableHead>{t("report.samplesTable.headers.answerPreview")}</TableHead>
-            <TableHead className="w-24">{t("report.samplesTable.headers.delta")}</TableHead>
+            {hasComparison && (
+              <TableHead className="w-24">{t("report.samplesTable.headers.delta")}</TableHead>
+            )}
             <TableHead className="w-20">
               {baselineMode
                 ? t("report.samplesTable.headers.passedCurrent")
                 : t("report.samplesTable.headers.passedA")}
             </TableHead>
-            <TableHead className="w-20">
-              {baselineMode
-                ? t("report.samplesTable.headers.passedBaseline")
-                : t("report.samplesTable.headers.passedB")}
-            </TableHead>
+            {hasComparison && (
+              <TableHead className="w-20">
+                {baselineMode
+                  ? t("report.samplesTable.headers.passedBaseline")
+                  : t("report.samplesTable.headers.passedB")}
+              </TableHead>
+            )}
             <TableHead className="w-32 text-right">
               {t("report.samplesTable.headers.actions")}
             </TableHead>
@@ -100,21 +109,25 @@ export function SamplesTable({
               <TableCell className="truncate max-w-md">
                 {s.resultA.call.rawAnswer.slice(0, 80)}
               </TableCell>
-              <TableCell>
-                <Badge variant={deltaVariant(s.delta)}>{t(`report.delta.${s.delta}`)}</Badge>
-              </TableCell>
+              {hasComparison && (
+                <TableCell>
+                  <Badge variant={deltaVariant(s.delta)}>{t(`runs.report.delta.${s.delta}`)}</Badge>
+                </TableCell>
+              )}
               <TableCell>
                 <PassIcon passed={s.resultA.judge.passed} />
               </TableCell>
-              <TableCell>
-                {s.resultB ? (
-                  <PassIcon passed={s.resultB.judge.passed} />
-                ) : (
-                  <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />
-                )}
-              </TableCell>
+              {hasComparison && (
+                <TableCell>
+                  {s.resultB ? (
+                    <PassIcon passed={s.resultB.judge.passed} />
+                  ) : (
+                    <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  )}
+                </TableCell>
+              )}
               <TableCell className="text-right">
-                <Button size="sm" variant="ghost" onClick={() => onOpenSample(s.id)}>
+                <Button size="sm" variant="ghost" onClick={() => onOpenSample(s)}>
                   {t("report.sampleDrawer.detail")}
                 </Button>
               </TableCell>
