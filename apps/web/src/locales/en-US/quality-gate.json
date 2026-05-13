@@ -147,7 +147,13 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
-    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" }
+    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" },
+    "selection": {
+      "count": "Selected {{count}}",
+      "compareSelected": "📊 Compare selected",
+      "clear": "Clear",
+      "needTwo": "Select at least 2 runs to compare"
+    }
   },
   "report": {
     "filters": {

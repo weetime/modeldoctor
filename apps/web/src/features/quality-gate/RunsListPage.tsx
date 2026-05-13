@@ -11,6 +11,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { GateStatusBadge } from "./components/GateStatusBadge";
@@ -32,6 +34,19 @@ export function RunsListPage() {
   const del = useDeleteRun();
   const items = data?.items ?? [];
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+  const clearSelection = () => setSelected(new Set());
+  const compareSelected = () => {
+    const ids = Array.from(selected).join(",");
+    nav(`/benchmarks/compare/saved/new?evaluationRunIds=${ids}`);
+  };
+
   return (
     <>
       <PageHeader
@@ -42,6 +57,24 @@ export function RunsListPage() {
         }
       />
       <div className="px-8 py-6 space-y-6">
+        {selected.size > 0 && (
+          <div className="sticky top-0 z-10 bg-card border rounded-md p-2 flex items-center justify-between">
+            <span className="text-sm">{t("runs.selection.count", { count: selected.size })}</span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={selected.size < 2}
+                onClick={compareSelected}
+                title={selected.size < 2 ? t("runs.selection.needTwo") : undefined}
+              >
+                {t("runs.selection.compareSelected")} ({selected.size})
+              </Button>
+              <Button size="sm" variant="ghost" onClick={clearSelection}>
+                {t("runs.selection.clear")}
+              </Button>
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div className="text-muted-foreground">{tCommon("table.loading")}</div>
         ) : items.length === 0 ? (
@@ -50,6 +83,7 @@ export function RunsListPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8" />
                 <TableHead>{t("evaluations.runsCol.id")}</TableHead>
                 <TableHead>{t("evaluations.runsCol.status")}</TableHead>
                 <TableHead>{t("evaluations.runsCol.progress")}</TableHead>
@@ -60,6 +94,9 @@ export function RunsListPage() {
             <TableBody>
               {items.map((r) => (
                 <TableRow key={r.id}>
+                  <TableCell>
+                    <Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} />
+                  </TableCell>
                   <TableCell>
                     <Link
                       className="text-primary hover:underline"

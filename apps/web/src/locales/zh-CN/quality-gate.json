@@ -147,7 +147,13 @@
       "failed": "失败",
       "cancelled": "已取消"
     },
-    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" }
+    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" },
+    "selection": {
+      "count": "已选 {{count}}",
+      "compareSelected": "📊 对比所选",
+      "clear": "取消选择",
+      "needTwo": "至少选择 2 个 run 才能对比"
+    }
   },
   "report": {
     "filters": {
