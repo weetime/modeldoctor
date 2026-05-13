@@ -111,7 +111,8 @@
       "baselineViewLink": "查看 baseline →",
       "pinSuccessToast": "已钉为 baseline",
       "unpinSuccessToast": "已解钉",
-      "pinErrorToast": "操作失败: {{message}}"
+      "pinErrorToast": "操作失败: {{message}}",
+      "addToCompareButton": "📊 加入对比"
     },
     "form": {
       "evaluationLabel": "评测集",

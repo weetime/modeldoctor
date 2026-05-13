@@ -289,6 +289,11 @@
     }
   },
   "compare": {
+    "autoLabel": {
+      "latest": "最新",
+      "previous": "前一次",
+      "older": "再前一次"
+    },
     "title": "对比基准测试",
     "subtitle": "{{n}} 个基准测试 · {{tool}}",
     "back": "返回列表",

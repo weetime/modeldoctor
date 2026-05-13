@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { PinBaselineButton } from "./components/PinBaselineButton";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
@@ -63,7 +63,14 @@ export function RunReportPage() {
               </Button>
             )}
             {run.status === "COMPLETED" && (
-              <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
+              <>
+                <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
+                    {t("runs.report.addToCompareButton")}
+                  </Link>
+                </Button>
+              </>
             )}
           </div>
         }

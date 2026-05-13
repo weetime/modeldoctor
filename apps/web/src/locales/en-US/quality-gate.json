@@ -111,7 +111,8 @@
       "baselineViewLink": "View baseline →",
       "pinSuccessToast": "Pinned as baseline",
       "unpinSuccessToast": "Unpinned",
-      "pinErrorToast": "Operation failed: {{message}}"
+      "pinErrorToast": "Operation failed: {{message}}",
+      "addToCompareButton": "📊 Add to Compare"
     },
     "form": {
       "evaluationLabel": "Evaluation Set",
