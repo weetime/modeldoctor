@@ -13,15 +13,21 @@ export class EvaluationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(userId: string): Promise<Evaluation[]> {
+    // Users see their own evaluations + all official built-ins (seeded under
+    // SEED_SYSTEM_USER_ID). Official sets show with an "Official" badge in
+    // the UI and are locked from edit/delete at the service layer.
     const rows = await this.prisma.evaluation.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
+      where: { OR: [{ userId }, { isOfficial: true }] },
+      orderBy: [{ isOfficial: "desc" }, { createdAt: "desc" }],
     });
     return rows.map(this.toDto);
   }
 
   async findById(userId: string, id: string): Promise<Evaluation | null> {
-    const row = await this.prisma.evaluation.findFirst({ where: { id, userId } });
+    // Read path includes official sets — users can run against built-ins.
+    const row = await this.prisma.evaluation.findFirst({
+      where: { id, OR: [{ userId }, { isOfficial: true }] },
+    });
     return row ? this.toDto(row) : null;
   }
 

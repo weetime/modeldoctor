@@ -164,3 +164,94 @@ describe("setBaseline", () => {
     );
   });
 });
+
+describe("Official evaluation guards", () => {
+  const userId = "u1";
+  const officialId = "ev_official";
+
+  function buildOfficialRepo() {
+    return {
+      findById: vi.fn().mockResolvedValue({
+        id: officialId,
+        userId: "usr_system_seed_00000000000",
+        name: "Built-in",
+        description: "official",
+        samples: [
+          { id: "s0", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
+        ],
+        isOfficial: true,
+        baselineRunId: null,
+      }),
+      update: vi.fn(),
+      delete: vi.fn(),
+      create: vi.fn().mockResolvedValue({
+        id: "ev_copy",
+        userId,
+        name: "Built-in (副本)",
+        samples: [],
+        isOfficial: false,
+      }),
+    };
+  }
+
+  it("update rejects ANY change on official evaluations (including baselineRunId)", async () => {
+    const repo = buildOfficialRepo();
+    const svc = new EvaluationsService(repo as never, undefined as never);
+
+    await expect(svc.update(userId, officialId, { name: "hacked" })).rejects.toThrow(
+      /is official and read-only/,
+    );
+    await expect(svc.update(userId, officialId, { baselineRunId: "run-x" })).rejects.toThrow(
+      /is official and read-only/,
+    );
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it("setBaseline rejects on official evaluations (pin would leak across users)", async () => {
+    const repo = buildOfficialRepo();
+    const runsRepo = {
+      findById: vi.fn().mockResolvedValue({
+        id: "run-x",
+        userId,
+        evaluationId: officialId,
+        status: "COMPLETED",
+        gateResult: "PASSED",
+      }),
+    };
+    const svc = new EvaluationsService(repo as never, runsRepo as never);
+    await expect(svc.setBaseline(userId, officialId, "run-x")).rejects.toThrow(
+      /is official; duplicate it first/,
+    );
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it("delete rejects official evaluations", async () => {
+    const repo = buildOfficialRepo();
+    const svc = new EvaluationsService(repo as never, undefined as never);
+    await expect(svc.delete(userId, officialId)).rejects.toThrow(
+      /is official and cannot be deleted/,
+    );
+    expect(repo.delete).not.toHaveBeenCalled();
+  });
+
+  it("duplicate creates a user-owned copy with name suffix", async () => {
+    const repo = buildOfficialRepo();
+    const svc = new EvaluationsService(repo as never, undefined as never);
+    const out = await svc.duplicate(userId, officialId);
+    expect(out.id).toBe("ev_copy");
+    expect(repo.create).toHaveBeenCalledWith(
+      userId,
+      expect.objectContaining({
+        name: "Built-in (副本)",
+        samples: expect.arrayContaining([expect.objectContaining({ prompt: "Q" })]),
+      }),
+    );
+  });
+
+  it("duplicate rejects when source not found / not accessible", async () => {
+    const repo = buildOfficialRepo();
+    repo.findById.mockResolvedValueOnce(null);
+    const svc = new EvaluationsService(repo as never, undefined as never);
+    await expect(svc.duplicate(userId, "missing")).rejects.toThrow(/not found/);
+  });
+});
