@@ -3,6 +3,7 @@ import {
   type CompareNarrative,
   type CompareSynthesizeRequest,
   type CompareSynthesizeResponse,
+  type HydratedSavedCompare,
   compareNarrativeSchema,
 } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
@@ -11,7 +12,7 @@ import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { summarizeForPrompt } from "./metrics.js";
 import { COMPARE_SYS_PROMPT_EN, COMPARE_SYS_PROMPT_ZH } from "./prompts.js";
-import { type HydratedSavedCompare, SavedComparesService } from "./saved-compares.service.js";
+import { SavedComparesService } from "./saved-compares.service.js";
 
 interface CacheEntry {
   generatedAt: string;

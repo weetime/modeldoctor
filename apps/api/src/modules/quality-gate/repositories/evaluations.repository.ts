@@ -5,11 +5,11 @@ import type {
   UpdateEvaluationRequest,
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import type { PrismaClient } from "@prisma/client";
+import { PrismaService } from "../../../database/prisma.service.js";
 
 @Injectable()
 export class EvaluationsRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async list(userId: string): Promise<Evaluation[]> {
     const rows = await this.prisma.evaluation.findMany({

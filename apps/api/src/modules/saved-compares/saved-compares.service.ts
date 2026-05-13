@@ -1,40 +1,14 @@
 import type {
   CreateSavedCompareRequest,
+  HydratedBenchmarkRef,
+  HydratedEvaluationRunRef,
+  HydratedSavedCompare,
   SavedCompare,
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
-
-export interface HydratedBenchmarkRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  // Present when missing === false:
-  name?: string | null;
-  tool?: string;
-  scenario?: string;
-  summaryMetrics?: unknown;
-  params?: unknown;
-  createdAt?: string;
-}
-
-export interface HydratedEvaluationRunRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  // Present when missing === false:
-  status?: string;
-  gateResult?: string | null;
-  aggregateMetrics?: unknown;
-  createdAt?: string;
-}
-
-export interface HydratedSavedCompare extends SavedCompare {
-  benchmarks: HydratedBenchmarkRef[];
-  evaluationRuns: HydratedEvaluationRunRef[];
-}
 
 @Injectable()
 export class SavedComparesService {

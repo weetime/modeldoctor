@@ -3,46 +3,14 @@ import type {
   CompareSynthesizeRequest,
   CompareSynthesizeResponse,
   CreateSavedCompareRequest,
+  HydratedSavedCompare,
   ListSavedComparesResponse,
   SavedCompare,
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface HydratedBenchmarkRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  name?: string | null;
-  tool?: string;
-  scenario?: string;
-  summaryMetrics?: unknown;
-  params?: unknown;
-  createdAt?: string;
-}
-
-interface HydratedEvaluationRunRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  status?: string;
-  gateResult?: string | null;
-  aggregateMetrics?: {
-    passRateA?: number;
-    passRateB?: number;
-    judgeAvgA?: number;
-    judgeAvgB?: number;
-    regressionCount?: number;
-    improvementCount?: number;
-    totalErrors?: number;
-  } | null;
-  createdAt?: string;
-}
-
-export type HydratedSavedCompare = SavedCompare & {
-  benchmarks: HydratedBenchmarkRef[];
-  evaluationRuns: HydratedEvaluationRunRef[];
-};
+export type { HydratedSavedCompare };
 
 export const savedCompareKeys = {
   all: ["saved-compares"] as const,

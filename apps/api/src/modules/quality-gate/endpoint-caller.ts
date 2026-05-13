@@ -1,12 +1,6 @@
 import type { EndpointCallResult } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-
-interface ConnectionsServiceLike {
-  findByIdWithDecryptedKey(
-    id: string,
-    userId: string,
-  ): Promise<{ id: string; baseUrl: string; model: string; apiKey?: string | null } | null>;
-}
+import { ConnectionService } from "../connection/connection.service.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const RETRY_DELAY_MS = 500;
@@ -14,7 +8,7 @@ const MAX_TOKENS = 2048;
 
 @Injectable()
 export class EndpointCaller {
-  constructor(private readonly connections: ConnectionsServiceLike) {}
+  constructor(private readonly connections: ConnectionService) {}
 
   async call(
     connectionId: string,
@@ -22,7 +16,7 @@ export class EndpointCaller {
     prompt: string,
     outerSignal: AbortSignal,
   ): Promise<EndpointCallResult> {
-    const conn = await this.connections.findByIdWithDecryptedKey(connectionId, userId);
+    const conn = await this.connections.getOwnedDecrypted(userId, connectionId).catch(() => null);
     if (!conn) {
       return { rawAnswer: "", latencyMs: 0, error: `connection ${connectionId} not found` };
     }

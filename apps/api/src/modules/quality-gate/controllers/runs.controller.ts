@@ -21,16 +21,12 @@ import { CurrentUser } from "../../../common/decorators/current-user.decorator.j
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
-import { RunsRepository } from "../repositories/runs.repository.js";
 import { RunsService } from "../services/runs.service.js";
 
 @Controller("quality-gate/runs")
 @UseGuards(JwtAuthGuard)
 export class RunsController {
-  constructor(
-    private readonly svc: RunsService,
-    private readonly repo: RunsRepository,
-  ) {}
+  constructor(private readonly svc: RunsService) {}
 
   @Get()
   list(
@@ -66,12 +62,11 @@ export class RunsController {
   }
 
   @Get(":id/samples")
-  async samples(
+  samples(
     @CurrentUser() user: JwtPayload,
     @Param("id") id: string,
     @Query(new ZodValidationPipe(listRunSamplesQuerySchema)) q: ListRunSamplesQuery,
   ) {
-    await this.svc.get(user.sub, id); // ownership check — throws 404 for unknown/unowned runs
-    return this.repo.listSamples(id, q);
+    return this.svc.listSamples(user.sub, id, q);
   }
 }

@@ -1,11 +1,11 @@
 import type { JudgeConfig } from "@modeldoctor/contracts";
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
 import pLimit from "p-limit";
-import type { EndpointCaller } from "../endpoint-caller.js";
+import { EndpointCaller } from "../endpoint-caller.js";
 import { computeGateResult } from "../gate/compute-gate-result.js";
 import { aggregateMetrics, computeDelta } from "../gate/sample-aggregation.js";
-import type { JudgeRegistry } from "../judges/registry.js";
-import type { RunsRepository } from "../repositories/runs.repository.js";
+import { JudgesService } from "../judges/judges.service.js";
+import { RunsRepository } from "../repositories/runs.repository.js";
 
 const SAMPLE_CONCURRENCY = 4;
 const JUDGE_CONCURRENCY = 2;
@@ -35,7 +35,7 @@ export class QualityGateRunExecutor implements OnModuleInit {
   constructor(
     private readonly repo: RunsRepository,
     private readonly endpointCaller: EndpointCaller,
-    @Inject("JUDGE_REGISTRY") private readonly judges: JudgeRegistry,
+    private readonly judges: JudgesService,
   ) {}
 
   async onModuleInit() {

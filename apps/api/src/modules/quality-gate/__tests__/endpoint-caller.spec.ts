@@ -9,7 +9,8 @@ const connection = {
 };
 
 const stubConnectionsService = {
-  findByIdWithDecryptedKey: vi.fn().mockResolvedValue(connection),
+  // Mirrors ConnectionService.getOwnedDecrypted(userId, id) → connection
+  getOwnedDecrypted: vi.fn().mockResolvedValue(connection),
 };
 
 const fetchMock = vi.fn();

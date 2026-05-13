@@ -18,7 +18,10 @@ function build() {
       ],
     }),
   };
-  const connections = { findById: vi.fn().mockResolvedValue({ id: "c", userId: "u1" }) };
+  const connections = {
+    // Mirrors ConnectionService.findOwnedPublic(userId, id)
+    findOwnedPublic: vi.fn().mockResolvedValue({ id: "c", userId: "u1" }),
+  };
   const executor = { start: vi.fn(), cancel: vi.fn() };
   return { repo, evaluationsRepo, connections, executor };
 }

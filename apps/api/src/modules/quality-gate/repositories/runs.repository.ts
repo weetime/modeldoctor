@@ -9,7 +9,8 @@ import type {
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import type { EvaluationRunStatus, PrismaClient } from "@prisma/client";
+import type { EvaluationRunStatus } from "@prisma/client";
+import { PrismaService } from "../../../database/prisma.service.js";
 import type { GateOutcome } from "../gate/compute-gate-result.js";
 
 export interface CreatePendingInput {
@@ -33,7 +34,7 @@ export interface SaveSampleInput {
 
 @Injectable()
 export class RunsRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createPending(input: CreatePendingInput): Promise<EvaluationRun> {
     const total = (input.evaluationSnapshot.samples as unknown[]).length;

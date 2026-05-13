@@ -2,6 +2,7 @@ import {
   type CreateEvaluationRequest,
   type Evaluation,
   type EvaluationSample,
+  type EvaluationSampleInput,
   type ImportEvaluationRequest,
   type UpdateEvaluationRequest,
   evaluationSampleSchema,
@@ -9,7 +10,7 @@ import {
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
-import type { EvaluationsRepository } from "../repositories/evaluations.repository.js";
+import { EvaluationsRepository } from "../repositories/evaluations.repository.js";
 
 const newSampleId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 12);
 
@@ -138,7 +139,7 @@ export class EvaluationsService {
     return { ...body, samples: this.assignIds(body.samples) };
   }
 
-  private assignIds(samples: EvaluationSample[]): EvaluationSample[] {
+  private assignIds(samples: EvaluationSampleInput[]): EvaluationSample[] {
     return samples.map((s, i) => ({ ...s, id: s.id || newSampleId(), idx: i }));
   }
 }
