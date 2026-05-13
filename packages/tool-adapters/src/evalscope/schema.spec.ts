@@ -79,7 +79,7 @@ describe("evalscopeReportSchema", () => {
       e2eLatency: { mean: 4000, p50: 3500, p90: 5500, p95: 6500, p99: 8000 },
       itl: { mean: 30, p50: 28, p90: 40, p95: 45, p99: 60 },
       requests: { total: 128, success: 128, error: 0, errorRate: 0 },
-      prefixCacheStats: { hitRate: 0.85, savings: 0.6 },
+      prefixCacheStats: { hitRate: 0.85 },
     });
     expect(r.prefixCacheStats?.hitRate).toBe(0.85);
   });

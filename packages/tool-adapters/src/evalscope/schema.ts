@@ -68,12 +68,13 @@ export const evalscopeReportSchema = z.object({
     error: z.number().int().nonnegative(),
     errorRate: z.number().min(0).max(1),
   }),
-  // evalscope-only: prefix-cache statistics surfaced when the backend
-  // (vLLM, LMCache, YRCache) emits hit-rate counters.
+  // evalscope-only: KV cache hit rate surfaced when the backend (vLLM,
+  // LMCache, YRCache) emits cached-token counters. evalscope reports a
+  // single "KV Cache Hit Rate (%)" field (`AVERAGE_CACHED_PERCENT`); we
+  // normalize to a 0-1 ratio.
   prefixCacheStats: z
     .object({
       hitRate: z.number().min(0).max(1),
-      savings: z.number().min(0).max(1),
     })
     .optional(),
 });
