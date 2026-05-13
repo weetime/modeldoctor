@@ -30,6 +30,10 @@ export const evaluationSchema = z.object({
   samples: z.array(evaluationSampleSchema),
   totalSamples: z.number().int().nonnegative(),
   baselineRunId: z.string().nullable(),
+  // Official built-in evaluations (seeded by the platform). Read-only — users
+  // cannot modify name/description/samples or delete; they can run against
+  // them and duplicate them as a starting point for their own evaluations.
+  isOfficial: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

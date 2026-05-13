@@ -82,6 +82,7 @@ export class EvaluationsRepository {
     samples: unknown;
     totalSamples: number;
     baselineRunId: string | null;
+    isOfficial: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): Evaluation => ({
@@ -93,6 +94,7 @@ export class EvaluationsRepository {
     samples: row.samples as EvaluationSample[],
     totalSamples: row.totalSamples,
     baselineRunId: row.baselineRunId,
+    isOfficial: row.isOfficial,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   });
