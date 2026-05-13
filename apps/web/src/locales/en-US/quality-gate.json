@@ -12,6 +12,16 @@
       "progress": "Progress",
       "createdAt": "Created"
     },
+    "baseline": {
+      "cardTitle": "📌 Pinned Baseline",
+      "view": "View run",
+      "change": "Change…",
+      "unpin": "Unpin",
+      "loading": "Loading…",
+      "unpinConfirmTitle": "Unpin baseline?",
+      "unpinConfirmBody": "Future runs of this evaluation will default to no baseline comparison.",
+      "unpinConfirmAction": "Unpin"
+    },
     "form": {
       "nameLabel": "Name",
       "namePlaceholder": "Enter an evaluation set name",

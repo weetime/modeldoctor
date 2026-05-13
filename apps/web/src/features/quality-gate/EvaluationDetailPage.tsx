@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EvaluationSampleEditor } from "./components/EvaluationSampleEditor";
+import { PinnedBaselineCard } from "./components/PinnedBaselineCard";
 import { useEvaluation, useUpdateEvaluation } from "./queries";
 
 type FormShape = Required<Pick<UpdateEvaluationRequest, "name" | "description" | "samples">>;
@@ -104,6 +105,9 @@ export function EvaluationDetailPage() {
         breadcrumbs={breadcrumbs}
       />
       <div className="space-y-6 px-8 py-6">
+        {data.baselineRunId && (
+          <PinnedBaselineCard evaluationId={data.id} baselineRunId={data.baselineRunId} />
+        )}
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <FormSection title={t("evaluations.form.sectionBasics")}>
