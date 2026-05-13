@@ -100,7 +100,12 @@ export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
 export const listRunsQuerySchema = z.object({
   status: runStatusSchema.optional(),
+  gateResult: gateResultSchema.optional(),
   evaluationId: z.string().optional(),
+  endpointId: z.string().optional(),
+  search: z.string().optional(),
+  createdAfter: z.string().datetime().optional(),
+  createdBefore: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });

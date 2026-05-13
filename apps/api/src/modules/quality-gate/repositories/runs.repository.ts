@@ -68,10 +68,27 @@ export class RunsRepository {
     userId: string,
     q: ListRunsQuery,
   ): Promise<{ items: EvaluationRun[]; total: number; page: number; pageSize: number }> {
-    const where = {
+    const createdAt: Prisma.DateTimeFilter = {};
+    if (q.createdAfter) createdAt.gte = new Date(q.createdAfter);
+    if (q.createdBefore) createdAt.lte = new Date(q.createdBefore);
+
+    const where: Prisma.EvaluationRunWhereInput = {
       userId,
       ...(q.status ? { status: q.status as EvaluationRunStatus } : {}),
+      ...(q.gateResult ? { gateResult: q.gateResult } : {}),
       ...(q.evaluationId ? { evaluationId: q.evaluationId } : {}),
+      ...(q.endpointId
+        ? { OR: [{ endpointAId: q.endpointId }, { endpointBId: q.endpointId }] }
+        : {}),
+      ...(q.createdAfter || q.createdBefore ? { createdAt } : {}),
+      ...(q.search
+        ? {
+            OR: [
+              { id: { startsWith: q.search } },
+              { evaluation: { name: { contains: q.search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
     };
     const [total, rows] = await Promise.all([
       this.prisma.evaluationRun.count({ where }),

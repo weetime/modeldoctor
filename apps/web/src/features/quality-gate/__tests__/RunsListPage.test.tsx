@@ -18,6 +18,16 @@ vi.mock("../queries", () => ({
           processedSamples: 3,
           totalSamples: 3,
           gateResult: "PASSED",
+          aggregateMetrics: {
+            passRateA: 1,
+            bothPassCount: 3,
+            bothFailCount: 0,
+            totalErrors: 0,
+            judgeCallCount: 3,
+          },
+          evaluation: { id: "e1", name: "Demo Eval" },
+          endpointA: { id: "c1", name: "Local", model: "qwen2.5-7b", baseUrl: "http://x" },
+          endpointB: null,
         },
         {
           id: "r2",
@@ -26,6 +36,16 @@ vi.mock("../queries", () => ({
           processedSamples: 3,
           totalSamples: 3,
           gateResult: "PASSED",
+          aggregateMetrics: {
+            passRateA: 1,
+            bothPassCount: 3,
+            bothFailCount: 0,
+            totalErrors: 0,
+            judgeCallCount: 3,
+          },
+          evaluation: { id: "e1", name: "Demo Eval" },
+          endpointA: { id: "c1", name: "Local", model: "qwen2.5-7b", baseUrl: "http://x" },
+          endpointB: null,
         },
       ],
       total: 2,
@@ -35,6 +55,13 @@ vi.mock("../queries", () => ({
     isLoading: false,
   }),
   useDeleteRun: () => ({ mutate: vi.fn() }),
+  useEvaluations: () => ({ data: [{ id: "e1", name: "Demo Eval" }] }),
+}));
+
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({
+    data: [{ id: "c1", name: "Local", model: "qwen2.5-7b", baseUrl: "http://x" }],
+  }),
 }));
 
 beforeAll(async () => {

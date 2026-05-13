@@ -189,6 +189,21 @@
       "compareSelected": "📊 Compare selected",
       "clear": "Clear",
       "needTwo": "Select at least 2 runs to compare"
+    },
+    "filters": {
+      "any": "Any",
+      "status": "Status",
+      "gateResult": "Gate result",
+      "evaluation": "Evaluation",
+      "endpoint": "Endpoint",
+      "search": "Search by run id or evaluation",
+      "clear": "Clear"
+    },
+    "passRate": {
+      "label": "Pass Rate",
+      "running": "{{processed}}/{{total}}",
+      "completed": "{{passed}}/{{total}} · {{pct}}",
+      "unknown": "—"
     }
   },
   "report": {

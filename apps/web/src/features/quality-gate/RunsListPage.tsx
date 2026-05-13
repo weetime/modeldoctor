@@ -20,18 +20,54 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { EvaluationRun, GateResult, ListRunsQuery, RunStatus } from "@modeldoctor/contracts";
 import { ArrowRight, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { GateStatusBadge } from "./components/GateStatusBadge";
+import { RunsListFilters } from "./components/RunsListFilters";
 import { useDeleteRun, useRuns } from "./queries";
 
 export function RunsListPage() {
   const nav = useNavigate();
   const { t } = useTranslation("quality-gate");
   const { t: tCommon } = useTranslation("common");
-  const { data, isLoading } = useRuns({});
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const query: Partial<ListRunsQuery> = useMemo(() => {
+    const get = (k: string) => searchParams.get(k) ?? undefined;
+    const q: Partial<ListRunsQuery> = {};
+    const status = get("status");
+    if (status) q.status = status as RunStatus;
+    const gateResult = get("gateResult");
+    if (gateResult) q.gateResult = gateResult as GateResult;
+    const evaluationId = get("evaluationId");
+    if (evaluationId) q.evaluationId = evaluationId;
+    const endpointId = get("endpointId");
+    if (endpointId) q.endpointId = endpointId;
+    const search = get("search");
+    if (search) q.search = search;
+    const createdAfter = get("createdAfter");
+    if (createdAfter) q.createdAfter = createdAfter;
+    const createdBefore = get("createdBefore");
+    if (createdBefore) q.createdBefore = createdBefore;
+    return q;
+  }, [searchParams]);
+
+  function patchQuery(next: Partial<ListRunsQuery>) {
+    const sp = new URLSearchParams();
+    if (next.status) sp.set("status", next.status);
+    if (next.gateResult) sp.set("gateResult", next.gateResult);
+    if (next.evaluationId) sp.set("evaluationId", next.evaluationId);
+    if (next.endpointId) sp.set("endpointId", next.endpointId);
+    if (next.search) sp.set("search", next.search);
+    if (next.createdAfter) sp.set("createdAfter", next.createdAfter);
+    if (next.createdBefore) sp.set("createdBefore", next.createdBefore);
+    setSearchParams(sp);
+  }
+
+  const { data, isLoading } = useRuns(query);
   const del = useDeleteRun();
   const items = data?.items ?? [];
 
@@ -57,7 +93,9 @@ export function RunsListPage() {
           <Button onClick={() => nav("/quality-gate/runs/new")}>{t("runs.create")}</Button>
         }
       />
-      <div className="px-8 py-6 space-y-6">
+      <div className="px-8 py-6 space-y-4">
+        <RunsListFilters query={query} onChange={patchQuery} />
+
         {selected.size > 0 && (
           <div className="sticky top-0 z-10 bg-card border rounded-md p-2 flex items-center justify-between">
             <span className="text-sm">{t("runs.selection.count", { count: selected.size })}</span>
@@ -89,7 +127,7 @@ export function RunsListPage() {
                 <TableHead>{t("evaluations.runsCol.evaluation")}</TableHead>
                 <TableHead>{t("evaluations.runsCol.endpoint")}</TableHead>
                 <TableHead className="w-32">{t("evaluations.runsCol.status")}</TableHead>
-                <TableHead className="w-20">{t("evaluations.runsCol.progress")}</TableHead>
+                <TableHead className="w-32">{t("runs.passRate.label")}</TableHead>
                 <TableHead className="w-48">{t("evaluations.runsCol.createdAt")}</TableHead>
                 <TableHead className="w-44 text-right">{tCommon("table.actions")}</TableHead>
               </TableRow>
@@ -141,7 +179,7 @@ export function RunsListPage() {
                     <GateStatusBadge status={r.status} gateResult={r.gateResult} />
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {r.processedSamples}/{r.totalSamples}
+                    <PassRateCell run={r} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(r.createdAt).toLocaleString()}
@@ -188,4 +226,32 @@ export function RunsListPage() {
       </div>
     </>
   );
+}
+
+function PassRateCell({ run }: { run: EvaluationRun }) {
+  const { t } = useTranslation("quality-gate");
+  if (run.status === "COMPLETED" && run.aggregateMetrics) {
+    const passRate = run.aggregateMetrics.passRateA;
+    const passed = Math.round(passRate * run.totalSamples);
+    return (
+      <span>
+        {t("runs.passRate.completed", {
+          passed,
+          total: run.totalSamples,
+          pct: `${(passRate * 100).toFixed(1)}%`,
+        })}
+      </span>
+    );
+  }
+  if (run.status === "RUNNING" || run.status === "PENDING") {
+    return (
+      <span className="text-muted-foreground">
+        {t("runs.passRate.running", {
+          processed: run.processedSamples,
+          total: run.totalSamples,
+        })}
+      </span>
+    );
+  }
+  return <span className="text-muted-foreground">{t("runs.passRate.unknown")}</span>;
 }

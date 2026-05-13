@@ -189,6 +189,21 @@
       "compareSelected": "📊 对比所选",
       "clear": "取消选择",
       "needTwo": "至少选择 2 个 run 才能对比"
+    },
+    "filters": {
+      "any": "全部",
+      "status": "状态",
+      "gateResult": "门禁结果",
+      "evaluation": "评测集",
+      "endpoint": "端点",
+      "search": "搜索 run id 或评测集名",
+      "clear": "清除过滤"
+    },
+    "passRate": {
+      "label": "通过率",
+      "running": "{{processed}}/{{total}}",
+      "completed": "{{passed}}/{{total}} · {{pct}}",
+      "unknown": "—"
     }
   },
   "report": {

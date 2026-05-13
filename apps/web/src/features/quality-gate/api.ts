@@ -29,7 +29,12 @@ export const qgApi = {
   listRuns: (q: Partial<ListRunsQuery>) => {
     const usp = new URLSearchParams();
     if (q.status) usp.set("status", q.status);
+    if (q.gateResult) usp.set("gateResult", q.gateResult);
     if (q.evaluationId) usp.set("evaluationId", q.evaluationId);
+    if (q.endpointId) usp.set("endpointId", q.endpointId);
+    if (q.search) usp.set("search", q.search);
+    if (q.createdAfter) usp.set("createdAfter", q.createdAfter);
+    if (q.createdBefore) usp.set("createdBefore", q.createdBefore);
     if (q.page !== undefined) usp.set("page", String(q.page));
     if (q.pageSize !== undefined) usp.set("pageSize", String(q.pageSize));
     const qs = usp.toString();
