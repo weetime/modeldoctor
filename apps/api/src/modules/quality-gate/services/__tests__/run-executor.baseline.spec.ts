@@ -73,7 +73,7 @@ describe("QualityGateRunExecutor baseline mode", () => {
     await executor.start("r1");
     expect(repo.loadCompletedSamplesById).toHaveBeenCalledWith("baseline-r");
     expect(repo.saveSample).toHaveBeenCalledTimes(2);
-    const calls = repo.saveSample.mock.calls.map((c: never[]) => c[0] as { resultB: unknown });
+    const calls = repo.saveSample.mock.calls.map((c) => c[0] as { resultB: unknown });
     expect(calls.every((c) => c.resultB !== null)).toBe(true);
   });
 
@@ -92,7 +92,9 @@ describe("QualityGateRunExecutor baseline mode", () => {
       baselineSamples: baseline as never,
     });
     await executor.start("r1");
-    const calls = repo.saveSample.mock.calls.map((c: never[]) => c[0] as { sampleId: string; delta: string; resultB: unknown });
+    const calls = repo.saveSample.mock.calls.map(
+      (c) => c[0] as { sampleId: string; delta: string; resultB: unknown },
+    );
     const s1 = calls.find((c) => c.sampleId === "s1");
     expect(s1).toBeDefined();
     expect(s1?.delta).toBe("NA");
@@ -103,13 +105,18 @@ describe("QualityGateRunExecutor baseline mode", () => {
     const baseline = new Map([
       ["s0", { resultA: { call: { rawAnswer: "A", latencyMs: 5 }, judge: { passed: true } } }],
     ]);
-    const { executor, repo, endpointCaller } = buildExecutor({
+    const { executor, repo } = buildExecutor({
       baselineRunIdAtExecution: "baseline-r",
       baselineSamples: baseline as never,
-      endpointAReturns: [{ rawAnswer: "wrong", latencyMs: 10 }, { rawAnswer: "B", latencyMs: 10 }],
+      endpointAReturns: [
+        { rawAnswer: "wrong", latencyMs: 10 },
+        { rawAnswer: "B", latencyMs: 10 },
+      ],
     });
     await executor.start("r1");
-    const calls = repo.saveSample.mock.calls.map((c: never[]) => c[0] as { sampleId: string; delta: string });
+    const calls = repo.saveSample.mock.calls.map(
+      (c) => c[0] as { sampleId: string; delta: string },
+    );
     expect(calls.find((c) => c.sampleId === "s0")?.delta).toBe("REGRESSION");
   });
 });
