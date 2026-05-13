@@ -50,6 +50,7 @@ describe("evaluationSchema", () => {
       samples: [],
       totalSamples: 0,
       baselineRunId: null,
+      isOfficial: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

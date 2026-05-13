@@ -127,7 +127,19 @@
       "pinSuccessToast": "Pinned as baseline",
       "unpinSuccessToast": "Unpinned",
       "pinErrorToast": "Operation failed: {{message}}",
-      "addToCompareButton": "📊 Add to Compare"
+      "addToCompareButton": "📊 Add to Compare",
+      "endpointsTitle": "Endpoints",
+      "endpointAColumn": "Endpoint A",
+      "endpointBColumn": "Endpoint B",
+      "endpointMissing": "(connection deleted)",
+      "gateRulesTitle": "Gate rules",
+      "gateRulesNone": "No gate thresholds configured",
+      "gateRuleStatusPass": "passed",
+      "gateRuleStatusFail": "failed",
+      "gateRulePassRateMin": "Min pass rate",
+      "gateRuleRegressionMax": "Max regressions",
+      "gateRuleJudgeScoreMin": "Min judge score",
+      "gateRuleActual": "Actual"
     },
     "form": {
       "evaluationLabel": "Evaluation Set",

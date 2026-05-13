@@ -41,6 +41,14 @@ export const aggregateMetricsSchema = z.object({
 });
 export type AggregateMetrics = z.infer<typeof aggregateMetricsSchema>;
 
+export const connectionRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  model: z.string(),
+  baseUrl: z.string(),
+});
+export type ConnectionRef = z.infer<typeof connectionRefSchema>;
+
 export const evaluationRunSchema = z.object({
   id: z.string(),
   userId: z.string(),
@@ -49,6 +57,8 @@ export const evaluationRunSchema = z.object({
   evaluationSnapshot: z.object({ samples: z.array(evaluationSampleSchema) }),
   endpointAId: z.string(),
   endpointBId: z.string().nullable(),
+  endpointA: connectionRefSchema.nullable(),
+  endpointB: connectionRefSchema.nullable(),
   gateConfig: gateConfigSchema,
   status: runStatusSchema,
   gateResult: gateResultSchema.nullable(),

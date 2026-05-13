@@ -127,7 +127,19 @@
       "pinSuccessToast": "已钉为 baseline",
       "unpinSuccessToast": "已解钉",
       "pinErrorToast": "操作失败: {{message}}",
-      "addToCompareButton": "📊 加入对比"
+      "addToCompareButton": "📊 加入对比",
+      "endpointsTitle": "端点信息",
+      "endpointAColumn": "Endpoint A",
+      "endpointBColumn": "Endpoint B",
+      "endpointMissing": "（连接已删除）",
+      "gateRulesTitle": "门禁规则",
+      "gateRulesNone": "未配置门禁阈值",
+      "gateRuleStatusPass": "通过",
+      "gateRuleStatusFail": "未通过",
+      "gateRulePassRateMin": "通过率下限",
+      "gateRuleRegressionMax": "回归数上限",
+      "gateRuleJudgeScoreMin": "Judge 均分下限",
+      "gateRuleActual": "实际"
     },
     "form": {
       "evaluationLabel": "评测集",
