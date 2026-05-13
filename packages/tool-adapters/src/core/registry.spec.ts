@@ -20,11 +20,22 @@ describe("registry", () => {
     expect(byTool("kv-cache-stress").name).toBe("kv-cache-stress");
   });
 
-  it("allAdapters returns five adapters", () => {
+  it("byTool('evalscope') returns the evalscope adapter", () => {
+    expect(byTool("evalscope").name).toBe("evalscope");
+  });
+
+  it("allAdapters returns six adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(5);
+    expect(all).toHaveLength(6);
     expect(all.map((a) => a.name).sort()).toEqual(
-      ["genai-perf", "guidellm", "kv-cache-stress", "prefix-cache-probe", "vegeta"].sort(),
+      [
+        "evalscope",
+        "genai-perf",
+        "guidellm",
+        "kv-cache-stress",
+        "prefix-cache-probe",
+        "vegeta",
+      ].sort(),
     );
   });
 });

@@ -47,6 +47,14 @@ export {
   type KvCacheStressReport,
 } from "./kv-cache-stress/schema.js";
 
+export {
+  evalscopeParamsSchema,
+  evalscopeReportSchema,
+  evalscopeParamDefaults,
+  type EvalscopeParams,
+  type EvalscopeReport,
+} from "./evalscope/schema.js";
+
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
 
@@ -68,4 +76,5 @@ export {
   VEGETA_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   KV_CACHE_STRESS_CATEGORY_DEFAULTS,
+  EVALSCOPE_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";

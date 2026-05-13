@@ -34,7 +34,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
   inference: {
     label: "推理性能基准",
     description: "TTFT / TPOT / 单次吞吐基线",
-    tools: ["guidellm", "genai-perf"],
+    tools: ["guidellm", "genai-perf", "evalscope"],
     paramsConstraints: {
       guidellm: {
         rateType: z.enum(["constant", "poisson", "throughput", "synchronous"]),
@@ -71,8 +71,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
   "kv-cache-stress": {
     label: "KV cache 后端压测",
     description:
-      "多轮对话压测,触发 prefix-cache 驱逐,对比不同 KV 卸载后端(LMCache / YRCache / etc.)的 QPS、TTFT、Prefix Cache Savings",
-    tools: ["kv-cache-stress"],
+      "长 prompt 冷/暖双轮 evalscope perf,对比不同 KV 卸载后端 (vanilla / LMCache / YRCache) 的 TTFT / 吞吐 / prefix-cache 命中率",
+    tools: ["kv-cache-stress", "evalscope"],
     paramsConstraints: {},
     reportComponent: "KvCacheStressReport",
   },

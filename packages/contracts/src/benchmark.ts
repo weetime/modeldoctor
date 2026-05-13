@@ -18,6 +18,7 @@ export const benchmarkToolSchema = z.enum([
   "vegeta",
   "prefix-cache-probe",
   "kv-cache-stress",
+  "evalscope",
 ]);
 export type BenchmarkTool = z.infer<typeof benchmarkToolSchema>;
 

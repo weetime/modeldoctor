@@ -10,11 +10,13 @@ import {
 import { useConnections } from "@/features/connections/queries";
 import type { ScenarioId } from "@modeldoctor/contracts";
 import {
+  EVALSCOPE_CATEGORY_DEFAULTS,
   GENAI_PERF_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
   KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
+  evalscopeParamDefaults,
   genaiPerfParamDefaults,
   guidellmParamDefaults,
   kvCacheStressParamDefaults,
@@ -33,6 +35,7 @@ const TOOL_CATEGORY_DEFAULTS = {
   "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
   "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   "kv-cache-stress": KV_CACHE_STRESS_CATEGORY_DEFAULTS,
+  evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
 } as const;
 import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
@@ -47,6 +50,7 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   "genai-perf": genaiPerfParamDefaults,
   "prefix-cache-probe": prefixCacheProbeParamDefaults,
   "kv-cache-stress": kvCacheStressParamDefaults,
+  evalscope: evalscopeParamDefaults,
 };
 
 export interface ToolEditorProps {

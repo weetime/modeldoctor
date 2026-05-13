@@ -21,16 +21,18 @@ const baseParams: EvalscopeParams = {
 };
 
 const plan: BuildCommandPlan<EvalscopeParams> = {
+  runId: "r1",
   params: baseParams,
   connection: {
-    id: "c1",
-    name: "vLLM Qwen3-32B",
     baseUrl: "http://10.0.0.5:8000",
-    model: "gen-studio_Qwen3-32B-rJIp",
     apiKey: "sk-test",
+    model: "gen-studio_Qwen3-32B-rJIp",
+    customHeaders: "",
+    queryParams: "",
     tokenizerHfId: null,
     prometheusUrl: null,
   },
+  callback: { url: "http://api/", token: "tk" },
 };
 
 describe("evalscope.buildCommand", () => {
@@ -127,6 +129,7 @@ describe("evalscope.parseFinalReport", () => {
     const percentile = readFileSync(fixturePath("benchmark_percentile.json"));
     const report = parseFinalReport("", { summary, percentile });
     expect(report.tool).toBe("evalscope");
+    if (report.tool !== "evalscope") throw new Error(`expected evalscope, got ${report.tool}`);
     expect(report.data.requests.total).toBe(128);
     expect(report.data.requests.success).toBe(128);
     expect(report.data.requests.error).toBe(0);
@@ -164,6 +167,7 @@ describe("evalscope.parseFinalReport", () => {
     );
     const percentile = readFileSync(fixturePath("benchmark_percentile.json"));
     const report = parseFinalReport("", { summary, percentile });
+    if (report.tool !== "evalscope") throw new Error(`expected evalscope, got ${report.tool}`);
     expect(report.data.prefixCacheStats).toBeUndefined();
   });
 
@@ -192,6 +196,7 @@ describe("evalscope.parseFinalReport", () => {
     );
     const percentile = readFileSync(fixturePath("benchmark_percentile.json"));
     const report = parseFinalReport("", { summary, percentile });
+    if (report.tool !== "evalscope") throw new Error(`expected evalscope, got ${report.tool}`);
     expect(report.data.requests.errorRate).toBeCloseTo(0.2);
   });
 });

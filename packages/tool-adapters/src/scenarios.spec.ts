@@ -19,12 +19,19 @@ describe("SCENARIOS constant", () => {
     ]);
   });
 
-  it("kv-cache-stress scenario lists kv-cache-stress only", () => {
-    expect(SCENARIOS["kv-cache-stress"].tools).toEqual(["kv-cache-stress"]);
+  it("kv-cache-stress scenario lists evalscope alongside the legacy kv-cache-stress tool", () => {
+    expect([...SCENARIOS["kv-cache-stress"].tools].sort()).toEqual([
+      "evalscope",
+      "kv-cache-stress",
+    ]);
   });
 
-  it("inference scenario lists guidellm and genai-perf", () => {
-    expect([...SCENARIOS.inference.tools].sort()).toEqual(["genai-perf", "guidellm"]);
+  it("inference scenario lists guidellm, genai-perf, and evalscope", () => {
+    expect([...SCENARIOS.inference.tools].sort()).toEqual([
+      "evalscope",
+      "genai-perf",
+      "guidellm",
+    ]);
   });
 
   it("capacity scenario lists guidellm only", () => {

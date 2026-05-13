@@ -1,4 +1,5 @@
 import type { ModalityCategory } from "@modeldoctor/contracts";
+import type { EvalscopeParams } from "./evalscope/schema.js";
 import type { GenaiPerfParams } from "./genai-perf/schema.js";
 import type { GuidellmParams } from "./guidellm/schema.js";
 import type { VegetaParams } from "./vegeta/schema.js";
@@ -71,3 +72,20 @@ export const KV_CACHE_STRESS_CATEGORY_DEFAULTS = {
   rerank: { unsupported: true },
   image: { unsupported: true },
 } as const satisfies Record<ModalityCategory, Record<string, never> | { unsupported: true }>;
+
+/**
+ * evalscope perf supports chat/completions and completions; the schema's
+ * `apiPath` enum gates the rest. Embedding / rerank / image / audio are out
+ * of scope for the inference + kv-cache-stress scenarios where evalscope
+ * is offered, so they get `unsupported` markers like guidellm.
+ */
+export const EVALSCOPE_CATEGORY_DEFAULTS = {
+  chat: { apiPath: "/v1/chat/completions" },
+  audio: { unsupported: true },
+  embeddings: { unsupported: true },
+  rerank: { unsupported: true },
+  image: { unsupported: true },
+} as const satisfies Record<
+  ModalityCategory,
+  { apiPath: EvalscopeParams["apiPath"] } | { unsupported: true }
+>;

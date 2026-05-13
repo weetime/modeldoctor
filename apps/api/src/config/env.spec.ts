@@ -52,6 +52,7 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
+      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
     });
     expect(env.DATABASE_URL).toBe("postgresql://u:p@h:5432/d");
   });
@@ -86,6 +87,7 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
+      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
     });
     expect(env.JWT_ACCESS_SECRET).toBe("a".repeat(32));
   });
@@ -187,6 +189,7 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
+      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
     };
 
     it("requires RUNNER_IMAGE_GUIDELLM outside test mode", () => {
@@ -212,6 +215,7 @@ describe("validateEnv", () => {
       expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:test");
       expect(env.RUNNER_IMAGE_PREFIX_CACHE_PROBE).toBe("md-runner-prefix-cache-probe:test");
       expect(env.RUNNER_IMAGE_KV_CACHE_STRESS).toBe("md-runner-kv-cache-stress:test");
+      expect(env.RUNNER_IMAGE_EVALSCOPE).toBe("md-runner-evalscope:test");
     });
 
     it("requires RUNNER_IMAGE_PREFIX_CACHE_PROBE outside test mode", () => {
@@ -222,6 +226,11 @@ describe("validateEnv", () => {
     it("requires RUNNER_IMAGE_KV_CACHE_STRESS outside test mode", () => {
       const { RUNNER_IMAGE_KV_CACHE_STRESS: _omitted, ...rest } = baseDev;
       expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_KV_CACHE_STRESS/);
+    });
+
+    it("requires RUNNER_IMAGE_EVALSCOPE outside test mode", () => {
+      const { RUNNER_IMAGE_EVALSCOPE: _omitted, ...rest } = baseDev;
+      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_EVALSCOPE/);
     });
 
     it("defaults BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to 1800", () => {
