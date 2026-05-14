@@ -117,7 +117,6 @@ export class BenchmarkChartsService {
 
     return { latencyCdf: { samples: samplesMs }, ttftHistogram: null };
   }
-
 }
 
 /**

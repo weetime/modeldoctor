@@ -15,7 +15,7 @@ ARG EVALSCOPE_VERSION=1.7.0
 
 RUN pip install --no-cache-dir \
         "evalscope==${EVALSCOPE_VERSION}" \
-        "modelscope==1.20.1" \
+        "modelscope==1.36.3" \
         'requests>=2.31,<3'
 
 # Bake LongAlpaca-12k. modelscope download writes to a sharded local dir.
