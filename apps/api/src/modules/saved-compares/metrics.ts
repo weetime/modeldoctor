@@ -1,3 +1,5 @@
+import { type MetricKind, type ToolName, byTool } from "@modeldoctor/tool-adapters";
+
 type Tagged = { tool?: string; data?: Record<string, unknown> };
 
 export function asTagged(m: unknown): Tagged | null {
@@ -15,65 +17,28 @@ function fromDist(data: Record<string, unknown>, key: string, field: string): nu
   return asFiniteNumber(dist?.[field]);
 }
 
-export function readP95Latency(m: unknown): number | null {
+function readByKind(kind: MetricKind, m: unknown): number | null {
   const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm":
-      return fromDist(t.data, "e2eLatency", "p95");
-    case "vegeta":
-      return fromDist(t.data, "latencies", "p95");
-    case "evalscope":
-    case "aiperf":
-      return fromDist(t.data, "e2eLatency", "p95");
-    default:
-      return null;
+  if (!t?.data || typeof t.tool !== "string") return null;
+  try {
+    return byTool(t.tool as ToolName).readMetric(kind, t.data);
+  } catch {
+    // byTool throws on unknown tool names; tolerate stale rows whose tool
+    // is no longer registered (e.g. a Run from a deleted-tool migration).
+    return null;
   }
+}
+
+export function readP95Latency(m: unknown): number | null {
+  return readByKind("e2e.p95", m);
 }
 
 export function readErrorRate(m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm": {
-      const r = t.data.requests as { total?: number; error?: number } | undefined;
-      const total = asFiniteNumber(r?.total);
-      const error = asFiniteNumber(r?.error);
-      if (total === null || error === null || total === 0) return null;
-      return error / total;
-    }
-    case "vegeta": {
-      const s = asFiniteNumber(t.data.success);
-      return s === null ? null : 1 - s / 100;
-    }
-    case "evalscope":
-    case "aiperf": {
-      // evalscope/aiperf schemas carry errorRate as a 0-1 fraction directly,
-      // so no division by total is required.
-      const r = t.data.requests as { errorRate?: number } | undefined;
-      return asFiniteNumber(r?.errorRate);
-    }
-    default:
-      return null;
-  }
+  return readByKind("errorRate", m);
 }
 
 export function readThroughput(m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm":
-      return asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean);
-    case "vegeta":
-      return asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput);
-    case "evalscope":
-    case "aiperf":
-      return asFiniteNumber(
-        (t.data.throughput as { requestsPerSec?: number } | undefined)?.requestsPerSec,
-      );
-    default:
-      return null;
-  }
+  return readByKind("requestsPerSec", m);
 }
 
 export interface PromptMetricsSummary {
@@ -83,18 +48,33 @@ export interface PromptMetricsSummary {
   e2e: { p50: number | null; p90: number | null; p99: number | null } | null;
 }
 
+/**
+ * Build a compact metrics snapshot for AI compare narratives.
+ *
+ * The scalar readers (throughput, errorRate) delegate to `adapter.readMetric`.
+ * The p50/p90/p99 dist buckets need a per-tool field-path lookup because the
+ * shared `MetricKind` enum exposes only p95/p99 percentiles — adding p50/p90
+ * is a future Task 5 extension. Until then, the tool→dist-key resolution lives
+ * inline; the table is intentionally tiny so future tool additions are obvious.
+ */
+const TTFT_DIST_KEY: Partial<Record<ToolName, string>> = {
+  guidellm: "ttft",
+  evalscope: "ttft",
+  aiperf: "ttft",
+  // vegeta is single-shot HTTP; no TTFT.
+};
+const E2E_DIST_KEY: Partial<Record<ToolName, string>> = {
+  guidellm: "e2eLatency",
+  evalscope: "e2eLatency",
+  aiperf: "e2eLatency",
+  vegeta: "latencies",
+};
+
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
-  const tool = t?.tool;
-  // evalscope + aiperf share the same nested ttft / e2eLatency dist shape as
-  // guidellm. vegeta has no TTFT (single-shot HTTP), so ttftKey stays null.
-  const ttftKey = tool === "guidellm" || tool === "evalscope" || tool === "aiperf" ? "ttft" : null;
-  const e2eKey =
-    tool === "guidellm" || tool === "evalscope" || tool === "aiperf"
-      ? "e2eLatency"
-      : tool === "vegeta"
-        ? "latencies"
-        : null;
+  const tool = t?.tool as ToolName | undefined;
+  const ttftKey = tool ? TTFT_DIST_KEY[tool] : undefined;
+  const e2eKey = tool ? E2E_DIST_KEY[tool] : undefined;
 
   return {
     throughput: readThroughput(m),

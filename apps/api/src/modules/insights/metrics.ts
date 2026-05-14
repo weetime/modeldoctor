@@ -1,90 +1,40 @@
+import { type MetricKind, type ToolName, byTool } from "@modeldoctor/tool-adapters";
+
 type MetricsBlob = { tool?: string; data?: Record<string, any> } | null | undefined;
 
-function fromDist(m: MetricsBlob, key: string, field: string): number | null {
-  const v = m?.data?.[key]?.[field];
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
-}
+/**
+ * Check-id (used by ComparisonService.ALL_CHECK_IDS) → adapter MetricKind.
+ * Multiple scenario-prefixed check ids can collapse to the same MetricKind —
+ * e.g. inference / capacity / gateway error_rate all read the same field.
+ * Anything not in this map (yet) returns null.
+ */
+const CHECK_ID_TO_METRIC_KIND: Record<string, MetricKind> = {
+  "inference.ttft.p95.ms": "ttft.p95",
+  "inference.ttft.p99.ms": "ttft.p99",
+  "inference.itl.p95.ms": "itl.p95",
+  "inference.e2e.p95.ms": "e2e.p95",
+  "inference.e2e.p99.ms": "e2e.p99",
+  "inference.error_rate": "errorRate",
+  "capacity.error_rate": "errorRate",
+  "gateway.error_rate": "errorRate",
+  "inference.throughput.req_per_s": "requestsPerSec",
+  "capacity.max_qps": "requestsPerSec",
+  "gateway.throughput.req_per_s": "requestsPerSec",
+  "capacity.tail_ratio": "tailRatio",
+  "gateway.tail_ratio": "tailRatio",
+};
 
 export function extractMetric(m: MetricsBlob, checkId: string): number | null {
   if (!m?.tool || !m?.data) return null;
-  switch (checkId) {
-    case "inference.ttft.p95.ms":
-      if (m.tool === "guidellm") return fromDist(m, "ttft", "p95");
-      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "ttft", "p95");
-      return null;
-    case "inference.ttft.p99.ms":
-      if (m.tool === "guidellm") return fromDist(m, "ttft", "p99");
-      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "ttft", "p99");
-      return null;
-    case "inference.itl.p95.ms":
-      if (m.tool === "guidellm") return fromDist(m, "itl", "p95");
-      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "itl", "p95");
-      return null;
-    case "inference.e2e.p95.ms":
-      if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p95");
-      if (m.tool === "vegeta") return fromDist(m, "latencies", "p95");
-      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "e2eLatency", "p95");
-      return null;
-    case "inference.e2e.p99.ms":
-      if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p99");
-      if (m.tool === "vegeta") return fromDist(m, "latencies", "p99");
-      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "e2eLatency", "p99");
-      return null;
-    case "inference.error_rate":
-    case "capacity.error_rate":
-    case "gateway.error_rate":
-      if (m.tool === "guidellm") {
-        const r = m.data.requests as { total?: number; error?: number } | undefined;
-        const t = r?.total;
-        const e = r?.error;
-        if (typeof t !== "number" || typeof e !== "number" || t === 0) return null;
-        return e / t;
-      }
-      if (m.tool === "vegeta") {
-        const s = m.data.success;
-        return typeof s === "number" ? 1 - s / 100 : null;
-      }
-      if (m.tool === "evalscope" || m.tool === "aiperf") {
-        // evalscope/aiperf carry requests.errorRate as a 0-1 fraction directly,
-        // so no division by total is required.
-        const r = m.data.requests as { errorRate?: number } | undefined;
-        const er = r?.errorRate;
-        return typeof er === "number" && Number.isFinite(er) ? er : null;
-      }
-      return null;
-    case "inference.throughput.req_per_s":
-    case "capacity.max_qps":
-    case "gateway.throughput.req_per_s": {
-      if (m.tool === "guidellm") return m.data.requestsPerSecond?.mean ?? null;
-      if (m.tool === "vegeta") return m.data.requests?.throughput ?? null;
-      if (m.tool === "evalscope" || m.tool === "aiperf") {
-        const t = m.data.throughput as { requestsPerSec?: number } | undefined;
-        const v = t?.requestsPerSec;
-        return typeof v === "number" && Number.isFinite(v) ? v : null;
-      }
-      return null;
-    }
-    case "capacity.tail_ratio":
-    case "gateway.tail_ratio": {
-      let p50: number | null = null;
-      let p99: number | null = null;
-      if (m.tool === "guidellm") {
-        p50 = m.data.e2eLatency?.p50 ?? null;
-        p99 = m.data.e2eLatency?.p99 ?? null;
-      }
-      if (m.tool === "vegeta") {
-        p50 = m.data.latencies?.p50 ?? null;
-        p99 = m.data.latencies?.p99 ?? null;
-      }
-      if (m.tool === "evalscope" || m.tool === "aiperf") {
-        p50 = m.data.e2eLatency?.p50 ?? null;
-        p99 = m.data.e2eLatency?.p99 ?? null;
-      }
-      if (typeof p50 !== "number" || typeof p99 !== "number" || p50 <= 0) return null;
-      return p99 / p50;
-    }
+  const kind = CHECK_ID_TO_METRIC_KIND[checkId];
+  if (!kind) return null;
+  try {
+    return byTool(m.tool as ToolName).readMetric(kind, m.data);
+  } catch {
+    // byTool throws on unknown tool names; tolerate stale rows whose tool
+    // is no longer registered (e.g. a Run from a deleted-tool migration).
+    return null;
   }
-  return null;
 }
 
 export function median(values: number[]): number {
