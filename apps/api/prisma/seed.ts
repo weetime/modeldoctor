@@ -25,6 +25,7 @@
 
 import { evaluationSampleSchema, profileRulesSchema } from "@modeldoctor/contracts";
 import {
+  aiperfParamsSchema,
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
@@ -203,7 +204,7 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope";
+type Tool = "guidellm" | "evalscope" | "aiperf";
 type SeedScenario = "inference" | "kv-cache-stress";
 interface BenchmarkTemplateSeed {
   id: string;
@@ -643,7 +644,12 @@ async function seedBenchmarkTemplates(): Promise<void> {
     // Pick the per-tool zod base schema. Each adapter owns its own
     // params schema; we route by tool name (not scenario) because some
     // tools are scenario-polymorphic.
-    const base = t.tool === "guidellm" ? guidellmParamsSchema : evalscopeParamsSchema;
+    const base =
+      t.tool === "guidellm"
+        ? guidellmParamsSchema
+        : t.tool === "aiperf"
+          ? aiperfParamsSchema
+          : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (kv-cache-stress, evalscope) this is

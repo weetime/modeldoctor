@@ -46,7 +46,7 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 
 ## Seeding built-in / official content
 
-Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via **`apps/api/prisma/seed.ts`** (Prisma's blessed seed pattern), NOT via INSERT statements inside migrations. Each row is validated through the relevant zod schema (`profileRulesSchema` from `@modeldoctor/contracts`; `guidellmParamsSchema` / `evalscopeParamsSchema` + `applyScenarioConstraints` from `@modeldoctor/tool-adapters`) before `prisma.<model>.upsert` by stable `id` / `slug`. The schema-picker is a `tool === "guidellm" ? guidellmParamsSchema : evalscopeParamsSchema` ternary today; widen to a switch when a new tool's official template lands.
+Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via **`apps/api/prisma/seed.ts`** (Prisma's blessed seed pattern), NOT via INSERT statements inside migrations. Each row is validated through the relevant zod schema (`profileRulesSchema` from `@modeldoctor/contracts`; `guidellmParamsSchema` / `evalscopeParamsSchema` / `aiperfParamsSchema` + `applyScenarioConstraints` from `@modeldoctor/tool-adapters`) before `prisma.<model>.upsert` by stable `id` / `slug`. The schema-picker handles all three tools; add the case alongside the others when a new tool's official template lands.
 
 - **Auto-runs** after `prisma migrate dev` and `prisma migrate reset` (Prisma reads `package.json#prisma.seed`).
 - **Prod / CI**: `prisma migrate deploy` does **not** auto-seed by design — deploy pipeline must invoke `pnpm prisma db seed` after `migrate deploy`.

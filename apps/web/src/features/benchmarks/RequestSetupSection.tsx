@@ -43,6 +43,15 @@ function inferEndpoint(
       };
     case "prefix-cache-probe":
       return { method: "POST", path: "/v1/chat/completions" };
+    case "evalscope": {
+      const p = typeof params.apiPath === "string" ? params.apiPath : "/v1/chat/completions";
+      return { method: "POST", path: p };
+    }
+    case "aiperf":
+      return {
+        method: "POST",
+        path: params.endpointType === "completions" ? "/v1/completions" : "/v1/chat/completions",
+      };
     default:
       return { method: "POST", path: "" };
   }
