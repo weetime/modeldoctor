@@ -6,12 +6,13 @@ import type {
 } from "../core/interface.js";
 import { type EvalscopeParams, evalscopeReportSchema } from "./schema.js";
 
-// LongAlpaca-12k is baked into the evalscope runner image at build time
-// (apps/benchmark-runner/images/evalscope.Dockerfile). Other datasets
-// (openqa / random) are tiny or fully synthetic; we let evalscope handle
-// them via its built-in dataset registry.
+// LongAlpaca-12k + HC3-Chinese (openqa) are baked into the evalscope runner
+// image at build time (apps/benchmark-runner/images/evalscope.Dockerfile)
+// so air-gapped clusters never hit modelscope.cn at run time. `random` is
+// fully synthetic and needs no dataset path.
 const BAKED_DATASET_PATHS: Record<string, string> = {
   longalpaca: "/opt/evalscope-datasets/longalpaca",
+  openqa: "/opt/evalscope-datasets/openqa/open_qa.jsonl",
 };
 
 const OUTPUTS_DIR = "out";

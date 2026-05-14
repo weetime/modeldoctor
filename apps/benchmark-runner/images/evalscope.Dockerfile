@@ -24,6 +24,14 @@ RUN modelscope download \
         --dataset AI-ModelScope/LongAlpaca-12k \
         --local_dir /opt/evalscope-datasets/longalpaca
 
+# Bake openqa (HC3-Chinese) for the inf-evalscope-short template + any
+# openqa-driven manual runs. Only open_qa.jsonl is needed.
+RUN python -c "from modelscope import dataset_snapshot_download; \
+    import shutil, os; \
+    p = dataset_snapshot_download('AI-ModelScope/HC3-Chinese', allow_patterns=['open_qa.jsonl']); \
+    os.makedirs('/opt/evalscope-datasets/openqa', exist_ok=True); \
+    shutil.copy(os.path.join(p, 'open_qa.jsonl'), '/opt/evalscope-datasets/openqa/open_qa.jsonl')"
+
 WORKDIR /app
 COPY runner runner
 
