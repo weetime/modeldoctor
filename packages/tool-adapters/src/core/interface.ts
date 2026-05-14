@@ -1,4 +1,9 @@
 import type { z } from "zod";
+import type { ToolMetricExtractor } from "./metric-extractor.js";
+
+// Re-export so consumers can `import { MetricKind } from "@modeldoctor/tool-adapters"`
+// instead of reaching into the core subpath.
+export type { MetricKind, ToolMetricExtractor } from "./metric-extractor.js";
 
 // ToolAdapter-registered tool names. The DB column `Run.tool` allows a
 // superset (additionally `'e2e'` and `'custom'`) — those don't go through
@@ -85,7 +90,7 @@ export interface BuildCommandResult {
 // acceptance gate). Adding a new CONNECTION-LEVEL capability that all tools
 // consume identically (e.g. `tokenizerHfId` added in #78 follow-up) is a
 // deliberate interface evolution and must be documented in the changelog.
-export interface ToolAdapter {
+export interface ToolAdapter extends ToolMetricExtractor {
   readonly name: ToolName;
   readonly scenarios: readonly import("../scenarios.js").ScenarioId[];
   readonly paramsSchema: z.ZodTypeAny;
