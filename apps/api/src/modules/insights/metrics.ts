@@ -10,20 +10,25 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
   switch (checkId) {
     case "inference.ttft.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "ttft", "p95");
+      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "ttft", "p95");
       return null;
     case "inference.ttft.p99.ms":
       if (m.tool === "guidellm") return fromDist(m, "ttft", "p99");
+      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "ttft", "p99");
       return null;
     case "inference.itl.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "itl", "p95");
+      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "itl", "p95");
       return null;
     case "inference.e2e.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p95");
       if (m.tool === "vegeta") return fromDist(m, "latencies", "p95");
+      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "e2eLatency", "p95");
       return null;
     case "inference.e2e.p99.ms":
       if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p99");
       if (m.tool === "vegeta") return fromDist(m, "latencies", "p99");
+      if (m.tool === "evalscope" || m.tool === "aiperf") return fromDist(m, "e2eLatency", "p99");
       return null;
     case "inference.error_rate":
     case "capacity.error_rate":
@@ -39,12 +44,24 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
         const s = m.data.success;
         return typeof s === "number" ? 1 - s / 100 : null;
       }
+      if (m.tool === "evalscope" || m.tool === "aiperf") {
+        // evalscope/aiperf carry requests.errorRate as a 0-1 fraction directly,
+        // so no division by total is required.
+        const r = m.data.requests as { errorRate?: number } | undefined;
+        const er = r?.errorRate;
+        return typeof er === "number" && Number.isFinite(er) ? er : null;
+      }
       return null;
     case "inference.throughput.req_per_s":
     case "capacity.max_qps":
     case "gateway.throughput.req_per_s": {
       if (m.tool === "guidellm") return m.data.requestsPerSecond?.mean ?? null;
       if (m.tool === "vegeta") return m.data.requests?.throughput ?? null;
+      if (m.tool === "evalscope" || m.tool === "aiperf") {
+        const t = m.data.throughput as { requestsPerSec?: number } | undefined;
+        const v = t?.requestsPerSec;
+        return typeof v === "number" && Number.isFinite(v) ? v : null;
+      }
       return null;
     }
     case "capacity.tail_ratio":
@@ -58,6 +75,10 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
       if (m.tool === "vegeta") {
         p50 = m.data.latencies?.p50 ?? null;
         p99 = m.data.latencies?.p99 ?? null;
+      }
+      if (m.tool === "evalscope" || m.tool === "aiperf") {
+        p50 = m.data.e2eLatency?.p50 ?? null;
+        p99 = m.data.e2eLatency?.p99 ?? null;
       }
       if (typeof p50 !== "number" || typeof p99 !== "number" || p50 <= 0) return null;
       return p99 / p50;

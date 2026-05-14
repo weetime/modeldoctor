@@ -23,6 +23,9 @@ export function readP95Latency(m: unknown): number | null {
       return fromDist(t.data, "e2eLatency", "p95");
     case "vegeta":
       return fromDist(t.data, "latencies", "p95");
+    case "evalscope":
+    case "aiperf":
+      return fromDist(t.data, "e2eLatency", "p95");
     default:
       return null;
   }
@@ -43,6 +46,13 @@ export function readErrorRate(m: unknown): number | null {
       const s = asFiniteNumber(t.data.success);
       return s === null ? null : 1 - s / 100;
     }
+    case "evalscope":
+    case "aiperf": {
+      // evalscope/aiperf schemas carry errorRate as a 0-1 fraction directly,
+      // so no division by total is required.
+      const r = t.data.requests as { errorRate?: number } | undefined;
+      return asFiniteNumber(r?.errorRate);
+    }
     default:
       return null;
   }
@@ -56,6 +66,11 @@ export function readThroughput(m: unknown): number | null {
       return asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean);
     case "vegeta":
       return asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput);
+    case "evalscope":
+    case "aiperf":
+      return asFiniteNumber(
+        (t.data.throughput as { requestsPerSec?: number } | undefined)?.requestsPerSec,
+      );
     default:
       return null;
   }
@@ -71,8 +86,15 @@ export interface PromptMetricsSummary {
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
   const tool = t?.tool;
-  const ttftKey = tool === "guidellm" ? "ttft" : null;
-  const e2eKey = tool === "guidellm" ? "e2eLatency" : tool === "vegeta" ? "latencies" : null;
+  // evalscope + aiperf share the same nested ttft / e2eLatency dist shape as
+  // guidellm. vegeta has no TTFT (single-shot HTTP), so ttftKey stays null.
+  const ttftKey = tool === "guidellm" || tool === "evalscope" || tool === "aiperf" ? "ttft" : null;
+  const e2eKey =
+    tool === "guidellm" || tool === "evalscope" || tool === "aiperf"
+      ? "e2eLatency"
+      : tool === "vegeta"
+        ? "latencies"
+        : null;
 
   return {
     throughput: readThroughput(m),
