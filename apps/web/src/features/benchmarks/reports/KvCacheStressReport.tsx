@@ -7,160 +7,222 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { KvCacheStressReport as Data } from "@modeldoctor/tool-adapters/schemas";
-import { useTranslation } from "react-i18next";
+import type { Benchmark } from "@modeldoctor/contracts";
+import {
+  type EvalscopeReport,
+  evalscopeReportSchema,
+} from "@modeldoctor/tool-adapters/schemas";
+import { useMemo } from "react";
+import { MetricCard } from "../components/MetricCard";
+import { useBenchmarkList } from "../queries";
+import { UnknownReport } from "./UnknownReport";
 
-interface Props {
-  data: Data;
+export interface KvCacheStressReportProps {
+  benchmark: Benchmark;
 }
 
-function statCard(label: string, value: string, hint?: string) {
+function fmt(n: number, digits = 1): string {
+  return n.toFixed(digits);
+}
+
+const RERUN_SUFFIX = " (rerun)";
+
+/**
+ * The "kv-cache-stress" scenario now renders evalscope's report shape (the
+ * legacy kv-cache-stress tool is being retired in Phase 9). When a sibling
+ * benchmark named `<name> (rerun)` exists in the same scope, we render a
+ * cold-vs-warm delta table comparing the cold first run (R1) against the
+ * warm rerun (R2). Otherwise the rerun panel is omitted.
+ */
+export function KvCacheStressReport({ benchmark }: KvCacheStressReportProps) {
+  const tagged = benchmark.summaryMetrics as {
+    tool?: string;
+    data?: unknown;
+  } | null;
+  const parsed = evalscopeReportSchema.safeParse(tagged?.data);
+  if (!parsed.success) {
+    return <UnknownReport benchmark={benchmark} reason={parsed.error.message} />;
+  }
+  const data: EvalscopeReport = parsed.data;
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-semibold">{value}</div>
-        {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <KvCacheStressMetrics data={data} />
+      <ColdWarmPairPanel benchmark={benchmark} cold={data} />
+    </div>
   );
 }
 
-export function KvCacheStressReport({ data }: Props) {
-  const { t } = useTranslation("benchmarks");
-  const { qps, outputTps, requestsOk, requestsErr, errRatePct, ttftMs, e2eMs, prom, backend } =
-    data;
+function KvCacheStressMetrics({ data }: { data: EvalscopeReport }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <MetricCard
+        title="TTFT (ms)"
+        rows={[
+          { label: "mean", value: fmt(data.ttft.mean) },
+          { label: "p50", value: fmt(data.ttft.p50) },
+          { label: "p90", value: fmt(data.ttft.p90) },
+          { label: "p95", value: fmt(data.ttft.p95) },
+          { label: "p99", value: fmt(data.ttft.p99) },
+        ]}
+      />
+      <MetricCard
+        title="ITL (ms)"
+        rows={[
+          { label: "mean", value: fmt(data.itl.mean) },
+          { label: "p50", value: fmt(data.itl.p50) },
+          { label: "p90", value: fmt(data.itl.p90) },
+          { label: "p95", value: fmt(data.itl.p95) },
+          { label: "p99", value: fmt(data.itl.p99) },
+        ]}
+      />
+      <MetricCard
+        title="E2E latency (ms)"
+        rows={[
+          { label: "mean", value: fmt(data.e2eLatency.mean) },
+          { label: "p50", value: fmt(data.e2eLatency.p50) },
+          { label: "p90", value: fmt(data.e2eLatency.p90) },
+          { label: "p95", value: fmt(data.e2eLatency.p95) },
+          { label: "p99", value: fmt(data.e2eLatency.p99) },
+        ]}
+      />
+      <MetricCard
+        title="Throughput"
+        rows={[
+          { label: "RPS", value: fmt(data.throughput.requestsPerSec) },
+          { label: "Output TPS", value: fmt(data.throughput.outputTokensPerSec) },
+          { label: "Total TPS", value: fmt(data.throughput.totalTokensPerSec) },
+        ]}
+      />
+      <MetricCard
+        title="Requests"
+        rows={[
+          { label: "total", value: data.requests.total },
+          { label: "success", value: data.requests.success },
+          { label: "error", value: data.requests.error },
+          {
+            label: "errorRate",
+            value: `${(data.requests.errorRate * 100).toFixed(2)}%`,
+          },
+        ]}
+      />
+      {data.prefixCacheStats ? (
+        <MetricCard
+          title="Prefix cache"
+          rows={[
+            {
+              label: "Hit rate",
+              value: `${(data.prefixCacheStats.hitRate * 100).toFixed(1)}%`,
+            },
+          ]}
+        />
+      ) : null}
+    </div>
+  );
+}
 
-  const sortedCounters = Object.entries(backend.counters).sort(([a], [b]) => a.localeCompare(b));
+interface ColdWarmPairPanelProps {
+  benchmark: Benchmark;
+  cold: EvalscopeReport;
+}
 
-  // delta in percentage points between HBM hit rate and full savings — same
-  // "hidden gain" framing used in the theriseunion/repots reports.
-  const hiddenGainPp =
-    prom.hbmHitRatePct !== undefined && prom.prefixCacheSavingsPct !== undefined
-      ? prom.prefixCacheSavingsPct - prom.hbmHitRatePct
-      : null;
+/**
+ * Looks up the cold/warm sibling for this benchmark via the same name + " (rerun)"
+ * convention used by `BenchmarkDetailPage.handleRerun`. We fetch a page of
+ * benchmarks for the same connection and pick:
+ *  - if this benchmark's name ends with " (rerun)" → the source (cold) by stripping
+ *    the suffix; this benchmark is the warm row (R2).
+ *  - otherwise → the sibling whose name is `<name> (rerun)`; this benchmark is
+ *    the cold row (R1).
+ *
+ * Renders nothing when no sibling is found (preserves the spec contract).
+ */
+function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
+  const isWarm = benchmark.name.endsWith(RERUN_SUFFIX);
+  const sourceName = isWarm ? benchmark.name.slice(0, -RERUN_SUFFIX.length) : benchmark.name;
+  const siblingName = isWarm ? sourceName : `${sourceName}${RERUN_SUFFIX}`;
+
+  const list = useBenchmarkList({
+    connectionId: benchmark.connectionId ?? undefined,
+    scenario: "kv-cache-stress",
+    search: sourceName,
+    limit: 50,
+  });
+
+  const sibling = useMemo<Benchmark | null>(() => {
+    const items = list.data?.pages.flatMap((p) => p.items) ?? [];
+    const match = items.find((b) => b.id !== benchmark.id && b.name === siblingName);
+    return match ?? null;
+  }, [list.data, benchmark.id, siblingName]);
+
+  const siblingData = useMemo<EvalscopeReport | null>(() => {
+    if (!sibling) return null;
+    const tagged = sibling.summaryMetrics as {
+      tool?: string;
+      data?: unknown;
+    } | null;
+    const parsed = evalscopeReportSchema.safeParse(tagged?.data);
+    return parsed.success ? parsed.data : null;
+  }, [sibling]);
+
+  if (!sibling || !siblingData) return null;
+
+  // R1 is always cold (no " (rerun)"), R2 is warm. If this benchmark is the
+  // warm one, the sibling is cold.
+  const r1 = isWarm ? siblingData : cold;
+  const r2 = isWarm ? cold : siblingData;
+
+  const rows: Array<{ label: string; r1: number; r2: number }> = [
+    { label: "TTFT p95 (ms)", r1: r1.ttft.p95, r2: r2.ttft.p95 },
+    {
+      label: "Throughput · RPS",
+      r1: r1.throughput.requestsPerSec,
+      r2: r2.throughput.requestsPerSec,
+    },
+    {
+      label: "Throughput · Output TPS",
+      r1: r1.throughput.outputTokensPerSec,
+      r2: r2.throughput.outputTokensPerSec,
+    },
+    { label: "ITL p50 (ms)", r1: r1.itl.p50, r2: r2.itl.p50 },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Top-line stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {statCard(t("reports.kvCacheStress.qps"), qps.toFixed(2))}
-        {statCard(t("reports.kvCacheStress.outputTps"), `${outputTps.toFixed(0)} tps`)}
-        {statCard(
-          t("reports.kvCacheStress.requests"),
-          `${requestsOk} / ${requestsOk + requestsErr}`,
-          `${requestsErr} err`,
-        )}
-        {statCard(t("reports.kvCacheStress.errRate"), `${errRatePct.toFixed(1)}%`)}
-      </div>
-
-      {/* Latency percentiles */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("reports.kvCacheStress.latency")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("reports.kvCacheStress.latencyMetric")}</TableHead>
-                <TableHead className="text-right">p50 (ms)</TableHead>
-                <TableHead className="text-right">p90 (ms)</TableHead>
-                <TableHead className="text-right">p99 (ms)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>TTFT</TableCell>
-                <TableCell className="text-right">{ttftMs.p50.toFixed(0)}</TableCell>
-                <TableCell className="text-right">{ttftMs.p90.toFixed(0)}</TableCell>
-                <TableCell className="text-right">{ttftMs.p99.toFixed(0)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>e2e</TableCell>
-                <TableCell className="text-right">{e2eMs.p50.toFixed(0)}</TableCell>
-                <TableCell className="text-right">{e2eMs.p90.toFixed(0)}</TableCell>
-                <TableCell className="text-right">{e2eMs.p99.toFixed(0)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Prefix cache savings — only shown when Prom URL was set */}
-      {(prom.hbmHitRatePct !== undefined || prom.prefixCacheSavingsPct !== undefined) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("reports.kvCacheStress.savingsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div>
-                <div className="text-muted-foreground">{t("reports.kvCacheStress.hbmHitRate")}</div>
-                <div className="text-2xl font-semibold">
-                  {prom.hbmHitRatePct !== undefined ? `${prom.hbmHitRatePct.toFixed(1)}%` : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">
-                  {t("reports.kvCacheStress.prefixCacheSavings")}
-                </div>
-                <div className="text-2xl font-semibold">
-                  {prom.prefixCacheSavingsPct !== undefined
-                    ? `${prom.prefixCacheSavingsPct.toFixed(1)}%`
-                    : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">{t("reports.kvCacheStress.hiddenGain")}</div>
-                <div className="text-2xl font-semibold">
-                  {hiddenGainPp !== null ? `+${hiddenGainPp.toFixed(1)} pp` : "—"}
-                </div>
-              </div>
-            </div>
-            <p className="text-muted-foreground">{t("reports.kvCacheStress.savingsExplainer")}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Backend native counters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {t("reports.kvCacheStress.backendTitle", { name: backend.nameGuess })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sortedCounters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("reports.kvCacheStress.backendEmpty")}
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("reports.kvCacheStress.counterName")}</TableHead>
-                  <TableHead className="text-right">
-                    {t("reports.kvCacheStress.counterValue")}
-                  </TableHead>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-semibold">
+          Cold vs. warm (R1 → R2)
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Metric</TableHead>
+              <TableHead className="text-right">R1 · cold</TableHead>
+              <TableHead className="text-right">R2 · warm</TableHead>
+              <TableHead className="text-right">Δ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => {
+              const delta = row.r1 === 0 ? null : ((row.r2 - row.r1) / row.r1) * 100;
+              return (
+                <TableRow key={row.label}>
+                  <TableCell className="font-medium">{row.label}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt(row.r1)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt(row.r2)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {delta === null
+                      ? "—"
+                      : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedCounters.map(([name, value]) => (
-                  <TableRow key={name}>
-                    <TableCell className="font-mono text-xs">{name}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {typeof value === "number" ? value.toLocaleString() : value}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
