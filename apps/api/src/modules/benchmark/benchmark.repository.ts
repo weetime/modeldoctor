@@ -87,7 +87,7 @@ export class BenchmarkRepository {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.BenchmarkWhereInput = {};
     if (input.scenario) where.scenario = input.scenario;
-    if (input.tool) where.tool = input.tool as "guidellm" | "vegeta";
+    if (input.tool) where.tool = input.tool;
     if (input.status) where.status = input.status;
     if (input.connectionId) where.connectionId = input.connectionId;
     if (input.parentBenchmarkId) where.parentBenchmarkId = input.parentBenchmarkId;

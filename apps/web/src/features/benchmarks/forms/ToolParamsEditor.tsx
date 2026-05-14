@@ -49,6 +49,31 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   aiperf: aiperfParamDefaults,
 };
 
+/**
+ * Dispatches to the tool-specific params form. The exhaustive switch + `never`
+ * default makes a missing branch a compile error if a new ToolName is added to
+ * @modeldoctor/tool-adapters; without this guard, the legacy nested ternary
+ * silently routed unknown tools to AiperfParamsForm.
+ */
+function pickParamsForm(tool: ToolName) {
+  switch (tool) {
+    case "guidellm":
+      return GuidellmParamsForm;
+    case "vegeta":
+      return VegetaParamsForm;
+    case "prefix-cache-probe":
+      return PrefixCacheProbeParamsForm;
+    case "evalscope":
+      return EvalscopeParamsForm;
+    case "aiperf":
+      return AiperfParamsForm;
+    default: {
+      const _exhaustive: never = tool;
+      throw new Error(`Unhandled tool in ToolParamsEditor: ${String(_exhaustive)}`);
+    }
+  }
+}
+
 export interface ToolEditorProps {
   scenario: ScenarioId;
   /** Form field name where the tool's params live. Defaults to "params" so
@@ -232,16 +257,10 @@ export function ToolParamsForm({
       />
     );
   }
-  const ParamsForm =
-    tool === "guidellm"
-      ? GuidellmParamsForm
-      : tool === "vegeta"
-        ? VegetaParamsForm
-        : tool === "prefix-cache-probe"
-          ? PrefixCacheProbeParamsForm
-          : tool === "evalscope"
-            ? EvalscopeParamsForm
-            : AiperfParamsForm;
+  // Explicit switch with an `assertNever` default so adding a new ToolName to
+  // @modeldoctor/tool-adapters without a corresponding branch fails compile,
+  // rather than silently routing the unhandled tool to AiperfParamsForm.
+  const ParamsForm = pickParamsForm(tool);
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 

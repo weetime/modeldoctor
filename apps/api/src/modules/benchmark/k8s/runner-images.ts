@@ -13,10 +13,10 @@ const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
 /**
  * Resolves the container image to use for a given tool. The image tag is
  * driven by `RUNNER_IMAGE_{tool}` env vars (set by the operator after
- * `./tools/build-runner-images.sh`); env-schema validation enforces all
- * three are present outside `NODE_ENV=test`, so missing here only
- * happens if a test forgets to seed the mock — surface loudly instead of
- * silently launching a Job with no image.
+ * `./tools/build-runner-images.sh`); env-schema validation enforces each
+ * tool's image env var is present outside `NODE_ENV=test`, so missing
+ * here only happens if a test forgets to seed the mock — surface loudly
+ * instead of silently launching a Job with no image.
  */
 export function imageForTool(tool: ToolName, config: ConfigService<Env, true>): string {
   const key = TOOL_TO_IMAGE_ENV[tool];
