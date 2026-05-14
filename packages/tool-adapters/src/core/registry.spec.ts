@@ -12,10 +12,6 @@ describe("registry", () => {
     expect(byTool("vegeta").name).toBe("vegeta");
   });
 
-  it("byTool('kv-cache-stress') returns the kv-cache-stress adapter", () => {
-    expect(byTool("kv-cache-stress").name).toBe("kv-cache-stress");
-  });
-
   it("byTool('evalscope') returns the evalscope adapter", () => {
     expect(byTool("evalscope").name).toBe("evalscope");
   });
@@ -24,18 +20,11 @@ describe("registry", () => {
     expect(byTool("aiperf").name).toBe("aiperf");
   });
 
-  it("allAdapters returns six adapters", () => {
+  it("allAdapters returns five adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(6);
+    expect(all).toHaveLength(5);
     expect(all.map((a) => a.name).sort()).toEqual(
-      [
-        "aiperf",
-        "evalscope",
-        "guidellm",
-        "kv-cache-stress",
-        "prefix-cache-probe",
-        "vegeta",
-      ].sort(),
+      ["aiperf", "evalscope", "guidellm", "prefix-cache-probe", "vegeta"].sort(),
     );
   });
 });

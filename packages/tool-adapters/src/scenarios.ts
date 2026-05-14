@@ -72,7 +72,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     label: "KV cache 后端压测",
     description:
       "长 prompt 冷/暖双轮 evalscope perf,对比不同 KV 卸载后端 (vanilla / LMCache / YRCache) 的 TTFT / 吞吐 / prefix-cache 命中率",
-    tools: ["kv-cache-stress", "evalscope"],
+    tools: ["evalscope"],
     paramsConstraints: {},
     reportComponent: "KvCacheStressReport",
   },

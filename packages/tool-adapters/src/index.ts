@@ -7,7 +7,6 @@ export * from "./core/progress-event.js";
 export { guidellmAdapter } from "./guidellm/index.js";
 export { vegetaAdapter } from "./vegeta/index.js";
 export { prefixCacheProbeAdapter } from "./prefix-cache-probe/index.js";
-export { kvCacheStressAdapter } from "./kv-cache-stress/index.js";
 export { evalscopeAdapter } from "./evalscope/index.js";
 export { aiperfAdapter } from "./aiperf/index.js";
 

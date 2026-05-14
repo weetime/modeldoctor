@@ -8,7 +8,6 @@ export type ToolName =
   | "guidellm"
   | "vegeta"
   | "prefix-cache-probe"
-  | "kv-cache-stress"
   | "evalscope"
   | "aiperf";
 
@@ -23,7 +22,6 @@ import type { EvalscopeReport } from "../evalscope/schema.js";
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
-import type { KvCacheStressReport } from "../kv-cache-stress/schema.js";
 import type { PrefixCacheProbeReport } from "../prefix-cache-probe/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
@@ -32,7 +30,6 @@ export type ToolReport =
   | { tool: "guidellm"; data: GuidellmReport }
   | { tool: "vegeta"; data: VegetaReport }
   | { tool: "prefix-cache-probe"; data: PrefixCacheProbeReport }
-  | { tool: "kv-cache-stress"; data: KvCacheStressReport }
   | { tool: "evalscope"; data: EvalscopeReport }
   | { tool: "aiperf"; data: AiperfReport };
 

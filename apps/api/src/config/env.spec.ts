@@ -50,7 +50,6 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
       RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
     });
@@ -85,7 +84,6 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
       RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
     });
@@ -187,7 +185,6 @@ describe("validateEnv", () => {
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
       RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
     };
@@ -208,7 +205,6 @@ describe("validateEnv", () => {
       expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:test");
       expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:test");
       expect(env.RUNNER_IMAGE_PREFIX_CACHE_PROBE).toBe("md-runner-prefix-cache-probe:test");
-      expect(env.RUNNER_IMAGE_KV_CACHE_STRESS).toBe("md-runner-kv-cache-stress:test");
       expect(env.RUNNER_IMAGE_EVALSCOPE).toBe("md-runner-evalscope:test");
       expect(env.RUNNER_IMAGE_AIPERF).toBe("md-runner-aiperf:test");
     });
@@ -216,11 +212,6 @@ describe("validateEnv", () => {
     it("requires RUNNER_IMAGE_PREFIX_CACHE_PROBE outside test mode", () => {
       const { RUNNER_IMAGE_PREFIX_CACHE_PROBE: _omitted, ...rest } = baseDev;
       expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_PREFIX_CACHE_PROBE/);
-    });
-
-    it("requires RUNNER_IMAGE_KV_CACHE_STRESS outside test mode", () => {
-      const { RUNNER_IMAGE_KV_CACHE_STRESS: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_KV_CACHE_STRESS/);
     });
 
     it("requires RUNNER_IMAGE_EVALSCOPE outside test mode", () => {

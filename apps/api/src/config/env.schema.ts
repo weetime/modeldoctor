@@ -64,7 +64,6 @@ export const EnvSchema = z
     RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     RUNNER_IMAGE_PREFIX_CACHE_PROBE: z.string().min(1).optional(),
-    RUNNER_IMAGE_KV_CACHE_STRESS: z.string().min(1).optional(),
     RUNNER_IMAGE_EVALSCOPE: z.string().min(1).optional(),
     RUNNER_IMAGE_AIPERF: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
@@ -138,7 +137,6 @@ export const EnvSchema = z
         "RUNNER_IMAGE_GUIDELLM",
         "RUNNER_IMAGE_VEGETA",
         "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
-        "RUNNER_IMAGE_KV_CACHE_STRESS",
         "RUNNER_IMAGE_EVALSCOPE",
         "RUNNER_IMAGE_AIPERF",
       ] as const;

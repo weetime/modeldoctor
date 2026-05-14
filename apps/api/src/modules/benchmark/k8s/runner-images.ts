@@ -6,7 +6,6 @@ const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
   guidellm: "RUNNER_IMAGE_GUIDELLM",
   vegeta: "RUNNER_IMAGE_VEGETA",
   "prefix-cache-probe": "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
-  "kv-cache-stress": "RUNNER_IMAGE_KV_CACHE_STRESS",
   evalscope: "RUNNER_IMAGE_EVALSCOPE",
   aiperf: "RUNNER_IMAGE_AIPERF",
 };

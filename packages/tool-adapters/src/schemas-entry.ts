@@ -32,14 +32,6 @@ export {
 } from "./prefix-cache-probe/schema.js";
 
 export {
-  kvCacheStressParamsSchema,
-  kvCacheStressReportSchema,
-  kvCacheStressParamDefaults,
-  type KvCacheStressParams,
-  type KvCacheStressReport,
-} from "./kv-cache-stress/schema.js";
-
-export {
   evalscopeParamsSchema,
   evalscopeReportSchema,
   evalscopeParamDefaults,
@@ -74,7 +66,6 @@ export {
   GUIDELLM_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   EVALSCOPE_CATEGORY_DEFAULTS,
   AIPERF_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";

@@ -19,11 +19,8 @@ describe("SCENARIOS constant", () => {
     ]);
   });
 
-  it("kv-cache-stress scenario lists evalscope alongside the legacy kv-cache-stress tool", () => {
-    expect([...SCENARIOS["kv-cache-stress"].tools].sort()).toEqual([
-      "evalscope",
-      "kv-cache-stress",
-    ]);
+  it("kv-cache-stress scenario lists evalscope only (legacy tool retired)", () => {
+    expect([...SCENARIOS["kv-cache-stress"].tools]).toEqual(["evalscope"]);
   });
 
   it("inference scenario lists guidellm, evalscope, and aiperf", () => {

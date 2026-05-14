@@ -1,7 +1,6 @@
 import { aiperfAdapter } from "../aiperf/index.js";
 import { evalscopeAdapter } from "../evalscope/index.js";
 import { guidellmAdapter } from "../guidellm/index.js";
-import { kvCacheStressAdapter } from "../kv-cache-stress/index.js";
 import { prefixCacheProbeAdapter } from "../prefix-cache-probe/index.js";
 import type { ScenarioId } from "../scenarios.js";
 import { vegetaAdapter } from "../vegeta/index.js";
@@ -11,7 +10,6 @@ const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
   guidellm: guidellmAdapter,
   vegeta: vegetaAdapter,
   "prefix-cache-probe": prefixCacheProbeAdapter,
-  "kv-cache-stress": kvCacheStressAdapter,
   evalscope: evalscopeAdapter,
   aiperf: aiperfAdapter,
 };

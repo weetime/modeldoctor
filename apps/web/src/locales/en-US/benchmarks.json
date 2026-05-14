@@ -31,7 +31,6 @@
       "guidellm": "guidellm",
       "vegeta": "vegeta",
       "prefix-cache-probe": "prefix-cache-probe",
-      "kv-cache-stress": "kv-cache-stress",
       "evalscope": "evalscope",
       "aiperf": "aiperf"
     },
@@ -39,7 +38,6 @@
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
       "prefix-cache-probe": "Validate Higress ai-load-balancer prefix stickiness; reports per-pod routing share + Prom hit rate",
-      "kv-cache-stress": "Long-prompt cold/warm KV cache stress (deprecated; prefer evalscope)",
       "evalscope": "Modelscope perf tool; chat / completions with prefix-cache hit-rate stats",
       "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark"
     },

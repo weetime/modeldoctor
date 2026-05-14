@@ -16,7 +16,6 @@ export const benchmarkToolSchema = z.enum([
   "guidellm",
   "vegeta",
   "prefix-cache-probe",
-  "kv-cache-stress",
   "evalscope",
   "aiperf",
 ]);

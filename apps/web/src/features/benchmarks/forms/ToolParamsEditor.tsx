@@ -13,13 +13,11 @@ import {
   AIPERF_CATEGORY_DEFAULTS,
   EVALSCOPE_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
-  KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   aiperfParamDefaults,
   evalscopeParamDefaults,
   guidellmParamDefaults,
-  kvCacheStressParamDefaults,
   prefixCacheProbeParamDefaults,
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -33,14 +31,12 @@ const TOOL_CATEGORY_DEFAULTS = {
   vegeta: VEGETA_CATEGORY_DEFAULTS,
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
   "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  "kv-cache-stress": KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
 } as const;
 import { AiperfParamsForm } from "./AiperfParamsForm";
 import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
-import { KvCacheStressParamsForm } from "./KvCacheStressParamsForm";
 import { PrefixCacheProbeParamsForm } from "./PrefixCacheProbeParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
@@ -49,7 +45,6 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
   "prefix-cache-probe": prefixCacheProbeParamDefaults,
-  "kv-cache-stress": kvCacheStressParamDefaults,
   evalscope: evalscopeParamDefaults,
   aiperf: aiperfParamDefaults,
 };
@@ -244,11 +239,9 @@ export function ToolParamsForm({
         ? VegetaParamsForm
         : tool === "prefix-cache-probe"
           ? PrefixCacheProbeParamsForm
-          : tool === "kv-cache-stress"
-            ? KvCacheStressParamsForm
-            : tool === "evalscope"
-              ? EvalscopeParamsForm
-              : AiperfParamsForm;
+          : tool === "evalscope"
+            ? EvalscopeParamsForm
+            : AiperfParamsForm;
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 
