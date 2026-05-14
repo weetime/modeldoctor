@@ -598,6 +598,27 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     },
     tags: ["inference", "evalscope", "long-context"],
   },
+  {
+    id: "tpl_inf_aiperf_baseline",
+    name: "AIPerf · 综合基线",
+    description:
+      "AIPerf 通用基线:concurrency=8, 200 requests, synthetic 输入均值 1024 tokens / 输出均值 256 tokens。一发就有,适合横评。",
+    scenario: "inference",
+    tool: "aiperf",
+    config: {
+      concurrency: 8,
+      requestCount: 200,
+      inputTokensMean: 1024,
+      inputTokensStddev: 128,
+      outputTokensMean: 256,
+      outputTokensStddev: 64,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "synthetic",
+      seed: 42,
+    },
+    tags: ["inference", "aiperf", "baseline", "synthetic"],
+  },
 ];
 
 // ---------------------------------------------------------------------------

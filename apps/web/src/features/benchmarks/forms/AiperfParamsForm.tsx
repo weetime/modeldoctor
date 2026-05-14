@@ -18,6 +18,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { numberField } from "./_shared/numberField";
 
 const DATASETS = ["synthetic", "sharegpt"] as const;
 // NOTE: AIPerf's CLI takes `--endpoint-type chat|completions` (not a full path);
@@ -48,14 +49,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.concurrency")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -68,14 +62,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.requestCount")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,14 +103,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.inputTokensMean")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -136,14 +116,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.inputTokensStddev")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -160,14 +133,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.outputTokensMean")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -180,14 +146,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.outputTokensStddev")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -240,14 +199,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
               <FormItem>
                 <FormLabel>{t("forms.aiperf.seed")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormDescription>{t("forms.aiperf.seedHint")}</FormDescription>
                 <FormMessage />

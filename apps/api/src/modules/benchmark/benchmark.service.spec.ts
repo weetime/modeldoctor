@@ -43,6 +43,19 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
       parseProgress: () => null,
       parseFinalReport: () => ({ tool: "guidellm", data: {} }),
       getMaxDurationSeconds: () => 1800,
+      // Minimal readMetric stub: just walk the shapes the report-summary
+      // tests below construct (`data.e2eLatency.p95`, `data.latencies.p95`).
+      // BenchmarkService.getByConnectionReports calls `byTool(tool).readMetric`
+      // via `readP95LatencyMs`, so the stub has to honor that contract.
+      readMetric: (kind: string, data: Record<string, unknown>) => {
+        if (kind === "e2e.p95") {
+          const e = (data.e2eLatency as { p95?: number } | undefined)?.p95;
+          if (typeof e === "number" && Number.isFinite(e)) return e;
+          const l = (data.latencies as { p95?: number } | undefined)?.p95;
+          return typeof l === "number" && Number.isFinite(l) ? l : null;
+        }
+        return null;
+      },
     }),
   };
 });

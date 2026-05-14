@@ -1,79 +1,15 @@
-type Tagged = { tool?: string; data?: Record<string, unknown> };
-
-export function asTagged(m: unknown): Tagged | null {
-  if (!m || typeof m !== "object") return null;
-  const t = m as Tagged;
-  return t.data ? t : null;
-}
-
-function asFiniteNumber(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
-}
-
-function fromDist(data: Record<string, unknown>, key: string, field: string): number | null {
-  const dist = data[key] as Record<string, unknown> | undefined;
-  return asFiniteNumber(dist?.[field]);
-}
+import { readMetricSafe } from "@modeldoctor/tool-adapters";
 
 export function readP95Latency(m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm":
-      return fromDist(t.data, "e2eLatency", "p95");
-    case "vegeta":
-      return fromDist(t.data, "latencies", "p95");
-    case "evalscope":
-    case "aiperf":
-      return fromDist(t.data, "e2eLatency", "p95");
-    default:
-      return null;
-  }
+  return readMetricSafe("e2e.p95", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readErrorRate(m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm": {
-      const r = t.data.requests as { total?: number; error?: number } | undefined;
-      const total = asFiniteNumber(r?.total);
-      const error = asFiniteNumber(r?.error);
-      if (total === null || error === null || total === 0) return null;
-      return error / total;
-    }
-    case "vegeta": {
-      const s = asFiniteNumber(t.data.success);
-      return s === null ? null : 1 - s / 100;
-    }
-    case "evalscope":
-    case "aiperf": {
-      // evalscope/aiperf schemas carry errorRate as a 0-1 fraction directly,
-      // so no division by total is required.
-      const r = t.data.requests as { errorRate?: number } | undefined;
-      return asFiniteNumber(r?.errorRate);
-    }
-    default:
-      return null;
-  }
+  return readMetricSafe("errorRate", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readThroughput(m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data) return null;
-  switch (t.tool) {
-    case "guidellm":
-      return asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean);
-    case "vegeta":
-      return asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput);
-    case "evalscope":
-    case "aiperf":
-      return asFiniteNumber(
-        (t.data.throughput as { requestsPerSec?: number } | undefined)?.requestsPerSec,
-      );
-    default:
-      return null;
-  }
+  return readMetricSafe("requestsPerSec", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export interface PromptMetricsSummary {
@@ -83,37 +19,34 @@ export interface PromptMetricsSummary {
   e2e: { p50: number | null; p90: number | null; p99: number | null } | null;
 }
 
+/**
+ * Build a compact metrics snapshot for AI compare narratives.
+ *
+ * All field reads delegate to `readMetricSafe`. The `ttft` and `e2e`
+ * sub-objects are null when the tool doesn't carry that distribution at
+ * all (vegeta has no TTFT) — detected by checking whether any of p50/p90/p99
+ * resolves to a number. Now that `MetricKind` includes the p50/p90 buckets,
+ * no per-tool field-path table is needed.
+ */
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
-  const t = asTagged(m);
-  const tool = t?.tool;
-  // evalscope + aiperf share the same nested ttft / e2eLatency dist shape as
-  // guidellm. vegeta has no TTFT (single-shot HTTP), so ttftKey stays null.
-  const ttftKey = tool === "guidellm" || tool === "evalscope" || tool === "aiperf" ? "ttft" : null;
-  const e2eKey =
-    tool === "guidellm" || tool === "evalscope" || tool === "aiperf"
-      ? "e2eLatency"
-      : tool === "vegeta"
-        ? "latencies"
-        : null;
+  const summary = m as { tool?: unknown; data?: unknown } | null;
+  const ttftP50 = readMetricSafe("ttft.p50", summary);
+  const ttftP90 = readMetricSafe("ttft.p90", summary);
+  const ttftP99 = readMetricSafe("ttft.p99", summary);
+  const e2eP50 = readMetricSafe("e2e.p50", summary);
+  const e2eP90 = readMetricSafe("e2e.p90", summary);
+  const e2eP99 = readMetricSafe("e2e.p99", summary);
 
   return {
-    throughput: readThroughput(m),
-    errorRate: readErrorRate(m),
+    throughput: readMetricSafe("requestsPerSec", summary),
+    errorRate: readMetricSafe("errorRate", summary),
     ttft:
-      t?.data && ttftKey
-        ? {
-            p50: fromDist(t.data, ttftKey, "p50"),
-            p90: fromDist(t.data, ttftKey, "p90"),
-            p99: fromDist(t.data, ttftKey, "p99"),
-          }
-        : null,
+      ttftP50 === null && ttftP90 === null && ttftP99 === null
+        ? null
+        : { p50: ttftP50, p90: ttftP90, p99: ttftP99 },
     e2e:
-      t?.data && e2eKey
-        ? {
-            p50: fromDist(t.data, e2eKey, "p50"),
-            p90: fromDist(t.data, e2eKey, "p90"),
-            p99: fromDist(t.data, e2eKey, "p99"),
-          }
-        : null,
+      e2eP50 === null && e2eP90 === null && e2eP99 === null
+        ? null
+        : { p50: e2eP50, p90: e2eP90, p99: e2eP99 },
   };
 }

@@ -1,16 +1,10 @@
-import {
-  readErrorRate,
-  readP95Latency,
-  readThroughput,
-} from "@/features/benchmarks/compare/metrics";
+import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 import type { CheckDescriptor } from "./descriptors";
 
-function fromDist(metrics: unknown, key: string, field: string): number | null {
-  const m = metrics as { tool?: string; data?: Record<string, unknown> } | null;
-  if (!m?.data) return null;
-  const dist = m.data[key] as Record<string, unknown> | undefined;
-  const v = dist?.[field];
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+// `run.summaryMetrics` is the contracts-side discriminated union; the helper
+// just needs `{ tool?, data? }`. Cast at the boundary like compare/metrics.ts.
+function read(kind: Parameters<typeof readMetricSafe>[0]) {
+  return (m: unknown) => readMetricSafe(kind, m as { tool?: unknown; data?: unknown } | null);
 }
 
 export const inferenceChecks: CheckDescriptor[] = [
@@ -22,12 +16,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 1.0,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.ttft.p95.ms.recommendation",
-    read: (m) => {
-      const t = (m as { tool?: string } | null)?.tool;
-      if (t === "guidellm" || t === "evalscope" || t === "aiperf")
-        return fromDist(m, "ttft", "p95");
-      return null;
-    },
+    read: read("ttft.p95"),
   },
   {
     id: "inference.ttft.p99.ms",
@@ -37,12 +26,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 0.5,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.ttft.p99.ms.recommendation",
-    read: (m) => {
-      const t = (m as { tool?: string } | null)?.tool;
-      if (t === "guidellm" || t === "evalscope" || t === "aiperf")
-        return fromDist(m, "ttft", "p99");
-      return null;
-    },
+    read: read("ttft.p99"),
   },
   {
     id: "inference.itl.p95.ms",
@@ -52,7 +36,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 0.7,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.itl.p95.ms.recommendation",
-    read: (m) => fromDist(m, "itl", "p95"),
+    read: read("itl.p95"),
   },
   {
     id: "inference.e2e.p95.ms",
@@ -61,8 +45,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 0.7,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.e2e.p95.ms.recommendation",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    read: (m) => readP95Latency(m as any),
+    read: read("e2e.p95"),
   },
   {
     id: "inference.e2e.p99.ms",
@@ -71,13 +54,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 0.5,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.e2e.p99.ms.recommendation",
-    read: (m) => {
-      const t = (m as { tool?: string } | null)?.tool;
-      if (t === "guidellm") return fromDist(m, "e2eLatency", "p99");
-      if (t === "vegeta") return fromDist(m, "latencies", "p99");
-      if (t === "evalscope" || t === "aiperf") return fromDist(m, "e2eLatency", "p99");
-      return null;
-    },
+    read: read("e2e.p99"),
   },
   {
     id: "inference.error_rate",
@@ -86,8 +63,7 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 1.0,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.error_rate.recommendation",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    read: (m) => readErrorRate(m as any),
+    read: read("errorRate"),
   },
   {
     id: "inference.throughput.req_per_s",
@@ -96,7 +72,6 @@ export const inferenceChecks: CheckDescriptor[] = [
     defaultWeight: 0.5,
     direction: "higher_is_better",
     recommendationKey: "checks.inference.throughput.req_per_s.recommendation",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    read: (m) => readThroughput(m as any),
+    read: read("requestsPerSec"),
   },
 ];

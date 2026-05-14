@@ -1,10 +1,13 @@
 import type { ToolAdapter } from "../core/interface.js";
+import { prefixCacheProbeReadMetric } from "./read-metric.js";
 import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import {
   prefixCacheProbeParamDefaults,
   prefixCacheProbeParamsSchema,
   prefixCacheProbeReportSchema,
 } from "./schema.js";
+
+export { prefixCacheProbeReadMetric } from "./read-metric.js";
 
 export const prefixCacheProbeAdapter: ToolAdapter = {
   name: "prefix-cache-probe",
@@ -16,6 +19,7 @@ export const prefixCacheProbeAdapter: ToolAdapter = {
   parseProgress,
   parseFinalReport,
   getMaxDurationSeconds,
+  readMetric: prefixCacheProbeReadMetric,
 };
 
 export type {

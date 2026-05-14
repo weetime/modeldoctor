@@ -18,6 +18,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { numberField } from "./_shared/numberField";
 
 const DATASETS = ["longalpaca", "openqa", "random"] as const;
 const API_PATHS = ["/v1/chat/completions", "/v1/completions"] as const;
@@ -66,14 +67,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.parallel")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -86,14 +80,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.number")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -110,14 +97,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.minPromptLength")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -130,14 +110,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.maxPromptLength")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -154,14 +127,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.minTokens")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -174,14 +140,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.maxTokens")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -234,14 +193,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
               <FormItem>
                 <FormLabel>{t("forms.evalscope.seed")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                    }
-                  />
+                  <Input type="number" {...numberField(field)} />
                 </FormControl>
                 <FormDescription>{t("forms.evalscope.seedHint")}</FormDescription>
                 <FormMessage />

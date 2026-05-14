@@ -175,6 +175,7 @@ describe("BenchmarkCallbackController", () => {
       parseProgress: () => null,
       parseFinalReport,
       getMaxDurationSeconds: () => 60,
+      readMetric: () => null,
     });
 
     repo.setup("benchmark-1", { id: "benchmark-1", tool: "guidellm", status: "running" });

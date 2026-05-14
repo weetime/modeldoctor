@@ -154,3 +154,28 @@ docker run --rm \
   -e MD_OUTPUT_FILES='{"report":"report.json"}' \
   md-runner-guidellm:dev3
 ```
+
+## Air-gapped clusters
+
+The evalscope + aiperf images bake their datasets at build time so runs work without internet egress from the cluster:
+
+| Image | Dataset enum value | Baked path | Source |
+|---|---|---|---|
+| evalscope | `longalpaca` | `/opt/evalscope-datasets/longalpaca/` | `AI-ModelScope/LongAlpaca-12k` (modelscope) |
+| evalscope | `openqa` | `/opt/evalscope-datasets/openqa/open_qa.jsonl` | `AI-ModelScope/HC3-Chinese:open_qa.jsonl` |
+| evalscope | `random` | n/a (synthetic) | — |
+| aiperf | `sharegpt` | `/app/.cache/aiperf/datasets/ShareGPT_V3_unfiltered_cleaned_split.json` | `anon8231489123/ShareGPT_Vicuna_unfiltered` (HuggingFace) |
+| aiperf | `synthetic` | n/a (built-in generator) | — |
+
+After build + before deploy, run `apps/benchmark-runner/scripts/verify-airgap.sh` to confirm every baked path is reachable with `--network none`.
+
+Image-size impact (rough):
+
+- `md-runner-evalscope`: ~1.75 GB (`python:3.11-slim` base + evalscope ~1.4 GB + LongAlpaca ~200 MB + open_qa ~50 MB)
+- `md-runner-aiperf`: ~1.7 GB (base + aiperf deps ~300 MB + ShareGPT ~672 MB)
+
+If a future dataset needs to be added:
+1. Add the bake step in the relevant Dockerfile.
+2. Add the path to `packages/tool-adapters/src/<tool>/runtime.ts` `BAKED_DATASET_PATHS` (evalscope) or document where the loader picks it up (aiperf).
+3. Add a check to `verify-airgap.sh`.
+4. Update this table.

@@ -83,8 +83,15 @@ describe("evalscope.buildCommand", () => {
     expect(result.argv).toContain("http://10.0.0.5:8000/v1/completions");
   });
 
-  it("omits --dataset-path when dataset is not longalpaca (lets evalscope use its own default)", () => {
+  it("passes --dataset-path for openqa (baked HC3-Chinese open_qa.jsonl)", () => {
     const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "openqa" } });
+    const idx = result.argv.indexOf("--dataset-path");
+    expect(idx).toBeGreaterThan(-1);
+    expect(result.argv[idx + 1]).toBe("/opt/evalscope-datasets/openqa/open_qa.jsonl");
+  });
+
+  it("does not pass --dataset-path for random (synthetic dataset)", () => {
+    const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "random" } });
     expect(result.argv).not.toContain("--dataset-path");
   });
 
