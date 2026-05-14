@@ -134,7 +134,7 @@ export function InferenceMetricsGrid({ data }: { data: NormalizedInferenceData }
           rows={[
             {
               label: t("reports.shared.hitRate"),
-              value: `${(data.prefixCache.hitRate * 100).toFixed(2)}%`,
+              value: `${(data.prefixCache.hitRate * 100).toFixed(1)}%`,
             },
           ]}
         />

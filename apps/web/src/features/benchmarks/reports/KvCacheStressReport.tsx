@@ -11,9 +11,9 @@ import type { Benchmark } from "@modeldoctor/contracts";
 import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { MetricCard } from "../components/MetricCard";
 import { useBenchmarkList } from "../queries";
 import { UnknownReport } from "./UnknownReport";
+import { InferenceMetricsGrid } from "./_shared/InferenceMetricsGrid";
 
 export interface KvCacheStressReportProps {
   benchmark: Benchmark;
@@ -52,77 +52,17 @@ export function KvCacheStressReport({ benchmark }: KvCacheStressReportProps) {
 }
 
 function KvCacheStressMetrics({ data }: { data: EvalscopeReport }) {
-  const { t } = useTranslation("benchmarks");
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <MetricCard
-        title={t("reports.shared.ttftMs")}
-        rows={[
-          { label: t("reports.shared.meanLabel"), value: fmt(data.ttft.mean) },
-          { label: t("reports.shared.p50Label"), value: fmt(data.ttft.p50) },
-          { label: t("reports.shared.p90Label"), value: fmt(data.ttft.p90) },
-          { label: t("reports.shared.p95Label"), value: fmt(data.ttft.p95) },
-          { label: t("reports.shared.p99Label"), value: fmt(data.ttft.p99) },
-        ]}
-      />
-      <MetricCard
-        title={t("reports.shared.itlMs")}
-        rows={[
-          { label: t("reports.shared.meanLabel"), value: fmt(data.itl.mean) },
-          { label: t("reports.shared.p50Label"), value: fmt(data.itl.p50) },
-          { label: t("reports.shared.p90Label"), value: fmt(data.itl.p90) },
-          { label: t("reports.shared.p95Label"), value: fmt(data.itl.p95) },
-          { label: t("reports.shared.p99Label"), value: fmt(data.itl.p99) },
-        ]}
-      />
-      <MetricCard
-        title={t("reports.shared.e2eLatencyMs")}
-        rows={[
-          { label: t("reports.shared.meanLabel"), value: fmt(data.e2eLatency.mean) },
-          { label: t("reports.shared.p50Label"), value: fmt(data.e2eLatency.p50) },
-          { label: t("reports.shared.p90Label"), value: fmt(data.e2eLatency.p90) },
-          { label: t("reports.shared.p95Label"), value: fmt(data.e2eLatency.p95) },
-          { label: t("reports.shared.p99Label"), value: fmt(data.e2eLatency.p99) },
-        ]}
-      />
-      <MetricCard
-        title={t("reports.shared.throughput")}
-        rows={[
-          { label: t("reports.shared.rps"), value: fmt(data.throughput.requestsPerSec) },
-          {
-            label: t("reports.shared.outputTps"),
-            value: fmt(data.throughput.outputTokensPerSec),
-          },
-          {
-            label: t("reports.shared.totalTps"),
-            value: fmt(data.throughput.totalTokensPerSec),
-          },
-        ]}
-      />
-      <MetricCard
-        title={t("reports.shared.requests")}
-        rows={[
-          { label: t("reports.shared.totalLabel"), value: data.requests.total },
-          { label: t("reports.shared.successLabel"), value: data.requests.success },
-          { label: t("reports.shared.errorLabel"), value: data.requests.error },
-          {
-            label: t("reports.shared.errorRateLabel"),
-            value: `${(data.requests.errorRate * 100).toFixed(2)}%`,
-          },
-        ]}
-      />
-      {data.prefixCacheStats ? (
-        <MetricCard
-          title={t("reports.shared.prefixCache")}
-          rows={[
-            {
-              label: t("reports.shared.hitRate"),
-              value: `${(data.prefixCacheStats.hitRate * 100).toFixed(1)}%`,
-            },
-          ]}
-        />
-      ) : null}
-    </div>
+    <InferenceMetricsGrid
+      data={{
+        ttft: data.ttft,
+        itl: data.itl,
+        e2e: data.e2eLatency,
+        throughput: data.throughput,
+        requests: data.requests,
+        prefixCache: data.prefixCacheStats,
+      }}
+    />
   );
 }
 
