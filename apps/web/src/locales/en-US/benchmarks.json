@@ -396,18 +396,6 @@
       "promBackoffSecHelp": "Prometheus default scrape is 15s; keep at least 18s of buffer",
       "missingPromUrl": "This connection has no Prometheus URL — cannot run prefix-cache validation. Edit the connection to add one."
     },
-    "kvCacheStress": {
-      "numSessions": "Sessions",
-      "numSessionsHelp": "Number of independent sessions; each gets a ~2000-token deterministic system prompt. 200 forces HBM eviction on 8x910B4.",
-      "turns": "Turns per session",
-      "turnsHelp": "Conversation depth — first turn is cold, later turns hit prefix cache.",
-      "concurrency": "Concurrency",
-      "maxTokens": "Max tokens",
-      "durationSec": "Duration (s)",
-      "durationSecHelp": "Recommend ≥ 600s for stable Prometheus counter deltas.",
-      "systemPromptSeed": "System prompt seed",
-      "systemPromptSeedHelp": "sha256-derived prefix. Reuse the same seed across runs to compare cache backends fairly."
-    },
     "evalscope": {
       "section": "Evalscope parameters",
       "dataset": "Dataset",
@@ -519,23 +507,6 @@
         "title": "Connection not found",
         "body": "It may have been deleted"
       }
-    },
-    "kvCacheStress": {
-      "qps": "QPS",
-      "outputTps": "Output tokens/sec",
-      "requests": "OK / Total",
-      "errRate": "Error rate",
-      "latency": "Latency distribution",
-      "latencyMetric": "Metric",
-      "savingsTitle": "Prefix cache savings (two views)",
-      "hbmHitRate": "HBM hit rate (vLLM counter)",
-      "prefixCacheSavings": "Full savings (incl. LMCache/YRCache)",
-      "hiddenGain": "Hidden backend gain",
-      "savingsExplainer": "HBM hit rate counts only vLLM HBM hits; full savings = 1 − actual prefill / total prompt, including chunks reloaded from LMCache/YRCache. The delta is the backend's invisible contribution.",
-      "backendTitle": "Backend native counters (nameGuess: {{name}})",
-      "backendEmpty": "No lmcache:* or yrcache_* counter scraped. The backend may not be enabled, or PROMETHEUS_MULTIPROC_DIR may be unset.",
-      "counterName": "Counter",
-      "counterValue": "Value"
     }
   }
 }

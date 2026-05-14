@@ -396,18 +396,6 @@
       "promBackoffSecHelp": "Prom 默认 15s 抓一次；最少留 18s 缓冲",
       "missingPromUrl": "该连接未配置 Prometheus URL，无法运行 prefix-cache 验证。请在连接编辑里补上。"
     },
-    "kvCacheStress": {
-      "numSessions": "Session 数",
-      "numSessionsHelp": "独立会话数。每个 session 一份 ~2000 token 的 deterministic system prompt（200 是 8x910B4 强制驱逐 HBM 的甜点）",
-      "turns": "对话轮数",
-      "turnsHelp": "history 累积,首轮冷启,后续轮命中 prefix cache",
-      "concurrency": "并发数",
-      "maxTokens": "Max tokens",
-      "durationSec": "时长(秒)",
-      "durationSecHelp": "建议 ≥ 600s 让 Prom counter delta 稳定",
-      "systemPromptSeed": "System prompt seed",
-      "systemPromptSeedHelp": "sha256 派生 prefix。不同 run 用同一个 seed 才能跨 run 比 prefix cache 收益"
-    },
     "evalscope": {
       "section": "evalscope 参数",
       "dataset": "数据集",
@@ -519,23 +507,6 @@
         "title": "未找到此连接",
         "body": "它可能已被删除"
       }
-    },
-    "kvCacheStress": {
-      "qps": "QPS",
-      "outputTps": "Output tokens/sec",
-      "requests": "完成 / 总请求",
-      "errRate": "错误率",
-      "latency": "延迟分布",
-      "latencyMetric": "指标",
-      "savingsTitle": "Prefix Cache Savings（两套口径）",
-      "hbmHitRate": "HBM hit rate（vLLM 自家 counter）",
-      "prefixCacheSavings": "全口径 Savings（含 LMCache/YRCache）",
-      "hiddenGain": "后端隐形增益",
-      "savingsExplainer": "HBM hit rate 只统计 vLLM HBM 命中；全口径 Savings = 1 − 实际 prefill / 总 prompt,包括 LMCache 从 CPU/disk 救回的 chunk。两者之差就是后端的隐形贡献。",
-      "backendTitle": "后端 native counter (nameGuess: {{name}})",
-      "backendEmpty": "没抓到 lmcache:* 或 yrcache_* counter。可能后端没启用或 PROMETHEUS_MULTIPROC_DIR 没配。",
-      "counterName": "Counter",
-      "counterValue": "值"
     }
   }
 }

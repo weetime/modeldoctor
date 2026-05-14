@@ -146,6 +146,10 @@ function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
     connectionId: benchmark.connectionId ?? undefined,
     scenario: "kv-cache-stress",
     search: sourceName,
+    // Restrict to terminal-success benchmarks so an in-flight rerun doesn't
+    // accidentally match as the sibling pair (its summaryMetrics is null and
+    // would parse-fail downstream).
+    status: "completed",
     limit: 50,
   });
 
