@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1.6
 
-# Phase 1 of evalscope rollout. evalscope is the load generator, not the
-# model server. Bake LongAlpaca-12k at build time so air-gapped clusters
-# can run the official 6-task methodology without runtime network egress.
-# Image ~1.7 GB (python:3.11-slim ~130 MB + evalscope+deps ~1.4 GB +
-# LongAlpaca dataset ~200 MB).
+# Modelscope evalscope perf load generator. Bakes LongAlpaca-12k +
+# HC3-Chinese open_qa.jsonl at build time so the image runs on
+# air-gapped clusters. Image ~1.75 GB.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
