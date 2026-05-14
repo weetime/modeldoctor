@@ -30,6 +30,28 @@ const genaiPerfMetrics: Benchmark["summaryMetrics"] = {
   },
 } as unknown as Benchmark["summaryMetrics"];
 
+const evalscopeMetrics: Benchmark["summaryMetrics"] = {
+  tool: "evalscope",
+  data: {
+    ttft: { mean: 80, p50: 75, p90: 100, p95: 150, p99: 200 },
+    e2eLatency: { mean: 220, p50: 210, p90: 380, p95: 420.7, p99: 600 },
+    itl: { mean: 25, p50: 24, p90: 32, p95: 40, p99: 60 },
+    throughput: { requestsPerSec: 8.4, outputTokensPerSec: 1200, totalTokensPerSec: 1800 },
+    requests: { total: 100, success: 97, error: 3, errorRate: 0.03 },
+  },
+} as unknown as Benchmark["summaryMetrics"];
+
+const aiperfMetrics: Benchmark["summaryMetrics"] = {
+  tool: "aiperf",
+  data: {
+    ttft: { mean: 90, p50: 85, p90: 110, p95: 160, p99: 220 },
+    e2eLatency: { mean: 240, p50: 230, p90: 400, p95: 455.2, p99: 650 },
+    itl: { mean: 28, p50: 27, p90: 34, p95: 42, p99: 65 },
+    throughput: { requestsPerSec: 7.1, outputTokensPerSec: 1050, totalTokensPerSec: 1600 },
+    requests: { total: 200, success: 198, error: 2, errorRate: 0.01 },
+  },
+} as unknown as Benchmark["summaryMetrics"];
+
 describe("readP95Latency", () => {
   it("reads guidellm.e2eLatency.p95", () => {
     expect(readP95Latency(guidellmMetrics)).toBe(491.2);
@@ -39,6 +61,12 @@ describe("readP95Latency", () => {
   });
   it("reads genai-perf.requestLatency.p95", () => {
     expect(readP95Latency(genaiPerfMetrics)).toBe(333.3);
+  });
+  it("reads evalscope.e2eLatency.p95", () => {
+    expect(readP95Latency(evalscopeMetrics)).toBe(420.7);
+  });
+  it("reads aiperf.e2eLatency.p95", () => {
+    expect(readP95Latency(aiperfMetrics)).toBe(455.2);
   });
   it("returns null when metrics is null", () => {
     expect(readP95Latency(null)).toBeNull();
@@ -61,6 +89,12 @@ describe("readErrorRate", () => {
   it("returns null for genai-perf (schema has no error field)", () => {
     expect(readErrorRate(genaiPerfMetrics)).toBeNull();
   });
+  it("reads evalscope requests.errorRate directly (already a 0-1 fraction)", () => {
+    expect(readErrorRate(evalscopeMetrics)).toBeCloseTo(0.03, 6);
+  });
+  it("reads aiperf requests.errorRate directly (already a 0-1 fraction)", () => {
+    expect(readErrorRate(aiperfMetrics)).toBeCloseTo(0.01, 6);
+  });
   it("returns null when guidellm requests.total is 0", () => {
     const zero = {
       tool: "guidellm",
@@ -79,6 +113,12 @@ describe("readThroughput", () => {
   });
   it("reads genai-perf.requestThroughput.avg", () => {
     expect(readThroughput(genaiPerfMetrics)).toBe(50.2);
+  });
+  it("reads evalscope.throughput.requestsPerSec", () => {
+    expect(readThroughput(evalscopeMetrics)).toBe(8.4);
+  });
+  it("reads aiperf.throughput.requestsPerSec", () => {
+    expect(readThroughput(aiperfMetrics)).toBe(7.1);
   });
   it("returns null when missing", () => {
     expect(readThroughput(null)).toBeNull();
@@ -108,6 +148,25 @@ describe("rowDescriptorsForTool", () => {
   it("returns genai-perf row set without errorRate row (schema has no error)", () => {
     const rows = rowDescriptorsForTool("genai-perf" as BenchmarkTool);
     expect(rows.find((r) => r.labelKey === "errorRate")).toBeUndefined();
+  });
+
+  it("returns evalscope row set with shared inference rows (ttft + itl + errorRate)", () => {
+    const rows = rowDescriptorsForTool("evalscope" as BenchmarkTool);
+    const verdictRows = rows.filter((r) => r.verdictKind !== undefined);
+    expect(verdictRows.map((r) => r.verdictKind).sort()).toEqual([
+      "errorRate",
+      "latency",
+      "throughput",
+    ]);
+    expect(rows.find((r) => r.labelKey === "ttftP95")).toBeDefined();
+    expect(rows.find((r) => r.labelKey === "itlP95")).toBeDefined();
+    expect(rows.find((r) => r.labelKey === "errorRate")).toBeDefined();
+  });
+
+  it("returns aiperf row set identical to evalscope (shared array)", () => {
+    expect(rowDescriptorsForTool("aiperf" as BenchmarkTool)).toBe(
+      rowDescriptorsForTool("evalscope" as BenchmarkTool),
+    );
   });
 
   it("returns empty array for unknown tool", () => {
