@@ -1,6 +1,7 @@
 import type { Benchmark } from "@modeldoctor/contracts";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import "@/lib/i18n";
 import { CapacityReport } from "../../reports/CapacityReport";
 
 const guidellmReport = {

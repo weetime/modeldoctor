@@ -10,6 +10,7 @@ import {
 import type { Benchmark } from "@modeldoctor/contracts";
 import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { MetricCard } from "../components/MetricCard";
 import { useBenchmarkList } from "../queries";
 import { UnknownReport } from "./UnknownReport";
@@ -51,64 +52,71 @@ export function KvCacheStressReport({ benchmark }: KvCacheStressReportProps) {
 }
 
 function KvCacheStressMetrics({ data }: { data: EvalscopeReport }) {
+  const { t } = useTranslation("benchmarks");
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       <MetricCard
-        title="TTFT (ms)"
+        title={t("reports.shared.ttftMs")}
         rows={[
-          { label: "mean", value: fmt(data.ttft.mean) },
-          { label: "p50", value: fmt(data.ttft.p50) },
-          { label: "p90", value: fmt(data.ttft.p90) },
-          { label: "p95", value: fmt(data.ttft.p95) },
-          { label: "p99", value: fmt(data.ttft.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.ttft.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.ttft.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.ttft.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.ttft.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.ttft.p99) },
         ]}
       />
       <MetricCard
-        title="ITL (ms)"
+        title={t("reports.shared.itlMs")}
         rows={[
-          { label: "mean", value: fmt(data.itl.mean) },
-          { label: "p50", value: fmt(data.itl.p50) },
-          { label: "p90", value: fmt(data.itl.p90) },
-          { label: "p95", value: fmt(data.itl.p95) },
-          { label: "p99", value: fmt(data.itl.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.itl.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.itl.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.itl.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.itl.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.itl.p99) },
         ]}
       />
       <MetricCard
-        title="E2E latency (ms)"
+        title={t("reports.shared.e2eLatencyMs")}
         rows={[
-          { label: "mean", value: fmt(data.e2eLatency.mean) },
-          { label: "p50", value: fmt(data.e2eLatency.p50) },
-          { label: "p90", value: fmt(data.e2eLatency.p90) },
-          { label: "p95", value: fmt(data.e2eLatency.p95) },
-          { label: "p99", value: fmt(data.e2eLatency.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.e2eLatency.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.e2eLatency.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.e2eLatency.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.e2eLatency.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.e2eLatency.p99) },
         ]}
       />
       <MetricCard
-        title="Throughput"
+        title={t("reports.shared.throughput")}
         rows={[
-          { label: "RPS", value: fmt(data.throughput.requestsPerSec) },
-          { label: "Output TPS", value: fmt(data.throughput.outputTokensPerSec) },
-          { label: "Total TPS", value: fmt(data.throughput.totalTokensPerSec) },
-        ]}
-      />
-      <MetricCard
-        title="Requests"
-        rows={[
-          { label: "total", value: data.requests.total },
-          { label: "success", value: data.requests.success },
-          { label: "error", value: data.requests.error },
+          { label: t("reports.shared.rps"), value: fmt(data.throughput.requestsPerSec) },
           {
-            label: "errorRate",
+            label: t("reports.shared.outputTps"),
+            value: fmt(data.throughput.outputTokensPerSec),
+          },
+          {
+            label: t("reports.shared.totalTps"),
+            value: fmt(data.throughput.totalTokensPerSec),
+          },
+        ]}
+      />
+      <MetricCard
+        title={t("reports.shared.requests")}
+        rows={[
+          { label: t("reports.shared.totalLabel"), value: data.requests.total },
+          { label: t("reports.shared.successLabel"), value: data.requests.success },
+          { label: t("reports.shared.errorLabel"), value: data.requests.error },
+          {
+            label: t("reports.shared.errorRateLabel"),
             value: `${(data.requests.errorRate * 100).toFixed(2)}%`,
           },
         ]}
       />
       {data.prefixCacheStats ? (
         <MetricCard
-          title="Prefix cache"
+          title={t("reports.shared.prefixCache")}
           rows={[
             {
-              label: "Hit rate",
+              label: t("reports.shared.hitRate"),
               value: `${(data.prefixCacheStats.hitRate * 100).toFixed(1)}%`,
             },
           ]}
@@ -135,6 +143,7 @@ interface ColdWarmPairPanelProps {
  * Renders nothing when no sibling is found (preserves the spec contract).
  */
 function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
+  const { t } = useTranslation("benchmarks");
   const isWarm = benchmark.name.endsWith(RERUN_SUFFIX);
   const sourceName = isWarm ? benchmark.name.slice(0, -RERUN_SUFFIX.length) : benchmark.name;
   const siblingName = isWarm ? sourceName : `${sourceName}${RERUN_SUFFIX}`;
@@ -174,33 +183,35 @@ function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
   const r2 = isWarm ? cold : siblingData;
 
   const rows: Array<{ label: string; r1: number; r2: number }> = [
-    { label: "TTFT p95 (ms)", r1: r1.ttft.p95, r2: r2.ttft.p95 },
+    { label: t("reports.kvCacheStress.ttftP95Ms"), r1: r1.ttft.p95, r2: r2.ttft.p95 },
     {
-      label: "Throughput · RPS",
+      label: `${t("reports.shared.throughput")} · ${t("reports.kvCacheStress.rps")}`,
       r1: r1.throughput.requestsPerSec,
       r2: r2.throughput.requestsPerSec,
     },
     {
-      label: "Throughput · Output TPS",
+      label: `${t("reports.shared.throughput")} · ${t("reports.kvCacheStress.outputTokensPerSec")}`,
       r1: r1.throughput.outputTokensPerSec,
       r2: r2.throughput.outputTokensPerSec,
     },
-    { label: "ITL p50 (ms)", r1: r1.itl.p50, r2: r2.itl.p50 },
+    { label: t("reports.kvCacheStress.itlP50Ms"), r1: r1.itl.p50, r2: r2.itl.p50 },
   ];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-semibold">Cold vs. warm (R1 → R2)</CardTitle>
+        <CardTitle className="text-sm font-semibold">
+          {t("reports.kvCacheStress.coldVsWarm")}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Metric</TableHead>
-              <TableHead className="text-right">R1 · cold</TableHead>
-              <TableHead className="text-right">R2 · warm</TableHead>
-              <TableHead className="text-right">Δ</TableHead>
+              <TableHead>{t("compare.metricColumnLabel")}</TableHead>
+              <TableHead className="text-right">{t("reports.kvCacheStress.cold")}</TableHead>
+              <TableHead className="text-right">{t("reports.kvCacheStress.warm")}</TableHead>
+              <TableHead className="text-right">{t("reports.kvCacheStress.delta")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

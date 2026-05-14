@@ -426,6 +426,41 @@
     }
   },
   "reports": {
+    "shared": {
+      "ttftMs": "TTFT (ms)",
+      "itlMs": "ITL (ms)",
+      "e2eLatencyMs": "E2E latency (ms)",
+      "throughput": "Throughput",
+      "requests": "Requests",
+      "prefixCache": "Prefix cache",
+      "concurrency": "Concurrency",
+      "rps": "RPS",
+      "outputTps": "Output TPS",
+      "inputTps": "Input TPS",
+      "totalTps": "Total TPS",
+      "totalLabel": "total",
+      "successLabel": "success",
+      "errorLabel": "error",
+      "incompleteLabel": "incomplete",
+      "errorRateLabel": "error rate",
+      "hitRate": "Hit rate",
+      "meanLabel": "mean",
+      "maxLabel": "max",
+      "p50Label": "p50",
+      "p90Label": "p90",
+      "p95Label": "p95",
+      "p99Label": "p99"
+    },
+    "kvCacheStress": {
+      "coldVsWarm": "Cold vs Warm",
+      "cold": "Cold (R1)",
+      "warm": "Warm (R2)",
+      "delta": "Δ",
+      "ttftP95Ms": "TTFT p95 (ms)",
+      "rps": "RPS",
+      "outputTokensPerSec": "Output tokens/s",
+      "itlP50Ms": "ITL p50 (ms)"
+    },
     "prefixCacheProbe": {
       "stickiness": "Stickiness",
       "deterministic": "Deterministic",

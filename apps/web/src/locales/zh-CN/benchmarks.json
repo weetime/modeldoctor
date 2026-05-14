@@ -426,6 +426,41 @@
     }
   },
   "reports": {
+    "shared": {
+      "ttftMs": "TTFT (ms)",
+      "itlMs": "逐 token 延迟 (ms)",
+      "e2eLatencyMs": "端到端延迟 (ms)",
+      "throughput": "吞吐",
+      "requests": "请求",
+      "prefixCache": "前缀缓存",
+      "concurrency": "并发",
+      "rps": "RPS",
+      "outputTps": "输出 TPS",
+      "inputTps": "输入 TPS",
+      "totalTps": "总 TPS",
+      "totalLabel": "总数",
+      "successLabel": "成功",
+      "errorLabel": "失败",
+      "incompleteLabel": "未完成",
+      "errorRateLabel": "错误率",
+      "hitRate": "命中率",
+      "meanLabel": "均值",
+      "maxLabel": "最大",
+      "p50Label": "p50",
+      "p90Label": "p90",
+      "p95Label": "p95",
+      "p99Label": "p99"
+    },
+    "kvCacheStress": {
+      "coldVsWarm": "冷态 vs 热态",
+      "cold": "冷态 (R1)",
+      "warm": "热态 (R2)",
+      "delta": "Δ",
+      "ttftP95Ms": "TTFT p95 (ms)",
+      "rps": "RPS",
+      "outputTokensPerSec": "输出 token/s",
+      "itlP50Ms": "ITL p50 (ms)"
+    },
     "prefixCacheProbe": {
       "stickiness": "粘附率",
       "deterministic": "确定性",

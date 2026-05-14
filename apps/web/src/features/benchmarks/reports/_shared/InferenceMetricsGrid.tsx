@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { MetricCard, type MetricRow } from "../../components/MetricCard";
 
 interface Dist {
@@ -51,77 +52,88 @@ function fmt(n: number, digits = 1): string {
 }
 
 export function InferenceMetricsGrid({ data }: { data: NormalizedInferenceData }) {
+  const { t } = useTranslation("benchmarks");
+
   const throughputRows: MetricRow[] = [
-    { label: "RPS", value: fmt(data.throughput.requestsPerSec) },
-    { label: "Output TPS", value: fmt(data.throughput.outputTokensPerSec) },
+    { label: t("reports.shared.rps"), value: fmt(data.throughput.requestsPerSec) },
+    { label: t("reports.shared.outputTps"), value: fmt(data.throughput.outputTokensPerSec) },
   ];
   if (typeof data.throughput.inputTokensPerSec === "number") {
-    throughputRows.push({ label: "Input TPS", value: fmt(data.throughput.inputTokensPerSec) });
+    throughputRows.push({
+      label: t("reports.shared.inputTps"),
+      value: fmt(data.throughput.inputTokensPerSec),
+    });
   }
-  throughputRows.push({ label: "Total TPS", value: fmt(data.throughput.totalTokensPerSec) });
+  throughputRows.push({
+    label: t("reports.shared.totalTps"),
+    value: fmt(data.throughput.totalTokensPerSec),
+  });
 
   const requestsRows: MetricRow[] = [
-    { label: "total", value: data.requests.total },
-    { label: "success", value: data.requests.success },
-    { label: "error", value: data.requests.error },
+    { label: t("reports.shared.totalLabel"), value: data.requests.total },
+    { label: t("reports.shared.successLabel"), value: data.requests.success },
+    { label: t("reports.shared.errorLabel"), value: data.requests.error },
   ];
   if (typeof data.requests.incomplete === "number") {
-    requestsRows.push({ label: "incomplete", value: data.requests.incomplete });
+    requestsRows.push({
+      label: t("reports.shared.incompleteLabel"),
+      value: data.requests.incomplete,
+    });
   }
   requestsRows.push({
-    label: "errorRate",
+    label: t("reports.shared.errorRateLabel"),
     value: `${(data.requests.errorRate * 100).toFixed(2)}%`,
   });
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       <MetricCard
-        title="TTFT (ms)"
+        title={t("reports.shared.ttftMs")}
         rows={[
-          { label: "mean", value: fmt(data.ttft.mean) },
-          { label: "p50", value: fmt(data.ttft.p50) },
-          { label: "p90", value: fmt(data.ttft.p90) },
-          { label: "p95", value: fmt(data.ttft.p95) },
-          { label: "p99", value: fmt(data.ttft.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.ttft.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.ttft.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.ttft.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.ttft.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.ttft.p99) },
         ]}
       />
       <MetricCard
-        title="ITL (ms)"
+        title={t("reports.shared.itlMs")}
         rows={[
-          { label: "mean", value: fmt(data.itl.mean) },
-          { label: "p50", value: fmt(data.itl.p50) },
-          { label: "p90", value: fmt(data.itl.p90) },
-          { label: "p95", value: fmt(data.itl.p95) },
-          { label: "p99", value: fmt(data.itl.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.itl.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.itl.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.itl.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.itl.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.itl.p99) },
         ]}
       />
       <MetricCard
-        title="E2E latency (ms)"
+        title={t("reports.shared.e2eLatencyMs")}
         rows={[
-          { label: "mean", value: fmt(data.e2e.mean) },
-          { label: "p50", value: fmt(data.e2e.p50) },
-          { label: "p90", value: fmt(data.e2e.p90) },
-          { label: "p95", value: fmt(data.e2e.p95) },
-          { label: "p99", value: fmt(data.e2e.p99) },
+          { label: t("reports.shared.meanLabel"), value: fmt(data.e2e.mean) },
+          { label: t("reports.shared.p50Label"), value: fmt(data.e2e.p50) },
+          { label: t("reports.shared.p90Label"), value: fmt(data.e2e.p90) },
+          { label: t("reports.shared.p95Label"), value: fmt(data.e2e.p95) },
+          { label: t("reports.shared.p99Label"), value: fmt(data.e2e.p99) },
         ]}
       />
-      <MetricCard title="Throughput" rows={throughputRows} />
+      <MetricCard title={t("reports.shared.throughput")} rows={throughputRows} />
       {data.concurrency ? (
         <MetricCard
-          title="Concurrency"
+          title={t("reports.shared.concurrency")}
           rows={[
-            { label: "mean", value: fmt(data.concurrency.mean) },
-            { label: "max", value: data.concurrency.max },
+            { label: t("reports.shared.meanLabel"), value: fmt(data.concurrency.mean) },
+            { label: t("reports.shared.maxLabel"), value: data.concurrency.max },
           ]}
         />
       ) : null}
-      <MetricCard title="Requests" rows={requestsRows} />
+      <MetricCard title={t("reports.shared.requests")} rows={requestsRows} />
       {data.prefixCache ? (
         <MetricCard
-          title="Prefix cache"
+          title={t("reports.shared.prefixCache")}
           rows={[
             {
-              label: "hitRate",
+              label: t("reports.shared.hitRate"),
               value: `${(data.prefixCache.hitRate * 100).toFixed(2)}%`,
             },
           ]}
