@@ -16,9 +16,7 @@ export const evalscopeParamsSchema = z
     maxPromptLength: z.number().int().min(1).max(32000).default(9000),
     minTokens: z.number().int().min(1).max(4096).default(160),
     maxTokens: z.number().int().min(1).max(4096).default(200),
-    apiPath: z
-      .enum(["/v1/chat/completions", "/v1/completions"])
-      .default("/v1/chat/completions"),
+    apiPath: z.enum(["/v1/chat/completions", "/v1/completions"]).default("/v1/chat/completions"),
     stream: z.boolean().default(true),
     seed: z.number().int().optional(),
   })

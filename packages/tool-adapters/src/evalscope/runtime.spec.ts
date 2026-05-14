@@ -150,7 +150,7 @@ describe("evalscope.parseFinalReport", () => {
     const summary = Buffer.from(
       JSON.stringify({
         "Test Duration (s)": 10,
-        "Concurrency": 4,
+        Concurrency: 4,
         "Total Requests": 8,
         "Success Requests": 8,
         "Failed Requests": 0,
@@ -179,7 +179,7 @@ describe("evalscope.parseFinalReport", () => {
     const summary = Buffer.from(
       JSON.stringify({
         "Test Duration (s)": 10,
-        "Concurrency": 4,
+        Concurrency: 4,
         "Total Requests": 10,
         "Success Requests": 8,
         "Failed Requests": 2,

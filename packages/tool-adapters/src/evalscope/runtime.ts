@@ -124,11 +124,7 @@ function findPercentile(rows: EvalscopePercentileRow[], pct: "50%" | "90%" | "95
   return rows.find((r) => r.Percentiles === pct);
 }
 
-function readDist(
-  rows: EvalscopePercentileRow[],
-  field: "TTFT (ms)" | "ITL (ms)",
-  mean: number,
-) {
+function readDist(rows: EvalscopePercentileRow[], field: "TTFT (ms)" | "ITL (ms)", mean: number) {
   return {
     mean,
     p50: findPercentile(rows, "50%")?.[field] ?? 0,

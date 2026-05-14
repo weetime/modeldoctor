@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  GUIDELLM_CATEGORY_DEFAULTS,
-  VEGETA_CATEGORY_DEFAULTS,
-} from "./category-defaults.js";
+import { GUIDELLM_CATEGORY_DEFAULTS, VEGETA_CATEGORY_DEFAULTS } from "./category-defaults.js";
 
 describe("VEGETA_CATEGORY_DEFAULTS", () => {
   it("maps every ModalityCategory to a supported apiType", () => {
