@@ -1,44 +1,15 @@
-import { type MetricKind, type ToolName, byTool } from "@modeldoctor/tool-adapters";
-
-type Tagged = { tool?: string; data?: Record<string, unknown> };
-
-export function asTagged(m: unknown): Tagged | null {
-  if (!m || typeof m !== "object") return null;
-  const t = m as Tagged;
-  return t.data ? t : null;
-}
-
-function asFiniteNumber(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
-}
-
-function fromDist(data: Record<string, unknown>, key: string, field: string): number | null {
-  const dist = data[key] as Record<string, unknown> | undefined;
-  return asFiniteNumber(dist?.[field]);
-}
-
-function readByKind(kind: MetricKind, m: unknown): number | null {
-  const t = asTagged(m);
-  if (!t?.data || typeof t.tool !== "string") return null;
-  try {
-    return byTool(t.tool as ToolName).readMetric(kind, t.data);
-  } catch {
-    // byTool throws on unknown tool names; tolerate stale rows whose tool
-    // is no longer registered (e.g. a Run from a deleted-tool migration).
-    return null;
-  }
-}
+import { readMetricSafe } from "@modeldoctor/tool-adapters";
 
 export function readP95Latency(m: unknown): number | null {
-  return readByKind("e2e.p95", m);
+  return readMetricSafe("e2e.p95", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readErrorRate(m: unknown): number | null {
-  return readByKind("errorRate", m);
+  return readMetricSafe("errorRate", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readThroughput(m: unknown): number | null {
-  return readByKind("requestsPerSec", m);
+  return readMetricSafe("requestsPerSec", m as { tool?: unknown; data?: unknown } | null);
 }
 
 export interface PromptMetricsSummary {
@@ -51,49 +22,31 @@ export interface PromptMetricsSummary {
 /**
  * Build a compact metrics snapshot for AI compare narratives.
  *
- * The scalar readers (throughput, errorRate) delegate to `adapter.readMetric`.
- * The p50/p90/p99 dist buckets need a per-tool field-path lookup because the
- * shared `MetricKind` enum exposes only p95/p99 percentiles — adding p50/p90
- * is a future Task 5 extension. Until then, the tool→dist-key resolution lives
- * inline; the table is intentionally tiny so future tool additions are obvious.
+ * All field reads delegate to `readMetricSafe`. The `ttft` and `e2e`
+ * sub-objects are null when the tool doesn't carry that distribution at
+ * all (vegeta has no TTFT) — detected by checking whether any of p50/p90/p99
+ * resolves to a number. Now that `MetricKind` includes the p50/p90 buckets,
+ * no per-tool field-path table is needed.
  */
-const TTFT_DIST_KEY: Partial<Record<ToolName, string>> = {
-  guidellm: "ttft",
-  evalscope: "ttft",
-  aiperf: "ttft",
-  // vegeta is single-shot HTTP; no TTFT.
-};
-const E2E_DIST_KEY: Partial<Record<ToolName, string>> = {
-  guidellm: "e2eLatency",
-  evalscope: "e2eLatency",
-  aiperf: "e2eLatency",
-  vegeta: "latencies",
-};
-
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
-  const t = asTagged(m);
-  const tool = t?.tool as ToolName | undefined;
-  const ttftKey = tool ? TTFT_DIST_KEY[tool] : undefined;
-  const e2eKey = tool ? E2E_DIST_KEY[tool] : undefined;
+  const summary = m as { tool?: unknown; data?: unknown } | null;
+  const ttftP50 = readMetricSafe("ttft.p50", summary);
+  const ttftP90 = readMetricSafe("ttft.p90", summary);
+  const ttftP99 = readMetricSafe("ttft.p99", summary);
+  const e2eP50 = readMetricSafe("e2e.p50", summary);
+  const e2eP90 = readMetricSafe("e2e.p90", summary);
+  const e2eP99 = readMetricSafe("e2e.p99", summary);
 
   return {
-    throughput: readThroughput(m),
-    errorRate: readErrorRate(m),
+    throughput: readMetricSafe("requestsPerSec", summary),
+    errorRate: readMetricSafe("errorRate", summary),
     ttft:
-      t?.data && ttftKey
-        ? {
-            p50: fromDist(t.data, ttftKey, "p50"),
-            p90: fromDist(t.data, ttftKey, "p90"),
-            p99: fromDist(t.data, ttftKey, "p99"),
-          }
-        : null,
+      ttftP50 === null && ttftP90 === null && ttftP99 === null
+        ? null
+        : { p50: ttftP50, p90: ttftP90, p99: ttftP99 },
     e2e:
-      t?.data && e2eKey
-        ? {
-            p50: fromDist(t.data, e2eKey, "p50"),
-            p90: fromDist(t.data, e2eKey, "p90"),
-            p99: fromDist(t.data, e2eKey, "p99"),
-          }
-        : null,
+      e2eP50 === null && e2eP90 === null && e2eP99 === null
+        ? null
+        : { p50: e2eP50, p90: e2eP90, p99: e2eP99 },
   };
 }

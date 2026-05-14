@@ -1,4 +1,4 @@
-import { type MetricKind, type ToolName, byTool } from "@modeldoctor/tool-adapters";
+import { type MetricKind, readMetricSafe } from "@modeldoctor/tool-adapters";
 
 type MetricsBlob = { tool?: string; data?: Record<string, any> } | null | undefined;
 
@@ -25,16 +25,9 @@ const CHECK_ID_TO_METRIC_KIND: Record<string, MetricKind> = {
 };
 
 export function extractMetric(m: MetricsBlob, checkId: string): number | null {
-  if (!m?.tool || !m?.data) return null;
   const kind = CHECK_ID_TO_METRIC_KIND[checkId];
   if (!kind) return null;
-  try {
-    return byTool(m.tool as ToolName).readMetric(kind, m.data);
-  } catch {
-    // byTool throws on unknown tool names; tolerate stale rows whose tool
-    // is no longer registered (e.g. a Run from a deleted-tool migration).
-    return null;
-  }
+  return readMetricSafe(kind, m);
 }
 
 export function median(values: number[]): number {

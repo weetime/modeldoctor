@@ -1,97 +1,30 @@
 import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
+import { type MetricKind, readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 
 // summaryMetrics is the discriminated union written by tool-adapter
 // parseFinalReport: { tool, data } (see
 // packages/tool-adapters/src/{guidellm,vegeta,aiperf,evalscope}/runtime.ts).
 // vegeta latencies are normalized to ms by the adapter (NOT ns).
+//
+// All per-tool field-path logic now lives in each adapter's `readMetric`
+// (see packages/tool-adapters/src/<tool>/read-metric.ts). This module
+// just picks `MetricKind`s and delegates via the shared `readMetricSafe`
+// helper — adding a new tool / metric updates exactly one adapter file.
 
 type SummaryMetrics = Benchmark["summaryMetrics"];
-type Tagged = { tool?: string; data?: Record<string, unknown> };
-
-function asTagged(metrics: SummaryMetrics): Tagged | null {
-  if (!metrics) return null;
-  const m = metrics as Tagged;
-  return m.data ? m : null;
-}
-
-// Number.isFinite filters NaN and ±Infinity. The verdict.ts contract requires
-// finite numbers; routing every reader through this guard means upstream
-// adapter regressions (e.g. a future tool emitting `0/0 = NaN`) degrade to
-// `null` here instead of poisoning delta math downstream.
-function asFiniteNumber(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
-}
-
-function fromDist(data: Record<string, unknown>, key: string, field: string): number | null {
-  const dist = data[key] as Record<string, unknown> | undefined;
-  return asFiniteNumber(dist?.[field]);
-}
 
 // ─── Verdict-eligible readers ────────────────────────────────────────────────
 
 export function readP95Latency(metrics: SummaryMetrics): number | null {
-  const m = asTagged(metrics);
-  if (!m?.data) return null;
-  switch (m.tool) {
-    case "guidellm":
-      return fromDist(m.data, "e2eLatency", "p95");
-    case "vegeta":
-      return fromDist(m.data, "latencies", "p95");
-    case "evalscope":
-    case "aiperf":
-      return fromDist(m.data, "e2eLatency", "p95");
-    default:
-      return null;
-  }
+  return readMetricSafe("e2e.p95", metrics as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readErrorRate(metrics: SummaryMetrics): number | null {
-  const m = asTagged(metrics);
-  if (!m?.data) return null;
-  switch (m.tool) {
-    case "guidellm": {
-      const r = m.data.requests as { total?: number; error?: number } | undefined;
-      const total = asFiniteNumber(r?.total);
-      const error = asFiniteNumber(r?.error);
-      if (total === null || error === null || total === 0) return null;
-      return error / total;
-    }
-    case "vegeta": {
-      const s = asFiniteNumber(m.data.success);
-      return s === null ? null : 1 - s / 100;
-    }
-    case "evalscope":
-    case "aiperf": {
-      // evalscope/aiperf schemas carry errorRate as a 0-1 fraction directly,
-      // so no division by total is required.
-      const r = m.data.requests as { errorRate?: number } | undefined;
-      return asFiniteNumber(r?.errorRate);
-    }
-    default:
-      return null;
-  }
+  return readMetricSafe("errorRate", metrics as { tool?: unknown; data?: unknown } | null);
 }
 
 export function readThroughput(metrics: SummaryMetrics): number | null {
-  const m = asTagged(metrics);
-  if (!m?.data) return null;
-  switch (m.tool) {
-    case "guidellm": {
-      const r = m.data.requestsPerSecond as { mean?: number } | undefined;
-      return asFiniteNumber(r?.mean);
-    }
-    case "vegeta": {
-      const r = m.data.requests as { throughput?: number } | undefined;
-      return asFiniteNumber(r?.throughput);
-    }
-    case "evalscope":
-    case "aiperf": {
-      const r = m.data.throughput as { requestsPerSec?: number } | undefined;
-      return asFiniteNumber(r?.requestsPerSec);
-    }
-    default:
-      return null;
-  }
+  return readMetricSafe("requestsPerSec", metrics as { tool?: unknown; data?: unknown } | null);
 }
 
 // ─── Grid row descriptors ────────────────────────────────────────────────────
@@ -114,50 +47,68 @@ export interface MetricRowDescriptor {
   unitSuffix?: string; // for the cell display (e.g. "ms", "%")
 }
 
-function distRow(
+function metricRow(
   labelKey: string,
-  toolKey: string,
-  field: string,
+  kind: MetricKind,
   opts: { digits?: number; unitSuffix?: string; verdictKind?: VerdictKind } = {},
 ): MetricRowDescriptor {
   return {
     labelKey,
-    read: (m) => {
-      const t = asTagged(m);
-      return t?.data ? fromDist(t.data, toolKey, field) : null;
-    },
+    read: (m) => readMetricSafe(kind, m as { tool?: unknown; data?: unknown } | null),
     digits: opts.digits,
     unitSuffix: opts.unitSuffix,
     verdictKind: opts.verdictKind,
   };
 }
 
+// `ttftMean` / `itlMean` / latency min/mean/max have no MetricKind counterparts
+// (only the dist buckets are first-class). Fall back to direct field reads
+// where MetricKind doesn't cover the case.
+function rawDistRow(
+  labelKey: string,
+  toolKey: string,
+  field: string,
+  opts: { unitSuffix?: string } = {},
+): MetricRowDescriptor {
+  return {
+    labelKey,
+    read: (m) => {
+      const t = m as { tool?: unknown; data?: Record<string, unknown> } | null;
+      if (!t?.data) return null;
+      const dist = t.data[toolKey] as Record<string, unknown> | undefined;
+      const v = dist?.[field];
+      return typeof v === "number" && Number.isFinite(v) ? v : null;
+    },
+    unitSuffix: opts.unitSuffix,
+  };
+}
+
 const guidellmRows: MetricRowDescriptor[] = [
-  distRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
-  distRow("ttftP50", "ttft", "p50", { unitSuffix: "ms" }),
-  distRow("ttftP95", "ttft", "p95", { unitSuffix: "ms" }),
-  distRow("ttftP99", "ttft", "p99", { unitSuffix: "ms" }),
-  distRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
-  distRow("itlP95", "itl", "p95", { unitSuffix: "ms" }),
-  distRow("e2eLatencyP50", "e2eLatency", "p50", { unitSuffix: "ms" }),
+  rawDistRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
+  metricRow("ttftP50", "ttft.p50", { unitSuffix: "ms" }),
+  metricRow("ttftP95", "ttft.p95", { unitSuffix: "ms" }),
+  metricRow("ttftP99", "ttft.p99", { unitSuffix: "ms" }),
+  rawDistRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
+  metricRow("itlP95", "itl.p95", { unitSuffix: "ms" }),
+  metricRow("e2eLatencyP50", "e2e.p50", { unitSuffix: "ms" }),
   // Verdict-eligible: shared latency P95 row uses the same reader as the
   // standalone readP95Latency exported above.
-  { labelKey: "latencyP95", read: readP95Latency, verdictKind: "latency", unitSuffix: "ms" },
-  distRow("e2eLatencyP99", "e2eLatency", "p99", { unitSuffix: "ms" }),
-  { labelKey: "errorRate", read: readErrorRate, verdictKind: "errorRate", digits: 4 },
-  { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
+  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
+  metricRow("e2eLatencyP99", "e2e.p99", { unitSuffix: "ms" }),
+  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
+  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
 ];
 
 const vegetaRows: MetricRowDescriptor[] = [
-  distRow("latencyMin", "latencies", "min", { unitSuffix: "ms" }),
-  distRow("latencyMean", "latencies", "mean", { unitSuffix: "ms" }),
-  distRow("latencyP50", "latencies", "p50", { unitSuffix: "ms" }),
-  distRow("latencyP90", "latencies", "p90", { unitSuffix: "ms" }),
-  { labelKey: "latencyP95", read: readP95Latency, verdictKind: "latency", unitSuffix: "ms" },
-  distRow("latencyP99", "latencies", "p99", { unitSuffix: "ms" }),
-  distRow("latencyMax", "latencies", "max", { unitSuffix: "ms" }),
-  { labelKey: "errorRate", read: readErrorRate, verdictKind: "errorRate", digits: 4 },
-  { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
+  rawDistRow("latencyMin", "latencies", "min", { unitSuffix: "ms" }),
+  rawDistRow("latencyMean", "latencies", "mean", { unitSuffix: "ms" }),
+  metricRow("latencyP50", "e2e.p50", { unitSuffix: "ms" }),
+  metricRow("latencyP90", "e2e.p90", { unitSuffix: "ms" }),
+  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
+  metricRow("latencyP99", "e2e.p99", { unitSuffix: "ms" }),
+  rawDistRow("latencyMax", "latencies", "max", { unitSuffix: "ms" }),
+  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
+  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
 ];
 
 // evalscope and aiperf surface the same inference fields (ttft / e2eLatency /
@@ -166,17 +117,17 @@ const vegetaRows: MetricRowDescriptor[] = [
 // fields (prefixCacheStats.hitRate) are rendered in the report component, not
 // the compare grid.
 const inferenceRowsForNewTools: MetricRowDescriptor[] = [
-  distRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
-  distRow("ttftP50", "ttft", "p50", { unitSuffix: "ms" }),
-  distRow("ttftP95", "ttft", "p95", { unitSuffix: "ms" }),
-  distRow("ttftP99", "ttft", "p99", { unitSuffix: "ms" }),
-  distRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
-  distRow("itlP95", "itl", "p95", { unitSuffix: "ms" }),
-  distRow("e2eLatencyP50", "e2eLatency", "p50", { unitSuffix: "ms" }),
-  { labelKey: "latencyP95", read: readP95Latency, verdictKind: "latency", unitSuffix: "ms" },
-  distRow("e2eLatencyP99", "e2eLatency", "p99", { unitSuffix: "ms" }),
-  { labelKey: "errorRate", read: readErrorRate, verdictKind: "errorRate", digits: 4 },
-  { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
+  rawDistRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
+  metricRow("ttftP50", "ttft.p50", { unitSuffix: "ms" }),
+  metricRow("ttftP95", "ttft.p95", { unitSuffix: "ms" }),
+  metricRow("ttftP99", "ttft.p99", { unitSuffix: "ms" }),
+  rawDistRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
+  metricRow("itlP95", "itl.p95", { unitSuffix: "ms" }),
+  metricRow("e2eLatencyP50", "e2e.p50", { unitSuffix: "ms" }),
+  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
+  metricRow("e2eLatencyP99", "e2e.p99", { unitSuffix: "ms" }),
+  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
+  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
 ];
 
 // Formats a baseline-to-current delta as a signed string for display in
