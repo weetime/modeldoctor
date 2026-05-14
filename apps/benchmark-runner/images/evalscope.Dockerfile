@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     MODELSCOPE_CACHE=/opt/evalscope-datasets
 
-ARG EVALSCOPE_VERSION=0.18.0
+ARG EVALSCOPE_VERSION=1.7.0
 
 RUN pip install --no-cache-dir \
         "evalscope==${EVALSCOPE_VERSION}" \
