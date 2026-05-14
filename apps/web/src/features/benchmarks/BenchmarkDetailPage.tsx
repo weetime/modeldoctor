@@ -20,7 +20,6 @@ import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSec
 import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
 import type { ScenarioId } from "@modeldoctor/contracts";
 import {
-  kvCacheStressReportSchema,
   migrateVegetaParams,
   prefixCacheProbeReportSchema,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -110,13 +109,8 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
       return <PrefixCacheProbeReport data={parsed.data} />;
     }
-    case "kv-cache-stress": {
-      const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
-      const candidate = tagged && "data" in tagged ? tagged.data : tagged;
-      const parsed = kvCacheStressReportSchema.safeParse(candidate);
-      if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
-      return <KvCacheStressReport data={parsed.data} />;
-    }
+    case "kv-cache-stress":
+      return <KvCacheStressReport benchmark={benchmark} />;
     default:
       return <UnknownReport benchmark={benchmark} />;
   }

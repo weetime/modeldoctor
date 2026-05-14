@@ -2,7 +2,7 @@
   "name": "@modeldoctor/tool-adapters",
   "version": "0.0.0",
   "private": true,
-  "description": "Per-tool typed adapters (guidellm / genai-perf / vegeta) with subpath exports for schema-only frontend consumption",
+  "description": "Per-tool typed adapters (guidellm / vegeta / aiperf / evalscope) with subpath exports for schema-only frontend consumption",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

@@ -10,14 +10,14 @@ import {
 import { useConnections } from "@/features/connections/queries";
 import type { ScenarioId } from "@modeldoctor/contracts";
 import {
-  GENAI_PERF_CATEGORY_DEFAULTS,
+  AIPERF_CATEGORY_DEFAULTS,
+  EVALSCOPE_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
-  KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
-  genaiPerfParamDefaults,
+  aiperfParamDefaults,
+  evalscopeParamDefaults,
   guidellmParamDefaults,
-  kvCacheStressParamDefaults,
   prefixCacheProbeParamDefaults,
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -30,13 +30,13 @@ import { SCENARIOS } from "../scenarios";
 const TOOL_CATEGORY_DEFAULTS = {
   vegeta: VEGETA_CATEGORY_DEFAULTS,
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
-  "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
   "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  "kv-cache-stress": KV_CACHE_STRESS_CATEGORY_DEFAULTS,
+  evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
+  aiperf: AIPERF_CATEGORY_DEFAULTS,
 } as const;
-import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
+import { AiperfParamsForm } from "./AiperfParamsForm";
+import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
-import { KvCacheStressParamsForm } from "./KvCacheStressParamsForm";
 import { PrefixCacheProbeParamsForm } from "./PrefixCacheProbeParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
@@ -44,10 +44,35 @@ import { VegetaParamsForm } from "./VegetaParamsForm";
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
-  "genai-perf": genaiPerfParamDefaults,
   "prefix-cache-probe": prefixCacheProbeParamDefaults,
-  "kv-cache-stress": kvCacheStressParamDefaults,
+  evalscope: evalscopeParamDefaults,
+  aiperf: aiperfParamDefaults,
 };
+
+/**
+ * Dispatches to the tool-specific params form. The exhaustive switch + `never`
+ * default makes a missing branch a compile error if a new ToolName is added to
+ * @modeldoctor/tool-adapters; without this guard, the legacy nested ternary
+ * silently routed unknown tools to AiperfParamsForm.
+ */
+function pickParamsForm(tool: ToolName) {
+  switch (tool) {
+    case "guidellm":
+      return GuidellmParamsForm;
+    case "vegeta":
+      return VegetaParamsForm;
+    case "prefix-cache-probe":
+      return PrefixCacheProbeParamsForm;
+    case "evalscope":
+      return EvalscopeParamsForm;
+    case "aiperf":
+      return AiperfParamsForm;
+    default: {
+      const _exhaustive: never = tool;
+      throw new Error(`Unhandled tool in ToolParamsEditor: ${String(_exhaustive)}`);
+    }
+  }
+}
 
 export interface ToolEditorProps {
   scenario: ScenarioId;
@@ -232,16 +257,10 @@ export function ToolParamsForm({
       />
     );
   }
-  const ParamsForm =
-    tool === "guidellm"
-      ? GuidellmParamsForm
-      : tool === "vegeta"
-        ? VegetaParamsForm
-        : tool === "prefix-cache-probe"
-          ? PrefixCacheProbeParamsForm
-          : tool === "kv-cache-stress"
-            ? KvCacheStressParamsForm
-            : GenaiPerfParamsForm;
+  // Explicit switch with an `assertNever` default so adding a new ToolName to
+  // @modeldoctor/tool-adapters without a corresponding branch fails compile,
+  // rather than silently routing the unhandled tool to AiperfParamsForm.
+  const ParamsForm = pickParamsForm(tool);
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 

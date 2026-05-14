@@ -8,7 +8,7 @@
  *
  * Every row is validated through its zod schema before reaching the DB:
  *   - evaluation_profiles  →  profileRulesSchema  (packages/contracts)
- *   - benchmark_templates  →  guidellm / genai-perf params + scenario
+ *   - benchmark_templates  →  guidellm / evalscope params + scenario
  *                             constraints (packages/tool-adapters)
  *
  * Adding a new built-in:
@@ -25,10 +25,10 @@
 
 import { evaluationSampleSchema, profileRulesSchema } from "@modeldoctor/contracts";
 import {
+  aiperfParamsSchema,
   applyScenarioConstraints,
-  genaiPerfParamsSchema,
+  evalscopeParamsSchema,
   guidellmParamsSchema,
-  kvCacheStressParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -200,11 +200,11 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   docs/superpowers/specs/2026-05-12-official-benchmark-templates-design.md
 //
 // All configs are validated through:
-//   - the adapter's own zod schema (guidellm | genai-perf)
-//   - applyScenarioConstraints("inference", tool)  (narrows rateType etc.)
+//   - the adapter's own zod schema (guidellm | evalscope)
+//   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "genai-perf" | "kv-cache-stress";
+type Tool = "guidellm" | "evalscope" | "aiperf";
 type SeedScenario = "inference" | "kv-cache-stress";
 interface BenchmarkTemplateSeed {
   id: string;
@@ -416,64 +416,187 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     tags: ["agent", "tool-use", "production-trace", "mooncake", "long-input"],
   },
   // -------------------------------------------------------------------------
-  // KV cache stress · 2 个官方 baseline 模板
+  // KV cache stress · 6 个官方 evalscope 模板 (Task 1-6)
   //
-  // 锚定 theriseunion/repots 2026-05-10(LMCache)/ 2026-05-11(YRCache) 实测:
-  // Qwen3-32B + Atlas 800I A2 / 8×910B4。两个模板的 `config` 故意完全一致 ——
-  // 同一工作负载 / 不同后端的"控制变量"对比方法论,用户跑两次后直接走 Compare
-  // 视图看 delta。本模板**只**包含 kv-cache-stress adapter 的 params,
-  // backend 切换由 deployment-recipes 文档化,本模板假设 backend 已部署。
+  // 锚定 2026-05-12 yrcache-vs-lmcache 实测方法论：6 task × 2 round (cold/warm)
+  // 矩阵。每个 task 是 (prompt 长度 × parallel) 的组合，配合 `<run>(rerun)` 子
+  // benchmark 触发 KvCacheStressReport 的冷/暖对比。seed=42 锁定 evalscope 数据
+  // 集采样器，保证 R2 真正测量的是相同 workload 上的 cache 命中率，而非另一组
+  // prompts 的天然波动。
   // -------------------------------------------------------------------------
   {
-    id: "tpl_official_kv_cache_lmcache_cpu_baseline",
-    name: "KV Cache · LMCache CPU baseline",
+    id: "tpl_kvs_evalscope_task_1",
+    name: "KV Cache · Task 1 · 8K prompt · parallel 8",
     description:
-      "对齐 2026-05-10 实测:Qwen3-32B + LMCache CPU 100 GB,200 sessions × 4 轮多轮对话,工作集 ~400K token 强制驱逐 HBM。预期 QPS ~3.75 / TTFT p90 ~2.3 s / Prefix Cache Savings 85% / err 0%(Atlas 800I A2 · 8×910B4)。",
+      "evalscope perf · 8000-9000 token prompts · parallel 8 · 64 次请求 · 160-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
     scenario: "kv-cache-stress",
-    tool: "kv-cache-stress",
+    tool: "evalscope",
     config: {
-      numSessions: 200,
-      turns: 4,
-      concurrency: 25,
-      maxTokens: 50,
-      durationSec: 600,
-      systemPromptSeed: "scn",
+      dataset: "longalpaca",
+      parallel: 8,
+      number: 64,
+      minPromptLength: 8000,
+      maxPromptLength: 9000,
+      minTokens: 160,
+      maxTokens: 200,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
     },
-    tags: ["kv-cache", "lmcache", "baseline", "multi-turn", "qwen3-32b"],
+    tags: ["kv-cache", "evalscope", "task-1"],
   },
   {
-    id: "tpl_official_kv_cache_yrcache_full_baseline",
-    name: "KV Cache · YRCache 三层缓存 baseline",
+    id: "tpl_kvs_evalscope_task_2",
+    name: "KV Cache · Task 2 · 8K prompt · parallel 16",
     description:
-      "对齐 2026-05-11 实测:Qwen3-32B + YRCache(CPU 100 GB + Local Disk + Redis 元数据 + NFS 数据),200 sessions × 4 轮。预期 QPS ~3.39 / TTFT p90 ~2.1 s / Prefix Cache Savings 89% / err 9-13%(Atlas 800I A2 · 8×910B4)。接受 err 率 trade-off 才推荐使用;生产强烈建议先跑 LMCache baseline 对比。",
+      "evalscope perf · 8000-9000 token prompts · parallel 16 · 128 次请求 · 160-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
     scenario: "kv-cache-stress",
-    tool: "kv-cache-stress",
+    tool: "evalscope",
     config: {
-      numSessions: 200,
-      turns: 4,
-      concurrency: 25,
-      maxTokens: 50,
-      durationSec: 600,
-      systemPromptSeed: "scn",
+      dataset: "longalpaca",
+      parallel: 16,
+      number: 128,
+      minPromptLength: 8000,
+      maxPromptLength: 9000,
+      minTokens: 160,
+      maxTokens: 200,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
     },
-    tags: ["kv-cache", "yrcache", "baseline", "multi-turn", "qwen3-32b", "shared-tier"],
+    tags: ["kv-cache", "evalscope", "task-2"],
   },
   {
-    id: "tpl_official_embeddings_high_throughput",
-    name: "嵌入服务高吞吐",
+    id: "tpl_kvs_evalscope_task_3",
+    name: "KV Cache · Task 3 · 11K prompt · parallel 8",
     description:
-      "嵌入服务压测：endpoint=embeddings，input 256 tokens，并发 64、2000 次请求。无生成、非流式，主测 RPS 与 p99 latency。",
+      "evalscope perf · 11000-13000 token prompts · parallel 8 · 64 次请求 · 300-400 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
+    scenario: "kv-cache-stress",
+    tool: "evalscope",
+    config: {
+      dataset: "longalpaca",
+      parallel: 8,
+      number: 64,
+      minPromptLength: 11000,
+      maxPromptLength: 13000,
+      minTokens: 300,
+      maxTokens: 400,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
+    },
+    tags: ["kv-cache", "evalscope", "task-3"],
+  },
+  {
+    id: "tpl_kvs_evalscope_task_4",
+    name: "KV Cache · Task 4 · 11K prompt · parallel 16",
+    description:
+      "evalscope perf · 11000-13000 token prompts · parallel 16 · 128 次请求 · 300-400 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
+    scenario: "kv-cache-stress",
+    tool: "evalscope",
+    config: {
+      dataset: "longalpaca",
+      parallel: 16,
+      number: 128,
+      minPromptLength: 11000,
+      maxPromptLength: 13000,
+      minTokens: 300,
+      maxTokens: 400,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
+    },
+    tags: ["kv-cache", "evalscope", "task-4"],
+  },
+  {
+    id: "tpl_kvs_evalscope_task_5",
+    name: "KV Cache · Task 5 · 14K prompt · parallel 8",
+    description:
+      "evalscope perf · 14000-16000 token prompts · parallel 8 · 64 次请求 · 100-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
+    scenario: "kv-cache-stress",
+    tool: "evalscope",
+    config: {
+      dataset: "longalpaca",
+      parallel: 8,
+      number: 64,
+      minPromptLength: 14000,
+      maxPromptLength: 16000,
+      minTokens: 100,
+      maxTokens: 200,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
+    },
+    tags: ["kv-cache", "evalscope", "task-5"],
+  },
+  {
+    id: "tpl_kvs_evalscope_task_6",
+    name: "KV Cache · Task 6 · 14K prompt · parallel 16",
+    description:
+      "evalscope perf · 14000-16000 token prompts · parallel 16 · 128 次请求 · 100-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
+    scenario: "kv-cache-stress",
+    tool: "evalscope",
+    config: {
+      dataset: "longalpaca",
+      parallel: 16,
+      number: 128,
+      minPromptLength: 14000,
+      maxPromptLength: 16000,
+      minTokens: 100,
+      maxTokens: 200,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
+    },
+    tags: ["kv-cache", "evalscope", "task-6"],
+  },
+  // -------------------------------------------------------------------------
+  // Inference · 2 个官方 evalscope 模板
+  //
+  // 短 prompt (OpenQA) vs 长 prompt (LongAlpaca 8K) — 覆盖 evalscope 在常规推理
+  // 性能基准下的两个典型形态。seed=42 锁定数据集采样器复现。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_inf_evalscope_short",
+    name: "evalscope · 短 prompt (OpenQA)",
+    description:
+      "evalscope perf 短 prompt 基线 · OpenQA 100-500 token · parallel 8 · 100 次请求 · 100-200 输出 token，seed=42 复现锁定。",
     scenario: "inference",
-    tool: "genai-perf",
+    tool: "evalscope",
     config: {
-      endpointType: "embeddings",
-      numPrompts: 2000,
-      concurrency: 64,
-      inputTokensMean: 256,
-      inputTokensStddev: 0,
-      streaming: false,
+      dataset: "openqa",
+      parallel: 8,
+      number: 100,
+      minPromptLength: 100,
+      maxPromptLength: 500,
+      minTokens: 100,
+      maxTokens: 200,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
     },
-    tags: ["embeddings", "non-generative", "high-throughput"],
+    tags: ["inference", "evalscope", "short"],
+  },
+  {
+    id: "tpl_inf_evalscope_long",
+    name: "evalscope · 长 prompt (LongAlpaca 8K)",
+    description:
+      "evalscope perf 长 prompt 基线 · LongAlpaca 7000-9000 token · parallel 8 · 64 次请求 · 200-400 输出 token，seed=42 复现锁定。",
+    scenario: "inference",
+    tool: "evalscope",
+    config: {
+      dataset: "longalpaca",
+      parallel: 8,
+      number: 64,
+      minPromptLength: 7000,
+      maxPromptLength: 9000,
+      minTokens: 200,
+      maxTokens: 400,
+      apiPath: "/v1/chat/completions",
+      stream: true,
+      seed: 42,
+    },
+    tags: ["inference", "evalscope", "long-context"],
   },
 ];
 
@@ -524,17 +647,17 @@ async function seedBenchmarkTemplates(): Promise<void> {
     const base =
       t.tool === "guidellm"
         ? guidellmParamsSchema
-        : t.tool === "genai-perf"
-          ? genaiPerfParamsSchema
-          : kvCacheStressParamsSchema;
+        : t.tool === "aiperf"
+          ? aiperfParamsSchema
+          : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
-    // (inference, genai-perf) and (kv-cache-stress, kv-cache-stress)
-    // this is a no-op — those scenarios' paramsConstraints maps have
-    // no entry for the given tool, so applyScenarioConstraints returns
-    // the bare adapter schema and re-parses the same shape. We still
-    // call it so the invariant "all official templates round-trip
-    // through scenario constraints" holds regardless of tool.
+    // (inference, evalscope) and (kv-cache-stress, evalscope) this is
+    // a no-op — those scenarios' paramsConstraints maps have no entry
+    // for evalscope, so applyScenarioConstraints returns the bare
+    // adapter schema and re-parses the same shape. We still call it
+    // so the invariant "all official templates round-trip through
+    // scenario constraints" holds regardless of tool.
     const validatedConfig = applyScenarioConstraints(t.scenario, t.tool).parse(validatedBase);
     await prisma.benchmarkTemplate.upsert({
       where: { id: t.id },

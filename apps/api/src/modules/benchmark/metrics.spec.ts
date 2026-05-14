@@ -20,15 +20,6 @@ describe("readP95LatencyMs", () => {
     ).toBe(147);
   });
 
-  it("reads genai-perf requestLatency.p95", () => {
-    expect(
-      readP95LatencyMs({
-        tool: "genai-perf",
-        data: { requestLatency: { p95: 220.5 } },
-      }),
-    ).toBe(220.5);
-  });
-
   it("returns null when summaryMetrics is null", () => {
     expect(readP95LatencyMs(null)).toBeNull();
   });

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build all three benchmark-runner wrapper images and import into the
+# Build all benchmark-runner wrapper images and import into the
 # local k3d cluster. Tag is the short git SHA of the most recent commit
 # that touched apps/benchmark-runner/, so devs never need to remember
 # to bump :devN — pulling the branch + running this script always
@@ -40,7 +40,7 @@ fi
 
 echo "==> Building runner images at tag :$TAG"
 
-for tool in guidellm vegeta genai-perf prefix-cache-probe kv-cache-stress; do
+for tool in guidellm vegeta prefix-cache-probe evalscope aiperf; do
   image="md-runner-${tool}:${TAG}"
   echo "==> docker build $image"
   docker build \
@@ -54,9 +54,9 @@ if [[ "$IMPORT" == "true" ]]; then
   k3d image import \
     "md-runner-guidellm:${TAG}" \
     "md-runner-vegeta:${TAG}" \
-    "md-runner-genai-perf:${TAG}" \
     "md-runner-prefix-cache-probe:${TAG}" \
-    "md-runner-kv-cache-stress:${TAG}" \
+    "md-runner-evalscope:${TAG}" \
+    "md-runner-aiperf:${TAG}" \
     -c "$K3D_CLUSTER"
 fi
 
@@ -64,6 +64,6 @@ echo
 echo "==> Done. Set these in your .env (or export RUNNER_IMAGE_TAG=$TAG):"
 echo "RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:${TAG}"
 echo "RUNNER_IMAGE_VEGETA=md-runner-vegeta:${TAG}"
-echo "RUNNER_IMAGE_GENAI_PERF=md-runner-genai-perf:${TAG}"
 echo "RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:${TAG}"
-echo "RUNNER_IMAGE_KV_CACHE_STRESS=md-runner-kv-cache-stress:${TAG}"
+echo "RUNNER_IMAGE_EVALSCOPE=md-runner-evalscope:${TAG}"
+echo "RUNNER_IMAGE_AIPERF=md-runner-aiperf:${TAG}"

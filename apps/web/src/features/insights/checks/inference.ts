@@ -17,37 +17,37 @@ export const inferenceChecks: CheckDescriptor[] = [
   {
     id: "inference.ttft.p95.ms",
     scenario: "inference",
-    toolFilter: ["guidellm", "genai-perf"],
+    toolFilter: ["guidellm", "evalscope", "aiperf"],
     axis: "responsiveness",
     defaultWeight: 1.0,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.ttft.p95.ms.recommendation",
     read: (m) => {
       const t = (m as { tool?: string } | null)?.tool;
-      if (t === "guidellm") return fromDist(m, "ttft", "p95");
-      if (t === "genai-perf") return fromDist(m, "timeToFirstToken", "p95");
+      if (t === "guidellm" || t === "evalscope" || t === "aiperf")
+        return fromDist(m, "ttft", "p95");
       return null;
     },
   },
   {
     id: "inference.ttft.p99.ms",
     scenario: "inference",
-    toolFilter: ["guidellm", "genai-perf"],
+    toolFilter: ["guidellm", "evalscope", "aiperf"],
     axis: "tail",
     defaultWeight: 0.5,
     direction: "lower_is_better",
     recommendationKey: "checks.inference.ttft.p99.ms.recommendation",
     read: (m) => {
       const t = (m as { tool?: string } | null)?.tool;
-      if (t === "guidellm") return fromDist(m, "ttft", "p99");
-      if (t === "genai-perf") return fromDist(m, "timeToFirstToken", "p99");
+      if (t === "guidellm" || t === "evalscope" || t === "aiperf")
+        return fromDist(m, "ttft", "p99");
       return null;
     },
   },
   {
     id: "inference.itl.p95.ms",
     scenario: "inference",
-    toolFilter: ["guidellm"],
+    toolFilter: ["guidellm", "evalscope", "aiperf"],
     axis: "smoothness",
     defaultWeight: 0.7,
     direction: "lower_is_better",
@@ -75,7 +75,7 @@ export const inferenceChecks: CheckDescriptor[] = [
       const t = (m as { tool?: string } | null)?.tool;
       if (t === "guidellm") return fromDist(m, "e2eLatency", "p99");
       if (t === "vegeta") return fromDist(m, "latencies", "p99");
-      if (t === "genai-perf") return fromDist(m, "requestLatency", "p99");
+      if (t === "evalscope" || t === "aiperf") return fromDist(m, "e2eLatency", "p99");
       return null;
     },
   },

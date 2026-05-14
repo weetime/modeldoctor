@@ -4,34 +4,29 @@ import type { z } from "zod";
 // superset (additionally `'e2e'` and `'custom'`) — those don't go through
 // ToolAdapter and follow their own codepaths. ToolName covers exactly the
 // adapters the registry knows about.
-export type ToolName =
-  | "guidellm"
-  | "genai-perf"
-  | "vegeta"
-  | "prefix-cache-probe"
-  | "kv-cache-stress";
+export type ToolName = "guidellm" | "vegeta" | "prefix-cache-probe" | "evalscope" | "aiperf";
 
 // ── Progress events (uniform across tools) ────────────────────────────
 export type ProgressEvent =
   | { kind: "progress"; pct: number; currentRequests?: number; message?: string }
   | { kind: "log"; level: "info" | "warn" | "error"; line: string };
 
-import type { GenaiPerfReport } from "../genai-perf/schema.js";
+import type { AiperfReport } from "../aiperf/schema.js";
+import type { EvalscopeReport } from "../evalscope/schema.js";
 // ── Forward-declare per-tool report types (filled in Task 1.4 / 1.5 / 1.6) ──
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
-import type { KvCacheStressReport } from "../kv-cache-stress/schema.js";
 import type { PrefixCacheProbeReport } from "../prefix-cache-probe/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
 // ── Discriminated union: report (consumers switch on `tool`) ──────────
 export type ToolReport =
   | { tool: "guidellm"; data: GuidellmReport }
-  | { tool: "genai-perf"; data: GenaiPerfReport }
   | { tool: "vegeta"; data: VegetaReport }
   | { tool: "prefix-cache-probe"; data: PrefixCacheProbeReport }
-  | { tool: "kv-cache-stress"; data: KvCacheStressReport };
+  | { tool: "evalscope"; data: EvalscopeReport }
+  | { tool: "aiperf"; data: AiperfReport };
 
 // ── buildCommand inputs ───────────────────────────────────────────────
 export interface BuildCommandPlan<TParams = unknown> {
@@ -45,7 +40,7 @@ export interface BuildCommandPlan<TParams = unknown> {
     queryParams: string;
     /**
      * HuggingFace tokenizer repo id, set on the Connection. Adapters that
-     * need a tokenizer (guidellm, genai-perf) fall back to this when the
+     * need a tokenizer (guidellm) fall back to this when the
      * per-run override is not set. Null/undefined when the user hasn't set
      * one (typical for connections whose `model` IS a valid HF id).
      */

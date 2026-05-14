@@ -31,15 +31,15 @@ export interface PromptMetricsSummary {
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
   const tool = t?.tool;
-  const ttftKey = tool === "guidellm" ? "ttft" : tool === "genai-perf" ? "timeToFirstToken" : null;
+  // evalscope + aiperf share the same nested ttft / e2eLatency dist shape as
+  // guidellm. vegeta has no TTFT (single-shot HTTP), so ttftKey stays null.
+  const ttftKey = tool === "guidellm" || tool === "evalscope" || tool === "aiperf" ? "ttft" : null;
   const e2eKey =
-    tool === "guidellm"
+    tool === "guidellm" || tool === "evalscope" || tool === "aiperf"
       ? "e2eLatency"
       : tool === "vegeta"
         ? "latencies"
-        : tool === "genai-perf"
-          ? "requestLatency"
-          : null;
+        : null;
 
   const throughput = !t?.data
     ? null
@@ -47,8 +47,10 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
       ? asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean)
       : tool === "vegeta"
         ? asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput)
-        : tool === "genai-perf"
-          ? asFiniteNumber((t.data.requestThroughput as { avg?: number } | undefined)?.avg)
+        : tool === "evalscope" || tool === "aiperf"
+          ? asFiniteNumber(
+              (t.data.throughput as { requestsPerSec?: number } | undefined)?.requestsPerSec,
+            )
           : null;
 
   let errorRate: number | null = null;
@@ -61,6 +63,11 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
     } else if (tool === "vegeta") {
       const s = asFiniteNumber(t.data.success);
       errorRate = s === null ? null : 1 - s / 100;
+    } else if (tool === "evalscope" || tool === "aiperf") {
+      // evalscope/aiperf carry requests.errorRate as a 0-1 fraction directly,
+      // so no division by total is required.
+      const r = t.data.requests as { errorRate?: number } | undefined;
+      errorRate = asFiniteNumber(r?.errorRate);
     }
   }
 

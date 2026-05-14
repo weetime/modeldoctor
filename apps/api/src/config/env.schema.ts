@@ -62,10 +62,10 @@ export const EnvSchema = z
     // Per-tool runner images (#53 Phase 2 / #78). Required when
     // NODE_ENV !== "test" (k8s is the only execution mode).
     RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
-    RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     RUNNER_IMAGE_PREFIX_CACHE_PROBE: z.string().min(1).optional(),
-    RUNNER_IMAGE_KV_CACHE_STRESS: z.string().min(1).optional(),
+    RUNNER_IMAGE_EVALSCOPE: z.string().min(1).optional(),
+    RUNNER_IMAGE_AIPERF: z.string().min(1).optional(),
     BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
     // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
     // counting (passed as --processor). Set this when the target gateway
@@ -136,9 +136,9 @@ export const EnvSchema = z
       const perToolImages = [
         "RUNNER_IMAGE_GUIDELLM",
         "RUNNER_IMAGE_VEGETA",
-        "RUNNER_IMAGE_GENAI_PERF",
         "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
-        "RUNNER_IMAGE_KV_CACHE_STRESS",
+        "RUNNER_IMAGE_EVALSCOPE",
+        "RUNNER_IMAGE_AIPERF",
       ] as const;
       for (const key of perToolImages) {
         if (!env[key]) {

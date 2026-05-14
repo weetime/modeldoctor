@@ -24,14 +24,6 @@ export {
 } from "./vegeta/schema.js";
 
 export {
-  genaiPerfParamsSchema,
-  genaiPerfReportSchema,
-  genaiPerfParamDefaults,
-  type GenaiPerfParams,
-  type GenaiPerfReport,
-} from "./genai-perf/schema.js";
-
-export {
   prefixCacheProbeParamsSchema,
   prefixCacheProbeReportSchema,
   prefixCacheProbeParamDefaults,
@@ -40,12 +32,20 @@ export {
 } from "./prefix-cache-probe/schema.js";
 
 export {
-  kvCacheStressParamsSchema,
-  kvCacheStressReportSchema,
-  kvCacheStressParamDefaults,
-  type KvCacheStressParams,
-  type KvCacheStressReport,
-} from "./kv-cache-stress/schema.js";
+  evalscopeParamsSchema,
+  evalscopeReportSchema,
+  evalscopeParamDefaults,
+  type EvalscopeParams,
+  type EvalscopeReport,
+} from "./evalscope/schema.js";
+
+export {
+  aiperfParamsSchema,
+  aiperfReportSchema,
+  aiperfParamDefaults,
+  type AiperfParams,
+  type AiperfReport,
+} from "./aiperf/schema.js";
 
 export type { ToolName, ProgressEvent, ToolReport } from "./core/interface.js";
 export { progressEventSchema } from "./core/progress-event.js";
@@ -63,9 +63,9 @@ export {
 } from "./vegeta/runtime.js";
 export { migrateVegetaParams } from "./vegeta/migrate-params.js";
 export {
-  GENAI_PERF_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  KV_CACHE_STRESS_CATEGORY_DEFAULTS,
+  EVALSCOPE_CATEGORY_DEFAULTS,
+  AIPERF_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";

@@ -19,12 +19,12 @@ describe("SCENARIOS constant", () => {
     ]);
   });
 
-  it("kv-cache-stress scenario lists kv-cache-stress only", () => {
-    expect(SCENARIOS["kv-cache-stress"].tools).toEqual(["kv-cache-stress"]);
+  it("kv-cache-stress scenario lists evalscope only (legacy tool retired)", () => {
+    expect([...SCENARIOS["kv-cache-stress"].tools]).toEqual(["evalscope"]);
   });
 
-  it("inference scenario lists guidellm and genai-perf", () => {
-    expect([...SCENARIOS.inference.tools].sort()).toEqual(["genai-perf", "guidellm"]);
+  it("inference scenario lists guidellm, evalscope, and aiperf", () => {
+    expect([...SCENARIOS.inference.tools].sort()).toEqual(["aiperf", "evalscope", "guidellm"]);
   });
 
   it("capacity scenario lists guidellm only", () => {
@@ -47,7 +47,7 @@ describe("invariant: SCENARIOS.tools ⊆ adapters that declare the scenario", ()
   });
 
   it("every adapter scenario is mirrored in SCENARIOS[s].tools", () => {
-    for (const tool of ["guidellm", "vegeta", "genai-perf"] as const) {
+    for (const tool of ["guidellm", "vegeta"] as const) {
       const adapter = byTool(tool);
       for (const scenarioId of adapter.scenarios) {
         expect(SCENARIOS[scenarioId].tools).toContain(tool);

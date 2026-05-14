@@ -2,7 +2,7 @@ import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
 
 // summaryMetrics is the discriminated union written by tool-adapter
 // parseFinalReport: { tool, data } (see
-// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts).
+// packages/tool-adapters/src/{guidellm,vegeta,aiperf,evalscope}/runtime.ts).
 // vegeta latencies are normalized to ms by the adapter (NOT ns).
 
 type SummaryMetrics = Benchmark["summaryMetrics"];
@@ -37,8 +37,9 @@ export function readP95Latency(metrics: SummaryMetrics): number | null {
       return fromDist(m.data, "e2eLatency", "p95");
     case "vegeta":
       return fromDist(m.data, "latencies", "p95");
-    case "genai-perf":
-      return fromDist(m.data, "requestLatency", "p95");
+    case "evalscope":
+    case "aiperf":
+      return fromDist(m.data, "e2eLatency", "p95");
     default:
       return null;
   }
@@ -59,8 +60,14 @@ export function readErrorRate(metrics: SummaryMetrics): number | null {
       const s = asFiniteNumber(m.data.success);
       return s === null ? null : 1 - s / 100;
     }
+    case "evalscope":
+    case "aiperf": {
+      // evalscope/aiperf schemas carry errorRate as a 0-1 fraction directly,
+      // so no division by total is required.
+      const r = m.data.requests as { errorRate?: number } | undefined;
+      return asFiniteNumber(r?.errorRate);
+    }
     default:
-      // genai-perf carries no error/success counts.
       return null;
   }
 }
@@ -77,9 +84,10 @@ export function readThroughput(metrics: SummaryMetrics): number | null {
       const r = m.data.requests as { throughput?: number } | undefined;
       return asFiniteNumber(r?.throughput);
     }
-    case "genai-perf": {
-      const r = m.data.requestThroughput as { avg?: number } | undefined;
-      return asFiniteNumber(r?.avg);
+    case "evalscope":
+    case "aiperf": {
+      const r = m.data.throughput as { requestsPerSec?: number } | undefined;
+      return asFiniteNumber(r?.requestsPerSec);
     }
     default:
       return null;
@@ -152,15 +160,22 @@ const vegetaRows: MetricRowDescriptor[] = [
   { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
 ];
 
-const genaiPerfRows: MetricRowDescriptor[] = [
-  distRow("latencyMean", "requestLatency", "avg", { unitSuffix: "ms" }),
-  distRow("latencyP50", "requestLatency", "p50", { unitSuffix: "ms" }),
-  distRow("latencyP90", "requestLatency", "p90", { unitSuffix: "ms" }),
+// evalscope and aiperf surface the same inference fields (ttft / e2eLatency /
+// itl distributions + throughput.requestsPerSec + requests.errorRate as a
+// 0-1 fraction), so they share a single row descriptor array. Evalscope-only
+// fields (prefixCacheStats.hitRate) are rendered in the report component, not
+// the compare grid.
+const inferenceRowsForNewTools: MetricRowDescriptor[] = [
+  distRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
+  distRow("ttftP50", "ttft", "p50", { unitSuffix: "ms" }),
+  distRow("ttftP95", "ttft", "p95", { unitSuffix: "ms" }),
+  distRow("ttftP99", "ttft", "p99", { unitSuffix: "ms" }),
+  distRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
+  distRow("itlP95", "itl", "p95", { unitSuffix: "ms" }),
+  distRow("e2eLatencyP50", "e2eLatency", "p50", { unitSuffix: "ms" }),
   { labelKey: "latencyP95", read: readP95Latency, verdictKind: "latency", unitSuffix: "ms" },
-  distRow("latencyP99", "requestLatency", "p99", { unitSuffix: "ms" }),
-  distRow("ttftMean", "timeToFirstToken", "avg", { unitSuffix: "ms" }),
-  distRow("ttftP95", "timeToFirstToken", "p95", { unitSuffix: "ms" }),
-  // genai-perf has no errorRate row (schema doesn't carry success/error counts)
+  distRow("e2eLatencyP99", "e2eLatency", "p99", { unitSuffix: "ms" }),
+  { labelKey: "errorRate", read: readErrorRate, verdictKind: "errorRate", digits: 4 },
   { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
 ];
 
@@ -185,8 +200,9 @@ export function rowDescriptorsForTool(tool: BenchmarkTool): MetricRowDescriptor[
       return guidellmRows;
     case "vegeta":
       return vegetaRows;
-    case "genai-perf":
-      return genaiPerfRows;
+    case "evalscope":
+    case "aiperf":
+      return inferenceRowsForNewTools;
     default:
       return [];
   }

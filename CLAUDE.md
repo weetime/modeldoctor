@@ -46,14 +46,14 @@ Surface reviewer feedback and any red checks back to the user, then either fix i
 
 ## Seeding built-in / official content
 
-Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via **`apps/api/prisma/seed.ts`** (Prisma's blessed seed pattern), NOT via INSERT statements inside migrations. Each row is validated through the relevant zod schema (`profileRulesSchema` from `@modeldoctor/contracts`; `guidellmParamsSchema` / `genaiPerfParamsSchema` + `applyScenarioConstraints` from `@modeldoctor/tool-adapters`) before `prisma.<model>.upsert` by stable `id` / `slug`.
+Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via **`apps/api/prisma/seed.ts`** (Prisma's blessed seed pattern), NOT via INSERT statements inside migrations. Each row is validated through the relevant zod schema (`profileRulesSchema` from `@modeldoctor/contracts`; `guidellmParamsSchema` / `evalscopeParamsSchema` / `aiperfParamsSchema` + `applyScenarioConstraints` from `@modeldoctor/tool-adapters`) before `prisma.<model>.upsert` by stable `id` / `slug`. The schema-picker handles all three tools; add the case alongside the others when a new tool's official template lands.
 
 - **Auto-runs** after `prisma migrate dev` and `prisma migrate reset` (Prisma reads `package.json#prisma.seed`).
 - **Prod / CI**: `prisma migrate deploy` does **not** auto-seed by design — deploy pipeline must invoke `pnpm prisma db seed` after `migrate deploy`.
 - **Adding a new built-in / official row**: append to `EVALUATION_PROFILES` or `BENCHMARK_TEMPLATES` in `seed.ts` with a fresh stable id/slug, then `pnpm -F @modeldoctor/api db:seed` to verify upsert.
 - **Editing**: change the seed object in place — next seed run UPDATEs.
 - **Removing**: delete from seed.ts AND ship a one-off migration with `DELETE FROM ... WHERE id = '...'` (seed.ts only upserts, never deletes).
-- **Migrations are schema-only**. Never put `INSERT`/`UPDATE`/`DELETE` of business data in a migration — only schema changes plus the data fixups required by those schema changes (e.g., backfilling a new column from an old one).
+- **Migrations are schema-only**. Never put `INSERT`/`UPDATE`/`DELETE` of business data in a migration — only schema changes plus the data fixups required by those schema changes (e.g., backfilling a new column from an old one). The one acceptable data-DML case is **tool-retirement deletes**: when the runtime `benchmarkToolSchema` zod enum narrows (e.g. Tasks 19/20 went 7 → 5 tools), pre-existing rows tagged with the dropped tool name become orphans that fail subsequent zod parses on every list / detail / metric read. Shipping a one-off `DELETE FROM benchmarks/benchmark_templates/saved_compares WHERE tool IN (...dropped...)` alongside the enum narrowing is a required data fixup, not a seed/business-data write. Keep this carve-out strictly to enum-narrowing fallout — adding back any other DML invites abuse.
 
 ## Insights & AI judge
 

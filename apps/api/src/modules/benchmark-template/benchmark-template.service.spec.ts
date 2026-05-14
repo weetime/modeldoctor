@@ -11,8 +11,8 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
     applyScenarioConstraints: () => ({ parse: (x: unknown) => x }),
     byTool: (name: string) => ({
       name,
-      // guidellm supports inference + capacity, vegeta only gateway,
-      // genai-perf only inference — matches the real adapter declarations.
+      // guidellm supports inference + capacity, vegeta only gateway —
+      // matches the real adapter declarations.
       scenarios:
         name === "guidellm"
           ? ["inference", "capacity"]

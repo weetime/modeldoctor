@@ -14,7 +14,7 @@ export type CreateBenchmarkInput = {
   userId?: string | null;
   connectionId?: string | null;
   scenario: string;
-  tool: "guidellm" | "genai-perf" | "vegeta" | "prefix-cache-probe" | "kv-cache-stress";
+  tool: "guidellm" | "vegeta" | "prefix-cache-probe" | "evalscope" | "aiperf";
   params: Prisma.InputJsonValue;
   name: string;
   description?: string | null;
@@ -87,7 +87,7 @@ export class BenchmarkRepository {
     const limit = Math.min(input.limit ?? 20, 100);
     const where: Prisma.BenchmarkWhereInput = {};
     if (input.scenario) where.scenario = input.scenario;
-    if (input.tool) where.tool = input.tool as "guidellm" | "genai-perf" | "vegeta";
+    if (input.tool) where.tool = input.tool;
     if (input.status) where.status = input.status;
     if (input.connectionId) where.connectionId = input.connectionId;
     if (input.parentBenchmarkId) where.parentBenchmarkId = input.parentBenchmarkId;

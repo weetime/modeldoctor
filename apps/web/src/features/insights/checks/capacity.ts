@@ -12,9 +12,9 @@ function tailRatio(m: any): number | null {
   } else if (t === "vegeta") {
     p50 = m?.data?.latencies?.p50 ?? null;
     p99 = m?.data?.latencies?.p99 ?? null;
-  } else if (t === "genai-perf") {
-    p50 = m?.data?.requestLatency?.p50 ?? null;
-    p99 = m?.data?.requestLatency?.p99 ?? null;
+  } else if (t === "evalscope" || t === "aiperf") {
+    p50 = m?.data?.e2eLatency?.p50 ?? null;
+    p99 = m?.data?.e2eLatency?.p99 ?? null;
   }
   if (typeof p50 !== "number" || typeof p99 !== "number" || p50 <= 0) return null;
   return p99 / p50;

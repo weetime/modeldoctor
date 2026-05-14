@@ -15,28 +15,6 @@ const guidellmReport = {
   requests: { total: 1000, success: 985, error: 10, incomplete: 5 },
 };
 
-const genaiPerfDist = {
-  avg: 12.5,
-  min: 10,
-  max: 30,
-  p50: 12,
-  p90: 18,
-  p95: 22,
-  p99: 28,
-  stddev: 4,
-  unit: "ms",
-};
-
-const genaiPerfReport = {
-  requestThroughput: { avg: 50.2, unit: "req/s" },
-  requestLatency: genaiPerfDist,
-  timeToFirstToken: genaiPerfDist,
-  interTokenLatency: { ...genaiPerfDist, avg: 5.1 },
-  outputTokenThroughput: { avg: 1200, unit: "tok/s" },
-  outputSequenceLength: { avg: 256, p50: 250, p99: 400 },
-  inputSequenceLength: { avg: 128, p50: 120, p99: 200 },
-};
-
 function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
   return {
     id: "r1",
@@ -73,19 +51,6 @@ describe("InferenceReport", () => {
     render(<InferenceReport benchmark={makeBenchmark()} />);
     // TTFT is a guidellm-only label; presence proves we routed to the guidellm metrics block.
     expect(screen.getByText(/TTFT \(ms\)/)).toBeInTheDocument();
-  });
-
-  it("dispatches to GenaiPerfInferenceMetrics for tool=genai-perf", () => {
-    render(
-      <InferenceReport
-        benchmark={makeBenchmark({
-          tool: "genai-perf",
-          summaryMetrics: { tool: "genai-perf", data: genaiPerfReport },
-        })}
-      />,
-    );
-    // "Sequence length" is a genai-perf-only card title.
-    expect(screen.getByText(/Sequence length/)).toBeInTheDocument();
   });
 
   it("falls back to UnknownReport for unsupported tool", () => {
