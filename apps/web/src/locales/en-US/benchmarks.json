@@ -411,6 +411,34 @@
       "durationSecHelp": "Recommend ≥ 600s for stable Prometheus counter deltas.",
       "systemPromptSeed": "System prompt seed",
       "systemPromptSeedHelp": "sha256-derived prefix. Reuse the same seed across runs to compare cache backends fairly."
+    },
+    "evalscope": {
+      "section": "Evalscope parameters",
+      "dataset": "Dataset",
+      "parallel": "Parallel",
+      "number": "Request count",
+      "minPromptLength": "Min prompt length",
+      "maxPromptLength": "Max prompt length",
+      "minTokens": "Min output tokens",
+      "maxTokens": "Max output tokens",
+      "apiPath": "API path",
+      "stream": "Streaming",
+      "seed": "Seed",
+      "seedHint": "Leave blank for random; integer locks reproducibility"
+    },
+    "aiperf": {
+      "section": "AIPerf parameters",
+      "concurrency": "Concurrency",
+      "requestCount": "Request count",
+      "dataset": "Dataset",
+      "inputTokensMean": "Input tokens mean",
+      "inputTokensStddev": "Input tokens stddev",
+      "outputTokensMean": "Output tokens mean",
+      "outputTokensStddev": "Output tokens stddev",
+      "endpointType": "Endpoint type",
+      "streaming": "Streaming",
+      "seed": "Seed",
+      "seedHint": "Leave blank for random; integer locks reproducibility"
     }
   },
   "reports": {

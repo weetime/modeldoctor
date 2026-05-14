@@ -411,6 +411,34 @@
       "durationSecHelp": "建议 ≥ 600s 让 Prom counter delta 稳定",
       "systemPromptSeed": "System prompt seed",
       "systemPromptSeedHelp": "sha256 派生 prefix。不同 run 用同一个 seed 才能跨 run 比 prefix cache 收益"
+    },
+    "evalscope": {
+      "section": "evalscope 参数",
+      "dataset": "数据集",
+      "parallel": "并发数 (parallel)",
+      "number": "请求数量 (number)",
+      "minPromptLength": "最小 prompt 长度",
+      "maxPromptLength": "最大 prompt 长度",
+      "minTokens": "最小输出 token",
+      "maxTokens": "最大输出 token",
+      "apiPath": "API 路径",
+      "stream": "流式响应",
+      "seed": "随机种子",
+      "seedHint": "留空则随机；填整数可复现实验"
+    },
+    "aiperf": {
+      "section": "AIPerf 参数",
+      "concurrency": "并发数",
+      "requestCount": "请求数",
+      "dataset": "数据集",
+      "inputTokensMean": "输入 token 均值",
+      "inputTokensStddev": "输入 token 标准差",
+      "outputTokensMean": "输出 token 均值",
+      "outputTokensStddev": "输出 token 标准差",
+      "endpointType": "端点类型",
+      "streaming": "流式响应",
+      "seed": "随机种子",
+      "seedHint": "留空则随机；填整数可复现实验"
     }
   },
   "reports": {
