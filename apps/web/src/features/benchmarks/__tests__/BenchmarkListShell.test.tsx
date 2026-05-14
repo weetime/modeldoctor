@@ -25,8 +25,8 @@ import { api } from "@/lib/api-client";
 
 // Real adapter-emitted shapes. `summaryMetrics` is the discriminated union
 // `{ tool, data }` written by tool-adapter `parseFinalReport` — see
-// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts. The
-// list-page readers must switch on `tool` and reach into `data.*`.
+// packages/tool-adapters/src/{guidellm,vegeta,aiperf,evalscope}/runtime.ts.
+// The list-page readers must switch on `tool` and reach into `data.*`.
 //
 // Fixtures only carry the fields readP95 / readErrorRate consume; the wider
 // schema has many more required fields but Benchmark.summaryMetrics is typed
@@ -48,13 +48,6 @@ const vegetaMetrics = {
     // success is a percent in [0, 100], not a 0-1 ratio.
     success: 98.5,
     requests: { total: 1000 },
-  },
-};
-
-const genaiPerfMetrics = {
-  tool: "genai-perf",
-  data: {
-    requestLatency: { p95: 333.3, unit: "ms" },
   },
 };
 
@@ -153,24 +146,6 @@ describe("BenchmarkListShell", () => {
     expect(screen.getByText("250.5")).toBeInTheDocument();
     // 1 - 98.5/100 = 0.015 → "0.0150"
     expect(screen.getByText("0.0150")).toBeInTheDocument();
-  });
-
-  it("renders a genai-perf row with p95 from requestLatency, error rate '—' (schema lacks error counts)", async () => {
-    const resp: ListBenchmarksResponse = {
-      items: [makeBenchmark("r1", "genai-perf", "completed", genaiPerfMetrics)],
-      nextCursor: null,
-    };
-    vi.mocked(api.get).mockResolvedValue(resp);
-    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
-    expect(await screen.findByText("genai-perf")).toBeInTheDocument();
-    expect(screen.getByText("333.3")).toBeInTheDocument();
-    // genai-perf schema has no error/success counts → error rate column is "—".
-    // We can't naively `getByText("—")` (the connection column also uses it
-    // as a fallback). Instead, find the row's cells and check the last
-    // numeric cell.
-    const cells = screen.getAllByRole("cell");
-    const errorRateCell = cells[cells.length - 2]; // last cell is the "→" link
-    expect(errorRateCell.textContent).toBe("—");
   });
 
   it("shows '—' for both metric columns when summaryMetrics is null", async () => {

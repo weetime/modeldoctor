@@ -4,7 +4,6 @@ import type { Env } from "../../../config/env.schema.js";
 
 const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
   guidellm: "RUNNER_IMAGE_GUIDELLM",
-  "genai-perf": "RUNNER_IMAGE_GENAI_PERF",
   vegeta: "RUNNER_IMAGE_VEGETA",
   "prefix-cache-probe": "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
   "kv-cache-stress": "RUNNER_IMAGE_KV_CACHE_STRESS",

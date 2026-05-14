@@ -2,7 +2,6 @@ import type { Benchmark } from "@modeldoctor/contracts";
 import { AiperfInferenceMetrics } from "./aiperf/InferenceMetrics";
 import { EvalscopeInferenceMetrics } from "./evalscope/InferenceMetrics";
 import { UnknownReport } from "./UnknownReport";
-import { GenaiPerfInferenceMetrics } from "./genai-perf/InferenceMetrics";
 import { GuidellmInferenceMetrics } from "./guidellm/InferenceMetrics";
 
 export interface InferenceReportProps {
@@ -13,8 +12,6 @@ export function InferenceReport({ benchmark }: InferenceReportProps) {
   switch (benchmark.tool) {
     case "guidellm":
       return <GuidellmInferenceMetrics benchmark={benchmark} />;
-    case "genai-perf":
-      return <GenaiPerfInferenceMetrics benchmark={benchmark} />;
     case "aiperf":
       return <AiperfInferenceMetrics benchmark={benchmark} />;
     case "evalscope":

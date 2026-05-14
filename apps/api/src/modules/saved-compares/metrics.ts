@@ -23,8 +23,6 @@ export function readP95Latency(m: unknown): number | null {
       return fromDist(t.data, "e2eLatency", "p95");
     case "vegeta":
       return fromDist(t.data, "latencies", "p95");
-    case "genai-perf":
-      return fromDist(t.data, "requestLatency", "p95");
     default:
       return null;
   }
@@ -58,8 +56,6 @@ export function readThroughput(m: unknown): number | null {
       return asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean);
     case "vegeta":
       return asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput);
-    case "genai-perf":
-      return asFiniteNumber((t.data.requestThroughput as { avg?: number } | undefined)?.avg);
     default:
       return null;
   }
@@ -75,15 +71,8 @@ export interface PromptMetricsSummary {
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
   const tool = t?.tool;
-  const ttftKey = tool === "guidellm" ? "ttft" : tool === "genai-perf" ? "timeToFirstToken" : null;
-  const e2eKey =
-    tool === "guidellm"
-      ? "e2eLatency"
-      : tool === "vegeta"
-        ? "latencies"
-        : tool === "genai-perf"
-          ? "requestLatency"
-          : null;
+  const ttftKey = tool === "guidellm" ? "ttft" : null;
+  const e2eKey = tool === "guidellm" ? "e2eLatency" : tool === "vegeta" ? "latencies" : null;
 
   return {
     throughput: readThroughput(m),

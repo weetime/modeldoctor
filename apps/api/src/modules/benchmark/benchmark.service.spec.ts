@@ -53,7 +53,6 @@ const ENV_DEFAULTS: Record<string, unknown> = {
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-  RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
 };
 
 function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
@@ -751,7 +750,7 @@ describe("BenchmarkService.getByConnectionReports", () => {
       id: string;
       connectionId: string;
       connection: { id: string; name: string; model: string; baseUrl: string } | null;
-      tool: "guidellm" | "vegeta" | "genai-perf";
+      tool: "guidellm" | "vegeta";
       status: string;
       summaryMetrics: unknown;
       createdAt: Date;

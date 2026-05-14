@@ -12,10 +12,6 @@ describe("registry", () => {
     expect(byTool("vegeta").name).toBe("vegeta");
   });
 
-  it("byTool('genai-perf') returns the genai-perf adapter", () => {
-    expect(byTool("genai-perf").name).toBe("genai-perf");
-  });
-
   it("byTool('kv-cache-stress') returns the kv-cache-stress adapter", () => {
     expect(byTool("kv-cache-stress").name).toBe("kv-cache-stress");
   });
@@ -28,14 +24,13 @@ describe("registry", () => {
     expect(byTool("aiperf").name).toBe("aiperf");
   });
 
-  it("allAdapters returns seven adapters", () => {
+  it("allAdapters returns six adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(7);
+    expect(all).toHaveLength(6);
     expect(all.map((a) => a.name).sort()).toEqual(
       [
         "aiperf",
         "evalscope",
-        "genai-perf",
         "guidellm",
         "kv-cache-stress",
         "prefix-cache-probe",

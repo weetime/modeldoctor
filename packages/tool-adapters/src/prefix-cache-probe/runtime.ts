@@ -14,7 +14,7 @@ export function buildCommand(plan: BuildCommandPlan<PrefixCacheProbeParams>): Bu
 
   // Argv passes user-supplied strings (baseUrl, prometheusUrl, model) as
   // separate argv entries — Python argparse doesn't shell-expand them, so
-  // there's no injection surface (unlike the genai-perf shell wrapper).
+  // there's no injection surface.
   const argv = [
     "python",
     "/app/probe.py",

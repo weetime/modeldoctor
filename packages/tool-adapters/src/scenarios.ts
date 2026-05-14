@@ -34,7 +34,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
   inference: {
     label: "推理性能基准",
     description: "TTFT / TPOT / 单次吞吐基线",
-    tools: ["guidellm", "genai-perf", "evalscope", "aiperf"],
+    tools: ["guidellm", "evalscope", "aiperf"],
     paramsConstraints: {
       guidellm: {
         rateType: z.enum(["constant", "poisson", "throughput", "synchronous"]),

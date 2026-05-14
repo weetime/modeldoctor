@@ -12,14 +12,12 @@ import type { ScenarioId } from "@modeldoctor/contracts";
 import {
   AIPERF_CATEGORY_DEFAULTS,
   EVALSCOPE_CATEGORY_DEFAULTS,
-  GENAI_PERF_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
   KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
   aiperfParamDefaults,
   evalscopeParamDefaults,
-  genaiPerfParamDefaults,
   guidellmParamDefaults,
   kvCacheStressParamDefaults,
   prefixCacheProbeParamDefaults,
@@ -34,7 +32,6 @@ import { SCENARIOS } from "../scenarios";
 const TOOL_CATEGORY_DEFAULTS = {
   vegeta: VEGETA_CATEGORY_DEFAULTS,
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
-  "genai-perf": GENAI_PERF_CATEGORY_DEFAULTS,
   "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   "kv-cache-stress": KV_CACHE_STRESS_CATEGORY_DEFAULTS,
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
@@ -42,7 +39,6 @@ const TOOL_CATEGORY_DEFAULTS = {
 } as const;
 import { AiperfParamsForm } from "./AiperfParamsForm";
 import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
-import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
 import { KvCacheStressParamsForm } from "./KvCacheStressParamsForm";
 import { PrefixCacheProbeParamsForm } from "./PrefixCacheProbeParamsForm";
@@ -52,7 +48,6 @@ import { VegetaParamsForm } from "./VegetaParamsForm";
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
-  "genai-perf": genaiPerfParamDefaults,
   "prefix-cache-probe": prefixCacheProbeParamDefaults,
   "kv-cache-stress": kvCacheStressParamDefaults,
   evalscope: evalscopeParamDefaults,
@@ -253,9 +248,7 @@ export function ToolParamsForm({
             ? KvCacheStressParamsForm
             : tool === "evalscope"
               ? EvalscopeParamsForm
-              : tool === "aiperf"
-                ? AiperfParamsForm
-                : GenaiPerfParamsForm;
+              : AiperfParamsForm;
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 

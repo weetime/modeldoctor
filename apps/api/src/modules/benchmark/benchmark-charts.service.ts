@@ -29,7 +29,6 @@ export class BenchmarkChartsService {
 
     if (row.tool === "guidellm") return this.extractGuidellm(row.id, files);
     if (row.tool === "vegeta") return this.extractVegeta(row.id, files);
-    if (row.tool === "genai-perf") return this.extractGenaiPerf(row.id, files);
     return empty;
   }
 
@@ -119,71 +118,6 @@ export class BenchmarkChartsService {
     return { latencyCdf: { samples: samplesMs }, ttftHistogram: null };
   }
 
-  /**
-   * genai-perf raw output (`profile_export.json`, perf_analyzer-side):
-   *   experiments[0].requests[] = {
-   *     timestamp:           int (nanoseconds since epoch, request sent),
-   *     response_timestamps: int[]  (nanoseconds since epoch, one per chunk),
-   *     ...
-   *   }
-   * Per-request derived metrics:
-   *   request_latency_ms = (response_timestamps[-1] - timestamp) / 1e6
-   *   ttft_ms            = (response_timestamps[0]  - timestamp) / 1e6
-   * Non-streaming: response_timestamps has length 1, so TTFT == request_latency
-   * (still meaningful as a bare latency distribution).
-   */
-  private extractGenaiPerf(
-    benchmarkId: string,
-    files: Record<string, string>,
-  ): BenchmarkChartsResponse {
-    const rawB64 = files.raw;
-    if (!rawB64) return { latencyCdf: null, ttftHistogram: null };
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(Buffer.from(rawB64, "base64").toString("utf8"));
-    } catch (e) {
-      this.log.warn(
-        `benchmark ${benchmarkId}: genai-perf raw parse failed: ${(e as Error).message}`,
-      );
-      return { latencyCdf: null, ttftHistogram: null };
-    }
-
-    const root = parsed as {
-      experiments?: Array<{
-        requests?: Array<{ timestamp?: number; response_timestamps?: number[] }>;
-      }>;
-    };
-    const requests = root.experiments?.[0]?.requests;
-    if (!requests || requests.length === 0) {
-      return { latencyCdf: null, ttftHistogram: null };
-    }
-
-    const latencyMs: number[] = [];
-    const ttftMs: number[] = [];
-    for (const r of requests) {
-      if (typeof r.timestamp !== "number") continue;
-      const rt = r.response_timestamps;
-      if (!Array.isArray(rt) || rt.length === 0) continue;
-      const startNs = r.timestamp;
-      const lastNs = rt[rt.length - 1];
-      const firstNs = rt[0];
-      const lat = (lastNs - startNs) / 1_000_000;
-      const ttft = (firstNs - startNs) / 1_000_000;
-      if (Number.isFinite(lat) && lat >= 0) latencyMs.push(lat);
-      if (Number.isFinite(ttft) && ttft >= 0) ttftMs.push(ttft);
-    }
-
-    if (latencyMs.length === 0) {
-      this.log.warn(`benchmark ${benchmarkId}: genai-perf raw yielded zero samples`);
-      return { latencyCdf: null, ttftHistogram: null };
-    }
-
-    return {
-      latencyCdf: { samples: latencyMs },
-      ttftHistogram: ttftMs.length > 0 ? { buckets: bucketize(ttftMs, HISTOGRAM_BIN_COUNT) } : null,
-    };
-  }
 }
 
 /**

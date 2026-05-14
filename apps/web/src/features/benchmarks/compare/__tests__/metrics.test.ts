@@ -21,15 +21,6 @@ const vegetaMetrics: Benchmark["summaryMetrics"] = {
   },
 } as unknown as Benchmark["summaryMetrics"];
 
-const genaiPerfMetrics: Benchmark["summaryMetrics"] = {
-  tool: "genai-perf",
-  data: {
-    requestLatency: { avg: 100, p50: 95, p90: 200, p95: 333.3, p99: 400 },
-    requestThroughput: { avg: 50.2 },
-    timeToFirstToken: { avg: 80, p50: 75, p90: 100, p95: 150, p99: 200 },
-  },
-} as unknown as Benchmark["summaryMetrics"];
-
 const evalscopeMetrics: Benchmark["summaryMetrics"] = {
   tool: "evalscope",
   data: {
@@ -59,9 +50,6 @@ describe("readP95Latency", () => {
   it("reads vegeta.latencies.p95", () => {
     expect(readP95Latency(vegetaMetrics)).toBe(250.5);
   });
-  it("reads genai-perf.requestLatency.p95", () => {
-    expect(readP95Latency(genaiPerfMetrics)).toBe(333.3);
-  });
   it("reads evalscope.e2eLatency.p95", () => {
     expect(readP95Latency(evalscopeMetrics)).toBe(420.7);
   });
@@ -86,9 +74,6 @@ describe("readErrorRate", () => {
     // success = 98.5% → error = 0.015
     expect(readErrorRate(vegetaMetrics)).toBeCloseTo(0.015, 6);
   });
-  it("returns null for genai-perf (schema has no error field)", () => {
-    expect(readErrorRate(genaiPerfMetrics)).toBeNull();
-  });
   it("reads evalscope requests.errorRate directly (already a 0-1 fraction)", () => {
     expect(readErrorRate(evalscopeMetrics)).toBeCloseTo(0.03, 6);
   });
@@ -110,9 +95,6 @@ describe("readThroughput", () => {
   });
   it("reads vegeta.requests.throughput", () => {
     expect(readThroughput(vegetaMetrics)).toBe(9.8);
-  });
-  it("reads genai-perf.requestThroughput.avg", () => {
-    expect(readThroughput(genaiPerfMetrics)).toBe(50.2);
   });
   it("reads evalscope.throughput.requestsPerSec", () => {
     expect(readThroughput(evalscopeMetrics)).toBe(8.4);
@@ -143,11 +125,6 @@ describe("rowDescriptorsForTool", () => {
   it("returns vegeta row set without TTFT/ITL rows", () => {
     const rows = rowDescriptorsForTool("vegeta" as BenchmarkTool);
     expect(rows.find((r) => r.labelKey === "ttftP95")).toBeUndefined();
-  });
-
-  it("returns genai-perf row set without errorRate row (schema has no error)", () => {
-    const rows = rowDescriptorsForTool("genai-perf" as BenchmarkTool);
-    expect(rows.find((r) => r.labelKey === "errorRate")).toBeUndefined();
   });
 
   it("returns evalscope row set with shared inference rows (ttft + itl + errorRate)", () => {

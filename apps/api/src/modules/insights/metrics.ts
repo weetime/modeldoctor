@@ -10,11 +10,9 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
   switch (checkId) {
     case "inference.ttft.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "ttft", "p95");
-      if (m.tool === "genai-perf") return fromDist(m, "timeToFirstToken", "p95");
       return null;
     case "inference.ttft.p99.ms":
       if (m.tool === "guidellm") return fromDist(m, "ttft", "p99");
-      if (m.tool === "genai-perf") return fromDist(m, "timeToFirstToken", "p99");
       return null;
     case "inference.itl.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "itl", "p95");
@@ -22,12 +20,10 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
     case "inference.e2e.p95.ms":
       if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p95");
       if (m.tool === "vegeta") return fromDist(m, "latencies", "p95");
-      if (m.tool === "genai-perf") return fromDist(m, "requestLatency", "p95");
       return null;
     case "inference.e2e.p99.ms":
       if (m.tool === "guidellm") return fromDist(m, "e2eLatency", "p99");
       if (m.tool === "vegeta") return fromDist(m, "latencies", "p99");
-      if (m.tool === "genai-perf") return fromDist(m, "requestLatency", "p99");
       return null;
     case "inference.error_rate":
     case "capacity.error_rate":
@@ -49,7 +45,6 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
     case "gateway.throughput.req_per_s": {
       if (m.tool === "guidellm") return m.data.requestsPerSecond?.mean ?? null;
       if (m.tool === "vegeta") return m.data.requests?.throughput ?? null;
-      if (m.tool === "genai-perf") return m.data.requestThroughput?.avg ?? null;
       return null;
     }
     case "capacity.tail_ratio":
@@ -63,10 +58,6 @@ export function extractMetric(m: MetricsBlob, checkId: string): number | null {
       if (m.tool === "vegeta") {
         p50 = m.data.latencies?.p50 ?? null;
         p99 = m.data.latencies?.p99 ?? null;
-      }
-      if (m.tool === "genai-perf") {
-        p50 = m.data.requestLatency?.p50 ?? null;
-        p99 = m.data.requestLatency?.p99 ?? null;
       }
       if (typeof p50 !== "number" || typeof p99 !== "number" || p50 <= 0) return null;
       return p99 / p50;

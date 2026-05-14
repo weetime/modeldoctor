@@ -14,7 +14,6 @@ export type ScenarioId = z.infer<typeof scenarioIdSchema>;
 
 export const benchmarkToolSchema = z.enum([
   "guidellm",
-  "genai-perf",
   "vegeta",
   "prefix-cache-probe",
   "kv-cache-stress",

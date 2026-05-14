@@ -77,8 +77,8 @@ describe("BenchmarkCreatePage", () => {
 
   it("defaults to inference scenario when no ?scenario= param (tool select shows guidellm)", () => {
     renderAt("/benchmarks/new");
-    // Inference is multi-tool (guidellm + genai-perf), so the dropdown is
-    // rendered as a combobox with the default-selected value visible.
+    // Inference is multi-tool (guidellm + evalscope + aiperf), so the
+    // dropdown is rendered as a combobox with the default-selected value visible.
     const toolCombo = screen.getByRole("combobox", { name: /Tool/i });
     expect(within(toolCombo).getByText(/guidellm/i)).toBeInTheDocument();
   });
@@ -118,8 +118,8 @@ describe("BenchmarkCreatePage", () => {
 
   it("renders GuidellmParamsForm fields when ?scenario=capacity", () => {
     renderAt("/benchmarks/new?scenario=capacity");
-    // GuidellmParamsForm exposes a "Profile" field that vegeta/genai-perf
-    // forms don't — distinctive enough to confirm the right subform mounted.
+    // GuidellmParamsForm exposes a "Profile" field that vegeta's form doesn't
+    // — distinctive enough to confirm the right subform mounted.
     expect(screen.getByLabelText(/^Profile$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Request rate/i)).toBeInTheDocument();
     // VegetaParamsForm's "Rate (req/s)" field MUST NOT be present.

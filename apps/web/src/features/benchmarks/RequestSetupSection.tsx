@@ -11,10 +11,10 @@ interface Props {
  * Cross-tool "what was sent" view.
  *
  * vegeta has a literal request body and reuses RequestDetailsSection (with
- * Copy-as-cURL replay). Wrapper-driven tools (guidellm / genai-perf /
- * prefix-cache-probe) synthesize requests at runtime from a config; for
- * those we render the endpoint + headers + the run config that drove
- * generation, not a fabricated example body.
+ * Copy-as-cURL replay). Wrapper-driven tools (guidellm / prefix-cache-probe)
+ * synthesize requests at runtime from a config; for those we render the
+ * endpoint + headers + the run config that drove generation, not a
+ * fabricated example body.
  */
 export function RequestSetupSection({ benchmark }: Props) {
   if (benchmark.tool === "vegeta") {
@@ -41,19 +41,6 @@ function inferEndpoint(
         method: "POST",
         path: params.apiType === "chat" ? "/v1/chat/completions" : "/v1/completions",
       };
-    case "genai-perf":
-      switch (params.endpointType) {
-        case "chat":
-          return { method: "POST", path: "/v1/chat/completions" };
-        case "completions":
-          return { method: "POST", path: "/v1/completions" };
-        case "embeddings":
-          return { method: "POST", path: "/v1/embeddings" };
-        case "rankings":
-          return { method: "POST", path: "/v1/rerank" };
-        default:
-          return { method: "POST", path: "/v1/chat/completions" };
-      }
     case "prefix-cache-probe":
       return { method: "POST", path: "/v1/chat/completions" };
     default:
@@ -91,27 +78,6 @@ function buildParamRows(
         rows.push({
           label: k("outputTokens"),
           value: String(params.datasetOutputTokens ?? "—"),
-        });
-      }
-      return rows;
-    }
-    case "genai-perf": {
-      const rows: ParamRow[] = [
-        { label: k("endpointType"), value: String(params.endpointType ?? "—") },
-        { label: k("streaming"), value: params.streaming ? k("on") : k("off") },
-        { label: k("numPrompts"), value: String(params.numPrompts ?? "—") },
-        { label: k("concurrency"), value: String(params.concurrency ?? "—") },
-      ];
-      if (params.inputTokensMean) {
-        rows.push({
-          label: k("inputTokensDist"),
-          value: `${params.inputTokensMean} ± ${params.inputTokensStddev ?? 0}`,
-        });
-      }
-      if (params.outputTokensMean) {
-        rows.push({
-          label: k("outputTokensDist"),
-          value: `${params.outputTokensMean} ± ${params.outputTokensStddev ?? 0}`,
         });
       }
       return rows;

@@ -62,7 +62,6 @@ export const EnvSchema = z
     // Per-tool runner images (#53 Phase 2 / #78). Required when
     // NODE_ENV !== "test" (k8s is the only execution mode).
     RUNNER_IMAGE_GUIDELLM: z.string().min(1).optional(),
-    RUNNER_IMAGE_GENAI_PERF: z.string().min(1).optional(),
     RUNNER_IMAGE_VEGETA: z.string().min(1).optional(),
     RUNNER_IMAGE_PREFIX_CACHE_PROBE: z.string().min(1).optional(),
     RUNNER_IMAGE_KV_CACHE_STRESS: z.string().min(1).optional(),
@@ -138,7 +137,6 @@ export const EnvSchema = z
       const perToolImages = [
         "RUNNER_IMAGE_GUIDELLM",
         "RUNNER_IMAGE_VEGETA",
-        "RUNNER_IMAGE_GENAI_PERF",
         "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
         "RUNNER_IMAGE_KV_CACHE_STRESS",
         "RUNNER_IMAGE_EVALSCOPE",

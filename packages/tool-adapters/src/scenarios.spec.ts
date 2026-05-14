@@ -26,13 +26,8 @@ describe("SCENARIOS constant", () => {
     ]);
   });
 
-  it("inference scenario lists guidellm, genai-perf, evalscope, and aiperf", () => {
-    expect([...SCENARIOS.inference.tools].sort()).toEqual([
-      "aiperf",
-      "evalscope",
-      "genai-perf",
-      "guidellm",
-    ]);
+  it("inference scenario lists guidellm, evalscope, and aiperf", () => {
+    expect([...SCENARIOS.inference.tools].sort()).toEqual(["aiperf", "evalscope", "guidellm"]);
   });
 
   it("capacity scenario lists guidellm only", () => {
@@ -55,7 +50,7 @@ describe("invariant: SCENARIOS.tools ⊆ adapters that declare the scenario", ()
   });
 
   it("every adapter scenario is mirrored in SCENARIOS[s].tools", () => {
-    for (const tool of ["guidellm", "vegeta", "genai-perf"] as const) {
+    for (const tool of ["guidellm", "vegeta"] as const) {
       const adapter = byTool(tool);
       for (const scenarioId of adapter.scenarios) {
         expect(SCENARIOS[scenarioId].tools).toContain(tool);

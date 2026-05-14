@@ -2,7 +2,7 @@ import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
 
 // summaryMetrics is the discriminated union written by tool-adapter
 // parseFinalReport: { tool, data } (see
-// packages/tool-adapters/src/{guidellm,vegeta,genai-perf}/runtime.ts).
+// packages/tool-adapters/src/{guidellm,vegeta,aiperf,evalscope}/runtime.ts).
 // vegeta latencies are normalized to ms by the adapter (NOT ns).
 
 type SummaryMetrics = Benchmark["summaryMetrics"];
@@ -37,8 +37,6 @@ export function readP95Latency(metrics: SummaryMetrics): number | null {
       return fromDist(m.data, "e2eLatency", "p95");
     case "vegeta":
       return fromDist(m.data, "latencies", "p95");
-    case "genai-perf":
-      return fromDist(m.data, "requestLatency", "p95");
     case "evalscope":
     case "aiperf":
       return fromDist(m.data, "e2eLatency", "p95");
@@ -70,7 +68,6 @@ export function readErrorRate(metrics: SummaryMetrics): number | null {
       return asFiniteNumber(r?.errorRate);
     }
     default:
-      // genai-perf carries no error/success counts.
       return null;
   }
 }
@@ -86,10 +83,6 @@ export function readThroughput(metrics: SummaryMetrics): number | null {
     case "vegeta": {
       const r = m.data.requests as { throughput?: number } | undefined;
       return asFiniteNumber(r?.throughput);
-    }
-    case "genai-perf": {
-      const r = m.data.requestThroughput as { avg?: number } | undefined;
-      return asFiniteNumber(r?.avg);
     }
     case "evalscope":
     case "aiperf": {
@@ -186,18 +179,6 @@ const inferenceRowsForNewTools: MetricRowDescriptor[] = [
   { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
 ];
 
-const genaiPerfRows: MetricRowDescriptor[] = [
-  distRow("latencyMean", "requestLatency", "avg", { unitSuffix: "ms" }),
-  distRow("latencyP50", "requestLatency", "p50", { unitSuffix: "ms" }),
-  distRow("latencyP90", "requestLatency", "p90", { unitSuffix: "ms" }),
-  { labelKey: "latencyP95", read: readP95Latency, verdictKind: "latency", unitSuffix: "ms" },
-  distRow("latencyP99", "requestLatency", "p99", { unitSuffix: "ms" }),
-  distRow("ttftMean", "timeToFirstToken", "avg", { unitSuffix: "ms" }),
-  distRow("ttftP95", "timeToFirstToken", "p95", { unitSuffix: "ms" }),
-  // genai-perf has no errorRate row (schema doesn't carry success/error counts)
-  { labelKey: "throughput", read: readThroughput, verdictKind: "throughput", unitSuffix: "req/s" },
-];
-
 // Formats a baseline-to-current delta as a signed string for display in
 // VerdictBadge. errorRate uses percentage points (×100, "pp" suffix);
 // latency/throughput use percent change with 1 decimal. Returns "—" when
@@ -219,8 +200,6 @@ export function rowDescriptorsForTool(tool: BenchmarkTool): MetricRowDescriptor[
       return guidellmRows;
     case "vegeta":
       return vegetaRows;
-    case "genai-perf":
-      return genaiPerfRows;
     case "evalscope":
     case "aiperf":
       return inferenceRowsForNewTools;

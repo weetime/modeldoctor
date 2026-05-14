@@ -49,7 +49,6 @@ describe("validateEnv", () => {
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
@@ -85,7 +84,6 @@ describe("validateEnv", () => {
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
@@ -188,7 +186,6 @@ describe("validateEnv", () => {
       BENCHMARK_CALLBACK_URL: "http://localhost:3001",
       RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
       RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_GENAI_PERF: "md-runner-genai-perf:test",
       RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
       RUNNER_IMAGE_KV_CACHE_STRESS: "md-runner-kv-cache-stress:test",
       RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
@@ -205,17 +202,11 @@ describe("validateEnv", () => {
       expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_VEGETA/);
     });
 
-    it("requires RUNNER_IMAGE_GENAI_PERF outside test mode", () => {
-      const { RUNNER_IMAGE_GENAI_PERF: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_GENAI_PERF/);
-    });
-
     it("accepts a fully-configured dev env with all RUNNER_IMAGE_* set", () => {
       const env = validateEnv(baseDev);
       expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
       expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:test");
       expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:test");
-      expect(env.RUNNER_IMAGE_GENAI_PERF).toBe("md-runner-genai-perf:test");
       expect(env.RUNNER_IMAGE_PREFIX_CACHE_PROBE).toBe("md-runner-prefix-cache-probe:test");
       expect(env.RUNNER_IMAGE_KV_CACHE_STRESS).toBe("md-runner-kv-cache-stress:test");
       expect(env.RUNNER_IMAGE_EVALSCOPE).toBe("md-runner-evalscope:test");

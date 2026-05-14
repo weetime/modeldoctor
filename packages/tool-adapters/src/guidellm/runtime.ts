@@ -22,7 +22,7 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
   // runner's "running:" log line (masked by _redacted), and any tooling
   // that inspects the wrapper process. The argv-level exposure inside the
   // guidellm process is currently accepted; tightening it would require a
-  // genai-perf-style file or pipe pattern.
+  // file or pipe pattern.
   // Contract: see runner/main.py::_inject_api_key_into_backend_kwargs.
   const backendKwargs: Record<string, unknown> = {};
   if (!params.validateBackend) {

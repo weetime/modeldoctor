@@ -17,7 +17,7 @@ export const inferenceChecks: CheckDescriptor[] = [
   {
     id: "inference.ttft.p95.ms",
     scenario: "inference",
-    toolFilter: ["guidellm", "genai-perf"],
+    toolFilter: ["guidellm"],
     axis: "responsiveness",
     defaultWeight: 1.0,
     direction: "lower_is_better",
@@ -25,14 +25,13 @@ export const inferenceChecks: CheckDescriptor[] = [
     read: (m) => {
       const t = (m as { tool?: string } | null)?.tool;
       if (t === "guidellm") return fromDist(m, "ttft", "p95");
-      if (t === "genai-perf") return fromDist(m, "timeToFirstToken", "p95");
       return null;
     },
   },
   {
     id: "inference.ttft.p99.ms",
     scenario: "inference",
-    toolFilter: ["guidellm", "genai-perf"],
+    toolFilter: ["guidellm"],
     axis: "tail",
     defaultWeight: 0.5,
     direction: "lower_is_better",
@@ -40,7 +39,6 @@ export const inferenceChecks: CheckDescriptor[] = [
     read: (m) => {
       const t = (m as { tool?: string } | null)?.tool;
       if (t === "guidellm") return fromDist(m, "ttft", "p99");
-      if (t === "genai-perf") return fromDist(m, "timeToFirstToken", "p99");
       return null;
     },
   },
@@ -75,7 +73,6 @@ export const inferenceChecks: CheckDescriptor[] = [
       const t = (m as { tool?: string } | null)?.tool;
       if (t === "guidellm") return fromDist(m, "e2eLatency", "p99");
       if (t === "vegeta") return fromDist(m, "latencies", "p99");
-      if (t === "genai-perf") return fromDist(m, "requestLatency", "p99");
       return null;
     },
   },

@@ -7,7 +7,6 @@ import type { Prisma } from "@prisma/client";
  *   guidellm → data.e2eLatency.p95     (ms)
  *   vegeta   → data.latencies.p95      (ms; runtime normalizes from
  *                                        Go-duration units before persist)
- *   genai-perf → data.requestLatency.p95 (ms)
  *
  * Returns null whenever the metric is missing or non-finite. The reports
  * service treats null as "no data point in this run".
@@ -37,8 +36,6 @@ export function readP95LatencyMs(metrics: Prisma.JsonValue | null): number | nul
       return fromDist(m.data, "e2eLatency", "p95");
     case "vegeta":
       return fromDist(m.data, "latencies", "p95");
-    case "genai-perf":
-      return fromDist(m.data, "requestLatency", "p95");
     default:
       return null;
   }

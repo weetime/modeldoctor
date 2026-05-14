@@ -16,7 +16,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const ALL = "__all__";
 
-const ALL_TOOLS: BenchmarkTool[] = ["guidellm", "genai-perf", "vegeta"];
+const ALL_TOOLS: BenchmarkTool[] = ["guidellm", "vegeta", "evalscope", "aiperf"];
 const STATUSES: BenchmarkStatus[] = [
   "pending",
   "submitted",

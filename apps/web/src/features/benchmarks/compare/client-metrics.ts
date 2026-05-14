@@ -31,15 +31,8 @@ export interface PromptMetricsSummary {
 export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const t = asTagged(m);
   const tool = t?.tool;
-  const ttftKey = tool === "guidellm" ? "ttft" : tool === "genai-perf" ? "timeToFirstToken" : null;
-  const e2eKey =
-    tool === "guidellm"
-      ? "e2eLatency"
-      : tool === "vegeta"
-        ? "latencies"
-        : tool === "genai-perf"
-          ? "requestLatency"
-          : null;
+  const ttftKey = tool === "guidellm" ? "ttft" : null;
+  const e2eKey = tool === "guidellm" ? "e2eLatency" : tool === "vegeta" ? "latencies" : null;
 
   const throughput = !t?.data
     ? null
@@ -47,9 +40,7 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
       ? asFiniteNumber((t.data.requestsPerSecond as { mean?: number } | undefined)?.mean)
       : tool === "vegeta"
         ? asFiniteNumber((t.data.requests as { throughput?: number } | undefined)?.throughput)
-        : tool === "genai-perf"
-          ? asFiniteNumber((t.data.requestThroughput as { avg?: number } | undefined)?.avg)
-          : null;
+        : null;
 
   let errorRate: number | null = null;
   if (t?.data) {
