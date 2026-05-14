@@ -18,9 +18,10 @@ RUN pip install --no-cache-dir \
         "modelscope==1.36.3" \
         'requests>=2.31,<3'
 
-# Bake LongAlpaca-12k. modelscope download writes to a sharded local dir.
+# Bake LongAlpaca-12k. modelscope download's positional `repo_id` defaults
+# to model lookup; LongAlpaca-12k is a dataset, so `--dataset` is required.
 RUN modelscope download \
-        AI-ModelScope/LongAlpaca-12k \
+        --dataset AI-ModelScope/LongAlpaca-12k \
         --local_dir /opt/evalscope-datasets/longalpaca
 
 WORKDIR /app

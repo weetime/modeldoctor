@@ -8,10 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Benchmark } from "@modeldoctor/contracts";
-import {
-  type EvalscopeReport,
-  evalscopeReportSchema,
-} from "@modeldoctor/tool-adapters/schemas";
+import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 import { useMemo } from "react";
 import { MetricCard } from "../components/MetricCard";
 import { useBenchmarkList } from "../queries";
@@ -194,9 +191,7 @@ function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-semibold">
-          Cold vs. warm (R1 → R2)
-        </CardTitle>
+        <CardTitle className="text-sm font-semibold">Cold vs. warm (R1 → R2)</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -217,9 +212,7 @@ function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
                   <TableCell className="text-right tabular-nums">{fmt(row.r1)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(row.r2)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {delta === null
-                      ? "—"
-                      : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                    {delta === null ? "—" : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`}
                   </TableCell>
                 </TableRow>
               );

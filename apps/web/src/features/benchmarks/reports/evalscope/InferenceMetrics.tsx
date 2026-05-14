@@ -1,8 +1,5 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import {
-  type EvalscopeReport,
-  evalscopeReportSchema,
-} from "@modeldoctor/tool-adapters/schemas";
+import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
 import { MetricCard } from "../../components/MetricCard";
 import { UnknownReport } from "../UnknownReport";
 
@@ -14,9 +11,7 @@ function fmt(n: number, digits = 1): string {
   return n.toFixed(digits);
 }
 
-export function EvalscopeInferenceMetrics({
-  benchmark,
-}: EvalscopeInferenceMetricsProps) {
+export function EvalscopeInferenceMetrics({ benchmark }: EvalscopeInferenceMetricsProps) {
   const tagged = benchmark.summaryMetrics as {
     tool?: string;
     data?: unknown;
