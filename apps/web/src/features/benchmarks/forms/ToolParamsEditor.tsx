@@ -40,6 +40,8 @@ const TOOL_CATEGORY_DEFAULTS = {
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
 } as const;
+import { AiperfParamsForm } from "./AiperfParamsForm";
+import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GenaiPerfParamsForm } from "./GenaiPerfParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
 import { KvCacheStressParamsForm } from "./KvCacheStressParamsForm";
@@ -249,7 +251,11 @@ export function ToolParamsForm({
           ? PrefixCacheProbeParamsForm
           : tool === "kv-cache-stress"
             ? KvCacheStressParamsForm
-            : GenaiPerfParamsForm;
+            : tool === "evalscope"
+              ? EvalscopeParamsForm
+              : tool === "aiperf"
+                ? AiperfParamsForm
+                : GenaiPerfParamsForm;
   return <ParamsForm fieldPrefix={paramsFieldName} />;
 }
 
