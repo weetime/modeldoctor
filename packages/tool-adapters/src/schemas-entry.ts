@@ -4,7 +4,7 @@
 // IMPORTANT: do NOT import anything from `runtime.ts` files transitively
 // from this entry point. We don't want `child_process` / `fs` / etc to
 // be reachable from the FE bundle. Keep this file's imports limited to
-// schema files.
+// schema files and pure metric extractors.
 
 export {
   guidellmParamsSchema,
@@ -69,3 +69,17 @@ export {
   EVALSCOPE_CATEGORY_DEFAULTS,
   AIPERF_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";
+
+// Metric kinds + pure per-tool extractors. These files have NO runtime
+// dependencies (no child_process, no fs) so FE can safely import them.
+export type { MetricKind, ToolMetricExtractor } from "./core/metric-extractor.js";
+export { guidellmReadMetric } from "./guidellm/read-metric.js";
+export { vegetaReadMetric } from "./vegeta/read-metric.js";
+export { prefixCacheProbeReadMetric } from "./prefix-cache-probe/read-metric.js";
+export { evalscopeReadMetric } from "./evalscope/read-metric.js";
+export { aiperfReadMetric } from "./aiperf/read-metric.js";
+
+// FE-safe variant of `readMetricSafe` — drives off the pure per-tool
+// readMetric exports above, NOT `byTool` (which would pull in adapter
+// runtimes via `registry.js`).
+export { readMetricSafe } from "./core/read-metric-safe.fe.js";

@@ -16,14 +16,29 @@ const sample: Record<string, unknown> = {
 };
 
 describe("guidellmAdapter.readMetric", () => {
+  it("ttft.p50", () => {
+    expect(guidellmAdapter.readMetric("ttft.p50", sample)).toBe(80);
+  });
+  it("ttft.p90", () => {
+    expect(guidellmAdapter.readMetric("ttft.p90", sample)).toBe(150);
+  });
   it("ttft.p95", () => {
     expect(guidellmAdapter.readMetric("ttft.p95", sample)).toBe(200);
   });
   it("ttft.p99", () => {
     expect(guidellmAdapter.readMetric("ttft.p99", sample)).toBe(300);
   });
+  it("itl.p50", () => {
+    expect(guidellmAdapter.readMetric("itl.p50", sample)).toBe(28);
+  });
   it("itl.p95", () => {
     expect(guidellmAdapter.readMetric("itl.p95", sample)).toBe(45);
+  });
+  it("e2e.p50", () => {
+    expect(guidellmAdapter.readMetric("e2e.p50", sample)).toBe(900);
+  });
+  it("e2e.p90", () => {
+    expect(guidellmAdapter.readMetric("e2e.p90", sample)).toBe(1400);
   });
   it("e2e.p95", () => {
     expect(guidellmAdapter.readMetric("e2e.p95", sample)).toBe(1600);

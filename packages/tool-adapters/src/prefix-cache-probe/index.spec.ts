@@ -6,9 +6,14 @@ import { prefixCacheProbeAdapter } from "./index.js";
 // of the load-generator inference metrics. Every MetricKind must return
 // null regardless of input.
 const allKinds: readonly MetricKind[] = [
+  "ttft.p50",
+  "ttft.p90",
   "ttft.p95",
   "ttft.p99",
+  "itl.p50",
   "itl.p95",
+  "e2e.p50",
+  "e2e.p90",
   "e2e.p95",
   "e2e.p99",
   "errorRate",

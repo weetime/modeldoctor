@@ -15,14 +15,29 @@ const sample: Record<string, unknown> = {
 };
 
 describe("vegetaAdapter.readMetric", () => {
+  it("ttft.p50 returns null (vegeta has no token semantics)", () => {
+    expect(vegetaAdapter.readMetric("ttft.p50", sample)).toBeNull();
+  });
+  it("ttft.p90 returns null", () => {
+    expect(vegetaAdapter.readMetric("ttft.p90", sample)).toBeNull();
+  });
   it("ttft.p95 returns null (vegeta has no token semantics)", () => {
     expect(vegetaAdapter.readMetric("ttft.p95", sample)).toBeNull();
   });
   it("ttft.p99 returns null", () => {
     expect(vegetaAdapter.readMetric("ttft.p99", sample)).toBeNull();
   });
+  it("itl.p50 returns null", () => {
+    expect(vegetaAdapter.readMetric("itl.p50", sample)).toBeNull();
+  });
   it("itl.p95 returns null", () => {
     expect(vegetaAdapter.readMetric("itl.p95", sample)).toBeNull();
+  });
+  it("e2e.p50 (latencies.p50)", () => {
+    expect(vegetaAdapter.readMetric("e2e.p50", sample)).toBe(180);
+  });
+  it("e2e.p90 (latencies.p90)", () => {
+    expect(vegetaAdapter.readMetric("e2e.p90", sample)).toBe(350);
   });
   it("e2e.p95 (latencies.p95)", () => {
     expect(vegetaAdapter.readMetric("e2e.p95", sample)).toBe(400);

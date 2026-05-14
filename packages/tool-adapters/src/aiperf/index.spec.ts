@@ -13,14 +13,29 @@ const sample: Record<string, unknown> = {
 };
 
 describe("aiperfAdapter.readMetric", () => {
+  it("ttft.p50", () => {
+    expect(aiperfAdapter.readMetric("ttft.p50", sample)).toBe(100);
+  });
+  it("ttft.p90", () => {
+    expect(aiperfAdapter.readMetric("ttft.p90", sample)).toBe(180);
+  });
   it("ttft.p95", () => {
     expect(aiperfAdapter.readMetric("ttft.p95", sample)).toBe(220);
   });
   it("ttft.p99", () => {
     expect(aiperfAdapter.readMetric("ttft.p99", sample)).toBe(320);
   });
+  it("itl.p50", () => {
+    expect(aiperfAdapter.readMetric("itl.p50", sample)).toBe(30);
+  });
   it("itl.p95", () => {
     expect(aiperfAdapter.readMetric("itl.p95", sample)).toBe(48);
+  });
+  it("e2e.p50", () => {
+    expect(aiperfAdapter.readMetric("e2e.p50", sample)).toBe(1000);
+  });
+  it("e2e.p90", () => {
+    expect(aiperfAdapter.readMetric("e2e.p90", sample)).toBe(1500);
   });
   it("e2e.p95", () => {
     expect(aiperfAdapter.readMetric("e2e.p95", sample)).toBe(1700);

@@ -7,9 +7,17 @@
 // Future tool additions can only miss a metric kind on PURPOSE — there
 // is no way to silently forget all the consumer call sites.
 export type MetricKind =
+  // Time-to-first-token distribution buckets.
+  | "ttft.p50"
+  | "ttft.p90"
   | "ttft.p95"
   | "ttft.p99"
+  // Inter-token-latency distribution buckets.
+  | "itl.p50"
   | "itl.p95"
+  // End-to-end latency distribution buckets.
+  | "e2e.p50"
+  | "e2e.p90"
   | "e2e.p95"
   | "e2e.p99"
   | "errorRate" // 0-1 fraction
