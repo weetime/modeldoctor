@@ -104,4 +104,44 @@ describe("QualityGateRunExecutor", () => {
     await ex.onModuleInit();
     expect(m.repo.sweepRunningOnBoot).toHaveBeenCalled();
   });
+
+  it("onModuleDestroy aborts in-flight runs and awaits them to settle", async () => {
+    const m = buildMocks();
+    m.repo.findFullRun.mockResolvedValue({
+      id: "rD",
+      userId: "u1",
+      endpointAId: "a",
+      endpointBId: null,
+      evaluationSnapshot: { samples: Array.from({ length: 20 }, (_, i) => sample(i)) },
+      gateConfig: { passRateMin: 0.9 },
+    });
+    m.caller.call.mockImplementation(
+      async (_id: string, _userId: string, _q: string, signal: AbortSignal) => {
+        await new Promise((r) => setTimeout(r, 30));
+        if (signal.aborted) return { rawAnswer: "", latencyMs: 0, error: "cancelled" };
+        return { rawAnswer: "x", latencyMs: 1 };
+      },
+    );
+    const ex = new QualityGateRunExecutor(m.repo as never, m.caller as never, m.judge as never);
+    let resolved = false;
+    const p = ex.start("rD").then(() => {
+      resolved = true;
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    // onModuleDestroy must wait for the run to wind down (not return immediately).
+    await ex.onModuleDestroy();
+    expect(resolved).toBe(true);
+    await p;
+    expect(m.repo.markCancelled).toHaveBeenCalledWith("rD");
+  });
+
+  it("swallows secondary Prisma error when markFailed throws (shutdown race)", async () => {
+    const m = buildMocks();
+    m.repo.findFullRun.mockRejectedValueOnce(new Error("primary boom"));
+    m.repo.markFailed.mockRejectedValueOnce(new Error("Engine is not yet connected"));
+    const ex = new QualityGateRunExecutor(m.repo as never, m.caller as never, m.judge as never);
+    // Must NOT throw / unhandled-reject — that's the regression we're fixing.
+    await expect(ex.start("rX")).resolves.toBeUndefined();
+    expect(m.repo.markFailed).toHaveBeenCalled();
+  });
 });
