@@ -163,13 +163,31 @@ export function BenchmarkCreatePage() {
 
   // Cascade guard: if the user changes connection after applying a template
   // and the new connection's category isn't covered by the template's
-  // `categories`, clear the template so we don't run with a config that
-  // doesn't fit the endpoint. User is told via toast and can re-pick.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: form is stable; we only re-run when category or template-id change
+  // `categories`, fully unwind the template's prefill — clearing only
+  // `templateId` leaves the template's params/name/description in the form
+  // and the user could accidentally submit a config that doesn't fit the
+  // endpoint. Reset to tool defaults (preserving tool/scenario/connectionId
+  // because those drive the current page), and drop `?templateId=` from
+  // the URL so a refresh doesn't immediately re-apply.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form / params / setSearchParams are stable; we only re-run when category or template-id change
   useEffect(() => {
     if (!watchedTemplateId || !bannerTpl.data || !connectionCategory) return;
     if (!bannerTpl.data.categories.includes(connectionCategory)) {
-      form.setValue("templateId", undefined, { shouldDirty: true });
+      const currentTool = form.getValues("tool");
+      form.reset({
+        tool: currentTool,
+        scenario,
+        connectionId: form.getValues("connectionId") ?? "",
+        name: "",
+        description: undefined,
+        params: TOOL_DEFAULTS[currentTool] as Record<string, unknown>,
+        templateId: undefined,
+      });
+      if (params.get("templateId")) {
+        const next = new URLSearchParams(params);
+        next.delete("templateId");
+        setSearchParams(next, { replace: true });
+      }
       toast.warning(
         t("create.prefillFromTemplate.categoryMismatch", {
           templateName: bannerTpl.data.name,

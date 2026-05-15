@@ -11,12 +11,13 @@ vi.mock("@/features/benchmark-templates/queries", () => ({
   useCreateTemplate: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
 }));
 
+const mockUseConnection = vi.fn();
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
     data: [{ id: "c1", name: "test-conn", baseUrl: "http://x", model: "m", category: "chat" }],
     isLoading: false,
   }),
-  useConnection: () => ({ data: null }),
+  useConnection: (...args: unknown[]) => mockUseConnection(...args),
   useCreateConnection: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
   useUpdateConnection: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
   useDiscoverConnection: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
@@ -58,6 +59,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe("BenchmarkCreatePage", () => {
   beforeEach(() => {
     mockUseTemplate.mockReturnValue({ data: undefined, isError: false });
+    mockUseConnection.mockReturnValue({ data: null });
     mockMutate.mockReset();
   });
 
@@ -401,5 +403,46 @@ describe("BenchmarkCreatePage", () => {
     expect(payload.templateId).toBeUndefined();
     // Prefilled params are still present after clearing the link.
     expect((payload.params as Record<string, unknown>).profile).toBe("throughput");
+  });
+
+  it("cascade clears template + params when connection category no longer matches", async () => {
+    // Template targets chat connections only.
+    mockUseTemplate.mockReturnValue({
+      data: {
+        id: "tpl-chat",
+        name: "chat-only preset",
+        description: null,
+        scenario: "inference",
+        tool: "guidellm",
+        config: { profile: "throughput" },
+        isOfficial: false,
+        createdBy: null,
+        tags: [],
+        categories: ["chat"],
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+      },
+      isError: false,
+    });
+    // Connection is an embeddings endpoint — does NOT match the template.
+    mockUseConnection.mockReturnValue({
+      data: {
+        id: "c-emb",
+        name: "emb-conn",
+        baseUrl: "http://x",
+        model: "m",
+        category: "embeddings",
+      },
+    });
+    renderAt("/benchmarks/new?scenario=inference&templateId=tpl-chat");
+
+    // After cascade fires, the prefilled name + params must be cleared so a
+    // stale chat-style config can't be submitted against an embeddings model.
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText(/Name|名称/i) as HTMLInputElement;
+      expect(nameInput.value).toBe("");
+    });
+    // Banner gone (templateId reset).
+    expect(screen.queryByText(/prefilled from template|已从模板/i)).not.toBeInTheDocument();
   });
 });
