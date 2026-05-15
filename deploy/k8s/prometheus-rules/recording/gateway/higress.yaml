@@ -1,0 +1,91 @@
+# PrometheusRule: Higress AI Statistics gateway
+#
+# Normalizes Higress AI Statistics plugin metrics into the
+# `modeldoctor:gateway:*` namespace. This is the route/consumer dimension
+# — it does NOT replace engine-side metrics. Apply this in addition to
+# (not instead of) your engine recording rule.
+#
+# All Higress AI metrics carry these source labels:
+#   ai_route, ai_cluster, ai_model, ai_consumer
+# We preserve them on the normalized output so per-tenant queries work.
+#
+# Limitation: Higress exposes only sum/count counter pairs, no histograms.
+# Avg latency works (sum/count), but per-route P99 is unavailable from
+# this layer — get it from the engine side via `model_name == ai_model`.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-higress
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/source: higress
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    - name: modeldoctor.gateway.higress.tokens
+      interval: 30s
+      rules:
+        - record: modeldoctor:gateway:input_tokens_total
+          expr: route_upstream_model_consumer_metric_input_token
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:output_tokens_total
+          expr: route_upstream_model_consumer_metric_output_token
+          labels:
+            source: higress
+        # Token rate per consumer — most useful series for spotting a
+        # noisy-neighbor tenant.
+        - record: modeldoctor:gateway:input_tokens_rate
+          expr: sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_input_token[1m]))
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:output_tokens_rate
+          expr: sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_output_token[1m]))
+          labels:
+            source: higress
+
+    - name: modeldoctor.gateway.higress.latency
+      interval: 30s
+      rules:
+        # Cumulative LLM service duration; downstream uses this with
+        # llm_duration_count to compute average.
+        - record: modeldoctor:gateway:llm_duration_total_seconds
+          # Higress reports microseconds in the source counter; convert to seconds.
+          # Verify your plugin build's unit before applying (some legacy
+          # builds report milliseconds — divide by 1000 instead).
+          expr: route_upstream_model_consumer_metric_llm_service_duration / 1e6
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:llm_request_count_total
+          expr: route_upstream_model_consumer_metric_llm_duration_count
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:ttft_total_seconds
+          expr: route_upstream_model_consumer_metric_llm_first_token_duration / 1e6
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:streaming_count_total
+          expr: route_upstream_model_consumer_metric_llm_stream_duration_count
+          labels:
+            source: higress
+        # Avg latency derived: total_duration / request_count (over 5m).
+        # Histogram-quantile is impossible from sum/count alone — for P99
+        # query the engine side via ai_model == model_name.
+        - record: modeldoctor:gateway:llm_duration_seconds:avg
+          expr: |
+            sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_llm_service_duration[5m]))
+            /
+            clamp_min(sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_llm_duration_count[5m])), 1)
+            / 1e6
+          labels:
+            source: higress
+        - record: modeldoctor:gateway:ttft_seconds:avg
+          expr: |
+            sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_llm_first_token_duration[5m]))
+            /
+            clamp_min(sum by (ai_route, ai_cluster, ai_model, ai_consumer) (rate(route_upstream_model_consumer_metric_llm_duration_count[5m])), 1)
+            / 1e6
+          labels:
+            source: higress

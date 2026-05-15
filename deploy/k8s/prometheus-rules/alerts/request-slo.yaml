@@ -1,0 +1,99 @@
+# PrometheusRule: Request-level SLO alerts
+#
+# Queries the normalized `modeldoctor:request:*` namespace ONLY — engine-
+# agnostic. As long as at least one recording rule (vllm-v0 / vllm-v1 /
+# sglang-* / tgi) is applied, these alerts will fire correctly. If no
+# engine recording rule is applied, the underlying series are simply
+# missing and these alerts stay silent (no false positives).
+#
+# Thresholds are starting defaults; tune per workload. Annotations carry
+# the model_name + engine + instance so the AI recommendation layer can
+# join with connection metadata downstream.
+#
+# Scenarios covered (per survey §8):
+#   - A: TTFT jitter + KV exhaustion
+#   - E: engine hang / OOM degradation
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-alerts-request-slo
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/kind: alert
+spec:
+  groups:
+    - name: modeldoctor.alerts.request-slo
+      rules:
+        - alert: ModelDoctorTtftP99High
+          expr: modeldoctor:request:ttft_seconds:p99 > 5
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: ttft-jitter
+          annotations:
+            summary: "TTFT P99 above 5s for {{ $labels.model_name }} on {{ $labels.engine }}"
+            description: |
+              5-minute P99 time-to-first-token is {{ $value | printf "%.2f" }}s
+              on model={{ $labels.model_name }} engine={{ $labels.engine }}
+              instance={{ $labels.instance }}. Check KV cache pressure and
+              queue depth.
+            modeldoctor_required_context: "kv_usage_ratio, request:waiting, request:preempted_total"
+
+        - alert: ModelDoctorTtftP99Critical
+          expr: modeldoctor:request:ttft_seconds:p99 > 15
+          for: 2m
+          labels:
+            severity: critical
+            modeldoctor_scenario: ttft-jitter
+          annotations:
+            summary: "TTFT P99 above 15s for {{ $labels.model_name }} on {{ $labels.engine }}"
+            description: |
+              P99 TTFT is {{ $value | printf "%.2f" }}s — user-perceived stall.
+              Likely cause: KV cache saturated + queue backed up, or upstream
+              dependency degraded.
+
+        - alert: ModelDoctorQueueBacklog
+          expr: modeldoctor:request:waiting > 50
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: queue-backlog
+          annotations:
+            summary: "{{ $value }} requests queued on {{ $labels.engine }} ({{ $labels.model_name }})"
+            description: |
+              Waiting queue depth {{ $value }} sustained for 5m. Either
+              autoscale or reduce concurrent client load.
+
+        - alert: ModelDoctorEngineHang
+          # No requests running AND no traffic completed in 10m =
+          # engine is hung or completely idle. AI layer can disambiguate
+          # by checking external traffic counters.
+          expr: |
+            (modeldoctor:request:running == 0)
+            and on (engine, model_name, instance)
+            (rate(modeldoctor:throughput:generation_tokens_total[10m]) == 0)
+          for: 10m
+          labels:
+            severity: warning
+            modeldoctor_scenario: engine-hang
+          annotations:
+            summary: "Engine {{ $labels.engine }} ({{ $labels.model_name }}) idle for 10m"
+            description: |
+              No running requests AND no generation tokens emitted in the
+              last 10 minutes. Either traffic legitimately stopped or
+              the engine is hung. Cross-check with gateway QPS.
+
+        - alert: ModelDoctorPreemptionStorm
+          expr: rate(modeldoctor:request:preempted_total[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: preemption-storm
+          annotations:
+            summary: "vLLM preempting >0.1 req/s on {{ $labels.model_name }}"
+            description: |
+              Preemption rate {{ $value | printf "%.3f" }} req/s sustained
+              for 5m. KV cache is over-subscribed; consider reducing
+              max-num-seqs or increasing gpu-memory-utilization.

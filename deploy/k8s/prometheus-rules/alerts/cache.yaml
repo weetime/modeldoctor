@@ -1,0 +1,67 @@
+# PrometheusRule: KV cache + prefix cache alerts
+#
+# Queries `modeldoctor:cache:*` only — engine-agnostic.
+# TGI and SGLang-without-prefix-cache will naturally produce empty
+# series and these alerts stay silent for those engines.
+#
+# Scenarios covered (per survey §8):
+#   - A: TTFT jitter + KV exhaustion (kv_usage_ratio leg)
+#   - B: prefix cache miss surge
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-alerts-cache
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/kind: alert
+spec:
+  groups:
+    - name: modeldoctor.alerts.cache
+      rules:
+        - alert: ModelDoctorKvCacheHigh
+          expr: modeldoctor:cache:kv_usage_ratio > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: kv-cache-pressure
+          annotations:
+            summary: 'KV cache {{ $value | printf "%.0f%%" }} on {{ $labels.model_name }} ({{ $labels.engine }})'
+            description: |
+              KV cache utilization at {{ $value | printf "%.2f" }} sustained
+              for 5m. New requests will start queueing; TTFT will degrade
+              and preemptions may kick in.
+            modeldoctor_required_context: "request:ttft_seconds, request:preempted_total"
+
+        - alert: ModelDoctorKvCacheCritical
+          expr: modeldoctor:cache:kv_usage_ratio > 0.95
+          for: 1m
+          labels:
+            severity: critical
+            modeldoctor_scenario: kv-cache-pressure
+          annotations:
+            summary: 'KV cache near-full ({{ $value | printf "%.0f%%" }}) on {{ $labels.model_name }}'
+            description: |
+              KV cache at {{ $value | printf "%.2f" }} — system is on the
+              edge of OOM-by-eviction. Either scale out or reduce concurrent
+              load immediately.
+
+        - alert: ModelDoctorPrefixCacheRegression
+          # Drops below 30% hit rate AND there's meaningful traffic.
+          # Without the rate guard, idle systems trip this trivially.
+          expr: |
+            modeldoctor:cache:prefix_hit_ratio < 0.3
+            and on (engine, model_name, instance)
+            rate(modeldoctor:throughput:prompt_tokens_total[5m]) > 10
+          for: 10m
+          labels:
+            severity: info
+            modeldoctor_scenario: prefix-cache-regression
+          annotations:
+            summary: 'Prefix cache hit rate {{ $value | printf "%.0f%%" }} on {{ $labels.model_name }}'
+            description: |
+              Prefix cache hit rate dropped to {{ $value | printf "%.2f" }}
+              over the last 10m with meaningful traffic. Workload pattern
+              may have shifted (new client, new prompt template), or cache
+              size is too small. Compare with prior period.

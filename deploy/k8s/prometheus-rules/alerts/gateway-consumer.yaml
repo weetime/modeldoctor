@@ -1,0 +1,64 @@
+# PrometheusRule: Gateway / multi-tenant alerts
+#
+# Queries `modeldoctor:gateway:*` only — Higress-sourced. This is the
+# only layer that knows ai_consumer (tenant / API key) identity, so
+# tenant-isolation alerts must live here.
+#
+# Scenario covered (per survey §8):
+#   - C: a single consumer monopolizing capacity
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-alerts-gateway-consumer
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/kind: alert
+spec:
+  groups:
+    - name: modeldoctor.alerts.gateway-consumer
+      rules:
+        - alert: ModelDoctorConsumerTokenSurge
+          # A single consumer driving > 70% of input tokens on a model
+          # for 10 minutes = noisy neighbor.
+          expr: |
+            modeldoctor:gateway:input_tokens_rate
+            /
+            ignoring (ai_consumer) group_left
+            sum by (ai_route, ai_cluster, ai_model) (modeldoctor:gateway:input_tokens_rate)
+            > 0.7
+          for: 10m
+          labels:
+            severity: info
+            modeldoctor_scenario: consumer-isolation
+          annotations:
+            summary: 'Consumer {{ $labels.ai_consumer }} = {{ $value | printf "%.0f%%" }} of traffic on {{ $labels.ai_model }}'
+            description: |
+              Tenant {{ $labels.ai_consumer }} is contributing
+              {{ $value | printf "%.2f" }} of total input-token rate
+              on model {{ $labels.ai_model }} via route {{ $labels.ai_route }}
+              for 10m. Confirm if expected (large customer) or runaway client.
+            modeldoctor_required_context: "request:running, cache:kv_usage_ratio for same ai_model"
+
+        - alert: ModelDoctorConsumerLatencyDegraded
+          # A consumer's avg TTFT regresses while others on the same
+          # model are fine = likely consumer-specific prompt pattern
+          # (long context, no prefix cache hit).
+          expr: |
+            modeldoctor:gateway:ttft_seconds:avg
+            >
+            (avg by (ai_route, ai_cluster, ai_model) (modeldoctor:gateway:ttft_seconds:avg)) * 2
+            and
+            modeldoctor:gateway:ttft_seconds:avg > 2
+          for: 10m
+          labels:
+            severity: info
+            modeldoctor_scenario: consumer-isolation
+          annotations:
+            summary: 'Consumer {{ $labels.ai_consumer }} TTFT {{ $value | printf "%.2f" }}s — 2x others'
+            description: |
+              Tenant {{ $labels.ai_consumer }} on model {{ $labels.ai_model }}
+              has avg TTFT {{ $value | printf "%.2f" }}s, more than 2x the
+              cohort average. Likely cause: long prompts, cold prefix cache,
+              or large output token requests.

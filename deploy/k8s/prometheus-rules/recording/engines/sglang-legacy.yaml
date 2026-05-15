@@ -1,0 +1,96 @@
+# PrometheusRule: SGLang legacy (v0.4.x – v0.5.3)
+#
+# Metric prefix in this version is `sglang:` (colon).
+# For v0.5.4+ apply sglang-v0.5.4plus.yaml instead — the prefix changed
+# to `sglang_` (underscore) and the two engine types are NOT compatible.
+#
+# Hard-coded label `engine="sglang-legacy"` is injected on every recorded
+# metric.
+#
+# SGLang typically binds one process to one model; if your scrape config
+# doesn't add a `model_name` label, downstream by-model queries will collapse
+# all replicas. Recommend adding `model_name` via relabel_configs in the
+# scrape job.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-sglang-legacy
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/engine: sglang-legacy
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    - name: modeldoctor.sglang-legacy.request
+      interval: 30s
+      rules:
+        - record: modeldoctor:request:running
+          expr: sglang:num_running_reqs
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:waiting
+          expr: sglang:num_queue_reqs
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:ttft_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:ttft_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:ttft_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:itl_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:itl_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:itl_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:e2e_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, instance) (rate(sglang:e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:request:e2e_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, instance) (rate(sglang:e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: sglang-legacy
+
+    - name: modeldoctor.sglang-legacy.throughput
+      interval: 30s
+      rules:
+        - record: modeldoctor:throughput:prompt_tokens_total
+          expr: sglang:prompt_tokens_total
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:throughput:generation_tokens_total
+          expr: sglang:generation_tokens_total
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:throughput:generation_rate_tps
+          expr: sglang:gen_throughput
+          labels:
+            engine: sglang-legacy
+
+    - name: modeldoctor.sglang-legacy.cache
+      interval: 30s
+      rules:
+        - record: modeldoctor:cache:kv_usage_ratio
+          expr: sglang:token_usage
+          labels:
+            engine: sglang-legacy
+        - record: modeldoctor:cache:prefix_hit_ratio
+          expr: sglang:cache_hit_rate
+          labels:
+            engine: sglang-legacy
