@@ -83,3 +83,10 @@ export { aiperfReadMetric } from "./aiperf/read-metric.js";
 // readMetric exports above, NOT `byTool` (which would pull in adapter
 // runtimes via `registry.js`).
 export { readMetricSafe } from "./core/read-metric-safe.fe.js";
+
+// Compare-grid row descriptors. Each adapter owns its row set in
+// `<adapter>/row-descriptors.ts`; the aggregated `Record<ToolName, …>`
+// gives FE a single import + compile-time exhaustiveness when a new tool
+// joins `ToolName`.
+export type { MetricRowSpec, VerdictKind } from "./core/row-descriptor.js";
+export { rowDescriptorsByTool } from "./core/row-descriptors.fe.js";

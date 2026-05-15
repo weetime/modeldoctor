@@ -1,15 +1,20 @@
 import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
-import { type MetricKind, readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
+import {
+  type MetricRowSpec,
+  type VerdictKind,
+  readMetricSafe,
+  rowDescriptorsByTool,
+} from "@modeldoctor/tool-adapters/schemas";
 
 // summaryMetrics is the discriminated union written by tool-adapter
 // parseFinalReport: { tool, data } (see
 // packages/tool-adapters/src/{guidellm,vegeta,aiperf,evalscope}/runtime.ts).
 // vegeta latencies are normalized to ms by the adapter (NOT ns).
 //
-// All per-tool field-path logic now lives in each adapter's `readMetric`
-// (see packages/tool-adapters/src/<tool>/read-metric.ts). This module
-// just picks `MetricKind`s and delegates via the shared `readMetricSafe`
-// helper — adding a new tool / metric updates exactly one adapter file.
+// Per-tool row sets, MetricKind dispatch, and raw field knowledge all
+// live in the adapters (`packages/tool-adapters/src/<tool>/row-descriptors.ts`
+// + read-metric.ts). This module just materializes adapter specs into
+// renderable rows and delegates value reads to `readMetricSafe`.
 
 type SummaryMetrics = Benchmark["summaryMetrics"];
 
@@ -28,16 +33,8 @@ export function readThroughput(metrics: SummaryMetrics): number | null {
 }
 
 // ─── Grid row descriptors ────────────────────────────────────────────────────
-//
-// Each descriptor names: (a) which i18n key labels the row, (b) how to
-// extract the number per Run, (c) which verdict function (if any) applies.
-//
-// `verdictKind` is undefined on display-only rows (latency p50/p99, TTFT
-// percentiles, byte counts, etc.). The compare grid only renders a colored
-// VerdictBadge on rows where verdictKind is set; other rows show the number
-// + a gray Δ% text.
 
-export type VerdictKind = "latency" | "errorRate" | "throughput";
+export type { VerdictKind };
 
 export interface MetricRowDescriptor {
   labelKey: string; // "compare.metricRowLabel.<key>"
@@ -47,88 +44,39 @@ export interface MetricRowDescriptor {
   unitSuffix?: string; // for the cell display (e.g. "ms", "%")
 }
 
-function metricRow(
-  labelKey: string,
-  kind: MetricKind,
-  opts: { digits?: number; unitSuffix?: string; verdictKind?: VerdictKind } = {},
-): MetricRowDescriptor {
+function readRawField(metrics: SummaryMetrics, section: string, field: string): number | null {
+  const t = metrics as { tool?: unknown; data?: Record<string, unknown> } | null;
+  if (!t?.data) return null;
+  const dist = t.data[section] as Record<string, unknown> | undefined;
+  const v = dist?.[field];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function materialize(spec: MetricRowSpec): MetricRowDescriptor {
+  if (spec.source === "metric") {
+    const { labelKey, metric, verdictKind, digits, unitSuffix } = spec;
+    return {
+      labelKey,
+      read: (m) => readMetricSafe(metric, m as { tool?: unknown; data?: unknown } | null),
+      verdictKind,
+      digits,
+      unitSuffix,
+    };
+  }
+  const { labelKey, section, field, unitSuffix } = spec;
   return {
     labelKey,
-    read: (m) => readMetricSafe(kind, m as { tool?: unknown; data?: unknown } | null),
-    digits: opts.digits,
-    unitSuffix: opts.unitSuffix,
-    verdictKind: opts.verdictKind,
+    read: (m) => readRawField(m, section, field),
+    unitSuffix,
   };
 }
 
-// `ttftMean` / `itlMean` / latency min/mean/max have no MetricKind counterparts
-// (only the dist buckets are first-class). Fall back to direct field reads
-// where MetricKind doesn't cover the case.
-function rawDistRow(
-  labelKey: string,
-  toolKey: string,
-  field: string,
-  opts: { unitSuffix?: string } = {},
-): MetricRowDescriptor {
-  return {
-    labelKey,
-    read: (m) => {
-      const t = m as { tool?: unknown; data?: Record<string, unknown> } | null;
-      if (!t?.data) return null;
-      const dist = t.data[toolKey] as Record<string, unknown> | undefined;
-      const v = dist?.[field];
-      return typeof v === "number" && Number.isFinite(v) ? v : null;
-    },
-    unitSuffix: opts.unitSuffix,
-  };
-}
-
-const guidellmRows: MetricRowDescriptor[] = [
-  rawDistRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
-  metricRow("ttftP50", "ttft.p50", { unitSuffix: "ms" }),
-  metricRow("ttftP95", "ttft.p95", { unitSuffix: "ms" }),
-  metricRow("ttftP99", "ttft.p99", { unitSuffix: "ms" }),
-  rawDistRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
-  metricRow("itlP95", "itl.p95", { unitSuffix: "ms" }),
-  metricRow("e2eLatencyP50", "e2e.p50", { unitSuffix: "ms" }),
-  // Verdict-eligible: shared latency P95 row uses the same reader as the
-  // standalone readP95Latency exported above.
-  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
-  metricRow("e2eLatencyP99", "e2e.p99", { unitSuffix: "ms" }),
-  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
-  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
-];
-
-const vegetaRows: MetricRowDescriptor[] = [
-  rawDistRow("latencyMin", "latencies", "min", { unitSuffix: "ms" }),
-  rawDistRow("latencyMean", "latencies", "mean", { unitSuffix: "ms" }),
-  metricRow("latencyP50", "e2e.p50", { unitSuffix: "ms" }),
-  metricRow("latencyP90", "e2e.p90", { unitSuffix: "ms" }),
-  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
-  metricRow("latencyP99", "e2e.p99", { unitSuffix: "ms" }),
-  rawDistRow("latencyMax", "latencies", "max", { unitSuffix: "ms" }),
-  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
-  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
-];
-
-// evalscope and aiperf surface the same inference fields (ttft / e2eLatency /
-// itl distributions + throughput.requestsPerSec + requests.errorRate as a
-// 0-1 fraction), so they share a single row descriptor array. Evalscope-only
-// fields (prefixCacheStats.hitRate) are rendered in the report component, not
-// the compare grid.
-const inferenceRowsForNewTools: MetricRowDescriptor[] = [
-  rawDistRow("ttftMean", "ttft", "mean", { unitSuffix: "ms" }),
-  metricRow("ttftP50", "ttft.p50", { unitSuffix: "ms" }),
-  metricRow("ttftP95", "ttft.p95", { unitSuffix: "ms" }),
-  metricRow("ttftP99", "ttft.p99", { unitSuffix: "ms" }),
-  rawDistRow("itlMean", "itl", "mean", { unitSuffix: "ms" }),
-  metricRow("itlP95", "itl.p95", { unitSuffix: "ms" }),
-  metricRow("e2eLatencyP50", "e2e.p50", { unitSuffix: "ms" }),
-  metricRow("latencyP95", "e2e.p95", { unitSuffix: "ms", verdictKind: "latency" }),
-  metricRow("e2eLatencyP99", "e2e.p99", { unitSuffix: "ms" }),
-  metricRow("errorRate", "errorRate", { digits: 4, verdictKind: "errorRate" }),
-  metricRow("throughput", "requestsPerSec", { unitSuffix: "req/s", verdictKind: "throughput" }),
-];
+// Materialized rows are cached by spec-array identity, not tool name.
+// Two adapters that re-export the same spec array (evalscope + aiperf
+// both re-export SHARED_INFERENCE_ROWS) therefore yield the same
+// materialized array reference — preserves the identity invariant that
+// compare/__tests__/metrics.test.ts asserts (`aiperf === evalscope`).
+const cache = new WeakMap<readonly MetricRowSpec[], MetricRowDescriptor[]>();
 
 // Formats a baseline-to-current delta as a signed string for display in
 // VerdictBadge. errorRate uses percentage points (×100, "pp" suffix);
@@ -146,15 +94,14 @@ export function deltaText(kind: VerdictKind, baseline: number, current: number):
 }
 
 export function rowDescriptorsForTool(tool: BenchmarkTool): MetricRowDescriptor[] {
-  switch (tool) {
-    case "guidellm":
-      return guidellmRows;
-    case "vegeta":
-      return vegetaRows;
-    case "evalscope":
-    case "aiperf":
-      return inferenceRowsForNewTools;
-    default:
-      return [];
+  const specs = rowDescriptorsByTool[tool as keyof typeof rowDescriptorsByTool] as
+    | readonly MetricRowSpec[]
+    | undefined;
+  if (!specs) return [];
+  let cached = cache.get(specs);
+  if (!cached) {
+    cached = specs.map(materialize);
+    cache.set(specs, cached);
   }
+  return cached;
 }
