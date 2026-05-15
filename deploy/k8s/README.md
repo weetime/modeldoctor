@@ -30,7 +30,7 @@ k3d cluster create modeldoctor
 kubectl create namespace modeldoctor
 kubectl apply -f deploy/k8s/rbac.yaml
 
-# Build the three runner images with the current source tree's git SHA and
+# Build the five runner images with the current source tree's git SHA and
 # import them into k3d. The script prints the matching RUNNER_IMAGE_*
 # tags to paste into your `.env` (one per tool).
 ./tools/build-runner-images.sh --import k3d --cluster modeldoctor
@@ -44,7 +44,9 @@ export BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
 export BENCHMARK_CALLBACK_URL=http://host.k3d.internal:3001
 export RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:<sha-from-script>
 export RUNNER_IMAGE_VEGETA=md-runner-vegeta:<sha-from-script>
-export RUNNER_IMAGE_GENAI_PERF=md-runner-genai-perf:<sha-from-script>
+export RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:<sha-from-script>
+export RUNNER_IMAGE_EVALSCOPE=md-runner-evalscope:<sha-from-script>
+export RUNNER_IMAGE_AIPERF=md-runner-aiperf:<sha-from-script>
 pnpm -F @modeldoctor/api start:dev
 ```
 
