@@ -35,6 +35,7 @@ function makeRow(over: Partial<PrismaBenchmarkTemplate> = {}): PrismaBenchmarkTe
     isOfficial: false,
     createdBy: "owner-1",
     tags: [],
+    categories: ["chat"],
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -72,6 +73,7 @@ describe("BenchmarkTemplateService", () => {
           config: {},
           isOfficial: false,
           tags: [],
+          categories: ["chat"],
         },
       );
       expect(out.id).toBe("tpl-1");
@@ -91,6 +93,7 @@ describe("BenchmarkTemplateService", () => {
             config: {},
             isOfficial: true,
             tags: [],
+            categories: ["chat"],
           },
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -107,6 +110,7 @@ describe("BenchmarkTemplateService", () => {
           config: {},
           isOfficial: true,
           tags: [],
+          categories: ["chat"],
         },
       );
       expect(out.isOfficial).toBe(true);
@@ -123,6 +127,7 @@ describe("BenchmarkTemplateService", () => {
             config: {},
             isOfficial: false,
             tags: [],
+            categories: ["chat"],
           },
         ),
       ).rejects.toThrow(BadRequestException);

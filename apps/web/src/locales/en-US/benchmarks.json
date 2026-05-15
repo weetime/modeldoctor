@@ -25,7 +25,8 @@
     "fields": {
       "name": "Name",
       "description": "Description (optional)",
-      "tool": "Tool"
+      "tool": "Tool",
+      "connectionCategoryHint": "Category:"
     },
     "tools": {
       "guidellm": "guidellm",
@@ -55,10 +56,21 @@
       "button": "Prefill from template",
       "search": "Search templates…",
       "empty": "No templates for this scenario yet",
+      "emptyForCategory": "No templates match current connection ({{category}}); use \"Show all\" below to bypass the filter",
+      "showAll": "Show all (ignore connection category)",
+      "filterByCategory": "Filter to {{category}} templates",
       "manage": "→ Manage templates",
       "applied": "Prefilled from template \"{{name}}\". You can still edit.",
       "scenarioMismatch": "Template belongs to {{scenario}}; scenario switched",
-      "notFound": "Template not found or deleted"
+      "categoryMismatch": "Cleared template \"{{templateName}}\": new connection category ({{category}}) does not match",
+      "notFound": "Template not found or deleted",
+      "categoryBadge": {
+        "chat": "Chat",
+        "embeddings": "Embeddings",
+        "rerank": "Rerank",
+        "audio": "Audio",
+        "image": "Image"
+      }
     },
     "prefilledBanner": {
       "label": "Prefilled from template \"{{name}}\"",

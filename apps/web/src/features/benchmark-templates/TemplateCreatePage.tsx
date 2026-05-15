@@ -44,6 +44,10 @@ export function TemplateCreatePage() {
       config: TOOL_DEFAULTS[tool] as Record<string, unknown>,
       isOfficial: false,
       tags: [],
+      // categories defaults to ["chat"] in the schema; the create-template
+      // UI does not yet expose a category picker (follow-up work). For now
+      // every user-created template targets chat connections.
+      categories: ["chat"],
     },
   });
 

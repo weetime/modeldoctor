@@ -69,6 +69,7 @@ export class BenchmarkTemplateService {
       isOfficial: req.isOfficial ?? false,
       createdBy: actor.sub,
       tags: req.tags ?? [],
+      categories: req.categories,
     });
     return toContract(row);
   }
@@ -147,6 +148,7 @@ function toContract(row: PrismaBenchmarkTemplate): BenchmarkTemplate {
     isOfficial: row.isOfficial,
     createdBy: row.createdBy,
     tags: row.tags,
+    categories: row.categories as BenchmarkTemplate["categories"],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

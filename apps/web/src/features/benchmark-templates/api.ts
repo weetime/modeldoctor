@@ -13,6 +13,7 @@ function buildListQuery(q: Partial<ListBenchmarkTemplatesQuery>): string {
   if (q.cursor) usp.set("cursor", q.cursor);
   if (q.scenario) usp.set("scenario", q.scenario);
   if (q.tool) usp.set("tool", q.tool);
+  if (q.category) usp.set("category", q.category);
   if (q.isOfficial !== undefined) usp.set("isOfficial", String(q.isOfficial));
   if (q.search) usp.set("search", q.search);
   const qs = usp.toString();

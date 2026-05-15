@@ -1,6 +1,7 @@
 import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTemplate } from "@/features/benchmark-templates/queries";
+import { useConnection } from "@/features/connections/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type BenchmarkTemplate,
@@ -101,6 +103,9 @@ export function BenchmarkCreatePage() {
   }, [scenario]);
 
   const watchedTemplateId = form.watch("templateId");
+  const watchedConnectionId = form.watch("connectionId");
+  const connectionQuery = useConnection(watchedConnectionId || null);
+  const connectionCategory = connectionQuery.data?.category ?? null;
   const tplQuery = useTemplate(templateIdParam ?? undefined);
   const bannerTpl = useTemplate(watchedTemplateId ?? undefined);
 
@@ -156,6 +161,24 @@ export function BenchmarkCreatePage() {
     }
   }, [templateIdParam, tplQuery.isError]);
 
+  // Cascade guard: if the user changes connection after applying a template
+  // and the new connection's category isn't covered by the template's
+  // `categories`, clear the template so we don't run with a config that
+  // doesn't fit the endpoint. User is told via toast and can re-pick.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form is stable; we only re-run when category or template-id change
+  useEffect(() => {
+    if (!watchedTemplateId || !bannerTpl.data || !connectionCategory) return;
+    if (!bannerTpl.data.categories.includes(connectionCategory)) {
+      form.setValue("templateId", undefined, { shouldDirty: true });
+      toast.warning(
+        t("create.prefillFromTemplate.categoryMismatch", {
+          templateName: bannerTpl.data.name,
+          category: connectionCategory,
+        }),
+      );
+    }
+  }, [connectionCategory, watchedTemplateId, bannerTpl.data]);
+
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       const benchmark = await createMut.mutateAsync(values);
@@ -189,7 +212,13 @@ export function BenchmarkCreatePage() {
         title={t(`create.titleByScenario.${scenario}`)}
         subtitle={t("create.subtitle")}
         breadcrumbs={breadcrumbs}
-        rightSlot={<PrefillFromTemplatePopover scenario={scenario} onPick={applyTemplate} />}
+        rightSlot={
+          <PrefillFromTemplatePopover
+            scenario={scenario}
+            category={connectionCategory}
+            onPick={applyTemplate}
+          />
+        }
       />
       <div className="space-y-6 px-8 py-6">
         <Form {...form}>
@@ -278,6 +307,16 @@ export function BenchmarkCreatePage() {
                             }
                           />
                         </FormControl>
+                        {connectionCategory && (
+                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>{t("create.fields.connectionCategoryHint")}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {t(`create.prefillFromTemplate.categoryBadge.${connectionCategory}`, {
+                                defaultValue: connectionCategory,
+                              })}
+                            </Badge>
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

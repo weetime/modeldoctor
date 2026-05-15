@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { benchmarkToolSchema, scenarioIdSchema } from "./benchmark.js";
+import { ModalityCategorySchema } from "./modality.js";
 
 export const benchmarkTemplateSchema = z.object({
   id: z.string(),
@@ -11,6 +12,11 @@ export const benchmarkTemplateSchema = z.object({
   isOfficial: z.boolean(),
   createdBy: z.string().nullable(),
   tags: z.array(z.string()),
+  // Modality categories the template targets. Drives the Prefill picker
+  // filter: only templates whose `categories` includes the connection's
+  // category are shown when a connection is selected. Defaults to ["chat"]
+  // in the DB; user-created templates should pick explicitly.
+  categories: z.array(ModalityCategorySchema).min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -21,6 +27,9 @@ export const listBenchmarkTemplatesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(50),
   scenario: scenarioIdSchema.optional(),
   tool: benchmarkToolSchema.optional(),
+  // Filters to templates whose `categories` array includes this value.
+  // Used by the Prefill picker when a connection is selected.
+  category: ModalityCategorySchema.optional(),
   isOfficial: z
     .preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean())
     .optional(),
@@ -41,6 +50,7 @@ export const createBenchmarkTemplateRequestSchema = z.object({
   tool: benchmarkToolSchema,
   config: z.record(z.unknown()),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),
+  categories: z.array(ModalityCategorySchema).min(1).default(["chat"]),
   isOfficial: z.boolean().default(false), // server enforces admin-only
 });
 export type CreateBenchmarkTemplateRequest = z.infer<typeof createBenchmarkTemplateRequestSchema>;
