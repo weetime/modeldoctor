@@ -156,10 +156,9 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(
-      <PrefillFromTemplatePopover scenario="inference" category="chat" onPick={() => {}} />,
-      { wrapper: Wrapper },
-    );
+    render(<PrefillFromTemplatePopover scenario="inference" category="chat" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
     // The list call fires on mount, regardless of popover open state.
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith(expect.stringContaining("category=chat")),
