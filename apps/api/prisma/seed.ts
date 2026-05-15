@@ -23,12 +23,18 @@
  * with `DELETE FROM ... WHERE id = '...'` (seed.ts only inserts/updates).
  */
 
-import { evaluationSampleSchema, profileRulesSchema } from "@modeldoctor/contracts";
+import {
+  type ModalityCategory,
+  evaluationSampleSchema,
+  profileRulesSchema,
+} from "@modeldoctor/contracts";
 import {
   aiperfParamsSchema,
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
+  prefixCacheProbeParamsSchema,
+  vegetaParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -204,8 +210,13 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf";
-type SeedScenario = "inference" | "kv-cache-stress";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "prefix-cache-probe";
+type SeedScenario =
+  | "inference"
+  | "kv-cache-stress"
+  | "capacity"
+  | "gateway"
+  | "prefix-cache-validation";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
@@ -214,6 +225,12 @@ interface BenchmarkTemplateSeed {
   tool: Tool;
   config: unknown;
   tags: string[];
+  // Modality categories the template targets. Drives the Prefill picker
+  // filter on the Create page (connection.category must match). Optional
+  // because every pre-existing template is a chat-completions workload —
+  // unset defaults to ["chat"] at upsert time, matching the DB default.
+  // New non-chat templates (vegeta embeddings, etc.) MUST set explicitly.
+  categories?: ModalityCategory[];
 }
 
 const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
@@ -619,6 +636,145 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     },
     tags: ["inference", "aiperf", "baseline", "synthetic"],
   },
+  // -------------------------------------------------------------------------
+  // Capacity · 2 个官方 guidellm 模板
+  //
+  // 容量规划场景 — 必须 rateType=sweep（applyScenarioConstraints 强制）。
+  // sweep 自动从低到高扫描负载,找到 SLO 拐点。两个模板覆盖典型形态。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_cap_guidellm_short_chat",
+    name: "短对话容量扫描",
+    description:
+      "短对话形状(input 512 / output 256)的容量上界扫描。sweep 自动从 1 RPS 阶梯到 maxConcurrency,定位 SLO 拐点。适合 chatbot/简单 QA 容量评估。",
+    scenario: "capacity",
+    tool: "guidellm",
+    config: {
+      profile: "throughput",
+      apiType: "chat",
+      datasetName: "random",
+      datasetInputTokens: 512,
+      datasetOutputTokens: 256,
+      rateType: "sweep",
+      requestRate: 0,
+      totalRequests: 2000,
+      maxDurationSeconds: 600,
+      maxConcurrency: 200,
+      validateBackend: false,
+    },
+    tags: ["capacity", "guidellm", "sweep", "chat-short"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_cap_guidellm_production_shape",
+    name: "生产对话流量容量(Azure 2024)",
+    description:
+      "锚定 Azure 2024 生产对话 trace 形状(input 1000 / output 100)的容量扫描。比短对话更逼近真实流量,SLO 拐点更可信。",
+    scenario: "capacity",
+    tool: "guidellm",
+    config: {
+      profile: "throughput",
+      apiType: "chat",
+      datasetName: "random",
+      datasetInputTokens: 1000,
+      datasetOutputTokens: 100,
+      rateType: "sweep",
+      requestRate: 0,
+      totalRequests: 3000,
+      maxDurationSeconds: 900,
+      maxConcurrency: 300,
+      validateBackend: false,
+    },
+    tags: ["capacity", "guidellm", "sweep", "production-trace"],
+    categories: ["chat"],
+  },
+  // -------------------------------------------------------------------------
+  // Gateway · 2 个官方 vegeta 模板
+  //
+  // 网关层压测 — vegeta 直打 HTTP,不解析模型语义。body 中的 model 字段
+  // 是占位符,用户应用模板后改成自己 connection 的模型名(form 会显示当前
+  // 值,所以可见)。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_gw_vegeta_openai_chat",
+    name: "OpenAI 兼容 · chat completions",
+    description:
+      "vegeta · 10 RPS × 30s 攻击 chat completions 端点。body 中 model 字段为占位符,应用模板后请改成你的 connection 模型名。重点看 gateway 层 p95 + 错误率。",
+    scenario: "gateway",
+    tool: "vegeta",
+    config: {
+      apiType: "chat",
+      rate: 10,
+      duration: 30,
+      path: "/v1/chat/completions",
+      body: JSON.stringify({
+        model: "<replace-with-your-model>",
+        messages: [{ role: "user", content: "hello" }],
+        max_tokens: 16,
+      }),
+    },
+    tags: ["gateway", "vegeta", "chat", "openai-compat"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_gw_vegeta_openai_embeddings",
+    name: "OpenAI 兼容 · embeddings",
+    description:
+      "vegeta · 20 RPS × 30s 攻击 embeddings 端点。body 的 model 字段为占位符,应用模板后请改。embeddings 端点比 chat 轻量,可承受更高 RPS。",
+    scenario: "gateway",
+    tool: "vegeta",
+    config: {
+      apiType: "embeddings",
+      rate: 20,
+      duration: 30,
+      path: "/v1/embeddings",
+      body: JSON.stringify({
+        model: "<replace-with-your-model>",
+        input: "hello world",
+      }),
+    },
+    tags: ["gateway", "vegeta", "embeddings", "openai-compat"],
+    categories: ["embeddings"],
+  },
+  // -------------------------------------------------------------------------
+  // Prefix-cache · 2 个官方 prefix-cache-probe 模板
+  //
+  // 路由粘性 / prefix-cache 命中率探针。promptSets 数量 = 共享 prefix 的
+  // 不同前缀组数; requestsPerSet = 每个前缀重复请求次数,用来判断是否始终
+  // 路由到同一 pod(命中 prefix cache)。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_pc_quick_sanity",
+    name: "路由粘性 · 快速 sanity",
+    description:
+      "2 个 prompt set × 每组 10 次请求 = 20 总请求。最低门槛的 prefix-cache 路由粘性自检,适合开发期快速验证 Higress / Envoy 路由策略是否生效。",
+    scenario: "prefix-cache-validation",
+    tool: "prefix-cache-probe",
+    config: {
+      promptSets: 2,
+      requestsPerSet: 10,
+      maxTokens: 5,
+      promBackoffSec: 18,
+    },
+    tags: ["prefix-cache", "probe", "sanity", "quick"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_deeper_coverage",
+    name: "路由粘性 · 深度覆盖",
+    description:
+      "3 个 prompt set × 每组 20 次请求 = 60 总请求,promBackoff 延长到 30s 等更稳态指标。生产前回归用,更高样本量下能看出路由抖动 / 局部失粘。",
+    scenario: "prefix-cache-validation",
+    tool: "prefix-cache-probe",
+    config: {
+      promptSets: 3,
+      requestsPerSet: 20,
+      maxTokens: 5,
+      promBackoffSec: 30,
+    },
+    tags: ["prefix-cache", "probe", "regression"],
+    categories: ["chat"],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -670,7 +826,11 @@ async function seedBenchmarkTemplates(): Promise<void> {
         ? guidellmParamsSchema
         : t.tool === "aiperf"
           ? aiperfParamsSchema
-          : evalscopeParamsSchema;
+          : t.tool === "vegeta"
+            ? vegetaParamsSchema
+            : t.tool === "prefix-cache-probe"
+              ? prefixCacheProbeParamsSchema
+              : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (kv-cache-stress, evalscope) this is
@@ -680,6 +840,9 @@ async function seedBenchmarkTemplates(): Promise<void> {
     // so the invariant "all official templates round-trip through
     // scenario constraints" holds regardless of tool.
     const validatedConfig = applyScenarioConstraints(t.scenario, t.tool).parse(validatedBase);
+    // Default to ["chat"] when unset — matches the DB column default and
+    // covers every pre-existing template (all chat-completions workloads).
+    const categories = t.categories ?? ["chat"];
     await prisma.benchmarkTemplate.upsert({
       where: { id: t.id },
       update: {
@@ -689,6 +852,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
         tool: t.tool,
         config: validatedConfig as Prisma.InputJsonValue,
         tags: t.tags,
+        categories,
         isOfficial: true,
       },
       create: {
@@ -699,6 +863,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
         tool: t.tool,
         config: validatedConfig as Prisma.InputJsonValue,
         tags: t.tags,
+        categories,
         isOfficial: true,
       },
     });

@@ -25,7 +25,8 @@
     "fields": {
       "name": "名称",
       "description": "备注（可选）",
-      "tool": "工具"
+      "tool": "工具",
+      "connectionCategoryHint": "类别:"
     },
     "tools": {
       "guidellm": "guidellm",
@@ -55,10 +56,21 @@
       "button": "从模板预填",
       "search": "搜索模板…",
       "empty": "还没有此场景的模板",
+      "emptyForCategory": "当前 connection (类别: {{category}}) 暂无匹配模板,可点底部切换\"显示全部\"",
+      "showAll": "显示全部 (忽略 connection 类别)",
+      "filterByCategory": "仅显示匹配 {{category}} 的模板",
       "manage": "→ 去模板库管理",
       "applied": "已从模板「{{name}}」预填,可继续修改",
       "scenarioMismatch": "模板属于 {{scenario}},已切换 scenario",
-      "notFound": "模板不存在或已删除"
+      "categoryMismatch": "已清除模板「{{templateName}}」: 新 connection 类别 ({{category}}) 与模板不匹配",
+      "notFound": "模板不存在或已删除",
+      "categoryBadge": {
+        "chat": "对话",
+        "embeddings": "向量",
+        "rerank": "重排",
+        "audio": "音频",
+        "image": "图像"
+      }
     },
     "prefilledBanner": {
       "label": "已从模板「{{name}}」预填",

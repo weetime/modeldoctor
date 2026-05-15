@@ -87,6 +87,10 @@ export function SaveAsTemplateDialog({ benchmark, onOpenChange }: SaveAsTemplate
         tool: benchmark.tool,
         config: benchmark.params as Record<string, unknown>,
         tags,
+        // Default to ["chat"] — the dialog doesn't expose a category
+        // picker; templates created from non-chat runs (a vegeta
+        // embeddings benchmark, etc.) can still be edited later.
+        categories: ["chat"],
         isOfficial: false,
       });
       toast.success(t("rowActions.saveAsTemplate.success", { name: next.name }));

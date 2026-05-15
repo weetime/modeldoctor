@@ -16,6 +16,7 @@ function tpl(overrides: Partial<BenchmarkTemplate> = {}): BenchmarkTemplate {
     isOfficial: false,
     createdBy: "u1",
     tags: [],
+    categories: ["chat"],
     createdAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     ...overrides,

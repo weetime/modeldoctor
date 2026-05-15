@@ -32,6 +32,7 @@ function tpl(overrides: Partial<BenchmarkTemplate> = {}): BenchmarkTemplate {
     isOfficial: true,
     createdBy: null,
     tags: ["official"],
+    categories: ["chat"],
     createdAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     ...overrides,
@@ -59,7 +60,7 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+    render(<PrefillFromTemplatePopover scenario="inference" category={null} onPick={() => {}} />, {
       wrapper: Wrapper,
     });
     await userEvent.click(
@@ -79,7 +80,7 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+    render(<PrefillFromTemplatePopover scenario="inference" category={null} onPick={() => {}} />, {
       wrapper: Wrapper,
     });
     await userEvent.click(
@@ -101,7 +102,7 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+    render(<PrefillFromTemplatePopover scenario="inference" category={null} onPick={() => {}} />, {
       wrapper: Wrapper,
     });
     await userEvent.click(
@@ -120,7 +121,7 @@ describe("PrefillFromTemplatePopover", () => {
       nextCursor: null,
     } satisfies ListBenchmarkTemplatesResponse);
 
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={() => {}} />, {
+    render(<PrefillFromTemplatePopover scenario="inference" category={null} onPick={() => {}} />, {
       wrapper: Wrapper,
     });
     await userEvent.click(
@@ -139,7 +140,7 @@ describe("PrefillFromTemplatePopover", () => {
     } satisfies ListBenchmarkTemplatesResponse);
 
     const onPick = vi.fn();
-    render(<PrefillFromTemplatePopover scenario="inference" onPick={onPick} />, {
+    render(<PrefillFromTemplatePopover scenario="inference" category={null} onPick={onPick} />, {
       wrapper: Wrapper,
     });
     await userEvent.click(
@@ -147,5 +148,20 @@ describe("PrefillFromTemplatePopover", () => {
     );
     await userEvent.click(await screen.findByRole("option", { name: /vLLM single/ }));
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: "t1", name: "vLLM single" }));
+  });
+
+  it("forwards connection category as a list filter when set", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [],
+      nextCursor: null,
+    } satisfies ListBenchmarkTemplatesResponse);
+
+    render(<PrefillFromTemplatePopover scenario="inference" category="chat" onPick={() => {}} />, {
+      wrapper: Wrapper,
+    });
+    // The list call fires on mount, regardless of popover open state.
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith(expect.stringContaining("category=chat")),
+    );
   });
 });

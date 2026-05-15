@@ -11,6 +11,7 @@ export type CreateBenchmarkTemplateInput = {
   isOfficial?: boolean;
   createdBy: string;
   tags?: string[];
+  categories?: string[];
 };
 
 export type UpdateBenchmarkTemplateInput = Partial<{
@@ -18,11 +19,14 @@ export type UpdateBenchmarkTemplateInput = Partial<{
   description: string | null;
   config: Prisma.InputJsonValue;
   tags: string[];
+  categories: string[];
 }>;
 
 export type ListBenchmarkTemplatesInput = {
   scenario?: string;
   tool?: string;
+  // Filters to templates whose `categories` array contains this value.
+  category?: string;
   isOfficial?: boolean;
   search?: string;
   cursor?: string;
@@ -47,6 +51,7 @@ export class BenchmarkTemplateRepository {
         config: input.config,
         isOfficial: input.isOfficial ?? false,
         tags: input.tags ?? [],
+        ...(input.categories ? { categories: input.categories } : {}),
         creator: { connect: { id: input.createdBy } },
       },
     });
@@ -71,6 +76,7 @@ export class BenchmarkTemplateRepository {
     const where: Prisma.BenchmarkTemplateWhereInput = {};
     if (input.scenario) where.scenario = input.scenario;
     if (input.tool) where.tool = input.tool;
+    if (input.category) where.categories = { has: input.category };
     if (input.isOfficial !== undefined) where.isOfficial = input.isOfficial;
     if (input.search) {
       where.OR = [

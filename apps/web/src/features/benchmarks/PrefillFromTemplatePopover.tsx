@@ -2,19 +2,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { useTemplates } from "@/features/benchmark-templates/queries";
-import type { BenchmarkTemplate, ScenarioId } from "@modeldoctor/contracts";
+import type { BenchmarkTemplate, ModalityCategory, ScenarioId } from "@modeldoctor/contracts";
 import { Layers, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 interface PrefillFromTemplatePopoverProps {
   scenario: ScenarioId;
+  /**
+   * Connection category to filter templates by. When set, only templates
+   * whose `categories` array includes this value are shown. When `null`,
+   * no category filter — all scenario templates show. The user can also
+   * toggle "show all" from inside the popover to bypass the filter.
+   */
+  category: ModalityCategory | null;
   onPick: (template: BenchmarkTemplate) => void;
 }
 
-export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemplatePopoverProps) {
+export function PrefillFromTemplatePopover({
+  scenario,
+  category,
+  onPick,
+}: PrefillFromTemplatePopoverProps) {
   const { t } = useTranslation("benchmarks");
-  const { data } = useTemplates({ scenario, limit: 50 });
+  const [showAll, setShowAll] = useState(false);
+  const effectiveCategory = showAll ? undefined : (category ?? undefined);
+  const { data } = useTemplates({ scenario, category: effectiveCategory, limit: 50 });
   const items = data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
@@ -37,6 +51,11 @@ export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemp
             <Badge variant="outline" className="text-xs">
               {it.tool}
             </Badge>
+            {it.categories.map((c) => (
+              <Badge key={c} variant="outline" className="text-xs">
+                {t(`create.prefillFromTemplate.categoryBadge.${c}`, { defaultValue: c })}
+              </Badge>
+            ))}
             {it.tags.slice(0, 3).map((tag) => (
               <Badge key={tag} variant="outline" className="text-xs">
                 {tag}
@@ -46,7 +65,11 @@ export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemp
         </div>
       )}
       searchPlaceholder={t("create.prefillFromTemplate.search")}
-      emptyText={t("create.prefillFromTemplate.empty")}
+      emptyText={
+        category && !showAll
+          ? t("create.prefillFromTemplate.emptyForCategory", { category })
+          : t("create.prefillFromTemplate.empty")
+      }
       align="end"
       contentClassName="w-96"
       trigger={
@@ -56,12 +79,27 @@ export function PrefillFromTemplatePopover({ scenario, onPick }: PrefillFromTemp
         </Button>
       }
       footer={
-        <Link
-          to={`/benchmark-templates?scenario=${scenario}`}
-          className="block px-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          {t("create.prefillFromTemplate.manage")}
-        </Link>
+        <div className="flex items-center justify-between px-1 text-xs">
+          {category ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {showAll
+                ? t("create.prefillFromTemplate.filterByCategory", { category })
+                : t("create.prefillFromTemplate.showAll")}
+            </button>
+          ) : (
+            <span />
+          )}
+          <Link
+            to={`/benchmark-templates?scenario=${scenario}`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t("create.prefillFromTemplate.manage")}
+          </Link>
+        </div>
       }
     />
   );

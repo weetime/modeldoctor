@@ -166,6 +166,11 @@ model BenchmarkTemplate {
   isOfficial  Boolean  @default(false) @map("is_official")
   createdBy   String?  @map("created_by")
   tags        String[] @default([])
+  // Modality categories this template targets (e.g. ["chat"], ["embeddings"]).
+  // Multi-value so a template can serve multiple categories (rare; most are
+  // single). Default is ["chat"] because every pre-existing template is a
+  // chat-completions workload — migration uses the same default for backfill.
+  categories  String[] @default(["chat"])
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

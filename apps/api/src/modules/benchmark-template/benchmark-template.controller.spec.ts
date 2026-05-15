@@ -45,6 +45,7 @@ describe("BenchmarkTemplateController", () => {
         config: {},
         isOfficial: false,
         tags: [],
+        categories: ["chat"],
       },
     );
     expect(mockService.create).toHaveBeenCalledWith(
@@ -64,6 +65,7 @@ describe("BenchmarkTemplateController", () => {
         config: {},
         isOfficial: true,
         tags: [],
+        categories: ["chat"],
       },
     );
     expect(mockService.create).toHaveBeenCalledWith(
