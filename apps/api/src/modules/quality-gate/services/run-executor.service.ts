@@ -1,5 +1,5 @@
 import type { JudgeConfig } from "@modeldoctor/contracts";
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import pLimit from "p-limit";
 import { EndpointCaller } from "../endpoint-caller.js";
 import { computeGateResult } from "../gate/compute-gate-result.js";
@@ -30,8 +30,8 @@ interface FullRun {
 }
 
 @Injectable()
-export class QualityGateRunExecutor implements OnModuleInit {
-  private readonly active = new Map<string, AbortController>();
+export class QualityGateRunExecutor implements OnModuleInit, OnModuleDestroy {
+  private readonly active = new Map<string, { ac: AbortController; promise: Promise<void> }>();
 
   constructor(
     private readonly repo: RunsRepository,
@@ -43,9 +43,25 @@ export class QualityGateRunExecutor implements OnModuleInit {
     await this.repo.sweepRunningOnBoot();
   }
 
+  // Controllers fire-and-forget `void executor.start(...)`, so without an
+  // explicit shutdown hook the executor can outlive the Prisma engine — the
+  // catch path then throws `Engine is not yet connected` as an unhandled
+  // rejection (seen in e2e teardown). Abort all in-flight runs and await
+  // them so markCancelled / markFailed completes while Prisma is still up.
+  async onModuleDestroy() {
+    const inflight = [...this.active.values()];
+    for (const { ac } of inflight) ac.abort();
+    await Promise.allSettled(inflight.map((v) => v.promise));
+  }
+
   async start(runId: string): Promise<void> {
     const ac = new AbortController();
-    this.active.set(runId, ac);
+    const promise = this.runInternal(runId, ac);
+    this.active.set(runId, { ac, promise });
+    await promise;
+  }
+
+  private async runInternal(runId: string, ac: AbortController): Promise<void> {
     try {
       const run = (await this.repo.findFullRun(runId)) as FullRun | null;
       if (!run) throw new Error(`run ${runId} not found`);
@@ -147,7 +163,7 @@ export class QualityGateRunExecutor implements OnModuleInit {
       );
 
       if (ac.signal.aborted) {
-        await this.repo.markCancelled(runId);
+        await this.repo.markCancelled(runId).catch(() => undefined);
         return;
       }
       const rows = await this.repo.sampleRowsForAggregate(runId);
@@ -155,13 +171,18 @@ export class QualityGateRunExecutor implements OnModuleInit {
       const gate = computeGateResult(metrics, run.gateConfig);
       await this.repo.markCompleted(runId, metrics, gate);
     } catch (e) {
-      await this.repo.markFailed(runId, e instanceof Error ? e.message : String(e));
+      // .catch(() => undefined): if shutdown raced past onModuleDestroy and
+      // Prisma is already disconnected, swallow rather than producing an
+      // unhandled rejection that crashes the process / fails the test run.
+      await this.repo
+        .markFailed(runId, e instanceof Error ? e.message : String(e))
+        .catch(() => undefined);
     } finally {
       this.active.delete(runId);
     }
   }
 
   cancel(runId: string) {
-    this.active.get(runId)?.abort();
+    this.active.get(runId)?.ac.abort();
   }
 }
