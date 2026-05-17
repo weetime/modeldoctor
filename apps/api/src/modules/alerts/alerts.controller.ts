@@ -65,13 +65,25 @@ export class AlertsController {
     // Fire-and-forget AI explanation for newly-created rows. Awaiting here
     // would block Alertmanager retries; the explainer writes to DB
     // independently and the UI surfaces it when ready.
-    for (const id of created) {
-      this.explainer.explainAsync(id).catch((err) => {
-        this.log.warn(`Explainer failed for alert ${id}: ${err}`);
-      });
-    }
+    //
+    // Explanations are processed sequentially to bound concurrent LLM
+    // calls — a single batch can carry many alerts (Alertmanager groups
+    // by labelSet), and parallel fan-out would pile up Prisma + LLM
+    // connections and risk hitting provider rate limits. Serial keeps
+    // resource use predictable at the cost of total latency.
+    void this.processExplanationsSequentially(created);
 
     return { accepted: body.alerts.length, created: created.length };
+  }
+
+  private async processExplanationsSequentially(alertEventIds: string[]): Promise<void> {
+    for (const id of alertEventIds) {
+      try {
+        await this.explainer.explainAsync(id);
+      } catch (err) {
+        this.log.warn(`Explainer failed for alert ${id}: ${(err as Error).message}`);
+      }
+    }
   }
 
   @Get()

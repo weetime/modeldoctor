@@ -82,14 +82,24 @@ export class AlertsService {
    *   1. label `model_name` exact match against Connection.model
    *   2. label `instance` host:port match against Connection.baseUrl
    *
-   * Returns the first match; multi-match resolution is V2 (would need an
-   * explicit selector field on Connection).
+   * Returns the first match by createdAt ASC for determinism.
+   *
+   * Multi-tenant limitation (V1): the webhook itself is unauthenticated
+   * Alertmanager traffic — we have no way to know "which user" an
+   * incoming alert belongs to other than the Connection it matches. In a
+   * shared deployment where multiple users register the same model name
+   * or the same host, this would attribute the alert to whichever
+   * Connection was created first. ModelDoctor V1 is single-tenant in
+   * practice, so this is acceptable; V2 should add an explicit
+   * `connectionSelector` field on the Connection (e.g. a unique
+   * Prometheus job label) so the match is unambiguous.
    */
   private async inferConnection(alert: AlertmanagerAlert): Promise<{ id: string } | null> {
     const modelName = alert.labels.model_name;
     if (modelName) {
       const hit = await this.prisma.connection.findFirst({
         where: { model: modelName },
+        orderBy: { createdAt: "asc" },
         select: { id: true },
       });
       if (hit) return hit;
@@ -97,9 +107,11 @@ export class AlertsService {
     const instance = alert.labels.instance;
     if (instance) {
       // instance is typically host:port; baseUrl may carry scheme + path.
-      // Substring match is good enough for v1 demo.
+      // Substring match is intentionally fuzzy for v1 — see the multi-
+      // tenant note above.
       const hit = await this.prisma.connection.findFirst({
         where: { baseUrl: { contains: instance.split(":")[0] } },
+        orderBy: { createdAt: "asc" },
         select: { id: true },
       });
       if (hit) return hit;
@@ -108,11 +120,14 @@ export class AlertsService {
   }
 
   async listForUser(userId: string, query: ListAlertsQuery) {
+    // Scope strictly to alerts whose inferred Connection belongs to this
+    // user. Alerts with no inferred connection (connectionId IS NULL) are
+    // NOT returned here — they would otherwise leak to every authenticated
+    // user in a shared deployment. Such alerts can still be inspected via
+    // admin-scoped tools / direct DB; v1 deliberately does not expose a
+    // user-facing "unattributed alerts" surface.
     const where: Prisma.AlertEventWhereInput = {
-      // Scope: alerts where the connection belongs to this user, OR alerts
-      // with no inferred connection (we show those globally so they're not
-      // lost).
-      OR: [{ connection: { userId } }, { connectionId: null }],
+      connection: { userId },
     };
     if (query.connectionId) where.connectionId = query.connectionId;
     if (query.status) where.status = query.status;
@@ -138,11 +153,10 @@ export class AlertsService {
   }
 
   async getForUser(userId: string, id: string) {
+    // Same multi-tenant rule as listForUser: only alerts attributed to a
+    // Connection owned by the caller are visible.
     const row = await this.prisma.alertEvent.findFirst({
-      where: {
-        id,
-        OR: [{ connection: { userId } }, { connectionId: null }],
-      },
+      where: { id, connection: { userId } },
       include: { explanation: true, connection: { select: { id: true, name: true } } },
     });
     return row;

@@ -15,16 +15,20 @@ const explanationResponseSchema = z.object({
   recommendations: z.array(z.string()).min(1).max(5),
 });
 
+// AI narrative is zh-CN only for V1 (per CLAUDE.md "Insights & AI judge"
+// section). Narrative is returned as plain-text paragraphs (no markdown
+// syntax) since the alert-detail UI renders it with `whitespace-pre-wrap`
+// and we don't carry a markdown parser on the web side yet.
 const SYS_PROMPT_ZH = `你是 LLM 推理服务的资深运维顾问。给定一条 Prometheus 告警 + 该连接的历史 benchmark + 已设基线,你需要:
 
-1. 用 2-4 段中文 markdown 解释这次告警的可能根因。**只基于提供的数据推断**,不要编造未提供的数字。
-2. 给出 1-5 条可执行的处置建议(从最紧急到次紧急)。
+1. 用 2-4 段中文**纯文本**解释这次告警的可能根因。段落之间空一行。不要使用 markdown 标记(**、## 、\`code\` 等),也不要写列表或表格 —— 段落叙事即可。**只基于提供的数据推断**,不要编造未提供的数字。
+2. 给出 1-5 条可执行的处置建议(从最紧急到次紧急),每条一句话。
 3. 重新评估严重程度 (critical / warning / info) — Prometheus 标的可能偏严或偏松,你根据上下文判断。
 
 输出 JSON:
 {
   "ai_severity": "critical" | "warning" | "info",
-  "narrative": "<markdown,2-4 段>",
+  "narrative": "<纯文本,2-4 段,段落间空一行>",
   "recommendations": ["<step 1>", "<step 2>", ...]
 }`;
 

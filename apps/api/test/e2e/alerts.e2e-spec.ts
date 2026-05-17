@@ -145,13 +145,20 @@ describe("Alerts webhook e2e", () => {
     expect(row?.connection?.name).toBe("test-conn-1");
   });
 
-  it("GET /api/alerts returns the authenticated user's alerts (and unattributed ones)", async () => {
+  it("GET /api/alerts returns only the caller's connection-attributed alerts (unattributed are hidden)", async () => {
     const res = await request(ctx.app.getHttpServer())
       .get("/api/alerts")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(Array.isArray(res.body)).toBe(true);
-    // At least the 3 alerts we created above (happy-path / idempotent / inferred).
-    expect(res.body.length).toBeGreaterThanOrEqual(3);
+    // Of the 4 alerts created in earlier specs, only the `inferred-fp`
+    // one has a connectionId (created against the test user's Llama-3-70B
+    // connection). The 3 unattributed alerts (happy-path / idempotent
+    // / its rerun) must NOT leak to the user list — see security note in
+    // alerts.service.listForUser.
+    const fingerprints = res.body.map((r: { fingerprint: string }) => r.fingerprint);
+    expect(fingerprints).toContain("inferred-fp");
+    expect(fingerprints).not.toContain("happy-path-fp-1");
+    expect(fingerprints).not.toContain("idempotent-fp");
   });
 });
