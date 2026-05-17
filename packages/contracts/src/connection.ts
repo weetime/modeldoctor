@@ -20,12 +20,7 @@ export type ServerKind = z.infer<typeof serverKindSchema>;
  * - `alertmanager` — Alertmanager instance routing alerts to ModelDoctor's
  *                    webhook. apiKey/model/category are not used.
  */
-export const connectionKindSchema = z.enum([
-  "model",
-  "gateway",
-  "prometheus",
-  "alertmanager",
-]);
+export const connectionKindSchema = z.enum(["model", "gateway", "prometheus", "alertmanager"]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
@@ -96,10 +91,7 @@ const createConnectionShape = z.object({
 // kind=model retains the v1 contract: apiKey/model/category are required.
 // kind=gateway/prometheus/alertmanager have looser shape since the entity
 // being pointed at is not a model-serving endpoint.
-function refineKindFields(
-  v: z.infer<typeof createConnectionShape>,
-  ctx: z.RefinementCtx,
-) {
+function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.RefinementCtx) {
   if (v.kind === "model") {
     if (!v.apiKey || v.apiKey.length === 0) {
       ctx.addIssue({

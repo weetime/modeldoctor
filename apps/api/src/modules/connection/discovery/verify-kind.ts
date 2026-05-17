@@ -105,7 +105,7 @@ async function verifyGateway(base: string, opts: FetchOpts): Promise<VerifyKindR
     return { kind: "gateway", ok: false, reason: `HTTP ${res.status} from ${url}` };
   }
   const body = (await res.json().catch(() => null)) as { data?: unknown[] } | null;
-  const modelCount = Array.isArray(body?.data) ? body!.data!.length : undefined;
+  const modelCount = Array.isArray(body?.data) ? body.data.length : undefined;
   return {
     kind: "gateway",
     ok: true,
@@ -158,7 +158,7 @@ async function verifyAlertmanager(base: string, opts: FetchOpts): Promise<Verify
       reason: "status endpoint did not return an Alertmanager shape",
     };
   }
-  const peers = Array.isArray(body.cluster?.peers) ? body.cluster!.peers!.length : undefined;
+  const peers = Array.isArray(body.cluster?.peers) ? body.cluster.peers.length : undefined;
   return {
     kind: "alertmanager",
     ok: true,
