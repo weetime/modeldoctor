@@ -39,36 +39,36 @@ spec:
         # "prefill" vs "decode".
         - record: modeldoctor:request:ttft_seconds:p95
           expr: |
-            histogram_quantile(0.95, sum by (le, instance) (rate(tgi_request_queue_duration_bucket[5m])))
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
             +
-            histogram_quantile(0.95, sum by (le, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:ttft_seconds:p99
           expr: |
-            histogram_quantile(0.99, sum by (le, instance) (rate(tgi_request_queue_duration_bucket[5m])))
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
             +
-            histogram_quantile(0.99, sum by (le, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:itl_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:itl_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:e2e_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, instance) (rate(tgi_request_duration_bucket[5m])))
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_duration_bucket[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:e2e_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, instance) (rate(tgi_request_duration_bucket[5m])))
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_duration_bucket[5m])))
           labels:
             engine: tgi
         - record: modeldoctor:request:queue_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, instance) (rate(tgi_request_queue_duration_bucket[5m])))
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
           labels:
             engine: tgi
 
@@ -76,14 +76,14 @@ spec:
       interval: 30s
       rules:
         - record: modeldoctor:throughput:prompt_tokens_total
-          expr: sum by (instance) (tgi_request_input_length_sum)
+          expr: sum by (model_name, instance)(tgi_request_input_length_sum)
           labels:
             engine: tgi
         - record: modeldoctor:throughput:generation_tokens_total
-          expr: sum by (instance) (tgi_request_generated_tokens_sum)
+          expr: sum by (model_name, instance)(tgi_request_generated_tokens_sum)
           labels:
             engine: tgi
         - record: modeldoctor:throughput:generation_rate_tps
-          expr: sum by (instance) (rate(tgi_request_generated_tokens_sum[1m]))
+          expr: sum by (model_name, instance)(rate(tgi_request_generated_tokens_sum[1m]))
           labels:
             engine: tgi
