@@ -27,6 +27,7 @@ vi.mock("@/features/connections/queries", () => ({
   useDeleteConnection: () => ({ mutateAsync: vi.fn() }),
   useRevealApiKey: () => ({ mutateAsync: vi.fn() }),
   useDiscoverConnection: () => ({ mutateAsync: vi.fn() }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {

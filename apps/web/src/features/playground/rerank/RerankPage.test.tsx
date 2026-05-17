@@ -13,6 +13,7 @@ vi.mock("@/lib/api-client", () => {
 const SAMPLE_CONN: ConnectionPublic = {
   id: "c1",
   userId: "u1",
+  kind: "model",
   name: "rk-1",
   baseUrl: "http://x",
   apiKeyPreview: "sk-...1234",
@@ -32,6 +33,7 @@ const SAMPLE_CONN: ConnectionPublic = {
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({ data: [SAMPLE_CONN], isLoading: false, error: null }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useConnection: (id: string | null | undefined) => ({
     data: id === "c1" ? SAMPLE_CONN : null,
     isLoading: false,

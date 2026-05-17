@@ -9,6 +9,7 @@ const seedList: ConnectionPublic[] = [
   {
     id: "c1",
     userId: "u1",
+    kind: "model",
     name: "chat-prod",
     baseUrl: "http://a",
     apiKeyPreview: "sk-...1234",
@@ -28,6 +29,7 @@ const seedList: ConnectionPublic[] = [
   {
     id: "c2",
     userId: "u1",
+    kind: "model",
     name: "embed-test",
     baseUrl: "http://b",
     apiKeyPreview: "sk-...5678",

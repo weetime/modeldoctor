@@ -10,7 +10,14 @@
     "createdAt": "Created",
     "actions": "Actions",
     "category": "Category",
-    "tags": "Tags"
+    "tags": "Tags",
+    "kind": "Kind"
+  },
+  "kinds": {
+    "model": "Model",
+    "gateway": "Gateway",
+    "prometheus": "Prometheus",
+    "alertmanager": "Alertmanager"
   },
   "dialog": {
     "createTitle": "New connection",
@@ -22,6 +29,8 @@
     "saveAsNewConnection": "Save as new connection",
     "savedConnectionMissing": "Saved connection no longer exists",
     "fields": {
+      "kind": "Kind",
+      "kindHelp": "model = inference endpoint; gateway = LLM gateway (e.g. Higress); prometheus / alertmanager = monitoring & alerting components.",
       "name": "Name",
       "namePlaceholder": "e.g. prod-vllm",
       "apiBaseUrl": "API Base URL",
@@ -71,6 +80,16 @@
       "empty": "Paste a curl command first",
       "invalid": "Could not extract parameters from curl command",
       "autoParseHint": "Auto-parses and triggers Discover after paste"
+    },
+    "verify": {
+      "button": "Verify kind",
+      "running": "Verifying…",
+      "ok": "Verified: {{summary}}",
+      "fail": "Verification failed: {{reason}}",
+      "missingBaseUrl": "Please enter baseUrl first",
+      "version": "version {{version}}",
+      "modelCount": "{{count}} models",
+      "clusterPeers": "{{count}} cluster peers"
     },
     "discover": {
       "button": "🔍 Discover",
@@ -129,6 +148,7 @@
   "filters": {
     "label": "Filter",
     "allCategories": "All categories",
-    "allTags": "All tags"
+    "allTags": "All tags",
+    "allKinds": "All kinds"
   }
 }

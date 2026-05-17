@@ -8,6 +8,7 @@ const list: ConnectionPublic[] = [
   {
     id: "c-chat",
     userId: "u1",
+    kind: "model",
     name: "chat-A",
     baseUrl: "http://a",
     apiKeyPreview: "sk-...1234",
@@ -27,6 +28,7 @@ const list: ConnectionPublic[] = [
   {
     id: "c-embed",
     userId: "u1",
+    kind: "model",
     name: "embed-B",
     baseUrl: "http://b",
     apiKeyPreview: "sk-...5678",
@@ -47,6 +49,7 @@ const list: ConnectionPublic[] = [
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({ data: list, isLoading: false, error: null }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { CategoryEndpointSelector } from "./CategoryEndpointSelector";
