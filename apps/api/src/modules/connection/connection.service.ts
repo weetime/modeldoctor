@@ -9,7 +9,12 @@ import type {
   ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Prisma, Connection as PrismaConnection } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
