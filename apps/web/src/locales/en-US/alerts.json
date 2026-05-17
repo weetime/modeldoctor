@@ -27,5 +27,21 @@
     "aiSeverity": "AI-assessed severity",
     "recommendations": "Recommendations",
     "noExplanation": "No AI analysis yet (LLM judge not configured, or still generating)"
+  },
+  "subscribers": {
+    "title": "Alert Subscribers",
+    "description": "Deliver alerts at or above the chosen severity to each subscriber's channel",
+    "empty": "No subscribers yet — alerts on this connection won't notify anyone",
+    "add": "Add subscriber",
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "confirm": "Add",
+    "channel": "Channel",
+    "channelPlaceholder": "Select channel",
+    "minSeverity": "Min severity",
+    "noChannels": "You don't have any notification channels — create one under Profile → Notifications",
+    "noChannelsLeft": "All available channels are already subscribed",
+    "errorCreate": "Failed to add subscriber",
+    "errorDelete": "Failed to remove subscriber"
   }
 }

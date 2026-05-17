@@ -32,3 +32,24 @@ export interface ListAlertsQuery {
   status?: "firing" | "resolved";
   severity?: "critical" | "warning" | "info";
 }
+
+export type Severity = "info" | "warning" | "critical";
+
+export interface SubscriberDto {
+  id: string;
+  connectionId: string;
+  userId: string;
+  channelId: string;
+  minSeverity: Severity;
+  enabled: boolean;
+  createdAt: string;
+  user: { id: string; email: string; displayName: string | null };
+  channel: { id: string; name: string; type: string };
+}
+
+export interface CreateSubscriberBody {
+  channelId: string;
+  minSeverity: Severity;
+  enabled?: boolean;
+  userId?: string;
+}

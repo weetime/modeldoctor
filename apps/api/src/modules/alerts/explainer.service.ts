@@ -5,6 +5,7 @@ import { PrismaService } from "../../database/prisma.service.js";
 import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import type { EventType } from "../notifications/subscriptions.service.js";
+import { SubscribersService } from "./subscribers.service.js";
 
 // AI-generated narrative shape. Stored as JSON in alert_explanations.recommendations,
 // markdown narrative in narrative column.
@@ -45,6 +46,7 @@ export class AlertExplainerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly judge: LlmJudgeService,
+    private readonly subscribers: SubscribersService,
   ) {}
 
   /**
@@ -204,16 +206,17 @@ export class AlertExplainerService {
   }
 
   /**
-   * Fire alert.explained event so users subscribed to this connection's
-   * alerts are notified. Subscriber model for v1 is minimal: we look up the
-   * Connection.userId as the owner and notify them. Multi-subscriber +
-   * severity-routing is roadmap follow-up.
+   * Fan out alert.explained deliveries to every ConnectionSubscriber
+   * whose minSeverity floor is met by the alert's AI-assessed severity.
+   *
+   * No-op when the alert has no inferred connection (we have no
+   * subscriber set to query in that case).
    */
   private async emitNotification(alertEventId: string, severity: string): Promise<void> {
     const event = await this.prisma.alertEvent.findUnique({
       where: { id: alertEventId },
       include: {
-        connection: { select: { id: true, userId: true, name: true } },
+        connection: { select: { id: true, name: true } },
         explanation: { select: { narrative: true } },
       },
     });
@@ -222,24 +225,11 @@ export class AlertExplainerService {
       return;
     }
 
-    // Find subscriptions for this connection (filter.connectionId match) on
-    // the alert.explained event type. We don't go through NotifyService
-    // because EventType is a string-union without alert.* members today;
-    // adding directly to NotificationDelivery keeps the change footprint
-    // small for v1.
-    const subs = await this.prisma.notificationSubscription.findMany({
-      where: {
-        eventType: "alert.explained",
-        channel: { userId: event.connection.userId },
-      },
-    });
-    const matched = subs.filter((s) => {
-      const f = s.filter as { connectionId?: string } | null;
-      if (!f?.connectionId) return true;
-      return f.connectionId === event.connection?.id;
-    });
+    const matched = await this.subscribers.findMatching(event.connection.id, severity);
     if (matched.length === 0) {
-      this.log.debug(`No subscribers for alert.explained on connection ${event.connection.id}`);
+      this.log.debug(
+        `No subscribers passing severity=${severity} for connection ${event.connection.id}`,
+      );
       return;
     }
 

@@ -26,6 +26,7 @@ model User {
   createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
   createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
   notificationChannels NotificationChannel[]
+  connectionSubscribers ConnectionSubscriber[]
   savedCompares        SavedCompare[]
   evaluations          Evaluation[]
   evaluationRuns       EvaluationRun[]
@@ -100,6 +101,7 @@ model Connection {
   evaluationRunsAsEndpointA EvaluationRun[] @relation("EvalEndpointA")
   evaluationRunsAsEndpointB EvaluationRun[] @relation("EvalEndpointB")
   alertEvents               AlertEvent[]
+  subscribers               ConnectionSubscriber[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -290,9 +292,10 @@ model NotificationChannel {
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscriptions NotificationSubscription[]
-  deliveries    NotificationDelivery[]
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions         NotificationSubscription[]
+  deliveries            NotificationDelivery[]
+  connectionSubscribers ConnectionSubscriber[]
 
   @@index([userId])
   @@map("notification_channels")
@@ -483,6 +486,36 @@ model AlertEvent {
   @@index([status, severity, receivedAt])
   @@index([scenario])
   @@map("alert_events")
+}
+
+// Per-connection alert subscriber. A user opts a specific channel into
+// alerts on a specific connection, with a minimum severity floor.
+//
+// This is independent of NotificationSubscription (which routes
+// benchmark.* and diagnostics.* events). Splitting keeps the alert
+// dispatch path simple and avoids retrofitting severity-routing into the
+// generic notifications path.
+model ConnectionSubscriber {
+  id           String   @id @default(cuid())
+  connectionId String   @map("connection_id")
+  userId       String   @map("user_id")
+  channelId    String   @map("channel_id")
+  // Floor below which we do not deliver. Compared against the AI-assessed
+  // severity (alert_explanations.ai_severity), falling back to the raw
+  // alert_events.severity if no explanation exists yet.
+  minSeverity  String   @map("min_severity") // 'info' | 'warning' | 'critical'
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  connection Connection          @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel    NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, userId, channelId])
+  @@index([connectionId])
+  @@index([userId])
+  @@map("connection_subscribers")
 }
 
 // AI-generated narrative per alert event. 1:1 with AlertEvent. Stored

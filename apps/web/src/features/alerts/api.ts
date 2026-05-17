@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { AlertEventDto, ListAlertsQuery } from "./types";
+import type { AlertEventDto, CreateSubscriberBody, ListAlertsQuery, SubscriberDto } from "./types";
 
 export const alertsApi = {
   list: (q: ListAlertsQuery = {}) => {
@@ -11,4 +11,13 @@ export const alertsApi = {
     return api.get<AlertEventDto[]>(`/api/alerts${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => api.get<AlertEventDto>(`/api/alerts/${id}`),
+};
+
+export const subscribersApi = {
+  list: (connectionId: string) =>
+    api.get<SubscriberDto[]>(`/api/connections/${connectionId}/subscribers`),
+  create: (connectionId: string, body: CreateSubscriberBody) =>
+    api.post<SubscriberDto>(`/api/connections/${connectionId}/subscribers`, body),
+  remove: (connectionId: string, subscriberId: string) =>
+    api.del<void>(`/api/connections/${connectionId}/subscribers/${subscriberId}`),
 };
