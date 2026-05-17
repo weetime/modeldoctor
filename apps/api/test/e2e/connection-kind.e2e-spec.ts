@@ -195,6 +195,39 @@ describe("Connection.kind e2e", () => {
     expect(res.body.reason).toMatch(/Prometheus shape/);
   });
 
+  it("PATCH on kind=model rejects clearing model/category/apiKey even when kind is omitted", async () => {
+    const created = await request(ctx.app.getHttpServer())
+      .post("/api/connections")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        kind: "model",
+        name: "patch-guard",
+        baseUrl: "http://x.test",
+        apiKey: "sk-orig",
+        model: "qwen-orig",
+        category: "chat",
+      })
+      .expect(201);
+
+    // PATCH without `kind` — superRefine alone would let this through;
+    // the service-layer invariant must reject it.
+    await request(ctx.app.getHttpServer())
+      .patch(`/api/connections/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ model: "" })
+      .expect(400);
+    await request(ctx.app.getHttpServer())
+      .patch(`/api/connections/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ category: null })
+      .expect(400);
+    await request(ctx.app.getHttpServer())
+      .patch(`/api/connections/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ apiKey: "" })
+      .expect(400);
+  });
+
   it("verify-kind for gateway returns model count from /v1/models", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

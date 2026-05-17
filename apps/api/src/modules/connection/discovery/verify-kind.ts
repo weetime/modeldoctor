@@ -158,6 +158,8 @@ async function verifyAlertmanager(base: string, opts: FetchOpts): Promise<Verify
       reason: "status endpoint did not return an Alertmanager shape",
     };
   }
+  // body is non-null here (narrowed by the versionInfo guard above), but stay
+  // defensive on `cluster` since it's optional in the AM /api/v2/status shape.
   const peers = Array.isArray(body.cluster?.peers) ? body.cluster.peers.length : undefined;
   return {
     kind: "alertmanager",

@@ -9,7 +9,7 @@ import type {
   ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Prisma, Connection as PrismaConnection } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
@@ -98,7 +98,24 @@ export class ConnectionService {
     id: string,
     input: UpdateConnection,
   ): Promise<ConnectionWithSecret | ConnectionPublic> {
-    await this.findOwnedRow(userId, id);
+    const existing = await this.findOwnedRow(userId, id);
+    // updateConnectionSchema is `.partial()`, so its superRefine only fires
+    // when `kind` is present in the body. A PATCH like `{"model": ""}` against
+    // an existing kind=model row would otherwise slip past validation and
+    // clear required fields. Compute the effective kind (patch.kind ?? row.kind)
+    // and re-enforce the same gate the create path uses.
+    const effectiveKind = (input.kind ?? existing.kind) as ConnectionKind;
+    if (effectiveKind === "model") {
+      if (input.model !== undefined && input.model.trim().length === 0) {
+        throw new BadRequestException("model is required for kind=model");
+      }
+      if (input.category === null) {
+        throw new BadRequestException("category is required for kind=model");
+      }
+      if (input.apiKey !== undefined && input.apiKey.length === 0) {
+        throw new BadRequestException("apiKey is required for kind=model");
+      }
+    }
     const data: Prisma.ConnectionUncheckedUpdateInput = {};
     if (input.kind !== undefined) data.kind = input.kind;
     if (input.name !== undefined) data.name = input.name;
