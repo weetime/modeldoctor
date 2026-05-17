@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service.js";
 
-export type EventType = "benchmark.completed" | "benchmark.failed" | "diagnostics.failed";
+export type EventType =
+  | "benchmark.completed"
+  | "benchmark.failed"
+  | "diagnostics.failed"
+  | "alert.explained";
 
 export interface CreateSubscriptionInput {
   channelId: string;

@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "告警",
+    "subtitle": "由 Prometheus / Alertmanager 推送, 平台 AI 给出解释 + 建议"
+  },
+  "empty": {
+    "title": "暂无告警",
+    "body": "当 Alertmanager 把告警推送到 /api/alerts/webhook 时, 会在这里显示。"
+  },
+  "col": {
+    "alertName": "告警名",
+    "severity": "严重度",
+    "status": "状态",
+    "model": "模型",
+    "scenario": "场景",
+    "startedAt": "开始时间"
+  },
+  "row": {
+    "expand": "展开详情",
+    "collapse": "收起详情"
+  },
+  "detail": {
+    "summary": "Summary",
+    "description": "Description",
+    "labels": "Labels",
+    "aiNarrative": "AI 分析",
+    "aiSeverity": "AI 判定严重度",
+    "recommendations": "处置建议",
+    "noExplanation": "暂无 AI 分析(可能未配置 LLM judge, 或后台仍在生成)"
+  }
+}

@@ -5,6 +5,7 @@ export const eventTypeSchema = z.enum([
   "benchmark.completed",
   "benchmark.failed",
   "diagnostics.failed",
+  "alert.explained",
 ]);
 
 export const createChannelSchema = z.object({

@@ -11,6 +11,7 @@ import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.j
 import { AppConfigModule } from "./config/config.module.js";
 import type { Env } from "./config/env.schema.js";
 import { DatabaseModule } from "./database/database.module.js";
+import { AlertsModule } from "./modules/alerts/alerts.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { JwtAuthGuard } from "./modules/auth/jwt-auth.guard.js";
 import { BaselineModule } from "./modules/baseline/baseline.module.js";
@@ -87,6 +88,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     AuthModule,
     BaselineModule,
     NotificationsModule,
+    AlertsModule,
     McpModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],

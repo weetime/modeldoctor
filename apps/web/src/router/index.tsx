@@ -1,3 +1,4 @@
+import { AlertsPage } from "@/features/alerts/AlertsPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { RegisterPage } from "@/features/auth/RegisterPage";
@@ -104,6 +105,7 @@ export const routes: RouteObject[] = [
           { path: "quality-gate/runs/:id", element: <RunReportPage /> },
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
+          { path: "alerts", element: <AlertsPage /> },
           { path: "connections", element: <ConnectionsPage /> },
           {
             path: "me",

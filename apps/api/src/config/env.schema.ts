@@ -87,6 +87,13 @@ export const EnvSchema = z
     KUBECONFIG: z.string().optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
 
+    // --- Alertmanager webhook receiver (P0 closed loop) ---
+    // Shared secret for Alertmanager → ModelDoctor webhook. Verified per
+    // request via HMAC-SHA256 in the X-ModelDoctor-Signature header. Required
+    // in non-test environments — the webhook endpoint hard-fails open
+    // requests in production. Length matches BENCHMARK_CALLBACK_SECRET.
+    ALERTMANAGER_WEBHOOK_SECRET: z.string().min(32).optional(),
+
     // --- MCP server (V1) ---
     // Both must be set together to enable /mcp. When either is unset the
     // MCP route returns 503 ("not configured"). See apps/api/.env.example
@@ -123,6 +130,13 @@ export const EnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["BENCHMARK_CALLBACK_SECRET"],
         message: "BENCHMARK_CALLBACK_SECRET is required when NODE_ENV is not 'test'",
+      });
+    }
+    if (env.NODE_ENV !== "test" && !env.ALERTMANAGER_WEBHOOK_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ALERTMANAGER_WEBHOOK_SECRET"],
+        message: "ALERTMANAGER_WEBHOOK_SECRET is required when NODE_ENV is not 'test'",
       });
     }
     if (env.NODE_ENV !== "test" && !env.BENCHMARK_CALLBACK_URL) {

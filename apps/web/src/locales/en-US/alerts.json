@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "Alerts",
+    "subtitle": "Pushed from Prometheus / Alertmanager; AI provides explanation + recommendations"
+  },
+  "empty": {
+    "title": "No alerts yet",
+    "body": "Alerts will appear here when Alertmanager pushes to /api/alerts/webhook."
+  },
+  "col": {
+    "alertName": "Alert",
+    "severity": "Severity",
+    "status": "Status",
+    "model": "Model",
+    "scenario": "Scenario",
+    "startedAt": "Started"
+  },
+  "row": {
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "detail": {
+    "summary": "Summary",
+    "description": "Description",
+    "labels": "Labels",
+    "aiNarrative": "AI Analysis",
+    "aiSeverity": "AI-assessed severity",
+    "recommendations": "Recommendations",
+    "noExplanation": "No AI analysis yet (LLM judge not configured, or still generating)"
+  }
+}
