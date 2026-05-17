@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   Boxes,
   Bug,
@@ -85,6 +86,7 @@ export const sidebarGroups: SidebarGroup[] = [
     id: "diagnostics",
     labelKey: "groups.diagnostics",
     items: [
+      { to: "/alerts", icon: AlertTriangle, labelKey: "items.alerts" },
       { to: "/debug", icon: Bug, labelKey: "items.requestDebug" },
       { to: "/diagnostics", icon: CheckCircle2, labelKey: "items.diagnostics" },
     ],

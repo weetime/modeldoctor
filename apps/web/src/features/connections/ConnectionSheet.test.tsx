@@ -32,6 +32,17 @@ vi.mock("./queries", () => ({
   }),
 }));
 
+// SubscribersSection (rendered in edit mode) reads from React Query hooks.
+// Stub them out so the sheet test doesn't need a QueryClientProvider.
+vi.mock("@/features/alerts/queries", () => ({
+  useSubscribers: () => ({ data: [], isLoading: false }),
+  useCreateSubscriber: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteSubscriber: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("@/features/notifications/queries", () => ({
+  useChannels: () => ({ data: [] }),
+}));
+
 import { ConnectionSheet } from "./ConnectionSheet";
 
 async function fillBaseFields(user: ReturnType<typeof userEvent.setup>) {

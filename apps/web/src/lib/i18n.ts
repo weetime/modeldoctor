@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { z } from "zod";
 
+import enAlerts from "@/locales/en-US/alerts.json";
 import enBenchmarkTemplates from "@/locales/en-US/benchmark-templates.json";
 import enBenchmarks from "@/locales/en-US/benchmarks.json";
 import enCommands from "@/locales/en-US/commands.json";
@@ -18,6 +19,7 @@ import enPlayground from "@/locales/en-US/playground.json";
 import enQualityGate from "@/locales/en-US/quality-gate.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
+import zhAlerts from "@/locales/zh-CN/alerts.json";
 import zhBenchmarkTemplates from "@/locales/zh-CN/benchmark-templates.json";
 import zhBenchmarks from "@/locales/zh-CN/benchmarks.json";
 import zhCommands from "@/locales/zh-CN/commands.json";
@@ -40,6 +42,7 @@ void i18n.use(initReactI18next).init({
     "en-US": {
       common: enCommon,
       sidebar: enSidebar,
+      alerts: enAlerts,
       connections: enConnections,
       diagnostics: enDiagnostics,
       benchmarks: enBenchmarks,
@@ -58,6 +61,7 @@ void i18n.use(initReactI18next).init({
     "zh-CN": {
       common: zhCommon,
       sidebar: zhSidebar,
+      alerts: zhAlerts,
       connections: zhConnections,
       diagnostics: zhDiagnostics,
       benchmarks: zhBenchmarks,
@@ -80,6 +84,7 @@ void i18n.use(initReactI18next).init({
   ns: [
     "common",
     "sidebar",
+    "alerts",
     "connections",
     "diagnostics",
     "benchmarks",

@@ -26,6 +26,7 @@ model User {
   createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
   createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
   notificationChannels NotificationChannel[]
+  connectionSubscribers ConnectionSubscriber[]
   savedCompares        SavedCompare[]
   evaluations          Evaluation[]
   evaluationRuns       EvaluationRun[]
@@ -99,6 +100,8 @@ model Connection {
 
   evaluationRunsAsEndpointA EvaluationRun[] @relation("EvalEndpointA")
   evaluationRunsAsEndpointB EvaluationRun[] @relation("EvalEndpointB")
+  alertEvents               AlertEvent[]
+  subscribers               ConnectionSubscriber[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -289,9 +292,10 @@ model NotificationChannel {
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscriptions NotificationSubscription[]
-  deliveries    NotificationDelivery[]
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions         NotificationSubscription[]
+  deliveries            NotificationDelivery[]
+  connectionSubscribers ConnectionSubscriber[]
 
   @@index([userId])
   @@map("notification_channels")
@@ -442,4 +446,101 @@ enum SampleDelta {
   BOTH_PASS
   BOTH_FAIL
   NA
+}
+
+// Alertmanager webhook ingest. One row per (fingerprint, startsAt) so the
+// same alert firing again later does not silently overwrite history; the
+// Alertmanager spec re-sends the same fingerprint for the duration of a
+// firing group so we de-dupe on the timestamp tuple.
+model AlertEvent {
+  id           String   @id @default(cuid())
+  fingerprint  String
+  status       String // "firing" | "resolved"
+  severity     String // labels.severity (critical | warning | info)
+  scenario     String? // labels.modeldoctor_scenario (from PR #190 rule files)
+  alertName    String   @map("alert_name") // labels.alertname
+
+  // Connection inferred from labels.model_name / instance / engine.
+  // Nullable: an incoming alert may not match any registered connection.
+  connectionId String?     @map("connection_id")
+  connection   Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  // Convenience scalars projected from labels for cheap filtering.
+  modelName String? @map("model_name")
+  engine    String?
+  instance  String?
+
+  // Full Alertmanager payload pieces.
+  labels      Json
+  annotations Json
+  rawPayload  Json @map("raw_payload")
+
+  startsAt   DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt     DateTime? @map("ends_at") @db.Timestamptz(3)
+  receivedAt DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+
+  explanation AlertExplanation?
+
+  @@unique([fingerprint, startsAt])
+  @@index([connectionId, receivedAt])
+  @@index([status, severity, receivedAt])
+  @@index([scenario])
+  @@map("alert_events")
+}
+
+// Per-connection alert subscriber. A user opts a specific channel into
+// alerts on a specific connection, with a minimum severity floor.
+//
+// This is independent of NotificationSubscription (which routes
+// benchmark.* and diagnostics.* events). Splitting keeps the alert
+// dispatch path simple and avoids retrofitting severity-routing into the
+// generic notifications path.
+model ConnectionSubscriber {
+  id           String   @id @default(cuid())
+  connectionId String   @map("connection_id")
+  userId       String   @map("user_id")
+  channelId    String   @map("channel_id")
+  // Floor below which we do not deliver. Compared against the AI-assessed
+  // severity (alert_explanations.ai_severity), falling back to the raw
+  // alert_events.severity if no explanation exists yet.
+  minSeverity  String   @map("min_severity") // 'info' | 'warning' | 'critical'
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  connection Connection          @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel    NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, userId, channelId])
+  @@index([connectionId])
+  @@index([userId])
+  @@map("connection_subscribers")
+}
+
+// AI-generated narrative per alert event. 1:1 with AlertEvent. Stored
+// separately because (a) it is async / may regenerate, (b) explanation can
+// be missing (LLM down, no judge configured) without losing the alert
+// itself.
+model AlertExplanation {
+  id              String   @id @default(cuid())
+  alertEventId    String   @unique @map("alert_event_id")
+  alertEvent      AlertEvent @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+
+  // Markdown narrative for the human reader.
+  narrative       String   @db.Text
+  // string[] — actionable steps. JSON to avoid migration on shape changes.
+  recommendations Json
+  // AI-suggested severity (may differ from incoming labels.severity).
+  aiSeverity      String   @map("ai_severity")
+
+  // Audit / observability for the LLM call itself.
+  llmProvider     String   @map("llm_provider")
+  llmModel        String   @map("llm_model")
+  tokensUsed      Int?     @map("tokens_used")
+  latencyMs       Int      @map("latency_ms")
+
+  generatedAt     DateTime @default(now()) @map("generated_at") @db.Timestamptz(3)
+
+  @@map("alert_explanations")
 }

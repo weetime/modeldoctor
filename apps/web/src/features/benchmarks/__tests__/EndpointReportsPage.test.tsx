@@ -70,7 +70,7 @@ describe("EndpointReportsPage", () => {
     await waitFor(() => expect(screen.getByText("bge-by-mis-tei")).toBeInTheDocument());
     expect(screen.getByText("gen-studio_bge-m3-uZbs")).toBeInTheDocument();
     expect(screen.getByText("http://183.240.109.2:30888")).toBeInTheDocument();
-    expect(screen.getByText(/12/)).toBeInTheDocument(); // run count
+    expect(screen.getByText(/12\s*runs/i)).toBeInTheDocument(); // run count
     expect(screen.getByText(/99\.8/)).toBeInTheDocument(); // success rate %
   });
 

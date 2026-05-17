@@ -20,6 +20,7 @@
     "benchmarkTemplates": "Test Templates",
     "qualityGateEvaluations": "Evaluations",
     "qualityGateRuns": "Runs",
+    "alerts": "Alerts",
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",
     "connections": "Connections",

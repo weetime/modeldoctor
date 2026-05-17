@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { SubscribersSection } from "@/features/alerts/SubscribersSection";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -770,6 +771,8 @@ export function ConnectionSheet({
                   </p>
                 ) : null}
               </FormSection>
+
+              {isEdit && existing ? <SubscribersSection connectionId={existing.id} /> : null}
 
               {discoverError ? (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">

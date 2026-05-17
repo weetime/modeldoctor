@@ -1,0 +1,47 @@
+{
+  "page": {
+    "title": "告警",
+    "subtitle": "由 Prometheus / Alertmanager 推送, 平台 AI 给出解释 + 建议"
+  },
+  "empty": {
+    "title": "暂无告警",
+    "body": "当 Alertmanager 把告警推送到 /api/alerts/webhook 时, 会在这里显示。"
+  },
+  "col": {
+    "alertName": "告警名",
+    "severity": "严重度",
+    "status": "状态",
+    "model": "模型",
+    "scenario": "场景",
+    "startedAt": "开始时间"
+  },
+  "row": {
+    "expand": "展开详情",
+    "collapse": "收起详情"
+  },
+  "detail": {
+    "summary": "Summary",
+    "description": "Description",
+    "labels": "Labels",
+    "aiNarrative": "AI 分析",
+    "aiSeverity": "AI 判定严重度",
+    "recommendations": "处置建议",
+    "noExplanation": "暂无 AI 分析(可能未配置 LLM judge, 或后台仍在生成)"
+  },
+  "subscribers": {
+    "title": "告警订阅",
+    "description": "告警达到选定严重度时, 通过对应通道发送给订阅者",
+    "empty": "暂无订阅者 — 这个连接的告警不会通知任何人",
+    "add": "添加订阅",
+    "remove": "删除",
+    "cancel": "取消",
+    "confirm": "添加",
+    "channel": "通道",
+    "channelPlaceholder": "选择通道",
+    "minSeverity": "最低严重度",
+    "noChannels": "你还没有通知通道, 先去「个人中心 → 通知」创建一个",
+    "noChannelsLeft": "已订阅所有可用通道",
+    "errorCreate": "添加订阅失败",
+    "errorDelete": "删除订阅失败"
+  }
+}
