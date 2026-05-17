@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  connectionKindSchema,
   createConnectionSchema,
   discoverConnectionRequestSchema,
   discoverConnectionResponseSchema,
   inferenceConfidenceSchema,
   serverKindSchema,
+  updateConnectionSchema,
+  verifyKindRequestSchema,
 } from "./connection.js";
 import { ENGINE_IDS } from "./engine.js";
 
@@ -134,6 +137,94 @@ describe("inferenceConfidenceSchema", () => {
 
   it("rejects unknown value", () => {
     expect(() => inferenceConfidenceSchema.parse("maybe")).toThrow();
+  });
+});
+
+describe("connectionKindSchema", () => {
+  it.each(["model", "gateway", "prometheus", "alertmanager"] as const)("accepts %s", (v) => {
+    expect(connectionKindSchema.parse(v)).toBe(v);
+  });
+
+  it("rejects unknown kind", () => {
+    expect(() => connectionKindSchema.parse("database")).toThrow();
+  });
+});
+
+describe("createConnectionSchema — kind=non-model relaxes required fields", () => {
+  const nonModelBase = {
+    name: "prom-1",
+    baseUrl: "http://prom:9090",
+    customHeaders: "",
+    queryParams: "",
+    tags: [],
+  };
+
+  it("kind=prometheus accepts omitted apiKey/model/category", () => {
+    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "prometheus" });
+    expect(r.success).toBe(true);
+  });
+
+  it("kind=alertmanager accepts omitted apiKey/model/category", () => {
+    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "alertmanager" });
+    expect(r.success).toBe(true);
+  });
+
+  it("kind=gateway accepts omitted apiKey/model/category", () => {
+    // gateway is auth-optional (apiKey may live in upstream model, not gateway).
+    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "gateway" });
+    expect(r.success).toBe(true);
+  });
+
+  it("kind defaults to 'model' when omitted, still requiring full v1 contract", () => {
+    const r = createConnectionSchema.safeParse(nonModelBase);
+    expect(r.success).toBe(false); // missing apiKey/model/category for kind=model
+  });
+
+  it("kind=model still requires apiKey/model/category", () => {
+    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "model" });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("updateConnectionSchema — partial PATCH semantics", () => {
+  it("accepts a single-field PATCH without kind", () => {
+    // This is exactly the shape the gemini security comment flagged: a
+    // partial PATCH without kind passes the contract layer; the service
+    // layer is responsible for re-enforcing kind-specific invariants.
+    const r = updateConnectionSchema.safeParse({ model: "" });
+    expect(r.success).toBe(true);
+  });
+
+  it("when kind=model is explicit in the PATCH, refine fires (empty apiKey rejected)", () => {
+    const r = updateConnectionSchema.safeParse({ kind: "model", apiKey: "" });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("verifyKindRequestSchema", () => {
+  it("accepts kind + baseUrl alone", () => {
+    const r = verifyKindRequestSchema.parse({
+      kind: "prometheus",
+      baseUrl: "http://prom:9090",
+    });
+    expect(r.kind).toBe("prometheus");
+  });
+
+  it("accepts optional apiKey + customHeaders", () => {
+    const r = verifyKindRequestSchema.parse({
+      kind: "gateway",
+      baseUrl: "http://higress",
+      apiKey: "sk-x",
+      customHeaders: "X-Project: p1",
+    });
+    expect(r.apiKey).toBe("sk-x");
+    expect(r.customHeaders).toBe("X-Project: p1");
+  });
+
+  it("rejects empty apiKey when supplied", () => {
+    expect(() =>
+      verifyKindRequestSchema.parse({ kind: "gateway", baseUrl: "http://x", apiKey: "" }),
+    ).toThrow();
   });
 });
 

@@ -187,7 +187,7 @@ export function ConnectionsPage() {
                     <TableRow key={c.id}>
                       <TableCell>
                         <Badge
-                          variant={c.kind === "model" ? "success" : "default"}
+                          variant={c.kind === "model" ? "outline" : "default"}
                           className="text-xs"
                         >
                           {t(`kinds.${c.kind}`)}

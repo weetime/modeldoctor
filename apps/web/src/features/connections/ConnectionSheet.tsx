@@ -554,7 +554,7 @@ export function ConnectionSheet({
                     control={form.control}
                     name="apiBaseUrl"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className={showModelFields ? undefined : "md:col-span-2"}>
                         <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
                         <FormControl>
                           <Input
