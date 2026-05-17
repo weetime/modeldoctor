@@ -1,0 +1,117 @@
+# PrometheusRule: vLLM V1 (0.7.x+ default engine)
+#
+# Normalizes vLLM V1 raw metrics into the `modeldoctor:*` namespace.
+# Apply ONLY when your inference workload is vLLM 0.7+ (V1 engine on by
+# default). For vLLM 0.6.x and earlier, apply vllm-v0.yaml instead.
+#
+# Hard-coded label `engine="vllm-v1"` is injected on every recorded
+# metric so downstream alert/dashboard queries can select by engine.
+#
+# Breaking changes from V0 handled here:
+# - vllm:gpu_cache_usage_perc → vllm:kv_cache_usage_perc
+# - vllm:time_per_output_token_seconds → vllm:inter_token_latency_seconds
+# - vllm:gpu_prefix_cache_hit_rate (gauge) → rate(vllm:prefix_cache_hits)
+#   / rate(vllm:prefix_cache_queries) (counter pair)
+#
+# Source label expectations:
+# - V1 metrics natively carry `model_name` and `engine` labels.
+# - This file's hard-coded `engine: vllm-v1` overrides any source `engine`
+#   label so the normalized layer has a single consistent value.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-vllm-v1
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/engine: vllm-v1
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    - name: modeldoctor.vllm-v1.request
+      interval: 30s
+      rules:
+        - record: modeldoctor:request:running
+          expr: vllm:num_requests_running
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:waiting
+          expr: vllm:num_requests_waiting
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:preempted_total
+          expr: vllm:num_preemptions_total
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:ttft_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:ttft_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:ttft_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        # V1: time_per_output_token_seconds renamed to inter_token_latency_seconds
+        - record: modeldoctor:request:itl_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:inter_token_latency_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:itl_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:inter_token_latency_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:itl_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:inter_token_latency_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:e2e_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:e2e_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:request:queue_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:request_queue_time_seconds_bucket[5m])))
+          labels:
+            engine: vllm-v1
+
+    - name: modeldoctor.vllm-v1.throughput
+      interval: 30s
+      rules:
+        - record: modeldoctor:throughput:prompt_tokens_total
+          expr: vllm:prompt_tokens_total
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:throughput:generation_tokens_total
+          expr: vllm:generation_tokens_total
+          labels:
+            engine: vllm-v1
+        - record: modeldoctor:throughput:generation_rate_tps
+          expr: sum by (model_name, instance) (rate(vllm:generation_tokens_total[1m]))
+          labels:
+            engine: vllm-v1
+
+    - name: modeldoctor.vllm-v1.cache
+      interval: 30s
+      rules:
+        # V1: kv_cache_usage_perc replaces gpu_cache_usage_perc (no CPU split)
+        - record: modeldoctor:cache:kv_usage_ratio
+          expr: vllm:kv_cache_usage_perc
+          labels:
+            engine: vllm-v1
+        # V1: prefix cache hit rate must be derived from two counters.
+        # Guard against divide-by-zero with a 0 fallback when queries are idle.
+        - record: modeldoctor:cache:prefix_hit_ratio
+          expr: |
+            sum by (model_name, instance) (rate(vllm:prefix_cache_hits[5m]))
+            /
+            clamp_min(sum by (model_name, instance) (rate(vllm:prefix_cache_queries[5m])), 1)
+          labels:
+            engine: vllm-v1

@@ -1,0 +1,85 @@
+# PrometheusRule: Accelerator (GPU/NPU) alerts
+#
+# Queries `modeldoctor:accelerator:*` only — vendor-agnostic.
+# Distinguishes NVIDIA vs Ascend via the `device_kind` label.
+#
+# Scenario covered (per survey §8):
+#   - D: GPU/NPU physical anomaly (XID errors, NPU error_code, thermal)
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-alerts-accelerator
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/kind: alert
+spec:
+  groups:
+    - name: modeldoctor.alerts.accelerator
+      rules:
+        - alert: ModelDoctorAcceleratorUnhealthy
+          expr: modeldoctor:accelerator:health_status == 0
+          for: 2m
+          labels:
+            severity: critical
+            modeldoctor_scenario: accelerator-fault
+          annotations:
+            summary: "{{ $labels.device_kind }} accelerator unhealthy on {{ $labels.instance }}"
+            description: |
+              Accelerator health flag is 0 for {{ $labels.device_kind }}
+              device on {{ $labels.instance }} (gpu/UUID/id={{ $labels.UUID }}{{ $labels.id }}).
+              NVIDIA: XID error in the last 5m. Ascend: explicit health bit.
+            modeldoctor_required_context: "accelerator:error_total, accelerator:temperature_celsius"
+
+        - alert: ModelDoctorAcceleratorTempHigh
+          expr: modeldoctor:accelerator:temperature_celsius > 85
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: accelerator-thermal
+          annotations:
+            summary: "{{ $labels.device_kind }} temp {{ $value }}°C on {{ $labels.instance }}"
+            description: |
+              Accelerator temperature {{ $value }}°C sustained for 5m on
+              {{ $labels.device_kind }} device {{ $labels.instance }}.
+              Throttling may engage; performance will degrade.
+
+        - alert: ModelDoctorAcceleratorTempCritical
+          # NVIDIA H100 throttle is ~87°C; A100 ~85°C; Ascend 910B ~85°C.
+          # 95° is a conservative critical line — adjust per device class.
+          expr: modeldoctor:accelerator:temperature_celsius > 95
+          for: 1m
+          labels:
+            severity: critical
+            modeldoctor_scenario: accelerator-thermal
+          annotations:
+            summary: "{{ $labels.device_kind }} temp critical {{ $value }}°C on {{ $labels.instance }}"
+            description: |
+              Temperature {{ $value }}°C is in shutdown-risk territory. Check
+              cooling and consider draining workloads from this node.
+
+        - alert: ModelDoctorAcceleratorMemoryHigh
+          expr: modeldoctor:accelerator:memory_usage_ratio > 0.95
+          for: 5m
+          labels:
+            severity: warning
+            modeldoctor_scenario: accelerator-memory
+          annotations:
+            summary: '{{ $labels.device_kind }} memory {{ $value | printf "%.0f%%" }} on {{ $labels.instance }}'
+            description: |
+              Device memory at {{ $value | printf "%.2f" }} sustained for 5m.
+              KV cache will start evicting; OOM imminent if load grows.
+
+        - alert: ModelDoctorAcceleratorErrors
+          expr: increase(modeldoctor:accelerator:error_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: warning
+            modeldoctor_scenario: accelerator-fault
+          annotations:
+            summary: "{{ $labels.device_kind }} error count increasing on {{ $labels.instance }}"
+            description: |
+              Accelerator error counter increased in the last 5m.
+              NVIDIA: XID error. Ascend: chip_info_error_code != 0.
+              Investigate `nvidia-smi -q` / `npu-smi info` output.

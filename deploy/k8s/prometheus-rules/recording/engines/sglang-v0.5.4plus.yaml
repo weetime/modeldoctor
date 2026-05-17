@@ -1,0 +1,91 @@
+# PrometheusRule: SGLang v0.5.4+
+#
+# Metric prefix in this version is `sglang_` (underscore).
+# For v0.5.3 and earlier apply sglang-legacy.yaml instead — the two engine
+# types are NOT compatible and must not be applied simultaneously.
+#
+# Hard-coded label `engine="sglang-v0.5.4plus"` is injected on every recorded
+# metric.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-sglang-v0-5-4plus
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/engine: sglang-v0.5.4plus
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    - name: modeldoctor.sglang-v0-5-4plus.request
+      interval: 30s
+      rules:
+        - record: modeldoctor:request:running
+          expr: sglang_num_running_reqs
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:waiting
+          expr: sglang_num_queue_reqs
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:ttft_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:ttft_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:ttft_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:itl_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:itl_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:itl_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:e2e_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:request:e2e_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: sglang-v0.5.4plus
+
+    - name: modeldoctor.sglang-v0-5-4plus.throughput
+      interval: 30s
+      rules:
+        - record: modeldoctor:throughput:prompt_tokens_total
+          expr: sglang_prompt_tokens_total
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:throughput:generation_tokens_total
+          expr: sglang_generation_tokens_total
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:throughput:generation_rate_tps
+          expr: sglang_gen_throughput
+          labels:
+            engine: sglang-v0.5.4plus
+
+    - name: modeldoctor.sglang-v0-5-4plus.cache
+      interval: 30s
+      rules:
+        - record: modeldoctor:cache:kv_usage_ratio
+          expr: sglang_token_usage
+          labels:
+            engine: sglang-v0.5.4plus
+        - record: modeldoctor:cache:prefix_hit_ratio
+          expr: sglang_cache_hit_rate
+          labels:
+            engine: sglang-v0.5.4plus
