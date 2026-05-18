@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
 import { dispatchToChannel } from "./adapters/index.js";
 import { ChannelsService } from "./channels.service.js";
@@ -17,6 +19,7 @@ export class DispatcherService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly channels: ChannelsService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
@@ -75,10 +78,16 @@ export class DispatcherService {
       return;
     }
     try {
-      await dispatchToChannel(channel.type, channel.url, {
-        eventType: row.eventType,
-        payload: row.payload as Record<string, unknown>,
-      });
+      const appBaseUrl = this.config.get("APP_BASE_URL", { infer: true });
+      await dispatchToChannel(
+        channel.type,
+        channel.url,
+        {
+          eventType: row.eventType,
+          payload: row.payload as Record<string, unknown>,
+        },
+        { appBaseUrl: appBaseUrl ?? undefined },
+      );
       await this.prisma.notificationDelivery.update({
         where: { id: row.id },
         data: { status: "sent", sentAt: now, lastError: null, nextRetryAt: null },
