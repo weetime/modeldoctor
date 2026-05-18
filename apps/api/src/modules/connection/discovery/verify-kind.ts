@@ -1,4 +1,5 @@
 import type { ConnectionKind } from "@modeldoctor/contracts";
+import { parseCustomHeaders } from "../../../common/http/parse-custom-headers.js";
 import { safeFetch } from "./safe-fetch.js";
 
 export interface VerifyKindInput {
@@ -28,8 +29,9 @@ export interface VerifyKindResult {
  * Each kind has a known "health" path:
  *   model         — N/A here; use the full discover flow instead
  *   gateway       — Higress: /v1/models (gateway exposes a unified list)
- *   prometheus    — /api/v1/status/buildinfo
  *   alertmanager  — /api/v2/status
+ *
+ * (Prometheus moved to /api/prometheus-datasources/verify — see verifyPrometheus below.)
  *
  * Verification is deliberately shallow: we only confirm the endpoint
  * responds with the shape that distinguishes the target product. Deeper
@@ -56,7 +58,6 @@ export async function verifyConnectionKind(input: VerifyKindInput): Promise<Veri
 
   try {
     if (kind === "gateway") return await verifyGateway(trimmed, fetchOpts);
-    if (kind === "prometheus") return await verifyPrometheus(trimmed, fetchOpts);
     if (kind === "alertmanager") return await verifyAlertmanager(trimmed, fetchOpts);
   } catch (err) {
     return {
@@ -73,25 +74,7 @@ export async function verifyConnectionKind(input: VerifyKindInput): Promise<Veri
   };
 }
 
-type FetchOpts = { apiKey?: string; extraHeaders?: Record<string, string>; method: "GET" };
-
-// Mirrors parseCustomHeaders in discovery.service.ts; kept local so this
-// module has no dependency on discovery internals. If a third copy is
-// needed, extract to a shared file.
-function parseCustomHeaders(raw: string | undefined): Record<string, string> | undefined {
-  if (!raw) return undefined;
-  const out: Record<string, string> = {};
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const colon = trimmed.indexOf(":");
-    if (colon <= 0) continue;
-    const key = trimmed.slice(0, colon).trim();
-    const value = trimmed.slice(colon + 1).trim();
-    if (key && value) out[key] = value;
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
-}
+export type FetchOpts = { apiKey?: string; extraHeaders?: Record<string, string>; method: "GET" };
 
 async function verifyGateway(base: string, opts: FetchOpts): Promise<VerifyKindResult> {
   // Higress exposes the OpenAI-shape model list at /v1/models on the gateway
@@ -113,7 +96,26 @@ async function verifyGateway(base: string, opts: FetchOpts): Promise<VerifyKindR
   };
 }
 
-async function verifyPrometheus(base: string, opts: FetchOpts): Promise<VerifyKindResult> {
+/**
+ * Result shape for the standalone Prometheus probe. Mirrors `VerifyKindResult`
+ * but without a `kind` field — "prometheus" was dropped from `ConnectionKind`
+ * once Prometheus instances became their own first-class entity
+ * (`PrometheusDatasource`). The /api/prometheus-datasources/verify controller
+ * calls this directly without going through `verifyConnectionKind`.
+ */
+export interface VerifyPrometheusResult {
+  ok: boolean;
+  version?: string;
+  /** Free-form facts: currently `{ revision }` if the buildinfo includes one. */
+  details?: Record<string, unknown>;
+  /** When `ok=false`, a short human-readable reason. */
+  reason?: string;
+}
+
+export async function verifyPrometheus(
+  base: string,
+  opts: FetchOpts,
+): Promise<VerifyPrometheusResult> {
   // GET /api/v1/status/buildinfo returns { status: "success", data: {
   //   version, revision, branch, buildUser, buildDate, goVersion } }.
   // Presence of `data.version` confirms this is a Prometheus instance, not
@@ -121,17 +123,16 @@ async function verifyPrometheus(base: string, opts: FetchOpts): Promise<VerifyKi
   const url = `${base}/api/v1/status/buildinfo`;
   const res = await safeFetch(url, opts);
   if (!res.ok) {
-    return { kind: "prometheus", ok: false, reason: `HTTP ${res.status} from ${url}` };
+    return { ok: false, reason: `HTTP ${res.status} from ${url}` };
   }
   const body = (await res.json().catch(() => null)) as {
     status?: string;
     data?: { version?: string; revision?: string };
   } | null;
   if (body?.status !== "success" || !body?.data?.version) {
-    return { kind: "prometheus", ok: false, reason: "buildinfo did not return a Prometheus shape" };
+    return { ok: false, reason: "buildinfo did not return a Prometheus shape" };
   }
   return {
-    kind: "prometheus",
     ok: true,
     version: body.data.version,
     details: body.data.revision ? { revision: body.data.revision } : undefined,
