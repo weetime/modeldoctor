@@ -15,6 +15,15 @@ describe("formatText — per-eventType shapes", () => {
     expect(out).toBe("[ModelDoctor] test: (no message)");
   });
 
+  it("test event with empty / whitespace-only message also falls back", () => {
+    expect(formatText({ eventType: "test", payload: { message: "" } })).toBe(
+      "[ModelDoctor] test: (no message)",
+    );
+    expect(formatText({ eventType: "test", payload: { message: "   " } })).toBe(
+      "[ModelDoctor] test: (no message)",
+    );
+  });
+
   it("alert.explained includes alertName + severity + connectionName", () => {
     const out = formatText({
       eventType: "alert.explained",
@@ -47,6 +56,22 @@ describe("formatText — per-eventType shapes", () => {
   it("alert.explained without alertName/severity uses placeholders", () => {
     const out = formatText({ eventType: "alert.explained", payload: {} });
     expect(out).toBe("[ModelDoctor] alert (unknown alert) severity=unknown");
+  });
+
+  it("alert.explained with empty alertName/severity also uses placeholders", () => {
+    const out = formatText({
+      eventType: "alert.explained",
+      payload: { alertName: "", severity: "  " },
+    });
+    expect(out).toBe("[ModelDoctor] alert (unknown alert) severity=unknown");
+  });
+
+  it("alert.explained falls through connectionName='' to connectionId", () => {
+    const out = formatText({
+      eventType: "alert.explained",
+      payload: { alertName: "X", severity: "info", connectionName: "", connectionId: "cmp_z" },
+    });
+    expect(out).toContain("connection=cmp_z");
   });
 
   it("benchmark.completed keeps the original shape (name + status + connection)", () => {

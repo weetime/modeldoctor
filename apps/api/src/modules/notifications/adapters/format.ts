@@ -8,6 +8,15 @@ export interface DingtalkMarkdown {
   text: string;
 }
 
+/** Narrow check used throughout the formatters: a value is a usable string
+ * only if it's actually a string AND has at least one non-whitespace char.
+ * Catches `""`, `"   "`, and the more obvious `undefined` / non-string cases
+ * with one predicate so the formatter doesn't render fields like
+ * `[ModelDoctor] test: ` with a trailing blank. */
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
 /**
  * One-line summary used as the message body by simple-text adapters
  * (Slack / Feishu / DingTalk). Starts with `[ModelDoctor]` so users can
@@ -28,21 +37,23 @@ export function formatText(body: DeliveryPayload): string {
   const ev = body.eventType;
 
   if (ev === "test") {
-    const message = typeof p.message === "string" ? p.message : "(no message)";
+    const message = isNonEmptyString(p.message) ? p.message : "(no message)";
     return `[ModelDoctor] test: ${message}`;
   }
 
   if (ev === "alert.explained") {
-    const alertName = typeof p.alertName === "string" ? p.alertName : "(unknown alert)";
-    const severity = typeof p.severity === "string" ? p.severity : "unknown";
+    const alertName = isNonEmptyString(p.alertName) ? p.alertName : "(unknown alert)";
+    const severity = isNonEmptyString(p.severity) ? p.severity : "unknown";
     // Prefer the human connection name; cuid fallback so we never drop
-    // the identifier entirely.
-    const conn =
-      typeof p.connectionName === "string" && p.connectionName.length > 0
-        ? p.connectionName
-        : typeof p.connectionId === "string"
-          ? p.connectionId
-          : null;
+    // the identifier entirely. Multi-tenant scoping (don't expose another
+    // user's alert) is enforced upstream in AlertsService.listForUser /
+    // AlertExplainerService.emitNotification, not here — the formatter
+    // receives an already-authorised payload.
+    const conn = isNonEmptyString(p.connectionName)
+      ? p.connectionName
+      : isNonEmptyString(p.connectionId)
+        ? p.connectionId
+        : null;
     const tail = conn ? ` connection=${conn}` : "";
     return `[ModelDoctor] alert ${alertName} severity=${severity}${tail}`;
   }
@@ -50,10 +61,13 @@ export function formatText(body: DeliveryPayload): string {
   // Benchmark-style fallback (unchanged from the original shape): name (or
   // runId), optional status, optional connection id. Same for
   // benchmark.completed / benchmark.failed / diagnostics.failed.
-  const name =
-    typeof p.name === "string" ? p.name : ((p.runId as string | undefined) ?? "(unknown)");
-  const status = typeof p.status === "string" ? ` status=${p.status}` : "";
-  const connId = typeof p.connectionId === "string" ? ` connection=${p.connectionId}` : "";
+  const name = isNonEmptyString(p.name)
+    ? p.name
+    : isNonEmptyString(p.runId)
+      ? p.runId
+      : "(unknown)";
+  const status = isNonEmptyString(p.status) ? ` status=${p.status}` : "";
+  const connId = isNonEmptyString(p.connectionId) ? ` connection=${p.connectionId}` : "";
   return `[ModelDoctor] ${ev} ${name}${status}${connId}`;
 }
 
@@ -77,17 +91,16 @@ export function formatDingtalkAlertMarkdown(
   opts: { appBaseUrl?: string } = {},
 ): DingtalkMarkdown {
   const p = body.payload as Record<string, unknown>;
-  const alertName = typeof p.alertName === "string" ? p.alertName : "(unknown alert)";
-  const severity = typeof p.severity === "string" ? p.severity : "unknown";
-  const connectionName =
-    typeof p.connectionName === "string" && p.connectionName.length > 0
-      ? p.connectionName
-      : typeof p.connectionId === "string"
-        ? p.connectionId
-        : null;
-  const narrative = typeof p.narrative === "string" ? p.narrative.trim() : "";
-  const scenario = typeof p.scenario === "string" ? p.scenario : null;
-  const alertEventId = typeof p.alertEventId === "string" ? p.alertEventId : null;
+  const alertName = isNonEmptyString(p.alertName) ? p.alertName : "(unknown alert)";
+  const severity = isNonEmptyString(p.severity) ? p.severity : "unknown";
+  const connectionName = isNonEmptyString(p.connectionName)
+    ? p.connectionName
+    : isNonEmptyString(p.connectionId)
+      ? p.connectionId
+      : null;
+  const narrative = isNonEmptyString(p.narrative) ? p.narrative.trim() : "";
+  const scenario = isNonEmptyString(p.scenario) ? p.scenario : null;
+  const alertEventId = isNonEmptyString(p.alertEventId) ? p.alertEventId : null;
 
   const recs = Array.isArray(p.recommendations) ? (p.recommendations as unknown[]) : [];
 
@@ -113,7 +126,7 @@ export function formatDingtalkAlertMarkdown(
   if (recs.length > 0) {
     lines.push("**建议处置**");
     for (const r of recs) {
-      if (typeof r === "string") lines.push(`- ${r}`);
+      if (isNonEmptyString(r)) lines.push(`- ${r}`);
     }
     lines.push("");
   }
