@@ -1,8 +1,11 @@
 import type { ConnectionPublic } from "@modeldoctor/contracts";
-import { ForbiddenException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
-import type { Connection as PrismaConnection } from "@prisma/client";
+import type {
+  Connection as PrismaConnection,
+  PrometheusDatasource as PrismaPrometheusDatasource,
+} from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionService } from "./connection.service.js";
@@ -18,11 +21,16 @@ function makePrismaMock() {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    prometheusDatasource: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+    },
   };
 }
 
 type RowWithProfile = PrismaConnection & {
   evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+  prometheusDatasource: PrismaPrometheusDatasource | null;
 };
 
 function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
@@ -38,11 +46,28 @@ function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
     queryParams: "",
     category: "chat",
     tags: [],
-    prometheusUrl: null,
+    prometheusDatasourceId: null,
+    prometheusDatasource: null,
     serverKind: null,
     tokenizerHfId: null,
     evaluationProfileId: null,
     evaluationProfile: null,
+    createdAt: new Date("2026-05-01T00:00:00Z"),
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
+function makeDatasource(
+  overrides: Partial<PrismaPrometheusDatasource> = {},
+): PrismaPrometheusDatasource {
+  return {
+    id: "ds_1",
+    name: "default",
+    baseUrl: "https://prom.example.com",
+    bearerCipher: "",
+    customHeaders: "",
+    isDefault: true,
     createdAt: new Date("2026-05-01T00:00:00Z"),
     updatedAt: new Date("2026-05-01T00:00:00Z"),
     ...overrides,
@@ -69,6 +94,10 @@ describe("ConnectionService", () => {
 
   beforeEach(async () => {
     prismaMock = makePrismaMock();
+    // Default: no datasources exist. Individual tests that exercise the
+    // three-state binding override these mocks.
+    prismaMock.prometheusDatasource.findFirst.mockResolvedValue(null);
+    prismaMock.prometheusDatasource.findUnique.mockResolvedValue(null);
     service = await makeService(prismaMock);
   });
 
@@ -99,14 +128,14 @@ describe("ConnectionService", () => {
       expect(out.apiKeyPreview).toBe("sk-...2345");
     });
 
-    it("persists prometheusUrl + serverKind when provided", async () => {
+    it("persists serverKind when provided", async () => {
       let storedData: Record<string, unknown> = {};
+      prismaMock.prometheusDatasource.findFirst.mockResolvedValue(null);
       prismaMock.connection.create.mockImplementation(
         async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
           storedData = args.data;
           return makeRow({
             apiKeyCipher: args.data.apiKeyCipher as string,
-            prometheusUrl: "http://prom:9090",
             serverKind: "vllm",
           });
         },
@@ -121,16 +150,14 @@ describe("ConnectionService", () => {
         queryParams: "",
         category: "chat",
         tags: [],
-        prometheusUrl: "http://prom:9090",
         serverKind: "vllm",
       });
-      expect(storedData.prometheusUrl).toBe("http://prom:9090");
       expect(storedData.serverKind).toBe("vllm");
-      expect(out.prometheusUrl).toBe("http://prom:9090");
       expect(out.serverKind).toBe("vllm");
     });
 
-    it("defaults prometheusUrl + serverKind to null when omitted", async () => {
+    it("defaults serverKind to null when omitted", async () => {
+      prismaMock.prometheusDatasource.findFirst.mockResolvedValue(null);
       prismaMock.connection.create.mockImplementation(
         async (args: { data: Record<string, unknown> & { apiKeyCipher: string } }) => {
           return makeRow({ apiKeyCipher: args.data.apiKeyCipher as string });
@@ -147,8 +174,165 @@ describe("ConnectionService", () => {
         category: "chat",
         tags: [],
       });
-      expect(out.prometheusUrl).toBeNull();
       expect(out.serverKind).toBeNull();
+    });
+  });
+
+  describe("create — prometheusDatasourceId three-state", () => {
+    const ds = makeDatasource({ id: "ds_default", isDefault: true });
+
+    beforeEach(() => {
+      prismaMock.prometheusDatasource.findFirst.mockResolvedValue(ds);
+      prismaMock.prometheusDatasource.findUnique.mockImplementation(
+        async (args: { where: { id: string } }) =>
+          args.where.id === ds.id ? { id: ds.id } : null,
+      );
+      prismaMock.connection.create.mockImplementation(
+        async (args: {
+          data: Record<string, unknown> & { apiKeyCipher: string; prometheusDatasourceId: unknown };
+        }) =>
+          makeRow({
+            apiKeyCipher: args.data.apiKeyCipher,
+            kind: args.data.kind as string,
+            prometheusDatasourceId:
+              (args.data.prometheusDatasourceId as string | null | undefined) ?? null,
+            prometheusDatasource: args.data.prometheusDatasourceId === ds.id ? ds : null,
+          }),
+      );
+    });
+
+    it("undefined + kind=model fills with current default", async () => {
+      const r = await service.create("u_a", {
+        kind: "model",
+        name: "m",
+        baseUrl: "https://m.com",
+        apiKey: "sk-abc",
+        model: "gpt-4",
+        category: "chat",
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasourceId).toBe(ds.id);
+      expect(r.prometheusDatasource?.name).toBe(ds.name);
+    });
+
+    it("undefined + no default exists stores null", async () => {
+      prismaMock.prometheusDatasource.findFirst.mockResolvedValue(null);
+      const r = await service.create("u_a", {
+        kind: "gateway",
+        name: "g",
+        baseUrl: "https://g.com",
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasourceId).toBeNull();
+    });
+
+    it("undefined + kind=alertmanager stores null even when default exists", async () => {
+      const r = await service.create("u_a", {
+        kind: "alertmanager",
+        name: "am",
+        baseUrl: "https://am.com",
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasourceId).toBeNull();
+    });
+
+    it("null explicit unbind stores null", async () => {
+      const r = await service.create("u_a", {
+        kind: "gateway",
+        name: "g",
+        baseUrl: "https://g.com",
+        prometheusDatasourceId: null,
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasourceId).toBeNull();
+    });
+
+    it("explicit id is validated and stored", async () => {
+      const r = await service.create("u_a", {
+        kind: "gateway",
+        name: "g",
+        baseUrl: "https://g.com",
+        prometheusDatasourceId: ds.id,
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasourceId).toBe(ds.id);
+    });
+
+    it("explicit non-existent id throws BadRequest with code PROMETHEUS_DATASOURCE_NOT_FOUND", async () => {
+      const promise = service.create("u_a", {
+        kind: "gateway",
+        name: "g",
+        baseUrl: "https://g.com",
+        prometheusDatasourceId: "nope",
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      await expect(promise).rejects.toBeInstanceOf(BadRequestException);
+      await expect(promise).rejects.toMatchObject({
+        response: { code: "PROMETHEUS_DATASOURCE_NOT_FOUND" },
+      });
+    });
+
+    it("explicit id + kind=alertmanager rejected with code PROMETHEUS_DATASOURCE_INVALID_KIND", async () => {
+      await expect(
+        service.create("u_a", {
+          kind: "alertmanager",
+          name: "am",
+          baseUrl: "https://am.com",
+          prometheusDatasourceId: ds.id,
+          customHeaders: "",
+          queryParams: "",
+          tags: [],
+        }),
+      ).rejects.toMatchObject({
+        response: { code: "PROMETHEUS_DATASOURCE_INVALID_KIND" },
+      });
+    });
+
+  });
+
+  describe("toContractPublic — drops prometheusUrl + includes prometheusDatasource summary", () => {
+    it("returns prometheusDatasource summary when bound", async () => {
+      const ds = makeDatasource({ id: "ds_bound", isDefault: true });
+      prismaMock.prometheusDatasource.findFirst.mockResolvedValue(ds);
+      prismaMock.prometheusDatasource.findUnique.mockResolvedValue({ id: ds.id });
+      prismaMock.connection.create.mockImplementation(
+        async (args: { data: { apiKeyCipher: string; prometheusDatasourceId: string | null } }) =>
+          makeRow({
+            apiKeyCipher: args.data.apiKeyCipher,
+            prometheusDatasourceId: args.data.prometheusDatasourceId,
+            prometheusDatasource: ds,
+          }),
+      );
+      const r = await service.create("u_a", {
+        kind: "model",
+        name: "m",
+        baseUrl: "https://m.com",
+        apiKey: "sk-abc",
+        model: "gpt-4",
+        category: "chat",
+        prometheusDatasourceId: ds.id,
+        customHeaders: "",
+        queryParams: "",
+        tags: [],
+      });
+      expect(r.prometheusDatasource).toEqual({
+        id: ds.id,
+        name: ds.name,
+        baseUrl: ds.baseUrl,
+      });
+      expect("prometheusUrl" in r).toBe(false);
     });
   });
 
@@ -211,12 +395,11 @@ describe("ConnectionService", () => {
       expect(out.name).toBe("renamed");
     });
 
-    it("clears prometheusUrl + serverKind when caller passes null", async () => {
+    it("clears serverKind when caller passes null", async () => {
       const cipher = await encryptForTest("sk-keep-1234");
       prismaMock.connection.findUnique.mockResolvedValue(
         makeRow({
           apiKeyCipher: cipher,
-          prometheusUrl: "http://old:9090",
           serverKind: "vllm",
         }),
       );
@@ -226,19 +409,14 @@ describe("ConnectionService", () => {
           updateData = args.data;
           return makeRow({
             apiKeyCipher: cipher,
-            prometheusUrl: null,
             serverKind: null,
           });
         },
       );
       const out = await service.update("u_1", "c_1", {
-        prometheusUrl: null,
         serverKind: null,
       });
-      expect(updateData.prometheusUrl).toBeNull();
       expect(updateData.serverKind).toBeNull();
-      // The DTO returned should reflect the cleared values.
-      expect(out.prometheusUrl).toBeNull();
       expect(out.serverKind).toBeNull();
     });
 

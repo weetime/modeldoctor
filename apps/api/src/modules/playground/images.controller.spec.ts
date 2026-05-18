@@ -39,6 +39,7 @@ function makeConn(): DecryptedConnection {
     category: "image",
     tokenizerHfId: null,
     prometheusUrl: null,
+    prometheusDatasourceId: null,
     serverKind: null,
   };
 }

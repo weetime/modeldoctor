@@ -65,22 +65,6 @@ describe("Connection.kind e2e", () => {
     expect(res.body.category).toBe("chat");
   });
 
-  it("create kind=prometheus skips apiKey/model/category", async () => {
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        kind: "prometheus",
-        name: "prom-1",
-        baseUrl: "http://prom.test:9090",
-      })
-      .expect(201);
-    expect(res.body.kind).toBe("prometheus");
-    expect(res.body.apiKeyPreview).toBe("");
-    expect(res.body.model).toBe("");
-    expect(res.body.category).toBeNull();
-  });
-
   it("create kind=alertmanager works without apiKey/model/category", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
@@ -133,28 +117,6 @@ describe("Connection.kind e2e", () => {
     expect(res.body.reason).toMatch(/non-model/);
   });
 
-  it("verify-kind reports Prometheus version from buildinfo", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          status: "success",
-          data: { version: "2.51.0", revision: "abc123" },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections/verify-kind")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "prometheus", baseUrl: "http://prom.test:9090" })
-      .expect(201);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.version).toBe("2.51.0");
-    expect(res.body.details).toMatchObject({ revision: "abc123" });
-  });
-
   it("verify-kind reports Alertmanager version from /api/v2/status", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -177,9 +139,9 @@ describe("Connection.kind e2e", () => {
     expect(res.body.details).toMatchObject({ clusterPeers: 1 });
   });
 
-  it("verify-kind returns ok=false when target shape is wrong", async () => {
+  it("verify-kind returns ok=false when target shape is wrong (alertmanager)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ not: "prometheus shape" }), {
+      new Response(JSON.stringify({ not: "alertmanager shape" }), {
         status: 200,
         headers: { "content-type": "application/json" },
       }),
@@ -189,10 +151,10 @@ describe("Connection.kind e2e", () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections/verify-kind")
       .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "prometheus", baseUrl: "http://prom.test:9090" })
+      .send({ kind: "alertmanager", baseUrl: "http://am.test:9093" })
       .expect(201);
     expect(res.body.ok).toBe(false);
-    expect(res.body.reason).toMatch(/Prometheus shape/);
+    expect(res.body.reason).toMatch(/Alertmanager shape/);
   });
 
   it("PATCH on kind=model rejects clearing model/category/apiKey even when kind is omitted", async () => {
@@ -244,5 +206,98 @@ describe("Connection.kind e2e", () => {
       .expect(201);
     expect(res.body.ok).toBe(true);
     expect(res.body.details).toMatchObject({ modelCount: 3 });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Connection × PrometheusDatasource three-state binding (Task 4)
+  //
+  // `token` belongs to the first registered user → admin (auth.service:
+  // `total === 0 → roles=["admin"]`), so we reuse it for both datasource
+  // CRUD (admin-gated) and connection CRUD (user-allowed).
+  // ---------------------------------------------------------------------------
+  describe("connection × prometheusDatasourceId", () => {
+    let datasourceId: string;
+
+    beforeAll(async () => {
+      // Make sure no prior test left a default datasource sitting around;
+      // these cases assert auto-fill behavior precisely.
+      await prisma.prometheusDatasource.deleteMany();
+      const r = await request(ctx.app.getHttpServer())
+        .post("/api/prometheus-datasources")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "default", baseUrl: "https://prom.example.com", isDefault: true })
+        .expect(201);
+      datasourceId = r.body.id;
+    });
+
+    it("POST /connections (kind=model, no prometheusDatasourceId) auto-fills default", async () => {
+      const r = await request(ctx.app.getHttpServer())
+        .post("/api/connections")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          kind: "model",
+          name: "auto-fill",
+          baseUrl: "https://m.example.com",
+          apiKey: "sk-abc",
+          model: "gpt-4",
+          category: "chat",
+        })
+        .expect(201);
+      expect(r.body.prometheusDatasourceId).toBe(datasourceId);
+      expect(r.body.prometheusDatasource).toMatchObject({
+        id: datasourceId,
+        name: "default",
+      });
+    });
+
+    it("POST /connections (kind=alertmanager, with id) → 400 PROMETHEUS_DATASOURCE_INVALID_KIND", async () => {
+      const r = await request(ctx.app.getHttpServer())
+        .post("/api/connections")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          kind: "alertmanager",
+          name: "am-with-ds",
+          baseUrl: "https://am2.example.com",
+          prometheusDatasourceId: datasourceId,
+        })
+        .expect(400);
+      // contracts.refine fires first (path: prometheusDatasourceId), so the
+      // request never reaches the service-layer check. Both code paths land
+      // at HTTP 400; we just assert the error envelope shape rather than the
+      // specific code, since validation-failure responses carry
+      // VALIDATION_FAILED from the zod pipe.
+      expect(r.body.error.code).toMatch(
+        /^(VALIDATION_FAILED|PROMETHEUS_DATASOURCE_INVALID_KIND)$/,
+      );
+    });
+
+    it("POST /connections with explicit null preserves null even when a default exists", async () => {
+      const r = await request(ctx.app.getHttpServer())
+        .post("/api/connections")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          kind: "gateway",
+          name: "g-no-source",
+          baseUrl: "https://g.example.com",
+          prometheusDatasourceId: null,
+        })
+        .expect(201);
+      expect(r.body.prometheusDatasourceId).toBeNull();
+      expect(r.body.prometheusDatasource).toBeNull();
+    });
+
+    it("POST /connections with explicit non-existent id → 400 PROMETHEUS_DATASOURCE_NOT_FOUND", async () => {
+      const r = await request(ctx.app.getHttpServer())
+        .post("/api/connections")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          kind: "gateway",
+          name: "g-bad-ds",
+          baseUrl: "https://g-bad.example.com",
+          prometheusDatasourceId: "ds_does_not_exist",
+        })
+        .expect(400);
+      expect(r.body.error.code).toBe("PROMETHEUS_DATASOURCE_NOT_FOUND");
+    });
   });
 });

@@ -18,6 +18,7 @@ function makeConn(over: Partial<DecryptedConnection> = {}): DecryptedConnection 
     category: "chat",
     tokenizerHfId: null,
     prometheusUrl: "http://prom:9090",
+    prometheusDatasourceId: "ds_1",
     serverKind: "vllm",
     ...over,
   };

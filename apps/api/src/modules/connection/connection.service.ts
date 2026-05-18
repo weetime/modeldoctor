@@ -9,6 +9,7 @@ import type {
   ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
+import { ErrorCodes } from "@modeldoctor/contracts";
 import {
   BadRequestException,
   ForbiddenException,
@@ -16,10 +17,35 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import type { Prisma, Connection as PrismaConnection } from "@prisma/client";
+import type {
+  Prisma,
+  Connection as PrismaConnection,
+  PrometheusDatasource as PrismaPrometheusDatasource,
+} from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+
+/**
+ * Joined connection row carrying the relations that toContractPublic /
+ * toContractWithSecret need. All findUnique / findMany queries that feed those
+ * mappers MUST use the matching `include:` so the join data is populated —
+ * use the `CONNECTION_INCLUDES` const below to keep them in lockstep.
+ */
+type ConnectionRow = PrismaConnection & {
+  evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
+  prometheusDatasource: PrismaPrometheusDatasource | null;
+};
+
+/**
+ * Canonical `include:` clause for every connection query that feeds a
+ * `toContractPublic` / `toContractWithSecret` call. Centralized so the local
+ * `ConnectionRow` payload type and the actual Prisma query stay in lockstep.
+ */
+const CONNECTION_INCLUDES = {
+  evaluationProfile: true,
+  prometheusDatasource: true,
+} as const satisfies Prisma.ConnectionInclude;
 
 export interface DecryptedConnection {
   id: string;
@@ -34,7 +60,16 @@ export interface DecryptedConnection {
   // `kind === "model"` first.
   category: ModalityCategory | null;
   tokenizerHfId: string | null;
-  prometheusUrl: string | null;
+  /**
+   * Derived: bound datasource's baseUrl, or null when no datasource is bound.
+   * The underlying `prometheusUrl` column was dropped in Task 4 of #189;
+   * this field is preserved on DecryptedConnection so tool-adapters consumers
+   * (engine-metrics, benchmark, prefix-cache-probe) don't need migrating this
+   * turn — to be removed in a follow-up that migrates them to read
+   * `prometheusDatasource.baseUrl` directly.
+   */
+  readonly prometheusUrl: string | null;
+  prometheusDatasourceId: string | null;
   serverKind: ServerKind | null;
 }
 
@@ -58,6 +93,10 @@ export class ConnectionService {
     // so the column stays NOT NULL and decrypt() returns "".
     const plaintextKey = input.apiKey ?? "";
     const apiKeyCipher = plaintextKey ? encrypt(plaintextKey, this.key) : "";
+    const prometheusDatasourceId = await this.resolvePrometheusDatasourceId(
+      input.kind,
+      input.prometheusDatasourceId,
+    );
     const row = await this.prisma.connection.create({
       data: {
         userId,
@@ -70,14 +109,14 @@ export class ConnectionService {
         queryParams: input.queryParams,
         category: input.category ?? null,
         tags: input.tags,
-        prometheusUrl: input.prometheusUrl ?? null,
+        prometheusDatasourceId,
         serverKind: input.serverKind ?? null,
         tokenizerHfId: input.tokenizerHfId ?? null,
         ...(input.evaluationProfileId !== undefined
           ? { evaluationProfileId: input.evaluationProfileId ?? null }
           : {}),
       },
-      include: { evaluationProfile: true },
+      include: CONNECTION_INCLUDES,
     });
     return this.toContractWithSecret(row, plaintextKey);
   }
@@ -86,7 +125,7 @@ export class ConnectionService {
     const rows = await this.prisma.connection.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
-      include: { evaluationProfile: true },
+      include: CONNECTION_INCLUDES,
     });
     return {
       items: rows.map((r) => this.toContractPublic(r)),
@@ -130,7 +169,15 @@ export class ConnectionService {
     if (input.queryParams !== undefined) data.queryParams = input.queryParams;
     if (input.category !== undefined) data.category = input.category;
     if (input.tags !== undefined) data.tags = input.tags;
-    if (input.prometheusUrl !== undefined) data.prometheusUrl = input.prometheusUrl;
+    if (input.prometheusDatasourceId !== undefined) {
+      // PATCH semantics: only resolve when the client explicitly sent the
+      // field (null or string). Skip when undefined — leave existing binding
+      // untouched.
+      data.prometheusDatasourceId = await this.resolvePrometheusDatasourceId(
+        effectiveKind,
+        input.prometheusDatasourceId,
+      );
+    }
     if (input.serverKind !== undefined) data.serverKind = input.serverKind;
     if (input.tokenizerHfId !== undefined) data.tokenizerHfId = input.tokenizerHfId;
     if (input.evaluationProfileId !== undefined)
@@ -142,7 +189,7 @@ export class ConnectionService {
     const row = await this.prisma.connection.update({
       where: { id },
       data,
-      include: { evaluationProfile: true },
+      include: CONNECTION_INCLUDES,
     });
 
     if (input.apiKey !== undefined) {
@@ -184,33 +231,75 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory | null,
       tokenizerHfId: row.tokenizerHfId,
-      prometheusUrl: row.prometheusUrl,
+      // Derived: bound datasource's baseUrl, or null when no datasource is bound.
+      // Downstream consumers (engine-metrics, benchmark adapters) continue to
+      // read this field unchanged after the v1 `prometheusUrl` column drop.
+      prometheusUrl: row.prometheusDatasource?.baseUrl ?? null,
+      prometheusDatasourceId: row.prometheusDatasourceId,
       serverKind: row.serverKind as ServerKind | null,
     };
   }
 
-  private async findOwnedRow(
-    userId: string,
-    id: string,
-  ): Promise<
-    PrismaConnection & {
-      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
-    }
-  > {
+  private async findOwnedRow(userId: string, id: string): Promise<ConnectionRow> {
     const row = await this.prisma.connection.findUnique({
       where: { id },
-      include: { evaluationProfile: true },
+      include: CONNECTION_INCLUDES,
     });
     if (!row) throw new NotFoundException(`Connection ${id} not found`);
     if (row.userId !== userId) throw new ForbiddenException();
     return row;
   }
 
-  private toContractPublic(
-    row: PrismaConnection & {
-      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
-    },
-  ): ConnectionPublic {
+  /**
+   * Resolves the prometheusDatasourceId to persist for a connection write,
+   * implementing the three-state contract:
+   *
+   * - `undefined`  → for kind ∈ {model, gateway}: fill with the current default
+   *                  datasource (null if no default exists). For kind=alertmanager,
+   *                  always null.
+   * - `null`       → explicit unbind; persisted as null.
+   * - `string`     → validated against the datasource table; throws
+   *                  BadRequestException(`PROMETHEUS_DATASOURCE_NOT_FOUND`) when
+   *                  unknown. For kind=alertmanager, throws
+   *                  BadRequestException(`PROMETHEUS_DATASOURCE_INVALID_KIND`)
+   *                  (defense-in-depth — contracts.refine catches this earlier).
+   */
+  private async resolvePrometheusDatasourceId(
+    kind: ConnectionKind,
+    fromClient: string | null | undefined,
+  ): Promise<string | null> {
+    if (kind === "alertmanager") {
+      if (fromClient !== null && fromClient !== undefined) {
+        throw new BadRequestException({
+          message: "prometheusDatasourceId must be null for kind=alertmanager",
+          code: ErrorCodes.PROMETHEUS_DATASOURCE_INVALID_KIND,
+        });
+      }
+      return null;
+    }
+    if (fromClient === null) return null;
+    if (typeof fromClient === "string") {
+      const exists = await this.prisma.prometheusDatasource.findUnique({
+        where: { id: fromClient },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new BadRequestException({
+          message: `PrometheusDatasource ${fromClient} not found`,
+          code: ErrorCodes.PROMETHEUS_DATASOURCE_NOT_FOUND,
+        });
+      }
+      return fromClient;
+    }
+    // Undefined → auto-fill with current default datasource (if any).
+    const def = await this.prisma.prometheusDatasource.findFirst({
+      where: { isDefault: true },
+      select: { id: true },
+    });
+    return def?.id ?? null;
+  }
+
+  private toContractPublic(row: ConnectionRow): ConnectionPublic {
     // Non-model kinds may have an empty cipher; decrypt() requires non-empty input.
     const apiKeyPreview = row.apiKeyCipher
       ? this.makePreview(decrypt(row.apiKeyCipher, this.key))
@@ -227,7 +316,14 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory | null,
       tags: row.tags,
-      prometheusUrl: row.prometheusUrl,
+      prometheusDatasourceId: row.prometheusDatasourceId,
+      prometheusDatasource: row.prometheusDatasource
+        ? {
+            id: row.prometheusDatasource.id,
+            name: row.prometheusDatasource.name,
+            baseUrl: row.prometheusDatasource.baseUrl,
+          }
+        : null,
       serverKind: row.serverKind as ConnectionPublic["serverKind"],
       tokenizerHfId: row.tokenizerHfId,
       createdAt: row.createdAt.toISOString(),
@@ -244,12 +340,7 @@ export class ConnectionService {
     };
   }
 
-  private toContractWithSecret(
-    row: PrismaConnection & {
-      evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
-    },
-    plaintext: string,
-  ): ConnectionWithSecret {
+  private toContractWithSecret(row: ConnectionRow, plaintext: string): ConnectionWithSecret {
     return {
       ...this.toContractPublic(row),
       apiKey: plaintext,
