@@ -144,7 +144,7 @@ function UserPanel({ railCollapsed }: { railCollapsed: boolean }) {
   const label = user.displayName?.trim() || user.email;
 
   const avatar = (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-pink-500 text-xs font-bold text-white">
       {user.avatarUrl ? (
         <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
       ) : (
@@ -159,14 +159,17 @@ function UserPanel({ railCollapsed }: { railCollapsed: boolean }) {
         type="button"
         className={cn(
           "flex w-full items-center rounded-md text-sm",
-          "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          "text-foreground hover:bg-accent/50",
           railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-3 py-1.5",
         )}
         aria-label={label}
       >
         {avatar}
         {railCollapsed ? null : (
-          <span className="min-w-0 flex-1 truncate text-left text-xs">{label}</span>
+          <>
+            <span className="min-w-0 flex-1 truncate text-left font-medium">{label}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
+          </>
         )}
       </button>
     </DropdownMenuTrigger>
