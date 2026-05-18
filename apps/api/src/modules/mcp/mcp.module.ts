@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../../database/database.module.js";
+import { AlertsModule } from "../alerts/alerts.module.js";
 import { BenchmarkModule } from "../benchmark/benchmark.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
 import { DiagnosticsModule } from "../diagnostics/diagnostics.module.js";
@@ -15,6 +16,7 @@ import { McpService } from "./mcp.service.js";
     BenchmarkModule,
     DiagnosticsModule,
     NotificationsModule,
+    AlertsModule,
   ],
   controllers: [McpController],
   providers: [McpService, McpAuthGuard],

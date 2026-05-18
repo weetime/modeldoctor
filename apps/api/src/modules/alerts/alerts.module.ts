@@ -12,6 +12,6 @@ import { SubscribersService } from "./subscribers.service.js";
   imports: [DatabaseModule, ConfigModule, LlmJudgeModule],
   controllers: [AlertsController, SubscribersController],
   providers: [AlertsService, AlertExplainerService, SubscribersService],
-  exports: [AlertsService],
+  exports: [AlertsService, SubscribersService],
 })
 export class AlertsModule {}
