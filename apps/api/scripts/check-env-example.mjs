@@ -26,23 +26,22 @@ const REL = (p) => relative(API_ROOT, p).replaceAll("\\", "/");
 const schemaSrc = readFileSync(SCHEMA_PATH, "utf8");
 const exampleSrc = readFileSync(EXAMPLE_PATH, "utf8");
 
-// Schema keys: top-level zod fields. Looks for `<indent>NAME: <ident>`
-// where NAME is SCREAMING_SNAKE_CASE and <ident> is a lowercase token
-// (the start of `z.string()...`, `envBoolean.default(...)`, etc.).
-// Requiring a lowercase RHS skips false positives like
-// `path: ["DATABASE_URL"]` inside superRefine (path is lowercase but
-// the RHS is `[`). Multi-line zod chains (e.g. `KEY: z\n  .string()`)
-// match because we don't anchor to `z.` — any lowercase identifier
-// after the colon counts.
-const schemaKeyPat = /^\s+([A-Z][A-Z0-9_]*):\s*[a-z]/gm;
+// Schema keys: top-level zod fields. Matches `<indent>NAME:` where
+// NAME is SCREAMING_SNAKE_CASE. The uppercase-only capture already
+// excludes lowercase tokens inside superRefine (`path: [...]`,
+// `message: ...`), so we don't need to anchor on the RHS shape —
+// keeping it open lets `KEY: SomeHelper(...)` or multi-line chains
+// with comments between `:` and `z.` still match.
+const schemaKeyPat = /^\s+([A-Z][A-Z0-9_]*):/gm;
 const schemaKeys = new Set();
 for (const m of schemaSrc.matchAll(schemaKeyPat)) {
   schemaKeys.add(m[1]);
 }
 
 // Example keys: lines like `KEY=...` or `# KEY=...` (commented-out
-// docs). Strip leading `#` + whitespace before matching.
-const exampleKeyPat = /^[#\s]*([A-Z][A-Z0-9_]*)=/gm;
+// docs). Strip leading `#` + whitespace before matching, and allow
+// optional whitespace around `=` since dotenv accepts `KEY = value`.
+const exampleKeyPat = /^[#\s]*([A-Z][A-Z0-9_]*)\s*=/gm;
 const exampleKeys = new Set();
 for (const m of exampleSrc.matchAll(exampleKeyPat)) {
   exampleKeys.add(m[1]);
