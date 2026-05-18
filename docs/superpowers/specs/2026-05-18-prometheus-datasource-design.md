@@ -110,11 +110,12 @@ export const connectionKindSchema = z.enum(["model", "gateway", "alertmanager"])
 ### Migration 步骤(一个 `prisma migrate dev --create-only`)
 
 1. `CREATE TABLE prometheus_datasources` + partial unique index
-2. **迁数据**:对每个 `Connection WHERE kind='prometheus'`:
-   - INSERT 一行进 `prometheus_datasources`(id 沿用,name/baseUrl/customHeaders 直接搬;bearerCipher 空)
-   - 最早一行(按 createdAt 排序)标 `is_default = true`
+2. **迁数据**(从 `Connection WHERE kind='prometheus'` 搬进新表):
+   - 按 `base_url` 去重(同一 URL 多用户都登记过的情况);保留每个 base_url 最早一行的 id / name / customHeaders;bearerCipher 一律空
+   - INSERT 进 `prometheus_datasources`(id 沿用,便于潜在引用迁移)
+   - 全局最早一行(按 createdAt asc)标 `is_default = true`(全局唯一 default)
 3. `ALTER TABLE connections ADD COLUMN prometheus_datasource_id text NULL`
-4. **Backfill consumer 端**:对每个 user,凡 `connection.prometheus_url IS NOT NULL` 且能在新表找到 `base_url = NEW.prometheus_url` 的行,填进 `prometheus_datasource_id`
+4. **Backfill consumer 端**:对每个 `connection`(任意 user),凡 `prometheus_url IS NOT NULL` 且能在新表找到 `base_url = connection.prometheus_url` 的行,填进 `prometheus_datasource_id`
 5. `DELETE FROM connections WHERE kind='prometheus'`
 6. `ALTER TABLE connections DROP COLUMN prometheus_url`
 7. `CREATE INDEX idx_conn_prom_ds ON connections(prometheus_datasource_id)`
