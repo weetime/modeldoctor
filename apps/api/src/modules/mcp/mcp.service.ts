@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
+import { AlertsService } from "../alerts/alerts.service.js";
+import { SubscribersService } from "../alerts/subscribers.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { DiscoveryService } from "../connection/discovery/discovery.service.js";
@@ -13,10 +15,13 @@ import { DispatcherService } from "../notifications/dispatcher.service.js";
 import { SubscriptionsService } from "../notifications/subscriptions.service.js";
 import { registerCreateChannel } from "./tools/create-channel.tool.js";
 import { registerDiscoverConnection } from "./tools/discover-connection.tool.js";
+import { registerGetAlertExplanation } from "./tools/get-alert-explanation.tool.js";
+import { registerListAlerts } from "./tools/list-alerts.tool.js";
 import { registerListBenchmarks } from "./tools/list-benchmarks.tool.js";
 import { registerListChannels } from "./tools/list-channels.tool.js";
 import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
+import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
 import { registerTestChannel } from "./tools/test-channel.tool.js";
 import { registerUnsubscribe } from "./tools/unsubscribe.tool.js";
@@ -52,6 +57,8 @@ export class McpService {
     private readonly channels: ChannelsService,
     private readonly subscriptions: SubscriptionsService,
     private readonly dispatcher: DispatcherService,
+    private readonly alerts: AlertsService,
+    private readonly subscribers: SubscribersService,
   ) {}
 
   async handleRequest(
@@ -73,6 +80,8 @@ export class McpService {
       diagnostics: this.diagnostics,
       channels: this.channels,
       subscriptions: this.subscriptions,
+      alerts: this.alerts,
+      subscribers: this.subscribers,
       notificationsTest: async (channelId: string) => {
         try {
           await this.dispatcher.testChannel(
@@ -95,6 +104,9 @@ export class McpService {
     registerSubscribe(server, deps);
     registerUnsubscribe(server, deps);
     registerTestChannel(server, deps);
+    registerListAlerts(server, deps);
+    registerGetAlertExplanation(server, deps);
+    registerSubscribeConnection(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -123,5 +135,7 @@ export interface McpToolDeps {
   diagnostics: DiagnosticsService;
   channels: ChannelsService;
   subscriptions: SubscriptionsService;
+  alerts: AlertsService;
+  subscribers: SubscribersService;
   notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }
