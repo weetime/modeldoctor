@@ -160,14 +160,14 @@ function UserPanel({ railCollapsed }: { railCollapsed: boolean }) {
         className={cn(
           "flex w-full items-center rounded-md text-sm",
           "text-foreground hover:bg-accent/50",
-          railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-2 py-1.5",
+          railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-3 py-1.5",
         )}
         aria-label={label}
       >
         {avatar}
         {railCollapsed ? null : (
           <>
-            <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">{label}</span>
+            <span className="min-w-0 flex-1 truncate text-left font-medium">{label}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
           </>
         )}
