@@ -13,6 +13,7 @@ vi.mock("@/lib/playground-stream", () => ({
 const CONN_A: ConnectionPublic = {
   id: "ca",
   userId: "u1",
+  kind: "model",
   name: "A",
   baseUrl: "http://a",
   apiKeyPreview: "sk-...1234",
@@ -33,6 +34,7 @@ const CONN_B: ConnectionPublic = { ...CONN_A, id: "cb", name: "B", baseUrl: "htt
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({ data: [CONN_A, CONN_B], isLoading: false, error: null }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useConnection: (id: string | null | undefined) => ({
     data: id === "ca" ? CONN_A : id === "cb" ? CONN_B : null,
     isLoading: false,

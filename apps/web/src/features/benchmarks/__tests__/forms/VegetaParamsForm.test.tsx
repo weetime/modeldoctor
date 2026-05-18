@@ -24,6 +24,7 @@ const wrapperSchema = z.object({
 const baseConnection: ConnectionPublic = {
   id: "c_emb",
   userId: "u_1",
+  kind: "model",
   name: "bge-by-mis-tei",
   baseUrl: "http://example/v1",
   apiKeyPreview: "sk-...bc8d",

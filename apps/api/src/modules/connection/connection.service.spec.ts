@@ -29,6 +29,7 @@ function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
   return {
     id: "c_1",
     userId: "u_1",
+    kind: "model",
     name: "vllm-prod",
     baseUrl: "http://10.x.x.x:30888",
     apiKeyCipher: "v1:placeholder",
@@ -82,6 +83,7 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
+        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: PLAINTEXT,
@@ -110,6 +112,7 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
+        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: "sk-abc",
@@ -134,6 +137,7 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
+        kind: "model",
         name: "x",
         baseUrl: "http://x",
         apiKey: "k",
@@ -332,6 +336,7 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
+        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: "sk-abc",
@@ -355,6 +360,7 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
+        kind: "model",
         name: "x",
         baseUrl: "http://x",
         apiKey: "k",

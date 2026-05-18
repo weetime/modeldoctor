@@ -62,6 +62,7 @@ vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
     data: [{ id: "c1", name: "Local", model: "qwen2.5-7b", baseUrl: "http://x" }],
   }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {

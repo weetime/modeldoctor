@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({ data: [], isLoading: false, error: null }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useConnection: () => ({ data: null, isLoading: false, error: null }),
 }));
 

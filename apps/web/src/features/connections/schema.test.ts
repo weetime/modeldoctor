@@ -153,3 +153,55 @@ describe("connectionInputEditSchema apiKey refine (edit-mode)", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("connectionInputSchema kind=non-model", () => {
+  const base = {
+    name: "prom-1",
+    apiBaseUrl: "http://prom:9090",
+    customHeaders: "",
+    queryParams: "",
+    tokenizerHfId: "",
+    tags: [],
+  };
+
+  it("kind=prometheus accepts empty apiKey/model/category", () => {
+    const r = connectionInputSchema.safeParse({
+      ...base,
+      kind: "prometheus",
+      apiKey: "",
+      model: "",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("kind=alertmanager accepts empty apiKey/model/category", () => {
+    const r = connectionInputSchema.safeParse({
+      ...base,
+      kind: "alertmanager",
+      apiKey: "",
+      model: "",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("kind=gateway accepts empty apiKey/model/category", () => {
+    const r = connectionInputSchema.safeParse({
+      ...base,
+      kind: "gateway",
+      apiKey: "",
+      model: "",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("defaults kind to 'model' when omitted", () => {
+    const r = connectionInputSchema.safeParse({
+      ...base,
+      apiKey: "sk-x",
+      model: "m1",
+      category: "chat" as const,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.kind).toBe("model");
+  });
+});

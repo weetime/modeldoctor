@@ -20,6 +20,7 @@ const USER: JwtPayload = { sub: "u_1", email: "alice@example.com", roles: [] };
 
 const PUBLIC_FIXTURE: ConnectionPublic = {
   id: "c_1",
+  kind: "model",
   userId: "u_1",
   name: "vllm-prod",
   baseUrl: "http://10.0.0.1:8000",
@@ -105,6 +106,7 @@ describe("ConnectionController", () => {
     it("calls service.create(userId, body) and returns ConnectionWithSecret", async () => {
       svc.create.mockResolvedValue(SECRET_FIXTURE);
       const body = {
+        kind: "model" as const,
         name: "vllm-prod",
         baseUrl: "http://10.0.0.1:8000",
         apiKey: "sk-secret-12345",
@@ -170,6 +172,7 @@ describe("ConnectionController", () => {
     it("create: response includes tokenizerHfId: null when not supplied", async () => {
       svc.create.mockResolvedValue(SECRET_FIXTURE);
       const body = {
+        kind: "model" as const,
         name: "vllm-prod",
         baseUrl: "http://10.0.0.1:8000",
         apiKey: "sk-secret-12345",
@@ -190,6 +193,7 @@ describe("ConnectionController", () => {
       };
       svc.create.mockResolvedValue(fixtureWithTokenizer);
       const body = {
+        kind: "model" as const,
         name: "vllm-prod",
         baseUrl: "http://10.0.0.1:8000",
         apiKey: "sk-secret-12345",

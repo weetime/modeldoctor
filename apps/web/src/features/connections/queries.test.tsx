@@ -61,6 +61,7 @@ describe("useCreateConnection", () => {
     (api.post as any).mockResolvedValue({ id: "c1", apiKey: "sk-x" });
     const { result } = renderHook(() => useCreateConnection(), { wrapper: wrap() });
     await result.current.mutateAsync({
+      kind: "model",
       name: "n",
       baseUrl: "http://x",
       apiKey: "sk-x",

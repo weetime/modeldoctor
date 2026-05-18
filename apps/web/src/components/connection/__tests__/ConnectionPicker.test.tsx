@@ -22,6 +22,7 @@ import { ConnectionPicker } from "../ConnectionPicker";
 const conn: ConnectionPublic = {
   id: "c_1",
   userId: "u_1",
+  kind: "model",
   name: "bge-by-mis-tei",
   baseUrl: "http://183.240.109.2:30888",
   apiKeyPreview: "sk-...bc8d",

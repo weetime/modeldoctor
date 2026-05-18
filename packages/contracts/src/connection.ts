@@ -5,17 +5,36 @@ import { ModalityCategorySchema } from "./modality.js";
 export const serverKindSchema = z.enum([...ENGINE_IDS, "higress", "generic"] as const);
 export type ServerKind = z.infer<typeof serverKindSchema>;
 
+/**
+ * A Connection's `kind` records what kind of LLM-stack component it points at.
+ *
+ * - `model`       — model-serving endpoint (the original v1 meaning). Required:
+ *                   model, apiKey, category.
+ * - `gateway`     — LLM gateway in front of one or more model servers
+ *                   (e.g. Higress). apiKey/model/category remain meaningful
+ *                   when routing through the gateway. `serverKind=higress`
+ *                   is the canonical first instance.
+ * - `prometheus`  — Prometheus instance scraping engine/gateway metrics.
+ *                   apiKey/model/category are not used; baseUrl is the
+ *                   Prometheus API root.
+ * - `alertmanager` — Alertmanager instance routing alerts to ModelDoctor's
+ *                    webhook. apiKey/model/category are not used.
+ */
+export const connectionKindSchema = z.enum(["model", "gateway", "prometheus", "alertmanager"]);
+export type ConnectionKind = z.infer<typeof connectionKindSchema>;
+
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
 export const connectionPublicSchema = z.object({
   id: z.string(),
   userId: z.string(),
+  kind: connectionKindSchema,
   name: z.string().min(1).max(120),
   baseUrl: z.string().url(),
   apiKeyPreview: z.string(),
-  model: z.string().min(1),
+  model: z.string(),
   customHeaders: z.string(),
   queryParams: z.string(),
-  category: ModalityCategorySchema,
+  category: ModalityCategorySchema.nullable(),
   tags: z.array(z.string()),
   prometheusUrl: z.string().url().nullable(),
   serverKind: serverKindSchema.nullable(),
@@ -40,31 +59,73 @@ export const connectionWithSecretSchema = connectionPublicSchema.extend({
 });
 export type ConnectionWithSecret = z.infer<typeof connectionWithSecretSchema>;
 
-export const createConnectionSchema = z.object({
+// apiKey shape validation lives here so create + update share it. Required-ness
+// is enforced separately via .superRefine() because non-model kinds skip it.
+const apiKeyStringSchema = z
+  .string()
+  .refine((v) => !/\p{Cc}/u.test(v), {
+    message: "apiKey must not contain control characters",
+  })
+  .refine((v) => v === v.trim(), {
+    message: "apiKey must not have leading or trailing whitespace",
+  });
+
+const createConnectionShape = z.object({
+  kind: connectionKindSchema.default("model"),
   name: z.string().min(1).max(120),
   baseUrl: z.string().url(),
-  apiKey: z
-    .string()
-    .min(1)
-    .refine((v) => !/\p{Cc}/u.test(v), {
-      message: "apiKey must not contain control characters",
-    })
-    .refine((v) => v === v.trim(), {
-      message: "apiKey must not have leading or trailing whitespace",
-    }),
-  model: z.string().min(1),
+  // Optional at the schema level so non-model kinds can omit. Required-ness for
+  // kind=model is enforced via superRefine below.
+  apiKey: apiKeyStringSchema.optional(),
+  model: z.string().optional(),
   customHeaders: z.string().default(""),
   queryParams: z.string().default(""),
-  category: ModalityCategorySchema,
+  category: ModalityCategorySchema.nullable().optional(),
   tags: z.array(z.string()).default([]),
   prometheusUrl: z.string().url().nullable().optional(),
   serverKind: serverKindSchema.nullable().optional(),
   tokenizerHfId: z.string().nullable().optional(),
   evaluationProfileId: z.string().nullable().optional(),
 });
+
+// kind=model retains the v1 contract: apiKey/model/category are required.
+// kind=gateway/prometheus/alertmanager have looser shape since the entity
+// being pointed at is not a model-serving endpoint.
+function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.RefinementCtx) {
+  if (v.kind === "model") {
+    if (!v.apiKey || v.apiKey.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["apiKey"],
+        message: "apiKey is required for kind=model",
+      });
+    }
+    if (!v.model || v.model.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["model"],
+        message: "model is required for kind=model",
+      });
+    }
+    if (!v.category) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["category"],
+        message: "category is required for kind=model",
+      });
+    }
+  }
+}
+
+export const createConnectionSchema = createConnectionShape.superRefine(refineKindFields);
 export type CreateConnection = z.infer<typeof createConnectionSchema>;
 
-export const updateConnectionSchema = createConnectionSchema.partial();
+// Update accepts a partial create shape; the same refine still applies when
+// `kind` is being changed (or implicitly model when omitted on partial — but
+// partial means kind may be absent; refine only fires when kind is supplied).
+export const updateConnectionSchema = createConnectionShape.partial().superRefine((v, ctx) => {
+  if (v.kind === "model") refineKindFields(v as z.infer<typeof createConnectionShape>, ctx);
+});
 export type UpdateConnection = z.infer<typeof updateConnectionSchema>;
 
 export const listConnectionsResponseSchema = z.object({
@@ -93,6 +154,23 @@ const inferredListFieldSchema = z.object({
   confidence: inferenceConfidenceSchema,
   evidence: z.string(),
 });
+
+export const verifyKindRequestSchema = z.object({
+  kind: connectionKindSchema,
+  baseUrl: z.string().url(),
+  apiKey: z.string().min(1).optional(),
+  customHeaders: z.string().optional(),
+});
+export type VerifyKindRequest = z.infer<typeof verifyKindRequestSchema>;
+
+export const verifyKindResponseSchema = z.object({
+  kind: connectionKindSchema,
+  ok: z.boolean(),
+  version: z.string().optional(),
+  details: z.record(z.unknown()).optional(),
+  reason: z.string().optional(),
+});
+export type VerifyKindResponse = z.infer<typeof verifyKindResponseSchema>;
 
 export const discoverConnectionRequestSchema = z.object({
   baseUrl: z.string().url(),

@@ -1,4 +1,5 @@
 import type {
+  ConnectionKind,
   ConnectionPublic,
   ConnectionRevealKeyResponse,
   ConnectionWithSecret,
@@ -8,7 +9,12 @@ import type {
   ServerKind,
   UpdateConnection,
 } from "@modeldoctor/contracts";
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Prisma, Connection as PrismaConnection } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
@@ -17,13 +23,16 @@ import { PrismaService } from "../../database/prisma.service.js";
 
 export interface DecryptedConnection {
   id: string;
+  kind: ConnectionKind;
   name: string;
   baseUrl: string;
   apiKey: string;
   model: string;
   customHeaders: string;
   queryParams: string;
-  category: ModalityCategory;
+  // null for non-model kinds; consumers that need a category must check
+  // `kind === "model"` first.
+  category: ModalityCategory | null;
   tokenizerHfId: string | null;
   prometheusUrl: string | null;
   serverKind: ServerKind | null;
@@ -45,17 +54,21 @@ export class ConnectionService {
   }
 
   async create(userId: string, input: CreateConnection): Promise<ConnectionWithSecret> {
-    const apiKeyCipher = encrypt(input.apiKey, this.key);
+    // Non-model kinds may omit apiKey; persist an empty cipher in that case
+    // so the column stays NOT NULL and decrypt() returns "".
+    const plaintextKey = input.apiKey ?? "";
+    const apiKeyCipher = plaintextKey ? encrypt(plaintextKey, this.key) : "";
     const row = await this.prisma.connection.create({
       data: {
         userId,
+        kind: input.kind,
         name: input.name,
         baseUrl: input.baseUrl,
         apiKeyCipher,
-        model: input.model,
+        model: input.model ?? "",
         customHeaders: input.customHeaders,
         queryParams: input.queryParams,
-        category: input.category,
+        category: input.category ?? null,
         tags: input.tags,
         prometheusUrl: input.prometheusUrl ?? null,
         serverKind: input.serverKind ?? null,
@@ -66,7 +79,7 @@ export class ConnectionService {
       },
       include: { evaluationProfile: true },
     });
-    return this.toContractWithSecret(row, input.apiKey);
+    return this.toContractWithSecret(row, plaintextKey);
   }
 
   async list(userId: string): Promise<ListConnectionsResponse> {
@@ -90,8 +103,26 @@ export class ConnectionService {
     id: string,
     input: UpdateConnection,
   ): Promise<ConnectionWithSecret | ConnectionPublic> {
-    await this.findOwnedRow(userId, id);
+    const existing = await this.findOwnedRow(userId, id);
+    // updateConnectionSchema is `.partial()`, so its superRefine only fires
+    // when `kind` is present in the body. A PATCH like `{"model": ""}` against
+    // an existing kind=model row would otherwise slip past validation and
+    // clear required fields. Compute the effective kind (patch.kind ?? row.kind)
+    // and re-enforce the same gate the create path uses.
+    const effectiveKind = (input.kind ?? existing.kind) as ConnectionKind;
+    if (effectiveKind === "model") {
+      if (input.model !== undefined && input.model.trim().length === 0) {
+        throw new BadRequestException("model is required for kind=model");
+      }
+      if (input.category === null) {
+        throw new BadRequestException("category is required for kind=model");
+      }
+      if (input.apiKey !== undefined && input.apiKey.length === 0) {
+        throw new BadRequestException("apiKey is required for kind=model");
+      }
+    }
     const data: Prisma.ConnectionUncheckedUpdateInput = {};
+    if (input.kind !== undefined) data.kind = input.kind;
     if (input.name !== undefined) data.name = input.name;
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl;
     if (input.model !== undefined) data.model = input.model;
@@ -104,7 +135,9 @@ export class ConnectionService {
     if (input.tokenizerHfId !== undefined) data.tokenizerHfId = input.tokenizerHfId;
     if (input.evaluationProfileId !== undefined)
       data.evaluationProfileId = input.evaluationProfileId;
-    if (input.apiKey !== undefined) data.apiKeyCipher = encrypt(input.apiKey, this.key);
+    if (input.apiKey !== undefined) {
+      data.apiKeyCipher = input.apiKey ? encrypt(input.apiKey, this.key) : "";
+    }
 
     const row = await this.prisma.connection.update({
       where: { id },
@@ -142,13 +175,14 @@ export class ConnectionService {
     const row = await this.findOwnedRow(userId, id);
     return {
       id: row.id,
+      kind: row.kind as ConnectionKind,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKey: decrypt(row.apiKeyCipher, this.key),
+      apiKey: row.apiKeyCipher ? decrypt(row.apiKeyCipher, this.key) : "",
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
-      category: row.category as ModalityCategory,
+      category: row.category as ModalityCategory | null,
       tokenizerHfId: row.tokenizerHfId,
       prometheusUrl: row.prometheusUrl,
       serverKind: row.serverKind as ServerKind | null,
@@ -177,16 +211,21 @@ export class ConnectionService {
       evaluationProfile: { id: string; slug: string; name: string; nameKey: string | null } | null;
     },
   ): ConnectionPublic {
+    // Non-model kinds may have an empty cipher; decrypt() requires non-empty input.
+    const apiKeyPreview = row.apiKeyCipher
+      ? this.makePreview(decrypt(row.apiKeyCipher, this.key))
+      : "";
     return {
       id: row.id,
       userId: row.userId,
+      kind: row.kind as ConnectionKind,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKeyPreview: this.makePreview(decrypt(row.apiKeyCipher, this.key)),
+      apiKeyPreview,
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
-      category: row.category as ModalityCategory,
+      category: row.category as ModalityCategory | null,
       tags: row.tags,
       prometheusUrl: row.prometheusUrl,
       serverKind: row.serverKind as ConnectionPublic["serverKind"],

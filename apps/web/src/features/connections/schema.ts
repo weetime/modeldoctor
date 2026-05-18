@@ -1,19 +1,25 @@
-import { ModalityCategorySchema, serverKindSchema } from "@modeldoctor/contracts";
+import {
+  ModalityCategorySchema,
+  connectionKindSchema,
+  serverKindSchema,
+} from "@modeldoctor/contracts";
 import { z } from "zod";
 
 const baseShape = {
+  kind: connectionKindSchema.default("model"),
   name: z
     .string()
     .transform((v) => v.trim())
     .pipe(z.string().min(1)),
   apiBaseUrl: z.string().url(),
-  model: z.string().min(1),
+  // model/category/apiKey are required only for kind=model — see superRefine below.
+  model: z.string().default(""),
   customHeaders: z.string(),
   queryParams: z.string(),
   tokenizerHfId: z.string(),
   prometheusUrl: z.string().url().nullable().optional(),
   serverKind: serverKindSchema.nullable().optional(),
-  category: ModalityCategorySchema,
+  category: ModalityCategorySchema.nullable().optional(),
   tags: z
     .array(z.string().trim())
     .default([])
@@ -29,32 +35,54 @@ const baseShape = {
     }),
 };
 
+function requireForModelKind<
+  T extends { kind?: string; apiKey?: string; model?: string; category?: unknown },
+>(v: T, ctx: z.RefinementCtx, opts: { apiKeyRequired: boolean }) {
+  if (v.kind !== "model") return;
+  if (opts.apiKeyRequired && (!v.apiKey || v.apiKey.trim().length === 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["apiKey"], message: "validation.required" });
+  }
+  if (!v.model || v.model.trim().length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["model"], message: "validation.required" });
+  }
+  if (!v.category) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["category"],
+      message: "validation.required",
+    });
+  }
+}
+
 /**
- * Create-mode form schema. apiKey is required because the server has nothing
- * stored yet.
+ * Create-mode form schema. apiKey is required for kind=model because the server
+ * has nothing stored yet; non-model kinds skip the apiKey/model/category gate.
  */
-export const connectionInputCreateSchema = z.object({
-  ...baseShape,
-  apiKey: z
-    .string()
-    .min(1)
-    .refine((v) => !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
-    .refine((v) => v === v.trim(), { message: "validation.apiKeyTrim" }),
-});
+export const connectionInputCreateSchema = z
+  .object({
+    ...baseShape,
+    apiKey: z
+      .string()
+      .default("")
+      .refine((v) => !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
+      .refine((v) => v === v.trim(), { message: "validation.apiKeyTrim" }),
+  })
+  .superRefine((v, ctx) => requireForModelKind(v, ctx, { apiKeyRequired: true }));
 
 /**
  * Edit-mode form schema. apiKey is optional: when the user did NOT toggle
  * "Reset apiKey", the field is empty and the PATCH body must omit it.
- * Empty string is the "no-reset" signal and must pass; non-empty values
- * get the same control-char + edge-whitespace refines as create-mode.
  */
-export const connectionInputEditSchema = z.object({
-  ...baseShape,
-  apiKey: z
-    .string()
-    .refine((v) => v === "" || !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
-    .refine((v) => v === "" || v === v.trim(), { message: "validation.apiKeyTrim" }),
-});
+export const connectionInputEditSchema = z
+  .object({
+    ...baseShape,
+    apiKey: z
+      .string()
+      .default("")
+      .refine((v) => v === "" || !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
+      .refine((v) => v === "" || v === v.trim(), { message: "validation.apiKeyTrim" }),
+  })
+  .superRefine((v, ctx) => requireForModelKind(v, ctx, { apiKeyRequired: false }));
 
 /** Backwards-compatible alias used by callers that need the create shape. */
 export const connectionInputSchema = connectionInputCreateSchema;

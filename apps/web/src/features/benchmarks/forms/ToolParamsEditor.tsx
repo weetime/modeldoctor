@@ -123,6 +123,7 @@ export function ToolSelectorField({
     : undefined;
   const isToolUnsupported = (tn: ToolName): boolean => {
     if (!connection) return false;
+    if (!connection.category) return true; // non-model kinds: no benchmark applies
     const def = TOOL_CATEGORY_DEFAULTS[tn][connection.category];
     return "unsupported" in def;
   };
@@ -180,7 +181,7 @@ export function ToolSelectorField({
                     {unsupported && connection ? (
                       <span className="text-[11px] text-amber-600 dark:text-amber-400">
                         {t("create.unsupportedToolForCategory", {
-                          category: connection.category,
+                          category: connection.category ?? "—",
                         })}
                       </span>
                     ) : null}
@@ -229,12 +230,14 @@ export function useToolUnsupported(
     ? connections.data?.find((c) => c.id === connectionId)
     : undefined;
   if (!connection) return null;
+  if (!connection.category) return null; // non-model kinds: not benchmarkable here
   const def = TOOL_CATEGORY_DEFAULTS[tool][connection.category];
   if (!("unsupported" in def)) return null;
+  const cat = connection.category;
   const alternatives = SCENARIOS[scenario].tools.filter(
-    (t) => !("unsupported" in TOOL_CATEGORY_DEFAULTS[t][connection.category]),
+    (t) => !("unsupported" in TOOL_CATEGORY_DEFAULTS[t][cat]),
   );
-  return { tool, category: connection.category, alternatives };
+  return { tool, category: cat, alternatives };
 }
 
 /** Tool-specific parameter form (no tool selector, no section heading).

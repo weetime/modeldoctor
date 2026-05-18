@@ -67,13 +67,25 @@ model RefreshToken {
 model Connection {
   id            String   @id @default(cuid())
   userId        String   @map("user_id")
+  // What kind of LLM-stack member this connection points at — see
+  // connectionKindSchema in @modeldoctor/contracts. Defaults to 'model'
+  // for backward compat: every pre-existing row predates the enum and is
+  // a model endpoint by construction.
+  kind          String   @default("model")
   name          String
   baseUrl       String   @map("base_url")
+  // Cipher is empty-string for kinds that don't carry an apiKey (prometheus,
+  // alertmanager); the runtime contract layer enforces required-ness per
+  // kind, not the DB schema.
   apiKeyCipher  String   @map("api_key_cipher") // AES-256-GCM v1, see common/crypto/aes-gcm.ts
-  model         String
+  // Empty-string default lets non-model kinds skip model name without a
+  // nullable column. Contract layer rejects empty model on kind=model writes.
+  model         String   @default("")
   customHeaders String   @default("") @map("custom_headers")
   queryParams   String   @default("") @map("query_params")
-  category      String // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
+  // Nullable so the DB doesn't need a placeholder ModalityCategory for a
+  // Prometheus or Alertmanager connection.
+  category      String?  // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
   // Reserved for #60 Prometheus integration. Nullable on purpose: existing

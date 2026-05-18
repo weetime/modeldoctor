@@ -62,6 +62,7 @@ export function VegetaParamsForm({ fieldPrefix = "params" }: VegetaParamsFormPro
     // Case 1: connection changed. Reset everything atomically.
     if (connection && lastConnectionId.current !== connection.id) {
       lastConnectionId.current = connection.id;
+      if (!connection.category) return; // non-model kinds aren't benchmarkable here
       const def = VEGETA_CATEGORY_DEFAULTS[connection.category];
       const nextApiType = def.apiType;
       setValue(`${fieldPrefix}.apiType`, nextApiType, { shouldDirty: false });

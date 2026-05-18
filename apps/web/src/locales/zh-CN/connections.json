@@ -10,7 +10,14 @@
     "createdAt": "创建时间",
     "actions": "操作",
     "category": "分类",
-    "tags": "标签"
+    "tags": "标签",
+    "kind": "类型"
+  },
+  "kinds": {
+    "model": "模型",
+    "gateway": "网关",
+    "prometheus": "Prometheus",
+    "alertmanager": "Alertmanager"
   },
   "dialog": {
     "createTitle": "新建连接",
@@ -22,6 +29,8 @@
     "saveAsNewConnection": "另存为新连接",
     "savedConnectionMissing": "保存的连接已被删除，请选择其他连接",
     "fields": {
+      "kind": "类型",
+      "kindHelp": "model = 推理端点；gateway = LLM 网关（如 Higress）；prometheus / alertmanager = 监控告警组件。",
       "name": "名称",
       "namePlaceholder": "例如 prod-vllm",
       "apiBaseUrl": "API Base URL",
@@ -71,6 +80,16 @@
       "empty": "请先粘贴 curl 命令",
       "invalid": "无法从 curl 命令中解析参数",
       "autoParseHint": "粘贴后自动解析并触发 Discover"
+    },
+    "verify": {
+      "button": "校验类型",
+      "running": "校验中…",
+      "ok": "校验通过：{{summary}}",
+      "fail": "校验失败：{{reason}}",
+      "missingBaseUrl": "请先填写 baseUrl",
+      "version": "版本 {{version}}",
+      "modelCount": "{{count}} 个模型",
+      "clusterPeers": "{{count}} 个集群节点"
     },
     "discover": {
       "button": "🔍 自动发现",
@@ -129,6 +148,7 @@
   "filters": {
     "label": "筛选",
     "allCategories": "全部分类",
-    "allTags": "全部标签"
+    "allTags": "全部标签",
+    "allKinds": "全部类型"
   }
 }

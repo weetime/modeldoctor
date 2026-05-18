@@ -71,6 +71,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
     if (!connection) return;
     if (lastConnectionId.current === connection.id) return;
     lastConnectionId.current = connection.id;
+    if (!connection.category) return; // non-model kinds aren't benchmarkable here
     const def = GUIDELLM_CATEGORY_DEFAULTS[connection.category];
     if ("apiType" in def) {
       setValue(`${fieldPrefix}.apiType`, def.apiType, { shouldDirty: false });

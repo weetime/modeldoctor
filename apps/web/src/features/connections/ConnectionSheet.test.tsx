@@ -30,6 +30,10 @@ vi.mock("./queries", () => ({
     mutateAsync: discoverMutate,
     isPending: discoverIsPending,
   }),
+  useVerifyKind: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 // SubscribersSection (rendered in edit mode) reads from React Query hooks.
@@ -55,6 +59,7 @@ async function fillBaseFields(user: ReturnType<typeof userEvent.setup>) {
 const EXISTING: ConnectionPublic = {
   id: "c1",
   userId: "u1",
+  kind: "model",
   name: "preexisting",
   baseUrl: "http://old.test",
   apiKeyPreview: "sk-...wxyz",
