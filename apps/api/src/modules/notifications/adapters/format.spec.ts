@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatText } from "./format.js";
+import { formatDingtalkAlertMarkdown, formatText } from "./format.js";
 
 describe("formatText — per-eventType shapes", () => {
   it("test event includes the message string", () => {
@@ -73,5 +73,73 @@ describe("formatText — per-eventType shapes", () => {
       payload: { name: "endpoint-health", status: "failed" },
     });
     expect(out).toBe("[ModelDoctor] diagnostics.failed endpoint-health status=failed");
+  });
+});
+
+describe("formatDingtalkAlertMarkdown", () => {
+  const fullPayload = {
+    alertEventId: "ae_abc",
+    alertName: "VllmKvCacheNearFull",
+    severity: "critical",
+    connectionId: "cmp_1",
+    connectionName: "prod-vllm",
+    scenario: "engine",
+    narrative: "KV cache pressure on prod-vllm exceeded 90% for 5 min.",
+    recommendations: ["扩容副本", "降低 max_tokens 上限"],
+  };
+
+  it("renders title + sectioned markdown body", () => {
+    const out = formatDingtalkAlertMarkdown({
+      eventType: "alert.explained",
+      payload: fullPayload,
+    });
+    expect(out.title).toBe("[ModelDoctor] CRITICAL · VllmKvCacheNearFull");
+    expect(out.text).toContain("#### [ModelDoctor] 告警：VllmKvCacheNearFull");
+    expect(out.text).toContain("> **严重度**: critical");
+    expect(out.text).toContain("> **关联连接**: prod-vllm");
+    expect(out.text).toContain("> **场景**: engine");
+    expect(out.text).toContain("**AI 解读**");
+    expect(out.text).toContain("KV cache pressure on prod-vllm exceeded 90% for 5 min.");
+    expect(out.text).toContain("**建议处置**");
+    expect(out.text).toContain("- 扩容副本");
+    expect(out.text).toContain("- 降低 max_tokens 上限");
+  });
+
+  it("omits detail link when appBaseUrl is unset", () => {
+    const out = formatDingtalkAlertMarkdown({
+      eventType: "alert.explained",
+      payload: fullPayload,
+    });
+    expect(out.text).not.toContain("[查看详情]");
+  });
+
+  it("renders detail link when appBaseUrl is provided", () => {
+    const out = formatDingtalkAlertMarkdown(
+      { eventType: "alert.explained", payload: fullPayload },
+      { appBaseUrl: "https://app.example.com/" },
+    );
+    expect(out.text).toContain("[查看详情](https://app.example.com/alerts/ae_abc)");
+  });
+
+  it("falls back to connectionId when connectionName missing", () => {
+    const out = formatDingtalkAlertMarkdown({
+      eventType: "alert.explained",
+      payload: { ...fullPayload, connectionName: undefined },
+    });
+    expect(out.text).toContain("> **关联连接**: cmp_1");
+  });
+
+  it("renders gracefully with no narrative + no recommendations", () => {
+    const out = formatDingtalkAlertMarkdown({
+      eventType: "alert.explained",
+      payload: {
+        alertName: "X",
+        severity: "warning",
+      },
+    });
+    expect(out.title).toBe("[ModelDoctor] WARNING · X");
+    expect(out.text).toContain("#### [ModelDoctor] 告警：X");
+    expect(out.text).not.toContain("**AI 解读**");
+    expect(out.text).not.toContain("**建议处置**");
   });
 });

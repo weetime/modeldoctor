@@ -87,6 +87,13 @@ export const EnvSchema = z
     KUBECONFIG: z.string().optional(),
     DISABLE_FIRST_USER_ADMIN: envBoolean.default(false),
 
+    // Optional web-app base URL used in outbound notification templates
+    // (e.g. the "查看详情" link in dingtalk alert markdown). Leave unset in
+    // dev to suppress the link entirely — message body still renders, it
+    // just doesn't carry a clickable detail link. In prod, set to the
+    // public origin, e.g. https://modeldoctor.example.com.
+    APP_BASE_URL: z.string().url().optional(),
+
     // --- Alertmanager webhook receiver (P0 closed loop) ---
     // Shared secret for Alertmanager → ModelDoctor webhook. Verified per
     // request via HMAC-SHA256 in the X-ModelDoctor-Signature header. Required
