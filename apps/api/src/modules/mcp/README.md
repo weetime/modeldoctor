@@ -81,7 +81,7 @@ Restart Claude Code; the tools below show up under "modeldoctor".
 
 | Tool | Use case |
 |---|---|
-| `list_alerts(connectionId?, status?, severity?, limit?, cursor?)` | List alerts attributed to one of the caller's Connections, newest first. Includes any AI narrative already generated. |
+| `list_alerts(connectionId?, status?, severity?, limit?, cursor?)` | List alerts attributed to one of the caller's Connections, newest first. Returns a slim row per alert (`rawPayload` / full labels stripped to protect the LLM context window) plus a `nextCursor` for pagination. Includes the AI narrative when already generated. Use `get_alert_explanation(id)` for full per-alert detail. |
 | `get_alert_explanation(alertId)` | Fetch a single alert + its AI narrative + recommendations + ai severity (null when the explainer hasn't run yet). |
 | `subscribe_connection(connectionId, channelId, minSeverity?, enabled?)` | Route alerts for a Connection to a notification channel, gated by minimum severity. Distinct from `subscribe` (event types) — this drives the alerts pipeline specifically. |
 
