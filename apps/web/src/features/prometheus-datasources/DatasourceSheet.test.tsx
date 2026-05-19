@@ -55,11 +55,18 @@ describe("DatasourceSheet (create)", () => {
     verifyMutate.mockClear();
     toastSuccess.mockClear();
     toastError.mockClear();
-    // Reset implementations so a prior test's mockRejectedValueOnce doesn't
-    // bleed into the next describe block.
+    // Reset implementations for ALL three mutations so a prior test's
+    // mockRejectedValueOnce / mockResolvedValueOnce can't bleed across
+    // describe blocks (matters in watch mode where files can re-run in any
+    // order). Symmetric reset is cheaper than reasoning about which mock
+    // each block touches.
     createMutate.mockImplementation(async (body: unknown) => ({
       id: "new",
       ...(body as object),
+    }));
+    updateMutate.mockImplementation(async (vars: { id: string; body: unknown }) => ({
+      id: vars.id,
+      ...(vars.body as object),
     }));
     verifyMutate.mockImplementation(async () => ({ ok: true, version: "2.50.0" }));
   });
@@ -174,11 +181,18 @@ describe("DatasourceSheet (edit)", () => {
     verifyMutate.mockClear();
     toastSuccess.mockClear();
     toastError.mockClear();
-    // Reset implementations so a prior test's mockRejectedValueOnce doesn't
-    // bleed into the next describe block.
+    // Reset implementations for ALL three mutations so a prior test's
+    // mockRejectedValueOnce / mockResolvedValueOnce can't bleed across
+    // describe blocks (matters in watch mode where files can re-run in any
+    // order). Symmetric reset is cheaper than reasoning about which mock
+    // each block touches.
     createMutate.mockImplementation(async (body: unknown) => ({
       id: "new",
       ...(body as object),
+    }));
+    updateMutate.mockImplementation(async (vars: { id: string; body: unknown }) => ({
+      id: vars.id,
+      ...(vars.body as object),
     }));
     verifyMutate.mockImplementation(async () => ({ ok: true, version: "2.50.0" }));
   });
