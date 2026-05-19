@@ -2,8 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
-const TEST_SECRET = "alertmanager-test-secret-padded-to-32-chars-min";
+// See alerts.e2e-spec for the time-of-validation explanation; this spec
+// also dispatches alerts via /api/alerts/webhook and so needs the same
+// Bearer the pre-injected fixture installs.
+const TEST_SECRET = E2E_ENV_DEFAULTS.ALERTMANAGER_WEBHOOK_SECRET;
 
 describe("Connection subscribers e2e", () => {
   let ctx: E2EContext;
@@ -17,7 +21,6 @@ describe("Connection subscribers e2e", () => {
   let otherChannelId: string;
 
   beforeAll(async () => {
-    process.env.ALERTMANAGER_WEBHOOK_SECRET = TEST_SECRET;
     ctx = await bootE2E();
     prisma = ctx.app.get(PrismaService);
 
