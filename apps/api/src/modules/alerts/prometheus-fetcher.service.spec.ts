@@ -267,4 +267,67 @@ describe("PrometheusFetcherService.fetchAlertContext (query_range + summarise)",
       restoreFetch();
     }
   });
+
+  it("returns null when Prometheus replies 200 with status='error' envelope", async () => {
+    // Mirrors the contract: even on HTTP 200, a Prometheus error envelope
+    // (status: "error", errorType, error) is not a usable result and the
+    // fetcher must drop the snapshot rather than feed garbage to the LLM.
+    globalThis.fetch = mockFetch(true, {
+      status: "error",
+      errorType: "bad_data",
+      error: "parse error at char 1",
+    });
+    try {
+      const ctx = await svc.fetchAlertContext(
+        makeEvent({ annotations: { expr: "broken{" }, connectionId: null }),
+      );
+      expect(ctx).toBeNull();
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  it("returns null when fetch throws (timeout / network) instead of hanging", async () => {
+    // Abort budget is 5s — we don't want to actually wait. Simulate the
+    // post-abort error the global fetch throws when AbortController fires.
+    globalThis.fetch = vi.fn(async () => {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }) as unknown as typeof globalThis.fetch;
+    try {
+      const ctx = await svc.fetchAlertContext(
+        makeEvent({ annotations: { expr: "up" }, connectionId: null }),
+      );
+      // The catch in queryRange logs + returns null; the explainer keeps
+      // generating a baseline-only narrative without crashing.
+      expect(ctx).toBeNull();
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  it("returns null when bearerCipher decrypt fails (rotated env key)", async () => {
+    // Plant a cipher encrypted under a different key, then construct the
+    // service with our test key. decrypt() throws → the catch in queryRange
+    // returns null without ever calling fetch (we'd notice if it did because
+    // fetch is unmocked here and prom.test isn't reachable from the suite).
+    const otherKey = Buffer.alloc(32, 9).toString("base64"); // ≠ TEST_KEY_B64
+    const { encrypt, decodeKey } = await import("../../common/crypto/aes-gcm.js");
+    const cipher = encrypt("real-bearer-token", decodeKey(otherKey));
+    await prisma.prometheusDatasource.update({
+      where: { id: ds.id },
+      data: { bearerCipher: cipher },
+    });
+
+    const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+    try {
+      const ctx = await svc.fetchAlertContext(
+        makeEvent({ annotations: { expr: "up" }, connectionId: null }),
+      );
+      expect(ctx).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      restoreFetch();
+    }
+  });
 });
