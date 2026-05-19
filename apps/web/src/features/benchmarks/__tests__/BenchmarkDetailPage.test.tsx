@@ -141,7 +141,8 @@ const defaultConnectionData = {
   queryParams: "",
   category: "chat" as const,
   tags: [],
-  prometheusUrl: null as string | null,
+  prometheusDatasourceId: null as string | null,
+  prometheusDatasource: null as { id: string; name: string; baseUrl: string } | null,
   serverKind: null as string | null,
   tokenizerHfId: null,
   createdAt: "2026-05-06T00:00:00.000Z",
@@ -666,7 +667,7 @@ describe("BenchmarkDetailPage", () => {
 
   // ---- EngineMetricsSection mount ----
 
-  it("renders <EngineMetricsSection> when connection has prometheusUrl + serverKind", async () => {
+  it("renders <EngineMetricsSection> when connection has prometheusDatasource + serverKind", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
         status: "completed",
@@ -677,7 +678,8 @@ describe("BenchmarkDetailPage", () => {
     mockUseConnection.mockReturnValue({
       data: {
         ...defaultConnectionData,
-        prometheusUrl: "http://prom:9090",
+        prometheusDatasourceId: "ds1",
+        prometheusDatasource: { id: "ds1", name: "default", baseUrl: "http://prom:9090" },
         serverKind: "vllm",
       },
     });
@@ -690,7 +692,7 @@ describe("BenchmarkDetailPage", () => {
     expect(await screen.findByTestId("engine-metrics-section")).toBeInTheDocument();
   });
 
-  it("does not render <EngineMetricsSection> when prometheusUrl is missing", async () => {
+  it("does not render <EngineMetricsSection> when prometheusDatasource is missing", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({
         status: "completed",
@@ -699,7 +701,12 @@ describe("BenchmarkDetailPage", () => {
       }),
     );
     mockUseConnection.mockReturnValue({
-      data: { ...defaultConnectionData, prometheusUrl: null, serverKind: "vllm" },
+      data: {
+        ...defaultConnectionData,
+        prometheusDatasourceId: null,
+        prometheusDatasource: null,
+        serverKind: "vllm",
+      },
     });
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     await screen.findByRole("heading", { name: "smoke" });

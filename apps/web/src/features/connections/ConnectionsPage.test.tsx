@@ -20,7 +20,8 @@ const seedList: ConnectionPublic[] = [
     tags: ["vLLM", "production"],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
-    prometheusUrl: null,
+    prometheusDatasourceId: null,
+    prometheusDatasource: null,
     serverKind: null,
     tokenizerHfId: null,
     evaluationProfileId: null,
@@ -40,7 +41,8 @@ const seedList: ConnectionPublic[] = [
     tags: ["TEI"],
     createdAt: "2026-04-26T14:22:00Z",
     updatedAt: "2026-04-26T14:22:00Z",
-    prometheusUrl: null,
+    prometheusDatasourceId: "ds1",
+    prometheusDatasource: { id: "ds1", name: "prod-prometheus", baseUrl: "http://prom:9090" },
     serverKind: null,
     tokenizerHfId: null,
     evaluationProfileId: null,
@@ -58,6 +60,12 @@ vi.mock("./queries", () => ({
   useCreateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDiscoverConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+// ConnectionSheet's "Metrics source" picker queries the datasources list.
+vi.mock("@/features/prometheus-datasources/queries", () => ({
+  useDatasources: () => ({ data: [], isLoading: false }),
 }));
 
 import { ConnectionsPage } from "./ConnectionsPage";
@@ -101,5 +109,33 @@ describe("ConnectionsPage (category + tags)", () => {
 
     expect(screen.getByText("chat-prod")).toBeInTheDocument();
     expect(screen.queryByText("embed-test")).not.toBeInTheDocument();
+  });
+
+  it("kind filter no longer offers the dropped 'prometheus' option", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ConnectionsPage />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("combobox", { name: /kind|类型/i }));
+    // Only model / gateway / alertmanager survive after Issue #189; "prometheus"
+    // is now its own settings entity, not a Connection kind.
+    expect(screen.queryByRole("option", { name: /^Prometheus$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Alertmanager$/ })).toBeInTheDocument();
+  });
+
+  it("renders the prometheusDatasource column — link for bound rows, em-dash for unbound", () => {
+    render(
+      <MemoryRouter>
+        <ConnectionsPage />
+      </MemoryRouter>,
+    );
+    // Bound row: clickable link to the Settings page with the datasource name.
+    const link = screen.getByRole("link", { name: "prod-prometheus" });
+    expect(link).toHaveAttribute("href", "/settings/prometheus-datasources");
+    // Unbound row (chat-prod has prometheusDatasource: null) shows em-dash —
+    // assert by the absence of a link with another datasource name.
+    expect(screen.queryByRole("link", { name: /unrelated/i })).not.toBeInTheDocument();
   });
 });

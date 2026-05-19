@@ -21,6 +21,7 @@ import {
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { SubscribersSection } from "@/features/alerts/SubscribersSection";
+import { useDatasources } from "@/features/prometheus-datasources/queries";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -90,14 +91,15 @@ const empty: Partial<ConnectionInput> = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: "",
-  prometheusUrl: null,
+  // Leave undefined on create so the API auto-fills the org-default datasource.
+  prometheusDatasourceId: undefined,
   serverKind: null,
   category: null,
   tags: [],
 };
 
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
-const KINDS: ConnectionKind[] = ["model", "gateway", "prometheus", "alertmanager"];
+const KINDS: ConnectionKind[] = ["model", "gateway", "alertmanager"];
 const MAX_SUGGESTION_CHIPS = 8;
 
 const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> = [
@@ -139,7 +141,8 @@ function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
     customHeaders: c.customHeaders,
     queryParams: c.queryParams,
     tokenizerHfId: c.tokenizerHfId ?? "",
-    prometheusUrl: c.prometheusUrl ?? null,
+    // Edit: pre-fill the actual binding (string id or null for explicit unbind).
+    prometheusDatasourceId: c.prometheusDatasourceId ?? null,
     serverKind: c.serverKind ?? null,
     category: c.category,
     tags: c.tags,
@@ -214,7 +217,11 @@ export function ConnectionSheet({
   const showServerKindField = isModelKind || isGatewayKind;
   const showTokenizerField = isModelKind;
   const showCategoryField = isModelKind || isGatewayKind;
-  const showPrometheusUrlField = isModelKind || isGatewayKind;
+  const showPrometheusDatasourceField = isModelKind || isGatewayKind;
+
+  // Loaded for the datasource <Select>; safe to call unconditionally (hook is
+  // gated by user auth via the api client, not by kind).
+  const { data: datasources } = useDatasources();
 
   // -- Discover helpers ------------------------------------------------------
   const countFilledFields = (r: DiscoverConnectionResponse): number =>
@@ -241,9 +248,9 @@ export function ConnectionSheet({
     if (inf.suggestedTags.values.length > 0 && !dirty.tags) {
       form.setValue("tags", inf.suggestedTags.values, { shouldDirty: false });
     }
-    if (inf.prometheusUrl.value && !dirty.prometheusUrl) {
-      form.setValue("prometheusUrl", inf.prometheusUrl.value, { shouldDirty: false });
-    }
+    // Note: inf.prometheusUrl is shown in the DiscoverResultBanner for evidence,
+    // but the form no longer carries a `prometheusUrl` field — metric pulls now
+    // go through the dedicated PrometheusDatasource binding instead.
   };
 
   const runDiscover = async (rawBaseUrl: string, rawApiKey?: string, rawCustomHeaders?: string) => {
@@ -359,7 +366,10 @@ export function ConnectionSheet({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
-          prometheusUrl: submitShowModelFields ? (values.prometheusUrl ?? null) : null,
+          // alertmanager never binds a metrics source; other kinds pass through.
+          prometheusDatasourceId: submitShowModelFields
+            ? (values.prometheusDatasourceId ?? null)
+            : null,
           serverKind: submitShowModelFields ? (values.serverKind ?? null) : null,
           category: submitShowModelFields ? (values.category ?? null) : null,
           tags: values.tags,
@@ -383,7 +393,9 @@ export function ConnectionSheet({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
-          prometheusUrl: submitShowModelFields ? (values.prometheusUrl ?? null) : null,
+          // alertmanager: always null. model/gateway: undefined → server auto-fills
+          // org default; null → explicit unbind; string → caller-specified id.
+          prometheusDatasourceId: submitShowModelFields ? values.prometheusDatasourceId : null,
           serverKind: submitShowModelFields ? (values.serverKind ?? null) : null,
           category: submitShowModelFields ? (values.category ?? null) : null,
           tags: values.tags,
@@ -882,7 +894,7 @@ export function ConnectionSheet({
                   </div>
                 ) : null}
 
-                {showTokenizerField || showPrometheusUrlField ? (
+                {showTokenizerField || showPrometheusDatasourceField ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {showTokenizerField ? (
                       <FormField
@@ -907,27 +919,44 @@ export function ConnectionSheet({
                       />
                     ) : null}
 
-                    {showPrometheusUrlField ? (
+                    {showPrometheusDatasourceField ? (
                       <FormField
                         control={form.control}
-                        name="prometheusUrl"
+                        name="prometheusDatasourceId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t("dialog.fields.prometheusUrl")}</FormLabel>
+                            <FormLabel>{t("dialog.fields.prometheusDatasource.label")}</FormLabel>
                             <FormControl>
-                              <Input
-                                type="url"
-                                autoComplete="off"
-                                placeholder={t("dialog.fields.prometheusUrlPlaceholder")}
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value === "" ? null : e.target.value)
-                                }
-                              />
+                              <Select
+                                value={field.value ?? "__none__"}
+                                onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                              >
+                                <SelectTrigger
+                                  aria-label={t("dialog.fields.prometheusDatasource.label")}
+                                >
+                                  <SelectValue
+                                    placeholder={t(
+                                      "dialog.fields.prometheusDatasource.placeholder",
+                                    )}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">
+                                    {t("dialog.fields.prometheusDatasource.none")}
+                                  </SelectItem>
+                                  {datasources?.map((ds) => (
+                                    <SelectItem key={ds.id} value={ds.id}>
+                                      {ds.name}
+                                      {ds.isDefault
+                                        ? ` (${t("dialog.fields.prometheusDatasource.defaultSuffix")})`
+                                        : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </FormControl>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {t("dialog.fields.prometheusUrlHelp")}
+                              {t("dialog.fields.prometheusDatasource.help")}
                             </p>
                             <FormMessage />
                           </FormItem>

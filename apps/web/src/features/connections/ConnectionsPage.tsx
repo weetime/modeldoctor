@@ -38,6 +38,7 @@ import type { ConnectionKind, ConnectionPublic, ModalityCategory } from "@modeld
 import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { ConnectionSheet, type ConnectionSheetMode } from "./ConnectionSheet";
 import { useConnections, useDeleteConnection } from "./queries";
 
@@ -122,13 +123,11 @@ export function ConnectionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allKinds")}</SelectItem>
-                  {(["model", "gateway", "prometheus", "alertmanager"] as ConnectionKind[]).map(
-                    (k) => (
-                      <SelectItem key={k} value={k}>
-                        {t(`kinds.${k}`)}
-                      </SelectItem>
-                    ),
-                  )}
+                  {(["model", "gateway", "alertmanager"] as ConnectionKind[]).map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {t(`kinds.${k}`)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select
@@ -176,6 +175,7 @@ export function ConnectionsPage() {
                     <TableHead>{t("table.apiBaseUrl")}</TableHead>
                     <TableHead>{t("table.apiKey")}</TableHead>
                     <TableHead>{t("table.category")}</TableHead>
+                    <TableHead>{t("table.columns.prometheusDatasource")}</TableHead>
                     <TableHead>{t("table.tags")}</TableHead>
                     <TableHead>{t("table.customHeaders")}</TableHead>
                     <TableHead>{t("table.createdAt")}</TableHead>
@@ -212,6 +212,18 @@ export function ConnectionsPage() {
                           <Badge variant="outline" className="text-xs">
                             {t(`dialog.categoryOptions.${c.category}`)}
                           </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {c.prometheusDatasource ? (
+                          <Link
+                            to="/settings/prometheus-datasources"
+                            className="text-xs text-primary hover:underline"
+                          >
+                            {c.prometheusDatasource.name}
+                          </Link>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}

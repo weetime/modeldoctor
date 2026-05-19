@@ -36,6 +36,37 @@ vi.mock("./queries", () => ({
   }),
 }));
 
+// ConnectionSheet renders a Prometheus-datasource <Select> for kind=model/gateway.
+// Fixture: one default datasource + one alternate so the (默认) suffix test works.
+vi.mock("@/features/prometheus-datasources/queries", () => ({
+  useDatasources: () => ({
+    data: [
+      {
+        id: "ds-default",
+        name: "default-prom",
+        baseUrl: "http://prom:9090",
+        bearerPreview: "",
+        customHeaders: "",
+        isDefault: true,
+        consumersCount: 0,
+        createdAt: "2026-05-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T00:00:00.000Z",
+      },
+      {
+        id: "ds-alt",
+        name: "secondary-prom",
+        baseUrl: "http://prom2:9090",
+        bearerPreview: "",
+        customHeaders: "",
+        isDefault: false,
+        consumersCount: 0,
+        createdAt: "2026-05-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T00:00:00.000Z",
+      },
+    ],
+  }),
+}));
+
 // SubscribersSection (rendered in edit mode) reads from React Query hooks.
 // Stub them out so the sheet test doesn't need a QueryClientProvider.
 vi.mock("@/features/alerts/queries", () => ({
@@ -71,7 +102,8 @@ const EXISTING: ConnectionPublic = {
   tags: ["vLLM"],
   createdAt: "2026-04-26T14:22:00Z",
   updatedAt: "2026-04-26T14:22:00Z",
-  prometheusUrl: null,
+  prometheusDatasourceId: null,
+  prometheusDatasource: null,
   serverKind: null,
   evaluationProfileId: null,
   evaluationProfile: null,
@@ -163,7 +195,7 @@ describe("ConnectionSheet (create mode)", () => {
     expect(arg.tokenizerHfId).toBeNull();
   });
 
-  it("submits prometheusUrl when entered", async () => {
+  it("creates with prometheusDatasourceId=undefined (let server auto-fill default) when user does not touch the picker", async () => {
     const user = userEvent.setup();
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
@@ -171,16 +203,16 @@ describe("ConnectionSheet (create mode)", () => {
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
     await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
 
-    await user.type(screen.getByLabelText(/prometheus/i), "http://prom:9090");
-
     await user.click(screen.getByRole("button", { name: /save|保存/i }));
 
     await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
     const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
-    expect(arg.prometheusUrl).toBe("http://prom:9090");
+    // For new connections, leaving the picker untouched MUST send `undefined`
+    // (not null) so the API picks the org-default datasource server-side.
+    expect(arg.prometheusDatasourceId).toBeUndefined();
   });
 
-  it("submits null when prometheusUrl left empty", async () => {
+  it("submits the chosen prometheusDatasourceId when user picks a non-default option", async () => {
     const user = userEvent.setup();
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
     await fillBaseFields(user);
@@ -188,12 +220,51 @@ describe("ConnectionSheet (create mode)", () => {
     await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
     await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
 
-    // Leave prometheusUrl field blank (default is null)
+    await user.click(screen.getByRole("combobox", { name: /Metrics source|指标源/i }));
+    await user.click(screen.getByRole("option", { name: /^secondary-prom$/ }));
+
     await user.click(screen.getByRole("button", { name: /save|保存/i }));
 
     await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
     const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
-    expect(arg.prometheusUrl).toBeNull();
+    expect(arg.prometheusDatasourceId).toBe("ds-alt");
+  });
+
+  it("submits prometheusDatasourceId=null when user picks a datasource then switches to 'Not bound'", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await fillBaseFields(user);
+
+    await user.click(screen.getByRole("combobox", { name: /category|分类/i }));
+    await user.click(screen.getByRole("option", { name: /^chat$|^对话$/i }));
+
+    // The picker defaults to showing "Not bound" (since the form value is
+    // undefined → server auto-fills). To exercise the explicit-unbind path,
+    // first pick a real datasource, then switch back to Not bound.
+    const dsCombo = screen.getByRole("combobox", { name: /Metrics source|指标源/i });
+    await user.click(dsCombo);
+    await user.click(screen.getByRole("option", { name: /^secondary-prom$/ }));
+    await user.click(dsCombo);
+    await user.click(screen.getByRole("option", { name: /Not bound|不绑定/ }));
+
+    await user.click(screen.getByRole("button", { name: /save|保存/i }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+    const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg.prometheusDatasourceId).toBeNull();
+  });
+
+  it("does NOT render the Metrics source picker for kind=alertmanager", async () => {
+    const user = userEvent.setup();
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+
+    await user.click(screen.getByRole("combobox", { name: /^kind|^类型/i }));
+    await user.click(screen.getByRole("option", { name: /^Alertmanager$/i }));
+
+    // alertmanager has no metrics datasource binding — picker must be hidden.
+    expect(
+      screen.queryByRole("combobox", { name: /Metrics source|指标源/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -509,7 +580,9 @@ describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
     });
-    expect(screen.getByLabelText(/prometheus/i)).toHaveValue("http://prom:9090");
+    // The legacy `prometheusUrl` form input is gone; Discover still surfaces
+    // the inferred value through the DiscoverResultBanner (evidence row), not
+    // as an editable field.
   });
 
   it("auto-apply preserves user-modified (dirty) model field in edit mode", async () => {
