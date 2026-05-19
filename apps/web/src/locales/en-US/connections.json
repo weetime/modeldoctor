@@ -11,12 +11,14 @@
     "actions": "Actions",
     "category": "Category",
     "tags": "Tags",
-    "kind": "Kind"
+    "kind": "Kind",
+    "columns": {
+      "prometheusDatasource": "Metrics source"
+    }
   },
   "kinds": {
     "model": "Model",
     "gateway": "Gateway",
-    "prometheus": "Prometheus",
     "alertmanager": "Alertmanager"
   },
   "dialog": {
@@ -30,7 +32,7 @@
     "savedConnectionMissing": "Saved connection no longer exists",
     "fields": {
       "kind": "Kind",
-      "kindHelp": "model = inference endpoint; gateway = LLM gateway (e.g. Higress); prometheus / alertmanager = monitoring & alerting components.",
+      "kindHelp": "model = inference endpoint; gateway = LLM gateway (e.g. Higress); alertmanager = alerting component.",
       "name": "Name",
       "namePlaceholder": "e.g. prod-vllm",
       "apiBaseUrl": "API Base URL",
@@ -51,8 +53,13 @@
       "serverKindPlaceholder": "Select…",
       "serverKindHelp": "Engine type determines the Prometheus metric namespace and powers the Engine Metrics dashboard.",
       "prometheusUrl": "Prometheus URL",
-      "prometheusUrlPlaceholder": "http://10.100.121.67:30121",
-      "prometheusUrlHelp": "Optional; prefix-cache-probe reads vLLM pod hit rates from here",
+      "prometheusDatasource": {
+        "label": "Metrics source (Prometheus datasource)",
+        "placeholder": "Choose a datasource",
+        "none": "Not bound",
+        "defaultSuffix": "default",
+        "help": "AI will pull metrics from this datasource when explaining alerts; default is the datasource marked default in Settings"
+      },
       "category": "Category",
       "categoryHelp": "Used by the Playground to filter the connection picker.",
       "categoryPlaceholder": "Select a category…",

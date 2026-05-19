@@ -169,6 +169,7 @@ const mockConnections: ConnectionService = {
     queryParams: "",
     tokenizerHfId: null,
     prometheusUrl: null,
+    prometheusDatasourceId: null,
     serverKind: null,
     category: "text" as const,
   })),

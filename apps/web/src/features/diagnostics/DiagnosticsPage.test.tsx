@@ -32,7 +32,8 @@ const SAMPLE_CONN: ConnectionPublic = {
   tags: [],
   createdAt: "2026-04-26T14:22:00Z",
   updatedAt: "2026-04-26T14:22:00Z",
-  prometheusUrl: null,
+  prometheusDatasourceId: null,
+  prometheusDatasource: null,
   serverKind: null,
   tokenizerHfId: null,
   evaluationProfileId: null,
@@ -51,6 +52,13 @@ vi.mock("@/features/connections/queries", () => ({
   useDiscoverConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteConnection: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+// ConnectionSheet (rendered when "+ 新建连接" is clicked in the picker) loads
+// the Prometheus datasources list. Stub the hook to keep this test out of the
+// React-Query provider business.
+vi.mock("@/features/prometheus-datasources/queries", () => ({
+  useDatasources: () => ({ data: [], isLoading: false }),
 }));
 
 import { api } from "@/lib/api-client";

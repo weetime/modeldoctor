@@ -164,15 +164,9 @@ describe("connectionInputSchema kind=non-model", () => {
     tags: [],
   };
 
-  it("kind=prometheus accepts empty apiKey/model/category", () => {
-    const r = connectionInputSchema.safeParse({
-      ...base,
-      kind: "prometheus",
-      apiKey: "",
-      model: "",
-    });
-    expect(r.success).toBe(true);
-  });
+  // "prometheus" was a Connection kind in V1 but has been promoted to its own
+  // PrometheusDatasource entity in Issue #189. The kind enum no longer accepts
+  // it, so this test is intentionally removed.
 
   it("kind=alertmanager accepts empty apiKey/model/category", () => {
     const r = connectionInputSchema.safeParse({

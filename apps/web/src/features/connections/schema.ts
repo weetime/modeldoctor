@@ -17,7 +17,10 @@ const baseShape = {
   customHeaders: z.string(),
   queryParams: z.string(),
   tokenizerHfId: z.string(),
-  prometheusUrl: z.string().url().nullable().optional(),
+  // Bind to a saved Prometheus datasource for AI alert explanation.
+  // `undefined` lets the API auto-fill the org-default datasource on create;
+  // `null` explicitly unbinds; a string id must reference an existing row.
+  prometheusDatasourceId: z.string().nullable().optional(),
   serverKind: serverKindSchema.nullable().optional(),
   category: ModalityCategorySchema.nullable().optional(),
   tags: z

@@ -1,0 +1,79 @@
+{
+  "page": {
+    "title": "Prometheus 数据源",
+    "subtitle": "管理 AI 解释告警时使用的 Prometheus 指标源",
+    "breadcrumb": "Prometheus 数据源",
+    "actions": {
+      "new": "+ 新增数据源"
+    },
+    "empty": {
+      "title": "尚未配置 Prometheus 数据源",
+      "subtitle": "添加第一个开始接入告警指标源"
+    },
+    "backToSettings": "返回设置"
+  },
+  "table": {
+    "columns": {
+      "name": "名称",
+      "baseUrl": "Prometheus URL",
+      "isDefault": "默认",
+      "auth": "鉴权",
+      "consumers": "关联 connection",
+      "actions": "操作"
+    },
+    "defaultBadge": "默认",
+    "setDefault": "设为默认",
+    "authAnonymous": "匿名",
+    "authBearer": "Bearer"
+  },
+  "sheet": {
+    "createTitle": "新建 Prometheus 数据源",
+    "editTitle": "编辑 Prometheus 数据源",
+    "fields": {
+      "name": { "label": "名称", "placeholder": "例如:primary-cluster" },
+      "baseUrl": { "label": "Prometheus URL", "placeholder": "https://prom.example.com" },
+      "bearerToken": { "label": "Bearer Token", "placeholder": "匿名 Prometheus 留空" },
+      "customHeaders": {
+        "label": "自定义 headers",
+        "placeholder": "X-Tenant: foo\nAuthorization: Basic ...",
+        "help": "一行一个 key: value"
+      },
+      "isDefault": {
+        "label": "设为默认",
+        "help": "新建 Connection 时自动绑定;同时只能有一个默认"
+      }
+    },
+    "rotateBearer": "轮换",
+    "rotateBearerHint": "替换已保存的 Bearer Token",
+    "actions": {
+      "verify": "测试连接",
+      "verifying": "测试中…"
+    }
+  },
+  "delete": {
+    "title": "删除数据源 {{name}}?",
+    "body": "将解绑 {{count}} 个 connection,绑定关系会被清空(connection 不会被删除)",
+    "confirm": "删除"
+  },
+  "toast": {
+    "createSuccess": "已创建",
+    "updateSuccess": "已保存",
+    "deleteSuccess": "已删除,解绑 {{count}} 个 connection",
+    "setDefaultSuccess": "已设为默认",
+    "verify": {
+      "ok": "连接成功 ({{version}})",
+      "okNoVersion": "连接成功",
+      "fail": "失败:{{reason}}"
+    },
+    "errors": {
+      "nameTaken": "数据源名称已被占用,换一个试试",
+      "baseUrlTaken": "该 Prometheus URL 已被登记过,换一个或编辑现有数据源",
+      "generic": "失败:{{message}}"
+    }
+  },
+  "settings": {
+    "title": "Prometheus 数据源",
+    "desc": "管理 AI 解释告警时使用的指标源,默认数据源会被新建 Connection 自动绑定",
+    "manage": "管理数据源"
+  }
+}

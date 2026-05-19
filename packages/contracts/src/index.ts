@@ -12,6 +12,7 @@ export * from "./debug-proxy.js";
 export * from "./modality.js";
 export * from "./auth.js";
 export * from "./connection.js";
+export * from "./prometheus-datasource.js";
 export * from "./playground.js";
 export * from "./benchmark.js";
 export * from "./benchmark-template.js";

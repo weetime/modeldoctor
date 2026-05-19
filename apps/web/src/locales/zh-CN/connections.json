@@ -11,12 +11,14 @@
     "actions": "操作",
     "category": "分类",
     "tags": "标签",
-    "kind": "类型"
+    "kind": "类型",
+    "columns": {
+      "prometheusDatasource": "指标源"
+    }
   },
   "kinds": {
     "model": "模型",
     "gateway": "网关",
-    "prometheus": "Prometheus",
     "alertmanager": "Alertmanager"
   },
   "dialog": {
@@ -30,7 +32,7 @@
     "savedConnectionMissing": "保存的连接已被删除，请选择其他连接",
     "fields": {
       "kind": "类型",
-      "kindHelp": "model = 推理端点；gateway = LLM 网关（如 Higress）；prometheus / alertmanager = 监控告警组件。",
+      "kindHelp": "model = 推理端点；gateway = LLM 网关（如 Higress）；alertmanager = 告警组件。",
       "name": "名称",
       "namePlaceholder": "例如 prod-vllm",
       "apiBaseUrl": "API Base URL",
@@ -51,8 +53,13 @@
       "serverKindPlaceholder": "选择…",
       "serverKindHelp": "推理引擎类型决定 Prometheus 指标的命名空间，关联 Engine Metrics 看板。",
       "prometheusUrl": "Prometheus 地址",
-      "prometheusUrlPlaceholder": "http://10.100.121.67:30121",
-      "prometheusUrlHelp": "可选；prefix-cache-probe 会从这里读取 vLLM Pod 命中率",
+      "prometheusDatasource": {
+        "label": "指标源 (Prometheus 数据源)",
+        "placeholder": "选择一个数据源",
+        "none": "不绑定",
+        "defaultSuffix": "默认",
+        "help": "AI 解释告警时将从此数据源拉指标；默认是 Settings 里标记的默认数据源"
+      },
       "category": "分类",
       "categoryHelp": "Playground 用它来过滤连接下拉。",
       "categoryPlaceholder": "请选择分类…",

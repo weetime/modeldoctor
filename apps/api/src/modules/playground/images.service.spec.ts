@@ -15,6 +15,7 @@ function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnec
     category: "image",
     tokenizerHfId: null,
     prometheusUrl: null,
+    prometheusDatasourceId: null,
     serverKind: null,
     ...overrides,
   };

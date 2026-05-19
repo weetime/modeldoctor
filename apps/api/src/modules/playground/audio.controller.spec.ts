@@ -39,6 +39,7 @@ function makeConn(): DecryptedConnection {
     category: "audio",
     tokenizerHfId: null,
     prometheusUrl: null,
+    prometheusDatasourceId: null,
     serverKind: null,
   };
 }

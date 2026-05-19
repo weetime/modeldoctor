@@ -34,6 +34,7 @@ import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
+import { DatasourcesPage } from "@/features/prometheus-datasources/DatasourcesPage";
 import { EvaluationCreatePage } from "@/features/quality-gate/EvaluationCreatePage";
 import { EvaluationDetailPage } from "@/features/quality-gate/EvaluationDetailPage";
 import { EvaluationsListPage } from "@/features/quality-gate/EvaluationsListPage";
@@ -119,6 +120,7 @@ export const routes: RouteObject[] = [
           },
           { path: "settings", element: <SettingsPage /> },
           { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
+          { path: "settings/prometheus-datasources", element: <DatasourcesPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },

@@ -3,6 +3,7 @@ import {
   type DiscoverConnectionResponse,
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
+import { parseCustomHeaders } from "../../../common/http/parse-custom-headers.js";
 import { inferCategory } from "./inference/category.js";
 import { inferPrometheusUrl } from "./inference/prometheus-url.js";
 import { inferServerKind } from "./inference/server-kind.js";
@@ -92,30 +93,6 @@ function collectWarnings(args: {
     warnings.push("apiKey was provided but /v1/models returned 401 — verify the key is valid");
   }
   return warnings;
-}
-
-/**
- * Parse the user-facing newline-separated `key: value` header string into a
- * Record. Same format the connection form uses for its `customHeaders` field
- * (and what `applyCurlToEndpoint` produces from a pasted curl). Lines that
- * are blank, commented (`#`), or missing a `:` are silently skipped.
- *
- * Returns `undefined` when the result would be empty so safeFetch can short-
- * circuit the merge path.
- */
-function parseCustomHeaders(raw: string | undefined): Record<string, string> | undefined {
-  if (!raw) return undefined;
-  const out: Record<string, string> = {};
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const colon = trimmed.indexOf(":");
-    if (colon <= 0) continue;
-    const key = trimmed.slice(0, colon).trim();
-    const value = trimmed.slice(colon + 1).trim();
-    if (key && value) out[key] = value;
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function inferModelsField(modelsR: ProbeResult<{ models: string[]; raw: unknown }>): {

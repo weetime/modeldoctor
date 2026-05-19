@@ -1,10 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { AlertEvent, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { PrismaService } from "../../database/prisma.service.js";
 import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import type { EventType } from "../notifications/subscriptions.service.js";
+import { type PromContext, PrometheusFetcherService } from "./prometheus-fetcher.service.js";
 import { SubscribersService } from "./subscribers.service.js";
 
 // AI-generated narrative shape. Stored as JSON in alert_explanations.recommendations,
@@ -25,6 +26,8 @@ const SYS_PROMPT_ZH = `你是 LLM 推理服务的资深运维顾问。给定一�
 2. 给出 1-5 条可执行的处置建议(从最紧急到次紧急),每条一句话。
 3. 重新评估严重程度 (critical / warning / info) — Prometheus 标的可能偏严或偏松,你根据上下文判断。
 
+如果给了"告警时段指标"段,优先用其中的真实数据点支撑结论;未提供时只基于 baseline / benchmark 推断,不要编数字。
+
 输出 JSON:
 {
   "ai_severity": "critical" | "warning" | "info",
@@ -32,15 +35,10 @@ const SYS_PROMPT_ZH = `你是 LLM 推理服务的资深运维顾问。给定一�
   "recommendations": ["<step 1>", "<step 2>", ...]
 }`;
 
-interface AlertContext {
-  alertName: string;
-  severity: string;
-  scenario: string | null;
-  status: string;
-  labels: Record<string, unknown>;
-  annotations: Record<string, unknown>;
-  startsAt: Date;
-  connectionId: string | null;
+interface BuiltContext {
+  baseline: Record<string, unknown> | null;
+  recentBenchmarks: Array<{ id: string; createdAt: string; metrics: unknown }>;
+  promSnapshot: PromContext | null;
 }
 
 @Injectable()
@@ -51,6 +49,7 @@ export class AlertExplainerService {
     private readonly prisma: PrismaService,
     private readonly judge: LlmJudgeService,
     private readonly subscribers: SubscribersService,
+    private readonly promFetcher: PrometheusFetcherService,
   ) {}
 
   /**
@@ -67,27 +66,19 @@ export class AlertExplainerService {
       return;
     }
 
+    // Pull the full AlertEvent row — the Prometheus fetcher needs
+    // `rawPayload.generatorURL` as a fallback when annotations.expr is absent,
+    // and the snapshot logic is keyed off startsAt + connectionId regardless.
     const event = await this.prisma.alertEvent.findUnique({
       where: { id: alertEventId },
-      select: {
-        id: true,
-        alertName: true,
-        severity: true,
-        scenario: true,
-        status: true,
-        labels: true,
-        annotations: true,
-        startsAt: true,
-        connectionId: true,
-      },
     });
     if (!event) {
       this.log.warn(`AlertEvent ${alertEventId} not found for explanation`);
       return;
     }
 
-    const context = await this.buildContext(event as AlertContext);
-    const prompt = this.buildPrompt(event as AlertContext, context);
+    const context = await this.buildContext(event);
+    const prompt = this.buildPrompt(event, context);
 
     const t0 = Date.now();
     let parsed: z.infer<typeof explanationResponseSchema>;
@@ -126,16 +117,28 @@ export class AlertExplainerService {
     await this.emitNotification(alertEventId, parsed.ai_severity);
   }
 
+  // Test-only accessors. The prompt-shape assertions live in the unit spec
+  // and don't need to round-trip through the LLM; exposing the two builders
+  // keeps that coverage cheap without making the production surface wider.
+  _test_buildContext(event: AlertEvent) {
+    return this.buildContext(event);
+  }
+  _test_buildPrompt(event: AlertEvent, context: BuiltContext) {
+    return this.buildPrompt(event, context);
+  }
+
   /**
-   * Pull baseline + last few benchmarks for the connection (if any) so the
-   * LLM can reason about regression vs absolute alert.
+   * Pull baseline + last few benchmarks for the connection (if any) plus a
+   * Prometheus snapshot around the alert's startsAt so the LLM can reason
+   * about regression vs absolute alert and ground claims on real datapoints.
+   *
+   * Each enrichment is best-effort: Prom fetch failures degrade to `null` and
+   * the narrative falls back to baseline-only reasoning (see SYS_PROMPT_ZH).
    */
-  private async buildContext(event: AlertContext): Promise<{
-    baseline: Record<string, unknown> | null;
-    recentBenchmarks: Array<{ id: string; createdAt: string; metrics: unknown }>;
-  }> {
+  private async buildContext(event: AlertEvent): Promise<BuiltContext> {
+    const promSnapshot = await this.promFetcher.fetchAlertContext(event);
     if (!event.connectionId) {
-      return { baseline: null, recentBenchmarks: [] };
+      return { baseline: null, recentBenchmarks: [], promSnapshot };
     }
     const baseline = await this.prisma.baseline.findFirst({
       where: { active: true, benchmark: { connectionId: event.connectionId } },
@@ -163,16 +166,11 @@ export class AlertExplainerService {
         createdAt: r.createdAt.toISOString(),
         metrics: r.summaryMetrics,
       })),
+      promSnapshot,
     };
   }
 
-  private buildPrompt(
-    event: AlertContext,
-    context: {
-      baseline: Record<string, unknown> | null;
-      recentBenchmarks: Array<{ id: string; createdAt: string; metrics: unknown }>;
-    },
-  ): string {
+  private buildPrompt(event: AlertEvent, context: BuiltContext): string {
     const sections = [
       "## 告警",
       `- 名称: ${event.alertName}`,
@@ -203,6 +201,25 @@ export class AlertExplainerService {
         "",
         `## 最近 ${context.recentBenchmarks.length} 次 benchmark`,
         `\`\`\`json\n${JSON.stringify(context.recentBenchmarks, null, 2)}\n\`\`\``,
+      );
+    }
+
+    if (context.promSnapshot) {
+      const snap = context.promSnapshot;
+      sections.push(
+        "",
+        `## 告警时段指标(数据源: ${snap.datasource.name})`,
+        `- expr: \`${snap.expr}\``,
+        `- 窗口: ${snap.window.start} → ${snap.window.end}, step=${snap.window.stepSeconds}s`,
+        `- 命中 series 数: ${snap.series.length}`,
+        "",
+        ...snap.series.flatMap((s) => [
+          `labels: ${JSON.stringify(s.labels)}`,
+          `summary: min=${s.summary.min.toFixed(3)}, max=${s.summary.max.toFixed(3)}, mean=${s.summary.mean.toFixed(3)}, last=${s.summary.last.toFixed(3)}`,
+          "samples:",
+          ...s.samples.map((p) => `  - ${p.at}  ${p.value}`),
+          "",
+        ]),
       );
     }
 

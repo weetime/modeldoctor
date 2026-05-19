@@ -14,13 +14,14 @@ export type ServerKind = z.infer<typeof serverKindSchema>;
  *                   (e.g. Higress). apiKey/model/category remain meaningful
  *                   when routing through the gateway. `serverKind=higress`
  *                   is the canonical first instance.
- * - `prometheus`  — Prometheus instance scraping engine/gateway metrics.
- *                   apiKey/model/category are not used; baseUrl is the
- *                   Prometheus API root.
  * - `alertmanager` — Alertmanager instance routing alerts to ModelDoctor's
  *                    webhook. apiKey/model/category are not used.
+ *
+ * Note: Prometheus instances are no longer modeled as connections; they live
+ * in their own first-class `PrometheusDatasource` table and are referenced
+ * from a connection via `prometheusDatasourceId`.
  */
-export const connectionKindSchema = z.enum(["model", "gateway", "prometheus", "alertmanager"]);
+export const connectionKindSchema = z.enum(["model", "gateway", "alertmanager"]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
@@ -36,7 +37,14 @@ export const connectionPublicSchema = z.object({
   queryParams: z.string(),
   category: ModalityCategorySchema.nullable(),
   tags: z.array(z.string()),
-  prometheusUrl: z.string().url().nullable(),
+  prometheusDatasourceId: z.string().nullable(),
+  prometheusDatasource: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      baseUrl: z.string().url(),
+    })
+    .nullable(),
   serverKind: serverKindSchema.nullable(),
   tokenizerHfId: z.string().nullable(),
   createdAt: z.string().datetime(),
@@ -82,15 +90,17 @@ const createConnectionShape = z.object({
   queryParams: z.string().default(""),
   category: ModalityCategorySchema.nullable().optional(),
   tags: z.array(z.string()).default([]),
-  prometheusUrl: z.string().url().nullable().optional(),
+  // Three-state binding: undefined → server fills with default datasource;
+  // null → explicit unbind; string → must exist and connection.kind !== 'alertmanager'.
+  prometheusDatasourceId: z.string().nullish(),
   serverKind: serverKindSchema.nullable().optional(),
   tokenizerHfId: z.string().nullable().optional(),
   evaluationProfileId: z.string().nullable().optional(),
 });
 
 // kind=model retains the v1 contract: apiKey/model/category are required.
-// kind=gateway/prometheus/alertmanager have looser shape since the entity
-// being pointed at is not a model-serving endpoint.
+// kind=gateway/alertmanager have looser shape since the entity being pointed
+// at is not a model-serving endpoint.
 function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.RefinementCtx) {
   if (v.kind === "model") {
     if (!v.apiKey || v.apiKey.length === 0) {
@@ -115,6 +125,16 @@ function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.Refin
       });
     }
   }
+  // Alertmanager connections are never bound to a metrics datasource — they
+  // route alerts inbound, they don't read metrics. Explicit null/undefined OK;
+  // a non-empty string id is a contract violation.
+  if (v.kind === "alertmanager" && v.prometheusDatasourceId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["prometheusDatasourceId"],
+      message: "prometheusDatasourceId must be null for kind=alertmanager",
+    });
+  }
 }
 
 export const createConnectionSchema = createConnectionShape.superRefine(refineKindFields);
@@ -125,6 +145,13 @@ export type CreateConnection = z.infer<typeof createConnectionSchema>;
 // partial means kind may be absent; refine only fires when kind is supplied).
 export const updateConnectionSchema = createConnectionShape.partial().superRefine((v, ctx) => {
   if (v.kind === "model") refineKindFields(v as z.infer<typeof createConnectionShape>, ctx);
+  if (v.kind === "alertmanager" && v.prometheusDatasourceId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["prometheusDatasourceId"],
+      message: "prometheusDatasourceId must be null for kind=alertmanager",
+    });
+  }
 });
 export type UpdateConnection = z.infer<typeof updateConnectionSchema>;
 

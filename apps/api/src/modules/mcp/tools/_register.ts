@@ -33,8 +33,9 @@ export function registerTool<TInput>(
   if (config.inputShape) {
     meta.inputSchema = config.inputShape;
   }
-  // biome-ignore lint/suspicious/noExplicitAny: SDK's registerTool generics
-  // trigger TS2589 on complex zod chains (default+coerce+optional). We
-  // restore type safety at the handler boundary via TInput.
+  // SDK's registerTool generics trigger TS2589 on complex zod chains
+  // (default+coerce+optional). Type safety is restored at the handler
+  // boundary via TInput.
+  // biome-ignore lint/suspicious/noExplicitAny: see comment above
   (server.registerTool as any)(config.name, meta, handler as (...args: unknown[]) => unknown);
 }

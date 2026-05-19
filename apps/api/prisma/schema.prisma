@@ -18,18 +18,18 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  refreshTokens        RefreshToken[]
-  benchmarks           Benchmark[]
-  connections          Connection[]
-  baselines            Baseline[]
-  diagnosticsRuns      DiagnosticsRun[]
-  createdTemplates     BenchmarkTemplate[]   @relation("UserCreatedTemplates")
-  createdProfiles      EvaluationProfile[]   @relation("UserCreatedProfiles")
-  notificationChannels NotificationChannel[]
+  refreshTokens         RefreshToken[]
+  benchmarks            Benchmark[]
+  connections           Connection[]
+  baselines             Baseline[]
+  diagnosticsRuns       DiagnosticsRun[]
+  createdTemplates      BenchmarkTemplate[]    @relation("UserCreatedTemplates")
+  createdProfiles       EvaluationProfile[]    @relation("UserCreatedProfiles")
+  notificationChannels  NotificationChannel[]
   connectionSubscribers ConnectionSubscriber[]
-  savedCompares        SavedCompare[]
-  evaluations          Evaluation[]
-  evaluationRuns       EvaluationRun[]
+  savedCompares         SavedCompare[]
+  evaluations           Evaluation[]
+  evaluationRuns        EvaluationRun[]
 
   @@index([email])
   @@map("users")
@@ -85,20 +85,22 @@ model Connection {
   queryParams   String   @default("") @map("query_params")
   // Nullable so the DB doesn't need a placeholder ModalityCategory for a
   // Prometheus or Alertmanager connection.
-  category      String?  // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
+  category      String? // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
-  // Reserved for #60 Prometheus integration. Nullable on purpose: existing
-  // connections (created before this migration) have no value, and the UI
-  // does not expose these fields yet.
-  prometheusUrl String? @map("prometheus_url")
-  serverKind    String? @map("server_kind") // see serverKindSchema in @modeldoctor/contracts
+  serverKind String? @map("server_kind") // see serverKindSchema in @modeldoctor/contracts
 
   // HuggingFace tokenizer repo id used by benchmarks (guidellm/genai-perf)
   // when the served `model` name isn't a real HF id. Nullable: existing
   // connections + connections targeting backends with HF-resolvable model
   // names need not set it.
   tokenizerHfId String? @map("tokenizer_hf_id")
+
+  // FK to system-level Prometheus instance scraping this connection's metrics.
+  // Nullable: kind=alertmanager must be null; kind ∈ {model,gateway} may be
+  // null (no source set) or fall back to PrometheusDatasource WHERE is_default.
+  prometheusDatasourceId String?               @map("prometheus_datasource_id")
+  prometheusDatasource   PrometheusDatasource? @relation(fields: [prometheusDatasourceId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -110,13 +112,14 @@ model Connection {
   evaluationProfileId String?            @map("evaluation_profile_id")
   evaluationProfile   EvaluationProfile? @relation("ConnectionEvaluationProfile", fields: [evaluationProfileId], references: [id], onDelete: SetNull)
 
-  evaluationRunsAsEndpointA EvaluationRun[] @relation("EvalEndpointA")
-  evaluationRunsAsEndpointB EvaluationRun[] @relation("EvalEndpointB")
+  evaluationRunsAsEndpointA EvaluationRun[]        @relation("EvalEndpointA")
+  evaluationRunsAsEndpointB EvaluationRun[]        @relation("EvalEndpointB")
   alertEvents               AlertEvent[]
   subscribers               ConnectionSubscriber[]
 
   @@unique([userId, name])
   @@index([userId])
+  @@index([prometheusDatasourceId])
   @@map("connections")
 }
 
@@ -304,7 +307,7 @@ model NotificationChannel {
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscriptions         NotificationSubscription[]
   deliveries            NotificationDelivery[]
   connectionSubscribers ConnectionSubscriber[]
@@ -345,18 +348,18 @@ model NotificationDelivery {
 }
 
 model SavedCompare {
-  id           String    @id @default(cuid())
-  userId       String    @map("user_id")
-  name         String
-  benchmarkIds      String[]  @map("benchmark_ids")
-  evaluationRunIds  String[]  @default([]) @map("evaluation_run_ids")
-  stageLabels       Json      @map("stage_labels")
-  baselineId   String?   @map("baseline_id")
-  context      String?   @db.Text
-  narrative    Json?
-  narrativeAt  DateTime? @map("narrative_at") @db.Timestamptz(3)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id               String    @id @default(cuid())
+  userId           String    @map("user_id")
+  name             String
+  benchmarkIds     String[]  @map("benchmark_ids")
+  evaluationRunIds String[]  @default([]) @map("evaluation_run_ids")
+  stageLabels      Json      @map("stage_labels")
+  baselineId       String?   @map("baseline_id")
+  context          String?   @db.Text
+  narrative        Json?
+  narrativeAt      DateTime? @map("narrative_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -388,32 +391,32 @@ model Evaluation {
 }
 
 model EvaluationRun {
-  id                  String                @id @default(cuid())
-  userId              String                @map("user_id")
-  evaluationId        String                @map("evaluation_id")
-  evaluationVersion   Int                   @map("evaluation_version")
-  evaluationSnapshot  Json                  @map("evaluation_snapshot")
-  endpointAId         String                @map("endpoint_a_id")
-  endpointBId         String?               @map("endpoint_b_id")
-  gateConfig          Json                  @map("gate_config")
-  status              EvaluationRunStatus   @default(PENDING)
-  gateResult          EvaluationGateResult? @map("gate_result")
-  aggregateMetrics    Json?                 @map("aggregate_metrics")
-  processedSamples    Int                   @default(0) @map("processed_samples")
-  totalSamples        Int                   @map("total_samples")
-  startedAt           DateTime?             @map("started_at") @db.Timestamptz(3)
-  finishedAt          DateTime?             @map("finished_at") @db.Timestamptz(3)
-  errorMessage                 String?               @map("error_message") @db.Text
-  baselineRunIdAtExecution     String?               @map("baseline_run_id_at_execution")
-  createdAt                    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                       String                @id @default(cuid())
+  userId                   String                @map("user_id")
+  evaluationId             String                @map("evaluation_id")
+  evaluationVersion        Int                   @map("evaluation_version")
+  evaluationSnapshot       Json                  @map("evaluation_snapshot")
+  endpointAId              String                @map("endpoint_a_id")
+  endpointBId              String?               @map("endpoint_b_id")
+  gateConfig               Json                  @map("gate_config")
+  status                   EvaluationRunStatus   @default(PENDING)
+  gateResult               EvaluationGateResult? @map("gate_result")
+  aggregateMetrics         Json?                 @map("aggregate_metrics")
+  processedSamples         Int                   @default(0) @map("processed_samples")
+  totalSamples             Int                   @map("total_samples")
+  startedAt                DateTime?             @map("started_at") @db.Timestamptz(3)
+  finishedAt               DateTime?             @map("finished_at") @db.Timestamptz(3)
+  errorMessage             String?               @map("error_message") @db.Text
+  baselineRunIdAtExecution String?               @map("baseline_run_id_at_execution")
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  evaluation           Evaluation            @relation("EvalRuns", fields: [evaluationId], references: [id], onDelete: Restrict)
-  endpointA            Connection            @relation("EvalEndpointA", fields: [endpointAId], references: [id], onDelete: Restrict)
-  endpointB            Connection?           @relation("EvalEndpointB", fields: [endpointBId], references: [id], onDelete: Restrict)
-  samples              EvaluationRunSample[]
-  pinnedAsBaselineFor  Evaluation[]          @relation("EvalBaseline")
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  evaluation          Evaluation            @relation("EvalRuns", fields: [evaluationId], references: [id], onDelete: Restrict)
+  endpointA           Connection            @relation("EvalEndpointA", fields: [endpointAId], references: [id], onDelete: Restrict)
+  endpointB           Connection?           @relation("EvalEndpointB", fields: [endpointBId], references: [id], onDelete: Restrict)
+  samples             EvaluationRunSample[]
+  pinnedAsBaselineFor Evaluation[]          @relation("EvalBaseline")
 
   @@index([userId, createdAt])
   @@index([evaluationId])
@@ -422,14 +425,14 @@ model EvaluationRun {
 }
 
 model EvaluationRunSample {
-  id          String      @id @default(cuid())
-  runId       String      @map("run_id")
-  sampleId    String      @map("sample_id")
-  sampleIdx   Int         @map("sample_idx")
-  resultA     Json        @map("result_a")
-  resultB     Json?       @map("result_b")
-  delta       SampleDelta
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  id        String      @id @default(cuid())
+  runId     String      @map("run_id")
+  sampleId  String      @map("sample_id")
+  sampleIdx Int         @map("sample_idx")
+  resultA   Json        @map("result_a")
+  resultB   Json?       @map("result_b")
+  delta     SampleDelta
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
 
   run EvaluationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
@@ -465,12 +468,12 @@ enum SampleDelta {
 // Alertmanager spec re-sends the same fingerprint for the duration of a
 // firing group so we de-dupe on the timestamp tuple.
 model AlertEvent {
-  id           String   @id @default(cuid())
-  fingerprint  String
-  status       String // "firing" | "resolved"
-  severity     String // labels.severity (critical | warning | info)
-  scenario     String? // labels.modeldoctor_scenario (from PR #190 rule files)
-  alertName    String   @map("alert_name") // labels.alertname
+  id          String  @id @default(cuid())
+  fingerprint String
+  status      String // "firing" | "resolved"
+  severity    String // labels.severity (critical | warning | info)
+  scenario    String? // labels.modeldoctor_scenario (from PR #190 rule files)
+  alertName   String  @map("alert_name") // labels.alertname
 
   // Connection inferred from labels.model_name / instance / engine.
   // Nullable: an incoming alert may not match any registered connection.
@@ -535,24 +538,42 @@ model ConnectionSubscriber {
 // be missing (LLM down, no judge configured) without losing the alert
 // itself.
 model AlertExplanation {
-  id              String   @id @default(cuid())
-  alertEventId    String   @unique @map("alert_event_id")
-  alertEvent      AlertEvent @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  alertEventId String     @unique @map("alert_event_id")
+  alertEvent   AlertEvent @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
 
   // Markdown narrative for the human reader.
-  narrative       String   @db.Text
+  narrative       String @db.Text
   // string[] — actionable steps. JSON to avoid migration on shape changes.
   recommendations Json
   // AI-suggested severity (may differ from incoming labels.severity).
-  aiSeverity      String   @map("ai_severity")
+  aiSeverity      String @map("ai_severity")
 
   // Audit / observability for the LLM call itself.
-  llmProvider     String   @map("llm_provider")
-  llmModel        String   @map("llm_model")
-  tokensUsed      Int?     @map("tokens_used")
-  latencyMs       Int      @map("latency_ms")
+  llmProvider String @map("llm_provider")
+  llmModel    String @map("llm_model")
+  tokensUsed  Int?   @map("tokens_used")
+  latencyMs   Int    @map("latency_ms")
 
-  generatedAt     DateTime @default(now()) @map("generated_at") @db.Timestamptz(3)
+  generatedAt DateTime @default(now()) @map("generated_at") @db.Timestamptz(3)
 
   @@map("alert_explanations")
+}
+
+// System-level Prometheus instance registered as a metrics source.
+// Admin-managed via /api/prometheus-datasources; consumed by AlertExplainerService
+// for query_range against alert exprs.
+model PrometheusDatasource {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  baseUrl       String   @unique @map("base_url")
+  bearerCipher  String   @default("") @map("bearer_cipher") // AES-256-GCM v1 (same key as connection.apiKeyCipher), empty = anonymous
+  customHeaders String   @default("") @map("custom_headers")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  consumers Connection[]
+
+  @@map("prometheus_datasources")
 }

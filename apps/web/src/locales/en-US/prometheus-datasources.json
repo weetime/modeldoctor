@@ -1,0 +1,82 @@
+{
+  "page": {
+    "title": "Prometheus datasources",
+    "subtitle": "Manage Prometheus metric sources used when AI explains alerts",
+    "breadcrumb": "Prometheus datasources",
+    "actions": {
+      "new": "+ New datasource"
+    },
+    "empty": {
+      "title": "No Prometheus datasource configured yet",
+      "subtitle": "Add the first one to start wiring alert metrics"
+    },
+    "backToSettings": "Back to Settings"
+  },
+  "table": {
+    "columns": {
+      "name": "Name",
+      "baseUrl": "Prometheus URL",
+      "isDefault": "Default",
+      "auth": "Auth",
+      "consumers": "Linked connections",
+      "actions": "Actions"
+    },
+    "defaultBadge": "Default",
+    "setDefault": "Set as default",
+    "authAnonymous": "Anonymous",
+    "authBearer": "Bearer"
+  },
+  "sheet": {
+    "createTitle": "New Prometheus datasource",
+    "editTitle": "Edit Prometheus datasource",
+    "fields": {
+      "name": { "label": "Name", "placeholder": "e.g. primary-cluster" },
+      "baseUrl": { "label": "Prometheus URL", "placeholder": "https://prom.example.com" },
+      "bearerToken": {
+        "label": "Bearer token",
+        "placeholder": "Leave blank for anonymous Prometheus"
+      },
+      "customHeaders": {
+        "label": "Custom headers",
+        "placeholder": "X-Tenant: foo\nAuthorization: Basic ...",
+        "help": "One key: value per line"
+      },
+      "isDefault": {
+        "label": "Set as default",
+        "help": "Automatically bound to newly-created Connections. Only one default is allowed."
+      }
+    },
+    "rotateBearer": "Rotate",
+    "rotateBearerHint": "Replace the stored Bearer token",
+    "actions": {
+      "verify": "Test connection",
+      "verifying": "Testing…"
+    }
+  },
+  "delete": {
+    "title": "Delete datasource {{name}}?",
+    "body": "Will detach {{count}} connection(s); their binding is cleared (the connections themselves are not deleted).",
+    "confirm": "Delete"
+  },
+  "toast": {
+    "createSuccess": "Created",
+    "updateSuccess": "Saved",
+    "deleteSuccess": "Deleted, detached {{count}} connection(s)",
+    "setDefaultSuccess": "Set as default",
+    "verify": {
+      "ok": "Connection OK ({{version}})",
+      "okNoVersion": "Connection OK",
+      "fail": "Failed: {{reason}}"
+    },
+    "errors": {
+      "nameTaken": "Datasource name already taken, try another",
+      "baseUrlTaken": "This Prometheus URL is already registered, try a different one or edit the existing datasource",
+      "generic": "Failed: {{message}}"
+    }
+  },
+  "settings": {
+    "title": "Prometheus datasources",
+    "desc": "Manage metric sources used when AI explains alerts. The default datasource is auto-bound to newly-created Connections.",
+    "manage": "Manage datasources"
+  }
+}
