@@ -28,9 +28,12 @@ export class EngineMetricsService {
   ): Promise<EngineMetricsSnapshotResponse> {
     const conn = await this.connections.getOwnedDecrypted(userId, connectionId);
 
-    if (!conn.prometheusUrl) {
+    if (!conn.prometheusDatasource) {
       throw new HttpException(
-        { reason: "engine_metrics_not_configured", detail: "missing prometheusUrl" },
+        {
+          reason: "engine_metrics_not_configured",
+          detail: "no Prometheus datasource bound to this connection",
+        },
         422,
       );
     }
@@ -51,7 +54,7 @@ export class EngineMetricsService {
     const from = new Date(q.from);
     const to = new Date(q.to);
     const step = q.step ?? DEFAULT_STEP_SECONDS;
-    const promBaseUrl = conn.prometheusUrl;
+    const promBaseUrl = conn.prometheusDatasource.baseUrl;
     const model = conn.model;
 
     const settled = await Promise.allSettled(

@@ -14,7 +14,7 @@ function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnec
     queryParams: "",
     category: "image",
     tokenizerHfId: null,
-    prometheusUrl: null,
+    prometheusDatasource: null,
     prometheusDatasourceId: null,
     serverKind: null,
     ...overrides,

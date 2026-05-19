@@ -14,7 +14,11 @@ const baseConn = {
   customHeaders: "",
   queryParams: "",
   tokenizerHfId: null,
-  prometheusUrl: "http://10.100.121.67:30121",
+  prometheusDatasource: {
+    id: "ds_test",
+    baseUrl: "http://10.100.121.67:30121",
+    bearerToken: null,
+  } as { id: string; baseUrl: string; bearerToken: string | null } | null,
 };
 
 const baseParams = {
@@ -55,8 +59,8 @@ describe("prefix-cache-probe.buildCommand", () => {
     expect(r.secretEnv.OPENAI_API_KEY).toBe("sk-test");
   });
 
-  it("throws when connection.prometheusUrl is null/undefined", () => {
-    const conn = { ...baseConn, prometheusUrl: null };
+  it("throws when connection has no prometheusDatasource bound", () => {
+    const conn = { ...baseConn, prometheusDatasource: null };
     expect(() =>
       buildCommand({
         runId: "r1",
@@ -64,7 +68,42 @@ describe("prefix-cache-probe.buildCommand", () => {
         connection: conn,
         callback: { url: "http://api/", token: "tk" },
       }),
-    ).toThrow(/prometheusUrl/);
+    ).toThrow(/Prometheus datasource/);
+  });
+
+  it("forwards bearerToken via secretEnv.PROM_BEARER_TOKEN (never argv) when set", () => {
+    // Acceptance hook for #208: runners now have a path to authenticated
+    // Prometheus scrapes. We lock both (a) the token reaches the env, and
+    // (b) it never appears in the argv (kubelet logs / `ps` would leak it).
+    const conn = {
+      ...baseConn,
+      prometheusDatasource: {
+        id: "ds_secure",
+        baseUrl: "http://10.100.121.67:30121",
+        bearerToken: "supersecret",
+      },
+    };
+    const r = buildCommand({
+      runId: "r1",
+      params: baseParams,
+      connection: conn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.secretEnv.PROM_BEARER_TOKEN).toBe("supersecret");
+    expect(r.argv.join(" ")).not.toContain("supersecret");
+  });
+
+  it("omits PROM_BEARER_TOKEN entirely when the datasource is anonymous (bearerToken=null)", () => {
+    // Anonymous Prometheus is the common dev-cluster case; we don't want to
+    // export an empty PROM_BEARER_TOKEN that probe.py might interpret as
+    // "Authorization: Bearer " (literal empty bearer).
+    const r = buildCommand({
+      runId: "r1",
+      params: baseParams,
+      connection: baseConn,
+      callback: { url: "http://api/", token: "tk" },
+    });
+    expect(r.secretEnv.PROM_BEARER_TOKEN).toBeUndefined();
   });
 
   it("outputFiles.result is result.json", () => {

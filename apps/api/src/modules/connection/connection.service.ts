@@ -61,14 +61,17 @@ export interface DecryptedConnection {
   category: ModalityCategory | null;
   tokenizerHfId: string | null;
   /**
-   * Derived: bound datasource's baseUrl, or null when no datasource is bound.
-   * The underlying `prometheusUrl` column was dropped in Task 4 of #189;
-   * this field is preserved on DecryptedConnection so tool-adapters consumers
-   * (engine-metrics, benchmark, prefix-cache-probe) don't need migrating this
-   * turn — to be removed in a follow-up that migrates them to read
-   * `prometheusDatasource.baseUrl` directly.
+   * Bound Prometheus datasource (admin-managed entity from #199), with the
+   * bearer token DECRYPTED at api side. Mirrors the `apiKey` plaintext shape
+   * so adapters can forward to runners via `secretEnv` (never argv).
+   * Null when no datasource is bound; bearerToken null when the datasource
+   * is anonymous (no bearer configured).
    */
-  readonly prometheusUrl: string | null;
+  prometheusDatasource: {
+    id: string;
+    baseUrl: string;
+    bearerToken: string | null;
+  } | null;
   prometheusDatasourceId: string | null;
   serverKind: ServerKind | null;
 }
@@ -231,13 +234,40 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory | null,
       tokenizerHfId: row.tokenizerHfId,
-      // Derived: bound datasource's baseUrl, or null when no datasource is bound.
-      // Downstream consumers (engine-metrics, benchmark adapters) continue to
-      // read this field unchanged after the v1 `prometheusUrl` column drop.
-      prometheusUrl: row.prometheusDatasource?.baseUrl ?? null,
+      // Decrypt the datasource bearer once here so adapters / downstream
+      // consumers get plaintext (same shape as `apiKey` above). Returning
+      // ciphertext would force every consumer to import the decrypt helper
+      // and the encryption key, defeating the boundary.
+      // Defensive: if a row mid-migration has a bearerCipher that decrypts
+      // with a rotated key, we surface `null` rather than throwing — the
+      // upstream PrometheusFetcherService already logs that failure mode.
+      prometheusDatasource: row.prometheusDatasource
+        ? {
+            id: row.prometheusDatasource.id,
+            baseUrl: row.prometheusDatasource.baseUrl,
+            bearerToken: this.tryDecryptBearer(row.prometheusDatasource.bearerCipher),
+          }
+        : null,
       prometheusDatasourceId: row.prometheusDatasourceId,
       serverKind: row.serverKind as ServerKind | null,
     };
+  }
+
+  /**
+   * Defensive decryption of a Prometheus datasource bearer cipher. Returns
+   * null when the cipher is empty (anonymous datasource) OR when decryption
+   * fails (env key rotated, corrupted cipher, etc.) — same graceful-
+   * degradation contract PrometheusFetcherService uses. Logging the
+   * specific failure mode lives upstream in that service to avoid double-
+   * logging from every connection read.
+   */
+  private tryDecryptBearer(cipher: string | null): string | null {
+    if (!cipher) return null;
+    try {
+      return decrypt(cipher, this.key);
+    } catch {
+      return null;
+    }
   }
 
   private async findOwnedRow(userId: string, id: string): Promise<ConnectionRow> {
