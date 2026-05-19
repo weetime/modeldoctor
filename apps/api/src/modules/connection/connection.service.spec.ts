@@ -330,7 +330,14 @@ describe("ConnectionService", () => {
         name: ds.name,
         baseUrl: ds.baseUrl,
       });
-      expect("prometheusUrl" in r).toBe(false);
+      // Anchor on a positive shape assertion FIRST so a regression that
+      // returned `{}` (or undefined) wouldn't make every subsequent absence
+      // check silently pass. `"prometheusUrl" in {}` is false — without this
+      // anchor, the dropped-field assertion below has nothing real to bite.
+      // (mock's makeRow doesn't echo the input `name`, so we only lock the
+      // fields the mock guarantees: a stable id and the contract's kind.)
+      expect(r).toMatchObject({ id: expect.any(String), kind: "model" });
+      expect(r).not.toHaveProperty("prometheusUrl");
     });
   });
 

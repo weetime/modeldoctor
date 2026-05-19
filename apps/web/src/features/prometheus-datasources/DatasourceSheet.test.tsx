@@ -1,20 +1,37 @@
 import "@/lib/i18n";
+import { ApiError } from "@/lib/api-client";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Hoisted so the sonner mock factory can refer to these symbols at hoist-time.
+const { toastSuccess, toastError } = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+}));
 
 const createMutate = vi.fn(async (body: unknown) => ({ id: "new", ...(body as object) }));
 const updateMutate = vi.fn(async (vars: { id: string; body: unknown }) => ({
   id: vars.id,
   ...(vars.body as object),
 }));
-const verifyMutate = vi.fn(async (_body: unknown) => ({ ok: true, version: "2.50.0" }));
+// Explicit return-type annotation widens the inferred type so per-test
+// mockResolvedValueOnce can return the failure variant `{ ok: false, reason }`
+// without TS narrowing to the happy-path shape.
+type VerifyResult = { ok: boolean; version?: string; reason?: string };
+const verifyMutate = vi.fn(
+  async (_body: unknown): Promise<VerifyResult> => ({ ok: true, version: "2.50.0" }),
+);
 
 vi.mock("./queries", () => ({
   useCreateDatasource: () => ({ mutateAsync: createMutate, isPending: false }),
   useUpdateDatasource: () => ({ mutateAsync: updateMutate, isPending: false }),
   useVerifyDatasource: () => ({ mutateAsync: verifyMutate, isPending: false }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: toastError },
 }));
 
 import { DatasourceSheet } from "./DatasourceSheet";
@@ -36,6 +53,22 @@ describe("DatasourceSheet (create)", () => {
     createMutate.mockClear();
     updateMutate.mockClear();
     verifyMutate.mockClear();
+    toastSuccess.mockClear();
+    toastError.mockClear();
+    // Reset implementations for ALL three mutations so a prior test's
+    // mockRejectedValueOnce / mockResolvedValueOnce can't bleed across
+    // describe blocks (matters in watch mode where files can re-run in any
+    // order). Symmetric reset is cheaper than reasoning about which mock
+    // each block touches.
+    createMutate.mockImplementation(async (body: unknown) => ({
+      id: "new",
+      ...(body as object),
+    }));
+    updateMutate.mockImplementation(async (vars: { id: string; body: unknown }) => ({
+      id: vars.id,
+      ...(vars.body as object),
+    }));
+    verifyMutate.mockImplementation(async () => ({ ok: true, version: "2.50.0" }));
   });
 
   it("submits create with name, baseUrl, and optional bearer", async () => {
@@ -78,6 +111,67 @@ describe("DatasourceSheet (create)", () => {
     const btn = screen.getByRole("button", { name: /test connection|测试连接/i });
     expect(btn).toBeDisabled();
   });
+
+  it("PROMETHEUS_DATASOURCE_NAME_TAKEN → localized toast.error, no inline submitError", async () => {
+    // The sheet's onSubmit catch routes the known conflict codes through
+    // toastDatasourceError (per-code i18n) instead of dumping the raw
+    // message into the inline error region. Lock that wiring.
+    createMutate.mockRejectedValueOnce(
+      new ApiError(409, "duplicate name", "PROMETHEUS_DATASOURCE_NAME_TAKEN"),
+    );
+    const user = userEvent.setup();
+    render(<DatasourceSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/^name|^名称/i), "prom-prod");
+    await user.type(screen.getByLabelText(/prometheus url/i), "https://prom.example.com");
+    await user.click(screen.getByRole("button", { name: /^save$|^保存$/i }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    // Localized "name taken" message lands in the toast; we lock the
+    // distinctive substring rather than the full prose so future copy
+    // tweaks don't break the test.
+    expect(toastError.mock.calls[0][0]).toMatch(/已被占用|already.*taken/i);
+    // Inline submitError text must NOT also render — codes are toast-routed.
+    expect(screen.queryByText("duplicate name")).toBeNull();
+  });
+
+  it("PROMETHEUS_DATASOURCE_BASEURL_TAKEN → localized toast.error for the baseUrl path", async () => {
+    createMutate.mockRejectedValueOnce(
+      new ApiError(409, "duplicate baseurl", "PROMETHEUS_DATASOURCE_BASEURL_TAKEN"),
+    );
+    const user = userEvent.setup();
+    render(<DatasourceSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/^name|^名称/i), "prom-prod");
+    await user.type(screen.getByLabelText(/prometheus url/i), "https://prom.example.com");
+    await user.click(screen.getByRole("button", { name: /^save$|^保存$/i }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(toastError.mock.calls[0][0]).toMatch(/url 已被登记|already.*registered|already.*taken/i);
+    expect(screen.queryByText("duplicate baseurl")).toBeNull();
+  });
+
+  it("verify resolving { ok: false, reason } surfaces toast.error with the reason", async () => {
+    verifyMutate.mockResolvedValueOnce({ ok: false, reason: "HTTP 401" });
+    const user = userEvent.setup();
+    render(<DatasourceSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/prometheus url/i), "https://prom.example.com");
+    await user.click(screen.getByRole("button", { name: /test connection|测试连接/i }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    // toast.verify.fail template includes {{reason}}; we lock that the
+    // reason string the server returned makes it through to the user.
+    expect(toastError.mock.calls[0][0]).toMatch(/HTTP 401/);
+  });
+
+  it("verify throwing (network/timeout) surfaces toast.error with the thrown message", async () => {
+    verifyMutate.mockRejectedValueOnce(new Error("Network down"));
+    const user = userEvent.setup();
+    render(<DatasourceSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    await user.type(screen.getByLabelText(/prometheus url/i), "https://prom.example.com");
+    await user.click(screen.getByRole("button", { name: /test connection|测试连接/i }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(toastError.mock.calls[0][0]).toMatch(/Network down/);
+  });
 });
 
 describe("DatasourceSheet (edit)", () => {
@@ -85,6 +179,22 @@ describe("DatasourceSheet (edit)", () => {
     createMutate.mockClear();
     updateMutate.mockClear();
     verifyMutate.mockClear();
+    toastSuccess.mockClear();
+    toastError.mockClear();
+    // Reset implementations for ALL three mutations so a prior test's
+    // mockRejectedValueOnce / mockResolvedValueOnce can't bleed across
+    // describe blocks (matters in watch mode where files can re-run in any
+    // order). Symmetric reset is cheaper than reasoning about which mock
+    // each block touches.
+    createMutate.mockImplementation(async (body: unknown) => ({
+      id: "new",
+      ...(body as object),
+    }));
+    updateMutate.mockImplementation(async (vars: { id: string; body: unknown }) => ({
+      id: vars.id,
+      ...(vars.body as object),
+    }));
+    verifyMutate.mockImplementation(async () => ({ ok: true, version: "2.50.0" }));
   });
 
   it("disables bearer field by default and OMITS bearerToken from PATCH body", async () => {
