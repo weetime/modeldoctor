@@ -141,7 +141,7 @@ All forms (page-style and dialog-style alike) follow the unified shadcn `<Form>`
 ### Page vs Dialog (creation flows)
 
 - **Page-style** when: > 5 fields, multiple sections, contains a dynamic sub-form (e.g. `ToolParamsEditor`), needs deep-link URL params, submit navigates to a detail page. Examples: `BenchmarkCreatePage`, `TemplateCreatePage` / `TemplateEditPage`.
-- **Dialog-style** when: ≤ 5 fields (or all same-category), no sub-form, submit stays in the originating list/detail context. Examples: `ConnectionDialog`, `SetBaselineDialog`.
+- **Sheet/Dialog-style** when: ≤ 5 fields (or all same-category), no sub-form, submit stays in the originating list/detail context. Most entity create/edit use shadcn `<Sheet>` (right-side drawer) for the extra vertical space — examples: `ConnectionSheet`, `DatasourceSheet`, `ChannelSheet`. Reserve `<Dialog>` (modal) for transient one-off operations that aren't full entity edits — example: `SetBaselineDialog`.
 
 Field-count is a guideline, not a hard rule — final call is "needs sections / sub-form / deep-link".
 

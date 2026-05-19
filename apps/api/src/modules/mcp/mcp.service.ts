@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service.js";
 import { AlertsService } from "../alerts/alerts.service.js";
 import { SubscribersService } from "../alerts/subscribers.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
@@ -24,6 +25,7 @@ import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
+import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
 import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
 import { registerTestChannel } from "./tools/test-channel.tool.js";
@@ -53,6 +55,7 @@ const SERVER_VERSION = (() => {
 @Injectable()
 export class McpService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly discovery: DiscoveryService,
     private readonly connections: ConnectionService,
     private readonly benchmarks: BenchmarkService,
@@ -76,8 +79,21 @@ export class McpService {
       { capabilities: { tools: {} } },
     );
 
+    // Look up the configured MCP user's actual roles in the DB so admin-only
+    // tools (e.g. set_default_prometheus_datasource) can gate on real status
+    // rather than hard-coding `isAdmin: false` everywhere. If the user has
+    // been deleted between server start and this call, we treat them as
+    // non-admin — the underlying service will then raise its own NotFound
+    // or Forbidden, which is the same end-state the REST layer presents.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { roles: true },
+    });
+    const isAdmin = !!user?.roles?.includes("admin");
+
     const deps: McpToolDeps = {
       userId,
+      isAdmin,
       discovery: this.discovery,
       connections: this.connections,
       benchmarks: this.benchmarks,
@@ -114,6 +130,7 @@ export class McpService {
     registerSubscribeConnection(server, deps);
     registerListPrometheusDatasources(server, deps);
     registerSetConnectionPrometheusSource(server, deps);
+    registerSetDefaultPrometheusDatasource(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -136,6 +153,13 @@ export class McpService {
 
 export interface McpToolDeps {
   userId: string;
+  /**
+   * Whether the configured MCP_USER_ID has the "admin" role in the DB.
+   * Resolved per-request from prisma; admin-gated tools (e.g.
+   * `set_default_prometheus_datasource`) check this before mutating
+   * shared/admin-managed resources. Read-only tools may ignore it.
+   */
+  isAdmin: boolean;
   discovery: DiscoveryService;
   connections: ConnectionService;
   benchmarks: BenchmarkService;
