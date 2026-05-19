@@ -13,10 +13,6 @@
  *
  * NOT included by design:
  * - DATABASE_URL — computed dynamically by pickTestDatabaseUrl()
- * - MCP_BEARER_TOKEN / MCP_USER_ID — mcp.e2e-spec relies on the
- *   "ConfigService falls back to live process.env when validatedEnv is undefined"
- *   path (since .env doesn't define MCP_*). Adding them here would BREAK the
- *   existing "503 when unset" test because validatedEnv would lock them.
  */
 export const E2E_ENV_DEFAULTS = {
   // passport-jwt validates secretOrKey at strategy-construction time, so
@@ -43,4 +39,12 @@ export const E2E_ENV_DEFAULTS = {
   // return that dev value (validatedConfig caches it at forRoot time) and the
   // spec's "Bearer X" wouldn't match.
   ALERTMANAGER_WEBHOOK_SECRET: "alertmanager-test-secret-padded-to-32-chars-min",
+  // McpAuthGuard.canActivate() reads both MCP_BEARER_TOKEN and MCP_USER_ID via
+  // ConfigService. mcp.e2e-spec.ts sends `Bearer ${MCP_BEARER_TOKEN}` and
+  // expects mcpUserId to be stamped from MCP_USER_ID; both must match exactly,
+  // so they live here for a single source of truth. The "missing secret → 503"
+  // branch is unit-covered by mcp.guard.spec.ts, so the fixture safely defines
+  // real values here without losing coverage.
+  MCP_BEARER_TOKEN: "test-mcp-token-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  MCP_USER_ID: "e2e-mcp-test-user",
 } as const;

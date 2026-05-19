@@ -1,66 +1,32 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type E2EContext, bootE2E } from "../helpers/app.js";
+import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
 /**
- * MCP route smoke tests. The full JSON-RPC handshake + tool roundtrip is
- * the SDK's responsibility (covered by its own tests); we verify our own
- * additions: the McpAuthGuard's 503 / 401 paths and that the route exists
- * at the expected path.
- */
-describe("MCP /mcp (e2e)", () => {
-  let ctx: E2EContext;
-
-  beforeAll(async () => {
-    // Ensure MCP env vars are unset so the 503-when-unconfigured branch is exercised.
-    delete process.env.MCP_BEARER_TOKEN;
-    delete process.env.MCP_USER_ID;
-    ctx = await bootE2E();
-  }, 120_000);
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  it("503 when MCP_BEARER_TOKEN / MCP_USER_ID are unset", async () => {
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/mcp")
-      .set("Authorization", "Bearer anything")
-      .send({});
-    expect(res.status).toBe(503);
-    // The AllExceptionsFilter wraps the message in various shapes; match
-    // any string field in the body.
-    expect(JSON.stringify(res.body)).toMatch(/MCP is not configured/i);
-  });
-});
-
-/**
- * Tool registry smoke test — boot the app with MCP env vars set, send a
- * `tools/list` JSON-RPC request, and verify all expected tool names
- * appear (catches "forgot to register a tool" regressions). Full per-tool
- * behavior is covered by the underlying service specs.
- */
-/**
- * Tool registry happy-path: set the env vars BEFORE bootE2E so the
- * McpAuthGuard sees them at app init, then drive a real `tools/list`
- * JSON-RPC request and assert the alert-loop tools are registered.
- * No user row is needed — the registry handshake doesn't invoke any
- * tool handler, so MCP_USER_ID is opaque at this layer.
+ * MCP route smoke tests. The full JSON-RPC handshake + tool roundtrip is the
+ * SDK's responsibility (covered by its own tests); we verify our own additions:
+ * that all expected tools are registered and exposed at the configured path.
+ *
+ * The McpAuthGuard's 503-when-unset and 401 bearer-mismatch branches are
+ * unit-tested in apps/api/src/modules/mcp/mcp.guard.spec.ts — no need to
+ * re-assert them through the HTTP layer (and doing so would force the brittle
+ * `delete process.env.MCP_*` carve-out we deliberately removed).
+ *
+ * MCP_BEARER_TOKEN / MCP_USER_ID come from E2E_ENV_DEFAULTS so the Bearer the
+ * test sends matches the value ConfigService loaded at app boot. Mutating
+ * process.env in beforeAll is the anti-pattern E2E_ENV_DEFAULTS exists to
+ * prevent (see that file's docstring for the alerts 401 backstory).
  */
 describe("MCP /mcp tools registry (e2e)", () => {
   let ctx: E2EContext;
-  const TOKEN = "test-mcp-token-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const FAKE_USER_ID = "mcp-test-user";
+  const TOKEN = E2E_ENV_DEFAULTS.MCP_BEARER_TOKEN;
 
   beforeAll(async () => {
-    process.env.MCP_BEARER_TOKEN = TOKEN;
-    process.env.MCP_USER_ID = FAKE_USER_ID;
     ctx = await bootE2E();
   }, 120_000);
 
   afterAll(async () => {
-    delete process.env.MCP_BEARER_TOKEN;
-    delete process.env.MCP_USER_ID;
     await ctx.teardown();
   });
 

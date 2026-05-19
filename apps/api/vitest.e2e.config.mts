@@ -32,7 +32,7 @@ export default defineConfig({
       DATABASE_URL: TEST_DATABASE_URL,
       // Shared fixture so spec files can import the same constants they
       // expect ConfigService to see. See test/setup/e2e-env-defaults.ts for
-      // per-key rationale and the MCP_* carve-out.
+      // per-key rationale.
       ...E2E_ENV_DEFAULTS,
     },
   },
