@@ -238,6 +238,12 @@ describe("Connection.kind e2e", () => {
       // ON DELETE SET NULL on Connection.prometheusDatasourceId, but
       // dropping the referencing rows first keeps the log free of orphan
       // chatter if the FK ever tightens to RESTRICT.
+      //
+      // Guard against beforeAll failing before datasourceId is assigned —
+      // vitest still runs afterAll on beforeAll failure, and Prisma silently
+      // ignores `where: { x: undefined }`, which would otherwise drop EVERY
+      // connection in the test DB and confuse debugging across e2e files.
+      if (!datasourceId) return;
       await prisma.connection.deleteMany({ where: { prometheusDatasourceId: datasourceId } });
       await prisma.prometheusDatasource.deleteMany();
     });
