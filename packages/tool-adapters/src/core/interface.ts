@@ -51,10 +51,21 @@ export interface BuildCommandPlan<TParams = unknown> {
      */
     tokenizerHfId: string | null;
     /**
-     * Required by tools that read per-pod metrics (prefix-cache-probe);
-     * other adapters ignore it. Null when the user hasn't configured one.
+     * Bound Prometheus datasource (admin-managed entity introduced in #199).
+     * Null when the connection has no datasource bound. Adapters that pull
+     * per-pod metrics (prefix-cache-probe today) read
+     * `prometheusDatasource.baseUrl` for the URL and forward `bearerToken`
+     * to the runner via `secretEnv` (NEVER argv) for authenticated scrapes.
+     *
+     * `bearerToken` is plaintext after api-side decryption — same trust
+     * boundary as `apiKey` above. Adapters MUST NOT log it or pass it via
+     * argv; secretEnv only.
      */
-    prometheusUrl: string | null;
+    prometheusDatasource: {
+      id: string;
+      baseUrl: string;
+      bearerToken: string | null;
+    } | null;
   };
   callback: { url: string; token: string };
 }

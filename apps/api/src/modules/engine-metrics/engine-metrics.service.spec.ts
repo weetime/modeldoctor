@@ -17,7 +17,11 @@ function makeConn(over: Partial<DecryptedConnection> = {}): DecryptedConnection 
     queryParams: "",
     category: "chat",
     tokenizerHfId: null,
-    prometheusUrl: "http://prom:9090",
+    prometheusDatasource: {
+      id: "ds_1",
+      baseUrl: "http://prom:9090",
+      bearerToken: null,
+    },
     prometheusDatasourceId: "ds_1",
     serverKind: "vllm",
     ...over,
@@ -43,8 +47,10 @@ describe("EngineMetricsService", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("rejects when connection lacks prometheusUrl (422)", async () => {
-    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn({ prometheusUrl: null }));
+  it("rejects when connection has no prometheusDatasource bound (422)", async () => {
+    connections.getOwnedDecrypted.mockResolvedValueOnce(
+      makeConn({ prometheusDatasource: null, prometheusDatasourceId: null }),
+    );
     await expect(
       svc.fetchSnapshot("u1", "c1", {
         from: "2026-05-09T00:00:00.000Z",

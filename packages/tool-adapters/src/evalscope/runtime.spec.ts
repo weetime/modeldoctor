@@ -30,7 +30,7 @@ const plan: BuildCommandPlan<EvalscopeParams> = {
     customHeaders: "",
     queryParams: "",
     tokenizerHfId: null,
-    prometheusUrl: null,
+    prometheusDatasource: null,
   },
   callback: { url: "http://api/", token: "tk" },
 };
