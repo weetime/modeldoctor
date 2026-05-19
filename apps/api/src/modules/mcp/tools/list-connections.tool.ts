@@ -14,7 +14,7 @@ export function registerListConnections(server: McpServer, deps: McpToolDeps): v
       title: "List connections",
       description:
         "List the user's saved inference-endpoint connections (id, name, baseUrl, " +
-        "model, category, tags, serverKind, prometheusUrl). The apiKey is NEVER " +
+        "model, category, tags, serverKind, prometheusDatasource). The apiKey is NEVER " +
         "returned — only a 4-char preview. Use the id with run_diagnostics or " +
         "list_benchmarks to look up dependent records.",
     },

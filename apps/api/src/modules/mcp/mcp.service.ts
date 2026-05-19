@@ -13,6 +13,7 @@ import { DiagnosticsService } from "../diagnostics/diagnostics.service.js";
 import { ChannelsService } from "../notifications/channels.service.js";
 import { DispatcherService } from "../notifications/dispatcher.service.js";
 import { SubscriptionsService } from "../notifications/subscriptions.service.js";
+import { PrometheusDatasourceService } from "../prometheus-datasource/prometheus-datasource.service.js";
 import { registerCreateChannel } from "./tools/create-channel.tool.js";
 import { registerDiscoverConnection } from "./tools/discover-connection.tool.js";
 import { registerGetAlertExplanation } from "./tools/get-alert-explanation.tool.js";
@@ -20,7 +21,9 @@ import { registerListAlerts } from "./tools/list-alerts.tool.js";
 import { registerListBenchmarks } from "./tools/list-benchmarks.tool.js";
 import { registerListChannels } from "./tools/list-channels.tool.js";
 import { registerListConnections } from "./tools/list-connections.tool.js";
+import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
+import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
 import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
 import { registerTestChannel } from "./tools/test-channel.tool.js";
@@ -59,6 +62,7 @@ export class McpService {
     private readonly dispatcher: DispatcherService,
     private readonly alerts: AlertsService,
     private readonly subscribers: SubscribersService,
+    private readonly prometheusDatasources: PrometheusDatasourceService,
   ) {}
 
   async handleRequest(
@@ -82,6 +86,7 @@ export class McpService {
       subscriptions: this.subscriptions,
       alerts: this.alerts,
       subscribers: this.subscribers,
+      prometheusDatasources: this.prometheusDatasources,
       notificationsTest: async (channelId: string) => {
         try {
           await this.dispatcher.testChannel(
@@ -107,6 +112,8 @@ export class McpService {
     registerListAlerts(server, deps);
     registerGetAlertExplanation(server, deps);
     registerSubscribeConnection(server, deps);
+    registerListPrometheusDatasources(server, deps);
+    registerSetConnectionPrometheusSource(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -137,5 +144,6 @@ export interface McpToolDeps {
   subscriptions: SubscriptionsService;
   alerts: AlertsService;
   subscribers: SubscribersService;
+  prometheusDatasources: PrometheusDatasourceService;
   notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }
