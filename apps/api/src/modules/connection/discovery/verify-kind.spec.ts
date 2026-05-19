@@ -21,12 +21,12 @@ function promResponse(
   init: { status?: number; contentType?: string } = {},
 ): Response {
   const text = typeof body === "string" ? body : JSON.stringify(body);
+  // Intentionally do NOT set content-length manually — string.length is the
+  // char count, not the byte count, and would lie under multi-byte UTF-8.
+  // The Response constructor computes the correct byte length itself.
   return new Response(text, {
     status: init.status ?? 200,
-    headers: {
-      "content-type": init.contentType ?? "application/json",
-      "content-length": String(text.length),
-    },
+    headers: { "content-type": init.contentType ?? "application/json" },
   });
 }
 

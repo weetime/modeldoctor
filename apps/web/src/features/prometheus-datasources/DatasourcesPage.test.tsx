@@ -143,9 +143,10 @@ describe("DatasourcesPage", () => {
       </MemoryRouter>,
     );
     // "+ New datasource" CTA in the page header is admin-only.
-    expect(screen.queryByText(/\+ 新增数据源|\+ new datasource/i)).toBeNull();
+    // Grouped alternation so ^ / $ apply to BOTH branches, not just one.
+    expect(screen.queryByText(/^(\+ 新增数据源|\+ new datasource)$/i)).toBeNull();
     // The "Set as default" button is admin-only; only the default badge remains.
-    expect(screen.queryByText(/^set as default$|^设为默认$/i)).toBeNull();
+    expect(screen.queryByText(/^(设为默认|set as default)$/i)).toBeNull();
     // No delete buttons — only em-dash placeholders in the action column.
     expect(screen.queryAllByLabelText(/delete|删除/i)).toHaveLength(0);
     // Table still renders rows in read-only mode.
@@ -165,7 +166,7 @@ describe("DatasourcesPage", () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole("button", { name: /^\+ 新增数据源|\+ new datasource$/i }),
+      screen.getByRole("button", { name: /^(\+ 新增数据源|\+ new datasource)$/i }),
     ).toBeInTheDocument();
   });
 
@@ -179,7 +180,7 @@ describe("DatasourcesPage", () => {
         <DatasourcesPage />
       </MemoryRouter>,
     );
-    expect(screen.queryByText(/\+ 新增数据源|\+ new datasource/i)).toBeNull();
+    expect(screen.queryByText(/^(\+ 新增数据源|\+ new datasource)$/i)).toBeNull();
     // Empty-state itself still renders so the user sees why the table is blank.
     expect(
       screen.getByText(/no prometheus datasource|尚未配置 prometheus 数据源/i),
@@ -195,7 +196,7 @@ describe("DatasourcesPage", () => {
       </MemoryRouter>,
     );
     // Only `prom-staging` (ds2, isDefault=false) renders the Set-default button.
-    const btn = screen.getByRole("button", { name: /^设为默认|^set as default/i });
+    const btn = screen.getByRole("button", { name: /^(设为默认|set as default)$/i });
     fireEvent.click(btn);
     await waitFor(() => expect(setDefaultMutate).toHaveBeenCalledTimes(1));
     expect(setDefaultMutate).toHaveBeenCalledWith("ds2");
