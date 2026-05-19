@@ -4,8 +4,6 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { EngineMetricsSection } from "./EngineMetricsSection.js";
 
-vi.mock("echarts-for-react", () => ({ default: () => <div data-testid="echart" /> }));
-
 vi.mock("@/lib/api-client", () => ({
   api: {
     get: vi.fn(async () => ({

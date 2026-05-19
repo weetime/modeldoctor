@@ -159,7 +159,11 @@ export function InsightsDetailPage() {
     return (
       <>
         <PageHeader title="…" breadcrumbs={breadcrumbs("…")} />
-        <div className="m-8 h-64 animate-pulse rounded-md border border-border bg-muted/30" />
+        <div
+          role="status"
+          aria-label="loading"
+          className="m-8 h-64 animate-pulse rounded-md border border-border bg-muted/30"
+        />
       </>
     );
   }

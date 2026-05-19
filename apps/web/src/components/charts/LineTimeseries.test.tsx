@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { LineTimeseries } from "./LineTimeseries.js";
-
-vi.mock("echarts-for-react", () => ({
-  default: ({ option }: { option: unknown }) => (
-    <div data-testid="echart" data-option={JSON.stringify(option)} />
-  ),
-}));
 
 const SERIES_A = {
   name: "infer-0",

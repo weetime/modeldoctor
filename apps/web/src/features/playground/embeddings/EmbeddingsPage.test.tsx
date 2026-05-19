@@ -10,12 +10,6 @@ vi.mock("@/lib/api-client", () => {
   return { ApiError, api: { post: vi.fn() } };
 });
 
-vi.mock("echarts-for-react", () => ({
-  default: ({ style }: { style?: React.CSSProperties }) => (
-    <div data-testid="echart" style={style} />
-  ),
-}));
-
 const SAMPLE_CONN: ConnectionPublic = {
   id: "c1",
   userId: "u1",

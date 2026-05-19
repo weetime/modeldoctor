@@ -1,14 +1,9 @@
 import { render } from "@testing-library/react";
-import type { CSSProperties } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { LatencyCDF } from "./LatencyCDF";
 import { PercentileTimeseries } from "./PercentileTimeseries";
 import { QPSTimeseries } from "./QPSTimeseries";
 import { TTFTHistogram } from "./TTFTHistogram";
-
-vi.mock("echarts-for-react", () => ({
-  default: ({ style }: { style?: CSSProperties }) => <div data-testid="echart" style={style} />,
-}));
 
 const N = 10_000;
 // Regression guard, not a real perf benchmark: jsdom doesn't render canvas.

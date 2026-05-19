@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { PercentileTimeseries } from "./PercentileTimeseries";
-
-vi.mock("echarts-for-react", () => ({
-  default: ({ option, style }: { option: unknown; style?: React.CSSProperties }) => (
-    <div data-testid="echart" data-option={JSON.stringify(option)} style={style} />
-  ),
-}));
 
 function readOption(): {
   series: Array<{

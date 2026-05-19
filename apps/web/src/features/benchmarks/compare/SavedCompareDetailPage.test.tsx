@@ -5,12 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
 import { SavedCompareDetailPage } from "./SavedCompareDetailPage";
 
-vi.mock("echarts-for-react", () => ({
-  default: ({ option }: { option: unknown }) => (
-    <div data-testid="echart" data-option={JSON.stringify(option)} />
-  ),
-}));
-
 vi.mock("@/lib/api-client", () => ({
   api: {
     get: vi.fn(async (path: string) => {
