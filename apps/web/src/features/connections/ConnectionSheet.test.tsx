@@ -580,9 +580,47 @@ describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
     });
-    // The legacy `prometheusUrl` form input is gone; Discover still surfaces
-    // the inferred value through the DiscoverResultBanner (evidence row), not
-    // as an editable field.
+    // The legacy `prometheusUrl` form input is gone. In the success path
+    // the DiscoverResultBanner does NOT render either (see runDiscover —
+    // banner only mounts when `countFilledFields === 0`). The inferred
+    // prometheusUrl is still carried through the contract for the
+    // zero-result diagnostic view; see the next test for that path.
+    expect(screen.queryByText(/请确认|please verify/i)).not.toBeInTheDocument();
+  });
+
+  it("zero-results banner surfaces the prometheusUrl evidence row (e.g. 'no /metrics')", async () => {
+    // Banner mounts only when ALL inferred fields are empty — that's the
+    // pure-diagnostic path. PR #199 kept inferred.prometheusUrl in the
+    // contract precisely so this row is still informative; lock that
+    // guarantee here so a future cleanup can't silently drop it.
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      health: { durationMs: 80, probesAttempted: 4, probesFailed: [], warnings: [] },
+      inferred: {
+        serverKind: { value: null, confidence: "unknown", evidence: "no server header" },
+        models: { values: [], confidence: "unknown", evidence: "/v1/models 404" },
+        category: { value: null, confidence: "unknown", evidence: "no signal" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "n/a" },
+        // Matches the actual evidence string the backend's prometheus-url
+        // inferrer emits when /metrics is unreachable — see
+        // apps/api/.../discovery/inference/prometheus-url.ts.
+        prometheusUrl: {
+          value: null,
+          confidence: "unknown",
+          evidence: "no /metrics endpoint detected",
+        },
+      },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+
+    await user.type(screen.getByLabelText(/api base url/i), "http://nothing-here.test");
+    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
+
+    // Banner mounts with the diagnostic table; the prometheusUrl row's
+    // evidence must surface so the user sees WHY metric inference failed.
+    await waitFor(() => {
+      expect(screen.getByText(/no \/metrics endpoint detected/i)).toBeInTheDocument();
+    });
   });
 
   it("auto-apply preserves user-modified (dirty) model field in edit mode", async () => {
