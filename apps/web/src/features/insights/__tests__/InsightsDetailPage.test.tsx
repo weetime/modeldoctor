@@ -162,7 +162,9 @@ describe("InsightsDetailPage", () => {
 
   it("renders the loading skeleton while either conn or profiles is pending", () => {
     renderPage();
-    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+    // The skeleton has role="status" so assistive tech announces the wait;
+    // we query semantically rather than by className for the same reason.
+    expect(screen.getByRole("status", { name: /loading/i })).toBeInTheDocument();
     // Hero band MUST NOT render in loading state — composite-score is the
     // testid we lock in success-state tests below.
     expect(screen.queryByTestId("composite-score")).toBeNull();
@@ -190,9 +192,10 @@ describe("InsightsDetailPage", () => {
     listQueryRef.current = { data: { pages: [{ items: [] }] }, isLoading: false };
     renderPage();
 
-    // Model name surfaces in both the PageHeader title and the breadcrumb;
-    // both copies are user-facing so we just lock that it's present.
-    expect(screen.getAllByText("Qwen3-32B").length).toBeGreaterThanOrEqual(1);
+    // Model name surfaces in exactly TWO places: PageHeader title +
+    // breadcrumb last entry. Lock the exact count so a regression that
+    // drops one (or adds a third unexpected render) fails loudly.
+    expect(screen.getAllByText("Qwen3-32B")).toHaveLength(2);
 
     // Composite score block renders the em-dash for null score (lock the
     // testid so future copy changes don't silently break us).
