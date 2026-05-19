@@ -135,10 +135,7 @@ export class PrometheusFetcherService {
         // (env rotated without re-encrypting) vs corrupted cipher vs algorithm
         // mismatch — `log.warn` alone left the catch site blind.
         const err = e as Error;
-        this.log.error(
-          `Datasource ${ds.id} bearer decrypt failed: ${err.message}`,
-          err.stack,
-        );
+        this.log.error(`Datasource ${ds.id} bearer decrypt failed: ${err.message}`, err.stack);
         return null;
       }
     }
