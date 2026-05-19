@@ -130,8 +130,15 @@ export class PrometheusFetcherService {
     if (ds.bearerCipher) {
       try {
         headers.Authorization = `Bearer ${decrypt(ds.bearerCipher, this.key)}`;
-      } catch {
-        this.log.warn(`Datasource ${ds.id} bearer decrypt failed`);
+      } catch (e) {
+        // Surface the stack so an admin can tell whether this is a key-mismatch
+        // (env rotated without re-encrypting) vs corrupted cipher vs algorithm
+        // mismatch — `log.warn` alone left the catch site blind.
+        const err = e as Error;
+        this.log.error(
+          `Datasource ${ds.id} bearer decrypt failed: ${err.message}`,
+          err.stack,
+        );
         return null;
       }
     }
