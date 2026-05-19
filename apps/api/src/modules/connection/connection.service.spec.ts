@@ -184,8 +184,7 @@ describe("ConnectionService", () => {
     beforeEach(() => {
       prismaMock.prometheusDatasource.findFirst.mockResolvedValue(ds);
       prismaMock.prometheusDatasource.findUnique.mockImplementation(
-        async (args: { where: { id: string } }) =>
-          args.where.id === ds.id ? { id: ds.id } : null,
+        async (args: { where: { id: string } }) => (args.where.id === ds.id ? { id: ds.id } : null),
       );
       prismaMock.connection.create.mockImplementation(
         async (args: {
@@ -299,7 +298,6 @@ describe("ConnectionService", () => {
         response: { code: "PROMETHEUS_DATASOURCE_INVALID_KIND" },
       });
     });
-
   });
 
   describe("toContractPublic — drops prometheusUrl + includes prometheusDatasource summary", () => {

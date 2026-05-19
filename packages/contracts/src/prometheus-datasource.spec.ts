@@ -107,17 +107,15 @@ describe("updatePrometheusDatasourceSchema", () => {
 describe("verifyPrometheusDatasourceRequestSchema", () => {
   it("requires baseUrl", () => {
     expect(() => verifyPrometheusDatasourceRequestSchema.parse({})).toThrow();
-    expect(
-      verifyPrometheusDatasourceRequestSchema.parse({ baseUrl: "https://x" }).baseUrl,
-    ).toBe("https://x");
+    expect(verifyPrometheusDatasourceRequestSchema.parse({ baseUrl: "https://x" }).baseUrl).toBe(
+      "https://x",
+    );
   });
 });
 
 describe("verifyPrometheusDatasourceResponseSchema", () => {
   it("ok with optional version", () => {
-    expect(
-      verifyPrometheusDatasourceResponseSchema.parse({ ok: true, version: "2.50" }),
-    ).toEqual({
+    expect(verifyPrometheusDatasourceResponseSchema.parse({ ok: true, version: "2.50" })).toEqual({
       ok: true,
       version: "2.50",
     });
@@ -150,11 +148,17 @@ describe("prometheusDatasourceWithSecretSchema", () => {
 
 describe("deletePrometheusDatasourceResponseSchema", () => {
   it("accepts non-negative consumersDetached", () => {
-    expect(deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: 0 })).toEqual({ consumersDetached: 0 });
-    expect(deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: 3 })).toEqual({ consumersDetached: 3 });
+    expect(deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: 0 })).toEqual({
+      consumersDetached: 0,
+    });
+    expect(deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: 3 })).toEqual({
+      consumersDetached: 3,
+    });
   });
 
   it("rejects negative consumersDetached", () => {
-    expect(() => deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: -1 })).toThrow();
+    expect(() =>
+      deletePrometheusDatasourceResponseSchema.parse({ consumersDetached: -1 }),
+    ).toThrow();
   });
 });
