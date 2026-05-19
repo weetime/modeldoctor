@@ -230,6 +230,18 @@ describe("Connection.kind e2e", () => {
       datasourceId = r.body.id;
     });
 
+    afterAll(async () => {
+      // Symmetric cleanup — without this the default datasource leaks into
+      // any e2e file run sequentially after this one (vitest runs e2e files
+      // one at a time but shares the DB), and would also auto-fill onto
+      // any further connection created later in this describe. FK is
+      // ON DELETE SET NULL on Connection.prometheusDatasourceId, but
+      // dropping the referencing rows first keeps the log free of orphan
+      // chatter if the FK ever tightens to RESTRICT.
+      await prisma.connection.deleteMany({ where: { prometheusDatasourceId: datasourceId } });
+      await prisma.prometheusDatasource.deleteMany();
+    });
+
     it("POST /connections (kind=model, no prometheusDatasourceId) auto-fills default", async () => {
       const r = await request(ctx.app.getHttpServer())
         .post("/api/connections")
