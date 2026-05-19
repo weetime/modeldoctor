@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { PieChart } from "./PieChart.js";
-
-vi.mock("echarts-for-react", () => ({
-  default: ({ option }: { option: unknown }) => (
-    <div data-testid="echart" data-option={JSON.stringify(option)} />
-  ),
-}));
 
 const PIE_DATA = [
   { name: "length", value: 42 },
