@@ -20,8 +20,13 @@ import { decodeKey, encrypt } from "../../src/common/crypto/aes-gcm.js";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { AlertExplainerService } from "../../src/modules/alerts/explainer.service.js";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
-const TEST_SECRET = "alertmanager-test-secret-padded-to-32-chars-min";
+// Sourced from the pre-injected fixture (see vitest.e2e.config.mts) — the
+// same value ConfigService.get returns at runtime. Setting process.env here
+// in beforeAll would be too late: NestConfigModule.forRoot caches
+// validatedConfig at AppModule import time.
+const TEST_SECRET = E2E_ENV_DEFAULTS.ALERTMANAGER_WEBHOOK_SECRET;
 
 describe("Alerts webhook e2e", () => {
   let ctx: E2EContext;
@@ -29,7 +34,6 @@ describe("Alerts webhook e2e", () => {
   let token: string;
 
   beforeAll(async () => {
-    process.env.ALERTMANAGER_WEBHOOK_SECRET = TEST_SECRET;
     ctx = await bootE2E();
     prisma = ctx.app.get(PrismaService);
     const u = await registerUser(ctx.app, "alerts@example.com");

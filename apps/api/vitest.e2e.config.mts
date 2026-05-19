@@ -1,6 +1,7 @@
 import swc from "unplugin-swc";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+import { E2E_ENV_DEFAULTS } from "./test/setup/e2e-env-defaults.js";
 import { pickTestDatabaseUrl } from "./test/setup/pick-test-db-url.js";
 
 // Same test DB resolution as vitest.config.mts. See that file for rationale.
@@ -29,26 +30,10 @@ export default defineConfig({
     setupFiles: ["./test/setup/db-guard.ts"],
     env: {
       DATABASE_URL: TEST_DATABASE_URL,
-      // passport-jwt validates secretOrKey at strategy-construction time,
-      // so AppModule boot needs a non-empty JWT secret even in test mode.
-      JWT_ACCESS_SECRET: "e2e-test-jwt-secret-not-for-production-use-only-32+chars",
-      // HmacCallbackGuard validates BENCHMARK_CALLBACK_SECRET at constructor
-      // time (same pattern as passport-jwt), so AppModule boot needs a
-      // non-empty value even when no benchmark e2e test cares about it.
-      // env.schema.ts treats it as optional under NODE_ENV=test; this
-      // injects a placeholder so the guard doesn't throw on construction.
-      BENCHMARK_CALLBACK_SECRET: "e2e-test-callback-secret-not-for-production-use-32+chars",
-      // RunService validates BENCHMARK_CALLBACK_URL at constructor time
-      // (#53 PR 53.2 review hardened this so a misconfigured deployment
-      // fails at boot instead of crashing with TypeError on the first
-      // run). env.schema.ts treats it as optional under NODE_ENV=test;
-      // inject a placeholder so the service can boot for AppModule e2e.
-      BENCHMARK_CALLBACK_URL: "http://e2e-test-placeholder.invalid/",
-      // BenchmarkService.constructor → decodeKey() runs at module init time,
-      // same constructor-validation pattern. env.schema.ts treats this as
-      // optional in test mode; inject a 32-byte base64 placeholder so the
-      // service can boot. (32 zero bytes; never used to encrypt real data.)
-      CONNECTION_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      // Shared fixture so spec files can import the same constants they
+      // expect ConfigService to see. See test/setup/e2e-env-defaults.ts for
+      // per-key rationale and the MCP_* carve-out.
+      ...E2E_ENV_DEFAULTS,
     },
   },
 });
