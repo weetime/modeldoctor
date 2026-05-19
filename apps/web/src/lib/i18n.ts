@@ -16,6 +16,7 @@ import enInsights from "@/locales/en-US/insights.json";
 import enMe from "@/locales/en-US/me.json";
 import enNotifications from "@/locales/en-US/notifications.json";
 import enPlayground from "@/locales/en-US/playground.json";
+import enPrometheusDatasources from "@/locales/en-US/prometheus-datasources.json";
 import enQualityGate from "@/locales/en-US/quality-gate.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
@@ -33,6 +34,7 @@ import zhInsights from "@/locales/zh-CN/insights.json";
 import zhMe from "@/locales/zh-CN/me.json";
 import zhNotifications from "@/locales/zh-CN/notifications.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
+import zhPrometheusDatasources from "@/locales/zh-CN/prometheus-datasources.json";
 import zhQualityGate from "@/locales/zh-CN/quality-gate.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
@@ -57,6 +59,7 @@ void i18n.use(initReactI18next).init({
       notifications: enNotifications,
       me: enMe,
       "quality-gate": enQualityGate,
+      "prometheus-datasources": enPrometheusDatasources,
     },
     "zh-CN": {
       common: zhCommon,
@@ -76,6 +79,7 @@ void i18n.use(initReactI18next).init({
       notifications: zhNotifications,
       me: zhMe,
       "quality-gate": zhQualityGate,
+      "prometheus-datasources": zhPrometheusDatasources,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -99,6 +103,7 @@ void i18n.use(initReactI18next).init({
     "notifications",
     "me",
     "quality-gate",
+    "prometheus-datasources",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

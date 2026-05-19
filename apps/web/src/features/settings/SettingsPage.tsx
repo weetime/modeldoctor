@@ -26,6 +26,7 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
 import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
@@ -33,6 +34,7 @@ import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./set
 export function SettingsPage() {
   const { t } = useTranslation("settings");
   const { t: tc } = useTranslation("common");
+  const { t: tPromDs } = useTranslation("prometheus-datasources");
   const theme = useThemeStore((s) => s.mode);
   const setTheme = useThemeStore((s) => s.setMode);
   const locale = useLocaleStore((s) => s.locale);
@@ -104,6 +106,17 @@ export function SettingsPage() {
 
           <SettingSection title={t("ai.title")} description={t("ai.description")}>
             <AiDiagnosisSection />
+          </SettingSection>
+
+          <SettingSection title={tPromDs("settings.title")} description={tPromDs("settings.desc")}>
+            <SettingRow
+              label={tPromDs("settings.title")}
+              control={
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/settings/prometheus-datasources">{tPromDs("settings.manage")} →</Link>
+                </Button>
+              }
+            />
           </SettingSection>
 
           <SettingSection title={t("environment.title")} description={t("environment.description")}>
