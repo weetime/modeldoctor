@@ -1,11 +1,19 @@
 // apps/api/src/modules/alerts/prometheus-fetcher.guard.spec.ts
 import { describe, expect, it } from "vitest";
-import { evaluateUrl, isPrivateOrLoopback, type SsrfGuardConfig, type Resolver } from "./prometheus-fetcher.guard";
+import {
+  type Resolver,
+  type SsrfGuardConfig,
+  evaluateUrl,
+  isPrivateOrLoopback,
+} from "./prometheus-fetcher.guard";
 
 const noResolver: Resolver = async () => {
   throw new Error("resolver should not be called");
 };
-const fixedResolver = (ips: string[]): Resolver => async () => ips;
+const fixedResolver =
+  (ips: string[]): Resolver =>
+  async () =>
+    ips;
 const failingResolver: Resolver = async () => {
   throw new Error("ENOTFOUND prom.lab");
 };
@@ -64,7 +72,11 @@ describe("isPrivateOrLoopback rejects non-IPs", () => {
 
 describe("evaluateUrl — permissive default (no allow-list, blockPrivate=false)", () => {
   it("allows any public host without DNS lookup", async () => {
-    const v = await evaluateUrl(new URL("http://public.example.com"), CONFIG_PERMISSIVE, noResolver);
+    const v = await evaluateUrl(
+      new URL("http://public.example.com"),
+      CONFIG_PERMISSIVE,
+      noResolver,
+    );
     expect(v).toEqual({ ok: true });
   });
   it("allows a private IP literal", async () => {

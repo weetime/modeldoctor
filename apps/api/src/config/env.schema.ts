@@ -94,6 +94,29 @@ export const EnvSchema = z
     // public origin, e.g. https://modeldoctor.example.com.
     APP_BASE_URL: z.string().url().optional(),
 
+    // --- Prometheus fetcher hardening (issue #200) ---
+    // Defense-in-depth knobs for the PrometheusFetcherService outbound
+    // HTTP. All three are opt-in: the default behaviour preserves the
+    // pre-#200 fetch semantics so existing LAN-only deploys aren't broken
+    // by an upgrade. See prometheus-fetcher.guard.ts for the policy
+    // precedence.
+    //
+    // When non-empty (comma-separated hostnames), this list IS the policy:
+    // anything outside it is rejected and the private-IP check is
+    // bypassed (the operator made an explicit choice). Empty / unset
+    // means "no allow-list, fall through to PROMETHEUS_FETCH_BLOCK_PRIVATE".
+    PROMETHEUS_FETCH_ALLOW_HOSTS: z.string().optional(),
+    // When true, reject any URL whose host resolves to a private /
+    // loopback / link-local IP. Default false because ModelDoctor
+    // typically runs Prometheus on an internal LAN.
+    PROMETHEUS_FETCH_BLOCK_PRIVATE: envBoolean.default(false),
+    // Upper bound on a single Prometheus response body in bytes. The
+    // query_range endpoint streams JSON, so we cap cumulative bytes
+    // before parsing to avoid a malicious / misconfigured datasource
+    // OOMing the api worker. Default 5 MiB — a 15-minute window at 15s
+    // step with 5 series fits in tens of KB, so this is generous.
+    PROMETHEUS_FETCH_MAX_BODY_BYTES: z.coerce.number().int().positive().default(5_242_880),
+
     // --- Alertmanager webhook receiver (P0 closed loop) ---
     // Shared secret for Alertmanager → ModelDoctor webhook. Verified per
     // request via HMAC-SHA256 in the X-ModelDoctor-Signature header. Required

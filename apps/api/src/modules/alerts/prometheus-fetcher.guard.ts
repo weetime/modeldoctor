@@ -1,6 +1,6 @@
+import { promises as dns } from "node:dns";
 // apps/api/src/modules/alerts/prometheus-fetcher.guard.ts
 import { isIP } from "node:net";
-import { promises as dns } from "node:dns";
 
 /**
  * Defense-in-depth guard for the PrometheusFetcher's outbound HTTP. The
