@@ -18,8 +18,7 @@
   },
   "kinds": {
     "model": "模型",
-    "gateway": "网关",
-    "alertmanager": "Alertmanager"
+    "gateway": "网关"
   },
   "dialog": {
     "createTitle": "新建连接",
@@ -32,7 +31,7 @@
     "savedConnectionMissing": "保存的连接已被删除，请选择其他连接",
     "fields": {
       "kind": "类型",
-      "kindHelp": "model = 推理端点；gateway = LLM 网关（如 Higress）；alertmanager = 告警组件。",
+      "kindHelp": "model = 推理端点；gateway = LLM 网关（如 Higress）。",
       "name": "名称",
       "namePlaceholder": "例如 prod-vllm",
       "apiBaseUrl": "API Base URL",

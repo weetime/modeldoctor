@@ -277,19 +277,6 @@ describe("ConnectionSheet (create mode)", () => {
     const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
     expect(arg.prometheusDatasourceId).toBeNull();
   });
-
-  it("does NOT render the Metrics source picker for kind=alertmanager", async () => {
-    const user = userEvent.setup();
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
-
-    await user.click(screen.getByRole("combobox", { name: /^kind|^类型/i }));
-    await user.click(screen.getByRole("option", { name: /^Alertmanager$/i }));
-
-    // alertmanager has no metrics datasource binding — picker must be hidden.
-    expect(
-      screen.queryByRole("combobox", { name: /Metrics source|指标源/i }),
-    ).not.toBeInTheDocument();
-  });
 });
 
 describe("ConnectionSheet (edit mode)", () => {

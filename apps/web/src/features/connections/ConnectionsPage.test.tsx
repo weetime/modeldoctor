@@ -118,7 +118,7 @@ describe("ConnectionsPage (category + tags)", () => {
     expect(screen.queryByText("embed-test")).not.toBeInTheDocument();
   });
 
-  it("kind filter no longer offers the dropped 'prometheus' option", async () => {
+  it("kind filter no longer offers dropped 'prometheus' / 'alertmanager' options", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -126,10 +126,13 @@ describe("ConnectionsPage (category + tags)", () => {
       </MemoryRouter>,
     );
     await user.click(screen.getByRole("combobox", { name: /kind|类型/i }));
-    // Only model / gateway / alertmanager survive after Issue #189; "prometheus"
-    // is now its own settings entity, not a Connection kind.
+    // Only model / gateway survive: prometheus moved to its own settings
+    // entity (#199); alertmanager is push-only via webhook and was never
+    // really used as a Connection (#218).
     expect(screen.queryByRole("option", { name: /^Prometheus$/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /^Alertmanager$/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /^Alertmanager$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Model|^模型$/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Gateway|^网关$/ })).toBeInTheDocument();
   });
 
   it("renders the prometheusDatasource column — link for bound rows, em-dash for unbound", () => {

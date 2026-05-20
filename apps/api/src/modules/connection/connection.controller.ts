@@ -78,7 +78,7 @@ export class ConnectionController {
     return this.discoveryService.discover(body);
   }
 
-  // Shallow probe for non-model kinds (gateway / Prometheus / Alertmanager).
+  // Shallow probe for non-model kinds (currently only gateway).
   // The full `discover` flow above is heavy and model-shaped; this endpoint
   // returns a yes/no + version + a few facts, suitable for an inline "Verify"
   // button next to the kind dropdown.

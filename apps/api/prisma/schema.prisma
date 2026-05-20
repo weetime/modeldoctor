@@ -74,9 +74,9 @@ model Connection {
   kind          String   @default("model")
   name          String
   baseUrl       String   @map("base_url")
-  // Cipher is empty-string for kinds that don't carry an apiKey (prometheus,
-  // alertmanager); the runtime contract layer enforces required-ness per
-  // kind, not the DB schema.
+  // Cipher is empty-string for kinds that don't carry an apiKey (gateway);
+  // the runtime contract layer enforces required-ness per kind, not the DB
+  // schema.
   apiKeyCipher  String   @map("api_key_cipher") // AES-256-GCM v1, see common/crypto/aes-gcm.ts
   // Empty-string default lets non-model kinds skip model name without a
   // nullable column. Contract layer rejects empty model on kind=model writes.
@@ -84,7 +84,7 @@ model Connection {
   customHeaders String   @default("") @map("custom_headers")
   queryParams   String   @default("") @map("query_params")
   // Nullable so the DB doesn't need a placeholder ModalityCategory for a
-  // Prometheus or Alertmanager connection.
+  // gateway connection.
   category      String? // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
@@ -97,8 +97,8 @@ model Connection {
   tokenizerHfId String? @map("tokenizer_hf_id")
 
   // FK to system-level Prometheus instance scraping this connection's metrics.
-  // Nullable: kind=alertmanager must be null; kind ∈ {model,gateway} may be
-  // null (no source set) or fall back to PrometheusDatasource WHERE is_default.
+  // Nullable: may be null (no source set) or fall back to PrometheusDatasource
+  // WHERE is_default at write time.
   prometheusDatasourceId String?               @map("prometheus_datasource_id")
   prometheusDatasource   PrometheusDatasource? @relation(fields: [prometheusDatasourceId], references: [id], onDelete: SetNull)
 

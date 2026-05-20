@@ -229,18 +229,6 @@ describe("ConnectionService", () => {
       expect(r.prometheusDatasourceId).toBeNull();
     });
 
-    it("undefined + kind=alertmanager stores null even when default exists", async () => {
-      const r = await service.create("u_a", {
-        kind: "alertmanager",
-        name: "am",
-        baseUrl: "https://am.com",
-        customHeaders: "",
-        queryParams: "",
-        tags: [],
-      });
-      expect(r.prometheusDatasourceId).toBeNull();
-    });
-
     it("null explicit unbind stores null", async () => {
       const r = await service.create("u_a", {
         kind: "gateway",
@@ -280,22 +268,6 @@ describe("ConnectionService", () => {
       await expect(promise).rejects.toBeInstanceOf(BadRequestException);
       await expect(promise).rejects.toMatchObject({
         response: { code: "PROMETHEUS_DATASOURCE_NOT_FOUND" },
-      });
-    });
-
-    it("explicit id + kind=alertmanager rejected with code PROMETHEUS_DATASOURCE_INVALID_KIND", async () => {
-      await expect(
-        service.create("u_a", {
-          kind: "alertmanager",
-          name: "am",
-          baseUrl: "https://am.com",
-          prometheusDatasourceId: ds.id,
-          customHeaders: "",
-          queryParams: "",
-          tags: [],
-        }),
-      ).rejects.toMatchObject({
-        response: { code: "PROMETHEUS_DATASOURCE_INVALID_KIND" },
       });
     });
   });

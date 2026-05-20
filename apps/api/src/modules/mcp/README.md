@@ -90,7 +90,7 @@ Restart Claude Code; the tools below show up under "modeldoctor".
 | Tool | Use case |
 |---|---|
 | `list_prometheus_datasources()` | List every Prometheus datasource configured in ModelDoctor. The row with `isDefault=true` is the one new connections (kind ∈ {model, gateway}) auto-bind to. `bearerToken` is NEVER returned — only `bearerPreview`. |
-| `set_connection_prometheus_source(connectionId, datasourceId?)` | Bind / rebind / unbind a connection's Prometheus datasource. `datasourceId='<id>'` binds explicitly, `datasourceId=null` unbinds, omit the field to fall back to the current default. Connections with `kind=alertmanager` must stay unbound. |
+| `set_connection_prometheus_source(connectionId, datasourceId?)` | Bind / rebind / unbind a connection's Prometheus datasource. `datasourceId='<id>'` binds explicitly, `datasourceId=null` unbinds, omit the field to fall back to the current default. |
 
 #### `list_prometheus_datasources`
 
@@ -149,7 +149,7 @@ Output (`structuredContent`): the updated connection's binding fields.
 {
   id: string;
   name: string;
-  kind: "model" | "gateway" | "alertmanager";
+  kind: "model" | "gateway";
   prometheusDatasourceId: string | null;
   prometheusDatasource: { id: string; name: string; baseUrl: string } | null;
 }
@@ -178,7 +178,7 @@ Example — *"Point my gpt-4o connection at the secondary Prometheus."*
 }
 ```
 
-Passing `datasourceId: null` unbinds the connection (downstream engine-metrics / benchmark adapters will see `prometheusUrl = null`). Passing a `connectionId` whose `kind=alertmanager` rejects with a Bad Request — alertmanager connections must not carry a Prometheus binding.
+Passing `datasourceId: null` unbinds the connection (downstream engine-metrics / benchmark adapters will see `prometheusUrl = null`).
 
 ## Adding a new tool
 

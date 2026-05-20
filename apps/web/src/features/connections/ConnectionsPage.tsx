@@ -123,7 +123,7 @@ export function ConnectionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allKinds")}</SelectItem>
-                  {(["model", "gateway", "alertmanager"] as ConnectionKind[]).map((k) => (
+                  {(["model", "gateway"] as ConnectionKind[]).map((k) => (
                     <SelectItem key={k} value={k}>
                       {t(`kinds.${k}`)}
                     </SelectItem>

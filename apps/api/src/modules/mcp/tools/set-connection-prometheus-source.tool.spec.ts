@@ -28,7 +28,7 @@ describe("set_connection_prometheus_source tool", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.name).toBe("set_connection_prometheus_source");
     expect(calls[0]?.meta.title).toBe("Set a connection's Prometheus datasource");
-    expect(calls[0]?.meta.description).toContain("kind=alertmanager");
+    expect(calls[0]?.meta.description).toContain("datasourceId");
     // inputShape forwarded into the meta.inputSchema slot by `registerTool`
     expect(calls[0]?.meta.inputSchema).toBeDefined();
   });
