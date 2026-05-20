@@ -17,10 +17,6 @@ type SetConnectionPrometheusSourceInput = {
  * - `datasourceId: null`   → unbind (sets `prometheusDatasourceId = NULL`).
  * - `datasourceId` omitted → fall back to the current default datasource
  *                            (or `null` if no default is set).
- *
- * Connections with `kind = "alertmanager"` MUST have `null` — the service
- * rejects any non-null value for that kind with a Bad Request that mentions
- * the `prometheus_datasource_invalid_kind` shape.
  */
 export function registerSetConnectionPrometheusSource(server: McpServer, deps: McpToolDeps): void {
   registerTool<SetConnectionPrometheusSourceInput>(
@@ -29,10 +25,9 @@ export function registerSetConnectionPrometheusSource(server: McpServer, deps: M
       name: "set_connection_prometheus_source",
       title: "Set a connection's Prometheus datasource",
       description:
-        "Bind a connection (kind ∈ {model, gateway}) to a Prometheus datasource. " +
-        "Pass datasourceId='<id>' to bind explicitly, datasourceId=null to unbind, " +
-        "or omit datasourceId to fall back to the current default. Rejected for " +
-        "connections where kind=alertmanager (those must stay unbound).",
+        "Bind a connection to a Prometheus datasource. Pass datasourceId='<id>' " +
+        "to bind explicitly, datasourceId=null to unbind, or omit datasourceId to " +
+        "fall back to the current default.",
       inputShape: {
         connectionId: z.string().min(1).describe("Connection id from list_connections."),
         datasourceId: z

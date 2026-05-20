@@ -27,11 +27,12 @@ export interface VerifyKindResult {
  * Probe a connection target to verify it is what the user said it is.
  *
  * Each kind has a known "health" path:
- *   model         — N/A here; use the full discover flow instead
- *   gateway       — Higress: /v1/models (gateway exposes a unified list)
- *   alertmanager  — /api/v2/status
+ *   model    — N/A here; use the full discover flow instead
+ *   gateway  — Higress: /v1/models (gateway exposes a unified list)
  *
- * (Prometheus moved to /api/prometheus-datasources/verify — see verifyPrometheus below.)
+ * (Prometheus moved to /api/prometheus-datasources/verify — see
+ * verifyPrometheus below. Alertmanager is push-only via webhook and has no
+ * outbound probe.)
  *
  * Verification is deliberately shallow: we only confirm the endpoint
  * responds with the shape that distinguishes the target product. Deeper
@@ -58,7 +59,6 @@ export async function verifyConnectionKind(input: VerifyKindInput): Promise<Veri
 
   try {
     if (kind === "gateway") return await verifyGateway(trimmed, fetchOpts);
-    if (kind === "alertmanager") return await verifyAlertmanager(trimmed, fetchOpts);
   } catch (err) {
     return {
       kind,
@@ -139,33 +139,3 @@ export async function verifyPrometheus(
   };
 }
 
-async function verifyAlertmanager(base: string, opts: FetchOpts): Promise<VerifyKindResult> {
-  // GET /api/v2/status returns { cluster, versionInfo, config, uptime, ... }.
-  // `versionInfo.version` is the distinguishing field; clusterPeers count
-  // (when present) is a useful operational detail.
-  const url = `${base}/api/v2/status`;
-  const res = await safeFetch(url, opts);
-  if (!res.ok) {
-    return { kind: "alertmanager", ok: false, reason: `HTTP ${res.status} from ${url}` };
-  }
-  const body = (await res.json().catch(() => null)) as {
-    versionInfo?: { version?: string };
-    cluster?: { peers?: unknown[] };
-  } | null;
-  if (!body?.versionInfo?.version) {
-    return {
-      kind: "alertmanager",
-      ok: false,
-      reason: "status endpoint did not return an Alertmanager shape",
-    };
-  }
-  // body is non-null here (narrowed by the versionInfo guard above), but stay
-  // defensive on `cluster` since it's optional in the AM /api/v2/status shape.
-  const peers = Array.isArray(body.cluster?.peers) ? body.cluster.peers.length : undefined;
-  return {
-    kind: "alertmanager",
-    ok: true,
-    version: body.versionInfo.version,
-    details: peers !== undefined ? { clusterPeers: peers } : undefined,
-  };
-}

@@ -97,7 +97,6 @@ export class ConnectionService {
     const plaintextKey = input.apiKey ?? "";
     const apiKeyCipher = plaintextKey ? encrypt(plaintextKey, this.key) : "";
     const prometheusDatasourceId = await this.resolvePrometheusDatasourceId(
-      input.kind,
       input.prometheusDatasourceId,
     );
     const row = await this.prisma.connection.create({
@@ -177,7 +176,6 @@ export class ConnectionService {
       // field (null or string). Skip when undefined — leave existing binding
       // untouched.
       data.prometheusDatasourceId = await this.resolvePrometheusDatasourceId(
-        effectiveKind,
         input.prometheusDatasourceId,
       );
     }
@@ -284,29 +282,16 @@ export class ConnectionService {
    * Resolves the prometheusDatasourceId to persist for a connection write,
    * implementing the three-state contract:
    *
-   * - `undefined`  → for kind ∈ {model, gateway}: fill with the current default
-   *                  datasource (null if no default exists). For kind=alertmanager,
-   *                  always null.
+   * - `undefined`  → fill with the current default datasource (null if no
+   *                  default exists).
    * - `null`       → explicit unbind; persisted as null.
    * - `string`     → validated against the datasource table; throws
    *                  BadRequestException(`PROMETHEUS_DATASOURCE_NOT_FOUND`) when
-   *                  unknown. For kind=alertmanager, throws
-   *                  BadRequestException(`PROMETHEUS_DATASOURCE_INVALID_KIND`)
-   *                  (defense-in-depth — contracts.refine catches this earlier).
+   *                  unknown.
    */
   private async resolvePrometheusDatasourceId(
-    kind: ConnectionKind,
     fromClient: string | null | undefined,
   ): Promise<string | null> {
-    if (kind === "alertmanager") {
-      if (fromClient !== null && fromClient !== undefined) {
-        throw new BadRequestException({
-          message: "prometheusDatasourceId must be null for kind=alertmanager",
-          code: ErrorCodes.PROMETHEUS_DATASOURCE_INVALID_KIND,
-        });
-      }
-      return null;
-    }
     if (fromClient === null) return null;
     if (typeof fromClient === "string") {
       const exists = await this.prisma.prometheusDatasource.findUnique({
