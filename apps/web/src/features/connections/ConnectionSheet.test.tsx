@@ -743,7 +743,9 @@ describe("Discover register CTA", () => {
       },
       health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
     });
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => {
@@ -758,7 +760,9 @@ describe("Discover register CTA", () => {
     // "http://prom:9090" with id "ds-default". Use that exact URL so
     // dup-check fires.
     mockDiscoverWithProm("http://prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => {
@@ -771,7 +775,9 @@ describe("Discover register CTA", () => {
     const user = userEvent.setup();
     mockDiscoverWithProm("http://discovered-prom:9090");
     const existing: ConnectionPublic = { ...EXISTING, prometheusDatasourceId: "ds-default" };
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing }} />, {
+      wrapper: Wrapper,
+    });
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
     expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
@@ -781,7 +787,9 @@ describe("Discover register CTA", () => {
     const user = userEvent.setup();
     mockUserRoles = []; // viewer
     mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
@@ -791,7 +799,9 @@ describe("Discover register CTA", () => {
   it("opens DatasourceSheet pre-populated with the inferred URL + derived name", async () => {
     const user = userEvent.setup();
     mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
@@ -807,7 +817,9 @@ describe("Discover register CTA", () => {
   it("onSaved binds the new datasource id and hides the pill", async () => {
     const user = userEvent.setup();
     mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
     await fillBaseFields(user);
     await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
     await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
