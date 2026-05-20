@@ -117,6 +117,11 @@
       "failedProbesHeading": "失败的探测",
       "noValue": "未检测到",
       "dismiss": "关闭探测结果",
+      "registerCta": {
+        "headline": "推断到 {{url}}",
+        "body": "尚未注册为数据源",
+        "action": "注册为数据源"
+      },
       "confidence": {
         "certain": "确定",
         "likely": "可能",
