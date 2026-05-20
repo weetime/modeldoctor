@@ -103,7 +103,7 @@ const empty: Partial<ConnectionInput> = {
 };
 
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
-const KINDS: ConnectionKind[] = ["model", "gateway", "alertmanager"];
+const KINDS: ConnectionKind[] = ["model", "gateway"];
 const MAX_SUGGESTION_CHIPS = 8;
 
 const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> = [
@@ -375,7 +375,6 @@ export function ConnectionSheet({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
-          // alertmanager never binds a metrics source; other kinds pass through.
           prometheusDatasourceId: submitShowModelFields
             ? (values.prometheusDatasourceId ?? null)
             : null,
@@ -402,8 +401,8 @@ export function ConnectionSheet({
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
           tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
-          // alertmanager: always null. model/gateway: undefined → server auto-fills
-          // org default; null → explicit unbind; string → caller-specified id.
+          // undefined → server auto-fills org default; null → explicit unbind;
+          // string → caller-specified id.
           prometheusDatasourceId: submitShowModelFields ? values.prometheusDatasourceId : null,
           serverKind: submitShowModelFields ? (values.serverKind ?? null) : null,
           category: submitShowModelFields ? (values.category ?? null) : null,

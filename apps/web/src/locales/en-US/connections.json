@@ -18,8 +18,7 @@
   },
   "kinds": {
     "model": "Model",
-    "gateway": "Gateway",
-    "alertmanager": "Alertmanager"
+    "gateway": "Gateway"
   },
   "dialog": {
     "createTitle": "New connection",
@@ -32,7 +31,7 @@
     "savedConnectionMissing": "Saved connection no longer exists",
     "fields": {
       "kind": "Kind",
-      "kindHelp": "model = inference endpoint; gateway = LLM gateway (e.g. Higress); alertmanager = alerting component.",
+      "kindHelp": "model = inference endpoint; gateway = LLM gateway (e.g. Higress).",
       "name": "Name",
       "namePlaceholder": "e.g. prod-vllm",
       "apiBaseUrl": "API Base URL",
