@@ -5,7 +5,6 @@ import { ImagesService } from "./images.service.js";
 function makeConn(overrides: Partial<DecryptedConnection> = {}): DecryptedConnection {
   return {
     id: "conn-1",
-    kind: "model",
     name: "test",
     baseUrl: "http://x",
     apiKey: "k",

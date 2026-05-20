@@ -47,7 +47,6 @@ export function registerSetConnectionPrometheusSource(server: McpServer, deps: M
       const payload = {
         id: updated.id,
         name: updated.name,
-        kind: updated.kind,
         prometheusDatasourceId: updated.prometheusDatasourceId,
         prometheusDatasource: updated.prometheusDatasource,
       };

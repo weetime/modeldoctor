@@ -67,24 +67,19 @@ model RefreshToken {
 model Connection {
   id            String   @id @default(cuid())
   userId        String   @map("user_id")
-  // What kind of LLM-stack member this connection points at — see
-  // connectionKindSchema in @modeldoctor/contracts. Defaults to 'model'
-  // for backward compat: every pre-existing row predates the enum and is
-  // a model endpoint by construction.
-  kind          String   @default("model")
   name          String
   baseUrl       String   @map("base_url")
-  // Cipher is empty-string for kinds that don't carry an apiKey (gateway);
-  // the runtime contract layer enforces required-ness per kind, not the DB
-  // schema.
   apiKeyCipher  String   @map("api_key_cipher") // AES-256-GCM v1, see common/crypto/aes-gcm.ts
   // Empty-string default lets non-model kinds skip model name without a
   // nullable column. Contract layer rejects empty model on kind=model writes.
+  // Every Connection is a model endpoint after #220; required at the
+  // contract layer (zod), but the column allows empty string in case a
+  // legacy row predates the contract narrowing.
   model         String   @default("")
   customHeaders String   @default("") @map("custom_headers")
   queryParams   String   @default("") @map("query_params")
-  // Nullable so the DB doesn't need a placeholder ModalityCategory for a
-  // gateway connection.
+  // Nullable so the DB doesn't need a placeholder ModalityCategory for
+  // legacy rows; the contract layer requires it on create/update.
   category      String? // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 

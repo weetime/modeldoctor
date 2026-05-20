@@ -60,7 +60,6 @@ describe("PrometheusDatasourceService", () => {
       await prisma.connection.create({
         data: {
           userId: "u_normal",
-          kind: "model",
           name: "m1",
           baseUrl: "https://m1.example.com",
           apiKeyCipher: "x",
@@ -237,7 +236,6 @@ describe("PrometheusDatasourceService", () => {
       await prisma.connection.create({
         data: {
           userId: "u_normal",
-          kind: "model",
           name: "m1",
           baseUrl: "https://m1.com",
           apiKeyCipher: "x",

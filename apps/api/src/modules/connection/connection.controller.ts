@@ -7,12 +7,9 @@ import {
   type DiscoverConnectionResponse,
   type ListConnectionsResponse,
   type UpdateConnection,
-  type VerifyKindRequest,
-  type VerifyKindResponse,
   createConnectionSchema,
   discoverConnectionRequestSchema,
   updateConnectionSchema,
-  verifyKindRequestSchema,
 } from "@modeldoctor/contracts";
 import {
   Body,
@@ -33,7 +30,6 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { ConnectionService } from "./connection.service.js";
 import { DiscoveryService } from "./discovery/discovery.service.js";
-import { verifyConnectionKind } from "./discovery/verify-kind.js";
 
 @Controller("connections")
 @UseGuards(JwtAuthGuard)
@@ -76,18 +72,6 @@ export class ConnectionController {
     @Body(new ZodValidationPipe(discoverConnectionRequestSchema)) body: DiscoverConnectionRequest,
   ): Promise<DiscoverConnectionResponse> {
     return this.discoveryService.discover(body);
-  }
-
-  // Shallow probe for non-model kinds (currently only gateway).
-  // The full `discover` flow above is heavy and model-shaped; this endpoint
-  // returns a yes/no + version + a few facts, suitable for an inline "Verify"
-  // button next to the kind dropdown.
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @Post("verify-kind")
-  async verifyKind(
-    @Body(new ZodValidationPipe(verifyKindRequestSchema)) body: VerifyKindRequest,
-  ): Promise<VerifyKindResponse> {
-    return verifyConnectionKind(body);
   }
 
   @Patch(":id")

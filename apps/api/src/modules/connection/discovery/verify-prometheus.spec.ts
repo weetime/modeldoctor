@@ -11,7 +11,7 @@ vi.mock("./ssrf-guard.js", () => ({
 }));
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { verifyPrometheus } from "./verify-kind.js";
+import { verifyPrometheus } from "./verify-prometheus.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
