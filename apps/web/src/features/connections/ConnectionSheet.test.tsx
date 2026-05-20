@@ -771,6 +771,23 @@ describe("Discover register CTA", () => {
     expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
   });
 
+  it("hides the pill when the inferred URL only differs by trailing slash / case", async () => {
+    // Fixture stores "http://prom:9090". Discover returns the same host with
+    // a trailing slash AND uppercase scheme — normalizeBaseUrl should still
+    // match so the dup-check fires.
+    const user = userEvent.setup();
+    mockDiscoverWithProm("HTTP://Prom:9090/");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
+  });
+
   it("hides the pill when a datasource is already bound", async () => {
     const user = userEvent.setup();
     mockDiscoverWithProm("http://discovered-prom:9090");

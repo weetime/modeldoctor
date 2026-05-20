@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SubscribersSection } from "@/features/alerts/SubscribersSection";
 import { DatasourceSheet } from "@/features/prometheus-datasources/DatasourceSheet";
 import { deriveDatasourceNameFromUrl } from "@/features/prometheus-datasources/derive-name";
+import { normalizeBaseUrl } from "@/features/prometheus-datasources/normalize-base-url";
 import { useDatasources } from "@/features/prometheus-datasources/queries";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
@@ -462,8 +463,14 @@ export function ConnectionSheet({
   const user = useAuthStore((s) => s.user);
   const isAdmin = (user?.roles ?? []).includes("admin");
   const watchedDsId = form.watch("prometheusDatasourceId");
+  // Compare via normalizeBaseUrl so trailing-slash / case-only variants
+  // ("http://prom:9090/" vs "http://prom:9090") don't slip past the
+  // dup-check and falsely surface a duplicate-register CTA.
   const inferredAlreadyRegistered = inferredPrometheusUrl
-    ? (datasources ?? []).some((d) => d.baseUrl === inferredPrometheusUrl)
+    ? (() => {
+        const target = normalizeBaseUrl(inferredPrometheusUrl);
+        return (datasources ?? []).some((d) => normalizeBaseUrl(d.baseUrl) === target);
+      })()
     : false;
   const showRegisterCta =
     showPrometheusDatasourceField &&
