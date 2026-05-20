@@ -302,4 +302,3 @@ describe("createConnectionSchema — prometheusDatasourceId", () => {
     expect(parsed.prometheusDatasourceId).toBeUndefined();
   });
 });
-

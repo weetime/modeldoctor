@@ -138,4 +138,3 @@ export async function verifyPrometheus(
     details: body.data.revision ? { revision: body.data.revision } : undefined,
   };
 }
-

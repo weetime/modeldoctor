@@ -270,7 +270,6 @@ describe("ConnectionService", () => {
         response: { code: "PROMETHEUS_DATASOURCE_NOT_FOUND" },
       });
     });
-
   });
 
   describe("toContractPublic — drops prometheusUrl + includes prometheusDatasource summary", () => {

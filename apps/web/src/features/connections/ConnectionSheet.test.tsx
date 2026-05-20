@@ -277,7 +277,6 @@ describe("ConnectionSheet (create mode)", () => {
     const arg = createMutate.mock.calls[0][0] as Record<string, unknown>;
     expect(arg.prometheusDatasourceId).toBeNull();
   });
-
 });
 
 describe("ConnectionSheet (edit mode)", () => {
