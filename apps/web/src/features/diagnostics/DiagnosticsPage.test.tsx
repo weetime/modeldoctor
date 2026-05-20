@@ -55,10 +55,15 @@ vi.mock("@/features/connections/queries", () => ({
 }));
 
 // ConnectionSheet (rendered when "+ 新建连接" is clicked in the picker) loads
-// the Prometheus datasources list. Stub the hook to keep this test out of the
-// React-Query provider business.
+// the Prometheus datasources list AND, since #207, always mounts a hidden
+// DatasourceSheet for the register-CTA flow — which calls the create/update/
+// verify mutation hooks at module init time. Stub all four to keep this test
+// out of the React-Query provider business.
 vi.mock("@/features/prometheus-datasources/queries", () => ({
   useDatasources: () => ({ data: [], isLoading: false }),
+  useCreateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVerifyDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { api } from "@/lib/api-client";

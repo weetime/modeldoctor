@@ -411,17 +411,17 @@ describe("Discover register CTA", () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
       inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: [] },
-        models: { values: ["m1"], confidence: "certain", evidence: [] },
-        category: { value: null, confidence: "unknown", evidence: [] },
-        suggestedTags: { values: [], confidence: "unknown", evidence: [] },
+        serverKind: { value: "vllm", confidence: "certain", evidence: "" },
+        models: { values: ["m1"], confidence: "certain", evidence: "" },
+        category: { value: null, confidence: "unknown", evidence: "" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "" },
         prometheusUrl: {
           value: "http://discovered-prom:9090",
           confidence: "likely",
-          evidence: [],
+          evidence: "",
         },
       },
-      health: { ok: true, probesFailed: [] },
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
     await fillBaseFields(user);
@@ -595,13 +595,13 @@ Inside the `describe("Discover register CTA", …)` block from Task 4, add five 
   function mockDiscoverWithProm(url: string | null) {
     discoverMutate.mockResolvedValue({
       inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: [] },
-        models: { values: ["m1"], confidence: "certain", evidence: [] },
-        category: { value: null, confidence: "unknown", evidence: [] },
-        suggestedTags: { values: [], confidence: "unknown", evidence: [] },
-        prometheusUrl: { value: url, confidence: "likely", evidence: [] },
+        serverKind: { value: "vllm", confidence: "certain", evidence: "" },
+        models: { values: ["m1"], confidence: "certain", evidence: "" },
+        category: { value: null, confidence: "unknown", evidence: "" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "" },
+        prometheusUrl: { value: url, confidence: "likely", evidence: "" },
       },
-      health: { ok: true, probesFailed: [] },
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
     });
   }
 
