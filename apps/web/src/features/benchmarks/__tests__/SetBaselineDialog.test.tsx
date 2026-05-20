@@ -35,11 +35,10 @@ describe("SetBaselineDialog", () => {
     render(<SetBaselineDialog benchmarkId="b1" open onOpenChange={() => {}} />, {
       wrapper: Wrapper,
     });
-    // The submit label comes from i18n; en-US falls back. Match by being the
-    // form's submit button (disabled by default).
-    const buttons = screen.getAllByRole("button");
-    const submit = buttons.find((b) => (b as HTMLButtonElement).type === "submit");
-    expect(submit).toBeDefined();
+    // Submit label is "保存" (zh-CN) / "Save" (en-US); the dialog has exactly
+    // one such button (Cancel is the only other one), so anchored name match
+    // is unambiguous and resilient to button-order changes.
+    const submit = screen.getByRole("button", { name: /^(保存|Save)$/i });
     expect(submit).toBeDisabled();
     await user.type(screen.getByLabelText(/Name/i), "v1");
     expect(submit).not.toBeDisabled();
@@ -64,10 +63,7 @@ describe("SetBaselineDialog", () => {
     await user.type(screen.getByLabelText(/Name/i), "anchor");
     await user.type(screen.getByLabelText(/Description/i), "desc");
     await user.type(screen.getByLabelText(/Tags/i), "a, b");
-    const submit = screen
-      .getAllByRole("button")
-      .find((b) => (b as HTMLButtonElement).type === "submit") as HTMLButtonElement;
-    await user.click(submit);
+    await user.click(screen.getByRole("button", { name: /^(保存|Save)$/i }));
     expect(mockMutate).toHaveBeenCalledWith(
       { benchmarkId: "r_1", name: "anchor", description: "desc", tags: ["a", "b"] },
       expect.any(Object),
@@ -79,10 +75,7 @@ describe("SetBaselineDialog", () => {
     render(<SetBaselineDialog benchmarkId="r_1" open onOpenChange={() => {}} />, {
       wrapper: Wrapper,
     });
-    const submit = screen
-      .getAllByRole("button")
-      .find((b) => (b as HTMLButtonElement).type === "submit") as HTMLButtonElement;
-    await user.click(submit);
+    await user.click(screen.getByRole("button", { name: /^(保存|Save)$/i }));
     expect(mockMutate).not.toHaveBeenCalled();
   });
 });

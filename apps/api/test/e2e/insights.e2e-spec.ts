@@ -45,17 +45,21 @@ describe("/api/insights comparison endpoints (e2e)", () => {
     await prisma.connection.deleteMany({ where: { userId } });
   });
 
-  it("baseline-comparison returns empty when no historical data", async () => {
-    const conn = await prisma.connection.create({
+  // Minimal Connection fixture — every test in this file only varies `name`.
+  const makeConn = (name: string) =>
+    prisma.connection.create({
       data: {
         userId,
-        name: "t",
+        name,
         baseUrl: "http://x",
         apiKeyCipher: "v1:a:b:c",
         model: "m",
         category: "chat",
       },
     });
+
+  it("baseline-comparison returns empty when no historical data", async () => {
+    const conn = await makeConn("t");
     const r = await request(ctx.app.getHttpServer())
       .get(`/api/insights/${conn.id}/baseline-comparison?from=${new Date().toISOString()}`)
       .set("Authorization", `Bearer ${token}`)
@@ -64,16 +68,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
   });
 
   it("fleet-comparison returns empty when only one connection in category", async () => {
-    const conn = await prisma.connection.create({
-      data: {
-        userId,
-        name: "t2",
-        baseUrl: "http://x",
-        apiKeyCipher: "v1:a:b:c",
-        model: "m",
-        category: "chat",
-      },
-    });
+    const conn = await makeConn("t2");
     const r = await request(ctx.app.getHttpServer())
       .get(`/api/insights/${conn.id}/fleet-comparison?from=${new Date().toISOString()}`)
       .set("Authorization", `Bearer ${token}`)
@@ -82,16 +77,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
   });
 
   it("POST /api/insights/:id/synthesize returns NarrativeFinding[] (mocked LLM)", async () => {
-    const conn = await prisma.connection.create({
-      data: {
-        userId,
-        name: "ai",
-        baseUrl: "http://x",
-        apiKeyCipher: "v1:a:b:c",
-        model: "m",
-        category: "chat",
-      },
-    });
+    const conn = await makeConn("ai");
     // Use the API to create the provider so the apiKey is properly encrypted
     await request(ctx.app.getHttpServer())
       .put("/api/llm-judge/provider")
@@ -109,16 +95,7 @@ describe("/api/insights comparison endpoints (e2e)", () => {
   });
 
   it("synthesize returns 404 when provider not configured", async () => {
-    const conn = await prisma.connection.create({
-      data: {
-        userId,
-        name: "noai",
-        baseUrl: "http://x",
-        apiKeyCipher: "v1:a:b:c",
-        model: "m",
-        category: "chat",
-      },
-    });
+    const conn = await makeConn("noai");
     // Note: beforeEach already wiped llmJudgeProvider; explicitly confirm clean state
     await prisma.llmJudgeProvider.deleteMany();
     await request(ctx.app.getHttpServer())
