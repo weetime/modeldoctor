@@ -9,7 +9,9 @@
  *   if vitest pre-injects X and the spec sends Bearer X, they MUST stay in sync.
  * - Setting `process.env.X = ...` in a spec's `beforeAll` is a known anti-pattern
  *   here: forRoot has already locked the value from .env, so the late mutation
- *   has no effect on ConfigService.get. Use this file instead.
+ *   has no effect on ConfigService.get. Use this file instead. The lint at
+ *   apps/api/scripts/check-e2e-no-env-mutation.mjs (wired into `pnpm lint`) fails
+ *   CI if a new spec re-introduces the pattern — see issue #209.
  *
  * NOT included by design:
  * - DATABASE_URL — computed dynamically by pickTestDatabaseUrl()
