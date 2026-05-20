@@ -9,7 +9,6 @@ const seedList: ConnectionPublic[] = [
   {
     id: "c1",
     userId: "u1",
-    kind: "model",
     name: "chat-prod",
     baseUrl: "http://a",
     apiKeyPreview: "sk-...1234",
@@ -30,7 +29,6 @@ const seedList: ConnectionPublic[] = [
   {
     id: "c2",
     userId: "u1",
-    kind: "model",
     name: "embed-test",
     baseUrl: "http://b",
     apiKeyPreview: "sk-...5678",
@@ -118,21 +116,17 @@ describe("ConnectionsPage (category + tags)", () => {
     expect(screen.queryByText("embed-test")).not.toBeInTheDocument();
   });
 
-  it("kind filter no longer offers dropped 'prometheus' / 'alertmanager' options", async () => {
-    const user = userEvent.setup();
+  it("kind filter dropdown is gone entirely (#220)", () => {
     render(
       <MemoryRouter>
         <ConnectionsPage />
       </MemoryRouter>,
     );
-    await user.click(screen.getByRole("combobox", { name: /kind|类型/i }));
-    // Only model / gateway survive: prometheus moved to its own settings
-    // entity (#199); alertmanager is push-only via webhook and was never
-    // really used as a Connection (#218).
-    expect(screen.queryByRole("option", { name: /^Prometheus$/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /^Alertmanager$/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /^Model|^模型$/ })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /^Gateway|^网关$/ })).toBeInTheDocument();
+    // After #220, Connection has no `kind` field at all — the filter
+    // dropdown that used to surface kinds was removed. Category + tags
+    // filters remain.
+    expect(screen.queryByRole("combobox", { name: /kind|类型/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /kind|类型/i })).not.toBeInTheDocument();
   });
 
   it("renders the prometheusDatasource column — link for bound rows, em-dash for unbound", () => {

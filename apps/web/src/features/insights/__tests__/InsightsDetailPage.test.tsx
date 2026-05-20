@@ -75,7 +75,6 @@ function makeConn(over: Partial<ConnectionPublic> = {}): ConnectionPublic {
     apiKeyPreview: "sk-...abc",
     model: "Qwen3-32B",
     category: "chat",
-    kind: "model",
     serverKind: "vllm",
     tokenizerHfId: null,
     tags: [],

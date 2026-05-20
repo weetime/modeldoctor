@@ -114,7 +114,6 @@ async function fillBaseFields(user: ReturnType<typeof userEvent.setup>) {
 const EXISTING: ConnectionPublic = {
   id: "c1",
   userId: "u1",
-  kind: "model",
   name: "preexisting",
   baseUrl: "http://old.test",
   apiKeyPreview: "sk-...wxyz",

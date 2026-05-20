@@ -8,8 +8,6 @@ import type {
   DiscoverConnectionResponse,
   ListConnectionsResponse,
   UpdateConnection,
-  VerifyKindRequest,
-  VerifyKindResponse,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -75,12 +73,5 @@ export function useDiscoverConnection() {
   return useMutation({
     mutationFn: (input: DiscoverConnectionRequest) =>
       api.post<DiscoverConnectionResponse>("/api/connections/discover", input),
-  });
-}
-
-export function useVerifyKind() {
-  return useMutation({
-    mutationFn: (input: VerifyKindRequest) =>
-      api.post<VerifyKindResponse>("/api/connections/verify-kind", input),
   });
 }

@@ -30,7 +30,6 @@ import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
-  ConnectionKind,
   ConnectionPublic,
   ConnectionWithSecret,
   CreateConnection,
@@ -38,28 +37,14 @@ import type {
   ModalityCategory,
   ServerKind,
   UpdateConnection,
-  VerifyKindResponse,
 } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Sparkles,
-  X as XIcon,
-} from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  useCreateConnection,
-  useDiscoverConnection,
-  useUpdateConnection,
-  useVerifyKind,
-} from "./queries";
+import { useCreateConnection, useDiscoverConnection, useUpdateConnection } from "./queries";
 import {
   type ConnectionInput,
   connectionInputCreateSchema,
@@ -87,7 +72,6 @@ interface ConnectionSheetProps {
 }
 
 const empty: Partial<ConnectionInput> = {
-  kind: "model",
   name: "",
   apiBaseUrl: "",
   apiKey: "",
@@ -103,7 +87,6 @@ const empty: Partial<ConnectionInput> = {
 };
 
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
-const KINDS: ConnectionKind[] = ["model", "gateway"];
 const MAX_SUGGESTION_CHIPS = 8;
 
 const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> = [
@@ -137,7 +120,6 @@ const PRESET_TAGS = [
 /** ConnectionPublic → form-shape default values (note: no apiKey is exposed by the server). */
 function existingToFormValues(c: ConnectionPublic): Partial<ConnectionInput> {
   return {
-    kind: c.kind,
     name: c.name,
     apiBaseUrl: c.baseUrl,
     apiKey: "", // never sent in PATCH unless reset toggle is on
@@ -175,11 +157,9 @@ export function ConnectionSheet({
   const [tagDraft, setTagDraft] = useState("");
   const [discoverResult, setDiscoverResult] = useState<DiscoverConnectionResponse | null>(null);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
-  const [verifyResult, setVerifyResult] = useState<VerifyKindResponse | null>(null);
   const [inferredPrometheusUrl, setInferredPrometheusUrl] = useState<string | null>(null);
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const discoverMut = useDiscoverConnection();
-  const verifyMut = useVerifyKind();
 
   const form = useForm<ConnectionInput>({
     resolver: zodResolver(isEdit ? connectionInputEditSchema : connectionInputCreateSchema),
@@ -202,7 +182,6 @@ export function ConnectionSheet({
     setTagDraft("");
     setDiscoverResult(null);
     setDiscoverError(null);
-    setVerifyResult(null);
     setInferredPrometheusUrl(null);
   }, [open, existing, initialValues]);
 
@@ -216,18 +195,7 @@ export function ConnectionSheet({
   const baseUrlValue = form.watch("apiBaseUrl");
   const apiKeyValue = form.watch("apiKey");
   const customHeadersValue = form.watch("customHeaders");
-  const kindValue: ConnectionKind = (form.watch("kind") as ConnectionKind | undefined) ?? "model";
-  const isModelKind = kindValue === "model";
-  const isGatewayKind = kindValue === "gateway";
-  const showModelFields = isModelKind || isGatewayKind; // gateway also routes by model
-  const showApiKeyField = isModelKind || isGatewayKind;
-  const showServerKindField = isModelKind || isGatewayKind;
-  const showTokenizerField = isModelKind;
-  const showCategoryField = isModelKind || isGatewayKind;
-  const showPrometheusDatasourceField = isModelKind || isGatewayKind;
 
-  // Loaded for the datasource <Select>; safe to call unconditionally (hook is
-  // gated by user auth via the api client, not by kind).
   const { data: datasources } = useDatasources();
 
   // -- Discover helpers ------------------------------------------------------
@@ -361,25 +329,22 @@ export function ConnectionSheet({
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
     const sanitizedBaseUrl = toApiBaseUrl(values.apiBaseUrl);
-    const kind: ConnectionKind = (values.kind as ConnectionKind | undefined) ?? "model";
-    const submitIsModelKind = kind === "model";
-    const submitIsGatewayKind = kind === "gateway";
-    const submitShowModelFields = submitIsModelKind || submitIsGatewayKind;
     try {
       if (existing) {
+        // superRefine guarantees category is non-null on submit; the cast
+        // narrows the form's `ModalityCategory | null` to the create/update
+        // contract's `ModalityCategory`.
+        const category = values.category as Exclude<typeof values.category, null | undefined>;
         const body: UpdateConnection = {
-          kind,
           name: values.name,
           baseUrl: sanitizedBaseUrl,
-          model: submitShowModelFields ? values.model : "",
+          model: values.model,
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
-          tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
-          prometheusDatasourceId: submitShowModelFields
-            ? (values.prometheusDatasourceId ?? null)
-            : null,
-          serverKind: submitShowModelFields ? (values.serverKind ?? null) : null,
-          category: submitShowModelFields ? (values.category ?? null) : null,
+          tokenizerHfId: values.tokenizerHfId.trim() || null,
+          prometheusDatasourceId: values.prometheusDatasourceId ?? null,
+          serverKind: values.serverKind ?? null,
+          category,
           tags: values.tags,
         };
         if (resetApiKey) {
@@ -392,20 +357,20 @@ export function ConnectionSheet({
         const saved = await updateMut.mutateAsync({ id: existing.id, body });
         onSaved?.(saved);
       } else {
+        const category = values.category as Exclude<typeof values.category, null | undefined>;
         const create: CreateConnection = {
-          kind,
           name: values.name,
           baseUrl: sanitizedBaseUrl,
-          apiKey: submitShowModelFields ? values.apiKey : "",
-          model: submitShowModelFields ? values.model : "",
+          apiKey: values.apiKey,
+          model: values.model,
           customHeaders: values.customHeaders,
           queryParams: values.queryParams,
-          tokenizerHfId: submitIsModelKind ? values.tokenizerHfId.trim() || null : null,
+          tokenizerHfId: values.tokenizerHfId.trim() || null,
           // undefined → server auto-fills org default; null → explicit unbind;
           // string → caller-specified id.
-          prometheusDatasourceId: submitShowModelFields ? values.prometheusDatasourceId : null,
-          serverKind: submitShowModelFields ? (values.serverKind ?? null) : null,
-          category: submitShowModelFields ? (values.category ?? null) : null,
+          prometheusDatasourceId: values.prometheusDatasourceId,
+          serverKind: values.serverKind ?? null,
+          category,
           tags: values.tags,
         };
         const saved = await createMut.mutateAsync(create);
@@ -418,45 +383,13 @@ export function ConnectionSheet({
     }
   });
 
-  const handleVerifyKind = async () => {
-    const baseUrl = baseUrlValue?.trim();
-    if (!baseUrl) return;
-    setVerifyResult(null);
-    try {
-      const res = await verifyMut.mutateAsync({
-        kind: kindValue,
-        baseUrl,
-        apiKey: apiKeyValue?.trim() || undefined,
-        customHeaders: customHeadersValue?.trim() || undefined,
-      });
-      setVerifyResult(res);
-      if (res.ok) {
-        const parts: string[] = [];
-        if (res.version) parts.push(t("dialog.verify.version", { version: res.version }));
-        if (res.details && typeof res.details.modelCount === "number") {
-          parts.push(t("dialog.verify.modelCount", { count: res.details.modelCount }));
-        }
-        if (res.details && typeof res.details.clusterPeers === "number") {
-          parts.push(t("dialog.verify.clusterPeers", { count: res.details.clusterPeers }));
-        }
-        const summary = parts.length > 0 ? parts.join(" · ") : t(`kinds.${res.kind}`);
-        toast.success(t("dialog.verify.ok", { summary }));
-      } else {
-        toast.error(t("dialog.verify.fail", { reason: res.reason ?? "" }));
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : tc("errors.unknown");
-      toast.error(t("dialog.verify.fail", { reason: msg }));
-    }
-  };
-
   const apiKeyDisabled = isEdit && !resetApiKey;
   const apiKeyPlaceholder = isEdit
     ? (existing?.apiKeyPreview ?? t("dialog.fields.apiKeyPlaceholder"))
     : t("dialog.fields.apiKeyPlaceholder");
 
   // Discover → register CTA — see issue #207. Show the pill only when all
-  // four conditions hold: an inferred URL exists, it's not already a
+  // three conditions hold: an inferred URL exists, it's not already a
   // registered datasource, the user hasn't picked any datasource yet, and
   // the current user is an admin (backend requires admin for create).
   const user = useAuthStore((s) => s.user);
@@ -472,11 +405,7 @@ export function ConnectionSheet({
       })()
     : false;
   const showRegisterCta =
-    showPrometheusDatasourceField &&
-    inferredPrometheusUrl != null &&
-    !inferredAlreadyRegistered &&
-    watchedDsId == null &&
-    isAdmin;
+    inferredPrometheusUrl != null && !inferredAlreadyRegistered && watchedDsId == null && isAdmin;
 
   return (
     <>
@@ -545,37 +474,6 @@ export function ConnectionSheet({
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="kind"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel required>{t("dialog.fields.kind")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={(field.value as ConnectionKind | undefined) ?? "model"}
-                              onValueChange={(v) => field.onChange(v as ConnectionKind)}
-                            >
-                              <SelectTrigger aria-label={t("dialog.fields.kind")}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {KINDS.map((k) => (
-                                  <SelectItem key={k} value={k}>
-                                    {t(`kinds.${k}`)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.kindHelp")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="name"
                       render={({ field }) => (
                         <FormItem>
@@ -591,14 +489,12 @@ export function ConnectionSheet({
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="apiBaseUrl"
                       render={({ field }) => (
-                        <FormItem className={showModelFields ? undefined : "md:col-span-2"}>
+                        <FormItem>
                           <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
                           <FormControl>
                             <Input
@@ -614,72 +510,27 @@ export function ConnectionSheet({
                         </FormItem>
                       )}
                     />
-
-                    {showModelFields ? (
-                      <FormField
-                        control={form.control}
-                        name="model"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel required={isModelKind}>{t("dialog.fields.model")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                autoComplete="off"
-                                placeholder={t("dialog.fields.modelPlaceholder")}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ) : null}
                   </div>
 
-                  {verifyResult ? (
-                    <div
-                      className={`flex items-start gap-2 rounded-md border p-2 text-xs ${
-                        verifyResult.ok
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                          : "border-destructive/30 bg-destructive/10 text-destructive"
-                      }`}
-                    >
-                      {verifyResult.ok ? (
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                      ) : (
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="model"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>{t("dialog.fields.model")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              autoComplete="off"
+                              placeholder={t("dialog.fields.modelPlaceholder")}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      <span className="flex-1">
-                        {verifyResult.ok
-                          ? [
-                              verifyResult.version
-                                ? t("dialog.verify.version", { version: verifyResult.version })
-                                : null,
-                              typeof verifyResult.details?.modelCount === "number"
-                                ? t("dialog.verify.modelCount", {
-                                    count: verifyResult.details.modelCount,
-                                  })
-                                : null,
-                              typeof verifyResult.details?.clusterPeers === "number"
-                                ? t("dialog.verify.clusterPeers", {
-                                    count: verifyResult.details.clusterPeers,
-                                  })
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ") || t(`kinds.${verifyResult.kind}`)
-                          : (verifyResult.reason ?? "")}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setVerifyResult(null)}
-                        aria-label={t("dialog.discover.dismiss")}
-                        className="opacity-70 hover:opacity-100"
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : null}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
@@ -717,64 +568,62 @@ export function ConnectionSheet({
                     )}
                   />
 
-                  {showApiKeyField ? (
-                    <FormField
-                      control={form.control}
-                      name="apiKey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center justify-between">
-                            <FormLabel required={isModelKind && !apiKeyDisabled}>
-                              {t("dialog.fields.apiKey")}
-                            </FormLabel>
-                            {isEdit ? (
-                              <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <input
-                                  type="checkbox"
-                                  checked={resetApiKey}
-                                  onChange={(e) => {
-                                    const next = e.target.checked;
-                                    setResetApiKey(next);
-                                    if (!next) form.setValue("apiKey", "");
-                                  }}
-                                />
-                                {t("dialog.resetApiKey")}
-                              </label>
-                            ) : null}
-                          </div>
-                          <div className="relative">
-                            <FormControl>
-                              <Input
-                                autoComplete="new-password"
-                                type={revealKey ? "text" : "password"}
-                                placeholder={apiKeyPlaceholder}
-                                disabled={apiKeyDisabled}
-                                {...field}
+                  <FormField
+                    control={form.control}
+                    name="apiKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel required={!apiKeyDisabled}>
+                            {t("dialog.fields.apiKey")}
+                          </FormLabel>
+                          {isEdit ? (
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                checked={resetApiKey}
+                                onChange={(e) => {
+                                  const next = e.target.checked;
+                                  setResetApiKey(next);
+                                  if (!next) form.setValue("apiKey", "");
+                                }}
                               />
-                            </FormControl>
-                            {!apiKeyDisabled ? (
-                              <button
-                                type="button"
-                                onClick={() => setRevealKey((v) => !v)}
-                                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                                aria-label={revealKey ? "hide" : "show"}
-                              >
-                                {revealKey ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </button>
-                            ) : null}
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.apiKeyEncryptedNotice")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : null}
+                              {t("dialog.resetApiKey")}
+                            </label>
+                          ) : null}
+                        </div>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              autoComplete="new-password"
+                              type={revealKey ? "text" : "password"}
+                              placeholder={apiKeyPlaceholder}
+                              disabled={apiKeyDisabled}
+                              {...field}
+                            />
+                          </FormControl>
+                          {!apiKeyDisabled ? (
+                            <button
+                              type="button"
+                              onClick={() => setRevealKey((v) => !v)}
+                              className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                              aria-label={revealKey ? "hide" : "show"}
+                            >
+                              {revealKey ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.apiKeyEncryptedNotice")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div>
                     <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
@@ -850,176 +699,158 @@ export function ConnectionSheet({
                     </p>
                   </div>
 
-                  {showCategoryField || showServerKindField ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {showCategoryField ? (
-                        <FormField
-                          control={form.control}
-                          name="category"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel required={isModelKind}>
-                                {t("dialog.fields.category")}
-                              </FormLabel>
-                              <FormControl>
-                                <Select
-                                  value={field.value ?? ""}
-                                  onValueChange={(v) => field.onChange(v === "" ? null : v)}
-                                >
-                                  <SelectTrigger aria-label={t("dialog.fields.category")}>
-                                    <SelectValue
-                                      placeholder={t("dialog.fields.categoryPlaceholder")}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {CATEGORIES.map((c) => (
-                                      <SelectItem key={c} value={c}>
-                                        {t(`dialog.categoryOptions.${c}`)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {t("dialog.fields.categoryHelp")}
-                              </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ) : null}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>{t("dialog.fields.category")}</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value ?? ""}
+                              onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                            >
+                              <SelectTrigger aria-label={t("dialog.fields.category")}>
+                                <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CATEGORIES.map((c) => (
+                                  <SelectItem key={c} value={c}>
+                                    {t(`dialog.categoryOptions.${c}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {t("dialog.fields.categoryHelp")}
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      {showServerKindField ? (
-                        <FormField
-                          control={form.control}
-                          name="serverKind"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
-                              <FormControl>
-                                <Select
-                                  value={field.value ?? ""}
-                                  onValueChange={(v) => field.onChange(v === "" ? null : v)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue
-                                      placeholder={t("dialog.fields.serverKindPlaceholder")}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {SERVER_KIND_OPTIONS.map((o) => (
-                                      <SelectItem key={o.value} value={o.value}>
-                                        {o.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {t("dialog.fields.serverKindHelp")}
-                              </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {showTokenizerField || showPrometheusDatasourceField ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {showTokenizerField ? (
-                        <FormField
-                          control={form.control}
-                          name="tokenizerHfId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  autoComplete="off"
-                                  placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
-                                  {...field}
+                    <FormField
+                      control={form.control}
+                      name="serverKind"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value ?? ""}
+                              onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={t("dialog.fields.serverKindPlaceholder")}
                                 />
-                              </FormControl>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {t("dialog.fields.tokenizerHfIdHelp")}
-                              </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ) : null}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SERVER_KIND_OPTIONS.map((o) => (
+                                  <SelectItem key={o.value} value={o.value}>
+                                    {o.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {t("dialog.fields.serverKindHelp")}
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                      {showPrometheusDatasourceField ? (
-                        <FormField
-                          control={form.control}
-                          name="prometheusDatasourceId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("dialog.fields.prometheusDatasource.label")}</FormLabel>
-                              <FormControl>
-                                <Select
-                                  value={field.value ?? "__none__"}
-                                  onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-                                >
-                                  <SelectTrigger
-                                    aria-label={t("dialog.fields.prometheusDatasource.label")}
-                                  >
-                                    <SelectValue
-                                      placeholder={t(
-                                        "dialog.fields.prometheusDatasource.placeholder",
-                                      )}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__none__">
-                                      {t("dialog.fields.prometheusDatasource.none")}
-                                    </SelectItem>
-                                    {datasources?.map((ds) => (
-                                      <SelectItem key={ds.id} value={ds.id}>
-                                        {ds.name}
-                                        {ds.isDefault
-                                          ? ` (${t("dialog.fields.prometheusDatasource.defaultSuffix")})`
-                                          : ""}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {t("dialog.fields.prometheusDatasource.help")}
-                              </p>
-                              <FormMessage />
-                              {showRegisterCta ? (
-                                <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                                  <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate">
-                                      {t("dialog.discover.registerCta.headline", {
-                                        url: inferredPrometheusUrl,
-                                      })}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {t("dialog.discover.registerCta.body")}
-                                    </p>
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setRegisterSheetOpen(true)}
-                                  >
-                                    {t("dialog.discover.registerCta.action")} →
-                                  </Button>
-                                </div>
-                              ) : null}
-                            </FormItem>
-                          )}
-                        />
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="tokenizerHfId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              autoComplete="off"
+                              placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {t("dialog.fields.tokenizerHfIdHelp")}
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="prometheusDatasourceId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("dialog.fields.prometheusDatasource.label")}</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value ?? "__none__"}
+                              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                            >
+                              <SelectTrigger
+                                aria-label={t("dialog.fields.prometheusDatasource.label")}
+                              >
+                                <SelectValue
+                                  placeholder={t("dialog.fields.prometheusDatasource.placeholder")}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">
+                                  {t("dialog.fields.prometheusDatasource.none")}
+                                </SelectItem>
+                                {datasources?.map((ds) => (
+                                  <SelectItem key={ds.id} value={ds.id}>
+                                    {ds.name}
+                                    {ds.isDefault
+                                      ? ` (${t("dialog.fields.prometheusDatasource.defaultSuffix")})`
+                                      : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {t("dialog.fields.prometheusDatasource.help")}
+                          </p>
+                          <FormMessage />
+                          {showRegisterCta ? (
+                            <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate">
+                                  {t("dialog.discover.registerCta.headline", {
+                                    url: inferredPrometheusUrl,
+                                  })}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t("dialog.discover.registerCta.body")}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setRegisterSheetOpen(true)}
+                              >
+                                {t("dialog.discover.registerCta.action")} →
+                              </Button>
+                            </div>
+                          ) : null}
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   {submitError ? (
                     <p className="text-sm text-destructive">
@@ -1062,51 +893,27 @@ export function ConnectionSheet({
                   submitLabel={tc("actions.save")}
                   pending={createMut.isPending || updateMut.isPending}
                   leading={
-                    showModelFields ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleDiscover}
-                        disabled={!baseUrlValue?.trim() || discoverMut.isPending}
-                        title={
-                          !baseUrlValue?.trim() ? t("dialog.discover.missingBaseUrl") : undefined
-                        }
-                      >
-                        {discoverMut.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t("dialog.discover.running")}
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            {t("dialog.discover.button")}
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleVerifyKind}
-                        disabled={!baseUrlValue?.trim() || verifyMut.isPending}
-                        title={
-                          !baseUrlValue?.trim() ? t("dialog.verify.missingBaseUrl") : undefined
-                        }
-                      >
-                        {verifyMut.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t("dialog.verify.running")}
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            {t("dialog.verify.button")}
-                          </>
-                        )}
-                      </Button>
-                    )
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleDiscover}
+                      disabled={!baseUrlValue?.trim() || discoverMut.isPending}
+                      title={
+                        !baseUrlValue?.trim() ? t("dialog.discover.missingBaseUrl") : undefined
+                      }
+                    >
+                      {discoverMut.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("dialog.discover.running")}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          {t("dialog.discover.button")}
+                        </>
+                      )}
+                    </Button>
                   }
                 />
               </SheetFooter>

@@ -154,31 +154,29 @@ describe("connectionInputEditSchema apiKey refine (edit-mode)", () => {
   });
 });
 
-describe("connectionInputSchema kind=non-model", () => {
+describe("connectionInputSchema — model-endpoint required fields", () => {
+  // Every Connection is a model endpoint after #220; the prometheus + gateway
+  // + alertmanager kinds are all gone, so apiKey/model/category are
+  // unconditionally required.
   const base = {
-    name: "prom-1",
-    apiBaseUrl: "http://prom:9090",
+    name: "m-1",
+    apiBaseUrl: "http://m:9000",
     customHeaders: "",
     queryParams: "",
     tokenizerHfId: "",
     tags: [],
   };
 
-  // "prometheus" was a Connection kind in V1 but has been promoted to its own
-  // PrometheusDatasource entity in Issue #189. The kind enum no longer accepts
-  // it, so this test is intentionally removed.
-
-  it("kind=gateway accepts empty apiKey/model/category", () => {
+  it("rejects empty apiKey + model + category", () => {
     const r = connectionInputSchema.safeParse({
       ...base,
-      kind: "gateway",
       apiKey: "",
       model: "",
     });
-    expect(r.success).toBe(true);
+    expect(r.success).toBe(false);
   });
 
-  it("defaults kind to 'model' when omitted", () => {
+  it("accepts the full v1 model-endpoint contract", () => {
     const r = connectionInputSchema.safeParse({
       ...base,
       apiKey: "sk-x",
@@ -186,6 +184,5 @@ describe("connectionInputSchema kind=non-model", () => {
       category: "chat" as const,
     });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.kind).toBe("model");
   });
 });

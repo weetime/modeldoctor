@@ -23,7 +23,6 @@ import { EndpointPicker } from "./EndpointPicker";
 const SAMPLE = {
   id: "c1",
   userId: "u1",
-  kind: "model",
   name: "vllm-prod",
   baseUrl: "http://example.com",
   apiKeyPreview: "sk-...abcd",

@@ -13,7 +13,6 @@ import { api } from "@/lib/api-client";
 const CONNECTION: ConnectionPublic = {
   id: "c_emb",
   userId: "u_1",
-  kind: "model",
   name: "bge-by-mis-tei",
   baseUrl: "http://gw",
   apiKeyPreview: "sk-...bc8d",
