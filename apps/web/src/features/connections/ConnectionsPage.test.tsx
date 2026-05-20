@@ -63,9 +63,16 @@ vi.mock("./queries", () => ({
   useVerifyKind: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-// ConnectionSheet's "Metrics source" picker queries the datasources list.
+// ConnectionSheet's "Metrics source" picker queries the datasources list AND,
+// since #207, mounts a hidden DatasourceSheet (for the register-CTA flow) that
+// calls the create/update/verify mutation hooks at module init time. Stub all
+// four — even though the current ConnectionsPage tests never open the sheet,
+// this keeps the mock self-sufficient if a future test does.
 vi.mock("@/features/prometheus-datasources/queries", () => ({
   useDatasources: () => ({ data: [], isLoading: false }),
+  useCreateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVerifyDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { ConnectionsPage } from "./ConnectionsPage";
