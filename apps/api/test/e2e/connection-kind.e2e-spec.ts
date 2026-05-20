@@ -65,7 +65,7 @@ describe("Connection.kind e2e", () => {
     expect(res.body.category).toBe("chat");
   });
 
-  it("create kind=alertmanager works without apiKey/model/category", async () => {
+  it("create kind=alertmanager is rejected (kind retired in #218)", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
@@ -74,8 +74,8 @@ describe("Connection.kind e2e", () => {
         name: "am-1",
         baseUrl: "http://am.test:9093",
       })
-      .expect(201);
-    expect(res.body.kind).toBe("alertmanager");
+      .expect(400);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
   });
 
   it("create kind=gateway carries model/apiKey when supplied", async () => {
@@ -117,44 +117,13 @@ describe("Connection.kind e2e", () => {
     expect(res.body.reason).toMatch(/non-model/);
   });
 
-  it("verify-kind reports Alertmanager version from /api/v2/status", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          versionInfo: { version: "0.27.0" },
-          cluster: { peers: [{ name: "peer-a" }] },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
+  it("verify-kind with kind=alertmanager is rejected by the validation pipe (#218)", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections/verify-kind")
       .set("Authorization", `Bearer ${token}`)
       .send({ kind: "alertmanager", baseUrl: "http://am.test:9093" })
-      .expect(201);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.version).toBe("0.27.0");
-    expect(res.body.details).toMatchObject({ clusterPeers: 1 });
-  });
-
-  it("verify-kind returns ok=false when target shape is wrong (alertmanager)", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ not: "alertmanager shape" }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections/verify-kind")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "alertmanager", baseUrl: "http://am.test:9093" })
-      .expect(201);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.reason).toMatch(/Alertmanager shape/);
+      .expect(400);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
   });
 
   it("PATCH on kind=model rejects clearing model/category/apiKey even when kind is omitted", async () => {
@@ -266,27 +235,6 @@ describe("Connection.kind e2e", () => {
         id: datasourceId,
         name: "default",
       });
-    });
-
-    it("POST /connections (kind=alertmanager, with id) → 400 PROMETHEUS_DATASOURCE_INVALID_KIND", async () => {
-      const r = await request(ctx.app.getHttpServer())
-        .post("/api/connections")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          kind: "alertmanager",
-          name: "am-with-ds",
-          baseUrl: "https://am2.example.com",
-          prometheusDatasourceId: datasourceId,
-        })
-        .expect(400);
-      // contracts.refine fires first (path: prometheusDatasourceId), so the
-      // request never reaches the service-layer check. Both code paths land
-      // at HTTP 400; we just assert the error envelope shape rather than the
-      // specific code, since validation-failure responses carry
-      // VALIDATION_FAILED from the zod pipe.
-      expect(r.body.error.code).toMatch(
-        /^(VALIDATION_FAILED|PROMETHEUS_DATASOURCE_INVALID_KIND)$/,
-      );
     });
 
     it("POST /connections with explicit null preserves null even when a default exists", async () => {
