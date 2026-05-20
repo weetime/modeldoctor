@@ -40,6 +40,14 @@ describe("PrometheusDatasource e2e", () => {
       .expect(403);
   });
 
+  it("POST :id/set-default requires admin", async () => {
+    // requireAdmin runs before the DB lookup, so we don't need a real id.
+    await request(ctx.app.getHttpServer())
+      .post("/api/prometheus-datasources/ds_nonexistent/set-default")
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(403);
+  });
+
   it("admin can create + list + set-default + delete", async () => {
     const createRes = await request(ctx.app.getHttpServer())
       .post("/api/prometheus-datasources")
@@ -61,7 +69,8 @@ describe("PrometheusDatasource e2e", () => {
       .expect(200);
     expect(listRes.body.items).toHaveLength(1);
     // bearerToken (plaintext) MUST NOT appear in list responses; only the
-    // create / update / rotate paths echo it once.
+    // create path echoes it once. (PATCH update / rotate paths exist but are
+    // not covered by this e2e suite — see service/controller unit tests.)
     expect(listRes.body.items[0].bearerToken).toBeUndefined();
     expect(listRes.body.items[0].bearerPreview).toContain("...");
 
