@@ -33,6 +33,15 @@ import { toast } from "sonner";
 import { toastDatasourceError } from "./errors";
 import { useCreateDatasource, useUpdateDatasource, useVerifyDatasource } from "./queries";
 
+/** Form input shape — mirrors the create schema with empty strings for absent values. */
+export interface DatasourceInput {
+  name: string;
+  baseUrl: string;
+  bearerToken: string;
+  customHeaders: string;
+  isDefault: boolean;
+}
+
 /**
  * Sheet mode — `create` for a brand-new row, `edit` to modify an existing
  * one. In edit mode, the bearerToken field is hidden by default (preview
@@ -41,7 +50,7 @@ import { useCreateDatasource, useUpdateDatasource, useVerifyDatasource } from ".
  * preserved.
  */
 export type DatasourceSheetMode =
-  | { kind: "create" }
+  | { kind: "create"; initial?: Partial<DatasourceInput> }
   | { kind: "edit"; existing: PrometheusDatasourcePublic };
 
 interface DatasourceSheetProps {
@@ -49,15 +58,6 @@ interface DatasourceSheetProps {
   onOpenChange: (open: boolean) => void;
   mode: DatasourceSheetMode;
   onSaved?: (ds: PrometheusDatasourcePublic | PrometheusDatasourceWithSecret) => void;
-}
-
-/** Form input shape — mirrors the create schema with empty strings for absent values. */
-interface DatasourceInput {
-  name: string;
-  baseUrl: string;
-  bearerToken: string;
-  customHeaders: string;
-  isDefault: boolean;
 }
 
 const empty: DatasourceInput = {
@@ -98,18 +98,27 @@ export function DatasourceSheet({ open, onOpenChange, mode, onSaved }: Datasourc
       isEdit ? updatePrometheusDatasourceSchema : createPrometheusDatasourceSchema,
     ) as never,
     mode: "onTouched",
-    defaultValues: empty,
+    defaultValues: existing
+      ? existingToFormValues(existing)
+      : { ...empty, ...(mode.kind === "create" ? (mode.initial ?? {}) : {}) },
   });
 
+  // Reseed the form whenever the sheet opens (or `existing` swaps) so a
+  // reopen with a fresh `initial` doesn't stick on stale state. We read
+  // `mode.initial` inside the effect rather than via deps — `mode` is a
+  // fresh object identity per parent render and would cause the effect
+  // to fire on every render. The "open false → true" transition is the
+  // only moment we need a reseed in practice (pill click always toggles
+  // `open` through false-to-true).
   useEffect(() => {
     if (!open) return;
-    if (existing) {
-      form.reset(existingToFormValues(existing));
-    } else {
-      form.reset(empty);
-    }
+    const next: DatasourceInput = existing
+      ? existingToFormValues(existing)
+      : { ...empty, ...(mode.kind === "create" ? (mode.initial ?? {}) : {}) };
+    form.reset(next);
     setSubmitError(null);
     setRotateBearer(false);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: `mode` identity is unstable; we read it inside the effect intentionally
   }, [open, existing, form]);
 
   const baseUrlValue = form.watch("baseUrl");

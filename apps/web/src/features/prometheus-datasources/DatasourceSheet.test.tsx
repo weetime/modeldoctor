@@ -172,6 +172,27 @@ describe("DatasourceSheet (create)", () => {
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     expect(toastError.mock.calls[0][0]).toMatch(/Network down/);
   });
+
+  it("create mode pre-fills baseUrl + name from `initial`", () => {
+    render(
+      <DatasourceSheet
+        open
+        onOpenChange={() => {}}
+        mode={{
+          kind: "create",
+          initial: { baseUrl: "http://discover.example:9090/", name: "discover.example:9090" },
+        }}
+      />,
+    );
+    expect(screen.getByLabelText(/prometheus url/i)).toHaveValue("http://discover.example:9090/");
+    expect(screen.getByLabelText(/^name\b/i)).toHaveValue("discover.example:9090");
+  });
+
+  it("create mode without `initial` still starts with empty form (regression)", () => {
+    render(<DatasourceSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
+    expect(screen.getByLabelText(/prometheus url/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^name\b/i)).toHaveValue("");
+  });
 });
 
 describe("DatasourceSheet (edit)", () => {
