@@ -21,7 +21,10 @@ import {
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { SubscribersSection } from "@/features/alerts/SubscribersSection";
+import { DatasourceSheet } from "@/features/prometheus-datasources/DatasourceSheet";
+import { deriveDatasourceNameFromUrl } from "@/features/prometheus-datasources/derive-name";
 import { useDatasources } from "@/features/prometheus-datasources/queries";
+import { useAuthStore } from "@/stores/auth-store";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -172,6 +175,8 @@ export function ConnectionSheet({
   const [discoverResult, setDiscoverResult] = useState<DiscoverConnectionResponse | null>(null);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
   const [verifyResult, setVerifyResult] = useState<VerifyKindResponse | null>(null);
+  const [inferredPrometheusUrl, setInferredPrometheusUrl] = useState<string | null>(null);
+  const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const discoverMut = useDiscoverConnection();
   const verifyMut = useVerifyKind();
 
@@ -197,6 +202,7 @@ export function ConnectionSheet({
     setDiscoverResult(null);
     setDiscoverError(null);
     setVerifyResult(null);
+    setInferredPrometheusUrl(null);
   }, [open, existing, initialValues]);
 
   // Re-validate when toggling the reset-apiKey switch in edit mode.
@@ -262,6 +268,7 @@ export function ConnectionSheet({
     const customHeaders = rawCustomHeaders?.trim() || undefined;
     try {
       const res = await discoverMut.mutateAsync({ baseUrl, apiKey, customHeaders });
+      setInferredPrometheusUrl(res.inferred.prometheusUrl.value ?? null);
 
       const filled = countFilledFields(res);
       if (filled > 0) {
@@ -297,6 +304,7 @@ export function ConnectionSheet({
   const dismissDiscoverFeedback = () => {
     setDiscoverError(null);
     setDiscoverResult(null);
+    setInferredPrometheusUrl(null);
   };
 
   // -- Auto-parse cURL on textarea change ------------------------------------
@@ -447,8 +455,26 @@ export function ConnectionSheet({
     ? (existing?.apiKeyPreview ?? t("dialog.fields.apiKeyPlaceholder"))
     : t("dialog.fields.apiKeyPlaceholder");
 
+  // Discover → register CTA — see issue #207. Show the pill only when all
+  // four conditions hold: an inferred URL exists, it's not already a
+  // registered datasource, the user hasn't picked any datasource yet, and
+  // the current user is an admin (backend requires admin for create).
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = (user?.roles ?? []).includes("admin");
+  const watchedDsId = form.watch("prometheusDatasourceId");
+  const inferredAlreadyRegistered = inferredPrometheusUrl
+    ? (datasources ?? []).some((d) => d.baseUrl === inferredPrometheusUrl)
+    : false;
+  const showRegisterCta =
+    showPrometheusDatasourceField &&
+    inferredPrometheusUrl != null &&
+    !inferredAlreadyRegistered &&
+    watchedDsId == null &&
+    isAdmin;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[640px]">
         <SheetHeader>
           <SheetTitle>{isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}</SheetTitle>
@@ -959,6 +985,27 @@ export function ConnectionSheet({
                               {t("dialog.fields.prometheusDatasource.help")}
                             </p>
                             <FormMessage />
+                            {showRegisterCta ? (
+                              <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                                <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate">
+                                    {t("dialog.discover.registerCta.headline", { url: inferredPrometheusUrl })}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("dialog.discover.registerCta.body")}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setRegisterSheetOpen(true)}
+                                >
+                                  {t("dialog.discover.registerCta.action")} →
+                                </Button>
+                              </div>
+                            ) : null}
                           </FormItem>
                         )}
                       />
@@ -1057,6 +1104,23 @@ export function ConnectionSheet({
         </Form>
       </SheetContent>
     </Sheet>
+      <DatasourceSheet
+        open={registerSheetOpen}
+        onOpenChange={setRegisterSheetOpen}
+        mode={{
+          kind: "create",
+          initial: {
+            baseUrl: inferredPrometheusUrl ?? "",
+            name: deriveDatasourceNameFromUrl(inferredPrometheusUrl),
+          },
+        }}
+        onSaved={(ds) => {
+          form.setValue("prometheusDatasourceId", ds.id, { shouldDirty: true });
+          setInferredPrometheusUrl(null);
+          setRegisterSheetOpen(false);
+        }}
+      />
+    </>
   );
 }
 

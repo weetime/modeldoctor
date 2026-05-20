@@ -38,6 +38,7 @@ vi.mock("./queries", () => ({
 
 // ConnectionSheet renders a Prometheus-datasource <Select> for kind=model/gateway.
 // Fixture: one default datasource + one alternate so the (默认) suffix test works.
+// Also stub DatasourceSheet query hooks (rendered via the register CTA).
 vi.mock("@/features/prometheus-datasources/queries", () => ({
   useDatasources: () => ({
     data: [
@@ -65,6 +66,9 @@ vi.mock("@/features/prometheus-datasources/queries", () => ({
       },
     ],
   }),
+  useCreateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVerifyDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 // SubscribersSection (rendered in edit mode) reads from React Query hooks.
@@ -76,6 +80,12 @@ vi.mock("@/features/alerts/queries", () => ({
 }));
 vi.mock("@/features/notifications/queries", () => ({
   useChannels: () => ({ data: [] }),
+}));
+
+let mockUserRoles: string[] = ["admin"];
+vi.mock("@/stores/auth-store", () => ({
+  useAuthStore: <T,>(selector: (s: { user: { roles: string[] } }) => T) =>
+    selector({ user: { roles: mockUserRoles } }),
 }));
 
 import { ConnectionSheet } from "./ConnectionSheet";
@@ -680,5 +690,37 @@ describe("ConnectionSheet (unified form stack)", () => {
     await user.click(nameInput);
     await user.tab();
     expect(await screen.findByText(/required/i)).toBeInTheDocument();
+  });
+});
+
+describe("Discover register CTA", () => {
+  beforeEach(() => {
+    mockUserRoles = ["admin"];
+    discoverMutate.mockReset();
+  });
+
+  it("shows the pill on the auto-apply path when inferred URL is unregistered", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: [] },
+        models: { values: ["m1"], confidence: "certain", evidence: [] },
+        category: { value: null, confidence: "unknown", evidence: [] },
+        suggestedTags: { values: [], confidence: "unknown", evidence: [] },
+        prometheusUrl: {
+          value: "http://discovered-prom:9090",
+          confidence: "likely",
+          evidence: [],
+        },
+      },
+      health: { ok: true, probesFailed: [] },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument();
+      expect(screen.getByText(/http:\/\/discovered-prom:9090/)).toBeInTheDocument();
+    });
   });
 });
