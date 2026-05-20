@@ -66,12 +66,18 @@ export function isPrivateOrLoopback(ip: string): boolean {
     if (a === 169 && b === 254) return true;
     // 0.0.0.0/8 (current network — kernel-routed to localhost on Linux)
     if (a === 0) return true;
+    // 100.64.0.0/10 (RFC 6598 CGNAT / shared address space)
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    // 198.18.0.0/15 (RFC 2544 benchmark testing)
+    if (a === 198 && (b === 18 || b === 19)) return true;
+    // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved/class E + 255.255.255.255 broadcast
+    if (a >= 224) return true;
     return false;
   }
   if (family === 6) {
     const lower = ip.toLowerCase();
-    // ::1 loopback
-    if (lower === "::1") return true;
+    // ::1 loopback, :: unspecified (some stacks route to localhost)
+    if (lower === "::1" || lower === "::") return true;
     // fc00::/7 unique local
     if (/^f[cd][0-9a-f]{2}:/.test(lower)) return true;
     // fe80::/10 link-local

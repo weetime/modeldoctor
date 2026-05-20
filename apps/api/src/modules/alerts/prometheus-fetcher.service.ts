@@ -190,9 +190,10 @@ export class PrometheusFetcherService {
     init: RequestInit,
     signal: AbortSignal,
   ): Promise<Response> {
-    const MAX_HOPS = 2;
+    // Allow the initial fetch + up to 2 redirect hops = 3 fetches total.
+    const MAX_FETCHES = 3;
     let url = initialUrl;
-    for (let hop = 0; hop < MAX_HOPS; hop++) {
+    for (let attempt = 0; attempt < MAX_FETCHES; attempt++) {
       const verdict = await evaluateUrl(url, this.fetcherConfig.guard);
       if (!verdict.ok) {
         throw new Error(`prom-fetcher refused ${url.href}: ${verdict.reason}`);
@@ -200,11 +201,14 @@ export class PrometheusFetcherService {
       const res = await fetch(url, { ...init, redirect: "manual", signal });
       if (res.status >= 300 && res.status < 400) {
         const loc = res.headers.get("location");
-        // Drain the body so the underlying socket can be reused.
-        await res.text().catch(() => undefined);
+        // Cancel the body stream rather than reading it: redirects rarely
+        // carry a meaningful body, and a malicious server could otherwise
+        // ship gigabytes here as a DoS. cancel() releases the underlying
+        // socket without buffering anything.
+        await res.body?.cancel().catch(() => undefined);
         if (!loc) return res; // 3xx without Location — let caller handle.
-        if (hop === MAX_HOPS - 1) {
-          throw new Error(`prom-fetcher exceeded ${MAX_HOPS} redirect hops`);
+        if (attempt === MAX_FETCHES - 1) {
+          throw new Error(`prom-fetcher exceeded ${MAX_FETCHES - 1} redirect hops`);
         }
         url = new URL(loc, url);
         continue;
@@ -226,20 +230,17 @@ export class PrometheusFetcherService {
       if (done) break;
       received += value.byteLength;
       if (received > max) {
-        // Cancel + drain so the socket doesn't leak. cancel() rejects pending reads.
+        // cancel() releases the underlying socket without buffering more.
         await reader.cancel();
         throw new Error(`prom-fetcher response exceeded ${max} bytes`);
       }
       chunks.push(value);
     }
-    const total = chunks.reduce((sum, c) => sum + c.byteLength, 0);
-    const buf = new Uint8Array(total);
-    let offset = 0;
-    for (const c of chunks) {
-      buf.set(c, offset);
-      offset += c.byteLength;
-    }
-    return JSON.parse(new TextDecoder().decode(buf));
+    const text = Buffer.concat(chunks).toString("utf-8");
+    // Empty body (e.g. 204 / misbehaving 200) → null; caller already
+    // guards on the null-from-readBoundedJson path.
+    if (!text) return null;
+    return JSON.parse(text);
   }
 
   /**

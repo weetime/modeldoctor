@@ -441,7 +441,8 @@ describe("PrometheusFetcherService.fetchAlertContext — hardening", () => {
       data: { name: "perm", baseUrl: "https://prom.test:9090", isDefault: true },
     });
     const svc = new PrometheusFetcherService(prisma, TEST_KEY_B64, PERMISSIVE_FETCHER_CONFIG);
-    // Two consecutive 302s: first hop → second → would exceed MAX_HOPS.
+    // Three consecutive 302s: initial + 2 redirects = 3 fetches (the limit).
+    // The 3rd fetch is also a 302 → throws "exceeded 2 redirect hops".
     const fetchSpy = vi
       .fn()
       .mockResolvedValueOnce(
@@ -455,6 +456,12 @@ describe("PrometheusFetcherService.fetchAlertContext — hardening", () => {
           status: 302,
           headers: { Location: "https://prom.test:9090/hop3" },
         }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://prom.test:9090/hop4" },
+        }),
       ) as unknown as typeof globalThis.fetch;
     globalThis.fetch = fetchSpy;
     try {
@@ -462,6 +469,53 @@ describe("PrometheusFetcherService.fetchAlertContext — hardening", () => {
         makeEvent({ annotations: { expr: "up" }, connectionId: null }),
       );
       expect(ctx).toBeNull();
+      // Three fetches attempted, then the limit fires.
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  it("4b. exactly 2 redirect hops allowed — terminal 200 reaches caller", async () => {
+    await prisma.prometheusDatasource.create({
+      data: { name: "perm2", baseUrl: "https://prom.test:9090", isDefault: true },
+    });
+    const svc = new PrometheusFetcherService(prisma, TEST_KEY_B64, PERMISSIVE_FETCHER_CONFIG);
+    // Two redirects then a real success — the body shape mirrors the
+    // permissive success-path tests above so summariseSeries works.
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://prom.test:9090/hop2" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://prom.test:9090/hop3" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "success",
+            data: {
+              resultType: "matrix",
+              result: [{ metric: { __name__: "up" }, values: [[1, "1"]] }],
+            },
+          }),
+          { status: 200 },
+        ),
+      ) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = fetchSpy;
+    try {
+      const ctx = await svc.fetchAlertContext(
+        makeEvent({ annotations: { expr: "up" }, connectionId: null }),
+      );
+      expect(ctx).not.toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
     } finally {
       restoreFetch();
     }

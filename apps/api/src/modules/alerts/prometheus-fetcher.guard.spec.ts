@@ -39,6 +39,22 @@ describe("isPrivateOrLoopback (IPv4)", () => {
     ["127.255.255.255", true],
     ["169.254.169.254", true],
     ["0.0.0.0", true],
+    // RFC 6598 CGNAT / shared address space
+    ["100.63.255.255", false],
+    ["100.64.0.1", true],
+    ["100.127.255.255", true],
+    ["100.128.0.1", false],
+    // RFC 2544 benchmark testing
+    ["198.17.255.255", false],
+    ["198.18.0.1", true],
+    ["198.19.255.255", true],
+    ["198.20.0.1", false],
+    // Multicast + reserved + broadcast (>= 224.0.0.0)
+    ["223.255.255.255", false],
+    ["224.0.0.1", true],
+    ["239.255.255.255", true],
+    ["240.0.0.1", true],
+    ["255.255.255.255", true],
     ["8.8.8.8", false],
     ["1.1.1.1", false],
   ] as const)("%s → %s", (ip, expected) => {
@@ -49,6 +65,7 @@ describe("isPrivateOrLoopback (IPv4)", () => {
 describe("isPrivateOrLoopback (IPv6)", () => {
   it.each([
     ["::1", true],
+    ["::", true], // unspecified address — some stacks route to localhost
     ["fc00::1", true],
     ["fd12:3456:789a::1", true],
     ["fe80::1", true],
