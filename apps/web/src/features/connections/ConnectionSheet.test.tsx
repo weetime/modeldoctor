@@ -703,17 +703,17 @@ describe("Discover register CTA", () => {
     const user = userEvent.setup();
     discoverMutate.mockResolvedValue({
       inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: [] },
-        models: { values: ["m1"], confidence: "certain", evidence: [] },
-        category: { value: null, confidence: "unknown", evidence: [] },
-        suggestedTags: { values: [], confidence: "unknown", evidence: [] },
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["m1"], confidence: "certain", evidence: "x" },
+        category: { value: null, confidence: "unknown", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
         prometheusUrl: {
           value: "http://discovered-prom:9090",
           confidence: "likely",
-          evidence: [],
+          evidence: "x",
         },
       },
-      health: { ok: true, probesFailed: [] },
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, { wrapper: Wrapper });
     await fillBaseFields(user);
