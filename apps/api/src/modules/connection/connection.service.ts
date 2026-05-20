@@ -198,7 +198,20 @@ export class ConnectionService {
    */
   async revealApiKey(userId: string, id: string): Promise<ConnectionRevealKeyResponse> {
     const row = await this.findOwnedRow(userId, id);
-    return { apiKey: decrypt(row.apiKeyCipher, this.key) };
+    return { apiKey: this.decryptApiKey(row.apiKeyCipher) };
+  }
+
+  /**
+   * Defensive apiKey decryption. The post-#220 contract requires non-empty
+   * apiKey on create / update, but rows persisted in the brief window between
+   * #218 (alertmanager retired) and #220 (kind field dropped) — when kind=
+   * gateway still allowed an empty apiKey — could carry an empty cipher.
+   * Returning "" for those rows preserves the pre-#220 read-path behavior
+   * rather than throwing inside `decrypt` (which requires non-empty input).
+   */
+  private decryptApiKey(cipher: string): string {
+    if (!cipher) return "";
+    return decrypt(cipher, this.key);
   }
 
   /**
@@ -211,7 +224,7 @@ export class ConnectionService {
       id: row.id,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKey: decrypt(row.apiKeyCipher, this.key),
+      apiKey: this.decryptApiKey(row.apiKeyCipher),
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
@@ -305,7 +318,7 @@ export class ConnectionService {
       userId: row.userId,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKeyPreview: this.makePreview(decrypt(row.apiKeyCipher, this.key)),
+      apiKeyPreview: this.makePreview(this.decryptApiKey(row.apiKeyCipher)),
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
