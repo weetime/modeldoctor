@@ -38,6 +38,7 @@ vi.mock("./queries", () => ({
 
 // ConnectionSheet renders a Prometheus-datasource <Select> for kind=model/gateway.
 // Fixture: one default datasource + one alternate so the (默认) suffix test works.
+// Also stub DatasourceSheet query hooks (rendered via the register CTA).
 vi.mock("@/features/prometheus-datasources/queries", () => ({
   useDatasources: () => ({
     data: [
@@ -65,6 +66,9 @@ vi.mock("@/features/prometheus-datasources/queries", () => ({
       },
     ],
   }),
+  useCreateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useVerifyDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 // SubscribersSection (rendered in edit mode) reads from React Query hooks.
@@ -76,6 +80,26 @@ vi.mock("@/features/alerts/queries", () => ({
 }));
 vi.mock("@/features/notifications/queries", () => ({
   useChannels: () => ({ data: [] }),
+}));
+
+let mockUserRoles: string[] = ["admin"];
+vi.mock("@/stores/auth-store", () => ({
+  useAuthStore: <T,>(selector: (s: { user: { roles: string[] } }) => T) =>
+    selector({ user: { roles: mockUserRoles } }),
+}));
+
+type CapturedDatasourceSheetProps = {
+  open: boolean;
+  mode: { kind: string; initial?: { baseUrl?: string; name?: string } };
+  onSaved?: (ds: { id: string; [k: string]: unknown }) => void;
+};
+let lastDatasourceSheetProps: CapturedDatasourceSheetProps | null = null;
+vi.mock("@/features/prometheus-datasources/DatasourceSheet", () => ({
+  DatasourceSheet: (props: CapturedDatasourceSheetProps) => {
+    lastDatasourceSheetProps = props;
+    // Render nothing — we just want to observe props and let tests call onSaved.
+    return null;
+  },
 }));
 
 import { ConnectionSheet } from "./ConnectionSheet";
@@ -680,5 +704,151 @@ describe("ConnectionSheet (unified form stack)", () => {
     await user.click(nameInput);
     await user.tab();
     expect(await screen.findByText(/required/i)).toBeInTheDocument();
+  });
+});
+
+describe("Discover register CTA", () => {
+  beforeEach(() => {
+    mockUserRoles = ["admin"];
+    discoverMutate.mockReset();
+    lastDatasourceSheetProps = null;
+  });
+
+  function mockDiscoverWithProm(url: string | null) {
+    discoverMutate.mockResolvedValue({
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["m1"], confidence: "certain", evidence: "x" },
+        category: { value: null, confidence: "unknown", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: { value: url, confidence: "likely", evidence: "x" },
+      },
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
+    });
+  }
+
+  it("shows the pill on the auto-apply path when inferred URL is unregistered", async () => {
+    const user = userEvent.setup();
+    discoverMutate.mockResolvedValue({
+      inferred: {
+        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
+        models: { values: ["m1"], confidence: "certain", evidence: "x" },
+        category: { value: null, confidence: "unknown", evidence: "x" },
+        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
+        prometheusUrl: {
+          value: "http://discovered-prom:9090",
+          confidence: "likely",
+          evidence: "x",
+        },
+      },
+      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
+    });
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument();
+      expect(screen.getByText(/http:\/\/discovered-prom:9090/)).toBeInTheDocument();
+    });
+  });
+
+  it("hides the pill when the inferred URL is already registered", async () => {
+    const user = userEvent.setup();
+    // Mocked datasources list (top of file) already contains baseUrl
+    // "http://prom:9090" with id "ds-default". Use that exact URL so
+    // dup-check fires.
+    mockDiscoverWithProm("http://prom:9090");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
+  });
+
+  it("hides the pill when the inferred URL only differs by trailing slash / case", async () => {
+    // Fixture stores "http://prom:9090". Discover returns the same host with
+    // a trailing slash AND uppercase scheme — normalizeBaseUrl should still
+    // match so the dup-check fires.
+    const user = userEvent.setup();
+    mockDiscoverWithProm("HTTP://Prom:9090/");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => {
+      expect(discoverMutate).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
+  });
+
+  it("hides the pill when a datasource is already bound", async () => {
+    const user = userEvent.setup();
+    mockDiscoverWithProm("http://discovered-prom:9090");
+    const existing: ConnectionPublic = { ...EXISTING, prometheusDatasourceId: "ds-default" };
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing }} />, {
+      wrapper: Wrapper,
+    });
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
+    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
+  });
+
+  it("hides the pill for non-admin users", async () => {
+    const user = userEvent.setup();
+    mockUserRoles = []; // viewer
+    mockDiscoverWithProm("http://discovered-prom:9090");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
+    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
+  });
+
+  it("opens DatasourceSheet pre-populated with the inferred URL + derived name", async () => {
+    const user = userEvent.setup();
+    mockDiscoverWithProm("http://discovered-prom:9090");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /注册为数据源|register as datasource/i }));
+    await waitFor(() => {
+      expect(lastDatasourceSheetProps?.open).toBe(true);
+      expect(lastDatasourceSheetProps?.mode.kind).toBe("create");
+      expect(lastDatasourceSheetProps?.mode.initial?.baseUrl).toBe("http://discovered-prom:9090");
+      expect(lastDatasourceSheetProps?.mode.initial?.name).toBe("discovered-prom:9090");
+    });
+  });
+
+  it("onSaved binds the new datasource id and hides the pill", async () => {
+    const user = userEvent.setup();
+    mockDiscoverWithProm("http://discovered-prom:9090");
+    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
+      wrapper: Wrapper,
+    });
+    await fillBaseFields(user);
+    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
+    await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /注册为数据源|register as datasource/i }));
+    await waitFor(() => expect(lastDatasourceSheetProps?.onSaved).toBeDefined());
+    // Simulate the sheet's save callback firing with the new row.
+    lastDatasourceSheetProps?.onSaved?.({
+      id: "ds-new",
+      name: "discovered-prom:9090",
+      baseUrl: "http://discovered-prom:9090",
+    });
+    // Pill goes away because (a) form id is now set and (b) inferred state cleared.
+    await waitFor(() => expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument());
   });
 });
