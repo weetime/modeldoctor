@@ -141,16 +141,20 @@ describe("inferenceConfidenceSchema", () => {
 });
 
 describe("connectionKindSchema", () => {
-  it("only allows model/gateway/alertmanager", () => {
-    expect(connectionKindSchema.options).toEqual(["model", "gateway", "alertmanager"]);
+  it("only allows model/gateway", () => {
+    expect(connectionKindSchema.options).toEqual(["model", "gateway"]);
   });
 
-  it.each(["model", "gateway", "alertmanager"] as const)("accepts %s", (v) => {
+  it.each(["model", "gateway"] as const)("accepts %s", (v) => {
     expect(connectionKindSchema.parse(v)).toBe(v);
   });
 
   it("rejects prometheus (now modeled as its own PrometheusDatasource entity)", () => {
     expect(() => connectionKindSchema.parse("prometheus")).toThrow();
+  });
+
+  it("rejects alertmanager (retired — AM pushes via webhook, not modeled)", () => {
+    expect(() => connectionKindSchema.parse("alertmanager")).toThrow();
   });
 
   it("rejects unknown kind", () => {
@@ -166,11 +170,6 @@ describe("createConnectionSchema — kind=non-model relaxes required fields", ()
     queryParams: "",
     tags: [],
   };
-
-  it("kind=alertmanager accepts omitted apiKey/model/category", () => {
-    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "alertmanager" });
-    expect(r.success).toBe(true);
-  });
 
   it("kind=gateway accepts omitted apiKey/model/category", () => {
     // gateway is auth-optional (apiKey may live in upstream model, not gateway).
@@ -207,10 +206,10 @@ describe("updateConnectionSchema — partial PATCH semantics", () => {
 describe("verifyKindRequestSchema", () => {
   it("accepts kind + baseUrl alone", () => {
     const r = verifyKindRequestSchema.parse({
-      kind: "alertmanager",
-      baseUrl: "http://am:9093",
+      kind: "gateway",
+      baseUrl: "http://higress:8080",
     });
-    expect(r.kind).toBe("alertmanager");
+    expect(r.kind).toBe("gateway");
   });
 
   it("accepts optional apiKey + customHeaders", () => {
@@ -271,17 +270,6 @@ describe("discoverConnectionResponseSchema", () => {
 });
 
 describe("createConnectionSchema — prometheusDatasourceId", () => {
-  it("rejects prometheusDatasourceId on kind=alertmanager", () => {
-    expect(() =>
-      createConnectionSchema.parse({
-        kind: "alertmanager",
-        name: "am",
-        baseUrl: "https://am.example.com",
-        prometheusDatasourceId: "ds_abc",
-      }),
-    ).toThrow();
-  });
-
   it("accepts prometheusDatasourceId on kind=model", () => {
     const parsed = createConnectionSchema.parse({
       kind: "model",
@@ -315,20 +303,3 @@ describe("createConnectionSchema — prometheusDatasourceId", () => {
   });
 });
 
-describe("updateConnectionSchema — prometheusDatasourceId alertmanager guard", () => {
-  it("rejects prometheusDatasourceId on kind=alertmanager PATCH", () => {
-    const r = updateConnectionSchema.safeParse({
-      kind: "alertmanager",
-      prometheusDatasourceId: "ds_abc",
-    });
-    expect(r.success).toBe(false);
-  });
-
-  it("accepts null prometheusDatasourceId on kind=alertmanager PATCH", () => {
-    const r = updateConnectionSchema.safeParse({
-      kind: "alertmanager",
-      prometheusDatasourceId: null,
-    });
-    expect(r.success).toBe(true);
-  });
-});

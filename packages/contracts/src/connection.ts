@@ -8,20 +8,21 @@ export type ServerKind = z.infer<typeof serverKindSchema>;
 /**
  * A Connection's `kind` records what kind of LLM-stack component it points at.
  *
- * - `model`       — model-serving endpoint (the original v1 meaning). Required:
- *                   model, apiKey, category.
- * - `gateway`     — LLM gateway in front of one or more model servers
- *                   (e.g. Higress). apiKey/model/category remain meaningful
- *                   when routing through the gateway. `serverKind=higress`
- *                   is the canonical first instance.
- * - `alertmanager` — Alertmanager instance routing alerts to ModelDoctor's
- *                    webhook. apiKey/model/category are not used.
+ * - `model`   — model-serving endpoint (the original v1 meaning). Required:
+ *               model, apiKey, category.
+ * - `gateway` — LLM gateway in front of one or more model servers
+ *               (e.g. Higress). apiKey/model/category remain meaningful when
+ *               routing through the gateway. `serverKind=higress` is the
+ *               canonical first instance.
  *
  * Note: Prometheus instances are no longer modeled as connections; they live
  * in their own first-class `PrometheusDatasource` table and are referenced
- * from a connection via `prometheusDatasourceId`.
+ * from a connection via `prometheusDatasourceId`. Alertmanager instances are
+ * not modeled at all — they push alerts via webhook and we attribute each
+ * incoming alert to a `kind=model` Connection by label match (see
+ * AlertsService#inferConnection).
  */
-export const connectionKindSchema = z.enum(["model", "gateway", "alertmanager"]);
+export const connectionKindSchema = z.enum(["model", "gateway"]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
@@ -91,7 +92,7 @@ const createConnectionShape = z.object({
   category: ModalityCategorySchema.nullable().optional(),
   tags: z.array(z.string()).default([]),
   // Three-state binding: undefined → server fills with default datasource;
-  // null → explicit unbind; string → must exist and connection.kind !== 'alertmanager'.
+  // null → explicit unbind; string → must reference an existing datasource.
   prometheusDatasourceId: z.string().nullish(),
   serverKind: serverKindSchema.nullable().optional(),
   tokenizerHfId: z.string().nullable().optional(),
@@ -99,8 +100,8 @@ const createConnectionShape = z.object({
 });
 
 // kind=model retains the v1 contract: apiKey/model/category are required.
-// kind=gateway/alertmanager have looser shape since the entity being pointed
-// at is not a model-serving endpoint.
+// kind=gateway has a looser shape since the entity being pointed at is not a
+// model-serving endpoint.
 function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.RefinementCtx) {
   if (v.kind === "model") {
     if (!v.apiKey || v.apiKey.length === 0) {
@@ -125,16 +126,6 @@ function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.Refin
       });
     }
   }
-  // Alertmanager connections are never bound to a metrics datasource — they
-  // route alerts inbound, they don't read metrics. Explicit null/undefined OK;
-  // a non-empty string id is a contract violation.
-  if (v.kind === "alertmanager" && v.prometheusDatasourceId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["prometheusDatasourceId"],
-      message: "prometheusDatasourceId must be null for kind=alertmanager",
-    });
-  }
 }
 
 export const createConnectionSchema = createConnectionShape.superRefine(refineKindFields);
@@ -145,13 +136,6 @@ export type CreateConnection = z.infer<typeof createConnectionSchema>;
 // partial means kind may be absent; refine only fires when kind is supplied).
 export const updateConnectionSchema = createConnectionShape.partial().superRefine((v, ctx) => {
   if (v.kind === "model") refineKindFields(v as z.infer<typeof createConnectionShape>, ctx);
-  if (v.kind === "alertmanager" && v.prometheusDatasourceId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["prometheusDatasourceId"],
-      message: "prometheusDatasourceId must be null for kind=alertmanager",
-    });
-  }
 });
 export type UpdateConnection = z.infer<typeof updateConnectionSchema>;
 
