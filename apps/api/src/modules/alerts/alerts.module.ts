@@ -7,9 +7,16 @@ import { PROMETHEUS_DS_ENC_KEY } from "../prometheus-datasource/prometheus-datas
 import { AlertsController } from "./alerts.controller.js";
 import { AlertsService } from "./alerts.service.js";
 import { AlertExplainerService } from "./explainer.service.js";
+import {
+  PROMETHEUS_FETCHER_CONFIG,
+  type PrometheusFetcherConfig,
+} from "./prometheus-fetcher.config.js";
 import { PrometheusFetcherService } from "./prometheus-fetcher.service.js";
 import { SubscribersController } from "./subscribers.controller.js";
 import { SubscribersService } from "./subscribers.service.js";
+
+export type { PrometheusFetcherConfig };
+export { PROMETHEUS_FETCHER_CONFIG };
 
 @Module({
   imports: [DatabaseModule, ConfigModule, LlmJudgeModule],
@@ -30,6 +37,27 @@ import { SubscribersService } from "./subscribers.service.js";
         const k = config.get("CONNECTION_API_KEY_ENCRYPTION_KEY", { infer: true });
         if (!k) throw new Error("CONNECTION_API_KEY_ENCRYPTION_KEY is required");
         return k;
+      },
+    },
+    {
+      provide: PROMETHEUS_FETCHER_CONFIG,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>): PrometheusFetcherConfig => {
+        const raw = config.get("PROMETHEUS_FETCH_ALLOW_HOSTS", { infer: true });
+        const allowHosts =
+          raw && raw.trim().length > 0
+            ? raw
+                .split(",")
+                .map((h) => h.trim())
+                .filter((h) => h.length > 0)
+            : null;
+        return {
+          guard: {
+            blockPrivate: config.get("PROMETHEUS_FETCH_BLOCK_PRIVATE", { infer: true }),
+            allowHosts,
+          },
+          maxBodyBytes: config.get("PROMETHEUS_FETCH_MAX_BODY_BYTES", { infer: true }),
+        };
       },
     },
   ],
