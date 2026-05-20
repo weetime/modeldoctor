@@ -7,23 +7,16 @@ import { PROMETHEUS_DS_ENC_KEY } from "../prometheus-datasource/prometheus-datas
 import { AlertsController } from "./alerts.controller.js";
 import { AlertsService } from "./alerts.service.js";
 import { AlertExplainerService } from "./explainer.service.js";
-import type { SsrfGuardConfig } from "./prometheus-fetcher.guard.js";
+import {
+  PROMETHEUS_FETCHER_CONFIG,
+  type PrometheusFetcherConfig,
+} from "./prometheus-fetcher.config.js";
 import { PrometheusFetcherService } from "./prometheus-fetcher.service.js";
 import { SubscribersController } from "./subscribers.controller.js";
 import { SubscribersService } from "./subscribers.service.js";
 
-/**
- * Combined runtime configuration for `PrometheusFetcherService`. Built
- * from env at module-init via the factory below; injected into the
- * service by token to keep the service constructor signature stable
- * for unit tests that already `new` the service directly.
- */
-export interface PrometheusFetcherConfig {
-  guard: SsrfGuardConfig;
-  maxBodyBytes: number;
-}
-
-export const PROMETHEUS_FETCHER_CONFIG = "PROMETHEUS_FETCHER_CONFIG";
+export type { PrometheusFetcherConfig };
+export { PROMETHEUS_FETCHER_CONFIG };
 
 @Module({
   imports: [DatabaseModule, ConfigModule, LlmJudgeModule],

@@ -4,6 +4,11 @@ import { decodeKey, decrypt } from "../../common/crypto/aes-gcm.js";
 import { parseCustomHeaders } from "../../common/http/parse-custom-headers.js";
 import { PrismaService } from "../../database/prisma.service.js";
 import { PROMETHEUS_DS_ENC_KEY } from "../prometheus-datasource/prometheus-datasource.service.js";
+import {
+  PROMETHEUS_FETCHER_CONFIG,
+  type PrometheusFetcherConfig,
+} from "./prometheus-fetcher.config.js";
+import { evaluateUrl } from "./prometheus-fetcher.guard.js";
 
 /**
  * Snapshot of Prometheus context surrounding an alert. Returned by
@@ -45,6 +50,7 @@ export class PrometheusFetcherService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PROMETHEUS_DS_ENC_KEY) keyB64: string,
+    @Inject(PROMETHEUS_FETCHER_CONFIG) private readonly fetcherConfig: PrometheusFetcherConfig,
   ) {
     this.key = decodeKey(keyB64);
   }
@@ -145,12 +151,12 @@ export class PrometheusFetcherService {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-      const res = await fetch(url, { headers, signal: controller.signal });
+      const res = await this.safeFetch(url, { headers }, controller.signal);
       if (!res.ok) {
         this.log.warn(`Prom query_range ${res.status} for ${ds.name}`);
         return null;
       }
-      const body = (await res.json()) as {
+      const body = (await this.readBoundedJson(res)) as {
         status: string;
         data?: {
           result?: Array<{
@@ -158,7 +164,8 @@ export class PrometheusFetcherService {
             values: Array<[number, string]>;
           }>;
         };
-      };
+      } | null;
+      if (!body) return null;
       if (body.status !== "success" || !body.data?.result) return null;
       return {
         datasource: { id: ds.id, name: ds.name },
@@ -176,6 +183,63 @@ export class PrometheusFetcherService {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private async safeFetch(
+    initialUrl: URL,
+    init: RequestInit,
+    signal: AbortSignal,
+  ): Promise<Response> {
+    const MAX_HOPS = 2;
+    let url = initialUrl;
+    for (let hop = 0; hop < MAX_HOPS; hop++) {
+      const verdict = await evaluateUrl(url, this.fetcherConfig.guard);
+      if (!verdict.ok) {
+        throw new Error(`prom-fetcher refused ${url.href}: ${verdict.reason}`);
+      }
+      const res = await fetch(url, { ...init, redirect: "manual", signal });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        // Drain the body so the underlying socket can be reused.
+        await res.text().catch(() => undefined);
+        if (!loc) return res; // 3xx without Location — let caller handle.
+        if (hop === MAX_HOPS - 1) {
+          throw new Error(`prom-fetcher exceeded ${MAX_HOPS} redirect hops`);
+        }
+        url = new URL(loc, url);
+        continue;
+      }
+      return res;
+    }
+    // Unreachable — the loop either returns or throws.
+    throw new Error("prom-fetcher safeFetch internal error");
+  }
+
+  private async readBoundedJson(res: Response): Promise<unknown> {
+    if (!res.body) return null;
+    const max = this.fetcherConfig.maxBodyBytes;
+    const reader = res.body.getReader();
+    let received = 0;
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > max) {
+        // Cancel + drain so the socket doesn't leak. cancel() rejects pending reads.
+        await reader.cancel();
+        throw new Error(`prom-fetcher response exceeded ${max} bytes`);
+      }
+      chunks.push(value);
+    }
+    const total = chunks.reduce((sum, c) => sum + c.byteLength, 0);
+    const buf = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      buf.set(c, offset);
+      offset += c.byteLength;
+    }
+    return JSON.parse(new TextDecoder().decode(buf));
   }
 
   /**
