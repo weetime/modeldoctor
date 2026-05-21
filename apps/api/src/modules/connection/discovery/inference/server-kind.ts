@@ -23,7 +23,14 @@ interface InferredField<T> {
 }
 
 /**
- * Header-keyword → ServerKind mapping (likely-tier signal).
+ * Header-keyword → ServerKind mapping (likely-tier signal). Inference
+ * engines only — gateway markers (`higress`, `istio-envoy`, `envoy`, …)
+ * are NOT in this table. A gateway in front of vLLM shouldn't cause
+ * serverKind to be inferred as "higress" because (1) gateway-ness isn't
+ * an engine, and (2) the actual engine behind the gateway is unknowable
+ * from headers alone. Gateway detection produces a **tag** instead (see
+ * deriveGatewayHints in discovery.service.ts).
+ *
  * Order doesn't matter — first hit wins, all values are mutually exclusive.
  */
 const HEADER_KEYWORDS: Array<[string, ServerKind]> = [
@@ -33,7 +40,6 @@ const HEADER_KEYWORDS: Array<[string, ServerKind]> = [
   ["text-generation-inference", "tgi"],
   ["mindie", "mindie"],
   ["lmdeploy", "lmdeploy"],
-  ["higress", "higress"],
 ];
 
 export function inferServerKind(inputs: Inputs): InferredField<ServerKind> {

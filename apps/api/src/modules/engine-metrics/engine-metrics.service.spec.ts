@@ -58,8 +58,13 @@ describe("EngineMetricsService", () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
-  it("rejects when serverKind has no manifest (e.g. higress) (422)", async () => {
-    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn({ serverKind: "higress" }));
+  it("rejects when serverKind has no manifest (e.g. generic) (422)", async () => {
+    // `generic` is the only serverKind in the enum that has no engine-
+    // metrics manifest by design — it represents "we know it's an OpenAI-
+    // compatible endpoint but not which engine". Previously this case was
+    // exercised via "higress", but Higress is no longer in the engine
+    // enum (it's a gateway tag).
+    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn({ serverKind: "generic" }));
     await expect(
       svc.fetchSnapshot("u1", "c1", {
         from: "2026-05-09T00:00:00.000Z",

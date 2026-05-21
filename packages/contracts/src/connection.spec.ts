@@ -81,12 +81,15 @@ describe("createConnectionSchema — apiKey validation", () => {
 });
 
 describe("serverKindSchema after engine SSOT extraction", () => {
-  it("accepts every EngineId plus higress + generic", () => {
+  it("accepts every EngineId plus generic", () => {
     for (const id of ENGINE_IDS) {
       expect(serverKindSchema.parse(id)).toBe(id);
     }
-    expect(serverKindSchema.parse("higress")).toBe("higress");
     expect(serverKindSchema.parse("generic")).toBe("generic");
+  });
+
+  it("rejects 'higress' (gateways are NOT engines — see connection.ts header)", () => {
+    expect(() => serverKindSchema.parse("higress")).toThrow();
   });
 
   it("rejects unknown values", () => {

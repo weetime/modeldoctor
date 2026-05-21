@@ -4,6 +4,16 @@ interface Inputs {
   serverKind: ServerKind | null;
   category: ModalityCategory | null;
   models: string[];
+  /**
+   * Free-form gateway markers derived from the server-header probe
+   * (`higress`, etc.) — see `deriveGatewayHints` in discovery.service.ts.
+   * Gateways aren't part of the engine taxonomy (`serverKind`), but
+   * presence is worth surfacing as a tag so downstream code can key off
+   * `tags.includes("higress")` (e.g. to fetch Higress AI-Statistics metrics
+   * from the gateway's own Prometheus namespace). Optional — omitting is
+   * equivalent to "no gateway detected".
+   */
+  gatewayHints?: string[];
 }
 
 interface InferredList {
@@ -29,6 +39,12 @@ export function inferTags(inputs: Inputs): InferredList {
   if (inputs.category) {
     tags.add(inputs.category);
     evidence.push(`category=${inputs.category}`);
+  }
+  for (const hint of inputs.gatewayHints ?? []) {
+    tags.add(hint);
+  }
+  if ((inputs.gatewayHints ?? []).length > 0) {
+    evidence.push(`gateway=${(inputs.gatewayHints ?? []).join(",")}`);
   }
 
   for (const id of inputs.models) {

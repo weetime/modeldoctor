@@ -100,7 +100,6 @@ const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> =
   { value: "infinity", label: ENGINE_DISPLAY_NAME.infinity },
   { value: "llamacpp", label: ENGINE_DISPLAY_NAME.llamacpp },
   { value: "comfyui", label: ENGINE_DISPLAY_NAME.comfyui },
-  { value: "higress", label: "Higress (Gateway)" },
   { value: "generic", label: "Generic" },
 ];
 
