@@ -145,6 +145,10 @@ All forms (page-style and dialog-style alike) follow the unified shadcn `<Form>`
 
 Field-count is a guideline, not a hard rule — final call is "needs sections / sub-form / deep-link".
 
+### Table-based list pages
+
+Skeleton, table-column conventions, action-column shape (Edit icon + DropdownMenu(Delete) under `<AlertDialog>`), and empty-state mirroring are SSOT-defined in **`docs/project-standards.md` §5 "表格列表页骨架"**. New / refactored list pages MUST follow that section. Reference impl: `apps/web/src/features/connections/ConnectionsPage.tsx`.
+
 ### Multi-section settings pages (User Center, etc.)
 
 Pages whose body is a **set of related but independently-saved forms** (Profile, Password, Notifications, …) MUST NOT stack every section vertically on a single route — that produces a very tall page where the bottom forms are out of reach and unrelated sections compete for context.

@@ -13,6 +13,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,13 +28,13 @@ import {
 } from "@/components/ui/table";
 import { useAuthStore } from "@/stores/auth-store";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
-import { Database, Star, Trash2 } from "lucide-react";
+import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DatasourceSheet, type DatasourceSheetMode } from "./DatasourceSheet";
 import { toastDatasourceError } from "./errors";
-import { useDatasources, useDeleteDatasource, useSetDefaultDatasource } from "./queries";
+import { useDatasources, useDeleteDatasource } from "./queries";
 
 export function DatasourcesPage() {
   const { t } = useTranslation("prometheus-datasources");
@@ -37,7 +43,6 @@ export function DatasourcesPage() {
 
   const listQuery = useDatasources();
   const deleteMut = useDeleteDatasource();
-  const setDefaultMut = useSetDefaultDatasource();
 
   const user = useAuthStore((s) => s.user);
   const isAdmin = (user?.roles ?? []).includes("admin");
@@ -48,16 +53,6 @@ export function DatasourcesPage() {
   const list: PrometheusDatasourcePublic[] = listQuery.data ?? [];
   const isLoading = listQuery.isLoading;
   const error = listQuery.error;
-
-  const onSetDefault = async (ds: PrometheusDatasourcePublic) => {
-    if (ds.isDefault) return;
-    try {
-      await setDefaultMut.mutateAsync(ds.id);
-      toast.success(t("toast.setDefaultSuccess"));
-    } catch (e) {
-      toastDatasourceError(t, e);
-    }
-  };
 
   const onConfirmDelete = async () => {
     if (!pendingDelete) return;
@@ -125,7 +120,7 @@ export function DatasourcesPage() {
                   <TableHead>{t("table.columns.auth")}</TableHead>
                   <TableHead>{t("table.columns.isDefault")}</TableHead>
                   <TableHead>{t("table.columns.consumers")}</TableHead>
-                  <TableHead className="w-32 text-center">{t("table.columns.actions")}</TableHead>
+                  <TableHead className="w-24 text-center">{t("table.columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -157,17 +152,6 @@ export function DatasourcesPage() {
                         <Badge variant="default" className="text-xs">
                           {t("table.defaultBadge")}
                         </Badge>
-                      ) : isAdmin ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => onSetDefault(ds)}
-                          disabled={setDefaultMut.isPending}
-                        >
-                          <Star className="mr-1 h-3 w-3" />
-                          {t("table.setDefault")}
-                        </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
@@ -176,16 +160,38 @@ export function DatasourcesPage() {
                     <TableCell className="text-center">
                       <div className="inline-flex items-center gap-1">
                         {isAdmin ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={tc("actions.delete")}
-                            title={tc("actions.delete")}
-                            onClick={() => setPendingDelete(ds)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={tc("actions.edit")}
+                              title={tc("actions.edit")}
+                              onClick={() => setDialogMode({ kind: "edit", existing: ds })}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={tc("table.actions")}
+                                  title={tc("table.actions")}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => setPendingDelete(ds)}
+                                  className="gap-2 text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  {tc("actions.delete")}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}

@@ -17,6 +17,13 @@ export interface SafeFetchOptions {
   maxBytes?: number;
   /** Max redirect hops before giving up. Default 3. */
   maxRedirects?: number;
+  /**
+   * When true, a 3xx response is returned to the caller as-is instead of
+   * following Location. Useful for probes that care about the **first hop's**
+   * identity (e.g. server-header probe needs the gateway's `Server: …`
+   * header on its 301 redirect, not whatever sits at the redirect target).
+   */
+  noFollow?: boolean;
   /** HTTP method. Default "GET". */
   method?: "GET" | "POST";
   /** Request body (already serialized; caller sets content-type via extraHeaders). */
@@ -82,6 +89,11 @@ export async function safeFetch(url: string, opts: SafeFetchOptions = {}): Promi
 
       // Handle 3xx manually: pull Location, resolve relative to currentUrl, loop.
       if (res.status >= 300 && res.status < 400 && res.status !== 304) {
+        // Caller opted out of redirect-following — return the 3xx as-is so
+        // they can inspect its headers (Server, Location, etc.).
+        if (opts.noFollow) {
+          return await readWithLimit(res, maxBytes);
+        }
         const location = res.headers.get("location");
         if (!location) {
           // No Location header → treat as final response (per RFC 7231 §6.4 the

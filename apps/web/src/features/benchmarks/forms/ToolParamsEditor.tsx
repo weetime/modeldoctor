@@ -144,6 +144,7 @@ export function ToolSelectorField({
   // useRef tracks the last connection-id we acted on so user-driven tool
   // changes after the auto-switch don't get clobbered.
   const lastAutoSwitchConn = useRef<string | undefined>(undefined);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleToolChange / isToolUnsupported are stable enough for this effect; we only want to react to connection or tool changes.
   useEffect(() => {
     if (displayTool) return;
     if (!connection) return;
@@ -157,7 +158,6 @@ export function ToolSelectorField({
     if (!supported) return;
     lastAutoSwitchConn.current = connection.id;
     handleToolChange(supported);
-    // biome-ignore lint/correctness/useExhaustiveDependencies: handleToolChange / isToolUnsupported are stable enough for this effect; we only want to react to connection or tool changes.
   }, [connection, tool, displayTool, availableTools]);
 
   return (

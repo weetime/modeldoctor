@@ -5,7 +5,6 @@ import {
 import { Injectable } from "@nestjs/common";
 import { parseCustomHeaders } from "../../../common/http/parse-custom-headers.js";
 import { inferCategory } from "./inference/category.js";
-import { inferPrometheusUrl } from "./inference/prometheus-url.js";
 import { inferServerKind } from "./inference/server-kind.js";
 import { inferTags } from "./inference/tags.js";
 import { runHealthProbe } from "./probes/health.js";
@@ -36,12 +35,13 @@ export class DiscoveryService {
     const serverKind = inferServerKind({ metricsR, serverHeaderR, modelsR });
     const models = inferModelsField(modelsR);
     const category = inferCategory({ models: models.values });
+    const gatewayHints = deriveGatewayHints(serverHeaderR);
     const suggestedTags = inferTags({
       serverKind: serverKind.value,
       category: category.value,
       models: models.values,
+      gatewayHints,
     });
-    const prometheusUrl = inferPrometheusUrl({ baseUrl: input.baseUrl, metricsR });
 
     return {
       health: {
@@ -55,7 +55,6 @@ export class DiscoveryService {
         models,
         category,
         suggestedTags,
-        prometheusUrl,
       },
     };
   }
@@ -93,6 +92,38 @@ function collectWarnings(args: {
     warnings.push("apiKey was provided but /v1/models returned 401 — verify the key is valid");
   }
   return warnings;
+}
+
+/**
+ * Map known gateway server-header substrings to a stable hint identifier.
+ * The hints become free-form tags on the Connection — they do NOT pollute
+ * `serverKind` (gateways aren't engines; see connection.ts header).
+ *
+ * `istio-envoy` and bare `envoy` both map to `higress` because Higress's
+ * data plane is Envoy-based and that's the gateway product we explicitly
+ * integrate with. A plain Istio gateway also shows `Server: istio-envoy`;
+ * the hint is best-effort and the operator can remove the tag if it's
+ * wrong for their deployment.
+ */
+const GATEWAY_HEADER_MAP: Array<[string, string]> = [
+  ["higress", "higress"],
+  ["istio-envoy", "higress"],
+  ["envoy", "higress"],
+];
+
+function deriveGatewayHints(
+  serverHeaderR: ProbeResult<{ server: string | null; poweredBy: string | null }>,
+): string[] {
+  if (!serverHeaderR.ok || !serverHeaderR.data) return [];
+  const haystack = [serverHeaderR.data.server, serverHeaderR.data.poweredBy]
+    .filter((s): s is string => !!s)
+    .join(" ");
+  if (!haystack) return [];
+  const hints = new Set<string>();
+  for (const [keyword, hint] of GATEWAY_HEADER_MAP) {
+    if (haystack.includes(keyword)) hints.add(hint);
+  }
+  return Array.from(hints);
 }
 
 function inferModelsField(modelsR: ProbeResult<{ models: string[]; raw: unknown }>): {

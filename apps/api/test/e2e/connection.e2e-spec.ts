@@ -73,20 +73,28 @@ describe("Connection e2e (model-endpoint contract + PrometheusDatasource binding
     expect(res.body).not.toHaveProperty("kind");
   });
 
-  it("create gateway-style connection works (serverKind=higress, same shape as model)", async () => {
+  it("create gateway-fronted connection works (engine serverKind + gateway-routing headers + 'higress' tag)", async () => {
+    // Gateways (Higress / istio-envoy / envoy) are NOT engines — serverKind
+    // accepts only real inference engines (vllm/sglang/tgi/mindie/lmdeploy)
+    // or 'generic'. Gateway presence surfaces as a free-form tag instead;
+    // this test pins the shape to make sure that contract stays intact.
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "higress-1",
+        name: "higress-fronted-vllm",
         baseUrl: "http://higress.test",
         apiKey: "gateway-key",
         model: "qwen3-32b-via-higress",
         category: "chat",
-        serverKind: "higress",
+        serverKind: "vllm",
+        customHeaders: "x-higress-llm-model: qwen3-32b",
+        tags: ["higress"],
       })
       .expect(201);
-    expect(res.body.serverKind).toBe("higress");
+    expect(res.body.serverKind).toBe("vllm");
+    expect(res.body.tags).toContain("higress");
+    expect(res.body.customHeaders).toContain("x-higress-llm-model");
   });
 
   it("GET /api/connections returns rows without a `kind` field", async () => {

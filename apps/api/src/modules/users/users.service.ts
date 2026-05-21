@@ -30,8 +30,16 @@ export class UsersService {
     return u;
   }
 
+  /**
+   * Count rows in the `users` table. Used by the "first user becomes admin"
+   * registration shortcut — needs to ignore the seed-time system user
+   * (roles=["system"], no login). Without the filter, `countAll() === 0` is
+   * always false after `prisma db seed` runs and no human ever gets admin.
+   */
   async countAll(): Promise<number> {
-    return this.prisma.user.count();
+    return this.prisma.user.count({
+      where: { NOT: { roles: { has: "system" } } },
+    });
   }
 
   async verifyPassword(passwordHash: string, plain: string): Promise<boolean> {

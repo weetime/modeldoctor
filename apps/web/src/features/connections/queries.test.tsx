@@ -113,7 +113,6 @@ describe("useDiscoverConnection", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "ok" },
         category: { value: "chat", confidence: "guess", evidence: "default" },
         suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "ok" },
-        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "ok" },
       },
     };
     (api.post as any).mockResolvedValue(fakeResponse);
@@ -134,7 +133,6 @@ describe("useDiscoverConnection", () => {
         models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
         category: { value: null, confidence: "unknown", evidence: "no models" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
       },
     });
     const { result } = renderHook(() => useDiscoverConnection(), { wrapper: wrap() });

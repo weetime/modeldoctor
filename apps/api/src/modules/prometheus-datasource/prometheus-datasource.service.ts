@@ -121,11 +121,21 @@ export class PrometheusDatasourceService {
     try {
       const row = await this.prisma.$transaction(async (tx) => {
         if (input.isDefault === true) {
+          // Promote: clear any existing default first so the partial unique
+          // index (only one row may be isDefault=true) stays satisfied.
           await tx.prometheusDatasource.updateMany({
             where: { isDefault: true, NOT: { id } },
             data: { isDefault: false },
           });
           data.isDefault = true;
+        } else if (input.isDefault === false) {
+          // Demote: explicit un-default. We allow the workspace to sit
+          // with zero defaults — matches Grafana's datasource model and
+          // is the operator's call. New connections created while no
+          // default exists fall back to `prometheusDatasourceId = null`
+          // (the contract permits null), which the operator can resolve
+          // later by promoting another row.
+          data.isDefault = false;
         }
         return tx.prometheusDatasource.update({
           where: { id },

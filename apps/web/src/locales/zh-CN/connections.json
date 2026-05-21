@@ -45,7 +45,6 @@
       "serverKind": "推理引擎",
       "serverKindPlaceholder": "选择…",
       "serverKindHelp": "推理引擎类型决定 Prometheus 指标的命名空间，关联 Engine Metrics 看板。",
-      "prometheusUrl": "Prometheus 地址",
       "prometheusDatasource": {
         "label": "指标源 (Prometheus 数据源)",
         "placeholder": "选择一个数据源",
@@ -100,11 +99,6 @@
       "failedProbesHeading": "失败的探测",
       "noValue": "未检测到",
       "dismiss": "关闭探测结果",
-      "registerCta": {
-        "headline": "推断到 {{url}}",
-        "body": "尚未注册为数据源",
-        "action": "注册为数据源"
-      },
       "confidence": {
         "certain": "确定",
         "likely": "可能",

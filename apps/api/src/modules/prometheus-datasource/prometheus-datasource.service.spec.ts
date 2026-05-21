@@ -191,6 +191,28 @@ describe("PrometheusDatasourceService", () => {
         NotFoundException,
       );
     });
+
+    it("explicit isDefault=false demotes the row (un-default — Grafana-aligned)", async () => {
+      // ModelDoctor allows the "zero default" workspace state: unchecking
+      // "Set as default" in the edit sheet sends isDefault=false and the
+      // service honors it. New connections created while no default
+      // exists fall back to prometheusDatasourceId=null; the operator
+      // promotes another row when they want auto-binding back. This
+      // matches Grafana's datasource model — we intentionally did NOT
+      // introduce a "must always have one default" invariant because
+      // operator agency > rigid bootstrap rules in this CRUD surface.
+      const r = await svc.create(ADMIN, {
+        name: "p-demote",
+        baseUrl: "https://p-demote.example.com",
+        customHeaders: "",
+        isDefault: true,
+      });
+      expect(r.isDefault).toBe(true);
+      const updated = await svc.update(ADMIN, r.id, { isDefault: false });
+      expect(updated.isDefault).toBe(false);
+      const reloaded = await prisma.prometheusDatasource.findUnique({ where: { id: r.id } });
+      expect(reloaded?.isDefault).toBe(false);
+    });
   });
 
   describe("setDefault", () => {

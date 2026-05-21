@@ -67,4 +67,29 @@ describe("inferTags", () => {
     expect(r.values).toEqual([]);
     expect(r.confidence).toBe("unknown");
   });
+
+  it("adds gatewayHints as tags (e.g. 'higress' from Server: istio-envoy)", () => {
+    const r = inferTags({
+      serverKind: null,
+      category: null,
+      models: [],
+      gatewayHints: ["higress"],
+    });
+    expect(r.values).toContain("higress");
+    expect(r.confidence).toBe("guess");
+    expect(r.evidence).toMatch(/gateway=higress/);
+  });
+
+  it("dedupes gatewayHints against existing tag set", () => {
+    // serverKind is 'higress' impossible post-#X (gateway not engine), but
+    // if a future enum ever overlaps, the Set dedupe should prevent dup tags.
+    const r = inferTags({
+      serverKind: "vllm",
+      category: "chat",
+      models: [],
+      gatewayHints: ["higress", "higress"],
+    });
+    const occurrences = r.values.filter((v) => v === "higress").length;
+    expect(occurrences).toBe(1);
+  });
 });

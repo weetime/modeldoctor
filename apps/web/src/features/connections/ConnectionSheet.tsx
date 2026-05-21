@@ -21,13 +21,9 @@ import {
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { SubscribersSection } from "@/features/alerts/SubscribersSection";
-import { DatasourceSheet } from "@/features/prometheus-datasources/DatasourceSheet";
-import { deriveDatasourceNameFromUrl } from "@/features/prometheus-datasources/derive-name";
-import { normalizeBaseUrl } from "@/features/prometheus-datasources/normalize-base-url";
 import { useDatasources } from "@/features/prometheus-datasources/queries";
 import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
-import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   ConnectionPublic,
@@ -100,7 +96,6 @@ const SERVER_KIND_OPTIONS: ReadonlyArray<{ value: ServerKind; label: string }> =
   { value: "infinity", label: ENGINE_DISPLAY_NAME.infinity },
   { value: "llamacpp", label: ENGINE_DISPLAY_NAME.llamacpp },
   { value: "comfyui", label: ENGINE_DISPLAY_NAME.comfyui },
-  { value: "higress", label: "Higress (Gateway)" },
   { value: "generic", label: "Generic" },
 ];
 
@@ -157,8 +152,6 @@ export function ConnectionSheet({
   const [tagDraft, setTagDraft] = useState("");
   const [discoverResult, setDiscoverResult] = useState<DiscoverConnectionResponse | null>(null);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
-  const [inferredPrometheusUrl, setInferredPrometheusUrl] = useState<string | null>(null);
-  const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const discoverMut = useDiscoverConnection();
 
   const form = useForm<ConnectionInput>({
@@ -182,7 +175,6 @@ export function ConnectionSheet({
     setTagDraft("");
     setDiscoverResult(null);
     setDiscoverError(null);
-    setInferredPrometheusUrl(null);
   }, [open, existing, initialValues]);
 
   // Re-validate when toggling the reset-apiKey switch in edit mode.
@@ -205,7 +197,6 @@ export function ConnectionSheet({
       r.inferred.models.values.length > 0 ? "x" : null,
       r.inferred.category.value,
       r.inferred.suggestedTags.values.length > 0 ? "x" : null,
-      r.inferred.prometheusUrl.value,
     ].filter(Boolean).length;
 
   const applyDiscoverToForm = (r: DiscoverConnectionResponse) => {
@@ -223,9 +214,6 @@ export function ConnectionSheet({
     if (inf.suggestedTags.values.length > 0 && !dirty.tags) {
       form.setValue("tags", inf.suggestedTags.values, { shouldDirty: false });
     }
-    // Note: inf.prometheusUrl is shown in the DiscoverResultBanner for evidence,
-    // but the form no longer carries a `prometheusUrl` field — metric pulls now
-    // go through the dedicated PrometheusDatasource binding instead.
   };
 
   const runDiscover = async (rawBaseUrl: string, rawApiKey?: string, rawCustomHeaders?: string) => {
@@ -237,8 +225,6 @@ export function ConnectionSheet({
     const customHeaders = rawCustomHeaders?.trim() || undefined;
     try {
       const res = await discoverMut.mutateAsync({ baseUrl, apiKey, customHeaders });
-      setInferredPrometheusUrl(res.inferred.prometheusUrl.value ?? null);
-
       const filled = countFilledFields(res);
       if (filled > 0) {
         // Smart-fill pattern (Notion / Linear): apply silently, surface a
@@ -273,7 +259,6 @@ export function ConnectionSheet({
   const dismissDiscoverFeedback = () => {
     setDiscoverError(null);
     setDiscoverResult(null);
-    setInferredPrometheusUrl(null);
   };
 
   // -- Auto-parse cURL on textarea change ------------------------------------
@@ -387,25 +372,6 @@ export function ConnectionSheet({
   const apiKeyPlaceholder = isEdit
     ? (existing?.apiKeyPreview ?? t("dialog.fields.apiKeyPlaceholder"))
     : t("dialog.fields.apiKeyPlaceholder");
-
-  // Discover → register CTA — see issue #207. Show the pill only when all
-  // three conditions hold: an inferred URL exists, it's not already a
-  // registered datasource, the user hasn't picked any datasource yet, and
-  // the current user is an admin (backend requires admin for create).
-  const user = useAuthStore((s) => s.user);
-  const isAdmin = (user?.roles ?? []).includes("admin");
-  const watchedDsId = form.watch("prometheusDatasourceId");
-  // Compare via normalizeBaseUrl so trailing-slash / case-only variants
-  // ("http://prom:9090/" vs "http://prom:9090") don't slip past the
-  // dup-check and falsely surface a duplicate-register CTA.
-  const inferredAlreadyRegistered = inferredPrometheusUrl
-    ? (() => {
-        const target = normalizeBaseUrl(inferredPrometheusUrl);
-        return (datasources ?? []).some((d) => normalizeBaseUrl(d.baseUrl) === target);
-      })()
-    : false;
-  const showRegisterCta =
-    inferredPrometheusUrl != null && !inferredAlreadyRegistered && watchedDsId == null && isAdmin;
 
   return (
     <>
@@ -824,29 +790,6 @@ export function ConnectionSheet({
                             {t("dialog.fields.prometheusDatasource.help")}
                           </p>
                           <FormMessage />
-                          {showRegisterCta ? (
-                            <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate">
-                                  {t("dialog.discover.registerCta.headline", {
-                                    url: inferredPrometheusUrl,
-                                  })}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {t("dialog.discover.registerCta.body")}
-                                </p>
-                              </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setRegisterSheetOpen(true)}
-                              >
-                                {t("dialog.discover.registerCta.action")} →
-                              </Button>
-                            </div>
-                          ) : null}
                         </FormItem>
                       )}
                     />
@@ -921,22 +864,6 @@ export function ConnectionSheet({
           </Form>
         </SheetContent>
       </Sheet>
-      <DatasourceSheet
-        open={registerSheetOpen}
-        onOpenChange={setRegisterSheetOpen}
-        mode={{
-          kind: "create",
-          initial: {
-            baseUrl: inferredPrometheusUrl ?? "",
-            name: deriveDatasourceNameFromUrl(inferredPrometheusUrl),
-          },
-        }}
-        onSaved={(ds) => {
-          form.setValue("prometheusDatasourceId", ds.id, { shouldDirty: true });
-          setInferredPrometheusUrl(null);
-          setRegisterSheetOpen(false);
-        }}
-      />
     </>
   );
 }
@@ -1007,13 +934,6 @@ function DiscoverResultBanner({
           : t("dialog.discover.noValue"),
       confidence: result.inferred.suggestedTags.confidence,
       evidence: result.inferred.suggestedTags.evidence,
-    },
-    {
-      key: "prometheusUrl",
-      label: t("dialog.fields.prometheusUrl"),
-      value: result.inferred.prometheusUrl.value ?? t("dialog.discover.noValue"),
-      confidence: result.inferred.prometheusUrl.confidence,
-      evidence: result.inferred.prometheusUrl.evidence,
     },
   ];
 

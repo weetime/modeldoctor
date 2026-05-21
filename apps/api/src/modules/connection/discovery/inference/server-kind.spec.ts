@@ -68,14 +68,23 @@ describe("inferServerKind", () => {
     expect(r.value).toBe("mindie");
   });
 
-  it("likely: Server header contains higress", () => {
-    const r = inferServerKind({
-      metricsR: failed(),
-      serverHeaderR: okHeader("higress/2.0.0"),
-      modelsR: failed(),
-    });
-    expect(r.value).toBe("higress");
-    expect(r.confidence).toBe<InferenceConfidence>("likely");
+  it("unknown: gateway-only headers (higress / istio-envoy / envoy) don't infer an engine", () => {
+    // Gateway-fronted connections — Higress's Envoy data plane self-
+    // reports `Server: istio-envoy`; bare `envoy` and `higress` strings
+    // are also possible. Inferring an engine from these would be a lie:
+    // the actual inference engine (vLLM/sglang/etc.) sits BEHIND the
+    // gateway and is unknowable from headers alone. The discover service
+    // surfaces gateway presence as a tag instead — see
+    // `deriveGatewayHints` in discovery.service.ts.
+    for (const header of ["higress/2.0.0", "istio-envoy", "envoy"]) {
+      const r = inferServerKind({
+        metricsR: failed(),
+        serverHeaderR: okHeader(header),
+        modelsR: failed(),
+      });
+      expect(r.value).toBeNull();
+      expect(r.confidence).toBe<InferenceConfidence>("unknown");
+    }
   });
 
   it("likely: Server header contains vllm even without /metrics", () => {

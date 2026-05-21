@@ -2,17 +2,27 @@ import { z } from "zod";
 import { ENGINE_IDS } from "./engine.js";
 import { ModalityCategorySchema } from "./modality.js";
 
-export const serverKindSchema = z.enum([...ENGINE_IDS, "higress", "generic"] as const);
+export const serverKindSchema = z.enum([...ENGINE_IDS, "generic"] as const);
 export type ServerKind = z.infer<typeof serverKindSchema>;
 
 /**
- * A Connection always points at an OpenAI-shape model endpoint. The "is this a
- * gateway?" question is captured by `serverKind` (which includes "higress");
- * there is no separate `Connection.kind` field. Earlier versions modeled
- * prometheus + alertmanager as kinds of Connection — both were moved out
- * (#199 promoted prometheus to `PrometheusDatasource`; #218 retired
- * alertmanager entirely since AM pushes via webhook). With those gone, every
- * Connection requires the model-endpoint contract: apiKey, model, category.
+ * A Connection always points at an OpenAI-shape model endpoint. `serverKind`
+ * identifies the **inference engine** behind that endpoint (vLLM / SGLang /
+ * TGI / etc.), used to namespace Prometheus metrics and surface engine-
+ * specific dashboards.
+ *
+ * Gateways in the request path (Higress, Istio, nginx, kong, …) are NOT
+ * captured in `serverKind` — a gateway isn't an engine, and header-based
+ * detection can only see the front hop, not the engine behind it. Instead,
+ * Discover surfaces gateway presence as a free-form **tag** (`higress`,
+ * etc.) so the UI can filter on it and downstream services (e.g. an
+ * eventual Higress-AI-Statistics metrics fetch) can key off
+ * `connection.tags.includes("higress")` without hijacking serverKind.
+ *
+ * Earlier versions also modeled prometheus + alertmanager as kinds of
+ * Connection — both were moved out (#199 → `PrometheusDatasource`; #218
+ * retired alertmanager). With those gone, every Connection requires the
+ * model-endpoint contract: apiKey, model, category.
  */
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
@@ -143,7 +153,6 @@ export const discoverConnectionResponseSchema = z.object({
     models: inferredListFieldSchema,
     category: inferredFieldSchema(ModalityCategorySchema),
     suggestedTags: inferredListFieldSchema,
-    prometheusUrl: inferredFieldSchema(z.string().url()),
   }),
 });
 export type DiscoverConnectionResponse = z.infer<typeof discoverConnectionResponseSchema>;

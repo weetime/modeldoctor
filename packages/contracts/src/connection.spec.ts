@@ -81,12 +81,15 @@ describe("createConnectionSchema — apiKey validation", () => {
 });
 
 describe("serverKindSchema after engine SSOT extraction", () => {
-  it("accepts every EngineId plus higress + generic", () => {
+  it("accepts every EngineId plus generic", () => {
     for (const id of ENGINE_IDS) {
       expect(serverKindSchema.parse(id)).toBe(id);
     }
-    expect(serverKindSchema.parse("higress")).toBe("higress");
     expect(serverKindSchema.parse("generic")).toBe("generic");
+  });
+
+  it("rejects 'higress' (gateways are NOT engines — see connection.ts header)", () => {
+    expect(() => serverKindSchema.parse("higress")).toThrow();
   });
 
   it("rejects unknown values", () => {
@@ -248,11 +251,6 @@ describe("discoverConnectionResponseSchema", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "/v1/models" },
         category: { value: "chat", confidence: "guess", evidence: "default" },
         suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "..." },
-        prometheusUrl: {
-          value: "http://10.0.0.1:8000",
-          confidence: "likely",
-          evidence: "engine exposes /metrics directly",
-        },
       },
     };
     expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();
@@ -266,7 +264,6 @@ describe("discoverConnectionResponseSchema", () => {
         models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
         category: { value: null, confidence: "unknown", evidence: "no models" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
       },
     };
     expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();

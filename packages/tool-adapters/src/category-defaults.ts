@@ -37,8 +37,7 @@ export const GUIDELLM_CATEGORY_DEFAULTS = {
  * prefix-cache-probe targets any chat-compatible vLLM endpoint; the modality
  * category doesn't restrict which connections are compatible. All categories
  * are supported — the only actual gate is whether the Connection has a bound
- * `prometheusDatasource` (post-#199 this is the first-class entity, not the
- * old `prometheusUrl` field); the form checks that separately and surfaces a
+ * `prometheusDatasource`; the form checks that separately and surfaces a
  * blocking alert when it's absent.
  */
 export const PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS = {

@@ -61,8 +61,6 @@ describe("DiscoveryService", () => {
     expect(r.inferred.category.value).toBe("chat");
     expect(r.inferred.suggestedTags.values).toContain("vllm");
     expect(r.inferred.suggestedTags.values).toContain("70b");
-    expect(r.inferred.prometheusUrl.value).toBe("http://x");
-    expect(r.inferred.prometheusUrl.confidence).toBe("likely");
   });
 
   it("records probe failures in health.probesFailed", async () => {
