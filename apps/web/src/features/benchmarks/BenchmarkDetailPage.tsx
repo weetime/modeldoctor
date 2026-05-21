@@ -126,8 +126,7 @@ function BenchmarkDetailTabs({
   const { t } = useTranslation("benchmarks");
   const showCharts = benchmark.tool !== "prefix-cache-probe";
   // Engine Metrics is reachable when the connection is bound to a Prometheus
-  // datasource (via the new PrometheusDatasource relation, not the legacy
-  // `prometheusUrl` column that no longer exists on Connection).
+  // datasource and the benchmark has a definite time window.
   const showEngineMetrics = Boolean(
     connection?.prometheusDatasource &&
       connection.serverKind &&

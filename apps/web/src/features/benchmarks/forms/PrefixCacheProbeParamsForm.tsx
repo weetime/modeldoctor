@@ -29,8 +29,7 @@ export function PrefixCacheProbeParamsForm({
     : undefined;
 
   // prefix-cache-probe needs a Prometheus datasource bound to the connection
-  // to read vLLM pod hit rates. The legacy per-connection `prometheusUrl` has
-  // been replaced by a relation onto PrometheusDatasource.
+  // to read vLLM pod hit rates.
   if (connection && !connection.prometheusDatasource) {
     return (
       <Alert variant="destructive">

@@ -11,8 +11,8 @@ type DiscoverInput = {
 
 /**
  * `discover_connection` — probe an inference endpoint and infer its
- * server kind, available models, category, suggested tags, and Prometheus
- * URL. Wraps `POST /api/connections/discover` (#151 / #157).
+ * server kind, available models, category, and suggested tags. Wraps
+ * `POST /api/connections/discover` (#151 / #157).
  */
 export function registerDiscoverConnection(server: McpServer, deps: McpToolDeps): void {
   registerTool<DiscoverInput>(
