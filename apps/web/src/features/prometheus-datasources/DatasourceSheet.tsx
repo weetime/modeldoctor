@@ -129,10 +129,19 @@ export function DatasourceSheet({ open, onOpenChange, mode, onSaved }: Datasourc
     setSubmitError(null);
     try {
       const trimmedBearer = values.bearerToken.trim();
+      // Normalize baseUrl client-side: trim whitespace + drop any trailing
+      // slashes. We don't want "http://prom:9090" and "http://prom:9090/"
+      // to round-trip as two distinct rows, and downstream probes append
+      // their own paths (e.g. `/api/v1/status/buildinfo`) so a trailing
+      // slash would produce double-slash request URLs. Case + path + query
+      // are preserved as-is — `normalizeBaseUrl()` in this folder is more
+      // aggressive (lowercases / drops query) but is for dup-detection,
+      // not storage.
+      const baseUrl = values.baseUrl.trim().replace(/\/+$/, "");
       if (existing) {
         const body: UpdatePrometheusDatasource = {
           name: values.name,
-          baseUrl: values.baseUrl,
+          baseUrl,
           customHeaders: values.customHeaders,
           isDefault: values.isDefault,
         };
@@ -146,7 +155,7 @@ export function DatasourceSheet({ open, onOpenChange, mode, onSaved }: Datasourc
       } else {
         const body: CreatePrometheusDatasource = {
           name: values.name,
-          baseUrl: values.baseUrl,
+          baseUrl,
           customHeaders: values.customHeaders,
           isDefault: values.isDefault,
         };
