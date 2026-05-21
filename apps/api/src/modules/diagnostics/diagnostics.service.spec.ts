@@ -9,7 +9,6 @@ import { DiagnosticsService } from "./diagnostics.service.js";
 
 function makeConn(overrides: Partial<DecryptedConnection> & { id: string }): DecryptedConnection {
   return {
-    kind: "model",
     name: "test-conn",
     baseUrl: "http://localhost:8000",
     apiKey: "test-key",

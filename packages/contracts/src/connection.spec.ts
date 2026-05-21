@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  connectionKindSchema,
   createConnectionSchema,
   discoverConnectionRequestSchema,
   discoverConnectionResponseSchema,
   inferenceConfidenceSchema,
   serverKindSchema,
   updateConnectionSchema,
-  verifyKindRequestSchema,
 } from "./connection.js";
 import { ENGINE_IDS } from "./engine.js";
 
@@ -140,93 +138,99 @@ describe("inferenceConfidenceSchema", () => {
   });
 });
 
-describe("connectionKindSchema", () => {
-  it("only allows model/gateway", () => {
-    expect(connectionKindSchema.options).toEqual(["model", "gateway"]);
-  });
-
-  it.each(["model", "gateway"] as const)("accepts %s", (v) => {
-    expect(connectionKindSchema.parse(v)).toBe(v);
-  });
-
-  it("rejects prometheus (now modeled as its own PrometheusDatasource entity)", () => {
-    expect(() => connectionKindSchema.parse("prometheus")).toThrow();
-  });
-
-  it("rejects alertmanager (retired — AM pushes via webhook, not modeled)", () => {
-    expect(() => connectionKindSchema.parse("alertmanager")).toThrow();
-  });
-
-  it("rejects unknown kind", () => {
-    expect(() => connectionKindSchema.parse("database")).toThrow();
-  });
-});
-
-describe("createConnectionSchema — kind=non-model relaxes required fields", () => {
-  const nonModelBase = {
-    name: "prom-1",
-    baseUrl: "http://prom:9090",
-    customHeaders: "",
-    queryParams: "",
-    tags: [],
-  };
-
-  it("kind=gateway accepts omitted apiKey/model/category", () => {
-    // gateway is auth-optional (apiKey may live in upstream model, not gateway).
-    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "gateway" });
-    expect(r.success).toBe(true);
-  });
-
-  it("kind defaults to 'model' when omitted, still requiring full v1 contract", () => {
-    const r = createConnectionSchema.safeParse(nonModelBase);
-    expect(r.success).toBe(false); // missing apiKey/model/category for kind=model
-  });
-
-  it("kind=model still requires apiKey/model/category", () => {
-    const r = createConnectionSchema.safeParse({ ...nonModelBase, kind: "model" });
+describe("createConnectionSchema — required model-endpoint fields", () => {
+  // Every Connection is a model endpoint, so apiKey/model/category are
+  // always required. No more kind-conditional relaxation.
+  it("rejects when apiKey is missing", () => {
+    const r = createConnectionSchema.safeParse({
+      name: "n",
+      baseUrl: "http://x",
+      model: "m",
+      category: "chat",
+      customHeaders: "",
+      queryParams: "",
+      tags: [],
+    });
     expect(r.success).toBe(false);
+  });
+
+  it("rejects when model is missing", () => {
+    const r = createConnectionSchema.safeParse({
+      name: "n",
+      baseUrl: "http://x",
+      apiKey: "sk-x",
+      category: "chat",
+      customHeaders: "",
+      queryParams: "",
+      tags: [],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects when category is missing", () => {
+    const r = createConnectionSchema.safeParse({
+      name: "n",
+      baseUrl: "http://x",
+      apiKey: "sk-x",
+      model: "m",
+      customHeaders: "",
+      queryParams: "",
+      tags: [],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts the full v1 contract", () => {
+    const r = createConnectionSchema.safeParse({
+      ...validBase,
+      apiKey: "sk-x",
+    });
+    expect(r.success).toBe(true);
   });
 });
 
 describe("updateConnectionSchema — partial PATCH semantics", () => {
-  it("accepts a single-field PATCH without kind", () => {
-    // This is exactly the shape the gemini security comment flagged: a
-    // partial PATCH without kind passes the contract layer; the service
-    // layer is responsible for re-enforcing kind-specific invariants.
-    const r = updateConnectionSchema.safeParse({ model: "" });
+  it("accepts a single-field PATCH", () => {
+    const r = updateConnectionSchema.safeParse({ name: "renamed" });
     expect(r.success).toBe(true);
   });
 
-  it("when kind=model is explicit in the PATCH, refine fires (empty apiKey rejected)", () => {
-    const r = updateConnectionSchema.safeParse({ kind: "model", apiKey: "" });
+  it("rejects an apiKey reset to empty string when supplied", () => {
+    const r = updateConnectionSchema.safeParse({ apiKey: "" });
     expect(r.success).toBe(false);
+  });
+
+  it("accepts a PATCH that only touches prometheusDatasourceId (null = unbind)", () => {
+    const r = updateConnectionSchema.safeParse({ prometheusDatasourceId: null });
+    expect(r.success).toBe(true);
   });
 });
 
-describe("verifyKindRequestSchema", () => {
-  it("accepts kind + baseUrl alone", () => {
-    const r = verifyKindRequestSchema.parse({
-      kind: "gateway",
-      baseUrl: "http://higress:8080",
+describe("createConnectionSchema — prometheusDatasourceId", () => {
+  it("accepts prometheusDatasourceId as a string", () => {
+    const parsed = createConnectionSchema.parse({
+      ...validBase,
+      apiKey: "sk-abc",
+      prometheusDatasourceId: "ds_abc",
     });
-    expect(r.kind).toBe("gateway");
+    expect(parsed.prometheusDatasourceId).toBe("ds_abc");
   });
 
-  it("accepts optional apiKey + customHeaders", () => {
-    const r = verifyKindRequestSchema.parse({
-      kind: "gateway",
-      baseUrl: "http://higress",
-      apiKey: "sk-x",
-      customHeaders: "X-Project: p1",
+  it("accepts null prometheusDatasourceId (explicit unbind)", () => {
+    const parsed = createConnectionSchema.parse({
+      ...validBase,
+      apiKey: "sk-abc",
+      prometheusDatasourceId: null,
     });
-    expect(r.apiKey).toBe("sk-x");
-    expect(r.customHeaders).toBe("X-Project: p1");
+    expect(parsed.prometheusDatasourceId).toBeNull();
   });
 
-  it("rejects empty apiKey when supplied", () => {
-    expect(() =>
-      verifyKindRequestSchema.parse({ kind: "gateway", baseUrl: "http://x", apiKey: "" }),
-    ).toThrow();
+  it("accepts undefined prometheusDatasourceId (server fills with default datasource)", () => {
+    const parsed = createConnectionSchema.parse({
+      ...validBase,
+      apiKey: "sk-abc",
+    });
+    expect(parsed.prometheusDatasourceId).toBeUndefined();
   });
 });
 
@@ -266,39 +270,5 @@ describe("discoverConnectionResponseSchema", () => {
       },
     };
     expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();
-  });
-});
-
-describe("createConnectionSchema — prometheusDatasourceId", () => {
-  it("accepts prometheusDatasourceId on kind=model", () => {
-    const parsed = createConnectionSchema.parse({
-      kind: "model",
-      name: "m",
-      baseUrl: "https://m.example.com",
-      apiKey: "sk-abc",
-      model: "gpt-4",
-      category: "chat",
-      prometheusDatasourceId: "ds_abc",
-    });
-    expect(parsed.prometheusDatasourceId).toBe("ds_abc");
-  });
-
-  it("accepts null prometheusDatasourceId (explicit unbind)", () => {
-    const parsed = createConnectionSchema.parse({
-      kind: "gateway",
-      name: "g",
-      baseUrl: "https://g.example.com",
-      prometheusDatasourceId: null,
-    });
-    expect(parsed.prometheusDatasourceId).toBeNull();
-  });
-
-  it("accepts undefined prometheusDatasourceId (server fills with default datasource)", () => {
-    const parsed = createConnectionSchema.parse({
-      kind: "gateway",
-      name: "g",
-      baseUrl: "https://g.example.com",
-    });
-    expect(parsed.prometheusDatasourceId).toBeUndefined();
   });
 });

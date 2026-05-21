@@ -10,8 +10,8 @@ type SetDefaultPrometheusDatasourceInput = {
 /**
  * `set_default_prometheus_datasource` — promote one Prometheus datasource
  * to the workspace-wide default. The default is the one that newly-created
- * Connections (kind ∈ {model, gateway}) auto-bind to when the caller
- * doesn't specify `prometheusDatasourceId` explicitly.
+ * Connections auto-bind to when the caller doesn't specify
+ * `prometheusDatasourceId` explicitly.
  *
  * Admin-gated. The configured `MCP_USER_ID` must have the `"admin"` role in
  * the DB (mcp.service resolves this per-request from prisma); otherwise the
@@ -33,8 +33,8 @@ export function registerSetDefaultPrometheusDatasource(server: McpServer, deps: 
       title: "Set the default Prometheus datasource",
       description:
         "Promote one Prometheus datasource (by id from list_prometheus_datasources) " +
-        "to the workspace default. New connections (kind=model or gateway) created " +
-        "without an explicit prometheusDatasourceId will auto-bind to this one. " +
+        "to the workspace default. New connections created without an explicit " +
+        "prometheusDatasourceId will auto-bind to this one. " +
         "Admin-only: the configured MCP_USER_ID must have the admin role in the DB.",
       inputShape: {
         datasourceId: z

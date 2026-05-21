@@ -20,7 +20,6 @@ const USER: JwtPayload = { sub: "u_1", email: "alice@example.com", roles: [] };
 
 const PUBLIC_FIXTURE: ConnectionPublic = {
   id: "c_1",
-  kind: "model",
   userId: "u_1",
   name: "vllm-prod",
   baseUrl: "http://10.0.0.1:8000",

@@ -6,30 +6,19 @@ export const serverKindSchema = z.enum([...ENGINE_IDS, "higress", "generic"] as 
 export type ServerKind = z.infer<typeof serverKindSchema>;
 
 /**
- * A Connection's `kind` records what kind of LLM-stack component it points at.
- *
- * - `model`   — model-serving endpoint (the original v1 meaning). Required:
- *               model, apiKey, category.
- * - `gateway` — LLM gateway in front of one or more model servers
- *               (e.g. Higress). apiKey/model/category remain meaningful when
- *               routing through the gateway. `serverKind=higress` is the
- *               canonical first instance.
- *
- * Note: Prometheus instances are no longer modeled as connections; they live
- * in their own first-class `PrometheusDatasource` table and are referenced
- * from a connection via `prometheusDatasourceId`. Alertmanager instances are
- * not modeled at all — they push alerts via webhook and we attribute each
- * incoming alert to a `kind=model` Connection by label match (see
- * AlertsService#inferConnection).
+ * A Connection always points at an OpenAI-shape model endpoint. The "is this a
+ * gateway?" question is captured by `serverKind` (which includes "higress");
+ * there is no separate `Connection.kind` field. Earlier versions modeled
+ * prometheus + alertmanager as kinds of Connection — both were moved out
+ * (#199 promoted prometheus to `PrometheusDatasource`; #218 retired
+ * alertmanager entirely since AM pushes via webhook). With those gone, every
+ * Connection requires the model-endpoint contract: apiKey, model, category.
  */
-export const connectionKindSchema = z.enum(["model", "gateway"]);
-export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 /** What clients see on list / detail. No plaintext apiKey, only preview. */
 export const connectionPublicSchema = z.object({
   id: z.string(),
   userId: z.string(),
-  kind: connectionKindSchema,
   name: z.string().min(1).max(120),
   baseUrl: z.string().url(),
   apiKeyPreview: z.string(),
@@ -68,10 +57,9 @@ export const connectionWithSecretSchema = connectionPublicSchema.extend({
 });
 export type ConnectionWithSecret = z.infer<typeof connectionWithSecretSchema>;
 
-// apiKey shape validation lives here so create + update share it. Required-ness
-// is enforced separately via .superRefine() because non-model kinds skip it.
 const apiKeyStringSchema = z
   .string()
+  .min(1)
   .refine((v) => !/\p{Cc}/u.test(v), {
     message: "apiKey must not contain control characters",
   })
@@ -79,17 +67,14 @@ const apiKeyStringSchema = z
     message: "apiKey must not have leading or trailing whitespace",
   });
 
-const createConnectionShape = z.object({
-  kind: connectionKindSchema.default("model"),
+export const createConnectionSchema = z.object({
   name: z.string().min(1).max(120),
   baseUrl: z.string().url(),
-  // Optional at the schema level so non-model kinds can omit. Required-ness for
-  // kind=model is enforced via superRefine below.
-  apiKey: apiKeyStringSchema.optional(),
-  model: z.string().optional(),
+  apiKey: apiKeyStringSchema,
+  model: z.string().min(1),
   customHeaders: z.string().default(""),
   queryParams: z.string().default(""),
-  category: ModalityCategorySchema.nullable().optional(),
+  category: ModalityCategorySchema,
   tags: z.array(z.string()).default([]),
   // Three-state binding: undefined → server fills with default datasource;
   // null → explicit unbind; string → must reference an existing datasource.
@@ -98,45 +83,11 @@ const createConnectionShape = z.object({
   tokenizerHfId: z.string().nullable().optional(),
   evaluationProfileId: z.string().nullable().optional(),
 });
-
-// kind=model retains the v1 contract: apiKey/model/category are required.
-// kind=gateway has a looser shape since the entity being pointed at is not a
-// model-serving endpoint.
-function refineKindFields(v: z.infer<typeof createConnectionShape>, ctx: z.RefinementCtx) {
-  if (v.kind === "model") {
-    if (!v.apiKey || v.apiKey.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["apiKey"],
-        message: "apiKey is required for kind=model",
-      });
-    }
-    if (!v.model || v.model.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["model"],
-        message: "model is required for kind=model",
-      });
-    }
-    if (!v.category) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["category"],
-        message: "category is required for kind=model",
-      });
-    }
-  }
-}
-
-export const createConnectionSchema = createConnectionShape.superRefine(refineKindFields);
 export type CreateConnection = z.infer<typeof createConnectionSchema>;
 
-// Update accepts a partial create shape; the same refine still applies when
-// `kind` is being changed (or implicitly model when omitted on partial — but
-// partial means kind may be absent; refine only fires when kind is supplied).
-export const updateConnectionSchema = createConnectionShape.partial().superRefine((v, ctx) => {
-  if (v.kind === "model") refineKindFields(v as z.infer<typeof createConnectionShape>, ctx);
-});
+// PATCH semantics: every field is optional, but if the client sends apiKey /
+// model / category, the same shape rules apply (non-empty, trimmed apiKey, etc.).
+export const updateConnectionSchema = createConnectionSchema.partial();
 export type UpdateConnection = z.infer<typeof updateConnectionSchema>;
 
 export const listConnectionsResponseSchema = z.object({
@@ -165,23 +116,6 @@ const inferredListFieldSchema = z.object({
   confidence: inferenceConfidenceSchema,
   evidence: z.string(),
 });
-
-export const verifyKindRequestSchema = z.object({
-  kind: connectionKindSchema,
-  baseUrl: z.string().url(),
-  apiKey: z.string().min(1).optional(),
-  customHeaders: z.string().optional(),
-});
-export type VerifyKindRequest = z.infer<typeof verifyKindRequestSchema>;
-
-export const verifyKindResponseSchema = z.object({
-  kind: connectionKindSchema,
-  ok: z.boolean(),
-  version: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
-  reason: z.string().optional(),
-});
-export type VerifyKindResponse = z.infer<typeof verifyKindResponseSchema>;
 
 export const discoverConnectionRequestSchema = z.object({
   baseUrl: z.string().url(),

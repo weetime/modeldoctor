@@ -1,20 +1,16 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-
-// SSRF guard mock so we can hit a non-resolvable hostname in the verify-kind
-// probe without flaky DNS in CI.
-vi.mock("../../src/modules/connection/discovery/ssrf-guard.js", () => ({
-  assertSafeUrl: vi.fn(async (url: string) => ({
-    safeUrl: new URL(url),
-    resolvedIp: "10.0.0.1",
-  })),
-  PRIVATE_HOSTS: new Set<string>(),
-}));
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import request from "supertest";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
 
-describe("Connection.kind e2e", () => {
+// Originally "Connection.kind e2e", scoped to enum behavior around model /
+// gateway / alertmanager kinds. After #220 retired the `Connection.kind`
+// field entirely (every Connection is a model endpoint; the gateway
+// distinction lives in `serverKind`), this file shrank to the
+// model-endpoint required-field guards + the PrometheusDatasource
+// three-state binding. The filename is kept for git-history continuity.
+describe("Connection e2e (model-endpoint contract + PrometheusDatasource binding)", () => {
   let ctx: E2EContext;
   let prisma: PrismaService;
   let token: string;
@@ -26,33 +22,27 @@ describe("Connection.kind e2e", () => {
     token = u.token;
   }, 120_000);
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   afterAll(async () => {
     await ctx.teardown();
   });
 
-  it("create kind=model still requires apiKey + model + category", async () => {
+  it("create still requires apiKey + model + category", async () => {
     await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        kind: "model",
-        name: "model-bad",
+        name: "missing-fields",
         baseUrl: "http://x.test",
         // missing apiKey, model, category
       })
       .expect(400);
   });
 
-  it("create kind=model succeeds with all required fields", async () => {
+  it("create succeeds with all required fields", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        kind: "model",
         name: "model-good",
         baseUrl: "http://x.test",
         apiKey: "sk-test",
@@ -60,30 +50,34 @@ describe("Connection.kind e2e", () => {
         category: "chat",
       })
       .expect(201);
-    expect(res.body.kind).toBe("model");
     expect(res.body.model).toBe("qwen-test");
     expect(res.body.category).toBe("chat");
   });
 
-  it("create kind=alertmanager is rejected (kind retired in #218)", async () => {
+  it("create with extraneous kind field is silently accepted (zod strips unknown keys)", async () => {
+    // Defensive: clients on old contracts may still POST `kind:"model"`.
+    // zod's default behavior strips unknown keys at parse time, so the
+    // request succeeds without the field ever reaching the DB.
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        kind: "alertmanager",
-        name: "am-1",
-        baseUrl: "http://am.test:9093",
+        kind: "model",
+        name: "ignores-kind",
+        baseUrl: "http://x.test",
+        apiKey: "sk-test",
+        model: "qwen-test",
+        category: "chat",
       })
-      .expect(400);
-    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+      .expect(201);
+    expect(res.body).not.toHaveProperty("kind");
   });
 
-  it("create kind=gateway carries model/apiKey when supplied", async () => {
+  it("create gateway-style connection works (serverKind=higress, same shape as model)", async () => {
     const res = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        kind: "gateway",
         name: "higress-1",
         baseUrl: "http://higress.test",
         apiKey: "gateway-key",
@@ -92,46 +86,25 @@ describe("Connection.kind e2e", () => {
         serverKind: "higress",
       })
       .expect(201);
-    expect(res.body.kind).toBe("gateway");
     expect(res.body.serverKind).toBe("higress");
   });
 
-  it("legacy GET /api/connections still works (kind exposed on each row)", async () => {
+  it("GET /api/connections returns rows without a `kind` field", async () => {
     const res = await request(ctx.app.getHttpServer())
       .get("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(Array.isArray(res.body.items)).toBe(true);
     for (const row of res.body.items) {
-      expect(row.kind).toBeDefined();
+      expect(row).not.toHaveProperty("kind");
     }
   });
 
-  it("POST /api/connections/verify-kind rejects kind=model", async () => {
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections/verify-kind")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "model", baseUrl: "http://x.test" })
-      .expect(201);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.reason).toMatch(/non-model/);
-  });
-
-  it("verify-kind with kind=alertmanager is rejected by the validation pipe (#218)", async () => {
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections/verify-kind")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "alertmanager", baseUrl: "http://am.test:9093" })
-      .expect(400);
-    expect(res.body.error.code).toBe("VALIDATION_FAILED");
-  });
-
-  it("PATCH on kind=model rejects clearing model/category/apiKey even when kind is omitted", async () => {
+  it("PATCH rejects clearing required fields", async () => {
     const created = await request(ctx.app.getHttpServer())
       .post("/api/connections")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        kind: "model",
         name: "patch-guard",
         baseUrl: "http://x.test",
         apiKey: "sk-orig",
@@ -140,8 +113,6 @@ describe("Connection.kind e2e", () => {
       })
       .expect(201);
 
-    // PATCH without `kind` — superRefine alone would let this through;
-    // the service-layer invariant must reject it.
     await request(ctx.app.getHttpServer())
       .patch(`/api/connections/${created.body.id}`)
       .set("Authorization", `Bearer ${token}`)
@@ -159,27 +130,8 @@ describe("Connection.kind e2e", () => {
       .expect(400);
   });
 
-  it("verify-kind for gateway returns model count from /v1/models", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({ data: [{ id: "m1" }, { id: "m2" }, { id: "m3" }] }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const res = await request(ctx.app.getHttpServer())
-      .post("/api/connections/verify-kind")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ kind: "gateway", baseUrl: "http://higress.test" })
-      .expect(201);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.details).toMatchObject({ modelCount: 3 });
-  });
-
   // ---------------------------------------------------------------------------
-  // Connection × PrometheusDatasource three-state binding (Task 4)
-  //
+  // Connection × PrometheusDatasource three-state binding.
   // `token` belongs to the first registered user → admin (auth.service:
   // `total === 0 → roles=["admin"]`), so we reuse it for both datasource
   // CRUD (admin-gated) and connection CRUD (user-allowed).
@@ -200,29 +152,16 @@ describe("Connection.kind e2e", () => {
     });
 
     afterAll(async () => {
-      // Symmetric cleanup — without this the default datasource leaks into
-      // any e2e file run sequentially after this one (vitest runs e2e files
-      // one at a time but shares the DB), and would also auto-fill onto
-      // any further connection created later in this describe. FK is
-      // ON DELETE SET NULL on Connection.prometheusDatasourceId, but
-      // dropping the referencing rows first keeps the log free of orphan
-      // chatter if the FK ever tightens to RESTRICT.
-      //
-      // Guard against beforeAll failing before datasourceId is assigned —
-      // vitest still runs afterAll on beforeAll failure, and Prisma silently
-      // ignores `where: { x: undefined }`, which would otherwise drop EVERY
-      // connection in the test DB and confuse debugging across e2e files.
       if (!datasourceId) return;
       await prisma.connection.deleteMany({ where: { prometheusDatasourceId: datasourceId } });
       await prisma.prometheusDatasource.deleteMany();
     });
 
-    it("POST /connections (kind=model, no prometheusDatasourceId) auto-fills default", async () => {
+    it("POST /connections (no prometheusDatasourceId) auto-fills default", async () => {
       const r = await request(ctx.app.getHttpServer())
         .post("/api/connections")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          kind: "model",
           name: "auto-fill",
           baseUrl: "https://m.example.com",
           apiKey: "sk-abc",
@@ -242,9 +181,11 @@ describe("Connection.kind e2e", () => {
         .post("/api/connections")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          kind: "gateway",
-          name: "g-no-source",
+          name: "no-source",
           baseUrl: "https://g.example.com",
+          apiKey: "sk-abc",
+          model: "gpt-4",
+          category: "chat",
           prometheusDatasourceId: null,
         })
         .expect(201);
@@ -257,9 +198,11 @@ describe("Connection.kind e2e", () => {
         .post("/api/connections")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          kind: "gateway",
-          name: "g-bad-ds",
+          name: "bad-ds",
           baseUrl: "https://g-bad.example.com",
+          apiKey: "sk-abc",
+          model: "gpt-4",
+          category: "chat",
           prometheusDatasourceId: "ds_does_not_exist",
         })
         .expect(400);

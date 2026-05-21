@@ -13,7 +13,6 @@ vi.mock("@/lib/playground-stream", () => ({
 const CONN_A: ConnectionPublic = {
   id: "ca",
   userId: "u1",
-  kind: "model",
   name: "A",
   baseUrl: "http://a",
   apiKeyPreview: "sk-...1234",

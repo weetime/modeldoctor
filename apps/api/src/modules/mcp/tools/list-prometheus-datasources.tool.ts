@@ -6,9 +6,9 @@ import { registerTool } from "./_register.js";
  * `list_prometheus_datasources` — surface the admin-managed Prometheus
  * datasource registry so an agent can pick one to bind to a Connection via
  * `set_connection_prometheus_source`. The row where `isDefault=true` is the
- * one new connections (kind ∈ {model, gateway}) auto-bind to when the caller
- * doesn't specify an id explicitly. `bearerCipher` / `bearerToken` are NEVER
- * returned — only the redacted `bearerPreview` (`abc...wxyz` or `""`).
+ * one new connections auto-bind to when the caller doesn't specify an id
+ * explicitly. `bearerCipher` / `bearerToken` are NEVER returned — only the
+ * redacted `bearerPreview` (`abc...wxyz` or `""`).
  *
  * Listing is intentionally not admin-gated (the underlying service exposes
  * the registry to every authenticated user) — admins are still the only role
@@ -23,10 +23,9 @@ export function registerListPrometheusDatasources(server: McpServer, deps: McpTo
       title: "List Prometheus datasources",
       description:
         "List every Prometheus datasource configured in ModelDoctor. The row " +
-        "where isDefault=true is the one new connections (kind=model or gateway) " +
-        "will auto-bind to. Use set_connection_prometheus_source to change a " +
-        "connection's binding. bearerToken is NEVER returned — only a short " +
-        "redacted preview.",
+        "where isDefault=true is the one new connections will auto-bind to. " +
+        "Use set_connection_prometheus_source to change a connection's binding. " +
+        "bearerToken is NEVER returned — only a short redacted preview.",
     },
     async () => {
       const list = await deps.prometheusDatasources.list({

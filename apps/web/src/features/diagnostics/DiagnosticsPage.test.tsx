@@ -21,7 +21,6 @@ vi.mock("@/lib/api-client", () => {
 const SAMPLE_CONN: ConnectionPublic = {
   id: "c1",
   userId: "u1",
-  kind: "model",
   name: "smoke-1",
   baseUrl: "http://host",
   apiKeyPreview: "sk-...test",

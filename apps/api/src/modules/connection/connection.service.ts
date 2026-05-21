@@ -1,5 +1,4 @@
 import type {
-  ConnectionKind,
   ConnectionPublic,
   ConnectionRevealKeyResponse,
   ConnectionWithSecret,
@@ -49,15 +48,12 @@ const CONNECTION_INCLUDES = {
 
 export interface DecryptedConnection {
   id: string;
-  kind: ConnectionKind;
   name: string;
   baseUrl: string;
   apiKey: string;
   model: string;
   customHeaders: string;
   queryParams: string;
-  // null for non-model kinds; consumers that need a category must check
-  // `kind === "model"` first.
   category: ModalityCategory | null;
   tokenizerHfId: string | null;
   /**
@@ -92,24 +88,20 @@ export class ConnectionService {
   }
 
   async create(userId: string, input: CreateConnection): Promise<ConnectionWithSecret> {
-    // Non-model kinds may omit apiKey; persist an empty cipher in that case
-    // so the column stays NOT NULL and decrypt() returns "".
-    const plaintextKey = input.apiKey ?? "";
-    const apiKeyCipher = plaintextKey ? encrypt(plaintextKey, this.key) : "";
+    const apiKeyCipher = encrypt(input.apiKey, this.key);
     const prometheusDatasourceId = await this.resolvePrometheusDatasourceId(
       input.prometheusDatasourceId,
     );
     const row = await this.prisma.connection.create({
       data: {
         userId,
-        kind: input.kind,
         name: input.name,
         baseUrl: input.baseUrl,
         apiKeyCipher,
-        model: input.model ?? "",
+        model: input.model,
         customHeaders: input.customHeaders,
         queryParams: input.queryParams,
-        category: input.category ?? null,
+        category: input.category,
         tags: input.tags,
         prometheusDatasourceId,
         serverKind: input.serverKind ?? null,
@@ -120,7 +112,7 @@ export class ConnectionService {
       },
       include: CONNECTION_INCLUDES,
     });
-    return this.toContractWithSecret(row, plaintextKey);
+    return this.toContractWithSecret(row, input.apiKey);
   }
 
   async list(userId: string): Promise<ListConnectionsResponse> {
@@ -144,26 +136,20 @@ export class ConnectionService {
     id: string,
     input: UpdateConnection,
   ): Promise<ConnectionWithSecret | ConnectionPublic> {
-    const existing = await this.findOwnedRow(userId, id);
-    // updateConnectionSchema is `.partial()`, so its superRefine only fires
-    // when `kind` is present in the body. A PATCH like `{"model": ""}` against
-    // an existing kind=model row would otherwise slip past validation and
-    // clear required fields. Compute the effective kind (patch.kind ?? row.kind)
-    // and re-enforce the same gate the create path uses.
-    const effectiveKind = (input.kind ?? existing.kind) as ConnectionKind;
-    if (effectiveKind === "model") {
-      if (input.model !== undefined && input.model.trim().length === 0) {
-        throw new BadRequestException("model is required for kind=model");
-      }
-      if (input.category === null) {
-        throw new BadRequestException("category is required for kind=model");
-      }
-      if (input.apiKey !== undefined && input.apiKey.length === 0) {
-        throw new BadRequestException("apiKey is required for kind=model");
-      }
+    await this.findOwnedRow(userId, id);
+    // updateConnectionSchema is `.partial()`; defend against PATCHes that
+    // clear required fields by re-asserting the model-endpoint contract
+    // when those fields are explicitly present.
+    if (input.model !== undefined && input.model.trim().length === 0) {
+      throw new BadRequestException("model must be non-empty");
+    }
+    if (input.category === null) {
+      throw new BadRequestException("category must be non-null");
+    }
+    if (input.apiKey !== undefined && input.apiKey.length === 0) {
+      throw new BadRequestException("apiKey must be non-empty");
     }
     const data: Prisma.ConnectionUncheckedUpdateInput = {};
-    if (input.kind !== undefined) data.kind = input.kind;
     if (input.name !== undefined) data.name = input.name;
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl;
     if (input.model !== undefined) data.model = input.model;
@@ -184,7 +170,7 @@ export class ConnectionService {
     if (input.evaluationProfileId !== undefined)
       data.evaluationProfileId = input.evaluationProfileId;
     if (input.apiKey !== undefined) {
-      data.apiKeyCipher = input.apiKey ? encrypt(input.apiKey, this.key) : "";
+      data.apiKeyCipher = encrypt(input.apiKey, this.key);
     }
 
     const row = await this.prisma.connection.update({
@@ -212,7 +198,20 @@ export class ConnectionService {
    */
   async revealApiKey(userId: string, id: string): Promise<ConnectionRevealKeyResponse> {
     const row = await this.findOwnedRow(userId, id);
-    return { apiKey: decrypt(row.apiKeyCipher, this.key) };
+    return { apiKey: this.decryptApiKey(row.apiKeyCipher) };
+  }
+
+  /**
+   * Defensive apiKey decryption. The post-#220 contract requires non-empty
+   * apiKey on create / update, but rows persisted in the brief window between
+   * #218 (alertmanager retired) and #220 (kind field dropped) — when kind=
+   * gateway still allowed an empty apiKey — could carry an empty cipher.
+   * Returning "" for those rows preserves the pre-#220 read-path behavior
+   * rather than throwing inside `decrypt` (which requires non-empty input).
+   */
+  private decryptApiKey(cipher: string): string {
+    if (!cipher) return "";
+    return decrypt(cipher, this.key);
   }
 
   /**
@@ -223,10 +222,9 @@ export class ConnectionService {
     const row = await this.findOwnedRow(userId, id);
     return {
       id: row.id,
-      kind: row.kind as ConnectionKind,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKey: row.apiKeyCipher ? decrypt(row.apiKeyCipher, this.key) : "",
+      apiKey: this.decryptApiKey(row.apiKeyCipher),
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,
@@ -315,17 +313,12 @@ export class ConnectionService {
   }
 
   private toContractPublic(row: ConnectionRow): ConnectionPublic {
-    // Non-model kinds may have an empty cipher; decrypt() requires non-empty input.
-    const apiKeyPreview = row.apiKeyCipher
-      ? this.makePreview(decrypt(row.apiKeyCipher, this.key))
-      : "";
     return {
       id: row.id,
       userId: row.userId,
-      kind: row.kind as ConnectionKind,
       name: row.name,
       baseUrl: row.baseUrl,
-      apiKeyPreview,
+      apiKeyPreview: this.makePreview(this.decryptApiKey(row.apiKeyCipher)),
       model: row.model,
       customHeaders: row.customHeaders,
       queryParams: row.queryParams,

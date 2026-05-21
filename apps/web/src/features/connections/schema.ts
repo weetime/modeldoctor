@@ -1,18 +1,12 @@
-import {
-  ModalityCategorySchema,
-  connectionKindSchema,
-  serverKindSchema,
-} from "@modeldoctor/contracts";
+import { ModalityCategorySchema, serverKindSchema } from "@modeldoctor/contracts";
 import { z } from "zod";
 
 const baseShape = {
-  kind: connectionKindSchema.default("model"),
   name: z
     .string()
     .transform((v) => v.trim())
     .pipe(z.string().min(1)),
   apiBaseUrl: z.string().url(),
-  // model/category/apiKey are required only for kind=model — see superRefine below.
   model: z.string().default(""),
   customHeaders: z.string(),
   queryParams: z.string(),
@@ -38,10 +32,9 @@ const baseShape = {
     }),
 };
 
-function requireForModelKind<
-  T extends { kind?: string; apiKey?: string; model?: string; category?: unknown },
+function requireModelEndpointFields<
+  T extends { apiKey?: string; model?: string; category?: unknown },
 >(v: T, ctx: z.RefinementCtx, opts: { apiKeyRequired: boolean }) {
-  if (v.kind !== "model") return;
   if (opts.apiKeyRequired && (!v.apiKey || v.apiKey.trim().length === 0)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["apiKey"], message: "validation.required" });
   }
@@ -58,8 +51,9 @@ function requireForModelKind<
 }
 
 /**
- * Create-mode form schema. apiKey is required for kind=model because the server
- * has nothing stored yet; non-model kinds skip the apiKey/model/category gate.
+ * Create-mode form schema. apiKey is required because the server has nothing
+ * stored yet. Every Connection is a model endpoint after #220 — no more
+ * kind-conditional carve-outs.
  */
 export const connectionInputCreateSchema = z
   .object({
@@ -70,7 +64,7 @@ export const connectionInputCreateSchema = z
       .refine((v) => !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
       .refine((v) => v === v.trim(), { message: "validation.apiKeyTrim" }),
   })
-  .superRefine((v, ctx) => requireForModelKind(v, ctx, { apiKeyRequired: true }));
+  .superRefine((v, ctx) => requireModelEndpointFields(v, ctx, { apiKeyRequired: true }));
 
 /**
  * Edit-mode form schema. apiKey is optional: when the user did NOT toggle
@@ -85,7 +79,7 @@ export const connectionInputEditSchema = z
       .refine((v) => v === "" || !/\p{Cc}/u.test(v), { message: "validation.apiKeyControlChar" })
       .refine((v) => v === "" || v === v.trim(), { message: "validation.apiKeyTrim" }),
   })
-  .superRefine((v, ctx) => requireForModelKind(v, ctx, { apiKeyRequired: false }));
+  .superRefine((v, ctx) => requireModelEndpointFields(v, ctx, { apiKeyRequired: false }));
 
 /** Backwards-compatible alias used by callers that need the create shape. */
 export const connectionInputSchema = connectionInputCreateSchema;

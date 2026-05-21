@@ -29,7 +29,7 @@ import { parseCustomHeaders } from "../../common/http/parse-custom-headers.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
-import { verifyPrometheus } from "../connection/discovery/verify-kind.js";
+import { verifyPrometheus } from "../connection/discovery/verify-prometheus.js";
 import {
   type PrometheusDatasourceActor,
   PrometheusDatasourceService,

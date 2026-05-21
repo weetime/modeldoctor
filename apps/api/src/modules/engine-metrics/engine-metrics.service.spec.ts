@@ -8,7 +8,6 @@ import { PromClient } from "./prom-client.js";
 function makeConn(over: Partial<DecryptedConnection> = {}): DecryptedConnection {
   return {
     id: "c1",
-    kind: "model",
     name: "test",
     baseUrl: "http://m:8000",
     apiKey: "x",

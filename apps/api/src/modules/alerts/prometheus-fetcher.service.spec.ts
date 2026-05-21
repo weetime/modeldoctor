@@ -77,7 +77,6 @@ describe("PrometheusFetcherService.resolveDatasource", () => {
     const conn = await prisma.connection.create({
       data: {
         userId: "u",
-        kind: "model",
         name: "m",
         baseUrl: "https://m.com",
         apiKeyCipher: "x",
@@ -97,7 +96,6 @@ describe("PrometheusFetcherService.resolveDatasource", () => {
     const conn = await prisma.connection.create({
       data: {
         userId: "u",
-        kind: "model",
         name: "m",
         baseUrl: "https://m.com",
         apiKeyCipher: "x",
@@ -113,7 +111,6 @@ describe("PrometheusFetcherService.resolveDatasource", () => {
     const conn = await prisma.connection.create({
       data: {
         userId: "u",
-        kind: "model",
         name: "m",
         baseUrl: "https://m.com",
         apiKeyCipher: "x",

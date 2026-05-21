@@ -8,7 +8,6 @@ const list: ConnectionPublic[] = [
   {
     id: "c-chat",
     userId: "u1",
-    kind: "model",
     name: "chat-A",
     baseUrl: "http://a",
     apiKeyPreview: "sk-...1234",
@@ -29,7 +28,6 @@ const list: ConnectionPublic[] = [
   {
     id: "c-embed",
     userId: "u1",
-    kind: "model",
     name: "embed-B",
     baseUrl: "http://b",
     apiKeyPreview: "sk-...5678",

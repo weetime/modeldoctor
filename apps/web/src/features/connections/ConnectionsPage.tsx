@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ConnectionKind, ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
+import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
 import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -51,7 +51,6 @@ export function ConnectionsPage() {
 
   const [filterCategory, setFilterCategory] = useState<ModalityCategory | "all">("all");
   const [filterTag, setFilterTag] = useState<string | "all">("all");
-  const [filterKind, setFilterKind] = useState<ConnectionKind | "all">("all");
 
   const allTags = Array.from(new Set(list.flatMap((c) => c.tags))).sort();
 
@@ -62,7 +61,6 @@ export function ConnectionsPage() {
   }, [allTags, filterTag]);
 
   const filtered = list.filter((c) => {
-    if (filterKind !== "all" && c.kind !== filterKind) return false;
     if (filterCategory !== "all" && c.category !== filterCategory) return false;
     if (filterTag !== "all" && !c.tags.includes(filterTag)) return false;
     return true;
@@ -115,22 +113,6 @@ export function ConnectionsPage() {
             <div className="mb-3 flex items-center gap-2">
               <span className="text-xs text-muted-foreground">{t("filters.label")}:</span>
               <Select
-                value={filterKind}
-                onValueChange={(v) => setFilterKind(v as ConnectionKind | "all")}
-              >
-                <SelectTrigger className="h-8 w-40 text-xs" aria-label={t("table.kind")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters.allKinds")}</SelectItem>
-                  {(["model", "gateway"] as ConnectionKind[]).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {t(`kinds.${k}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
                 value={filterCategory}
                 onValueChange={(v) => setFilterCategory(v as ModalityCategory | "all")}
               >
@@ -169,7 +151,6 @@ export function ConnectionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("table.kind")}</TableHead>
                     <TableHead>{t("table.name")}</TableHead>
                     <TableHead>{t("table.model")}</TableHead>
                     <TableHead>{t("table.apiBaseUrl")}</TableHead>
@@ -185,14 +166,6 @@ export function ConnectionsPage() {
                 <TableBody>
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell>
-                        <Badge
-                          variant={c.kind === "model" ? "outline" : "default"}
-                          className="text-xs"
-                        >
-                          {t(`kinds.${c.kind}`)}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="font-medium">
                         <button
                           type="button"

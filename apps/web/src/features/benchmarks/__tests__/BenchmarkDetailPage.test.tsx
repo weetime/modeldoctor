@@ -132,7 +132,6 @@ function Wrapper({ children }: { children: ReactNode }) {
 const defaultConnectionData = {
   id: "c1",
   userId: "u_1",
-  kind: "model",
   name: "test-conn",
   baseUrl: "http://x",
   apiKeyPreview: "sk-...test",

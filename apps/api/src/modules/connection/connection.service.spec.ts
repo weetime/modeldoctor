@@ -37,7 +37,6 @@ function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
   return {
     id: "c_1",
     userId: "u_1",
-    kind: "model",
     name: "vllm-prod",
     baseUrl: "http://10.x.x.x:30888",
     apiKeyCipher: "v1:placeholder",
@@ -112,7 +111,6 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
-        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: PLAINTEXT,
@@ -141,7 +139,6 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
-        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: "sk-abc",
@@ -164,7 +161,6 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
-        kind: "model",
         name: "x",
         baseUrl: "http://x",
         apiKey: "k",
@@ -192,7 +188,6 @@ describe("ConnectionService", () => {
         }) =>
           makeRow({
             apiKeyCipher: args.data.apiKeyCipher,
-            kind: args.data.kind as string,
             prometheusDatasourceId:
               (args.data.prometheusDatasourceId as string | null | undefined) ?? null,
             prometheusDatasource: args.data.prometheusDatasourceId === ds.id ? ds : null,
@@ -202,7 +197,6 @@ describe("ConnectionService", () => {
 
     it("undefined + kind=model fills with current default", async () => {
       const r = await service.create("u_a", {
-        kind: "model",
         name: "m",
         baseUrl: "https://m.com",
         apiKey: "sk-abc",
@@ -216,54 +210,43 @@ describe("ConnectionService", () => {
       expect(r.prometheusDatasource?.name).toBe(ds.name);
     });
 
+    const validInput = {
+      name: "g",
+      baseUrl: "https://g.com",
+      apiKey: "sk-abc",
+      model: "gpt-4",
+      category: "chat" as const,
+      customHeaders: "",
+      queryParams: "",
+      tags: [],
+    };
+
     it("undefined + no default exists stores null", async () => {
       prismaMock.prometheusDatasource.findFirst.mockResolvedValue(null);
-      const r = await service.create("u_a", {
-        kind: "gateway",
-        name: "g",
-        baseUrl: "https://g.com",
-        customHeaders: "",
-        queryParams: "",
-        tags: [],
-      });
+      const r = await service.create("u_a", { ...validInput });
       expect(r.prometheusDatasourceId).toBeNull();
     });
 
     it("null explicit unbind stores null", async () => {
       const r = await service.create("u_a", {
-        kind: "gateway",
-        name: "g",
-        baseUrl: "https://g.com",
+        ...validInput,
         prometheusDatasourceId: null,
-        customHeaders: "",
-        queryParams: "",
-        tags: [],
       });
       expect(r.prometheusDatasourceId).toBeNull();
     });
 
     it("explicit id is validated and stored", async () => {
       const r = await service.create("u_a", {
-        kind: "gateway",
-        name: "g",
-        baseUrl: "https://g.com",
+        ...validInput,
         prometheusDatasourceId: ds.id,
-        customHeaders: "",
-        queryParams: "",
-        tags: [],
       });
       expect(r.prometheusDatasourceId).toBe(ds.id);
     });
 
     it("explicit non-existent id throws BadRequest with code PROMETHEUS_DATASOURCE_NOT_FOUND", async () => {
       const promise = service.create("u_a", {
-        kind: "gateway",
-        name: "g",
-        baseUrl: "https://g.com",
+        ...validInput,
         prometheusDatasourceId: "nope",
-        customHeaders: "",
-        queryParams: "",
-        tags: [],
       });
       await expect(promise).rejects.toBeInstanceOf(BadRequestException);
       await expect(promise).rejects.toMatchObject({
@@ -286,7 +269,6 @@ describe("ConnectionService", () => {
           }),
       );
       const r = await service.create("u_a", {
-        kind: "model",
         name: "m",
         baseUrl: "https://m.com",
         apiKey: "sk-abc",
@@ -308,7 +290,7 @@ describe("ConnectionService", () => {
       // anchor, the dropped-field assertion below has nothing real to bite.
       // (mock's makeRow doesn't echo the input `name`, so we only lock the
       // fields the mock guarantees: a stable id and the contract's kind.)
-      expect(r).toMatchObject({ id: expect.any(String), kind: "model" });
+      expect(r).toMatchObject({ id: expect.any(String) });
       expect(r).not.toHaveProperty("prometheusUrl");
     });
   });
@@ -491,7 +473,6 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
-        kind: "model",
         name: "vllm-prod",
         baseUrl: "http://10.x.x.x:30888",
         apiKey: "sk-abc",
@@ -515,7 +496,6 @@ describe("ConnectionService", () => {
         },
       );
       const out = await service.create("u_1", {
-        kind: "model",
         name: "x",
         baseUrl: "http://x",
         apiKey: "k",

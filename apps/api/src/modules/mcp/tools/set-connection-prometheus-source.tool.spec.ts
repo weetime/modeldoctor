@@ -37,7 +37,6 @@ describe("set_connection_prometheus_source tool", () => {
     const update = vi.fn().mockResolvedValue({
       id: "c1",
       name: "m",
-      kind: "model",
       prometheusDatasourceId: "ds1",
       prometheusDatasource: { id: "ds1", name: "default", baseUrl: "https://p.com" },
     });
@@ -51,7 +50,6 @@ describe("set_connection_prometheus_source tool", () => {
     const result = (await calls[0]?.handler({ connectionId: "c1" })) as {
       structuredContent: {
         id: string;
-        kind: string;
         prometheusDatasourceId: string | null;
         prometheusDatasource: { id: string; name: string; baseUrl: string } | null;
       };
@@ -70,7 +68,6 @@ describe("set_connection_prometheus_source tool", () => {
     const update = vi.fn().mockResolvedValue({
       id: "c1",
       name: "m",
-      kind: "model",
       prometheusDatasourceId: null,
       prometheusDatasource: null,
     });
@@ -100,7 +97,6 @@ describe("set_connection_prometheus_source tool", () => {
     const update = vi.fn().mockResolvedValue({
       id: "c1",
       name: "m",
-      kind: "gateway",
       prometheusDatasourceId: "ds2",
       prometheusDatasource: { id: "ds2", name: "secondary", baseUrl: "https://p2.com" },
     });
