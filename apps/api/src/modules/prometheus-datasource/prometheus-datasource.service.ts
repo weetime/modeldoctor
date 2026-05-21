@@ -129,10 +129,12 @@ export class PrometheusDatasourceService {
           });
           data.isDefault = true;
         } else if (input.isDefault === false) {
-          // Demote: explicit un-default. Leaving the workspace with no
-          // default row is allowed — new connections will skip auto-bind
-          // and store prometheusDatasourceId=null until an operator picks
-          // another default via setDefault() or edits another row.
+          // Demote: explicit un-default. We allow the workspace to sit
+          // with zero defaults — matches Grafana's datasource model and
+          // is the operator's call. New connections created while no
+          // default exists fall back to `prometheusDatasourceId = null`
+          // (the contract permits null), which the operator can resolve
+          // later by promoting another row.
           data.isDefault = false;
         }
         return tx.prometheusDatasource.update({

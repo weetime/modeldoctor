@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/table";
 import { useAuthStore } from "@/stores/auth-store";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
-import { Database, MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
+import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DatasourceSheet, type DatasourceSheetMode } from "./DatasourceSheet";
 import { toastDatasourceError } from "./errors";
-import { useDatasources, useDeleteDatasource, useSetDefaultDatasource } from "./queries";
+import { useDatasources, useDeleteDatasource } from "./queries";
 
 export function DatasourcesPage() {
   const { t } = useTranslation("prometheus-datasources");
@@ -43,7 +43,6 @@ export function DatasourcesPage() {
 
   const listQuery = useDatasources();
   const deleteMut = useDeleteDatasource();
-  const setDefaultMut = useSetDefaultDatasource();
 
   const user = useAuthStore((s) => s.user);
   const isAdmin = (user?.roles ?? []).includes("admin");
@@ -54,16 +53,6 @@ export function DatasourcesPage() {
   const list: PrometheusDatasourcePublic[] = listQuery.data ?? [];
   const isLoading = listQuery.isLoading;
   const error = listQuery.error;
-
-  const onSetDefault = async (ds: PrometheusDatasourcePublic) => {
-    if (ds.isDefault) return;
-    try {
-      await setDefaultMut.mutateAsync(ds.id);
-      toast.success(t("toast.setDefaultSuccess"));
-    } catch (e) {
-      toastDatasourceError(t, e);
-    }
-  };
 
   const onConfirmDelete = async () => {
     if (!pendingDelete) return;
@@ -163,17 +152,6 @@ export function DatasourcesPage() {
                         <Badge variant="default" className="text-xs">
                           {t("table.defaultBadge")}
                         </Badge>
-                      ) : isAdmin ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => onSetDefault(ds)}
-                          disabled={setDefaultMut.isPending}
-                        >
-                          <Star className="mr-1 h-3 w-3" />
-                          {t("table.setDefault")}
-                        </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}

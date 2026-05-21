@@ -2,15 +2,15 @@ import "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth-store";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // vi.hoisted is required for symbols referenced inside vi.mock factories —
 // vi.mock is hoisted above all imports/top-level lets, so plain `const fn = vi.fn()`
 // at module scope would be uninitialized when the factory runs.
-const { deleteMutate, setDefaultMutate, toastSuccess, toastError } = vi.hoisted(() => ({
+const { deleteMutate, toastSuccess, toastError } = vi.hoisted(() => ({
   deleteMutate: vi.fn(),
-  setDefaultMutate: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
 }));
@@ -24,7 +24,6 @@ vi.mock("./queries", () => ({
     error: null,
   }),
   useDeleteDatasource: () => ({ mutateAsync: deleteMutate, isPending: false }),
-  useSetDefaultDatasource: () => ({ mutateAsync: setDefaultMutate, isPending: false }),
   // Sheet imports — keep stubs so the sheet wouldn't crash if opened.
   useCreateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateDatasource: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -95,7 +94,6 @@ function asViewer() {
 describe("DatasourcesPage", () => {
   beforeEach(() => {
     deleteMutate.mockClear();
-    setDefaultMutate.mockClear();
     toastSuccess.mockClear();
     toastError.mockClear();
     mockList = [];
@@ -145,10 +143,13 @@ describe("DatasourcesPage", () => {
     // "+ New datasource" CTA in the page header is admin-only.
     // Grouped alternation so ^ / $ apply to BOTH branches, not just one.
     expect(screen.queryByText(/^(\+ 新增数据源|\+ new datasource)$/i)).toBeNull();
-    // The "Set as default" button is admin-only; only the default badge remains.
+    // No "Set as default" affordance is on the list page anymore — default
+    // management lives entirely in the edit sheet now (see service.update()
+    // workspace-invariant guard). Confirming the string is absent.
     expect(screen.queryByText(/^(设为默认|set as default)$/i)).toBeNull();
-    // No delete buttons — only em-dash placeholders in the action column.
-    expect(screen.queryAllByLabelText(/delete|删除/i)).toHaveLength(0);
+    // No edit / actions buttons — only em-dash placeholders in the action column.
+    expect(screen.queryAllByLabelText(/edit|编辑/i)).toHaveLength(0);
+    expect(screen.queryAllByLabelText(/^操作$|^actions$/i)).toHaveLength(0);
     // Table still renders rows in read-only mode.
     expect(screen.getByText("prom-prod")).toBeInTheDocument();
     expect(screen.getByText("prom-staging")).toBeInTheDocument();
@@ -187,25 +188,7 @@ describe("DatasourcesPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("clicking 'Set as default' on a non-default row invokes the mutation with its id", async () => {
-    setDefaultMutate.mockResolvedValueOnce(undefined);
-    mockList = TWO_ROW_FIXTURE;
-    render(
-      <MemoryRouter>
-        <DatasourcesPage />
-      </MemoryRouter>,
-    );
-    // Only `prom-staging` (ds2, isDefault=false) renders the Set-default button.
-    const btn = screen.getByRole("button", { name: /^(设为默认|set as default)$/i });
-    fireEvent.click(btn);
-    await waitFor(() => expect(setDefaultMutate).toHaveBeenCalledTimes(1));
-    expect(setDefaultMutate).toHaveBeenCalledWith("ds2");
-    // Success toast fires with the localized success message.
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
-    expect(toastSuccess.mock.calls[0][0]).toMatch(/已设为默认|set as default/i);
-  });
-
-  it("delete flow: trash → AlertDialog confirm → mutate + cascade-count toast", async () => {
+  it("delete flow: dropdown trigger → menuitem → AlertDialog confirm → mutate + cascade-count toast", async () => {
     // 2 connections will be detached when ds1 is dropped; the success toast
     // MUST surface that count (the whole point of returning consumersDetached).
     deleteMutate.mockResolvedValueOnce({ consumersDetached: 2 });
@@ -216,13 +199,21 @@ describe("DatasourcesPage", () => {
       </MemoryRouter>,
     );
 
-    // Two trash icons (one per row). Click the first — corresponds to ds1.
-    const trashButtons = screen.getAllByLabelText(/^删除$|^delete$/i);
-    expect(trashButtons.length).toBe(2);
-    fireEvent.click(trashButtons[0]);
+    // Per project-standards §5 表格列表页骨架: destructive actions live
+    // inside a row-level DropdownMenu (triggered by MoreHorizontal with
+    // aria-label="Actions"/"操作"), not as a bare red Trash icon. There's
+    // one trigger per row; click the first (ds1). Radix DropdownMenu needs
+    // real pointer events (userEvent), not synthetic fireEvent.
+    const overflowButtons = screen.getAllByLabelText(/^操作$|^actions$/i);
+    expect(overflowButtons.length).toBe(2);
+    await userEvent.click(overflowButtons[0]);
+
+    // After opening the menu the Delete menuitem is rendered. Click it to
+    // open the AlertDialog confirm.
+    const deleteMenuItem = await screen.findByRole("menuitem", { name: /^删除$|^delete$/i });
+    await userEvent.click(deleteMenuItem);
 
     // AlertDialog opens; the confirm button uses t("delete.confirm") = "删除".
-    // Cancel says t.common("actions.cancel") = "取消" / "Cancel".
     const confirmBtn = await screen.findByRole("button", { name: /^删除$|^delete$/i });
     fireEvent.click(confirmBtn);
 
