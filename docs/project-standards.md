@@ -171,6 +171,39 @@ export const useXxxStore = create<XxxState>()(
 
 sonner 的 `<Toaster />` 在 `App.tsx` 里挂载,自动跟随 `useThemeStore.mode`。页面内引入 `import { toast } from "sonner"` 直接用。
 
+### 表格列表页骨架
+
+列出实体集合(connections / prometheus-datasources / benchmarks / templates / runs / alerts / ...)的页面共享同一套骨架。新增 / 重构列表页 MUST 对齐。参考实现:`apps/web/src/features/connections/ConnectionsPage.tsx`。
+
+**整体结构**(从外到内):
+
+1. **`<PageHeader>`**:`title` + `subtitle`,`rightSlot` 放主创建按钮(无权限时为 `null`)。Breadcrumbs 跟 CLAUDE.md `Breadcrumbs` 章节走 —— 顶级列表页(`/connections`)不传,嵌套于 hub 的列表页(`/settings/prometheus-datasources`)按 detail/edit/create 同理可传。
+2. **Filter row**(可选,table 上方):`<div className="mb-3 flex items-center gap-2">` + 紧凑 `<Select className="h-8 w-40 text-xs">` 群,左对齐。
+3. **Table 或 EmptyState**(条件渲染):列表为空走 `<EmptyState>`(`actions` slot 跟 PageHeader rightSlot **镜像同一个创建按钮**,同 label 同点击行为,无权限同隐藏);非空走 `<Table>`。
+4. **Confirm Dialogs**:destructive 操作走 `<AlertDialog>`(RULE-comp-2),挂在组件树尾,by-id state 触发(`pendingDelete: T | null`)。
+
+**Table 列结构**:
+
+- **第 1 列(标识列)**:
+  - 实体有 detail page → `<Link to=...>`。
+  - 实体仅有 edit-in-sheet → `<button type="button" className="text-left hover:text-primary hover:underline">` 触发 edit sheet。
+  - 两种形态视觉一致(text-link 样式,`font-medium`)。
+- **中间列**:类型化呈现 —— URL / key 用 `font-mono text-xs`;时间用 `<RelativeTime>`;枚举 / 状态用 `<Badge variant=...>`;tag 列用小 chip(`rounded-full bg-secondary px-2 py-0.5 text-[10px]`)。
+- **最后一列(操作列)**:
+  - 表头:`<TableHead className="w-24 text-center">{t("table.actions")}</TableHead>`(列宽固定 `w-24`,内容居中)。
+  - 单元格:`<div className="inline-flex items-center gap-1">` 包裹两个 affordance:
+    1. **主操作**:Edit icon button(`<Pencil className="h-4 w-4"/>`,`<Button variant="ghost" size="icon" aria-label title>`),触发 edit sheet 或跳详情编辑页。
+    2. **溢出菜单**:`<DropdownMenu>` trigger 是 `<MoreHorizontal className="h-4 w-4"/>` ghost icon button,菜单项放删除及其他低频 destructive。删除项 `className="gap-2 text-destructive focus:text-destructive"`,onClick 设置 `pendingDelete` 触发 `<AlertDialog>` (RULE-comp-2),**不直接 mutate**。
+  - 严禁:操作列只放裸 `<Trash2>` 红色 icon —— 误触 destructive、且 Edit 主操作不发现。
+- **角色 gated 单元格**:用户无权时,该按钮位置渲染 `<span className="text-xs text-muted-foreground">—</span>` 占位,**不留空白**(列宽不抖动)。
+
+**关键反例**:
+
+- ❌ `c.name` 直接 `<span>` 不可点 —— 用户找不到 edit 入口。
+- ❌ 操作列只一个红色 Trash icon —— Edit 不发现 + 误触。
+- ❌ EmptyState 不带 `actions` —— 空状态死胡同(user 报的 prometheus-datasources empty-state 缺创建按钮就是这条)。
+- ❌ 直接调 `deleteMut.mutateAsync(...)` 不过 `<AlertDialog>` —— 违反 RULE-comp-2。
+
 ---
 
 ## 6. i18n 规范
