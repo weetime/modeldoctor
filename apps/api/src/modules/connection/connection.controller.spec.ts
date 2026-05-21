@@ -304,7 +304,6 @@ describe("ConnectionController.discover", () => {
         models: { values: ["m"], confidence: "certain", evidence: "ok" },
         category: { value: "chat", confidence: "guess", evidence: "default" },
         suggestedTags: { values: ["vllm"], confidence: "guess", evidence: "ok" },
-        prometheusUrl: { value: "http://x", confidence: "likely", evidence: "ok" },
       },
     };
     discovery.discover.mockResolvedValue(fake);

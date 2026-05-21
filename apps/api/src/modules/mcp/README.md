@@ -62,7 +62,7 @@ Restart Claude Code; the tools below show up under "modeldoctor".
 
 | Tool | Use case |
 |---|---|
-| `discover_connection(baseUrl, apiKey?, customHeaders?)` | Probe an inference endpoint; returns inferred serverKind / models / category / suggested tags / prometheusUrl. Pre-fill for new connections. |
+| `discover_connection(baseUrl, apiKey?, customHeaders?)` | Probe an inference endpoint; returns inferred serverKind / models / category / suggested tags. Pre-fill for new connections. |
 | `list_connections()` | Read the saved connection library. Returns id, name, baseUrl, model, category, tags, serverKind, prometheusDatasource. apiKey is NEVER returned. |
 | `list_benchmarks(limit?, status?, connectionId?, cursor?)` | List benchmark runs newest-first. Cursor pagination. |
 | `run_diagnostics(connectionId, probes?)` | Run endpoint probes (chat-text / embeddings / rerank / image-* / audio-*) and return per-probe pass/fail. Synchronous. |
@@ -176,7 +176,7 @@ Example — *"Point my gpt-4o connection at the secondary Prometheus."*
 }
 ```
 
-Passing `datasourceId: null` unbinds the connection (downstream engine-metrics / benchmark adapters will see `prometheusUrl = null`).
+Passing `datasourceId: null` unbinds the connection (downstream engine-metrics / benchmark adapters will see `prometheusDatasource = null` on the connection).
 
 ## Adding a new tool
 

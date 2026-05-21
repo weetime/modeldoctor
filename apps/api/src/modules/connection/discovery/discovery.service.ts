@@ -5,7 +5,6 @@ import {
 import { Injectable } from "@nestjs/common";
 import { parseCustomHeaders } from "../../../common/http/parse-custom-headers.js";
 import { inferCategory } from "./inference/category.js";
-import { inferPrometheusUrl } from "./inference/prometheus-url.js";
 import { inferServerKind } from "./inference/server-kind.js";
 import { inferTags } from "./inference/tags.js";
 import { runHealthProbe } from "./probes/health.js";
@@ -43,7 +42,6 @@ export class DiscoveryService {
       models: models.values,
       gatewayHints,
     });
-    const prometheusUrl = inferPrometheusUrl({ baseUrl: input.baseUrl, metricsR });
 
     return {
       health: {
@@ -57,7 +55,6 @@ export class DiscoveryService {
         models,
         category,
         suggestedTags,
-        prometheusUrl,
       },
     };
   }

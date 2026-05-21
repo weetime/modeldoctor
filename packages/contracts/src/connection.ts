@@ -153,7 +153,6 @@ export const discoverConnectionResponseSchema = z.object({
     models: inferredListFieldSchema,
     category: inferredFieldSchema(ModalityCategorySchema),
     suggestedTags: inferredListFieldSchema,
-    prometheusUrl: inferredFieldSchema(z.string().url()),
   }),
 });
 export type DiscoverConnectionResponse = z.infer<typeof discoverConnectionResponseSchema>;

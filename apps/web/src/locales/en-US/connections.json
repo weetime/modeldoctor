@@ -45,7 +45,6 @@
       "serverKind": "Engine",
       "serverKindPlaceholder": "Select…",
       "serverKindHelp": "Engine type determines the Prometheus metric namespace and powers the Engine Metrics dashboard.",
-      "prometheusUrl": "Prometheus URL",
       "prometheusDatasource": {
         "label": "Metrics source (Prometheus datasource)",
         "placeholder": "Choose a datasource",
@@ -100,11 +99,6 @@
       "failedProbesHeading": "Failed probes",
       "noValue": "not detected",
       "dismiss": "Dismiss discover result",
-      "registerCta": {
-        "headline": "Detected {{url}}",
-        "body": "Not registered as a datasource yet",
-        "action": "Register as datasource"
-      },
       "confidence": {
         "certain": "certain",
         "likely": "likely",

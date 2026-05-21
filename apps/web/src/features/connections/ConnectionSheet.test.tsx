@@ -36,9 +36,8 @@ vi.mock("./queries", () => ({
   }),
 }));
 
-// ConnectionSheet renders a Prometheus-datasource <Select> for kind=model/gateway.
+// ConnectionSheet renders a Prometheus-datasource <Select> picker.
 // Fixture: one default datasource + one alternate so the (默认) suffix test works.
-// Also stub DatasourceSheet query hooks (rendered via the register CTA).
 vi.mock("@/features/prometheus-datasources/queries", () => ({
   useDatasources: () => ({
     data: [
@@ -86,20 +85,6 @@ let mockUserRoles: string[] = ["admin"];
 vi.mock("@/stores/auth-store", () => ({
   useAuthStore: <T,>(selector: (s: { user: { roles: string[] } }) => T) =>
     selector({ user: { roles: mockUserRoles } }),
-}));
-
-type CapturedDatasourceSheetProps = {
-  open: boolean;
-  mode: { kind: string; initial?: { baseUrl?: string; name?: string } };
-  onSaved?: (ds: { id: string; [k: string]: unknown }) => void;
-};
-let lastDatasourceSheetProps: CapturedDatasourceSheetProps | null = null;
-vi.mock("@/features/prometheus-datasources/DatasourceSheet", () => ({
-  DatasourceSheet: (props: CapturedDatasourceSheetProps) => {
-    lastDatasourceSheetProps = props;
-    // Render nothing — we just want to observe props and let tests call onSaved.
-    return null;
-  },
 }));
 
 import { ConnectionSheet } from "./ConnectionSheet";
@@ -364,7 +349,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "x" },
         category: { value: "chat", confidence: "guess", evidence: "x" },
         suggestedTags: { values: ["vllm"], confidence: "guess", evidence: "x" },
-        prometheusUrl: { value: "http://x.test", confidence: "likely", evidence: "x" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -400,7 +384,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: ["qwen-72b"], confidence: "certain", evidence: "x" },
         category: { value: "chat", confidence: "guess", evidence: "x" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -432,11 +415,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "/v1/models" },
         category: { value: "chat", confidence: "guess", evidence: "default" },
         suggestedTags: { values: ["vllm", "chat", "8b"], confidence: "guess", evidence: "..." },
-        prometheusUrl: {
-          value: "http://x",
-          confidence: "likely",
-          evidence: "engine exposes /metrics",
-        },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -493,7 +471,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
         category: { value: null, confidence: "unknown", evidence: "no models" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -523,7 +500,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: [], confidence: "unknown", evidence: "x" },
         category: { value: null, confidence: "unknown", evidence: "x" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -551,7 +527,6 @@ describe("ConnectionSheet — Discover region", () => {
         models: { values: [], confidence: "unknown", evidence: "endpoint unreachable" },
         category: { value: null, confidence: "unknown", evidence: "no models" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "no signal" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "no /metrics" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -580,7 +555,6 @@ describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
         models: { values: ["llama-3-8b"], confidence: "certain", evidence: "x" },
         category: { value: "chat", confidence: "guess", evidence: "x" },
         suggestedTags: { values: ["vllm", "chat"], confidence: "guess", evidence: "x" },
-        prometheusUrl: { value: "http://prom:9090", confidence: "likely", evidence: "x" },
       },
     });
     render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
@@ -590,47 +564,9 @@ describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/^model\b/i)).toHaveValue("llama-3-8b");
     });
-    // The legacy `prometheusUrl` form input is gone. In the success path
-    // the DiscoverResultBanner does NOT render either (see runDiscover —
-    // banner only mounts when `countFilledFields === 0`). The inferred
-    // prometheusUrl is still carried through the contract for the
-    // zero-result diagnostic view; see the next test for that path.
+    // In the success path the DiscoverResultBanner does NOT render
+    // (see runDiscover — banner only mounts when `countFilledFields === 0`).
     expect(screen.queryByText(/请确认|please verify/i)).not.toBeInTheDocument();
-  });
-
-  it("zero-results banner surfaces the prometheusUrl evidence row (e.g. 'no /metrics')", async () => {
-    // Banner mounts only when ALL inferred fields are empty — that's the
-    // pure-diagnostic path. PR #199 kept inferred.prometheusUrl in the
-    // contract precisely so this row is still informative; lock that
-    // guarantee here so a future cleanup can't silently drop it.
-    const user = userEvent.setup();
-    discoverMutate.mockResolvedValue({
-      health: { durationMs: 80, probesAttempted: 4, probesFailed: [], warnings: [] },
-      inferred: {
-        serverKind: { value: null, confidence: "unknown", evidence: "no server header" },
-        models: { values: [], confidence: "unknown", evidence: "/v1/models 404" },
-        category: { value: null, confidence: "unknown", evidence: "no signal" },
-        suggestedTags: { values: [], confidence: "unknown", evidence: "n/a" },
-        // Matches the actual evidence string the backend's prometheus-url
-        // inferrer emits when /metrics is unreachable — see
-        // apps/api/.../discovery/inference/prometheus-url.ts.
-        prometheusUrl: {
-          value: null,
-          confidence: "unknown",
-          evidence: "no /metrics endpoint detected",
-        },
-      },
-    });
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />);
-
-    await user.type(screen.getByLabelText(/api base url/i), "http://nothing-here.test");
-    await user.click(screen.getByRole("button", { name: /Discover|自动发现/i }));
-
-    // Banner mounts with the diagnostic table; the prometheusUrl row's
-    // evidence must surface so the user sees WHY metric inference failed.
-    await waitFor(() => {
-      expect(screen.getByText(/no \/metrics endpoint detected/i)).toBeInTheDocument();
-    });
   });
 
   it("auto-apply preserves user-modified (dirty) model field in edit mode", async () => {
@@ -642,7 +578,6 @@ describe("ConnectionSheet — Discover auto-apply + dirty preservation", () => {
         models: { values: ["server-suggested-model"], confidence: "certain", evidence: "x" },
         category: { value: "chat", confidence: "guess", evidence: "x" },
         suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: { value: null, confidence: "unknown", evidence: "x" },
       },
     });
     render(
@@ -690,151 +625,5 @@ describe("ConnectionSheet (unified form stack)", () => {
     await user.click(nameInput);
     await user.tab();
     expect(await screen.findByText(/required/i)).toBeInTheDocument();
-  });
-});
-
-describe("Discover register CTA", () => {
-  beforeEach(() => {
-    mockUserRoles = ["admin"];
-    discoverMutate.mockReset();
-    lastDatasourceSheetProps = null;
-  });
-
-  function mockDiscoverWithProm(url: string | null) {
-    discoverMutate.mockResolvedValue({
-      inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
-        models: { values: ["m1"], confidence: "certain", evidence: "x" },
-        category: { value: null, confidence: "unknown", evidence: "x" },
-        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: { value: url, confidence: "likely", evidence: "x" },
-      },
-      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
-    });
-  }
-
-  it("shows the pill on the auto-apply path when inferred URL is unregistered", async () => {
-    const user = userEvent.setup();
-    discoverMutate.mockResolvedValue({
-      inferred: {
-        serverKind: { value: "vllm", confidence: "certain", evidence: "x" },
-        models: { values: ["m1"], confidence: "certain", evidence: "x" },
-        category: { value: null, confidence: "unknown", evidence: "x" },
-        suggestedTags: { values: [], confidence: "unknown", evidence: "x" },
-        prometheusUrl: {
-          value: "http://discovered-prom:9090",
-          confidence: "likely",
-          evidence: "x",
-        },
-      },
-      health: { durationMs: 50, probesAttempted: 4, probesFailed: [], warnings: [] },
-    });
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => {
-      expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument();
-      expect(screen.getByText(/http:\/\/discovered-prom:9090/)).toBeInTheDocument();
-    });
-  });
-
-  it("hides the pill when the inferred URL is already registered", async () => {
-    const user = userEvent.setup();
-    // Mocked datasources list (top of file) already contains baseUrl
-    // "http://prom:9090" with id "ds-default". Use that exact URL so
-    // dup-check fires.
-    mockDiscoverWithProm("http://prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => {
-      expect(discoverMutate).toHaveBeenCalled();
-    });
-    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
-  });
-
-  it("hides the pill when the inferred URL only differs by trailing slash / case", async () => {
-    // Fixture stores "http://prom:9090". Discover returns the same host with
-    // a trailing slash AND uppercase scheme — normalizeBaseUrl should still
-    // match so the dup-check fires.
-    const user = userEvent.setup();
-    mockDiscoverWithProm("HTTP://Prom:9090/");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => {
-      expect(discoverMutate).toHaveBeenCalled();
-    });
-    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
-  });
-
-  it("hides the pill when a datasource is already bound", async () => {
-    const user = userEvent.setup();
-    mockDiscoverWithProm("http://discovered-prom:9090");
-    const existing: ConnectionPublic = { ...EXISTING, prometheusDatasourceId: "ds-default" };
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "edit", existing }} />, {
-      wrapper: Wrapper,
-    });
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
-    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
-  });
-
-  it("hides the pill for non-admin users", async () => {
-    const user = userEvent.setup();
-    mockUserRoles = []; // viewer
-    mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => expect(discoverMutate).toHaveBeenCalled());
-    expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument();
-  });
-
-  it("opens DatasourceSheet pre-populated with the inferred URL + derived name", async () => {
-    const user = userEvent.setup();
-    mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: /注册为数据源|register as datasource/i }));
-    await waitFor(() => {
-      expect(lastDatasourceSheetProps?.open).toBe(true);
-      expect(lastDatasourceSheetProps?.mode.kind).toBe("create");
-      expect(lastDatasourceSheetProps?.mode.initial?.baseUrl).toBe("http://discovered-prom:9090");
-      expect(lastDatasourceSheetProps?.mode.initial?.name).toBe("discovered-prom:9090");
-    });
-  });
-
-  it("onSaved binds the new datasource id and hides the pill", async () => {
-    const user = userEvent.setup();
-    mockDiscoverWithProm("http://discovered-prom:9090");
-    render(<ConnectionSheet open onOpenChange={() => {}} mode={{ kind: "create" }} />, {
-      wrapper: Wrapper,
-    });
-    await fillBaseFields(user);
-    await user.click(screen.getByRole("button", { name: /自动发现|auto.?discover|🔍/i }));
-    await waitFor(() => expect(screen.getByText(/推断到|Detected/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: /注册为数据源|register as datasource/i }));
-    await waitFor(() => expect(lastDatasourceSheetProps?.onSaved).toBeDefined());
-    // Simulate the sheet's save callback firing with the new row.
-    lastDatasourceSheetProps?.onSaved?.({
-      id: "ds-new",
-      name: "discovered-prom:9090",
-      baseUrl: "http://discovered-prom:9090",
-    });
-    // Pill goes away because (a) form id is now set and (b) inferred state cleared.
-    await waitFor(() => expect(screen.queryByText(/推断到|Detected/)).not.toBeInTheDocument());
   });
 });

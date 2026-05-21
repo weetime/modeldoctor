@@ -10,10 +10,7 @@ describe("UsersService.countAll", () => {
   beforeEach(async () => {
     count = vi.fn();
     const mod = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        { provide: PrismaService, useValue: { user: { count } } },
-      ],
+      providers: [UsersService, { provide: PrismaService, useValue: { user: { count } } }],
     }).compile();
     service = mod.get(UsersService);
   });
