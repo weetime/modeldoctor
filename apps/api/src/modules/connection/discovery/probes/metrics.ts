@@ -6,8 +6,12 @@ const MAX_BODY_BYTES = 64 * 1024;
 // Prometheus exposition-format sample line:
 //   metric_name [{label="value",...}] <number> [<timestamp>]
 // Metric/label names per spec: first char [a-zA-Z_:], subsequent [a-zA-Z0-9_:].
+// Value per spec is a Go ParseFloat-compatible float, including `1.` (trailing
+// dot), `.5`, scientific, and the special tokens `NaN`, `+Inf`, `-Inf`, `Inf`
+// — vLLM/Python prometheus_client emits NaN for under-observed quantiles, so
+// missing those would false-negative a freshly-started engine.
 const METRIC_SAMPLE_LINE =
-  /^[a-zA-Z_:][a-zA-Z0-9_:]*(\{[^}]*\})? [+-]?(\d+(\.\d+)?|\d*\.\d+)([eE][+-]?\d+)?( \d+)?$/m;
+  /^[a-zA-Z_:][a-zA-Z0-9_:]*(\{[^}]*\})? ([+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?|[+-]?Inf|NaN)( \d+)?$/m;
 const HELP_OR_TYPE_LINE = /^# (HELP|TYPE) /m;
 
 function looksLikePrometheusExposition(body: string): boolean {

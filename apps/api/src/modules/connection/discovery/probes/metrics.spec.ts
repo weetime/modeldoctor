@@ -114,4 +114,27 @@ describe("runMetricsProbe", () => {
     expect(r.ok).toBe(true);
     expect(r.data?.body).toContain("vllm:request_success_total");
   });
+
+  // Prometheus spec values include NaN / ±Inf and floats like `1.` (trailing
+  // dot) and `.5` (leading dot). vLLM/Python prometheus_client emits NaN for
+  // under-observed quantiles, so a freshly-started engine whose only sample
+  // lines are NaN values must still pass the shape check.
+  it("returns ok=true for NaN / Inf / -Inf / trailing-dot / leading-dot values", async () => {
+    const body = [
+      'vllm:p99_latency_seconds{model="qwen",quantile="0.99"} NaN',
+      "vllm:request_total +Inf",
+      "vllm:error_total -Inf",
+      "process_open_fds 1.",
+      "process_cpu_fraction .5",
+      "process_uptime 1.5e3",
+    ].join("\n");
+    fetchMock.mockResolvedValueOnce(
+      new Response(body, {
+        status: 200,
+        headers: { "content-type": "text/plain", "content-length": String(body.length) },
+      }),
+    );
+    const r = await runMetricsProbe({ baseUrl: "http://x" });
+    expect(r.ok).toBe(true);
+  });
 });
