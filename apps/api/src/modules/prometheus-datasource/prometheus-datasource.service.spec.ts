@@ -191,6 +191,24 @@ describe("PrometheusDatasourceService", () => {
         NotFoundException,
       );
     });
+
+    it("explicit isDefault=false demotes the row (un-default)", async () => {
+      // Regression: the update() path previously only handled isDefault=true
+      // (promote). Unchecking the "Set as default" checkbox in the edit
+      // sheet sent isDefault=false, but the service silently ignored it,
+      // so the row stayed default. UI looked broken.
+      const r = await svc.create(ADMIN, {
+        name: "p-demote",
+        baseUrl: "https://p-demote.example.com",
+        customHeaders: "",
+        isDefault: true,
+      });
+      expect(r.isDefault).toBe(true);
+      const updated = await svc.update(ADMIN, r.id, { isDefault: false });
+      expect(updated.isDefault).toBe(false);
+      const reloaded = await prisma.prometheusDatasource.findUnique({ where: { id: r.id } });
+      expect(reloaded?.isDefault).toBe(false);
+    });
   });
 
   describe("setDefault", () => {

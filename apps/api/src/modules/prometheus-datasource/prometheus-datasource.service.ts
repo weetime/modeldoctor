@@ -121,11 +121,19 @@ export class PrometheusDatasourceService {
     try {
       const row = await this.prisma.$transaction(async (tx) => {
         if (input.isDefault === true) {
+          // Promote: clear any existing default first so the partial unique
+          // index (only one row may be isDefault=true) stays satisfied.
           await tx.prometheusDatasource.updateMany({
             where: { isDefault: true, NOT: { id } },
             data: { isDefault: false },
           });
           data.isDefault = true;
+        } else if (input.isDefault === false) {
+          // Demote: explicit un-default. Leaving the workspace with no
+          // default row is allowed — new connections will skip auto-bind
+          // and store prometheusDatasourceId=null until an operator picks
+          // another default via setDefault() or edits another row.
+          data.isDefault = false;
         }
         return tx.prometheusDatasource.update({
           where: { id },
