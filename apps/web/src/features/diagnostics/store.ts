@@ -1,6 +1,6 @@
-import { type EndpointValues, emptyEndpointValues } from "@/lib/endpoint-values";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { type EndpointValues, emptyEndpointValues } from "@/lib/endpoint-values";
 import type { ProbeCategory, ProbeName, ProbeResult } from "./types";
 
 interface E2EState {

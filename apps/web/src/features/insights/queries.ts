@@ -1,10 +1,10 @@
-import { api } from "@/lib/api-client";
 import type {
   ListEvaluationProfilesResponse,
   SynthesizeRequest,
   SynthesizeResponse,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export function useEvaluationProfiles() {
   return useQuery<ListEvaluationProfilesResponse>({

@@ -1,5 +1,5 @@
-import { noBase64Snippets } from "./chat";
 import type { CodeSnippets } from "./chat";
+import { noBase64Snippets } from "./chat";
 
 const PLACEHOLDER = "<YOUR_API_KEY>";
 

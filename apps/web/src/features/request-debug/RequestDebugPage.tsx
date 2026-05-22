@@ -1,3 +1,6 @@
+import { useMutation } from "@tanstack/react-query";
+import { useEffect, useId } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/common/page-header";
 import { EndpointSelector } from "@/components/connection/EndpointSelector";
 import { Button } from "@/components/ui/button";
@@ -15,9 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useConnection } from "@/features/connections/queries";
 import { ApiError, api } from "@/lib/api-client";
 import { parseCurlCommand } from "@/lib/curl-parser";
-import { useMutation } from "@tanstack/react-query";
-import { useEffect, useId } from "react";
-import { useTranslation } from "react-i18next";
 import { KeyValueTable } from "./KeyValueTable";
 import { ResponseViewer } from "./ResponseViewer";
 import { useDebugStore } from "./store";

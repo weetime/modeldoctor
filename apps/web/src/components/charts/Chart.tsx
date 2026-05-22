@@ -1,5 +1,4 @@
 import type { EChartsOption } from "echarts";
-import ReactECharts from "echarts-for-react";
 import { BarChart, HeatmapChart, LineChart, ScatterChart } from "echarts/charts";
 import {
   DataZoomComponent,
@@ -11,6 +10,7 @@ import {
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
+import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
 import { useChartTokens } from "./_shared";
 import { applyTheme } from "./theme";

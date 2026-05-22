@@ -1,3 +1,7 @@
+import type { BenchmarkTemplate } from "@modeldoctor/contracts";
+import { MoreHorizontal, ShieldCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,10 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { BenchmarkTemplate } from "@modeldoctor/contracts";
-import { MoreHorizontal, ShieldCheck } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 
 export interface TemplateCardProps {
   template: BenchmarkTemplate;

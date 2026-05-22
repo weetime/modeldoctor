@@ -1,3 +1,6 @@
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RelativeTime } from "@/components/common/relative-time";
@@ -11,9 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
-import { Fragment, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useAlerts } from "./queries";
 import type { AlertEventDto } from "./types";
 

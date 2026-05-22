@@ -3,8 +3,8 @@ import {
   type CompareNarrative,
   type CompareSynthesizeRequest,
   type CompareSynthesizeResponse,
-  type HydratedSavedCompare,
   compareNarrativeSchema,
+  type HydratedSavedCompare,
 } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { LruCache } from "../insights/cache.js";
@@ -40,7 +40,7 @@ export class CompareSynthesizeService {
     if (!sc) throw new NotFoundException("SavedCompare not found");
 
     const provider = await this.llmJudge.getDecrypted();
-    if (!provider || !provider.enabled) {
+    if (!provider?.enabled) {
       throw new ServiceUnavailableException("LLM provider not configured");
     }
 

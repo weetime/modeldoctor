@@ -1,3 +1,5 @@
+import { useEffect, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +10,6 @@ import { useConnection } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import type { ParsedCurl } from "@/lib/curl-parser";
 import { type EndpointValues, emptyEndpointValues } from "@/lib/endpoint-values";
-import { useEffect, useId, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 export interface EndpointPickerProps {
   /** Current endpoint values surfaced for display + curl import paths. */
@@ -287,5 +287,5 @@ export function EndpointPicker({
   );
 }
 
-export { emptyEndpointValues };
 export type { EndpointValues };
+export { emptyEndpointValues };

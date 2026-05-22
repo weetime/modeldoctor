@@ -6,7 +6,7 @@ import {
   benchmarkLogCallbackSchema,
   benchmarkStateCallbackSchema,
 } from "@modeldoctor/contracts";
-import { type ProgressEvent, type ToolName, byTool } from "@modeldoctor/tool-adapters";
+import { byTool, type ProgressEvent, type ToolName } from "@modeldoctor/tool-adapters";
 import {
   Body,
   Controller,

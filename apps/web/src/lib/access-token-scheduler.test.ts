@@ -1,5 +1,5 @@
-import { useAuthStore } from "@/stores/auth-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/stores/auth-store";
 import { startAccessTokenScheduler } from "./access-token-scheduler";
 
 const mockUser = {

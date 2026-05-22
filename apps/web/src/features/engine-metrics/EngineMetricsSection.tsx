@@ -1,3 +1,8 @@
+import type { EngineMetricsPanelResult, EngineMetricsSeries } from "@modeldoctor/contracts";
+import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
+import { format } from "date-fns";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   BarChartPanel,
   type BarChartSeries,
@@ -6,11 +11,6 @@ import {
   type LineTimeseriesSeries,
   Stat,
 } from "@/components/charts";
-import type { EngineMetricsPanelResult, EngineMetricsSeries } from "@modeldoctor/contracts";
-import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
-import { format } from "date-fns";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { type Group, vizFor } from "./metric-viz.js";
 import { useEngineMetrics } from "./useEngineMetrics.js";
 

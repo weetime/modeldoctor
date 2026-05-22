@@ -1,9 +1,9 @@
+import type { ChatParams as ChatParamsType } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import type { ChatParams as ChatParamsType } from "@modeldoctor/contracts";
-import { useTranslation } from "react-i18next";
 
 interface ChatParamsProps {
   value: ChatParamsType;

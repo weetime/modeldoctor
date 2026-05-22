@@ -1,3 +1,6 @@
+import { CheckIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,9 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useRuns } from "../queries";
 import { GateStatusBadge } from "./GateStatusBadge";
 

@@ -1,3 +1,6 @@
+import { AlertCircle } from "lucide-react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   FormControl,
@@ -9,9 +12,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useConnections } from "@/features/connections/queries";
-import { AlertCircle } from "lucide-react";
-import { useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 
 interface PrefixCacheProbeParamsFormProps {
   fieldPrefix?: "params" | "config";

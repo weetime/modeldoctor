@@ -10,16 +10,16 @@ import { runRerankCohereProbe } from "./rerank-cohere.js";
 import { runRerankTEIProbe } from "./rerank-tei.js";
 import { runTTSProbe } from "./tts.js";
 
+export { runASRProbe } from "./asr.js";
+export { runChatAudioOmniProbe } from "./chat-audio-omni.js";
 export { runChatTextProbe } from "./chat-text.js";
 export { runChatVisionProbe } from "./chat-vision.js";
-export { runChatAudioOmniProbe } from "./chat-audio-omni.js";
 export { runEmbeddingsOpenAIProbe } from "./embeddings-openai.js";
 export { runEmbeddingsTEIProbe } from "./embeddings-tei.js";
-export { runRerankTEIProbe } from "./rerank-tei.js";
-export { runRerankCohereProbe } from "./rerank-cohere.js";
-export { runTTSProbe } from "./tts.js";
-export { runASRProbe } from "./asr.js";
 export { runImageGenProbe } from "./image-gen.js";
+export { runRerankCohereProbe } from "./rerank-cohere.js";
+export { runRerankTEIProbe } from "./rerank-tei.js";
+export { runTTSProbe } from "./tts.js";
 
 export interface ProbeCtx {
   apiBaseUrl: string;

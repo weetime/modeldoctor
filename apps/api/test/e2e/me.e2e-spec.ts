@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 const TINY_PNG_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";

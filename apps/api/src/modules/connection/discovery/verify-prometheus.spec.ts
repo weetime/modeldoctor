@@ -2,6 +2,7 @@
 // placeholder hostnames we pass in. The probe code calls `safeFetch` →
 // `assertSafeUrl` → DNS, which would fail on `prom.example.test`.
 import { vi } from "vitest";
+
 vi.mock("./ssrf-guard.js", () => ({
   assertSafeUrl: vi.fn(async (url: string) => ({
     safeUrl: new URL(url),

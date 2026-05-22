@@ -1,8 +1,8 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import { UnknownReport } from "./UnknownReport";
 import { AiperfInferenceMetrics } from "./aiperf/InferenceMetrics";
 import { EvalscopeInferenceMetrics } from "./evalscope/InferenceMetrics";
 import { GuidellmInferenceMetrics } from "./guidellm/InferenceMetrics";
+import { UnknownReport } from "./UnknownReport";
 
 export interface InferenceReportProps {
   benchmark: Benchmark;

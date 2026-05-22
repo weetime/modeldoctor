@@ -1,4 +1,3 @@
-import i18n from "@/lib/i18n";
 import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -14,6 +13,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 
 // Hoisted refs so the mock factories below can reference them at
 // vi.mock-hoist time. Each per-test setup mutates `.current` to switch

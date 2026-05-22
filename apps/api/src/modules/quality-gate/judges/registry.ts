@@ -1,7 +1,7 @@
 import type { JudgeConfig, JudgeOutcome } from "@modeldoctor/contracts";
 import { containsJudge } from "./contains.js";
 import { exactMatchJudge } from "./exact-match.js";
-import { type LlmJudgeService, createLlmJudge } from "./llm-judge.js";
+import { createLlmJudge, type LlmJudgeService } from "./llm-judge.js";
 import { regexJudge } from "./regex.js";
 import type { Judge, JudgeContext } from "./types.js";
 

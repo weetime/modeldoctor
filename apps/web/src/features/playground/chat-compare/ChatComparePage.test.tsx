@@ -1,10 +1,10 @@
-import i18n from "@/lib/i18n";
 import type { ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 
 vi.mock("@/lib/playground-stream", () => ({
   playgroundFetchStream: vi.fn().mockResolvedValue(undefined),

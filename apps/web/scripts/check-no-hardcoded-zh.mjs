@@ -5,8 +5,8 @@
 // This is a path-only guard — comments are NOT exempt. If you need a Chinese
 // comment, translate it to English.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve, relative } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -56,7 +56,7 @@ for (const file of walk(SRC)) {
 
 if (failed) {
   console.error("[no-hardcoded-zh] FAIL — CJK characters in source:");
-  for (const h of hits.slice(0, 50)) console.error("  " + h);
+  for (const h of hits.slice(0, 50)) console.error(`  ${h}`);
   if (hits.length > 50) console.error(`  …and ${hits.length - 50} more.`);
   console.error("\nFix: route user-facing strings through t(); translate comments to English.");
   process.exit(1);

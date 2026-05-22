@@ -14,9 +14,9 @@ import { buildRerankBody } from "./rerank.js";
 
 export { buildChatBody } from "./chat.js";
 export { buildEmbeddingsBody } from "./embeddings.js";
-export { buildRerankBody } from "./rerank.js";
 export { buildImagesBody } from "./images.js";
-export { buildChatVisionBody, buildChatAudioBody } from "./multimodal.js";
+export { buildChatAudioBody, buildChatVisionBody } from "./multimodal.js";
+export { buildRerankBody } from "./rerank.js";
 
 export const VALID_API_TYPES = [
   "chat",

@@ -1,9 +1,10 @@
 // apps/web/src/features/insights/FindingsCard.tsx
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 import type { Finding } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const SEV_RANK: Record<Finding["severity"], number> = {
   crit: 0,

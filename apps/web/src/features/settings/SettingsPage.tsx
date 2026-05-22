@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import {
   AlertDialog,
@@ -24,10 +28,6 @@ import { useDebugStore } from "@/features/request-debug/store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { AiDiagnosisSection } from "./AiDiagnosisSection";
 import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
 

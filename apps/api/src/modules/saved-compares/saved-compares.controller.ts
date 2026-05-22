@@ -1,9 +1,9 @@
 import {
   type CompareSynthesizeRequest,
   type CreateSavedCompareRequest,
-  type UpdateSavedCompareRequest,
   compareSynthesizeRequestSchema,
   createSavedCompareRequestSchema,
+  type UpdateSavedCompareRequest,
   updateSavedCompareRequestSchema,
 } from "@modeldoctor/contracts";
 import {
@@ -20,8 +20,8 @@ import {
 } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { CompareSynthesizeService } from "./compare-synthesize.service.js";
 import { SavedComparesService } from "./saved-compares.service.js";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VALID_API_TYPES, buildRequestBody } from "./index.js";
+import { buildRequestBody, VALID_API_TYPES } from "./index.js";
 
 describe("buildRequestBody", () => {
   it("accepts every declared api type without throwing", () => {

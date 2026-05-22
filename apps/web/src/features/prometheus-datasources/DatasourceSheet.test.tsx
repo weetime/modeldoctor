@@ -1,9 +1,9 @@
 import "@/lib/i18n";
-import { ApiError } from "@/lib/api-client";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/api-client";
 
 // Hoisted so the sonner mock factory can refer to these symbols at hoist-time.
 const { toastSuccess, toastError } = vi.hoisted(() => ({

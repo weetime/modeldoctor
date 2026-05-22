@@ -66,7 +66,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
   for (const line of lines) {
     if (line.includes("Requests") && line.includes("[total")) {
       const match = line.match(/Requests\s+\[.*?\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.requests = Number.parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.requests = Number.parseInt(match[1], 10);
 
       const valuesMatch = line.match(/\]\s+([\d.]+),\s+([\d.]+),\s+([\d.]+)/);
       if (
@@ -75,7 +75,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
         valuesMatch[2] !== undefined &&
         valuesMatch[3] !== undefined
       ) {
-        parsed.requests = Number.parseInt(valuesMatch[1]);
+        parsed.requests = Number.parseInt(valuesMatch[1], 10);
         parsed.rate = Number.parseFloat(valuesMatch[2]);
         parsed.throughput = Number.parseFloat(valuesMatch[3]);
       }
@@ -103,12 +103,12 @@ export function parseVegetaReport(report: string): VegetaParsed {
 
     if (line.includes("Bytes In") && line.includes("[total")) {
       const match = line.match(/\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.bytesIn = Number.parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.bytesIn = Number.parseInt(match[1], 10);
     }
 
     if (line.includes("Bytes Out") && line.includes("[total")) {
       const match = line.match(/\]\s+([\d.]+)/);
-      if (match && match[1] !== undefined) parsed.bytesOut = Number.parseInt(match[1]);
+      if (match && match[1] !== undefined) parsed.bytesOut = Number.parseInt(match[1], 10);
     }
 
     if (line.includes("Success") && line.includes("[ratio]")) {
@@ -123,7 +123,7 @@ export function parseVegetaReport(report: string): VegetaParsed {
         for (const code of codes) {
           const [status, count] = code.split(":");
           if (status && count) {
-            parsed.statusCodes[status] = Number.parseInt(count);
+            parsed.statusCodes[status] = Number.parseInt(count, 10);
           }
         }
       }

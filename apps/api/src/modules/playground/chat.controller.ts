@@ -11,8 +11,8 @@ import { createZodDto } from "nestjs-zod";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { pipeUpstreamSseToResponse } from "../../integrations/openai-client/index.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { ChatService } from "./chat.service.js";
 

@@ -1,10 +1,10 @@
 import "@/lib/i18n";
-import { useAuthStore } from "@/stores/auth-store";
 import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/stores/auth-store";
 
 // vi.hoisted is required for symbols referenced inside vi.mock factories —
 // vi.mock is hoisted above all imports/top-level lets, so plain `const fn = vi.fn()`

@@ -1,4 +1,15 @@
 import {
+  ChevronDown,
+  LogOut,
+  Monitor,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sun,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { NavLink } from "react-router-dom";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -10,17 +21,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
-import {
-  ChevronDown,
-  LogOut,
-  Monitor,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sun,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router-dom";
 import {
   type SidebarItem as Item,
   sidebarGroups,

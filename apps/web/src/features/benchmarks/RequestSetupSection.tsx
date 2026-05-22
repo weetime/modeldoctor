@@ -1,6 +1,6 @@
-import { useConnection } from "@/features/connections/queries";
 import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
+import { useConnection } from "@/features/connections/queries";
 import { RequestDetailsSection } from "./RequestDetailsSection";
 
 interface Props {

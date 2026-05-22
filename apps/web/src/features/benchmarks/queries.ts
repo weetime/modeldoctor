@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   Benchmark,
   CreateBenchmarkRequest,
@@ -7,6 +6,7 @@ import type {
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 import { benchmarkApi } from "./api";
 
 /**

@@ -1,3 +1,8 @@
+import type { Channel } from "@modeldoctor/contracts";
+import { Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +24,6 @@ import {
 } from "@/components/ui/table";
 import { ChannelSheet } from "@/features/notifications/ChannelSheet";
 import { useChannels, useDeleteChannel, useTestChannel } from "@/features/notifications/queries";
-import type { Channel } from "@modeldoctor/contracts";
-import { Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 export function MeNotificationsPage(): JSX.Element {
   const { t: tMe } = useTranslation("me");

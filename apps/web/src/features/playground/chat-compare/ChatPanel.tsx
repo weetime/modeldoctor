@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
 import { Settings2, Square, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { ChatParams } from "../chat/ChatParams";
 import { MessageList } from "../chat/MessageList";

@@ -27,9 +27,7 @@ for (const palette of PALETTES) {
       }
 
       // Confirm body picked up palette tokens.
-      const bg = await page.evaluate(() =>
-        getComputedStyle(document.body).backgroundColor.trim(),
-      );
+      const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor.trim());
       expect(bg.length).toBeGreaterThan(0);
       expect(bg).not.toBe("rgba(0, 0, 0, 0)");
 

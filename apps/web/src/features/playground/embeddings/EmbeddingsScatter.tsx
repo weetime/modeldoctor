@@ -1,5 +1,5 @@
-import { Chart } from "@/components/charts";
 import { useTranslation } from "react-i18next";
+import { Chart } from "@/components/charts";
 
 export interface EmbeddingsScatterProps {
   inputs: string[];

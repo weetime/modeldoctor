@@ -6,6 +6,9 @@
  *   - `CompareHistoryControls`  "Save snapshot" button + history dropdown
  */
 
+import { History, Save, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,9 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { History, Save, Trash2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { createHistoryStore } from "../history/createHistoryStore";
 import {
   applyBlobPatches,

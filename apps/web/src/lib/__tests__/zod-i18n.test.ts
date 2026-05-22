@@ -1,6 +1,6 @@
-import i18n from "@/lib/i18n";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import i18n from "@/lib/i18n";
 
 beforeEach(async () => {
   await i18n.changeLanguage("zh-CN");

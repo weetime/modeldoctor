@@ -1,5 +1,5 @@
-import { api } from "@/lib/api-client";
 import type { Baseline, CreateBaseline, ListBaselinesResponse } from "@modeldoctor/contracts";
+import { api } from "@/lib/api-client";
 
 export const baselineApi = {
   list: () => api.get<ListBaselinesResponse>("/api/baselines"),

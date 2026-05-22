@@ -61,7 +61,7 @@ export function buildChatVisionBody({
   return {
     model,
     messages,
-    max_tokens: Number.parseInt(maxTokens as string) || 256,
+    max_tokens: Number.parseInt(maxTokens as string, 10) || 256,
     temperature: Number.parseFloat(temperature as string) || 0.0,
   };
 }

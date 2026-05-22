@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 // 192KB so the ~33% base64 overhead stays under the contract's 256KB string cap.
 const MAX_BYTES = 192 * 1024;

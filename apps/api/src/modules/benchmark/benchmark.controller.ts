@@ -2,12 +2,12 @@ import {
   type Benchmark,
   type BenchmarkChartsResponse,
   type CreateBenchmarkRequest,
+  createBenchmarkRequestSchema,
   type EndpointReportRange,
   type EndpointReportsResponse,
+  endpointReportRangeSchema,
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
-  createBenchmarkRequestSchema,
-  endpointReportRangeSchema,
   listBenchmarksQuerySchema,
 } from "@modeldoctor/contracts";
 import {
@@ -25,10 +25,10 @@ import {
 } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
-import { BenchmarkChartsService } from "./benchmark-charts.service.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BenchmarkService } from "./benchmark.service.js";
+import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 
 @Controller("benchmarks")
 @UseGuards(JwtAuthGuard)

@@ -1,6 +1,6 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import { UnknownReport } from "./UnknownReport";
 import { GuidellmCapacityMetrics } from "./guidellm/CapacityMetrics";
+import { UnknownReport } from "./UnknownReport";
 
 export interface CapacityReportProps {
   benchmark: Benchmark;

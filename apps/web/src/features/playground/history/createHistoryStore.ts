@@ -1,5 +1,5 @@
-import { type StoreApi, type UseBoundStore, create } from "zustand";
-import { type PersistStorage, type StorageValue, persist } from "zustand/middleware";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
+import { type PersistStorage, persist, type StorageValue } from "zustand/middleware";
 import { idb } from "./idbStorage";
 
 export interface HistoryEntry<S> {

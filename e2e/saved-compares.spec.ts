@@ -28,9 +28,7 @@ test.beforeEach(() => {
   resetTestDb();
 });
 
-test("saved compares list renders empty state for a fresh authenticated user", async ({
-  page,
-}) => {
+test("saved compares list renders empty state for a fresh authenticated user", async ({ page }) => {
   await registerAndLogin(page);
   await page.goto("/benchmarks/compare/saved");
 

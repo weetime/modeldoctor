@@ -2,7 +2,7 @@ import type { JudgeConfig, JudgeOutcome } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import { chatCompletion } from "../../insights/llm-client.js";
 import { LlmJudgeService } from "../../llm-judge/llm-judge.service.js";
-import { type JudgeRegistry, createJudgeRegistry } from "./registry.js";
+import { createJudgeRegistry, type JudgeRegistry } from "./registry.js";
 import type { JudgeContext } from "./types.js";
 
 /**
@@ -19,7 +19,7 @@ export class JudgesService {
     this.registry = createJudgeRegistry({
       runJudge: async (input) => {
         const provider = await llm.getDecrypted();
-        if (!provider || !provider.enabled) {
+        if (!provider?.enabled) {
           throw new Error(
             "No enabled LLM judge provider configured. Configure one at Settings → LLM Judge.",
           );

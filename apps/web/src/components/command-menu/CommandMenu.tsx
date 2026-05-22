@@ -1,3 +1,6 @@
+import { Keyboard, Monitor, Moon, Sun } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   sidebarGroups,
   sidebarPrimaryItems,
@@ -14,9 +17,6 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
-import { Keyboard, Monitor, Moon, Sun } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 interface CommandMenuProps {
   open: boolean;

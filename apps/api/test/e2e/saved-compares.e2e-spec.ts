@@ -13,7 +13,7 @@ vi.mock("../../src/modules/insights/llm-client.js", () => ({
 }));
 
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 describe("/api/saved-compares (e2e)", () => {
   let ctx: E2EContext;

@@ -1,8 +1,8 @@
-import i18n from "@/lib/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 import { PasswordSection } from "./PasswordSection";
 
 vi.mock("./queries", () => ({

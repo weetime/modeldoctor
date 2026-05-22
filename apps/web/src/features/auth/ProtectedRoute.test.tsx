@@ -1,7 +1,7 @@
-import { useAuthStore } from "@/stores/auth-store";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/stores/auth-store";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 const mockUser = {

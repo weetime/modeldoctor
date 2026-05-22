@@ -1,8 +1,8 @@
-import { useAuthStore } from "@/stores/auth-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/stores/auth-store";
 import { LoginPage } from "./LoginPage";
 
 vi.mock("@/lib/api-client", () => {
@@ -21,8 +21,8 @@ vi.mock("@/lib/api-client", () => {
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-import { api } from "@/lib/api-client";
 import { toast } from "sonner";
+import { api } from "@/lib/api-client";
 
 const mockUser = {
   id: "u1",

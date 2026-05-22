@@ -97,9 +97,13 @@ test("create genai-perf benchmark — happy path", async ({ page }) => {
     await page.waitForURL(/\/benchmarks\/[^/]+$/, { timeout: 10_000 });
     expect(page.url()).toMatch(/\/benchmarks\/[^/]+$/);
     // StatusBadge renders one of: pending | submitted | running | completed | failed
-    const statusBadge = page.getByRole("status").or(
-      page.locator('[aria-label="pending"], [aria-label="Pending"], [aria-label="submitted"], [aria-label="Submitted"], [aria-label="running"], [aria-label="Running"], [aria-label="failed"], [aria-label="Failed"]'),
-    );
+    const statusBadge = page
+      .getByRole("status")
+      .or(
+        page.locator(
+          '[aria-label="pending"], [aria-label="Pending"], [aria-label="submitted"], [aria-label="Submitted"], [aria-label="running"], [aria-label="Running"], [aria-label="failed"], [aria-label="Failed"]',
+        ),
+      );
     await expect(statusBadge.first()).toBeVisible({ timeout: 10_000 });
   }
 });

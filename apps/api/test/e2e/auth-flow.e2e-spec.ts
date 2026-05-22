@@ -11,7 +11,7 @@
  */
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type E2EContext, bootE2E } from "../helpers/app.js";
+import { bootE2E, type E2EContext } from "../helpers/app.js";
 
 describe("Auth rate limit (e2e)", () => {
   let ctx: E2EContext;

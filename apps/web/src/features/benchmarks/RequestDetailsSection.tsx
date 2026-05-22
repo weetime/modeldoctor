@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { useConnection, useRevealApiKey } from "@/features/connections/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
-import { type VegetaParams, migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
+import { migrateVegetaParams, type VegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useConnection, useRevealApiKey } from "@/features/connections/queries";
 
 interface Props {
   benchmark: Benchmark;

@@ -1,19 +1,3 @@
-import { FormActions } from "@/components/common/form-actions";
-import { FormSection } from "@/components/common/form-section";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/lib/api-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   CreatePrometheusDatasource,
@@ -30,6 +14,22 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { FormActions } from "@/components/common/form-actions";
+import { FormSection } from "@/components/common/form-section";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError } from "@/lib/api-client";
 import { toastDatasourceError } from "./errors";
 import { useCreateDatasource, useUpdateDatasource, useVerifyDatasource } from "./queries";
 

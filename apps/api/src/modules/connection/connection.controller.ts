@@ -3,12 +3,12 @@ import {
   type ConnectionRevealKeyResponse,
   type ConnectionWithSecret,
   type CreateConnection,
+  createConnectionSchema,
   type DiscoverConnectionRequest,
   type DiscoverConnectionResponse,
+  discoverConnectionRequestSchema,
   type ListConnectionsResponse,
   type UpdateConnection,
-  createConnectionSchema,
-  discoverConnectionRequestSchema,
   updateConnectionSchema,
 } from "@modeldoctor/contracts";
 import {
@@ -26,8 +26,8 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ConnectionService } from "./connection.service.js";
 import { DiscoveryService } from "./discovery/discovery.service.js";
 

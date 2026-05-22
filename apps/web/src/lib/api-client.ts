@@ -1,6 +1,6 @@
-import { useAuthStore } from "@/stores/auth-store";
 import type { PublicUser } from "@modeldoctor/contracts";
 import { StandardErrorResponseSchema } from "@modeldoctor/contracts";
+import { useAuthStore } from "@/stores/auth-store";
 import { coordinatedRefresh } from "./auth-coordinator";
 
 export class ApiError extends Error {

@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
 // See alerts.e2e-spec for the time-of-validation explanation; this spec
@@ -115,13 +115,13 @@ describe("Connection subscribers e2e", () => {
     const target = before.find((s) => s.userId === otherId);
     expect(target).toBeDefined();
     await request(ctx.app.getHttpServer())
-      .delete(`/api/connections/${connectionId}/subscribers/${target!.id}`)
+      .delete(`/api/connections/${connectionId}/subscribers/${target?.id}`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .expect(204);
     const after = await prisma.connectionSubscriber.findMany({
       where: { connectionId },
     });
-    expect(after.find((s) => s.id === target!.id)).toBeUndefined();
+    expect(after.find((s) => s.id === target?.id)).toBeUndefined();
     expect(after.find((s) => s.userId === ownerId)).toBeDefined();
   });
 
@@ -129,7 +129,7 @@ describe("Connection subscribers e2e", () => {
     // At this point only the owner is subscribed at minSeverity=warning.
     // Send a critical alert that should hit them. Then send an info alert
     // (below floor) that should not.
-    const deliveriesBefore = await prisma.notificationDelivery.count({
+    const _deliveriesBefore = await prisma.notificationDelivery.count({
       where: { channelId: ownerChannelId },
     });
 
@@ -182,9 +182,7 @@ describe("Connection subscribers e2e", () => {
     // an LLM is the no-explainer branch where we skip. To validate the
     // severity gate alone, we directly check what the subscribers service
     // returns. (The full LLM path is exercised manually in dev.)
-    const { SubscribersService } = await import(
-      "../../src/modules/alerts/subscribers.service.js"
-    );
+    const { SubscribersService } = await import("../../src/modules/alerts/subscribers.service.js");
     const subs = ctx.app.get(SubscribersService);
     const criticalMatches = await subs.findMatching(connectionId, "critical");
     const infoMatches = await subs.findMatching(connectionId, "info");

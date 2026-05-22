@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { CompareNarrative } from "@modeldoctor/contracts";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export interface AiAnalysisPanelProps {
   narrative: CompareNarrative | null;

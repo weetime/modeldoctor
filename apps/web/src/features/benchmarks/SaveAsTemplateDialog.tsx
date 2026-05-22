@@ -1,3 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Benchmark } from "@modeldoctor/contracts";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { z } from "zod";
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,13 +27,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTemplate } from "@/features/benchmark-templates/queries";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { Benchmark } from "@modeldoctor/contracts";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const formSchema = z.object({
   name: z.string().trim().min(1).max(100),

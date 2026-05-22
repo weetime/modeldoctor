@@ -1,9 +1,9 @@
-import i18n from "@/lib/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 import { RunReportPage } from "../RunReportPage";
 
 const mockRun = {

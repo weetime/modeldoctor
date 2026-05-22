@@ -1,6 +1,6 @@
 import type { BenchmarkStatus } from "@modeldoctor/contracts";
-import { Ban, CheckCircle2, Clock, Loader2, Send, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Ban, CheckCircle2, Clock, Loader2, Send, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface StatusVisual {

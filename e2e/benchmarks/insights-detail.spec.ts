@@ -16,9 +16,9 @@ test("redirects from legacy /benchmarks/reports/:id to /insights/:id", async ({ 
 
 test("notFound state for unknown connectionId", async ({ page }) => {
   await page.goto("/insights/does-not-exist");
-  await expect(
-    page.getByText(/Connection not found or deleted|连接不存在或已删除/i),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Connection not found or deleted|连接不存在或已删除/i)).toBeVisible({
+    timeout: 10_000,
+  });
 });
 
 test("range picker writes ?range=7d to URL on a connection with no runs", async ({ page }) => {

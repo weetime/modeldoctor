@@ -1,9 +1,9 @@
-import { TableCell, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { deltaText, type MetricRowDescriptor } from "./metrics";
 import { VerdictBadge } from "./VerdictBadge";
-import { type MetricRowDescriptor, deltaText } from "./metrics";
 import { verdictFor } from "./verdict";
 
 export interface MetricRowProps {

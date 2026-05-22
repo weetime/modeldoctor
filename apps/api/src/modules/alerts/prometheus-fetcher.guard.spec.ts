@@ -1,10 +1,10 @@
 // apps/api/src/modules/alerts/prometheus-fetcher.guard.spec.ts
 import { describe, expect, it } from "vitest";
 import {
-  type Resolver,
-  type SsrfGuardConfig,
   evaluateUrl,
   isPrivateOrLoopback,
+  type Resolver,
+  type SsrfGuardConfig,
 } from "./prometheus-fetcher.guard.js";
 
 const noResolver: Resolver = async () => {

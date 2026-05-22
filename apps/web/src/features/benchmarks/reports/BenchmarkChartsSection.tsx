@@ -1,7 +1,7 @@
-import { LatencyCDF, TTFTHistogram } from "@/components/charts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { BenchmarkTool } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
+import { LatencyCDF, TTFTHistogram } from "@/components/charts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useBenchmarkCharts } from "../queries";
 
 export interface BenchmarkChartsSectionProps {

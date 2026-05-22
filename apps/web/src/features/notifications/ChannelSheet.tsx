@@ -1,3 +1,9 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Channel } from "@modeldoctor/contracts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
@@ -21,12 +27,6 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useConnections } from "@/features/connections/queries";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { Channel } from "@modeldoctor/contracts";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   useCreateChannel,
   useCreateSubscription,
@@ -141,7 +141,16 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
       connectionIds: hasGlobalRow ? [] : connIds,
       events,
     });
-  }, [open, channel?.id, channel?.type, channel?.name, subsQuery.isSuccess, existingSubs, form]);
+  }, [
+    open,
+    channel?.id,
+    channel?.type,
+    channel?.name,
+    subsQuery.isSuccess,
+    existingSubs,
+    form,
+    channel,
+  ]);
 
   /** Compute the set of subscription keys the user wants. */
   const intendedKeys = useMemo<SubKey[]>(() => {

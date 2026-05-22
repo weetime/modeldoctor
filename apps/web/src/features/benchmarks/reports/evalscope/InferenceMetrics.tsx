@@ -1,7 +1,7 @@
 import type { Benchmark } from "@modeldoctor/contracts";
 import { evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
-import { UnknownReport } from "../UnknownReport";
 import { InferenceMetricsGrid } from "../_shared/InferenceMetricsGrid";
+import { UnknownReport } from "../UnknownReport";
 
 export interface EvalscopeInferenceMetricsProps {
   benchmark: Benchmark;

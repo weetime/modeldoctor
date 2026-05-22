@@ -1,8 +1,8 @@
 import { NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { JwtAuthGuard } from "../../../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../../../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../../../auth/jwt-auth.guard.js";
 import { RunsService } from "../../services/runs.service.js";
 import { RunsController } from "../runs.controller.js";
 

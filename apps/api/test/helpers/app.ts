@@ -5,7 +5,7 @@ import request from "supertest";
 import { AppModule } from "../../src/app.module.js";
 import { AllExceptionsFilter } from "../../src/common/filters/all-exceptions.filter.js";
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type TestDatabase, startPostgres } from "./postgres-container.js";
+import { startPostgres, type TestDatabase } from "./postgres-container.js";
 
 export interface E2EContext {
   app: INestApplication;

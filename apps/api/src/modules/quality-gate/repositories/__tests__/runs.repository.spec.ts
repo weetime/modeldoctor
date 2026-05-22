@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  type TestDatabase,
   startPostgres,
+  type TestDatabase,
 } from "../../../../../test/helpers/postgres-container.js";
 import type { PrismaService } from "../../../../database/prisma.service.js";
 import { RunsRepository } from "../runs.repository.js";

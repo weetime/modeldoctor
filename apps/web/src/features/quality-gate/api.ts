@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   CreateEvaluationRequest,
   CreateRunRequest,
@@ -12,6 +11,7 @@ import type {
   ListRunsResponse,
   UpdateEvaluationRequest,
 } from "@modeldoctor/contracts";
+import { api } from "@/lib/api-client";
 
 export const qgApi = {
   listEvaluations: () => api.get<ListEvaluationsResponse>("/api/quality-gate/evaluations"),

@@ -4,19 +4,21 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 vi.mock("../../src/modules/insights/llm-client.js", () => ({
   chatCompletion: vi.fn(async () => ({
     content: JSON.stringify({
-      findings: [{
-        severity: "warning",
-        title: "TTFT high",
-        rootCause: "p95 1240ms exceeds threshold",
-        recommendations: ["warm up"],
-      }],
+      findings: [
+        {
+          severity: "warning",
+          title: "TTFT high",
+          rootCause: "p95 1240ms exceeds threshold",
+          recommendations: ["warm up"],
+        },
+      ],
     }),
     latencyMs: 100,
   })),
 }));
 
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 describe("/api/insights comparison endpoints (e2e)", () => {
   let ctx: E2EContext;

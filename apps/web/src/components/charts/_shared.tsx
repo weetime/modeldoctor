@@ -11,7 +11,7 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { type ReactNode, useMemo } from "react";
 import { useThemeStore } from "../../stores/theme-store";
-import { type ChartTokens, applyTheme, getChartTokens } from "./theme";
+import { applyTheme, type ChartTokens, getChartTokens } from "./theme";
 
 echarts.use([
   LineChart,

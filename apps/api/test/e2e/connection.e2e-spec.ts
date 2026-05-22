@@ -1,8 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
 import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaService } from "../../src/database/prisma.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 // Originally "Connection.kind e2e", scoped to enum behavior around model /
 // gateway / alertmanager kinds. After #220 retired the `Connection.kind`

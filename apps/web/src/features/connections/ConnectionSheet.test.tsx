@@ -81,7 +81,7 @@ vi.mock("@/features/notifications/queries", () => ({
   useChannels: () => ({ data: [] }),
 }));
 
-let mockUserRoles: string[] = ["admin"];
+const mockUserRoles: string[] = ["admin"];
 vi.mock("@/stores/auth-store", () => ({
   useAuthStore: <T,>(selector: (s: { user: { roles: string[] } }) => T) =>
     selector({ user: { roles: mockUserRoles } }),

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 // apps/api/src/modules/insights/synthesize.service.ts
 import {
   type NarrativeFinding,
+  narrativeFindingSchema,
   type SynthesizeRequest,
   type SynthesizeResponse,
-  narrativeFindingSchema,
 } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { z } from "zod";
@@ -88,8 +88,7 @@ export class SynthesizeService {
     body: SynthesizeRequest,
   ): Promise<SynthesizeResponse> {
     const provider = await this.judge.getDecrypted();
-    if (!provider || !provider.enabled)
-      throw new NotFoundException("LLM provider not configured or disabled");
+    if (!provider?.enabled) throw new NotFoundException("LLM provider not configured or disabled");
 
     const runs =
       body.runIds.length > 0

@@ -1,3 +1,8 @@
+import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
+import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -27,11 +32,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuthStore } from "@/stores/auth-store";
-import type { PrometheusDatasourcePublic } from "@modeldoctor/contracts";
-import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { DatasourceSheet, type DatasourceSheetMode } from "./DatasourceSheet";
 import { toastDatasourceError } from "./errors";
 import { useDatasources, useDeleteDatasource } from "./queries";

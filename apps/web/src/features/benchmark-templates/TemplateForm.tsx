@@ -1,3 +1,7 @@
+import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
+import { useId } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { FormSection } from "@/components/common/form-section";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,10 +20,6 @@ import {
   ToolSelectorField,
 } from "@/features/benchmarks/forms/ToolParamsEditor";
 import { SCENARIOS, type ScenarioId } from "@/features/benchmarks/scenarios";
-import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
-import { useId } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 
 export interface TemplateFormProps {
   mode: "create" | "edit-owner" | "edit-readonly";

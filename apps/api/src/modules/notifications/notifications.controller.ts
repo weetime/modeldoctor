@@ -7,9 +7,9 @@ import { DispatcherService } from "./dispatcher.service.js";
 import {
   type CreateChannelDto,
   type CreateSubscriptionDto,
-  type UpdateChannelDto,
   createChannelSchema,
   createSubscriptionSchema,
+  type UpdateChannelDto,
   updateChannelSchema,
 } from "./notifications.dto.js";
 import { SubscriptionsService } from "./subscriptions.service.js";

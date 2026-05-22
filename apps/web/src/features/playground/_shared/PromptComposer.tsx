@@ -1,7 +1,7 @@
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
 
 export interface PromptComposerProps {
   value: string;

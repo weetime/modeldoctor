@@ -1,7 +1,7 @@
-import { PageHeader } from "@/components/common/page-header";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router-dom";
+import { PageHeader } from "@/components/common/page-header";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { to: "/me/profile", labelKey: "nav.profile" },

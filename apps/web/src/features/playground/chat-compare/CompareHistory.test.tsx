@@ -10,12 +10,12 @@
  */
 
 import "@/lib/i18n";
-import i18n from "@/lib/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({ data: [], isLoading: false, error: null }),

@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import { type PanelCount, useCompareStore } from "./store";
 
 const COUNTS: PanelCount[] = [2, 3, 4, 6, 8];

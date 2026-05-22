@@ -1,4 +1,4 @@
-import { type JudgeConfig, defaultPassThreshold } from "@modeldoctor/contracts";
+import { defaultPassThreshold, type JudgeConfig } from "@modeldoctor/contracts";
 import type { Judge } from "./types.js";
 
 type Config = Extract<JudgeConfig, { kind: "llm-judge" }>;
@@ -55,7 +55,7 @@ export function createLlmJudge(service: LlmJudgeService): Judge<Config> {
         let parsed: { score: number; reason: string };
         try {
           parsed = JSON.parse(resp.content);
-        } catch (e) {
+        } catch (_e) {
           return { passed: false, error: `judge returned non-JSON: ${resp.content.slice(0, 200)}` };
         }
         if (typeof parsed.score !== "number") {

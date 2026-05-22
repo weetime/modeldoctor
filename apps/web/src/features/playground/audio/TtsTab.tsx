@@ -1,10 +1,10 @@
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { ApiError, api } from "@/lib/api-client";
 import type { PlaygroundTtsRequest, PlaygroundTtsResponse } from "@modeldoctor/contracts";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ApiError, api } from "@/lib/api-client";
 import { PromptComposer } from "../_shared/PromptComposer";
 import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";

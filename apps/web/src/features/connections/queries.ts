@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   ConnectionPublic,
   ConnectionRevealKeyResponse,
@@ -10,6 +9,7 @@ import type {
   UpdateConnection,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 const KEY = ["connections"] as const;
 const detailKey = (id: string) => [...KEY, id] as const;

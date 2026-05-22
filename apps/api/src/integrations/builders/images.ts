@@ -22,6 +22,6 @@ export function buildImagesBody({
   if (!imagePrompt) throw new Error("Missing required parameter: imagePrompt");
   const body: Record<string, unknown> = { model, prompt: imagePrompt };
   if (imageSize) body.size = imageSize;
-  if (imageN) body.n = Number.parseInt(imageN as string) || 1;
+  if (imageN) body.n = Number.parseInt(imageN as string, 10) || 1;
   return body;
 }

@@ -1,8 +1,8 @@
+import { type ReactNode, useEffect, useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { refreshAccessToken } from "@/lib/api-client";
 import { retryWithBackoff } from "@/lib/retry-with-backoff";
 import { useAuthStore } from "@/stores/auth-store";
-import { type ReactNode, useEffect, useState } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 interface BootGateProps {
   children: ReactNode;

@@ -1,9 +1,9 @@
 import {
   type BenchmarkTemplate,
   type CreateBenchmarkTemplateRequest,
+  createBenchmarkTemplateRequestSchema,
   type ListBenchmarkTemplatesQuery,
   type ListBenchmarkTemplatesResponse,
-  createBenchmarkTemplateRequestSchema,
   listBenchmarkTemplatesQuerySchema,
   patchBenchmarkTemplateRequestSchema as patchSchema,
 } from "@modeldoctor/contracts";
@@ -22,8 +22,8 @@ import {
 } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BenchmarkTemplateService, type TemplateActor } from "./benchmark-template.service.js";
 
 // patchSchema is imported from @modeldoctor/contracts (patchBenchmarkTemplateRequestSchema).

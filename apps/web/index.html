@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ModelDoctor</title>
     <script>
-      (function () {
+      (() => {
         try {
-          var stored = localStorage.getItem("md.theme.v1");
-          var theme = stored ? JSON.parse(stored).state.mode : "system";
-          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          var isDark = theme === "dark" || (theme === "system" && prefersDark);
+          const stored = localStorage.getItem("md.theme.v1");
+          const theme = stored ? JSON.parse(stored).state.mode : "system";
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const isDark = theme === "dark" || (theme === "system" && prefersDark);
           if (isDark) document.documentElement.classList.add("dark");
         } catch (_) {}
       })();

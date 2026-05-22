@@ -1,5 +1,5 @@
-import { useAuthStore } from "@/stores/auth-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "@/stores/auth-store";
 import { playgroundFetchStream } from "./playground-stream";
 
 function makeSseResponse(events: string[]): Response {

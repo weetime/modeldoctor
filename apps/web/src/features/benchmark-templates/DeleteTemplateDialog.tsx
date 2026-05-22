@@ -1,3 +1,5 @@
+import type { BenchmarkTemplate } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,8 +10,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { BenchmarkTemplate } from "@modeldoctor/contracts";
-import { useTranslation } from "react-i18next";
 
 export interface DeleteTemplateDialogProps {
   template: BenchmarkTemplate | null;

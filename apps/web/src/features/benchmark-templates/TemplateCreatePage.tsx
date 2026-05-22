@@ -1,22 +1,22 @@
-import { FormActions } from "@/components/common/form-actions";
-import { PageHeader } from "@/components/common/page-header";
-import { Form } from "@/components/ui/form";
-import { TOOL_DEFAULTS } from "@/features/benchmarks/forms/ToolParamsEditor";
-import { SCENARIOS } from "@/features/benchmarks/scenarios";
-import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateBenchmarkTemplateRequest,
-  type ScenarioId,
   createBenchmarkTemplateRequestSchema,
+  type ScenarioId,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { TemplateForm } from "./TemplateForm";
+import { FormActions } from "@/components/common/form-actions";
+import { PageHeader } from "@/components/common/page-header";
+import { Form } from "@/components/ui/form";
+import { TOOL_DEFAULTS } from "@/features/benchmarks/forms/ToolParamsEditor";
+import { SCENARIOS } from "@/features/benchmarks/scenarios";
+import { useAuthStore } from "@/stores/auth-store";
 import { useCreateTemplate } from "./queries";
+import { TemplateForm } from "./TemplateForm";
 
 export function TemplateCreatePage() {
   const { t } = useTranslation("benchmark-templates");

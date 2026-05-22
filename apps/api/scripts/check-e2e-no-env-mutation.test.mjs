@@ -1,13 +1,11 @@
 // Run with: `node --test apps/api/scripts/check-e2e-no-env-mutation.test.mjs`
 // or via the wired `pnpm check:e2e-env:test` script.
-import test from "node:test";
+
 import assert from "node:assert/strict";
 import { dirname, resolve } from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
-import {
-  findViolations,
-  findViolationsInSource,
-} from "./check-e2e-no-env-mutation.mjs";
+import { findViolations, findViolationsInSource } from "./check-e2e-no-env-mutation.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Fixtures live under scripts/ (not test/) so vitest's `test/**/*.e2e-spec.ts`

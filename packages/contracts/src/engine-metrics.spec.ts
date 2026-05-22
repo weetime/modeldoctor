@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ENGINE_METRIC_NAMESPACE } from "./engine-metrics/manifests/index.js";
 import {
   engineMetricsSnapshotQuerySchema,
   engineMetricsSnapshotResponseSchema,
   panelUnitSchema,
 } from "./engine-metrics.js";
-
-import { ENGINE_METRIC_NAMESPACE } from "./engine-metrics/manifests/index.js";
 
 describe("engine-metrics zod schemas", () => {
   it("panelUnitSchema accepts ms/s/%/ratio/tps/rps/count/bytes", () => {

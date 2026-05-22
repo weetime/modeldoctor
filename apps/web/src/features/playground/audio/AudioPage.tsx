@@ -1,18 +1,18 @@
-import { useConnection } from "@/features/connections/queries";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import { useConnection } from "@/features/connections/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
-import { PlaygroundShell } from "../PlaygroundShell";
 import { genAudioSnippets } from "../code-snippets/audio";
-import { HistoryDrawer } from "../history/HistoryDrawer";
 import type { HistoryEntry } from "../history/createHistoryStore";
+import { HistoryDrawer } from "../history/HistoryDrawer";
+import { PlaygroundShell } from "../PlaygroundShell";
+import { type AudioHistorySnapshot, useAudioHistoryStore } from "./history";
 import { SttParams } from "./SttParams";
 import { SttTab } from "./SttTab";
+import { type TtsFormat, useAudioStore } from "./store";
 import { TtsParams } from "./TtsParams";
 import { TtsTab } from "./TtsTab";
-import { type AudioHistorySnapshot, useAudioHistoryStore } from "./history";
-import { type TtsFormat, useAudioStore } from "./store";
 
 type Tab = "tts" | "stt";
 

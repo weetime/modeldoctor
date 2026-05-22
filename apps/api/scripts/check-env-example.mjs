@@ -14,7 +14,7 @@
 // example file is the README for the env, not a working .env.
 
 import { readFileSync } from "node:fs";
-import { dirname, resolve, relative } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -59,12 +59,18 @@ if (missing.length === 0 && extra.length === 0) {
 
 console.error("[env-example] FAIL — drift between env.schema.ts and .env.example:");
 if (missing.length > 0) {
-  console.error(`\n  ${missing.length} key(s) declared in env.schema.ts but missing from .env.example:`);
+  console.error(
+    `\n  ${missing.length} key(s) declared in env.schema.ts but missing from .env.example:`,
+  );
   for (const k of missing) console.error(`    - ${k}`);
-  console.error(`\n  Fix: add each missing key to apps/api/.env.example with a placeholder or default value.`);
+  console.error(
+    `\n  Fix: add each missing key to apps/api/.env.example with a placeholder or default value.`,
+  );
 }
 if (extra.length > 0) {
-  console.error(`\n  ${extra.length} key(s) in .env.example with no matching entry in env.schema.ts:`);
+  console.error(
+    `\n  ${extra.length} key(s) in .env.example with no matching entry in env.schema.ts:`,
+  );
   for (const k of extra) console.error(`    - ${k}`);
   console.error(`\n  Fix: remove the orphan key from .env.example, or wire it into env.schema.ts.`);
 }

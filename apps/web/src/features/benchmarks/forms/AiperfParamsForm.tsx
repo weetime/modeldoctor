@@ -1,3 +1,5 @@
+import { useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { FormSection } from "@/components/common/form-section";
 import {
   FormControl,
@@ -16,8 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useFormContext } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { numberField } from "./_shared/numberField";
 
 const DATASETS = ["synthetic", "sharegpt"] as const;

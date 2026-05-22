@@ -1,10 +1,10 @@
-import i18n from "@/lib/i18n";
 import type { Finding } from "@modeldoctor/contracts";
 // apps/web/src/features/insights/__tests__/FindingsCard.test.tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it } from "vitest";
+import i18n from "@/lib/i18n";
 import { FindingsCard } from "../FindingsCard";
 
 function f(

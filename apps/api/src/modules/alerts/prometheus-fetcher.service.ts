@@ -249,10 +249,7 @@ export class PrometheusFetcherService {
    * payload bounded — the LLM doesn't need every 15s sample to ground its
    * claims, just enough to anchor the narrative.
    */
-  private summariseSeries(s: {
-    metric: Record<string, string>;
-    values: Array<[number, string]>;
-  }) {
+  private summariseSeries(s: { metric: Record<string, string>; values: Array<[number, string]> }) {
     const nums = s.values.map(([ts, v]) => ({
       at: new Date(ts * 1000).toISOString(),
       value: Number(v),

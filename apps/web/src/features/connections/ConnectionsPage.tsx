@@ -1,3 +1,8 @@
+import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
+import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RelativeTime } from "@/components/common/relative-time";
@@ -34,11 +39,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
-import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { ConnectionSheet, type ConnectionSheetMode } from "./ConnectionSheet";
 import { useConnections, useDeleteConnection } from "./queries";
 

@@ -23,8 +23,8 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { Env } from "../../config/env.schema.js";
 import { UsersService } from "../users/users.service.js";
 import { AuthService } from "./auth.service.js";
-import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import type { JwtPayload } from "./jwt.strategy.js";
+import { JwtAuthGuard } from "./jwt-auth.guard.js";
 
 const REFRESH_COOKIE = "md_refresh";
 const SESSION_COOKIE = "md_session";

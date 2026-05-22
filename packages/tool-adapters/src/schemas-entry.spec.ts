@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import * as schemas from "./schemas-entry.js";
 import {
   GUIDELLM_CATEGORY_DEFAULTS,
+  migrateVegetaParams,
   VEGETA_API_TYPE_TO_BODY,
   VEGETA_API_TYPE_TO_PATH,
   VEGETA_CATEGORY_DEFAULTS,
-  migrateVegetaParams,
 } from "./schemas-entry.js";
 
 describe("schemas-entry", () => {

@@ -2,8 +2,8 @@ import type { Baseline, ListBaselinesResponse } from "@modeldoctor/contracts";
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BaselineController } from "./baseline.controller.js";
 import { BaselineService } from "./baseline.service.js";
 

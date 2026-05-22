@@ -1,6 +1,6 @@
-import { Card, CardContent } from "@/components/ui/card";
 import type { ScenarioId } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
+import { Card, CardContent } from "@/components/ui/card";
 import { RadarChart } from "./RadarChart";
 
 type Sub = Record<ScenarioId, number | null>;
