@@ -33,7 +33,7 @@
         "useNodejsImportProtocol": "error"
       },
       "suspicious": { "noExplicitAny": "warn", "noArrayIndexKey": "warn" },
-      "correctness": { "useExhaustiveDependencies": "warn", "useImportExtensions": "error" },
+      "correctness": { "useExhaustiveDependencies": "warn" },
       "complexity": { "noForEach": "warn" },
       "nursery": { "noCommonJs": "error" }
     }
@@ -44,14 +44,6 @@
       "linter": {
         "rules": {
           "nursery": { "noCommonJs": "off" }
-        }
-      }
-    },
-    {
-      "include": ["apps/api/**", "apps/web/**", "e2e/**"],
-      "linter": {
-        "rules": {
-          "correctness": { "useImportExtensions": "off" }
         }
       }
     }

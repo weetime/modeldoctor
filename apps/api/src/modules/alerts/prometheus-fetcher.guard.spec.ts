@@ -5,7 +5,7 @@ import {
   type SsrfGuardConfig,
   evaluateUrl,
   isPrivateOrLoopback,
-} from "./prometheus-fetcher.guard";
+} from "./prometheus-fetcher.guard.js";
 
 const noResolver: Resolver = async () => {
   throw new Error("resolver should not be called");
