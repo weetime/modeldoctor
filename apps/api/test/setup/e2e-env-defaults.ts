@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse as parseDotenv } from "dotenv";
 
 /**
  * Test-mode env fixture, parsed from apps/api/.env.test.
@@ -10,9 +11,11 @@ import { fileURLToPath } from "node:url";
  * Spec files that need to send a Bearer header matching what ConfigService
  * sees re-import E2E_ENV_DEFAULTS.X to stay in sync.
  *
- * Parsed at module-load time (synchronous read) so spec files can use the
- * const at top level. The path is resolved relative to this file so the
- * resolution doesn't depend on vitest worker cwd.
+ * Parsed via the same `dotenv` library that `@nestjs/config` uses internally,
+ * so the TypeScript const and the ConfigService.get(...) values can never
+ * diverge on quoted strings, inline comments, or other dotenv-spec edge
+ * cases. The path is resolved relative to this file so it doesn't depend on
+ * the vitest worker cwd.
  *
  * Setting `process.env.X = ...` in a spec's `beforeAll` is a known anti-pattern
  * here: forRoot has already locked the value from .env.test, so the late
@@ -24,26 +27,7 @@ import { fileURLToPath } from "node:url";
  * - DATABASE_URL — vitest configs override it dynamically via pickTestDatabaseUrl().
  */
 const ENV_TEST_PATH = resolve(fileURLToPath(import.meta.url), "..", "..", "..", ".env.test");
-
-// Minimal KEY=VALUE parser. Handles `#` line comments, blank lines, and
-// values without quoting. We control the file (apps/api/.env.test), so we
-// don't need the full dotenv spec (no quoted values, no escape sequences,
-// no $-expansion). If you reach for those, switch to the dotenv lib instead.
-function parseEnvFile(contents: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const rawLine of contents.split("\n")) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq < 1) continue;
-    const key = line.slice(0, eq).trim();
-    const value = line.slice(eq + 1).trim();
-    out[key] = value;
-  }
-  return out;
-}
-
-const parsed = parseEnvFile(readFileSync(ENV_TEST_PATH, "utf8"));
+const parsed = parseDotenv(readFileSync(ENV_TEST_PATH));
 
 function required(key: string): string {
   const v = parsed[key];
