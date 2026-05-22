@@ -58,19 +58,17 @@ export default defineConfig({
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
       env: {
-        // NODE_ENV=test makes most env vars optional in env.schema.ts; we still
-        // set the JWT/encryption secrets explicitly because auth + connection
-        // services hash/sign with them and would silently use "" defaults.
+        // NODE_ENV=test triggers AppConfigModule to load apps/api/.env.test —
+        // that file is the single source of truth for JWT/encryption/callback
+        // secrets and runner image tags. We only inline the server-shape config
+        // here (port, DB URL pointing at the e2e DB, CORS origin matching the
+        // playwright web server, log level).
         NODE_ENV: "test",
         PORT: String(E2E_API_PORT),
         DATABASE_URL: TEST_DATABASE_URL,
         CORS_ORIGINS: `http://localhost:${E2E_WEB_PORT}`,
-        JWT_ACCESS_SECRET: "e2e-jwt-access-secret-not-for-prod-not-for-prod",
-        JWT_ACCESS_EXPIRES_IN: "1h",
-        JWT_REFRESH_EXPIRES_DAYS: "7",
-        // 32 zero bytes, base64 — fine for test, MUST NOT be used in prod.
-        CONNECTION_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        BENCHMARK_CALLBACK_SECRET: "e2e-callback-secret-not-for-prod-not-for-prod",
+        // Override .env.test's placeholder callback URL with the real e2e API
+        // origin so HMAC-signed callbacks actually reach the test server.
         BENCHMARK_CALLBACK_URL: `http://localhost:${E2E_API_PORT}/api/runs/callback`,
         // Quiet logs during e2e — pino logs at info+ by default.
         LOG_LEVEL: "warn",
