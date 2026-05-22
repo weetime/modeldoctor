@@ -1,7 +1,6 @@
 import swc from "unplugin-swc";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
-import { E2E_ENV_DEFAULTS } from "./test/setup/e2e-env-defaults.js";
 import { pickTestDatabaseUrl } from "./test/setup/pick-test-db-url.js";
 
 // Same test DB resolution as vitest.config.mts. See that file for rationale.
@@ -29,11 +28,13 @@ export default defineConfig({
     globalSetup: ["./test/setup/global-setup.mts"],
     setupFiles: ["./test/setup/db-guard.ts"],
     env: {
+      // DATABASE_URL is the only env we inject dynamically — pickTestDatabaseUrl
+      // honours TEST_DATABASE_URL overrides and refuses to pass a non-`_test`
+      // URL through. All other test-mode values (JWT secret, callback URL,
+      // encryption key, ALERTMANAGER / MCP / RUNNER_IMAGE_* …) live in
+      // apps/api/.env.test and are auto-loaded by AppConfigModule when
+      // NODE_ENV=test (vitest sets NODE_ENV=test by default).
       DATABASE_URL: TEST_DATABASE_URL,
-      // Shared fixture so spec files can import the same constants they
-      // expect ConfigService to see. See test/setup/e2e-env-defaults.ts for
-      // per-key rationale.
-      ...E2E_ENV_DEFAULTS,
     },
   },
 });

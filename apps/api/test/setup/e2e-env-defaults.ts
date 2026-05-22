@@ -1,52 +1,46 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseDotenv } from "dotenv";
+
 /**
- * Pre-injected env defaults for ALL e2e tests. Spread into vitest.e2e.config.mts
- * `env:` block so they land in process.env BEFORE NestJS's ConfigModule.forRoot
- * runs (which happens at AppModule file-import time, before any beforeAll).
+ * Test-mode env fixture, parsed from apps/api/.env.test.
  *
- * Why these live here and not inline in vitest.e2e.config.mts:
- * - e2e spec files often need to send the SAME secret as the Bearer in their
- *   HTTP requests. Importing E2E_ENV_DEFAULTS.X gives a single source of truth —
- *   if vitest pre-injects X and the spec sends Bearer X, they MUST stay in sync.
- * - Setting `process.env.X = ...` in a spec's `beforeAll` is a known anti-pattern
- *   here: forRoot has already locked the value from .env, so the late mutation
- *   has no effect on ConfigService.get. Use this file instead. The lint at
- *   apps/api/scripts/check-e2e-no-env-mutation.mjs (wired into `pnpm lint`) fails
- *   CI if a new spec re-introduces the pattern — see issue #209.
+ * apps/api/.env.test is the single source of truth: AppConfigModule loads it
+ * automatically when NODE_ENV=test (see apps/api/src/config/config.module.ts).
+ * Spec files that need to send a Bearer header matching what ConfigService
+ * sees re-import E2E_ENV_DEFAULTS.X to stay in sync.
+ *
+ * Parsed via the same `dotenv` library that `@nestjs/config` uses internally,
+ * so the TypeScript const and the ConfigService.get(...) values can never
+ * diverge on quoted strings, inline comments, or other dotenv-spec edge
+ * cases. The path is resolved relative to this file so it doesn't depend on
+ * the vitest worker cwd.
+ *
+ * Setting `process.env.X = ...` in a spec's `beforeAll` is a known anti-pattern
+ * here: forRoot has already locked the value from .env.test, so the late
+ * mutation has no effect on ConfigService.get. Use this fixture instead. The
+ * lint at apps/api/scripts/check-e2e-no-env-mutation.mjs (wired into
+ * `pnpm lint`) fails CI if a new spec re-introduces the pattern — see #209.
  *
  * NOT included by design:
- * - DATABASE_URL — computed dynamically by pickTestDatabaseUrl()
+ * - DATABASE_URL — vitest configs override it dynamically via pickTestDatabaseUrl().
  */
+const ENV_TEST_PATH = resolve(fileURLToPath(import.meta.url), "..", "..", "..", ".env.test");
+const parsed = parseDotenv(readFileSync(ENV_TEST_PATH));
+
+function required(key: string): string {
+  const v = parsed[key];
+  if (!v) throw new Error(`apps/api/.env.test missing required key: ${key}`);
+  return v;
+}
+
 export const E2E_ENV_DEFAULTS = {
-  // passport-jwt validates secretOrKey at strategy-construction time, so
-  // AppModule boot needs a non-empty JWT secret even in test mode.
-  JWT_ACCESS_SECRET: "e2e-test-jwt-secret-not-for-production-use-only-32+chars",
-  // HmacCallbackGuard validates BENCHMARK_CALLBACK_SECRET at constructor time
-  // (same pattern as passport-jwt), so AppModule boot needs a non-empty value
-  // even when no benchmark e2e test cares about it. env.schema.ts treats it as
-  // optional under NODE_ENV=test; this injects a placeholder so the guard
-  // doesn't throw on construction.
-  BENCHMARK_CALLBACK_SECRET: "e2e-test-callback-secret-not-for-production-use-32+chars",
-  // RunService validates BENCHMARK_CALLBACK_URL at constructor time so a
-  // misconfigured deployment fails at boot instead of crashing with TypeError
-  // on the first run. env.schema.ts treats it as optional under NODE_ENV=test;
-  // inject a placeholder so the service can boot for AppModule e2e.
-  BENCHMARK_CALLBACK_URL: "http://e2e-test-placeholder.invalid/",
-  // BenchmarkService.constructor → decodeKey() runs at module init time, same
-  // constructor-validation pattern. env.schema.ts treats this as optional in
-  // test mode; inject a 32-byte base64 placeholder so the service can boot.
-  // (32 zero bytes; never used to encrypt real data.)
-  CONNECTION_API_KEY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  // AlertsController.verifyAuth compares against this in constant time. .env
-  // defines a real dev value, so without pre-injection ConfigService.get would
-  // return that dev value (validatedConfig caches it at forRoot time) and the
-  // spec's "Bearer X" wouldn't match.
-  ALERTMANAGER_WEBHOOK_SECRET: "alertmanager-test-secret-padded-to-32-chars-min",
-  // McpAuthGuard.canActivate() reads both MCP_BEARER_TOKEN and MCP_USER_ID via
-  // ConfigService. mcp.e2e-spec.ts sends `Bearer ${MCP_BEARER_TOKEN}` and
-  // expects mcpUserId to be stamped from MCP_USER_ID; both must match exactly,
-  // so they live here for a single source of truth. The "missing secret → 503"
-  // branch is unit-covered by mcp.guard.spec.ts, so the fixture safely defines
-  // real values here without losing coverage.
-  MCP_BEARER_TOKEN: "test-mcp-token-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  MCP_USER_ID: "e2e-mcp-test-user",
+  JWT_ACCESS_SECRET: required("JWT_ACCESS_SECRET"),
+  BENCHMARK_CALLBACK_SECRET: required("BENCHMARK_CALLBACK_SECRET"),
+  BENCHMARK_CALLBACK_URL: required("BENCHMARK_CALLBACK_URL"),
+  CONNECTION_API_KEY_ENCRYPTION_KEY: required("CONNECTION_API_KEY_ENCRYPTION_KEY"),
+  ALERTMANAGER_WEBHOOK_SECRET: required("ALERTMANAGER_WEBHOOK_SECRET"),
+  MCP_BEARER_TOKEN: required("MCP_BEARER_TOKEN"),
+  MCP_USER_ID: required("MCP_USER_ID"),
 } as const;

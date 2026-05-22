@@ -1,120 +1,143 @@
 import { describe, expect, it } from "vitest";
 import { validateEnv } from "./env.schema.js";
 
+// Single fixture: a fully-valid env that every spec starts from and mutates
+// to assert a single failure mode. Mirrors the dummy values in
+// apps/api/.env.test (the SSOT consumed at runtime when NODE_ENV=test). After
+// #223 the schema is uniformly required across all envs — test isolation
+// lives at the loading layer, not the schema.
+const validEnv = () => ({
+  NODE_ENV: "test" as const,
+  DATABASE_URL: "postgresql://u:p@h:5432/d",
+  JWT_ACCESS_SECRET: "x".repeat(48),
+  CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+  BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
+  BENCHMARK_CALLBACK_URL: "http://localhost:3001",
+  ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
+  RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
+  RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+  RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
+  RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
+  RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
+});
+
 describe("validateEnv", () => {
-  it("accepts minimal env in test mode", () => {
-    const env = validateEnv({ NODE_ENV: "test" });
+  it("accepts a fully-populated env in test mode", () => {
+    const env = validateEnv(validEnv());
     expect(env.NODE_ENV).toBe("test");
     expect(env.PORT).toBe(3001);
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.CORS_ORIGINS).toEqual(["http://localhost:5173"]);
+    expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
+    expect(env.BENCHMARK_DEFAULT_MAX_DURATION_SECONDS).toBe(1800);
+  });
+
+  it("accepts the same env in production", () => {
+    const env = validateEnv({ ...validEnv(), NODE_ENV: "production" });
+    expect(env.NODE_ENV).toBe("production");
+    expect(env.JWT_ACCESS_SECRET).toBe("x".repeat(48));
   });
 
   it("coerces PORT string to number", () => {
-    const env = validateEnv({ NODE_ENV: "test", PORT: "8080" });
+    const env = validateEnv({ ...validEnv(), PORT: "8080" });
     expect(env.PORT).toBe(8080);
   });
 
   it("rejects bad LOG_LEVEL", () => {
-    expect(() => validateEnv({ NODE_ENV: "test", LOG_LEVEL: "chatty" })).toThrow(/LOG_LEVEL/);
+    expect(() => validateEnv({ ...validEnv(), LOG_LEVEL: "chatty" })).toThrow(/LOG_LEVEL/);
   });
 
   it("splits CORS_ORIGINS on comma", () => {
-    const env = validateEnv({ NODE_ENV: "test", CORS_ORIGINS: "http://a,http://b" });
+    const env = validateEnv({ ...validEnv(), CORS_ORIGINS: "http://a,http://b" });
     expect(env.CORS_ORIGINS).toEqual(["http://a", "http://b"]);
   });
 
-  it("rejects JWT_ACCESS_SECRET shorter than 32 chars when provided", () => {
-    expect(() => validateEnv({ NODE_ENV: "test", JWT_ACCESS_SECRET: "short" })).toThrow(
+  // Uniformly-required fields — schema rejects missing values in EVERY env,
+  // including test mode (#223). Each spec omits one required key and asserts
+  // the corresponding ZodIssue path is reported.
+  describe("uniformly required fields", () => {
+    const requiredKeys = [
+      "DATABASE_URL",
+      "JWT_ACCESS_SECRET",
+      "CONNECTION_API_KEY_ENCRYPTION_KEY",
+      "BENCHMARK_CALLBACK_SECRET",
+      "BENCHMARK_CALLBACK_URL",
+      "ALERTMANAGER_WEBHOOK_SECRET",
+      "RUNNER_IMAGE_GUIDELLM",
+      "RUNNER_IMAGE_VEGETA",
+      "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
+      "RUNNER_IMAGE_EVALSCOPE",
+      "RUNNER_IMAGE_AIPERF",
+    ] as const;
+
+    for (const key of requiredKeys) {
+      it(`rejects when ${key} is missing in test mode`, () => {
+        const { [key]: _omitted, ...rest } = validEnv();
+        expect(() => validateEnv(rest)).toThrow(new RegExp(key));
+      });
+
+      it(`rejects when ${key} is missing in production`, () => {
+        const { [key]: _omitted, ...rest } = validEnv();
+        expect(() => validateEnv({ ...rest, NODE_ENV: "production" })).toThrow(new RegExp(key));
+      });
+    }
+  });
+
+  // Per-field shape constraints (length, format) — these guarded the same
+  // mistakes pre-#223 and still apply.
+  it("rejects JWT_ACCESS_SECRET shorter than 32 chars", () => {
+    expect(() => validateEnv({ ...validEnv(), JWT_ACCESS_SECRET: "short" })).toThrow(
       /JWT_ACCESS_SECRET/,
     );
   });
 
-  // DATABASE_URL enforcement tests
-  it("throws when NODE_ENV=development and DATABASE_URL is missing", () => {
-    expect(() => validateEnv({})).toThrow(/DATABASE_URL/);
+  it("rejects non-URL DATABASE_URL", () => {
+    expect(() => validateEnv({ ...validEnv(), DATABASE_URL: "not-a-url" })).toThrow(/DATABASE_URL/);
   });
 
-  it("throws when NODE_ENV=production and DATABASE_URL is missing", () => {
-    expect(() => validateEnv({ NODE_ENV: "production" })).toThrow(/DATABASE_URL/);
-  });
-
-  it("accepts NODE_ENV=production with a valid DATABASE_URL", () => {
-    const env = validateEnv({
-      NODE_ENV: "production",
-      DATABASE_URL: "postgresql://u:p@h:5432/d",
-      JWT_ACCESS_SECRET: "a".repeat(32),
-      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-      BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
-      BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
-      RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
-    });
-    expect(env.DATABASE_URL).toBe("postgresql://u:p@h:5432/d");
-  });
-
-  it("rejects non-URL DATABASE_URL in production", () => {
-    expect(() => validateEnv({ NODE_ENV: "production", DATABASE_URL: "not-a-url" })).toThrow(
-      /DATABASE_URL/,
+  it("rejects BENCHMARK_CALLBACK_SECRET shorter than 32 chars", () => {
+    expect(() => validateEnv({ ...validEnv(), BENCHMARK_CALLBACK_SECRET: "x".repeat(31) })).toThrow(
+      /BENCHMARK_CALLBACK_SECRET/,
     );
   });
 
-  // JWT_ACCESS_SECRET enforcement tests
-  it("throws when NODE_ENV=development and JWT_ACCESS_SECRET is missing", () => {
-    expect(() => validateEnv({})).toThrow(/JWT_ACCESS_SECRET/);
-  });
-
-  it("throws when NODE_ENV=production and JWT_ACCESS_SECRET is missing", () => {
+  it("rejects CONNECTION_API_KEY_ENCRYPTION_KEY that decodes to ≠ 32 bytes", () => {
+    const tooShort = Buffer.alloc(16, 0x42).toString("base64");
     expect(() =>
-      validateEnv({ NODE_ENV: "production", DATABASE_URL: "postgresql://u:p@h:5432/d" }),
-    ).toThrow(/JWT_ACCESS_SECRET/);
+      validateEnv({ ...validEnv(), CONNECTION_API_KEY_ENCRYPTION_KEY: tooShort }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 
-  it("accepts NODE_ENV=production with a valid JWT_ACCESS_SECRET and valid DATABASE_URL", () => {
-    const env = validateEnv({
-      NODE_ENV: "production",
-      DATABASE_URL: "postgresql://u:p@h:5432/d",
-      JWT_ACCESS_SECRET: "a".repeat(32),
-      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-      BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
-      BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
-      RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
-    });
-    expect(env.JWT_ACCESS_SECRET).toBe("a".repeat(32));
+  it("rejects CONNECTION_API_KEY_ENCRYPTION_KEY with non-base64 input", () => {
+    expect(() =>
+      validateEnv({ ...validEnv(), CONNECTION_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
+    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
   });
 
-  // DISABLE_FIRST_USER_ADMIN string-to-boolean coercion (safe-by-default semantics).
-  // Regression guard: z.coerce.boolean() treated string "false" as truthy.
+  // DISABLE_FIRST_USER_ADMIN string-to-boolean coercion (safe-by-default
+  // semantics). Regression guard: z.coerce.boolean() treated string "false"
+  // as truthy.
   it("DISABLE_FIRST_USER_ADMIN defaults to false when unset", () => {
-    const env = validateEnv({ NODE_ENV: "test" });
+    const env = validateEnv(validEnv());
     expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
   });
 
   it('DISABLE_FIRST_USER_ADMIN reads string "false" as boolean false', () => {
-    const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: "false" });
+    const env = validateEnv({ ...validEnv(), DISABLE_FIRST_USER_ADMIN: "false" });
     expect(env.DISABLE_FIRST_USER_ADMIN).toBe(false);
   });
 
   it('DISABLE_FIRST_USER_ADMIN reads string "true" as boolean true', () => {
-    const env = validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: "true" });
+    const env = validateEnv({ ...validEnv(), DISABLE_FIRST_USER_ADMIN: "true" });
     expect(env.DISABLE_FIRST_USER_ADMIN).toBe(true);
   });
 
   it("DISABLE_FIRST_USER_ADMIN accepts native booleans", () => {
     expect(
-      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN,
+      validateEnv({ ...validEnv(), DISABLE_FIRST_USER_ADMIN: true }).DISABLE_FIRST_USER_ADMIN,
     ).toBe(true);
     expect(
-      validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN,
+      validateEnv({ ...validEnv(), DISABLE_FIRST_USER_ADMIN: false }).DISABLE_FIRST_USER_ADMIN,
     ).toBe(false);
   });
 
@@ -124,135 +147,9 @@ describe("validateEnv", () => {
     // "TRUE" must crash boot rather than silently resolve to false (the prior
     // bug behavior with z.coerce.boolean() was the symmetric mistake).
     for (const v of ["", "0", "no", "off", "TRUE", "yes", "1", "ture", "False"]) {
-      expect(() => validateEnv({ NODE_ENV: "test", DISABLE_FIRST_USER_ADMIN: v })).toThrow(
+      expect(() => validateEnv({ ...validEnv(), DISABLE_FIRST_USER_ADMIN: v })).toThrow(
         /DISABLE_FIRST_USER_ADMIN/,
       );
     }
-  });
-
-  // CONNECTION_API_KEY_ENCRYPTION_KEY: optional, but if provided must be a
-  // base64 string that decodes to exactly 32 bytes (AES-256 key length).
-  it("CONNECTION_API_KEY_ENCRYPTION_KEY is optional", () => {
-    const env = validateEnv({ NODE_ENV: "test" });
-    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBeUndefined();
-  });
-
-  it("CONNECTION_API_KEY_ENCRYPTION_KEY accepts a 32-byte base64 key", () => {
-    const key = Buffer.alloc(32, 0x42).toString("base64");
-    const env = validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: key });
-    expect(env.CONNECTION_API_KEY_ENCRYPTION_KEY).toBe(key);
-  });
-
-  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects a key that decodes to ≠ 32 bytes", () => {
-    const tooShort = Buffer.alloc(16, 0x42).toString("base64");
-    expect(() =>
-      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: tooShort }),
-    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
-  });
-
-  it("CONNECTION_API_KEY_ENCRYPTION_KEY rejects non-base64 input", () => {
-    expect(() =>
-      validateEnv({ NODE_ENV: "test", CONNECTION_API_KEY_ENCRYPTION_KEY: "not!base64!@#$" }),
-    ).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
-  });
-
-  // BENCHMARK_CALLBACK_SECRET: optional, but if provided must be ≥ 32 chars.
-  it("BENCHMARK_CALLBACK_SECRET is optional", () => {
-    const env = validateEnv({ NODE_ENV: "test" });
-    expect(env.BENCHMARK_CALLBACK_SECRET).toBeUndefined();
-  });
-
-  it("BENCHMARK_CALLBACK_SECRET accepts a 32-char string", () => {
-    const env = validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(32) });
-    expect(env.BENCHMARK_CALLBACK_SECRET).toBe("x".repeat(32));
-  });
-
-  it("BENCHMARK_CALLBACK_SECRET rejects a string shorter than 32 chars", () => {
-    expect(() =>
-      validateEnv({ NODE_ENV: "test", BENCHMARK_CALLBACK_SECRET: "x".repeat(31) }),
-    ).toThrow(/BENCHMARK_CALLBACK_SECRET/);
-  });
-
-  describe("Phase 3 benchmark env", () => {
-    const baseTest = {
-      NODE_ENV: "test" as const,
-    };
-    const baseDev = {
-      NODE_ENV: "development" as const,
-      DATABASE_URL: "postgres://localhost:5432/db",
-      JWT_ACCESS_SECRET: "x".repeat(32),
-      CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-      BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
-      BENCHMARK_CALLBACK_URL: "http://localhost:3001",
-      ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
-      RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
-      RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-      RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
-      RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
-      RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
-    };
-
-    it("requires RUNNER_IMAGE_GUIDELLM outside test mode", () => {
-      const { RUNNER_IMAGE_GUIDELLM: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_GUIDELLM/);
-    });
-
-    it("requires RUNNER_IMAGE_VEGETA outside test mode", () => {
-      const { RUNNER_IMAGE_VEGETA: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_VEGETA/);
-    });
-
-    it("accepts a fully-configured dev env with all RUNNER_IMAGE_* set", () => {
-      const env = validateEnv(baseDev);
-      expect(env.BENCHMARK_K8S_NAMESPACE).toBe("modeldoctor-benchmarks");
-      expect(env.RUNNER_IMAGE_GUIDELLM).toBe("md-runner-guidellm:test");
-      expect(env.RUNNER_IMAGE_VEGETA).toBe("md-runner-vegeta:test");
-      expect(env.RUNNER_IMAGE_PREFIX_CACHE_PROBE).toBe("md-runner-prefix-cache-probe:test");
-      expect(env.RUNNER_IMAGE_EVALSCOPE).toBe("md-runner-evalscope:test");
-      expect(env.RUNNER_IMAGE_AIPERF).toBe("md-runner-aiperf:test");
-    });
-
-    it("requires RUNNER_IMAGE_PREFIX_CACHE_PROBE outside test mode", () => {
-      const { RUNNER_IMAGE_PREFIX_CACHE_PROBE: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_PREFIX_CACHE_PROBE/);
-    });
-
-    it("requires RUNNER_IMAGE_EVALSCOPE outside test mode", () => {
-      const { RUNNER_IMAGE_EVALSCOPE: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_EVALSCOPE/);
-    });
-
-    it("requires RUNNER_IMAGE_AIPERF outside test mode", () => {
-      const { RUNNER_IMAGE_AIPERF: _omitted, ...rest } = baseDev;
-      expect(() => validateEnv(rest)).toThrow(/RUNNER_IMAGE_AIPERF/);
-    });
-
-    it("defaults BENCHMARK_DEFAULT_MAX_DURATION_SECONDS to 1800", () => {
-      const env = validateEnv(baseDev);
-      expect(env.BENCHMARK_DEFAULT_MAX_DURATION_SECONDS).toBe(1800);
-    });
-
-    it("requires CONNECTION_API_KEY_ENCRYPTION_KEY outside test mode", () => {
-      const noKey = { ...baseDev, CONNECTION_API_KEY_ENCRYPTION_KEY: undefined };
-      expect(() => validateEnv(noKey)).toThrow(/CONNECTION_API_KEY_ENCRYPTION_KEY/);
-    });
-
-    it("requires BENCHMARK_CALLBACK_SECRET outside test mode", () => {
-      const noSecret = { ...baseDev, BENCHMARK_CALLBACK_SECRET: undefined };
-      expect(() => validateEnv(noSecret)).toThrow(/BENCHMARK_CALLBACK_SECRET/);
-    });
-
-    it("requires BENCHMARK_CALLBACK_URL outside test mode", () => {
-      const noUrl = { ...baseDev, BENCHMARK_CALLBACK_URL: undefined };
-      expect(() => validateEnv(noUrl)).toThrow(/BENCHMARK_CALLBACK_URL/);
-    });
-
-    it("does not require benchmark vars in test mode", () => {
-      // Sanity: minimal `baseTest` still validates without RUNNER_IMAGE_*
-      // (they're only required when NODE_ENV !== "test").
-      const env = validateEnv(baseTest);
-      expect(env.NODE_ENV).toBe("test");
-      expect(env.RUNNER_IMAGE_GUIDELLM).toBeUndefined();
-    });
   });
 });
