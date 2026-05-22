@@ -47,6 +47,10 @@ jobs:
       - run: pnpm -r type-check
       - run: pnpm lint
 
+      # publint + attw need dist/ to exist — build packages first.
+      # (The final `pnpm build` below re-runs this idempotently for apps/*.)
+      - run: pnpm -r --filter='./packages/*' build
+
       - name: Validate packages publish shape
         run: pnpm -r --filter='./packages/*' exec publint --strict
 
