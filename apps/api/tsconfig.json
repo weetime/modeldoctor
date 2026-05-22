@@ -1,15 +1,26 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // ── Phase 2 (#224) removes these overrides — base will be the
+    //    single source of truth (NodeNext + verbatimModuleSyntax).
     "module": "commonjs",
     "moduleResolution": "node",
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": false,
+    // ── (existing apps/api-specific options below, keep as-is) ──
+    "target": "ES2022",
+    "outDir": "./dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "incremental": false,
     "lib": ["ES2022"],
     "types": ["node", "vitest/globals", "multer"],
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "target": "ES2022",
     "baseUrl": "./",
-    "outDir": "./dist",
     "declaration": false,
     "sourceMap": true,
     "paths": {

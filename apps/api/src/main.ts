@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import { json, urlencoded } from "express";
 import { Logger } from "nestjs-pino";
-import { AppModule } from "./app.module";
+import { AppModule } from "./app.module.js";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
 import type { Env } from "./config/env.schema.js";
 

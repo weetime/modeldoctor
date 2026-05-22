@@ -46,6 +46,47 @@ jobs:
       - run: pnpm -F @modeldoctor/api exec prisma migrate deploy
       - run: pnpm -r type-check
       - run: pnpm lint
+
+      # publint + attw need dist/ to exist — build packages first.
+      # (The final `pnpm build` below re-runs this idempotently for apps/*.)
+      - run: pnpm -r --filter='./packages/*' build
+
+      - name: Validate packages publish shape
+        run: pnpm -r --filter='./packages/*' exec publint --strict
+
+      - name: Validate types resolve in ESM
+        run: pnpm -r --filter='./packages/*' exec attw --pack --profile node16
+
+      - name: No CJS-only globals in packages/ + apps/web
+        run: |
+          set -e
+          # Filter out: (1) legitimate ESM shims using fileURLToPath, (2) test files where Vitest injects __dirname
+          violations=$(grep -rEn "(^|[^a-zA-Z_])__(dirname|filename)\b" \
+              --include='*.ts' --include='*.tsx' \
+              packages/ apps/web/src/ 2>/dev/null \
+            | grep -v "fileURLToPath" \
+            | grep -v '\.spec\.ts\|\.test\.ts\|\.spec\.tsx\|\.test\.tsx' \
+            || true)
+          if [ -n "$violations" ]; then
+            echo "::error::CJS-only globals (__dirname/__filename) found in ESM scope:"
+            echo "$violations"
+            exit 1
+          fi
+          echo "OK — no CJS-only globals in packages/ + apps/web"
+
+      - name: All non-api packages have type:module
+        run: |
+          set -e
+          fail=0
+          for f in packages/*/package.json apps/web/package.json; do
+            if ! grep -q '"type": "module"' "$f"; then
+              echo "::error file=$f::missing \"type\": \"module\""
+              fail=1
+            fi
+          done
+          [ $fail -eq 0 ] && echo "OK — all non-api packages have type:module"
+          exit $fail
+
       - run: pnpm -r test
       - run: pnpm -F @modeldoctor/api test:e2e
       - run: pnpm build

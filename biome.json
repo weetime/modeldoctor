@@ -26,10 +26,26 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": { "noUselessElse": "warn", "useConst": "warn", "useImportType": "off" },
+      "style": {
+        "noUselessElse": "warn",
+        "useConst": "warn",
+        "useImportType": "off",
+        "useNodejsImportProtocol": "error"
+      },
       "suspicious": { "noExplicitAny": "warn", "noArrayIndexKey": "warn" },
       "correctness": { "useExhaustiveDependencies": "warn" },
-      "complexity": { "noForEach": "warn" }
+      "complexity": { "noForEach": "warn" },
+      "nursery": { "noCommonJs": "error" }
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": ["apps/api/**/*.ts"],
+      "linter": {
+        "rules": {
+          "nursery": { "noCommonJs": "off" }
+        }
+      }
+    }
+  ]
 }
