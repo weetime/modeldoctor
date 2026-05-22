@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // ── Phase 2 Task 2 removes these overrides when contracts becomes
+    // ── Phase 1 Task 2 removes these overrides when contracts becomes
     //    an ESM dual-package (NodeNext + verbatimModuleSyntax from base).
     "module": "commonjs",
     "moduleResolution": "node",

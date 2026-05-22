@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // ── Phase 2 Task 3 replaces these overrides when tool-adapters
+    // ── Phase 1 Task 3 replaces these overrides when tool-adapters
     //    migrates to ESM (NodeNext + verbatimModuleSyntax from base).
     "module": "ESNext",
     "moduleResolution": "bundler",
