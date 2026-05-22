@@ -1,15 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // ── Phase 1 Task 2 removes these overrides when contracts becomes
-    //    an ESM dual-package (NodeNext + verbatimModuleSyntax from base).
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "verbatimModuleSyntax": false,
-    "allowSyntheticDefaultImports": true,
-    "isolatedModules": false,
-    // ── (existing contracts-specific options below, keep as-is) ──
     "outDir": "./dist",
     "rootDir": "./src"
   },
