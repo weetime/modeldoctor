@@ -4,7 +4,8 @@
     "declaration": false,
     "sourceMap": true,
     "rootDir": "./src",
-    "paths": {}
+    "paths": {},
+    "noEmit": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts", "test"]
