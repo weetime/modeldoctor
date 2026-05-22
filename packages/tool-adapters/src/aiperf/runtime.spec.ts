@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { BuildCommandPlan } from "../core/interface.js";
 import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import type { AiperfParams } from "./schema.js";
 
-const fixturePath = (n: string) => join(__dirname, "__fixtures__", n);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fixturePath = (n: string) => path.join(__dirname, "__fixtures__", n);
 
 const baseParams: AiperfParams = {
   concurrency: 8,
