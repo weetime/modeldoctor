@@ -1,6 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // ── Phase 2 Task 3 replaces these overrides when tool-adapters
+    //    migrates to ESM (NodeNext + verbatimModuleSyntax from base).
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": false,
+    // ── (existing tool-adapters-specific options below, keep as-is) ──
     "outDir": "./dist",
     "rootDir": "./src"
   },

@@ -1,6 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // ── Web is already ESM ("type": "module") but uses Vite bundler
+    //    resolution. These overrides preserve the Vite-compatible
+    //    module resolution until apps/web adopts NodeNext (future task).
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": false,
+    // ── (existing apps/web-specific options below, keep as-is) ──
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true,
