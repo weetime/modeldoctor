@@ -141,16 +141,7 @@ export function ChannelSheet({ open, onOpenChange, channel }: Props): JSX.Elemen
       connectionIds: hasGlobalRow ? [] : connIds,
       events,
     });
-  }, [
-    open,
-    channel?.id,
-    channel?.type,
-    channel?.name,
-    subsQuery.isSuccess,
-    existingSubs,
-    form,
-    channel,
-  ]);
+  }, [open, channel?.id, channel?.type, channel?.name, subsQuery.isSuccess, existingSubs, form]);
 
   /** Compute the set of subscription keys the user wants. */
   const intendedKeys = useMemo<SubKey[]>(() => {

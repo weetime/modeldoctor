@@ -126,7 +126,8 @@ export function ChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, tQg]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: tQg from useTranslation is stable; we only want to re-fire on searchParams change
+  }, [searchParams]);
 
   const canSend = !!slice.selectedConnectionId;
   const disabledReason = canSend ? undefined : t("chat.composer.needConnection");

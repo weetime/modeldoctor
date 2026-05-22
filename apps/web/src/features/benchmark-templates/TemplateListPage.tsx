@@ -55,7 +55,8 @@ export function TemplateListPage() {
       setParam("search", trimmed || null);
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
-  }, [searchDraft, setParam]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: setParam is defined inline and changes identity each render; we intentionally debounce only on draft change
+  }, [searchDraft]);
 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useTemplates({
     scenario,

@@ -52,7 +52,7 @@ export function RunsListFilters({ query, onChange }: RunsListFiltersProps) {
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
     // biome-ignore lint/correctness/useExhaustiveDependencies: patch closes over query but we intentionally only refire on draft change
-  }, [searchDraft, patch]);
+  }, [searchDraft]);
 
   const isFiltered =
     query.status !== undefined ||

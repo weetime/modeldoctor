@@ -69,7 +69,8 @@ export function BenchmarkListFilters({
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchDraft, patch]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: patch identity is unstable; we intentionally debounce only on draft change
+  }, [searchDraft]);
 
   const isFiltered =
     query.tool !== undefined ||
