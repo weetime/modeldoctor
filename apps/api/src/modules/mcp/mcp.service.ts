@@ -26,8 +26,8 @@ import { registerListPrometheusDatasources } from "./tools/list-prometheus-datas
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
-import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
+import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
 import { registerTestChannel } from "./tools/test-channel.tool.js";
 import { registerUnsubscribe } from "./tools/unsubscribe.tool.js";
 

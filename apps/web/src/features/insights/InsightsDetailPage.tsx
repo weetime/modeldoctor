@@ -1,3 +1,8 @@
+import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
+import { SearchX } from "lucide-react";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams, useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
@@ -12,19 +17,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBenchmarkList } from "@/features/benchmarks/queries";
 import { useConnection, useUpdateConnection } from "@/features/connections/queries";
-import type { Benchmark, EndpointReportRange, ScenarioId } from "@modeldoctor/contracts";
-import { SearchX } from "lucide-react";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { useParams, useSearchParams } from "react-router-dom";
 import { AiDiagnosisCard } from "./AiDiagnosisCard";
-import { ProfileSelector } from "./ProfileSelector";
-import { RadarChart } from "./RadarChart";
-import { ScenarioPanel } from "./ScenarioPanel";
 import { buildFindings } from "./buildFindings";
 import { axisValue, compositeScore, scenarioScore } from "./evaluate";
+import { ProfileSelector } from "./ProfileSelector";
 import { useEvaluationProfiles } from "./queries";
+import { RadarChart } from "./RadarChart";
 import { getValidatedRange } from "./range";
+import { ScenarioPanel } from "./ScenarioPanel";
 
 function severityClass(score: number | null): string {
   if (score == null) return "text-muted-foreground";

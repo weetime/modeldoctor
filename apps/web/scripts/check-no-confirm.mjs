@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Forbids window.confirm / window.alert — use AlertDialog instead.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve, relative } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -40,7 +40,7 @@ for (const file of walk(SRC)) {
 
 if (failed) {
   console.error("[no-confirm] FAIL — use AlertDialog instead of window.confirm/alert:");
-  for (const h of hits) console.error("  " + h);
+  for (const h of hits) console.error(`  ${h}`);
   process.exit(1);
 }
 console.log("[no-confirm] OK — no window.confirm/alert in source.");

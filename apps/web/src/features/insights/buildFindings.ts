@@ -1,5 +1,5 @@
-import i18n from "@/lib/i18n";
 import type { Benchmark, Finding, ProfileRules } from "@modeldoctor/contracts";
+import i18n from "@/lib/i18n";
 import { ALL_CHECKS, type CheckDescriptor } from "./checks/descriptors";
 import { evaluateSeverity } from "./evaluate";
 

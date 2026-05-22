@@ -13,9 +13,9 @@ import { DiagnosticsRepository } from "./diagnostics.repository.js";
 
 function parseHeaderLines(s: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
-  if (!s || !s.trim()) return out;
+  if (!s?.trim()) return out;
   for (const rawLine of s.split("\n").map((l) => l.trim())) {
-    if (!rawLine || !rawLine.includes(":")) continue;
+    if (!rawLine?.includes(":")) continue;
     const idx = rawLine.indexOf(":");
     out[rawLine.slice(0, idx).trim()] = rawLine.slice(idx + 1).trim();
   }

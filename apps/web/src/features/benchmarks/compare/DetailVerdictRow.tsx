@@ -1,16 +1,16 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useBaselineById } from "@/features/baseline/queries";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useBaselineById } from "@/features/baseline/queries";
 import { useBenchmarkDetail } from "../queries";
-import { VerdictBadge } from "./VerdictBadge";
 import {
-  type VerdictKind,
   deltaText,
   readErrorRate,
   readP95Latency,
   readThroughput,
+  type VerdictKind,
 } from "./metrics";
+import { VerdictBadge } from "./VerdictBadge";
 import { verdictFor } from "./verdict";
 
 export interface DetailVerdictRowProps {

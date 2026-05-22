@@ -20,8 +20,8 @@ import type { Env } from "../../config/env.schema.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import {
   type AlertmanagerPayload,
-  type ListAlertsQuery,
   alertmanagerPayloadSchema,
+  type ListAlertsQuery,
   listAlertsQuerySchema,
 } from "./alerts.dto.js";
 import { AlertsService } from "./alerts.service.js";

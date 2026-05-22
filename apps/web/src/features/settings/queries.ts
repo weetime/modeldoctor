@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   LlmJudgeProviderPublic,
   TestLlmJudgeRequest,
@@ -6,6 +5,7 @@ import type {
   UpsertLlmJudgeProvider,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 const KEY = ["llm-judge-provider"] as const;
 

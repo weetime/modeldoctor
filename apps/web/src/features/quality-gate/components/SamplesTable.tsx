@@ -1,3 +1,7 @@
+import type { RunSample, SampleDelta, SampleFilter } from "@modeldoctor/contracts";
+import { Check, Minus, X } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,10 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RunSample, SampleDelta, SampleFilter } from "@modeldoctor/contracts";
-import { Check, Minus, X } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useRunSamples } from "../queries";
 
 function deltaVariant(

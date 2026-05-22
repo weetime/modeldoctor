@@ -9,8 +9,8 @@ import { Body, Controller, Get, HttpCode, Patch, Post, UseGuards } from "@nestjs
 import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { UsersService } from "./users.service.js";
 
 @UseGuards(JwtAuthGuard)

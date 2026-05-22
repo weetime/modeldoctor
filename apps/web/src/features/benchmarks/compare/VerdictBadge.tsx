@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { VerdictKind } from "./metrics";
 import type { Verdict } from "./verdict";
 

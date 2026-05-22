@@ -1,3 +1,14 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  type UpdateEvaluationRequest,
+  updateEvaluationRequestSchema,
+} from "@modeldoctor/contracts";
+import { Copy, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { PageHeader } from "@/components/common/page-header";
@@ -13,17 +24,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  type UpdateEvaluationRequest,
-  updateEvaluationRequestSchema,
-} from "@modeldoctor/contracts";
-import { Copy, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 import { PinnedBaselineCard } from "./components/PinnedBaselineCard";
 import { SamplesTableEditor } from "./components/SamplesTableEditor";
 import { useDuplicateEvaluation, useEvaluation, useUpdateEvaluation } from "./queries";

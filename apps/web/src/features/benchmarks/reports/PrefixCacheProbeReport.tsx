@@ -1,3 +1,5 @@
+import type { PrefixCacheProbeReport as Data } from "@modeldoctor/tool-adapters/schemas";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -7,8 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PrefixCacheProbeReport as Data } from "@modeldoctor/tool-adapters/schemas";
-import { useTranslation } from "react-i18next";
 
 interface Props {
   data: Data;

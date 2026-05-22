@@ -19,6 +19,7 @@ vi.mock("@/lib/api-client", () => {
   }
   return { ApiError, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn() } };
 });
+
 import { api } from "@/lib/api-client";
 
 function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {

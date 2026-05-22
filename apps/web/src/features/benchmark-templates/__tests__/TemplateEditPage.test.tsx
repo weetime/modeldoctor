@@ -14,13 +14,16 @@ vi.mock("../queries", () => ({
 }));
 
 import { useAuthStore } from "@/stores/auth-store";
-import { TemplateEditPage } from "../TemplateEditPage";
 import { useTemplate } from "../queries";
+import { TemplateEditPage } from "../TemplateEditPage";
 
 function Wrapper({
   children,
   route = "/benchmark-templates/abc",
-}: { children: ReactNode; route?: string }) {
+}: {
+  children: ReactNode;
+  route?: string;
+}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>

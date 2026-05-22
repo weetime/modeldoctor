@@ -1,14 +1,14 @@
 import {
   type CreatePrometheusDatasource,
+  createPrometheusDatasourceSchema,
   type DeletePrometheusDatasourceResponse,
   type ListPrometheusDatasourcesResponse,
   type PrometheusDatasourcePublic,
   type PrometheusDatasourceWithSecret,
   type UpdatePrometheusDatasource,
+  updatePrometheusDatasourceSchema,
   type VerifyPrometheusDatasourceRequest,
   type VerifyPrometheusDatasourceResponse,
-  createPrometheusDatasourceSchema,
-  updatePrometheusDatasourceSchema,
   verifyPrometheusDatasourceRequestSchema,
   verifyPrometheusDatasourceResponseSchema,
 } from "@modeldoctor/contracts";
@@ -27,8 +27,8 @@ import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { parseCustomHeaders } from "../../common/http/parse-custom-headers.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { verifyPrometheus } from "../connection/discovery/verify-prometheus.js";
 import {
   type PrometheusDatasourceActor,

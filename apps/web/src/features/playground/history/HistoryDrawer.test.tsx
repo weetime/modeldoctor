@@ -2,8 +2,8 @@ import "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
-import { HistoryDrawer } from "./HistoryDrawer";
 import { createHistoryStore } from "./createHistoryStore";
+import { HistoryDrawer } from "./HistoryDrawer";
 
 interface Snap {
   text: string;

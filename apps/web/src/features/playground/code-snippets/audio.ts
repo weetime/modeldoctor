@@ -1,6 +1,6 @@
 import type { SttSlice, TtsSlice } from "../audio/store";
-import { noBase64Snippets, truncateDataUrl } from "./chat";
 import type { CodeSnippets } from "./chat";
+import { noBase64Snippets, truncateDataUrl } from "./chat";
 
 const KEY = "<YOUR_API_KEY>";
 const TTS_PATH = "/v1/audio/speech";

@@ -1,3 +1,9 @@
+import type { EndpointReportRange } from "@modeldoctor/contracts";
+import { formatDistanceToNow } from "date-fns";
+import { ArrowRight, BarChart3, Search } from "lucide-react";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -14,15 +20,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEvaluationProfiles } from "@/features/insights/queries";
 import { getValidatedRange } from "@/features/insights/range";
-import type { EndpointReportRange } from "@modeldoctor/contracts";
-import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, BarChart3, Search } from "lucide-react";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
-import { TrendIndicator } from "./TrendIndicator";
 import { useEndpointReports } from "./queries";
 import { StatusBadge } from "./status-display";
+import { TrendIndicator } from "./TrendIndicator";
 
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
 const ALL = "__all__";
@@ -49,7 +49,7 @@ export function EndpointReportsPage() {
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    data?.items.forEach((it) => set.add(it.connection.category));
+    for (const it of data?.items ?? []) set.add(it.connection.category);
     return [...set].sort();
   }, [data]);
 

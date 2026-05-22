@@ -1,9 +1,9 @@
+import { Check, RotateCcw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Check, RotateCcw, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { ProbeName, ProbeResult } from "./types";
 import { PROBE_DEFAULT_PATHS } from "./types";
 

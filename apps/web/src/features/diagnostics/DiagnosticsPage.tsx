@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { EndpointPicker } from "@/components/connection/EndpointPicker";
 import { Button } from "@/components/ui/button";
@@ -9,8 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError, api } from "@/lib/api-client";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { ProbeCard } from "./ProbeCard";
 import { useE2EStore } from "./store";
 import type { DiagnosticsRunResponse, ProbeCategory, ProbeName, ProbeResult } from "./types";

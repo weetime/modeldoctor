@@ -1,8 +1,8 @@
 import {
   type CreateEvaluationRequest,
-  type UpdateEvaluationRequest,
   createEvaluationRequestSchema,
   importEvaluationRequestSchema,
+  type UpdateEvaluationRequest,
   updateEvaluationRequestSchema,
 } from "@modeldoctor/contracts";
 import {
@@ -20,8 +20,8 @@ import {
 import { z } from "zod";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
 import { EvaluationsService } from "../services/evaluations.service.js";
 
 const importBodySchema = z.object({

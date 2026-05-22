@@ -1,3 +1,6 @@
+import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,9 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { BenchmarkStatus, BenchmarkTool, ListBenchmarksQuery } from "@modeldoctor/contracts";
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { DateRangeFilter } from "./DateRangeFilter";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -69,6 +69,7 @@ export function BenchmarkListFilters({
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: patch identity is unstable; we intentionally debounce only on draft change
   }, [searchDraft]);
 
   const isFiltered =

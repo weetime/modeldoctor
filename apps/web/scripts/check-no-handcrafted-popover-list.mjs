@@ -2,8 +2,8 @@
 // Warn-only: detects co-occurrence of <Popover, <Input, and <ul in features/.
 // Signals a likely hand-rolled searchable dropdown that should use <Combobox>.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve, relative } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -33,7 +33,7 @@ for (const file of walk(FEATURES)) {
 
 if (hits.length) {
   console.warn("[no-handcrafted-popover-list] suspected hand-rolled searchable dropdowns:");
-  for (const h of hits) console.warn("  " + h);
+  for (const h of hits) console.warn(`  ${h}`);
   console.warn("Consider replacing with <Combobox> from components/ui/combobox.tsx.");
 }
 // Always exit 0 — warning only.

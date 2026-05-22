@@ -1,3 +1,11 @@
+import type { VegetaParams } from "@modeldoctor/tool-adapters/schemas";
+import {
+  VEGETA_API_TYPE_TO_BODY,
+  VEGETA_API_TYPE_TO_PATH,
+  VEGETA_CATEGORY_DEFAULTS,
+} from "@modeldoctor/tool-adapters/schemas";
+import { useEffect, useRef } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,14 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useConnections } from "@/features/connections/queries";
-import {
-  VEGETA_API_TYPE_TO_BODY,
-  VEGETA_API_TYPE_TO_PATH,
-  VEGETA_CATEGORY_DEFAULTS,
-} from "@modeldoctor/tool-adapters/schemas";
-import type { VegetaParams } from "@modeldoctor/tool-adapters/schemas";
-import { useEffect, useRef } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
 
 const API_TYPES: VegetaParams["apiType"][] = [
   "chat",

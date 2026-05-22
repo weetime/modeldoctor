@@ -1,10 +1,10 @@
-import i18n from "@/lib/i18n";
 import type { Benchmark } from "@modeldoctor/contracts";
 // apps/web/src/features/insights/__tests__/ScenarioPanel.test.tsx
 import { render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import i18n from "@/lib/i18n";
 import { ScenarioPanel } from "../ScenarioPanel";
 
 function r(ui: React.ReactNode) {

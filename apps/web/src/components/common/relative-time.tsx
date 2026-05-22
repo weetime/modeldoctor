@@ -1,6 +1,6 @@
-import { useLocaleStore } from "@/stores/locale-store";
 import { format, formatDistanceToNow } from "date-fns";
 import { enUS, zhCN } from "date-fns/locale";
+import { useLocaleStore } from "@/stores/locale-store";
 
 interface RelativeTimeProps {
   date: string | number | Date;

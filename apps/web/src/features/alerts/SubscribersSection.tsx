@@ -1,3 +1,7 @@
+import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { FormSection } from "@/components/common/form-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,10 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useChannels } from "@/features/notifications/queries";
-import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { useCreateSubscriber, useDeleteSubscriber, useSubscribers } from "./queries";
 import type { Severity } from "./types";
 

@@ -13,8 +13,8 @@ vi.mock("@/stores/auth-store", () => ({
     selector({ user: { id: "user-1", roles: ["user"] } }),
 }));
 
-import { TemplateListPage } from "../TemplateListPage";
 import { useTemplates } from "../queries";
+import { TemplateListPage } from "../TemplateListPage";
 
 function Wrapper({
   children,

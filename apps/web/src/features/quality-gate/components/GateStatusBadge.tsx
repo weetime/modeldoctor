@@ -1,6 +1,6 @@
 import type { GateResult, RunStatus } from "@modeldoctor/contracts";
-import { AlertTriangle, Ban, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface Visual {

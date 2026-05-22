@@ -1,6 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type UpsertLlmJudgeProvider, upsertLlmJudgeProviderSchema } from "@modeldoctor/contracts";
 import { Eye, EyeOff } from "lucide-react";
@@ -8,6 +5,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useLlmJudgeProvider, useTestLlmJudge, useUpsertLlmJudgeProvider } from "./queries";
 import { SettingRow } from "./settings-primitives";
 

@@ -1,9 +1,9 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "files": {
-    "ignore": ["**/dist", "**/node_modules", "**/coverage", "**/.vite"]
+    "includes": ["**", "!**/dist", "!**/node_modules", "!**/coverage", "!**/.vite"]
   },
-  "organizeImports": { "enabled": true },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -22,28 +22,43 @@
       "semicolons": "always"
     }
   },
+  "css": {
+    "parser": { "cssModules": true, "tailwindDirectives": true }
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
+      "a11y": {
+        "useAriaPropsSupportedByRole": "warn",
+        "useSemanticElements": "warn"
+      },
       "style": {
         "noUselessElse": "warn",
         "useConst": "warn",
         "useImportType": "off",
-        "useNodejsImportProtocol": "error"
+        "useNodejsImportProtocol": "error",
+        "noCommonJs": "error"
       },
-      "suspicious": { "noExplicitAny": "warn", "noArrayIndexKey": "warn" },
-      "correctness": { "useExhaustiveDependencies": "warn" },
-      "complexity": { "noForEach": "warn" },
-      "nursery": { "noCommonJs": "error" }
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "noTemplateCurlyInString": "warn",
+        "noAssignInExpressions": "warn",
+        "noUnknownAtRules": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
+      "complexity": { "noForEach": "warn" }
     }
   },
   "overrides": [
     {
-      "include": ["apps/api/**/*.ts"],
+      "includes": ["**/apps/api/**/*.ts"],
       "linter": {
         "rules": {
-          "nursery": { "noCommonJs": "off" }
+          "style": { "noCommonJs": "off" }
         }
       }
     }

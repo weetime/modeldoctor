@@ -1,11 +1,11 @@
-import i18n from "@/lib/i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TtsTab } from "./TtsTab";
+import i18n from "@/lib/i18n";
 import { useAudioHistoryStore } from "./history";
 import { useAudioStore } from "./store";
+import { TtsTab } from "./TtsTab";
 
 const renderTts = () =>
   render(

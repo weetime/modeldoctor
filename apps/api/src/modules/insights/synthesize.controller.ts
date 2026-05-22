@@ -3,8 +3,8 @@ import { type SynthesizeRequest, synthesizeRequestSchema } from "@modeldoctor/co
 import { Body, Controller, Param, Post, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { SynthesizeService } from "./synthesize.service.js";
 
 @UseGuards(JwtAuthGuard)

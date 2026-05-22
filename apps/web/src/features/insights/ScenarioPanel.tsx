@@ -1,10 +1,11 @@
 // apps/web/src/features/insights/ScenarioPanel.tsx
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 import type { Benchmark, Finding, ScenarioId } from "@modeldoctor/contracts";
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FindingsCard } from "./FindingsCard";
 import { RadarChart } from "./RadarChart";
 

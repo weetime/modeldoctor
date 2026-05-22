@@ -61,7 +61,7 @@ export class AlertExplainerService {
    */
   async explainAsync(alertEventId: string): Promise<void> {
     const judge = await this.judge.getDecrypted();
-    if (!judge || !judge.enabled) {
+    if (!judge?.enabled) {
       this.log.debug(`No LLM judge configured; skipping explanation for ${alertEventId}`);
       return;
     }

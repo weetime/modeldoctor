@@ -1,8 +1,8 @@
 // apps/api/src/modules/insights/comparison.controller.ts
 import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ComparisonService } from "./comparison.service.js";
 
 @UseGuards(JwtAuthGuard)

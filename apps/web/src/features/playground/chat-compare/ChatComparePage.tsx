@@ -1,6 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { ApiError, api } from "@/lib/api-client";
-import { playgroundFetchStream } from "@/lib/playground-stream";
 import type {
   ChatMessage,
   PlaygroundChatRequest,
@@ -9,9 +6,12 @@ import type {
 import { Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { PlaygroundShell } from "../PlaygroundShell";
-import { MessageComposer } from "../chat/MessageComposer";
+import { Button } from "@/components/ui/button";
+import { ApiError, api } from "@/lib/api-client";
+import { playgroundFetchStream } from "@/lib/playground-stream";
 import { type AttachedFile, buildContentParts } from "../chat/attachments";
+import { MessageComposer } from "../chat/MessageComposer";
+import { PlaygroundShell } from "../PlaygroundShell";
 import { ChatPanel } from "./ChatPanel";
 import { CompareHistoryControls } from "./CompareHistory";
 import { PanelCountSwitcher } from "./PanelCountSwitcher";

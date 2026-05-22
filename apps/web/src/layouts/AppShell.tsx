@@ -1,6 +1,6 @@
+import { Outlet } from "react-router-dom";
 import { CommandMenuProvider } from "@/components/command-menu/CommandMenuProvider";
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import { Outlet } from "react-router-dom";
 
 export function AppShell() {
   return (

@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
+import { useMemo } from "react";
 import {
+  assignRunColors,
   BarChartPanel,
   Gauge,
   LatencyCDF,
@@ -8,12 +11,9 @@ import {
   QPSTimeseries,
   Stat,
   TTFTHistogram,
-  assignRunColors,
   useChartTokens,
 } from "@/components/charts";
-import type { ReactNode } from "react";
-import { useMemo } from "react";
-import { RUN_ID_LIST, fixtures } from "./fixtures";
+import { fixtures, RUN_ID_LIST } from "./fixtures";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

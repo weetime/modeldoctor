@@ -2,7 +2,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { BenchmarkRepository } from "../../src/modules/benchmark/benchmark.repository.js";
-import { type E2EContext, bootE2E } from "../helpers/app.js";
+import { bootE2E, type E2EContext } from "../helpers/app.js";
 
 describe("Auth (e2e)", () => {
   let ctx: E2EContext;
@@ -300,7 +300,11 @@ describe("Auth (e2e)", () => {
       name: "admin-run",
       params: { apiType: "chat", apiBaseUrl: "http://admin-run", model: "m", rate: 1, duration: 1 },
     });
-    await repo.update(adminRow.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
+    await repo.update(adminRow.id, {
+      status: "completed",
+      completedAt: new Date(),
+      summaryMetrics: {},
+    });
 
     const user2Row = await repo.create({
       userId: user2Id,
@@ -309,7 +313,11 @@ describe("Auth (e2e)", () => {
       name: "user2-run",
       params: { apiType: "chat", apiBaseUrl: "http://user2-run", model: "m", rate: 1, duration: 1 },
     });
-    await repo.update(user2Row.id, { status: "completed", completedAt: new Date(), summaryMetrics: {} });
+    await repo.update(user2Row.id, {
+      status: "completed",
+      completedAt: new Date(),
+      summaryMetrics: {},
+    });
 
     const adminBenchmarksRes = await request(ctx.app.getHttpServer())
       .get("/api/benchmarks?scope=all")
@@ -350,7 +358,9 @@ describe("Auth (e2e)", () => {
       .expect(200);
 
     // All returned benchmarks must belong to this user
-    expect(benchmarksRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(true);
+    expect(benchmarksRes.body.items.every((r: { userId: string }) => r.userId === userId)).toBe(
+      true,
+    );
     expect(
       benchmarksRes.body.items.some(
         (r: { params: { apiBaseUrl?: string } }) => r.params?.apiBaseUrl === "http://own-run",
@@ -384,9 +394,7 @@ describe("Auth (e2e)", () => {
 
     const rawCookies = regRes.headers["set-cookie"] as string[] | string | undefined;
     const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
-    const cookieValue = (
-      cookies.find((c) => c.startsWith("md_refresh=")) as string
-    ).split(";")[0];
+    const cookieValue = (cookies.find((c) => c.startsWith("md_refresh=")) as string).split(";")[0];
 
     const [resA, resB] = await Promise.all([
       request(ctx.app.getHttpServer()).post("/api/auth/refresh").set("Cookie", cookieValue),

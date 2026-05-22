@@ -13,7 +13,7 @@ vi.mock("../../src/modules/connection/discovery/ssrf-guard.js", () => ({
 import request from "supertest";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { DispatcherService } from "../../src/modules/notifications/dispatcher.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 describe("Notifications e2e", () => {
   let ctx: E2EContext;

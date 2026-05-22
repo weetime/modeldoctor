@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   Benchmark,
   BenchmarkChartsResponse,
@@ -6,6 +5,7 @@ import type {
   ListBenchmarksQuery,
   ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
+import { api } from "@/lib/api-client";
 
 function buildListQuery(q: Partial<ListBenchmarksQuery>): string {
   const usp = new URLSearchParams();

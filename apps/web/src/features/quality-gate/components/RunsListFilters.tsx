@@ -1,3 +1,6 @@
+import type { GateResult, ListRunsQuery, RunStatus } from "@modeldoctor/contracts";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,9 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnections } from "@/features/connections/queries";
-import type { GateResult, ListRunsQuery, RunStatus } from "@modeldoctor/contracts";
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { DateRangeFilter } from "../../benchmarks/DateRangeFilter";
 import { useEvaluations } from "../queries";
 

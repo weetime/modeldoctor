@@ -1,3 +1,7 @@
+import { History, Trash2 } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { StoreApi, UseBoundStore } from "zustand";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,10 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { History, Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
-import type { StoreApi, UseBoundStore } from "zustand";
 import type { HistoryEntry, HistoryStoreState } from "./createHistoryStore";
 
 export interface HistoryDrawerProps<S> {

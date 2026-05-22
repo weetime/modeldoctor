@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { byTool } from "./core/registry.js";
 import { guidellmParamsSchema } from "./guidellm/schema.js";
 import {
-  SCENARIOS,
-  type ScenarioId,
   applyScenarioConstraints,
   assertScenariosInvariant,
+  SCENARIOS,
+  type ScenarioId,
 } from "./scenarios.js";
 
 describe("SCENARIOS constant", () => {

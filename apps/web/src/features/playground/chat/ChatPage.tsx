@@ -1,7 +1,3 @@
-import { useConnection } from "@/features/connections/queries";
-import { qgApi } from "@/features/quality-gate/api";
-import { ApiError, api } from "@/lib/api-client";
-import { playgroundFetchStream } from "@/lib/playground-stream";
 import type {
   ChatMessage,
   PlaygroundChatRequest,
@@ -11,8 +7,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useConnection } from "@/features/connections/queries";
+import { qgApi } from "@/features/quality-gate/api";
+import { ApiError, api } from "@/lib/api-client";
+import { playgroundFetchStream } from "@/lib/playground-stream";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
-import { PlaygroundShell } from "../PlaygroundShell";
 import { useChatModeTabs } from "../chat-compare/useChatModeTabs";
 import { genChatSnippets } from "../code-snippets/chat";
 import { HistoryDrawer } from "../history/HistoryDrawer";
@@ -21,12 +20,13 @@ import {
   persistMessageAttachments,
   rehydrateMessageBlobs,
 } from "../history/persistAttachments";
+import { PlaygroundShell } from "../PlaygroundShell";
+import { type AttachedFile, buildContentParts } from "./attachments";
 import { ChatParams } from "./ChatParams";
+import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { MessageComposer } from "./MessageComposer";
 import { MessageList } from "./MessageList";
 import { ReproduceBanner } from "./ReproduceBanner";
-import { type AttachedFile, buildContentParts } from "./attachments";
-import { type ChatHistorySnapshot, useChatHistoryStore } from "./history";
 import { useChatStore } from "./store";
 
 /**
@@ -119,13 +119,14 @@ export function ChatPage() {
           expected: sample.expected,
           initialDraft: sample.prompt,
         });
-      } catch (e) {
+      } catch (_e) {
         toast.error(tQg("playground.reproduceFailedToast", "Failed to load reproduce context"));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // biome-ignore lint/correctness/useExhaustiveDependencies: tQg from useTranslation is stable; we only want to re-fire on searchParams change
   }, [searchParams]);
 
   const canSend = !!slice.selectedConnectionId;

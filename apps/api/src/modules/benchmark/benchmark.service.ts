@@ -8,7 +8,7 @@ import {
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
-import { type ToolName, applyScenarioConstraints, byTool } from "@modeldoctor/tool-adapters";
+import { applyScenarioConstraints, byTool, type ToolName } from "@modeldoctor/tool-adapters";
 import {
   BadRequestException,
   ConflictException,

@@ -1,3 +1,7 @@
+import type { Benchmark, CompareNarrative, GateResult, RunStatus } from "@modeldoctor/contracts";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/page-header";
 import {
   AlertDialog,
@@ -14,14 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GateStatusBadge } from "@/features/quality-gate/components/GateStatusBadge";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
-import type { Benchmark, CompareNarrative, GateResult, RunStatus } from "@modeldoctor/contracts";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
 import { AiAnalysisPanel } from "./AiAnalysisPanel";
-import { type ReportRun, ReportSections } from "./ReportSections";
 import { exportPageAsHtml } from "./exportHtml";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
+import { type ReportRun, ReportSections } from "./ReportSections";
 
 function extractParamsSummary(params: unknown): {
   workload?: string;

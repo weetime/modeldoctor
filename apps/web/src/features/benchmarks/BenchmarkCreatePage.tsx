@@ -1,3 +1,17 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  type BenchmarkTemplate,
+  type CreateBenchmarkRequest,
+  createBenchmarkRequestSchema,
+  type ScenarioId,
+  scenarioIdSchema,
+} from "@modeldoctor/contracts";
+import { X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { useForm, useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
 import { ConnectionPicker } from "@/components/connection/ConnectionPicker";
@@ -16,27 +30,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTemplate } from "@/features/benchmark-templates/queries";
 import { useConnection } from "@/features/connections/queries";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  type BenchmarkTemplate,
-  type CreateBenchmarkRequest,
-  type ScenarioId,
-  createBenchmarkRequestSchema,
-  scenarioIdSchema,
-} from "@modeldoctor/contracts";
-import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useForm, useFormContext } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
-import { PrefillFromTemplatePopover } from "./PrefillFromTemplatePopover";
 import {
   TOOL_DEFAULTS,
   ToolParamsForm,
   ToolSelectorField,
   useToolUnsupported,
 } from "./forms/ToolParamsEditor";
+import { PrefillFromTemplatePopover } from "./PrefillFromTemplatePopover";
 import { useCreateBenchmark } from "./queries";
 import { SCENARIOS } from "./scenarios";
 
@@ -45,7 +45,11 @@ function SubmitRow({
   scenario,
   pending,
   onCancel,
-}: { scenario: ScenarioId; pending: boolean; onCancel: () => void }) {
+}: {
+  scenario: ScenarioId;
+  pending: boolean;
+  onCancel: () => void;
+}) {
   const { t } = useTranslation("benchmarks");
   const { t: tc } = useTranslation("common");
   const { formState } = useFormContext();

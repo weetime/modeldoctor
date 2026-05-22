@@ -1,3 +1,20 @@
+import type { ScenarioId } from "@modeldoctor/contracts";
+import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
+import {
+  AIPERF_CATEGORY_DEFAULTS,
+  aiperfParamDefaults,
+  EVALSCOPE_CATEGORY_DEFAULTS,
+  evalscopeParamDefaults,
+  GUIDELLM_CATEGORY_DEFAULTS,
+  guidellmParamDefaults,
+  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
+  prefixCacheProbeParamDefaults,
+  VEGETA_CATEGORY_DEFAULTS,
+  vegetaParamDefaults,
+} from "@modeldoctor/tool-adapters/schemas";
+import { useEffect, useId, useRef } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { FormSection } from "@/components/common/form-section";
 import { Label } from "@/components/ui/label";
 import {
@@ -8,23 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnections } from "@/features/connections/queries";
-import type { ScenarioId } from "@modeldoctor/contracts";
-import {
-  AIPERF_CATEGORY_DEFAULTS,
-  EVALSCOPE_CATEGORY_DEFAULTS,
-  GUIDELLM_CATEGORY_DEFAULTS,
-  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  VEGETA_CATEGORY_DEFAULTS,
-  aiperfParamDefaults,
-  evalscopeParamDefaults,
-  guidellmParamDefaults,
-  prefixCacheProbeParamDefaults,
-  vegetaParamDefaults,
-} from "@modeldoctor/tool-adapters/schemas";
-import type { ToolName } from "@modeldoctor/tool-adapters/schemas";
-import { useEffect, useId, useRef } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { SCENARIOS } from "../scenarios";
 
 const TOOL_CATEGORY_DEFAULTS = {
@@ -34,6 +34,7 @@ const TOOL_CATEGORY_DEFAULTS = {
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
 } as const;
+
 import { AiperfParamsForm } from "./AiperfParamsForm";
 import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";

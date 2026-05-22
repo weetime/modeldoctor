@@ -1,5 +1,5 @@
-import type { EngineManifest } from "../../engine-metrics.js";
 import type { EngineId } from "../../engine.js";
+import type { EngineManifest } from "../../engine-metrics.js";
 import { mindieManifest } from "./mindie.js";
 import { sglangManifest } from "./sglang.js";
 import { teiManifest } from "./tei.js";

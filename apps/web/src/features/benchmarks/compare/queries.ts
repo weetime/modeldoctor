@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   CompareSynthesizeRequest,
   CompareSynthesizeResponse,
@@ -9,6 +8,7 @@ import type {
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export type { HydratedSavedCompare };
 

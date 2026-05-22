@@ -1,22 +1,16 @@
-import i18n from "@/lib/i18n";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nextProvider } from "react-i18next";
 import { beforeAll, describe, expect, it } from "vitest";
+import i18n from "@/lib/i18n";
 import { JudgeConfigEditor } from "../JudgeConfigEditor";
 
 beforeAll(async () => {
   await i18n.changeLanguage("zh-CN");
 });
 
-function Harness({
-  defaultValues,
-  children,
-}: {
-  defaultValues: object;
-  children: ReactNode;
-}) {
+function Harness({ defaultValues, children }: { defaultValues: object; children: ReactNode }) {
   const form = useForm({ defaultValues });
   return (
     <I18nextProvider i18n={i18n}>

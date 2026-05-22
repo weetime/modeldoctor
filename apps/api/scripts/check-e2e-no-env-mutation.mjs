@@ -10,7 +10,7 @@
 // call and its matching `)`, then regex inside that span. This catches
 // the 99% case without pulling in TypeScript at lint time.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

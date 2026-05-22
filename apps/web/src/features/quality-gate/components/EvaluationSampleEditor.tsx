@@ -1,8 +1,8 @@
+import { useFormContext } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { useFormContext } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { JudgeConfigEditor } from "./JudgeConfigEditor";
 
 interface Props {

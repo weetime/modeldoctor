@@ -27,7 +27,7 @@ export function parseCurlCommand(input: string): ParsedCurl {
       const u = new URL(result.url);
       if (u.search) {
         const parts: string[] = [];
-        u.searchParams.forEach((v, k) => parts.push(`${k}=${v}`));
+        for (const [k, v] of u.searchParams) parts.push(`${k}=${v}`);
         result.queryParams = parts.join("\n");
         u.search = "";
         result.url = u.toString().replace(/\/$/, (m) => (result.url.endsWith("/") ? m : ""));

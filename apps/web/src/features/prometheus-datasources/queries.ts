@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   CreatePrometheusDatasource,
   DeletePrometheusDatasourceResponse,
@@ -10,6 +9,7 @@ import type {
   VerifyPrometheusDatasourceResponse,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 const KEY = ["prometheus-datasources"] as const;
 const detailKey = (id: string) => [...KEY, id] as const;

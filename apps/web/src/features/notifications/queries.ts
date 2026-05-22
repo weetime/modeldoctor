@@ -1,4 +1,3 @@
-import { api } from "@/lib/api-client";
 import type {
   Channel,
   CreateChannelRequest,
@@ -8,6 +7,7 @@ import type {
   UpdateChannelRequest,
 } from "@modeldoctor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 const channelsKey = ["notifications", "channels"] as const;
 const subscriptionsKey = ["notifications", "subscriptions"] as const;

@@ -1,5 +1,5 @@
-import { StageBarChart, type StageBarDatum } from "@/components/charts/StageBarChart";
 import { useTranslation } from "react-i18next";
+import { StageBarChart, type StageBarDatum } from "@/components/charts/StageBarChart";
 import { summarizeForPrompt } from "./client-metrics";
 
 export interface StageRun {

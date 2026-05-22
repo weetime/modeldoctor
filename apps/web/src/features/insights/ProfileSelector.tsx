@@ -1,4 +1,7 @@
 // apps/web/src/features/insights/ProfileSelector.tsx
+
+import type { EvaluationProfile } from "@modeldoctor/contracts";
+import { useTranslation } from "react-i18next";
 import {
   Select,
   SelectContent,
@@ -6,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { EvaluationProfile } from "@modeldoctor/contracts";
-import { useTranslation } from "react-i18next";
 
 interface Props {
   value: string;

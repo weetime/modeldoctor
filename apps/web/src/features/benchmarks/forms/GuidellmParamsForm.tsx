@@ -1,3 +1,7 @@
+import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
+import { GUIDELLM_CATEGORY_DEFAULTS, guidellmRateTypes } from "@modeldoctor/tool-adapters/schemas";
+import { useEffect, useId, useRef } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import {
   FormControl,
   FormDescription,
@@ -17,10 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useConnections } from "@/features/connections/queries";
-import { GUIDELLM_CATEGORY_DEFAULTS, guidellmRateTypes } from "@modeldoctor/tool-adapters/schemas";
-import type { GuidellmParams } from "@modeldoctor/tool-adapters/schemas";
-import { useEffect, useId, useRef } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
 
 const PROFILES: GuidellmParams["profile"][] = [
   "throughput",

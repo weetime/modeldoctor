@@ -1,10 +1,10 @@
 import type { ModalityCategory, ProbeName } from "@modeldoctor/contracts";
 
 export type {
-  ProbeName,
-  ProbeCheck,
-  ProbeResult,
   DiagnosticsRunResponse,
+  ProbeCheck,
+  ProbeName,
+  ProbeResult,
 } from "@modeldoctor/contracts";
 
 /**

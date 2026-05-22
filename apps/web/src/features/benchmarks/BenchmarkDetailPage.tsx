@@ -1,3 +1,15 @@
+import type { Benchmark, ConnectionPublic, ScenarioId } from "@modeldoctor/contracts";
+import {
+  migrateVegetaParams,
+  prefixCacheProbeReportSchema,
+} from "@modeldoctor/tool-adapters/schemas";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,24 +29,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
-import type { Benchmark, ConnectionPublic } from "@modeldoctor/contracts";
-import type { ScenarioId } from "@modeldoctor/contracts";
-import {
-  migrateVegetaParams,
-  prefixCacheProbeReportSchema,
-} from "@modeldoctor/tool-adapters/schemas";
-import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
-import { RequestSetupSection } from "./RequestSetupSection";
-import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
-import { SetBaselineDialog } from "./SetBaselineDialog";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
   benchmarkKeys,
@@ -44,6 +40,7 @@ import {
   useCreateBenchmark,
   useDeleteBenchmark,
 } from "./queries";
+import { RequestSetupSection } from "./RequestSetupSection";
 import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
@@ -51,6 +48,8 @@ import { InferenceReport } from "./reports/InferenceReport";
 import { KvCacheStressReport } from "./reports/KvCacheStressReport";
 import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
+import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
+import { SetBaselineDialog } from "./SetBaselineDialog";
 
 /**
  * Pre-terminal placeholder rendered while the benchmark is still in flight.
@@ -267,7 +266,7 @@ export function BenchmarkDetailPage() {
   const canRerun = benchmark.connectionId !== null;
 
   async function handleRerun() {
-    if (!benchmark || !benchmark.connectionId) return;
+    if (!benchmark?.connectionId) return;
     // Schema caps name at 128. " (rerun)" is 8 chars; reserve 120 for the source.
     const sourceName = benchmark.name;
     const trimmed = sourceName.length > 120 ? sourceName.slice(0, 120) : sourceName;

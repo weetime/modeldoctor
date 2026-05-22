@@ -1,6 +1,6 @@
-import { api } from "@/lib/api-client";
 import type { EngineMetricsSnapshotResponse } from "@modeldoctor/contracts";
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export interface EngineMetricsRange {
   from: string;

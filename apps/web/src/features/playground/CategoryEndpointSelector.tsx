@@ -1,3 +1,6 @@
+import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
+import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,9 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConnections } from "@/features/connections/queries";
-import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
-import { useId, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 const NEW_CONNECTION = "__new__";
 

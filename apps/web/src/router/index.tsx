@@ -1,3 +1,4 @@
+import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
 import { AlertsPage } from "@/features/alerts/AlertsPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
@@ -12,11 +13,11 @@ import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { BenchmarkKvCacheStressPage } from "@/features/benchmarks/BenchmarkKvCacheStressPage";
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
-import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { SavedCompareCreatePage } from "@/features/benchmarks/compare/SavedCompareCreatePage";
 import { SavedCompareDetailPage } from "@/features/benchmarks/compare/SavedCompareDetailPage";
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
+import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DeploymentRecipesPage } from "@/features/deployment-recipes";
 import { DevChartsPage } from "@/features/dev-charts";
@@ -29,8 +30,8 @@ import { ProfilePage } from "@/features/me/ProfilePage";
 import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
-import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
+import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
 import { RerankPage } from "@/features/playground/rerank/RerankPage";
@@ -44,7 +45,6 @@ import { RunsListPage } from "@/features/quality-gate/RunsListPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { AppShell } from "@/layouts/AppShell";
-import { Navigate, type RouteObject, useParams, useSearchParams } from "react-router-dom";
 
 function RedirectToInsights() {
   const { connectionId } = useParams<{ connectionId: string }>();

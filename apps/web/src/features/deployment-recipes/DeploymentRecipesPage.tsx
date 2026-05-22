@@ -1,3 +1,6 @@
+import { Check, Filter, Search, SearchX } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
@@ -5,13 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Check, Filter, Search, SearchX } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { ENGINES, getRecipe, MODELS } from "./data";
 import { RecipeDrawer } from "./RecipeDrawer";
-import { ENGINES, MODELS, getRecipe } from "./data";
-import { CATEGORY_ORDER } from "./types";
 import type { CategoryId, EngineId, EngineMeta, ModelEntry, RecipeStatus } from "./types";
+import { CATEGORY_ORDER } from "./types";
 
 type CategoryFilter = "all" | CategoryId;
 

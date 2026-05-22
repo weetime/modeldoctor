@@ -4,8 +4,8 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import {
   type CreateSubscriberDto,
-  type UpdateSubscriberDto,
   createSubscriberSchema,
+  type UpdateSubscriberDto,
   updateSubscriberSchema,
 } from "./subscribers.dto.js";
 import { SubscribersService } from "./subscribers.service.js";

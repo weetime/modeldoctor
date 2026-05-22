@@ -1,3 +1,5 @@
+import { ChevronsUpDown } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -8,8 +10,6 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDown } from "lucide-react";
-import { type ReactNode, useState } from "react";
 
 export interface ComboboxProps<T> {
   items: T[];

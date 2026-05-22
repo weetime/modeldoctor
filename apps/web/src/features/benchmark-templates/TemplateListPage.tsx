@@ -1,18 +1,18 @@
-import { PageHeader } from "@/components/common/page-header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuthStore } from "@/stores/auth-store";
 import type { BenchmarkTemplate, ScenarioId } from "@modeldoctor/contracts";
 import { Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/common/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthStore } from "@/stores/auth-store";
 import { DeleteTemplateDialog } from "./DeleteTemplateDialog";
-import { TemplateCard } from "./TemplateCard";
 import { useDeleteTemplate, useTemplates } from "./queries";
+import { TemplateCard } from "./TemplateCard";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -55,6 +55,7 @@ export function TemplateListPage() {
       setParam("search", trimmed || null);
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(handle);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: setParam is defined inline and changes identity each render; we intentionally debounce only on draft change
   }, [searchDraft]);
 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useTemplates({

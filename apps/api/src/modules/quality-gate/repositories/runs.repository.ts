@@ -8,8 +8,8 @@ import type {
   RunSample,
 } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 import type { EvaluationRunStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../../database/prisma.service.js";
 import type { GateOutcome } from "../gate/compute-gate-result.js";
 

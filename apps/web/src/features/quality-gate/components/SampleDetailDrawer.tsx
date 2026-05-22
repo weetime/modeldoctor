@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 function PassIcon({ passed }: { passed: boolean }) {
   return passed ? (

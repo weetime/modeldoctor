@@ -1,3 +1,8 @@
+import type { ConnectionPublic, ConnectionWithSecret } from "@modeldoctor/contracts";
+import { ClipboardPaste } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,11 +17,6 @@ import { ConnectionSheet, type ConnectionSheetMode } from "@/features/connection
 import { useConnections } from "@/features/connections/queries";
 import { applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
 import { type ParsedCurl, parseCurlCommand } from "@/lib/curl-parser";
-import type { ConnectionPublic, ConnectionWithSecret } from "@modeldoctor/contracts";
-import { ClipboardPaste } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 const MANUAL = "__manual__";
 const NEW_CONNECTION = "__new__";

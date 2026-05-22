@@ -1,3 +1,19 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import type {
+  ConnectionPublic,
+  ConnectionWithSecret,
+  CreateConnection,
+  DiscoverConnectionResponse,
+  ModalityCategory,
+  ServerKind,
+  UpdateConnection,
+} from "@modeldoctor/contracts";
+import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
+import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
@@ -22,24 +38,8 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { SubscribersSection } from "@/features/alerts/SubscribersSection";
 import { useDatasources } from "@/features/prometheus-datasources/queries";
-import { type EndpointKey, applyCurlToEndpoint } from "@/lib/apply-curl-to-endpoint";
+import { applyCurlToEndpoint, type EndpointKey } from "@/lib/apply-curl-to-endpoint";
 import { parseCurlCommand, toApiBaseUrl } from "@/lib/curl-parser";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type {
-  ConnectionPublic,
-  ConnectionWithSecret,
-  CreateConnection,
-  DiscoverConnectionResponse,
-  ModalityCategory,
-  ServerKind,
-  UpdateConnection,
-} from "@modeldoctor/contracts";
-import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
-import { AlertTriangle, Eye, EyeOff, Loader2, Sparkles, X as XIcon } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { useCreateConnection, useDiscoverConnection, useUpdateConnection } from "./queries";
 import {
   type ConnectionInput,
@@ -374,140 +374,79 @@ export function ConnectionSheet({
     : t("dialog.fields.apiKeyPlaceholder");
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[640px]">
-          <SheetHeader>
-            <SheetTitle>{isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}</SheetTitle>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[640px]">
+        <SheetHeader>
+          <SheetTitle>{isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}</SheetTitle>
+        </SheetHeader>
 
-          <Form {...form}>
-            <form
-              onSubmit={onSubmit}
-              autoComplete="off"
-              className="flex min-h-0 flex-1 flex-col gap-4"
-            >
-              {/* Honeypots: Chrome ignores autocomplete=off when a password field is present. */}
-              <input
-                type="text"
-                name="username"
-                autoComplete="username"
-                tabIndex={-1}
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  opacity: 0,
-                  height: 0,
-                  width: 0,
-                  pointerEvents: "none",
-                }}
-              />
-              <input
-                type="password"
-                name="password"
-                autoComplete="new-password"
-                tabIndex={-1}
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  opacity: 0,
-                  height: 0,
-                  width: 0,
-                  pointerEvents: "none",
-                }}
-              />
-              <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-                <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
-                  <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-                    {t("dialog.curl.import")}
-                  </summary>
-                  <div className="mt-2 space-y-2">
-                    <Textarea
-                      rows={5}
-                      value={curlInput}
-                      onChange={(e) => onCurlChange(e.target.value)}
-                      placeholder={t("dialog.curl.placeholder")}
-                      className="font-mono text-xs"
-                      aria-label={t("dialog.curl.import")}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("dialog.curl.autoParseHint")}
-                    </p>
-                  </div>
-                </details>
+        <Form {...form}>
+          <form
+            onSubmit={onSubmit}
+            autoComplete="off"
+            className="flex min-h-0 flex-1 flex-col gap-4"
+          >
+            {/* Honeypots: Chrome ignores autocomplete=off when a password field is present. */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                opacity: 0,
+                height: 0,
+                width: 0,
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                opacity: 0,
+                height: 0,
+                width: 0,
+                pointerEvents: "none",
+              }}
+            />
+            <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+              <details className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                  {t("dialog.curl.import")}
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    rows={5}
+                    value={curlInput}
+                    onChange={(e) => onCurlChange(e.target.value)}
+                    placeholder={t("dialog.curl.placeholder")}
+                    className="font-mono text-xs"
+                    aria-label={t("dialog.curl.import")}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("dialog.curl.autoParseHint")}
+                  </p>
+                </div>
+              </details>
 
-                <FormSection>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel required>{t("dialog.fields.name")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              autoComplete="off"
-                              placeholder={t("dialog.fields.namePlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="apiBaseUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              autoComplete="off"
-                              placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.apiBaseUrlHelp")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="model"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel required>{t("dialog.fields.model")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              autoComplete="off"
-                              placeholder={t("dialog.fields.modelPlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
+              <FormSection>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="customHeaders"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("dialog.fields.customHeaders")}</FormLabel>
+                        <FormLabel required>{t("dialog.fields.name")}</FormLabel>
                         <FormControl>
-                          <Textarea
-                            rows={3}
-                            placeholder={t("dialog.fields.customHeadersPlaceholder")}
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.namePlaceholder")}
                             {...field}
                           />
                         </FormControl>
@@ -518,353 +457,408 @@ export function ConnectionSheet({
 
                   <FormField
                     control={form.control}
-                    name="queryParams"
+                    name="apiBaseUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("dialog.fields.queryParams")}</FormLabel>
+                        <FormLabel required>{t("dialog.fields.apiBaseUrl")}</FormLabel>
                         <FormControl>
-                          <Textarea
-                            rows={2}
-                            placeholder={t("dialog.fields.queryParamsPlaceholder")}
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.apiBaseUrlPlaceholder")}
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="apiKey"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel required={!apiKeyDisabled}>
-                            {t("dialog.fields.apiKey")}
-                          </FormLabel>
-                          {isEdit ? (
-                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <input
-                                type="checkbox"
-                                checked={resetApiKey}
-                                onChange={(e) => {
-                                  const next = e.target.checked;
-                                  setResetApiKey(next);
-                                  if (!next) form.setValue("apiKey", "");
-                                }}
-                              />
-                              {t("dialog.resetApiKey")}
-                            </label>
-                          ) : null}
-                        </div>
-                        <div className="relative">
-                          <FormControl>
-                            <Input
-                              autoComplete="new-password"
-                              type={revealKey ? "text" : "password"}
-                              placeholder={apiKeyPlaceholder}
-                              disabled={apiKeyDisabled}
-                              {...field}
-                            />
-                          </FormControl>
-                          {!apiKeyDisabled ? (
-                            <button
-                              type="button"
-                              onClick={() => setRevealKey((v) => !v)}
-                              className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-                              aria-label={revealKey ? "hide" : "show"}
-                            >
-                              {revealKey ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </button>
-                          ) : null}
-                        </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {t("dialog.apiKeyEncryptedNotice")}
+                          {t("dialog.fields.apiBaseUrlHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.model")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.modelPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="customHeaders"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.customHeaders")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder={t("dialog.fields.customHeadersPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="queryParams"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("dialog.fields.queryParams")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder={t("dialog.fields.queryParamsPlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel required={!apiKeyDisabled}>
+                          {t("dialog.fields.apiKey")}
+                        </FormLabel>
+                        {isEdit ? (
+                          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={resetApiKey}
+                              onChange={(e) => {
+                                const next = e.target.checked;
+                                setResetApiKey(next);
+                                if (!next) form.setValue("apiKey", "");
+                              }}
+                            />
+                            {t("dialog.resetApiKey")}
+                          </label>
+                        ) : null}
+                      </div>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            autoComplete="new-password"
+                            type={revealKey ? "text" : "password"}
+                            placeholder={apiKeyPlaceholder}
+                            disabled={apiKeyDisabled}
+                            {...field}
+                          />
+                        </FormControl>
+                        {!apiKeyDisabled ? (
+                          <button
+                            type="button"
+                            onClick={() => setRevealKey((v) => !v)}
+                            className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                            aria-label={revealKey ? "hide" : "show"}
+                          >
+                            {revealKey ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("dialog.apiKeyEncryptedNotice")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div>
+                  <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
+                  <Controller
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => {
+                      const current = field.value ?? [];
+                      const tryAdd = (raw: string) => {
+                        const trimmed = raw.trim();
+                        if (!trimmed) return;
+                        if (current.includes(trimmed)) return;
+                        field.onChange([...current, trimmed]);
+                      };
+                      const remove = (tag: string) =>
+                        field.onChange(current.filter((item: string) => item !== tag));
+                      const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {current.map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                              >
+                                {tag}
+                                <button
+                                  type="button"
+                                  aria-label={t("dialog.fields.tagsRemove", {
+                                    tag,
+                                    defaultValue: `Remove tag ${tag}`,
+                                  })}
+                                  onClick={() => remove(tag)}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <Input
+                            id="tags"
+                            value={tagDraft}
+                            onChange={(e) => setTagDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                tryAdd(tagDraft);
+                                setTagDraft("");
+                              }
+                            }}
+                            placeholder={t("dialog.fields.tagsPlaceholder")}
+                          />
+                          {suggestions.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
+                                <button
+                                  type="button"
+                                  key={s}
+                                  onClick={() => tryAdd(s)}
+                                  className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
+                                >
+                                  + {s}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("dialog.fields.tagsHelp")}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("dialog.fields.category")}</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                          >
+                            <SelectTrigger aria-label={t("dialog.fields.category")}>
+                              <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CATEGORIES.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {t(`dialog.categoryOptions.${c}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.categoryHelp")}
                         </p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div>
-                    <Label htmlFor="tags">{t("dialog.fields.tags")}</Label>
-                    <Controller
-                      control={form.control}
-                      name="tags"
-                      render={({ field }) => {
-                        const current = field.value ?? [];
-                        const tryAdd = (raw: string) => {
-                          const trimmed = raw.trim();
-                          if (!trimmed) return;
-                          if (current.includes(trimmed)) return;
-                          field.onChange([...current, trimmed]);
-                        };
-                        const remove = (tag: string) =>
-                          field.onChange(current.filter((item: string) => item !== tag));
-                        const suggestions = PRESET_TAGS.filter((p) => !current.includes(p));
-                        return (
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap gap-1">
-                              {current.map((tag: string) => (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
-                                >
-                                  {tag}
-                                  <button
-                                    type="button"
-                                    aria-label={t("dialog.fields.tagsRemove", {
-                                      tag,
-                                      defaultValue: `Remove tag ${tag}`,
-                                    })}
-                                    onClick={() => remove(tag)}
-                                  >
-                                    <XIcon className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                            <Input
-                              id="tags"
-                              value={tagDraft}
-                              onChange={(e) => setTagDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  tryAdd(tagDraft);
-                                  setTagDraft("");
-                                }
-                              }}
-                              placeholder={t("dialog.fields.tagsPlaceholder")}
-                            />
-                            {suggestions.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {suggestions.slice(0, MAX_SUGGESTION_CHIPS).map((s) => (
-                                  <button
-                                    type="button"
-                                    key={s}
-                                    onClick={() => tryAdd(s)}
-                                    className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/40"
-                                  >
-                                    + {s}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      }}
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t("dialog.fields.tagsHelp")}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel required>{t("dialog.fields.category")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value ?? ""}
-                              onValueChange={(v) => field.onChange(v === "" ? null : v)}
-                            >
-                              <SelectTrigger aria-label={t("dialog.fields.category")}>
-                                <SelectValue placeholder={t("dialog.fields.categoryPlaceholder")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {CATEGORIES.map((c) => (
-                                  <SelectItem key={c} value={c}>
-                                    {t(`dialog.categoryOptions.${c}`)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.categoryHelp")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="serverKind"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value ?? ""}
-                              onValueChange={(v) => field.onChange(v === "" ? null : v)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue
-                                  placeholder={t("dialog.fields.serverKindPlaceholder")}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {SERVER_KIND_OPTIONS.map((o) => (
-                                  <SelectItem key={o.value} value={o.value}>
-                                    {o.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.serverKindHelp")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="tokenizerHfId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              autoComplete="off"
-                              placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.tokenizerHfIdHelp")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="prometheusDatasourceId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("dialog.fields.prometheusDatasource.label")}</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value ?? "__none__"}
-                              onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-                            >
-                              <SelectTrigger
-                                aria-label={t("dialog.fields.prometheusDatasource.label")}
-                              >
-                                <SelectValue
-                                  placeholder={t("dialog.fields.prometheusDatasource.placeholder")}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">
-                                  {t("dialog.fields.prometheusDatasource.none")}
+                  <FormField
+                    control={form.control}
+                    name="serverKind"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.serverKind")}</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(v) => field.onChange(v === "" ? null : v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("dialog.fields.serverKindPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SERVER_KIND_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
                                 </SelectItem>
-                                {datasources?.map((ds) => (
-                                  <SelectItem key={ds.id} value={ds.id}>
-                                    {ds.name}
-                                    {ds.isDefault
-                                      ? ` (${t("dialog.fields.prometheusDatasource.defaultSuffix")})`
-                                      : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t("dialog.fields.prometheusDatasource.help")}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {submitError ? (
-                    <p className="text-sm text-destructive">
-                      {submitError.toLowerCase().includes("exists")
-                        ? t("dialog.errors.duplicateName")
-                        : submitError}
-                    </p>
-                  ) : null}
-                </FormSection>
-
-                {isEdit && existing ? <SubscribersSection connectionId={existing.id} /> : null}
-
-                {discoverError ? (
-                  <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span className="flex-1">{discoverError}</span>
-                    <button
-                      type="button"
-                      onClick={dismissDiscoverFeedback}
-                      aria-label={t("dialog.discover.dismiss")}
-                      className="opacity-70 hover:opacity-100"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : null}
-                {discoverResult && !discoverError ? (
-                  <DiscoverResultBanner
-                    result={discoverResult}
-                    onClose={dismissDiscoverFeedback}
-                    closeLabel={t("dialog.discover.dismiss")}
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.serverKindHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                ) : null}
-              </div>
+                </div>
 
-              <SheetFooter className="border-t border-border pt-3">
-                <FormActions
-                  onCancel={() => onOpenChange(false)}
-                  cancelLabel={tc("actions.cancel")}
-                  submitLabel={tc("actions.save")}
-                  pending={createMut.isPending || updateMut.isPending}
-                  leading={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleDiscover}
-                      disabled={!baseUrlValue?.trim() || discoverMut.isPending}
-                      title={
-                        !baseUrlValue?.trim() ? t("dialog.discover.missingBaseUrl") : undefined
-                      }
-                    >
-                      {discoverMut.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("dialog.discover.running")}
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          {t("dialog.discover.button")}
-                        </>
-                      )}
-                    </Button>
-                  }
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="tokenizerHfId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.tokenizerHfId")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            autoComplete="off"
+                            placeholder={t("dialog.fields.tokenizerHfIdPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.tokenizerHfIdHelp")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="prometheusDatasourceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("dialog.fields.prometheusDatasource.label")}</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? "__none__"}
+                            onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                          >
+                            <SelectTrigger
+                              aria-label={t("dialog.fields.prometheusDatasource.label")}
+                            >
+                              <SelectValue
+                                placeholder={t("dialog.fields.prometheusDatasource.placeholder")}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">
+                                {t("dialog.fields.prometheusDatasource.none")}
+                              </SelectItem>
+                              {datasources?.map((ds) => (
+                                <SelectItem key={ds.id} value={ds.id}>
+                                  {ds.name}
+                                  {ds.isDefault
+                                    ? ` (${t("dialog.fields.prometheusDatasource.defaultSuffix")})`
+                                    : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("dialog.fields.prometheusDatasource.help")}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {submitError ? (
+                  <p className="text-sm text-destructive">
+                    {submitError.toLowerCase().includes("exists")
+                      ? t("dialog.errors.duplicateName")
+                      : submitError}
+                  </p>
+                ) : null}
+              </FormSection>
+
+              {isEdit && existing ? <SubscribersSection connectionId={existing.id} /> : null}
+
+              {discoverError ? (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="flex-1">{discoverError}</span>
+                  <button
+                    type="button"
+                    onClick={dismissDiscoverFeedback}
+                    aria-label={t("dialog.discover.dismiss")}
+                    className="opacity-70 hover:opacity-100"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : null}
+              {discoverResult && !discoverError ? (
+                <DiscoverResultBanner
+                  result={discoverResult}
+                  onClose={dismissDiscoverFeedback}
+                  closeLabel={t("dialog.discover.dismiss")}
                 />
-              </SheetFooter>
-            </form>
-          </Form>
-        </SheetContent>
-      </Sheet>
-    </>
+              ) : null}
+            </div>
+
+            <SheetFooter className="border-t border-border pt-3">
+              <FormActions
+                onCancel={() => onOpenChange(false)}
+                cancelLabel={tc("actions.cancel")}
+                submitLabel={tc("actions.save")}
+                pending={createMut.isPending || updateMut.isPending}
+                leading={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDiscover}
+                    disabled={!baseUrlValue?.trim() || discoverMut.isPending}
+                    title={!baseUrlValue?.trim() ? t("dialog.discover.missingBaseUrl") : undefined}
+                  >
+                    {discoverMut.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("dialog.discover.running")}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {t("dialog.discover.button")}
+                      </>
+                    )}
+                  </Button>
+                }
+              />
+            </SheetFooter>
+          </form>
+        </Form>
+      </SheetContent>
+    </Sheet>
   );
 }
 

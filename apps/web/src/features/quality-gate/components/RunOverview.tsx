@@ -1,8 +1,8 @@
-import { Card } from "@/components/ui/card";
 import type { AggregateMetrics, ConnectionRef, EvaluationRun } from "@modeldoctor/contracts";
 import { Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 import { GateStatusBadge } from "./GateStatusBadge";
 
 function pct(n: number | undefined) {
@@ -124,13 +124,7 @@ function EndpointsSection({
   );
 }
 
-function EndpointCard({
-  label,
-  connection,
-}: {
-  label: string;
-  connection: ConnectionRef | null;
-}) {
+function EndpointCard({ label, connection }: { label: string; connection: ConnectionRef | null }) {
   const { t } = useTranslation("quality-gate");
   return (
     <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">

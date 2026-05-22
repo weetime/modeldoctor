@@ -1,3 +1,7 @@
+import type { Benchmark } from "@modeldoctor/contracts";
+import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -7,13 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Benchmark } from "@modeldoctor/contracts";
-import { type EvalscopeReport, evalscopeReportSchema } from "@modeldoctor/tool-adapters/schemas";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { useBenchmarkList } from "../queries";
-import { UnknownReport } from "./UnknownReport";
 import { InferenceMetricsGrid } from "./_shared/InferenceMetricsGrid";
+import { UnknownReport } from "./UnknownReport";
 
 export interface KvCacheStressReportProps {
   benchmark: Benchmark;

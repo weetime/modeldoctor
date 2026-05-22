@@ -1,3 +1,8 @@
+import type { ConnectionPublic } from "@modeldoctor/contracts";
+import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,11 +19,6 @@ import {
 } from "@/components/ui/select";
 import { ConnectionSheet } from "@/features/connections/ConnectionSheet";
 import { useConnections } from "@/features/connections/queries";
-import type { ConnectionPublic } from "@modeldoctor/contracts";
-import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 const MANUAL = "__manual__";
 

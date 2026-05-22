@@ -1,8 +1,8 @@
-import i18n from "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
 import { PrefixCacheProbeParamsForm } from "../PrefixCacheProbeParamsForm";
 
 const mockUseConnections = vi.fn();
@@ -13,7 +13,10 @@ vi.mock("@/features/connections/queries", () => ({
 function Harness({
   connectionId,
   hasDatasource,
-}: { connectionId: string; hasDatasource: boolean }) {
+}: {
+  connectionId: string;
+  hasDatasource: boolean;
+}) {
   mockUseConnections.mockReturnValue({
     data: [
       {

@@ -1,9 +1,9 @@
 import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
 import {
   type MetricRowSpec,
-  type VerdictKind,
   readMetricSafe,
   rowDescriptorsByTool,
+  type VerdictKind,
 } from "@modeldoctor/tool-adapters/schemas";
 
 // summaryMetrics is the discriminated union written by tool-adapter

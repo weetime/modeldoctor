@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Mic, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { consumeDemoSeed } from "../_shared/demo-seed";
 import {
   ALLOWED_FILE_MIMES,

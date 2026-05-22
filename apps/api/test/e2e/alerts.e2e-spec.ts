@@ -1,4 +1,4 @@
-import { type Server, createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +19,7 @@ vi.mock("../../src/modules/insights/llm-client.js", () => ({
 import { decodeKey, encrypt } from "../../src/common/crypto/aes-gcm.js";
 import { PrismaService } from "../../src/database/prisma.service.js";
 import { AlertExplainerService } from "../../src/modules/alerts/explainer.service.js";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
 // Sourced from the pre-injected fixture (see vitest.e2e.config.mts) — the
@@ -47,7 +47,7 @@ describe("Alerts webhook e2e", () => {
   function samplePayload(overrides: { fingerprint?: string; modelName?: string } = {}) {
     return {
       version: "4",
-      groupKey: "{}:{alertname=\"ModelDoctorKvCacheHigh\"}",
+      groupKey: '{}:{alertname="ModelDoctorKvCacheHigh"}',
       alerts: [
         {
           status: "firing" as const,
@@ -140,7 +140,7 @@ describe("Alerts webhook e2e", () => {
     expect(userRow).not.toBeNull();
     await prisma.connection.create({
       data: {
-        userId: userRow!.id,
+        userId: userRow?.id,
         name: "test-conn-1",
         baseUrl: "https://vllm-1.local:8000",
         apiKeyCipher: "n/a",

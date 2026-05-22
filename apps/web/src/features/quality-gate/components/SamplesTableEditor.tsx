@@ -1,3 +1,8 @@
+import type { EvaluationSample } from "@modeldoctor/contracts";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -9,11 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { EvaluationSample } from "@modeldoctor/contracts";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { EvaluationSampleEditor } from "./EvaluationSampleEditor";
 
 interface Props {

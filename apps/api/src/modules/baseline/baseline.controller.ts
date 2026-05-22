@@ -1,8 +1,8 @@
 import {
   type Baseline,
   type CreateBaseline,
-  type ListBaselinesResponse,
   createBaselineSchema,
+  type ListBaselinesResponse,
 } from "@modeldoctor/contracts";
 import {
   Body,
@@ -17,8 +17,8 @@ import {
 } from "@nestjs/common";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BaselineService } from "./baseline.service.js";
 
 @Controller("baselines")

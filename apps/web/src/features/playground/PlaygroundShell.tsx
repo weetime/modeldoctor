@@ -1,13 +1,13 @@
-import { PageHeader } from "@/components/common/page-header";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { ModalityCategory } from "@modeldoctor/contracts";
 import { Code2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PageHeader } from "@/components/common/page-header";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { CodeSnippets } from "./code-snippets/chat";
 import { ParamsPanel } from "./ParamsPanel";
 import { ViewCodeDialog } from "./ViewCodeDialog";
-import type { CodeSnippets } from "./code-snippets/chat";
 
 export interface PlaygroundShellProps {
   /** Page title rendered inside PageHeader (row 1). */

@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Benchmark } from "@modeldoctor/contracts";
 import { type VegetaReport, vegetaReportSchema } from "@modeldoctor/tool-adapters/schemas";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "../../components/MetricCard";
 import { UnknownReport } from "../UnknownReport";
 

@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
-import { type E2EContext, bootE2E, registerUser } from "../helpers/app.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 let ctx: E2EContext;
 let token: string;
@@ -19,7 +19,13 @@ async function createConnection(name: string) {
   const r = await request(ctx.app.getHttpServer())
     .post("/api/connections")
     .set("Authorization", `Bearer ${token}`)
-    .send({ name, baseUrl: "http://127.0.0.1:1", apiKey: "sk-test", model: "demo", category: "chat" })
+    .send({
+      name,
+      baseUrl: "http://127.0.0.1:1",
+      apiKey: "sk-test",
+      model: "demo",
+      category: "chat",
+    })
     .expect(201);
   return r.body.id as string;
 }
@@ -60,8 +66,20 @@ describe("Quality Gate e2e", () => {
       .send({
         name: "smoke",
         samples: [
-          { id: "s0", idx: 0, prompt: "say hi", expected: "hi", judgeConfig: { kind: "exact-match" } },
-          { id: "s1", idx: 1, prompt: "say hi", expected: "hi", judgeConfig: { kind: "contains", substrings: ["hi"], mode: "all" } },
+          {
+            id: "s0",
+            idx: 0,
+            prompt: "say hi",
+            expected: "hi",
+            judgeConfig: { kind: "exact-match" },
+          },
+          {
+            id: "s1",
+            idx: 1,
+            prompt: "say hi",
+            expected: "hi",
+            judgeConfig: { kind: "contains", substrings: ["hi"], mode: "all" },
+          },
         ],
       })
       .expect(201);
@@ -71,7 +89,12 @@ describe("Quality Gate e2e", () => {
     const runRes = await request(ctx.app.getHttpServer())
       .post("/api/quality-gate/runs")
       .set("Authorization", `Bearer ${token}`)
-      .send({ evaluationId: evalId, endpointAId: a, endpointBId: b, gateConfig: { passRateMin: 0.9 } })
+      .send({
+        evaluationId: evalId,
+        endpointAId: a,
+        endpointBId: b,
+        gateConfig: { passRateMin: 0.9 },
+      })
       .expect(201);
     const runId = runRes.body.id as string;
     expect(runId).toBeTruthy();

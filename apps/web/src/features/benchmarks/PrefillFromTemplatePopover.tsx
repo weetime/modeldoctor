@@ -1,12 +1,12 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
-import { useTemplates } from "@/features/benchmark-templates/queries";
 import type { BenchmarkTemplate, ModalityCategory, ScenarioId } from "@modeldoctor/contracts";
 import { Layers, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { useTemplates } from "@/features/benchmark-templates/queries";
 
 interface PrefillFromTemplatePopoverProps {
   scenario: ScenarioId;

@@ -2,8 +2,8 @@
 // Forbids native <select> and <textarea> in TSX, except the shadcn UI
 // wrappers in components/ui/ which legitimately wrap them.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve, relative } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -45,7 +45,7 @@ for (const file of walk(SRC)) {
 
 if (failed) {
   console.error("[no-native-select] FAIL — use shadcn <Select> / <Textarea> instead:");
-  for (const h of hits) console.error("  " + h);
+  for (const h of hits) console.error(`  ${h}`);
   process.exit(1);
 }
 console.log("[no-native-select] OK — no native <select>/<textarea> outside components/ui/.");

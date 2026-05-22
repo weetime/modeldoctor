@@ -1,9 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { useConnection } from "@/features/connections/queries";
-import { ApiError, api } from "@/lib/api-client";
 import type {
   PlaygroundEmbeddingsRequest,
   PlaygroundEmbeddingsResponse,
@@ -12,12 +6,18 @@ import { Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
-import { PlaygroundShell } from "../PlaygroundShell";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useConnection } from "@/features/connections/queries";
+import { ApiError, api } from "@/lib/api-client";
 import { consumeDemoSeed } from "../_shared/demo-seed";
+import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { genEmbeddingsSnippets } from "../code-snippets/embeddings";
-import { HistoryDrawer } from "../history/HistoryDrawer";
 import { createHistoryStore } from "../history/createHistoryStore";
+import { HistoryDrawer } from "../history/HistoryDrawer";
+import { PlaygroundShell } from "../PlaygroundShell";
 import { EmbeddingsParamsPanel } from "./EmbeddingsParams";
 import { EmbeddingsScatter } from "./EmbeddingsScatter";
 import { computePca2D } from "./pca";

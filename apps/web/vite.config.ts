@@ -1,10 +1,10 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import path from "node:path";
-import tailwindcss from "tailwindcss";
+import react from "@vitejs/plugin-react";
 import autoprefixer from "autoprefixer";
-import tailwindConfig from "./tailwind.config";
+import tailwindcss from "tailwindcss";
 import type { Plugin } from "vite";
+import { defineConfig } from "vite";
+import tailwindConfig from "./tailwind.config";
 
 /** Strip emoji from third-party library strings (e.g. React Router default error boundary). */
 function stripThirdPartyEmoji(): Plugin {

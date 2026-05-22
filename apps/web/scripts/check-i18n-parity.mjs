@@ -2,7 +2,7 @@
 // Compares zh-CN and en-US namespace JSONs for key-set equality. Recursive.
 // Exits 1 on any difference, printing the missing dot-paths per side.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

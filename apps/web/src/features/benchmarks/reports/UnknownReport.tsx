@@ -1,5 +1,5 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Benchmark } from "@modeldoctor/contracts";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export interface UnknownReportProps {
   benchmark: Benchmark;

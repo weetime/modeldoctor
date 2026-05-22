@@ -1,8 +1,3 @@
-import { FormActions } from "@/components/common/form-actions";
-import { PageHeader } from "@/components/common/page-header";
-import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/auth-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type PatchBenchmarkTemplateRequest,
@@ -13,9 +8,14 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { FormActions } from "@/components/common/form-actions";
+import { PageHeader } from "@/components/common/page-header";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { useAuthStore } from "@/stores/auth-store";
 import { DeleteTemplateDialog } from "./DeleteTemplateDialog";
-import { TemplateForm } from "./TemplateForm";
 import { useDeleteTemplate, useTemplate, useUpdateTemplate } from "./queries";
+import { TemplateForm } from "./TemplateForm";
 
 export function TemplateEditPage() {
   const { t } = useTranslation("benchmark-templates");

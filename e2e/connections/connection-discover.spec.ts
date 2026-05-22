@@ -120,12 +120,8 @@ test("Discover succeeds against a Higress-style gateway when customHeaders is se
 
   // Dismiss the zero-result banner to reset state, then add the routing
   // header and re-Discover — auto-apply fills the model field.
-  await dialog
-    .getByRole("button", { name: /Dismiss discover result|关闭探测结果/i })
-    .click();
-  await dialog
-    .getByLabel(/custom headers|自定义请求头/i)
-    .fill("x-higress-llm-model: qwen-72b");
+  await dialog.getByRole("button", { name: /Dismiss discover result|关闭探测结果/i }).click();
+  await dialog.getByLabel(/custom headers|自定义请求头/i).fill("x-higress-llm-model: qwen-72b");
   await dialog.getByRole("button", { name: /Discover|自动发现/i }).click();
 
   await expect(dialog.getByLabel(/^Model|^模型/i)).toHaveValue("qwen-72b", { timeout: 15_000 });

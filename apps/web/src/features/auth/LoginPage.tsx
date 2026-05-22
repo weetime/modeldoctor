@@ -1,3 +1,9 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { AuthTokenResponse, LoginRequest } from "@modeldoctor/contracts";
+import { LoginRequestSchema } from "@modeldoctor/contracts";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -10,12 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { ApiError, api } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { LoginRequestSchema } from "@modeldoctor/contracts";
-import type { AuthTokenResponse, LoginRequest } from "@modeldoctor/contracts";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const AUTH_PATHS = new Set(["/login", "/register"]);
 

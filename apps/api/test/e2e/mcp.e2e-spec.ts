@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type E2EContext, bootE2E } from "../helpers/app.js";
+import { bootE2E, type E2EContext } from "../helpers/app.js";
 import { E2E_ENV_DEFAULTS } from "../setup/e2e-env-defaults.js";
 
 /**

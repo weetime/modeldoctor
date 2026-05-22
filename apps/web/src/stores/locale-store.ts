@@ -1,6 +1,6 @@
-import i18n from "@/lib/i18n";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import i18n from "@/lib/i18n";
 
 export type Locale = "en-US" | "zh-CN";
 

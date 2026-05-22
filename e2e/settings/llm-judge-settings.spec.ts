@@ -27,9 +27,9 @@ test("AI Diagnosis section renders + accepts form input + Save click is wired", 
   // Be strict — "Test connection" disambiguates from "Clear test data".
   await page.getByRole("button", { name: /测试连接|Test connection/i }).click();
   // Wait for any toast (a `.sonner-toast` or generic role=status).
-  await expect(
-    page.getByText(/连接成功|连接失败|耗时|test|connected|failed/i).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/连接成功|连接失败|耗时|test|connected|failed/i).first()).toBeVisible(
+    { timeout: 15_000 },
+  );
 
   // Save click — should not throw; we don't assert on persistence here.
   await page.getByRole("button", { name: /^保存$|^Save$/ }).click();

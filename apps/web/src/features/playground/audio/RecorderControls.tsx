@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
 import { Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export interface RecorderControlsProps {
   onComplete: (blob: Blob, mimeType: string, durationMs: number) => void;

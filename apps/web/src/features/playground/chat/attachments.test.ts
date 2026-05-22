@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_FILE_MIMES,
   ATTACHMENT_LIMITS,
-  MAX_FILE_BYTES,
   buildContentParts,
+  MAX_FILE_BYTES,
   readFileAsAttachment,
 } from "./attachments";
 
