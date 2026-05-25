@@ -6,7 +6,7 @@ const fixtureMeta = { toolVersion: "guidellm 0.2.1", startTimeIso: "2026-05-25T0
 const fixtureResult = { exitCode: 0, finishTimeIso: "2026-05-25T01:00:00.000Z", files: { "report.json": "files/report.json" } };
 
 function makeDeps() {
-  const storage: ReportStorage = {
+  const storage = {
     exists: vi.fn(async () => true),
     readJson: vi.fn(async (k: string) => {
       if (k.endsWith("meta.json")) return fixtureMeta;
@@ -15,7 +15,7 @@ function makeDeps() {
     }),
     readText: vi.fn(async () => "stdout content"),
     readBytes: vi.fn(async () => Buffer.from("file content")),
-  };
+  } as unknown as ReportStorage;
   const repo = {
     findById: vi.fn(async (id: string) => ({
       id, status: "running", tool: "guidellm", userId: "u1",
@@ -101,7 +101,7 @@ describe("ReportLoader", () => {
   });
 
   it("guard race: updateGuarded returns null → no notify", async () => {
-    deps.repo.updateGuarded = vi.fn(async () => null);
+    deps.repo.updateGuarded = vi.fn(async () => null) as never;
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     expect(deps.notify.emit).not.toHaveBeenCalled();

@@ -4,9 +4,14 @@ import {
   podFailed,
   podPendingWaiting,
   podRunId,
+  podRunning,
   podSucceeded,
 } from "./__fixtures__/pod-fixtures.js";
-import { K8sJobWatcherService, type WatcherDeps } from "./k8s-job-watcher.service.js";
+import {
+  K8sJobWatcherService,
+  type WatcherDeps,
+  type WatcherMode,
+} from "./k8s-job-watcher.service.js";
 
 function makeFakeInformer() {
   const handlers = new Map<string, Array<(arg: unknown) => void>>();
@@ -33,11 +38,12 @@ function makeFakeInformer() {
   return informer;
 }
 
-function makeDeps(mode: "off" | "backstop" = "backstop"): {
+function makeDeps(mode: WatcherMode = "backstop"): {
   deps: WatcherDeps;
   informer: ReturnType<typeof makeFakeInformer>;
   repo: { findById: ReturnType<typeof vi.fn>; updateGuarded: ReturnType<typeof vi.fn> };
   reconciler: { run: ReturnType<typeof vi.fn> };
+  reportLoader: { tryLoad: ReturnType<typeof vi.fn> };
 } {
   const informer = makeFakeInformer();
   const repo = {
@@ -45,6 +51,7 @@ function makeDeps(mode: "off" | "backstop" = "backstop"): {
     updateGuarded: vi.fn(async () => null),
   };
   const reconciler = { run: vi.fn(async () => undefined) };
+  const reportLoader = { tryLoad: vi.fn(async () => {}) };
   return {
     deps: {
       mode,
@@ -57,10 +64,12 @@ function makeDeps(mode: "off" | "backstop" = "backstop"): {
       makeInformer: () => informer as unknown as Informer<V1Pod>,
       repo: repo as never,
       reconciler: reconciler as never,
+      reportLoader: reportLoader as never,
     },
     informer,
     repo,
     reconciler,
+    reportLoader,
   };
 }
 
@@ -213,5 +222,64 @@ describe("K8sJobWatcherService event handling", () => {
     informer.fire("update", podSucceeded());
     await new Promise((r) => setTimeout(r, 5));
     expect(repo.updateGuarded).not.toHaveBeenCalled();
+  });
+});
+
+describe("K8sJobWatcherService — primary mode", () => {
+  it("mode=primary starts informer + runs reconciler on init (no throw)", async () => {
+    const { deps, informer, reconciler } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    expect(informer.start).toHaveBeenCalledOnce();
+    expect(reconciler.run).toHaveBeenCalledOnce();
+  });
+
+  it("Succeeded pod → reportLoader.tryLoad called with runId", async () => {
+    const { deps, informer, repo, reportLoader } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "running" });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+
+    informer.fire("update", podSucceeded());
+    await new Promise((r) => setTimeout(r, 5));
+
+    expect(reportLoader.tryLoad).toHaveBeenCalledOnce();
+    expect(reportLoader.tryLoad).toHaveBeenCalledWith(podRunId());
+    expect(repo.updateGuarded).not.toHaveBeenCalled();
+  });
+
+  it("Running ready pod + status=submitted → updateGuarded(['submitted'], { status: 'running' })", async () => {
+    const { deps, informer, repo } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted" });
+    repo.updateGuarded.mockResolvedValue({ id: podRunId() });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+
+    informer.fire("update", podRunning());
+    await new Promise((r) => setTimeout(r, 5));
+
+    expect(repo.updateGuarded).toHaveBeenCalledWith(
+      podRunId(),
+      ["submitted"],
+      expect.objectContaining({ status: "running", startedAt: expect.any(Date) }),
+    );
+  });
+
+  it("Failed pod (primary) → updateGuarded(IN_PROGRESS_STATES, { status: 'failed' }) immediately (no grace)", async () => {
+    const { deps, informer, repo } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "running" });
+    repo.updateGuarded.mockResolvedValue({ id: podRunId() });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+
+    // No firstTerminalAt seed needed — primary mode ignores grace period for Failed
+    informer.fire("update", podFailed(1, "Error", "tool exit 1"));
+    await new Promise((r) => setTimeout(r, 5));
+
+    expect(repo.updateGuarded).toHaveBeenCalledWith(
+      podRunId(),
+      ["pending", "submitted", "running"],
+      expect.objectContaining({ status: "failed" }),
+    );
   });
 });

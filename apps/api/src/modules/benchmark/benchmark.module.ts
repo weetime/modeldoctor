@@ -17,6 +17,7 @@ import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
 import { StartupReconciler } from "./k8s/startup-reconciler.js";
+import type { ReportLoader } from "./storage/report-loader.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 
 async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeConfig> {
@@ -87,6 +88,16 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           terminalReconcileGraceSec,
         };
 
+        // Stub reportLoader — replaced in T12 when S3ReportStorage + ReportLoader
+        // are wired as proper NestJS providers. Until then this satisfies the
+        // WatcherDeps type and prevents type-check failures.
+        const reportLoaderStub: ReportLoader = {
+          tryLoad: async (runId: string) => {
+            // TODO(T12): replace with injected ReportLoader
+            void runId;
+          },
+        } as unknown as ReportLoader;
+
         if (mode === "off") {
           // mode=off: build a service that no-ops on init/destroy. Avoids
           // loading K8s entirely in dev / CI / unit-test envs.
@@ -103,6 +114,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
               repo,
               podCache: { get: () => undefined, list: () => [] },
             }),
+            reportLoader: reportLoaderStub,
           });
         }
 
@@ -136,6 +148,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           makeInformer: () => informer,
           repo,
           reconciler,
+          reportLoader: reportLoaderStub,
         });
       },
     },
