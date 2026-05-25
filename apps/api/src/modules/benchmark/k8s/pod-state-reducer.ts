@@ -25,6 +25,8 @@ export interface ReducerConfig {
 }
 
 export type DesiredTransition =
+  | { kind: "running"; startedAt: Date }
+  | { kind: "load-report" }
   | { kind: "failed-pre-start"; reason: string; message: string }
   | { kind: "failed-terminal"; exitCode: number; reason: string; message: string }
   | { kind: "noop" };
@@ -40,6 +42,7 @@ export interface ReducerInput {
   firstTerminalAt: Date | null;
   now: Date;
   config: ReducerConfig;
+  mode: "backstop" | "primary";
 }
 
 /** 2 KiB cap: statusMessage is TEXT in Postgres but watcher-sourced messages
@@ -73,6 +76,11 @@ export function reduce(input: ReducerInput): DesiredTransition {
 
   // Hard guard: never touch benchmarks that are already in a terminal state.
   if (!isInProgressStatus(currentStatus)) return { kind: "noop" };
+
+  if (input.mode === "primary") {
+    return reducePrimary(input);
+  }
+  // fall through to existing backstop body
 
   const phase = pod.status?.phase;
 
@@ -120,5 +128,51 @@ export function reduce(input: ReducerInput): DesiredTransition {
   }
 
   // 3. Running / Pending / Unknown — backstop does nothing.
+  return { kind: "noop" };
+}
+
+function reducePrimary(input: ReducerInput): DesiredTransition {
+  const { pod, currentStatus, firstFatalWaitingAt, now, config } = input;
+  const phase = pod.status?.phase;
+
+  // 1. Succeeded → trigger ReportLoader
+  if (phase === "Succeeded") return { kind: "load-report" };
+
+  // 2. Failed → write failed directly (no grace)
+  if (phase === "Failed") {
+    const term = getTerminated(pod);
+    return {
+      kind: "failed-terminal",
+      exitCode: term?.exitCode ?? -1,
+      reason: term?.reason ?? "PodFailed",
+      message: truncate(term ? `${term.reason}: ${term.message}` : "pod in Failed phase"),
+    };
+  }
+
+  // 3. FATAL waiting + grace elapsed
+  const waiting = getWaitingReason(pod);
+  if (waiting && config.fatalWaitingReasons.includes(waiting.reason)) {
+    if (firstFatalWaitingAt) {
+      const elapsedSec = (now.getTime() - firstFatalWaitingAt.getTime()) / 1000;
+      if (elapsedSec >= config.waitingFatalGraceSec) {
+        return {
+          kind: "failed-pre-start",
+          reason: waiting.reason,
+          message: truncate(`${waiting.reason}: ${waiting.message}`),
+        };
+      }
+    }
+    return { kind: "noop" };
+  }
+
+  // 4. Running + container ready + currentStatus=submitted → mark running
+  if (phase === "Running" && currentStatus === "submitted") {
+    const runner = getRunnerStatus(pod);
+    if (runner?.ready) {
+      const startedAt = runner.state?.running?.startedAt ?? now;
+      return { kind: "running", startedAt: new Date(startedAt) };
+    }
+  }
+
   return { kind: "noop" };
 }
