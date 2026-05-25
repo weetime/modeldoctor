@@ -17,6 +17,8 @@ export const K8S_NAMESPACE = Symbol("K8S_NAMESPACE");
  *  manager and the factory holds the SSE / adapter / DI wiring. */
 @Injectable()
 export class PodLogStreamerFactory {
+  private readonly logger = new Logger(PodLogStreamerFactory.name);
+
   constructor(
     public readonly repo: BenchmarkRepository,  // public: ProgressThrottle ctor needs it
     private readonly sse: SseHub,
@@ -65,11 +67,11 @@ export class PodLogStreamerFactory {
       const msg = (e as Error).message || "";
       if (/403|forbidden/i.test(msg)) {
         throw new Error(
-          `PodLogStreamerPool: RBAC missing pods/log:get in ns=${this.namespace}: ${msg}`,
+          `PodLogStreamerFactory: RBAC missing pods/log:get in ns=${this.namespace}: ${msg}`,
         );
       }
       // 404 or transient — log only, do not fail boot
-      new Logger(PodLogStreamerFactory.name).log(
+      this.logger.log(
         `RBAC probe non-fatal error (expected on 404): ${msg.slice(0, 200)}`,
       );
     }
