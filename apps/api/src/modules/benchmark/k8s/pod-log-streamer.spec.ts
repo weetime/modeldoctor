@@ -11,7 +11,7 @@ function makeK8sLogMock(streams: PassThrough[]) {
   // 'pipe' handler in PodLogStreamer can attach an error listener.
   for (const s of streams) s.on("error", () => {});
   return {
-    log: vi.fn(async (_ns, _pod, _container, sink) => {
+    log: vi.fn(async (_ns: unknown, _pod: unknown, _container: unknown, sink: unknown, _opts?: unknown) => {
       const passthrough = streams[i++];
       if (!passthrough) throw new Error(`k8sLog.log called too many times (i=${i})`);
       // Pipe our test passthrough → caller's sink so 'end'/'error' propagate

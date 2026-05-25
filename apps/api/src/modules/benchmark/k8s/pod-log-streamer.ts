@@ -113,7 +113,10 @@ export class PodLogStreamer {
         break;
       } catch (e) {
         this.consecutiveFailures += 1;
-        if (this.state === "STOPPED") break;
+        // abort() may have set state to STOPPED while we awaited k8sLog.log.
+        // We must re-check state since the while guard narrowed it to not-STOPPED,
+        // but abort() may have changed it concurrently.
+        if ((this.state as StreamerState) === "STOPPED") break;
         this.log.warn(
           `stream broke for ${this.runId} (attempt ${this.consecutiveFailures}): ${(e as Error).message}`,
         );
