@@ -1,5 +1,6 @@
 import type { V1Pod } from "@kubernetes/client-node";
 import { isInProgressStatus } from "../constants.js";
+import { getRunnerStatus } from "./runner-container.js";
 
 /**
  * Pod waiting reasons we treat as "won't self-recover" — once the grace
@@ -50,14 +51,14 @@ function truncate(s: string): string {
 }
 
 function getWaitingReason(pod: V1Pod): { reason: string; message: string } | null {
-  const cs = pod.status?.containerStatuses?.[0];
+  const cs = getRunnerStatus(pod);
   const w = cs?.state?.waiting;
   if (!w?.reason) return null;
   return { reason: w.reason, message: w.message ?? "" };
 }
 
 function getTerminated(pod: V1Pod): { exitCode: number; reason: string; message: string } | null {
-  const cs = pod.status?.containerStatuses?.[0];
+  const cs = getRunnerStatus(pod);
   const t = cs?.state?.terminated;
   if (!t) return null;
   return {

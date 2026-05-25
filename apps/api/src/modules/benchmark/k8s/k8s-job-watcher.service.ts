@@ -3,6 +3,7 @@ import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@ne
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
+import { getRunnerStatus } from "./runner-container.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
 
 export type WatcherMode = "off" | "backstop" | "primary";
@@ -74,7 +75,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
   /** Updates in-memory tracking maps based on current pod state. */
   private trackTiming(pod: V1Pod, runId: string, now: Date): void {
     const phase = pod.status?.phase;
-    const waitingReason = pod.status?.containerStatuses?.[0]?.state?.waiting?.reason;
+    const waitingReason = getRunnerStatus(pod)?.state?.waiting?.reason;
     const isFatalWaiting =
       !!waitingReason && this.deps.reducerConfig.fatalWaitingReasons.includes(waitingReason);
 

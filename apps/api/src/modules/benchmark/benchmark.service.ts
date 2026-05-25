@@ -28,7 +28,7 @@ import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-tem
 import { ConnectionService } from "../connection/connection.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
-import { IN_PROGRESS_STATES, TERMINAL_STATES, isInProgressStatus } from "./constants.js";
+import { IN_PROGRESS_STATES, isInProgressStatus, TERMINAL_STATES } from "./constants.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
 import { readP95LatencyMs } from "./metrics.js";
