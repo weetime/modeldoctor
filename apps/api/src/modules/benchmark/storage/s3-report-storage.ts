@@ -1,5 +1,5 @@
 import { GetObjectCommand, HeadObjectCommand, NotFound, S3Client } from "@aws-sdk/client-s3";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Readable } from "node:stream";
 import type { ReportStorage } from "./report-storage.js";
 
@@ -13,7 +13,6 @@ export interface S3ReportStorageConfig {
 
 @Injectable()
 export class S3ReportStorage implements ReportStorage {
-  private readonly log = new Logger(S3ReportStorage.name);
   private readonly client: S3Client;
   private readonly bucket: string;
 
