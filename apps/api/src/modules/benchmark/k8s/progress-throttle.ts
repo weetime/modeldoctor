@@ -20,16 +20,12 @@ export class ProgressThrottle {
     this.pendingPct = pct;
     const elapsed = this.clock() - this.lastWriteAt;
     if (elapsed >= this.windowMs) {
-      void this.doFlush();
+      void this.flushNow();
       return;
     }
     if (!this.timer) {
-      this.timer = setTimeout(() => void this.doFlush(), this.windowMs - elapsed);
+      this.timer = setTimeout(() => void this.flushNow(), this.windowMs - elapsed);
     }
-  }
-
-  private async doFlush(): Promise<void> {
-    await this.flushNow();
   }
 
   async flushNow(): Promise<void> {
