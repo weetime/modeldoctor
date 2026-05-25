@@ -1,5 +1,5 @@
 """Generic tool wrapper. Reads MD_* env, spawns argv, batches /log,
-collects outputFiles, posts /finish.
+collects outputFiles, writes report to S3.
 
 Phase 3 of #53: replaces the guidellm-specific runner. This file
 contains zero tool-specific knowledge.
@@ -7,7 +7,6 @@ contains zero tool-specific knowledge.
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
@@ -16,28 +15,33 @@ import sys
 import threading
 import time
 from collections import deque
+from datetime import UTC, datetime
 from pathlib import Path
 
-from runner.callback import post_finish, post_log_batch, post_state_running
+from runner.callback import post_log_batch
+from runner.s3_writer import S3Writer
+from runner.storage_keys import file_key, keys_for
 
 LOG_BATCH_INTERVAL_SEC = 0.25
 LOG_LINE_MAX_BYTES = 64 * 1024
-# Bounds the /finish POST body and runner RSS for long-running benchmarks.
-# /finish's stdout/stderr role is post-mortem only (/log already streamed
+# Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
+# stdout.log/stderr.log are post-mortem only (/log already streamed
 # everything live), so 64 KB per stream is sufficient for triage.
 LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
-# vegeta attack.bin for a long load test can exceed 100 MB; base64-encoding
-# that entirely in memory would OOM the runner process.
-OUTPUT_FILE_MAX_BYTES = 50 * 1024 * 1024  # per output file
-# Cap version string length sent in the /state callback body. The contract
-# (`benchmarkStateCallbackSchema.toolVersion`) hard-caps at 50; truncating
-# here mirrors that so a tool with a verbose `--version` banner doesn't
-# flunk validation.
+# S3 enforces its own object size limits; output files stream via put_file
+# (multipart-aware for objects >5 MB), so no in-memory cap is needed here.
+# Cap version string length stored in meta.json. The reportMetaSchema
+# toolVersion field hard-caps at 50; truncating here mirrors that so a tool
+# with a verbose `--version` banner doesn't violate the cap.
 TOOL_VERSION_MAX_CHARS = 50
 TOOL_VERSION_TIMEOUT_SEC = 10
 
 logging.basicConfig(level=logging.INFO, format="[runner] %(message)s")
 log = logging.getLogger("runner")
+
+
+def _iso_now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def detect_tool_version(tool: str) -> str | None:
@@ -214,15 +218,18 @@ def main() -> int:
     if tool_version is None and tool_name:
         log.warning("detect_tool_version(%s) returned None", tool_name)
 
-    try:
-        post_state_running(
-            callback_url=callback_url,
-            token=token,
-            benchmark_id=benchmark_id,
-            tool_version=tool_version,
-        )
-    except Exception as e:
-        log.warning("post_state_running failed: %s", e)
+    # S3 writer — fail-fast if env is misconfigured.
+    s3 = S3Writer.from_env()
+    keys = keys_for(benchmark_id)
+
+    # 1. Write meta.json — runner has started, tool version known.
+    s3.put_json(
+        keys.meta,
+        {
+            "toolVersion": tool_version or "",
+            "startTimeIso": _iso_now(),
+        },
+    )
 
     argv = _inject_api_key_into_backend_kwargs(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
@@ -244,47 +251,36 @@ def main() -> int:
     t1.join(timeout=5)
     t2.join(timeout=5)
 
-    files_b64: dict[str, str] = {}
+    # 2. Upload output files via put_file (auto-multipart for >5 MB)
+    files_map: dict[str, str] = {}
     for alias, rel_path in output_files.items():
         full = Path.cwd() / rel_path
         if not full.exists():
             continue
-        size = full.stat().st_size
-        if size > OUTPUT_FILE_MAX_BYTES:
-            log.warning(
-                "output file %s (%d bytes) exceeds %d byte cap; skipping",
-                alias,
-                size,
-                OUTPUT_FILE_MAX_BYTES,
-            )
-            continue
-        files_b64[alias] = base64.b64encode(full.read_bytes()).decode("ascii")
+        rel = f"files/{alias}"
+        s3.put_file(file_key(benchmark_id, alias), str(full))
+        files_map[alias] = rel
 
-    state = "completed" if proc.returncode == 0 else "failed"
-    message = None if state == "completed" else f"tool exited with code {proc.returncode}"
-
+    # 3. Upload stdout/stderr (tailed buffer from StreamPump)
     # Snapshot deques into lists in case a daemon pump thread is still
     # alive after join(timeout=5) — protects against "deque mutated
     # during iteration" RuntimeError under unusual EOF behavior.
-    try:
-        post_finish(
-            callback_url=callback_url,
-            token=token,
-            benchmark_id=benchmark_id,
-            state=state,
-            exit_code=proc.returncode,
-            stdout="\n".join(list(out_pump.full)),
-            stderr="\n".join(list(err_pump.full)),
-            files=files_b64,
-            message=message,
-        )
-    except Exception as e:
-        log.error("post_finish failed: %s", e)
-        return 1
+    s3.put_text(keys.stdout, "\n".join(list(out_pump.full)))
+    s3.put_text(keys.stderr, "\n".join(list(err_pump.full)))
 
-    # Always exit 0 from the wrapper itself — failure of the inner tool is
-    # already conveyed via /finish state=failed.
-    return 0
+    # 4. Sentinel — result.json LAST. API uses this to determine "storage complete".
+    s3.put_json(
+        keys.result,
+        {
+            "exitCode": proc.returncode,
+            "finishTimeIso": _iso_now(),
+            "files": files_map,
+        },
+    )
+
+    # Propagate the tool's exit code so pod.phase reflects success/failure.
+    # Watcher: exit=0 → pod.Succeeded → ReportLoader; exit!=0 → pod.Failed → failed-terminal.
+    return proc.returncode
 
 
 if __name__ == "__main__":

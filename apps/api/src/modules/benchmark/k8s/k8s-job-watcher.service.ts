@@ -2,6 +2,7 @@ import type { Informer, V1Pod } from "@kubernetes/client-node";
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
+import type { ReportLoader } from "../storage/report-loader.js";
 import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import { getRunnerStatus } from "./runner-container.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
@@ -17,6 +18,7 @@ export interface WatcherDeps {
   makeInformer: () => Informer<V1Pod>;
   repo: BenchmarkRepository;
   reconciler: StartupReconciler;
+  reportLoader: ReportLoader;
 }
 
 @Injectable()
@@ -34,9 +36,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       this.log.log("K8S_WATCHER_MODE=off → skipping informer + reconciler");
       return;
     }
-    if (this.deps.mode === "primary") {
-      throw new Error("K8S_WATCHER_MODE=primary is reserved for Phase 2; not yet implemented");
-    }
     this.informer = this.deps.makeInformer();
     this.informer.on("add", (p) => this.handlePodEvent(p));
     this.informer.on("update", (p) => this.handlePodEvent(p));
@@ -53,7 +52,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       // The informer auto-reconnects; we only log. Future: emit ops alert at threshold.
     });
     await this.informer.start();
-    this.log.log(`K8s watcher started (mode=backstop, ns=${this.deps.namespace})`);
+    this.log.log(`K8s watcher started (mode=${this.deps.mode}, ns=${this.deps.namespace})`);
     await this.deps.reconciler.run();
   }
 
@@ -115,6 +114,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       firstTerminalAt: this.firstTerminalAt.get(runId) ?? null,
       now,
       config: this.deps.reducerConfig,
+      mode: this.deps.mode === "off" ? "backstop" : this.deps.mode,
     });
 
     await this.execute(runId, transition, now);
@@ -128,22 +128,49 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async execute(runId: string, t: DesiredTransition, now: Date): Promise<void> {
-    if (t.kind === "noop") return;
-    try {
-      const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
-        status: "failed",
-        statusMessage: t.message,
-        completedAt: now,
-      });
-      if (!updated) {
-        this.log.log(
-          `guard rejected update for ${runId} (status already terminal); watcher backed off`,
-        );
+    switch (t.kind) {
+      case "noop":
+        return;
+
+      case "running": {
+        try {
+          const updated = await this.deps.repo.updateGuarded(runId, ["submitted"], {
+            status: "running",
+            startedAt: t.startedAt,
+          });
+          if (updated) this.log.log(`watcher marked ${runId} running`);
+        } catch (e) {
+          this.log.warn(`updateGuarded(${runId}) running failed: ${(e as Error).message}`);
+        }
         return;
       }
-      this.log.log(`watcher marked ${runId} failed: ${t.kind}`);
-    } catch (e) {
-      this.log.warn(`updateGuarded(${runId}) failed: ${(e as Error).message}`);
+
+      case "load-report": {
+        // Fire-and-forget — ReportLoader handles its own errors and writes.
+        void this.deps.reportLoader.tryLoad(runId);
+        return;
+      }
+
+      case "failed-pre-start":
+      case "failed-terminal": {
+        try {
+          const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
+            status: "failed",
+            statusMessage: t.message,
+            completedAt: now,
+          });
+          if (!updated) {
+            this.log.log(
+              `guard rejected update for ${runId} (status already terminal); watcher backed off`,
+            );
+            return;
+          }
+          this.log.log(`watcher marked ${runId} failed: ${t.kind}`);
+        } catch (e) {
+          this.log.warn(`updateGuarded(${runId}) failed: ${(e as Error).message}`);
+        }
+        return;
+      }
     }
   }
 }

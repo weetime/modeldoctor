@@ -19,6 +19,11 @@ const validEnv = () => ({
   RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
   RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
   RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
+  // S3-compatible object storage (required since Phase 2).
+  S3_ENDPOINT: "http://localhost:9999",
+  S3_ACCESS_KEY: "test-access-key",
+  S3_SECRET_KEY: "test-secret-key",
+  S3_BUCKET: "test-bucket",
 });
 
 describe("validateEnv", () => {
@@ -68,6 +73,11 @@ describe("validateEnv", () => {
       "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
       "RUNNER_IMAGE_EVALSCOPE",
       "RUNNER_IMAGE_AIPERF",
+      // S3 (required since Phase 2 — S3_REGION has a default so excluded)
+      "S3_ENDPOINT",
+      "S3_ACCESS_KEY",
+      "S3_SECRET_KEY",
+      "S3_BUCKET",
     ] as const;
 
     for (const key of requiredKeys) {

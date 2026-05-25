@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { benchmarkSchema, listBenchmarksQuerySchema } from "./benchmark.js";
+import {
+  benchmarkSchema,
+  listBenchmarksQuerySchema,
+  reportMetaSchema,
+  reportResultSchema,
+  reportStorageKeys,
+} from "./benchmark.js";
 
 describe("benchmarkSchema (baselineFor wiring)", () => {
   it("accepts baselineFor as null", () => {
@@ -38,6 +44,43 @@ describe("listBenchmarksQuerySchema (baseline filters)", () => {
     expect(out.isBaseline).toBe(true);
     const out2 = listBenchmarksQuerySchema.parse({ referencesBaseline: "false" });
     expect(out2.referencesBaseline).toBe(false);
+  });
+});
+
+describe("reportStorageKeys", () => {
+  it("produces stable keys for a runId", () => {
+    const k = reportStorageKeys("run-abc");
+    expect(k.meta).toBe("run-abc/meta.json");
+    expect(k.result).toBe("run-abc/result.json");
+    expect(k.stdout).toBe("run-abc/stdout.log");
+    expect(k.stderr).toBe("run-abc/stderr.log");
+    expect(k.file("report.json")).toBe("run-abc/files/report.json");
+  });
+});
+
+describe("reportMetaSchema", () => {
+  it("accepts a valid meta payload", () => {
+    expect(
+      reportMetaSchema.parse({
+        toolVersion: "guidellm 0.2.1",
+        startTimeIso: "2026-05-25T00:00:00.000Z",
+      }),
+    ).toBeTruthy();
+  });
+  it("rejects missing startTimeIso", () => {
+    expect(() => reportMetaSchema.parse({ toolVersion: "x" })).toThrow();
+  });
+});
+
+describe("reportResultSchema", () => {
+  it("accepts a valid result payload", () => {
+    expect(
+      reportResultSchema.parse({
+        exitCode: 0,
+        finishTimeIso: "2026-05-25T01:00:00.000Z",
+        files: { "report-json": "files/report.json" },
+      }),
+    ).toBeTruthy();
   });
 });
 
