@@ -291,11 +291,7 @@ def test_log_batches_posted_with_correct_kwargs(
     assert mock_post_log.call_count >= 1
 
     # All stdout-stream calls should target benchmark_id=b-test and stream=stdout.
-    stdout_calls = [
-        c
-        for c in mock_post_log.call_args_list
-        if c.kwargs.get("stream") == "stdout"
-    ]
+    stdout_calls = [c for c in mock_post_log.call_args_list if c.kwargs.get("stream") == "stdout"]
     assert len(stdout_calls) >= 1
     for c in stdout_calls:
         assert c.kwargs["benchmark_id"] == "b-test"

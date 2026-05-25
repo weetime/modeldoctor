@@ -42,5 +42,3 @@ def post_log_batch(
         token,
         {"stream": stream, "lines": lines},
     )
-
-

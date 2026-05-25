@@ -223,10 +223,13 @@ def main() -> int:
     keys = keys_for(benchmark_id)
 
     # 1. Write meta.json — runner has started, tool version known.
-    s3.put_json(keys.meta, {
-        "toolVersion": tool_version or "",
-        "startTimeIso": _iso_now(),
-    })
+    s3.put_json(
+        keys.meta,
+        {
+            "toolVersion": tool_version or "",
+            "startTimeIso": _iso_now(),
+        },
+    )
 
     argv = _inject_api_key_into_backend_kwargs(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
@@ -266,11 +269,14 @@ def main() -> int:
     s3.put_text(keys.stderr, "\n".join(list(err_pump.full)))
 
     # 4. Sentinel — result.json LAST. API uses this to determine "storage complete".
-    s3.put_json(keys.result, {
-        "exitCode": proc.returncode,
-        "finishTimeIso": _iso_now(),
-        "files": files_map,
-    })
+    s3.put_json(
+        keys.result,
+        {
+            "exitCode": proc.returncode,
+            "finishTimeIso": _iso_now(),
+            "files": files_map,
+        },
+    )
 
     # Propagate the tool's exit code so pod.phase reflects success/failure.
     # Watcher: exit=0 → pod.Succeeded → ReportLoader; exit!=0 → pod.Failed → failed-terminal.
