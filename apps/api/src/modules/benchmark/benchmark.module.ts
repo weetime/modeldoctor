@@ -13,16 +13,16 @@ import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
-import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.controller.js";
 import { BenchmarkFilesController } from "./benchmark-files.controller.js";
+import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.controller.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
 import { StartupReconciler } from "./k8s/startup-reconciler.js";
+import { SseHub } from "./sse/sse-hub.service.js";
 import { ReportLoader } from "./storage/report-loader.js";
 import { REPORT_STORAGE, type ReportStorage } from "./storage/report-storage.js";
 import { S3ReportStorage } from "./storage/s3-report-storage.js";
-import { SseHub } from "./sse/sse-hub.service.js";
 
 async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeConfig> {
   const k8s = await import("@kubernetes/client-node");

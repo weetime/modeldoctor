@@ -228,20 +228,38 @@ describe("PodStateReducer — primary mode", () => {
 
   it("Succeeded + IN_PROGRESS → load-report", () => {
     const out = reduce({
-      pod: makePod({ phase: "Succeeded" }), currentStatus: "running",
-      firstFatalWaitingAt: null, firstTerminalAt: null, now, config: baseConfig, mode: "primary",
+      pod: makePod({ phase: "Succeeded" }),
+      currentStatus: "running",
+      firstFatalWaitingAt: null,
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toEqual({ kind: "load-report" });
   });
 
   it("Failed + IN_PROGRESS → failed-terminal (no grace)", () => {
     const out = reduce({
-      pod: makePod({ phase: "Failed", containerStatuses: [{
-        name: "runner", ready: false, image: "x", imageID: "x", restartCount: 0,
-        state: { terminated: { exitCode: 1, reason: "Error", message: "boom" } },
-      }] }),
-      currentStatus: "running", firstFatalWaitingAt: null, firstTerminalAt: null,
-      now, config: baseConfig, mode: "primary",
+      pod: makePod({
+        phase: "Failed",
+        containerStatuses: [
+          {
+            name: "runner",
+            ready: false,
+            image: "x",
+            imageID: "x",
+            restartCount: 0,
+            state: { terminated: { exitCode: 1, reason: "Error", message: "boom" } },
+          },
+        ],
+      }),
+      currentStatus: "running",
+      firstFatalWaitingAt: null,
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toMatchObject({ kind: "failed-terminal", exitCode: 1, reason: "Error" });
   });
@@ -249,58 +267,113 @@ describe("PodStateReducer — primary mode", () => {
   it("Running + container ready + status=submitted → running", () => {
     const startedAt = "2026-05-25T00:50:00Z";
     const out = reduce({
-      pod: makePod({ phase: "Running", containerStatuses: [{
-        name: "runner", ready: true, image: "x", imageID: "x", restartCount: 0,
-        state: { running: { startedAt: new Date(startedAt) } },
-      }] }),
-      currentStatus: "submitted", firstFatalWaitingAt: null, firstTerminalAt: null,
-      now, config: baseConfig, mode: "primary",
+      pod: makePod({
+        phase: "Running",
+        containerStatuses: [
+          {
+            name: "runner",
+            ready: true,
+            image: "x",
+            imageID: "x",
+            restartCount: 0,
+            state: { running: { startedAt: new Date(startedAt) } },
+          },
+        ],
+      }),
+      currentStatus: "submitted",
+      firstFatalWaitingAt: null,
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toEqual({ kind: "running", startedAt: new Date(startedAt) });
   });
 
   it("Running + container NOT ready → noop", () => {
     const out = reduce({
-      pod: makePod({ phase: "Running", containerStatuses: [{
-        name: "runner", ready: false, image: "x", imageID: "x", restartCount: 0,
-        state: { running: { startedAt: new Date(now) } },
-      }] }),
-      currentStatus: "submitted", firstFatalWaitingAt: null, firstTerminalAt: null,
-      now, config: baseConfig, mode: "primary",
+      pod: makePod({
+        phase: "Running",
+        containerStatuses: [
+          {
+            name: "runner",
+            ready: false,
+            image: "x",
+            imageID: "x",
+            restartCount: 0,
+            state: { running: { startedAt: new Date(now) } },
+          },
+        ],
+      }),
+      currentStatus: "submitted",
+      firstFatalWaitingAt: null,
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toEqual({ kind: "noop" });
   });
 
   it("Pending + ImagePullBackOff + grace not elapsed → noop", () => {
     const out = reduce({
-      pod: makePod({ phase: "Pending", containerStatuses: [{
-        name: "runner", ready: false, image: "x", imageID: "x", restartCount: 0,
-        state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
-      }] }),
+      pod: makePod({
+        phase: "Pending",
+        containerStatuses: [
+          {
+            name: "runner",
+            ready: false,
+            image: "x",
+            imageID: "x",
+            restartCount: 0,
+            state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
+          },
+        ],
+      }),
       currentStatus: "submitted",
-      firstFatalWaitingAt: new Date(now.getTime() - 30_000), firstTerminalAt: null,
-      now, config: baseConfig, mode: "primary",
+      firstFatalWaitingAt: new Date(now.getTime() - 30_000),
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toEqual({ kind: "noop" });
   });
 
   it("Pending + ImagePullBackOff + grace elapsed → failed-pre-start", () => {
     const out = reduce({
-      pod: makePod({ phase: "Pending", containerStatuses: [{
-        name: "runner", ready: false, image: "x", imageID: "x", restartCount: 0,
-        state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
-      }] }),
+      pod: makePod({
+        phase: "Pending",
+        containerStatuses: [
+          {
+            name: "runner",
+            ready: false,
+            image: "x",
+            imageID: "x",
+            restartCount: 0,
+            state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
+          },
+        ],
+      }),
       currentStatus: "submitted",
-      firstFatalWaitingAt: new Date(now.getTime() - 70_000), firstTerminalAt: null,
-      now, config: baseConfig, mode: "primary",
+      firstFatalWaitingAt: new Date(now.getTime() - 70_000),
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toMatchObject({ kind: "failed-pre-start", reason: "ImagePullBackOff" });
   });
 
   it("any phase + terminal benchmark status → noop", () => {
     const out = reduce({
-      pod: makePod({ phase: "Succeeded" }), currentStatus: "completed",
-      firstFatalWaitingAt: null, firstTerminalAt: null, now, config: baseConfig, mode: "primary",
+      pod: makePod({ phase: "Succeeded" }),
+      currentStatus: "completed",
+      firstFatalWaitingAt: null,
+      firstTerminalAt: null,
+      now,
+      config: baseConfig,
+      mode: "primary",
     });
     expect(out).toEqual({ kind: "noop" });
   });

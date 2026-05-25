@@ -47,7 +47,9 @@ describe("buildJobManifest", () => {
     const j = buildJobManifest(ctx, { namespace: "ns" });
     const c = j.spec?.template.spec?.containers[0];
     expect(c?.envFrom).toContainEqual(
-      expect.objectContaining({ secretRef: expect.objectContaining({ name: "md-benchmark-storage" }) }),
+      expect.objectContaining({
+        secretRef: expect.objectContaining({ name: "md-benchmark-storage" }),
+      }),
     );
   });
 

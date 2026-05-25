@@ -1,6 +1,6 @@
+import { Readable } from "node:stream";
 import { GetObjectCommand, HeadObjectCommand, NotFound, S3Client } from "@aws-sdk/client-s3";
 import { Injectable } from "@nestjs/common";
-import { Readable } from "node:stream";
 import type { ReportStorage } from "./report-storage.js";
 
 export interface S3ReportStorageConfig {
@@ -54,7 +54,8 @@ export class S3ReportStorage implements ReportStorage {
     if (!res.Body) throw new Error(`S3 GetObject ${key} returned empty body`);
     const stream = res.Body as Readable;
     const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    for await (const chunk of stream)
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     return Buffer.concat(chunks);
   }
 }

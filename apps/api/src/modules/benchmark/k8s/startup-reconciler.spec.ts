@@ -14,14 +14,21 @@ function podWithRunId(runId: string): V1Pod {
   };
 }
 
-function makeDeps(opts: {
-  podsInCache?: V1Pod[];
-  storageExists?: boolean | ((key: string) => Promise<boolean>);
-} = {}): {
+function makeDeps(
+  opts: {
+    podsInCache?: V1Pod[];
+    storageExists?: boolean | ((key: string) => Promise<boolean>);
+  } = {},
+): {
   deps: ReconcilerDeps;
   repo: { listByStatus: ReturnType<typeof vi.fn>; updateGuarded: ReturnType<typeof vi.fn> };
   cache: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
-  storage: { exists: ReturnType<typeof vi.fn>; readJson: ReturnType<typeof vi.fn>; readText: ReturnType<typeof vi.fn>; readBytes: ReturnType<typeof vi.fn> };
+  storage: {
+    exists: ReturnType<typeof vi.fn>;
+    readJson: ReturnType<typeof vi.fn>;
+    readText: ReturnType<typeof vi.fn>;
+    readBytes: ReturnType<typeof vi.fn>;
+  };
   reportLoader: { tryLoad: ReturnType<typeof vi.fn> };
 } {
   const repo = {
@@ -121,7 +128,9 @@ describe("StartupReconciler", () => {
 
   it("storage.exists throws → logs + falls back to pod check", async () => {
     const { deps, repo, cache, storage, reportLoader } = makeDeps({
-      storageExists: async () => { throw new Error("s3 down"); },
+      storageExists: async () => {
+        throw new Error("s3 down");
+      },
     });
     repo.listByStatus.mockResolvedValueOnce([{ id: "r1", status: "running" }]);
 

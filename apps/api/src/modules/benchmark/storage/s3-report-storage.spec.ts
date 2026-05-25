@@ -1,5 +1,5 @@
-import { GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
+import { GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { S3ReportStorage } from "./s3-report-storage.js";
@@ -31,7 +31,9 @@ describe("S3ReportStorage", () => {
   });
 
   it("exists() returns false on NotFound", async () => {
-    s3Mock.on(HeadObjectCommand).rejects(Object.assign(new Error("not found"), { name: "NotFound" }));
+    s3Mock
+      .on(HeadObjectCommand)
+      .rejects(Object.assign(new Error("not found"), { name: "NotFound" }));
     const storage = makeStorage();
     expect(await storage.exists("run-1/result.json")).toBe(false);
   });

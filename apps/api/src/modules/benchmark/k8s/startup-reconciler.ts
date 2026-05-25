@@ -1,6 +1,6 @@
 import type { ObjectCache, V1Pod } from "@kubernetes/client-node";
-import { Injectable, Logger } from "@nestjs/common";
 import { reportStorageKeys } from "@modeldoctor/contracts";
+import { Injectable, Logger } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import type { ReportLoader } from "../storage/report-loader.js";

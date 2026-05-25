@@ -1,10 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { reportStorageKeys, type ReportMeta, type ReportResult } from "@modeldoctor/contracts";
+import { type ReportMeta, type ReportResult, reportStorageKeys } from "@modeldoctor/contracts";
 import { byTool as defaultByTool, type ToolName } from "@modeldoctor/tool-adapters";
+import { Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import type { NotifyService } from "../../notifications/notify.service.js";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
-import type { NotifyService } from "../../notifications/notify.service.js";
 import type { SseHub } from "../sse/sse-hub.service.js";
 import type { ReportStorage } from "./report-storage.js";
 
@@ -30,7 +30,8 @@ export class ReportLoader {
 
   async tryLoad(runId: string): Promise<void> {
     const bench = await this.deps.repo.findById(runId);
-    if (!bench || !IN_PROGRESS_STATES.includes(bench.status as (typeof IN_PROGRESS_STATES)[number])) return;
+    if (!bench || !IN_PROGRESS_STATES.includes(bench.status as (typeof IN_PROGRESS_STATES)[number]))
+      return;
     const keys = reportStorageKeys(runId);
     try {
       const [meta, result, stdout, stderr] = await Promise.all([
@@ -100,7 +101,10 @@ export class ReportLoader {
     }
   }
 
-  private async loadFiles(runId: string, fileMap: Record<string, string>): Promise<Record<string, Buffer>> {
+  private async loadFiles(
+    runId: string,
+    fileMap: Record<string, string>,
+  ): Promise<Record<string, Buffer>> {
     const entries: Array<[string, Buffer]> = [];
     for (const [alias, relPath] of Object.entries(fileMap)) {
       const key = `${runId}/${relPath}`;

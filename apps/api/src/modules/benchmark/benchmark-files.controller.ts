@@ -1,8 +1,17 @@
-import { Controller, ForbiddenException, Get, Inject, NotFoundException, Param, StreamableFile, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  StreamableFile,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
 import { REPORT_STORAGE, type ReportStorage } from "./storage/report-storage.js";
 
@@ -30,7 +39,8 @@ export class BenchmarkFilesController {
       throw new ForbiddenException();
     }
 
-    const files = ((bench.rawOutput as { files?: Record<string, string> } | null) ?? {}).files ?? {};
+    const files =
+      ((bench.rawOutput as { files?: Record<string, string> } | null) ?? {}).files ?? {};
     const relPath = files[alias];
     if (!relPath) throw new NotFoundException(`alias ${alias} not in this benchmark's files`);
 
