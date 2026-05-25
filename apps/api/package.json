@@ -30,6 +30,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.mts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1053.0",
     "@kubernetes/client-node": "^0.21",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@modeldoctor/contracts": "workspace:*",
@@ -72,6 +73,7 @@
     "@types/multer": "^2.1.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6",
+    "aws-sdk-client-mock": "^4.1.0",
     "dotenv": "^17.4.1",
     "pino-pretty": "^11",
     "supertest": "^7",
