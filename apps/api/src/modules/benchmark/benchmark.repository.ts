@@ -134,6 +134,29 @@ export class BenchmarkRepository {
     });
   }
 
+  /**
+   * Conditional update: only writes when current `status` is in `allowedStatuses`.
+   * Returns the updated row, or `null` if the guard rejected the write (row not
+   * found OR status outside allowed set).
+   *
+   * Implementation uses Prisma's `updateMany` with a `where: { status: { in } }`
+   * filter; if `count === 0` the guard rejected. Followed by a `findUnique` to
+   * return the new row. Two queries instead of one, but cleaner than raw SQL
+   * and the watcher path is low-volume.
+   */
+  async updateGuarded(
+    id: string,
+    allowedStatuses: readonly string[],
+    input: UpdateBenchmarkInput,
+  ): Promise<PrismaBenchmark | null> {
+    const result = await this.prisma.benchmark.updateMany({
+      where: { id, status: { in: [...allowedStatuses] } },
+      data: input,
+    });
+    if (result.count === 0) return null;
+    return this.prisma.benchmark.findUnique({ where: { id } });
+  }
+
   delete(id: string): Promise<PrismaBenchmark> {
     return this.prisma.benchmark.delete({ where: { id } });
   }
