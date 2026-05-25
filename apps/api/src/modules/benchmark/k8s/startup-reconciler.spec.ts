@@ -1,19 +1,35 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { V1Pod } from "@kubernetes/client-node";
+import { describe, expect, it, vi } from "vitest";
 import { StartupReconciler, type ReconcilerDeps } from "./startup-reconciler.js";
 
-function makeDeps(): {
+function podWithRunId(runId: string): V1Pod {
+  return {
+    metadata: {
+      name: `run-${runId}-xyz12`, // Job spawns pods with random suffix
+      namespace: "modeldoctor-benchmarks",
+      labels: { "modeldoctor.ai/run-id": runId },
+    },
+    spec: { containers: [{ name: "runner", image: "x" }] },
+    status: { phase: "Running" },
+  };
+}
+
+function makeDeps(podsInCache: V1Pod[] = []): {
   deps: ReconcilerDeps;
   repo: {
     listByStatus: ReturnType<typeof vi.fn>;
     updateGuarded: ReturnType<typeof vi.fn>;
   };
-  cache: { get: ReturnType<typeof vi.fn> };
+  cache: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
 } {
   const repo = {
     listByStatus: vi.fn(async () => []),
     updateGuarded: vi.fn(async () => ({ id: "x" })),
   };
-  const cache = { get: vi.fn(() => undefined) };
+  const cache = {
+    list: vi.fn(() => podsInCache),
+    get: vi.fn(() => undefined),
+  };
   return {
     deps: {
       namespace: "modeldoctor-benchmarks",
@@ -27,27 +43,25 @@ function makeDeps(): {
 
 describe("StartupReconciler", () => {
   it("no-op when no IN_PROGRESS benchmarks", async () => {
-    const { deps, repo } = makeDeps();
+    const { deps, repo, cache } = makeDeps();
     await new StartupReconciler(deps).run();
     expect(repo.listByStatus).toHaveBeenCalledOnce();
+    expect(cache.list).not.toHaveBeenCalled();
     expect(repo.updateGuarded).not.toHaveBeenCalled();
   });
 
-  it("leaves benchmarks alone when matching pod exists (informer will handle)", async () => {
-    const { deps, repo, cache } = makeDeps();
+  it("leaves benchmark alone when a pod with matching run-id label exists", async () => {
+    const { deps, repo, cache } = makeDeps([podWithRunId("abc")]);
     repo.listByStatus.mockResolvedValue([{ id: "abc", status: "running" }]);
-    cache.get.mockReturnValue({
-      metadata: { name: "run-abc", labels: { "modeldoctor.ai/run-id": "abc" } },
-      status: { phase: "Running" },
-    });
     await new StartupReconciler(deps).run();
+    expect(cache.list).toHaveBeenCalledWith("modeldoctor-benchmarks");
     expect(repo.updateGuarded).not.toHaveBeenCalled();
   });
 
-  it("marks failed when pod is gone (orphan)", async () => {
-    const { deps, repo, cache } = makeDeps();
+  it("marks failed when no pod with matching run-id label is in the cache", async () => {
+    // Cache contains a pod, but with a DIFFERENT run-id — should NOT save us.
+    const { deps, repo } = makeDeps([podWithRunId("someone-else")]);
     repo.listByStatus.mockResolvedValue([{ id: "abc", status: "running" }]);
-    cache.get.mockReturnValue(undefined);
     await new StartupReconciler(deps).run();
     expect(repo.updateGuarded).toHaveBeenCalledWith(
       "abc",
@@ -59,17 +73,14 @@ describe("StartupReconciler", () => {
     );
   });
 
-  it("processes multiple benchmarks independently", async () => {
-    const { deps, repo, cache } = makeDeps();
+  it("processes multiple benchmarks independently using label-based lookup", async () => {
+    // Cache contains only pod for "b". "a" and "c" are orphans.
+    const { deps, repo } = makeDeps([podWithRunId("b")]);
     repo.listByStatus.mockResolvedValue([
       { id: "a", status: "running" },
       { id: "b", status: "submitted" },
       { id: "c", status: "running" },
     ]);
-    cache.get.mockImplementation((name: string) => {
-      if (name === "run-b") return { metadata: { labels: {} }, status: { phase: "Running" } };
-      return undefined;
-    });
     await new StartupReconciler(deps).run();
     expect(repo.updateGuarded).toHaveBeenCalledTimes(2);
     expect(repo.updateGuarded).toHaveBeenCalledWith("a", expect.any(Array), expect.any(Object));
