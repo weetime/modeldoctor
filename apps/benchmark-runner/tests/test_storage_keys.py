@@ -1,4 +1,4 @@
-from runner.storage_keys import keys_for, file_key
+from runner.storage_keys import file_key, keys_for
 
 
 def test_keys_for_basic():

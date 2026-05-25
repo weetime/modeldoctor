@@ -2,6 +2,7 @@ import json
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 from moto import mock_aws
 
 from runner.s3_writer import S3Writer
@@ -33,9 +34,11 @@ def test_writer_puts_json_text_and_file(s3_env, tmp_path):
 
     meta = json.loads(s3_client.get_object(Bucket="test-bucket", Key="r1/meta.json")["Body"].read())
     assert meta == {"toolVersion": "x"}
-    stdout = s3_client.get_object(Bucket="test-bucket", Key="r1/stdout.log")["Body"].read().decode()
+    stdout_resp = s3_client.get_object(Bucket="test-bucket", Key="r1/stdout.log")
+    stdout = stdout_resp["Body"].read().decode()
     assert stdout == "hello\nworld"
-    report = s3_client.get_object(Bucket="test-bucket", Key="r1/files/report.json")["Body"].read().decode()
+    report_resp = s3_client.get_object(Bucket="test-bucket", Key="r1/files/report.json")
+    report = report_resp["Body"].read().decode()
     assert report == '{"ok":true}'
 
 
@@ -44,5 +47,5 @@ def test_writer_raises_when_bucket_missing(s3_env):
     # No bucket created — put should raise
     s3_client = boto3.client("s3", region_name="us-east-1")
     writer = S3Writer(client=s3_client, bucket="test-bucket")
-    with pytest.raises(Exception):
+    with pytest.raises(ClientError):
         writer.put_json("r1/meta.json", {})

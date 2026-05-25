@@ -15,7 +15,7 @@ from botocore.config import Config
 
 class S3Writer:
     @classmethod
-    def from_env(cls) -> "S3Writer":
+    def from_env(cls) -> S3Writer:
         region = os.environ.get("S3_REGION", "us-east-1")
         client = boto3.client(
             "s3",
@@ -38,7 +38,12 @@ class S3Writer:
 
     def put_json(self, key: str, obj: object) -> None:
         body = json.dumps(obj).encode("utf-8")
-        self.client.put_object(Bucket=self.bucket, Key=key, Body=body, ContentType="application/json")
+        self.client.put_object(
+            Bucket=self.bucket,
+            Key=key,
+            Body=body,
+            ContentType="application/json",
+        )
 
     def put_text(self, key: str, text: str) -> None:
         self.client.put_object(
