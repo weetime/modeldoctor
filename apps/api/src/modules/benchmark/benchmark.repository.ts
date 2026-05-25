@@ -173,6 +173,19 @@ export class BenchmarkRepository {
   }
 
   /**
+   * List benchmarks whose status is in the given set. Used by StartupReconciler
+   * to find IN_PROGRESS benchmarks at boot time and reconcile against cluster
+   * state. Bounded at 500 rows for safety; in practice the IN_PROGRESS set is
+   * tiny (benchmarks finish in minutes, not hours).
+   */
+  async listByStatus(statuses: readonly string[]): Promise<PrismaBenchmark[]> {
+    return this.prisma.benchmark.findMany({
+      where: { status: { in: [...statuses] } },
+      take: 500,
+    });
+  }
+
+  /**
    * Lightweight existence probe used by BenchmarkService to validate
    * `parentBenchmarkId` before issuing a `repo.create` that would otherwise
    * raise a Prisma P2003 FK-constraint error and surface as HTTP 500. Selecting
