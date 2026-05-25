@@ -53,6 +53,17 @@ export const EnvSchema = z.object({
   // K8s job runner config — subprocess driver removed in #101.
   BENCHMARK_CALLBACK_URL: z.string().url(),
   BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
+  // K8s watcher (Phase 1: backstop only).
+  //   off: informer 不启动（开发本机默认）
+  //   backstop: informer 启动，只做 FATAL waiting / terminal-no-callback 兜底
+  //   primary: Phase 2 之后才用，本 phase 不实施
+  K8S_WATCHER_MODE: z.enum(["off", "backstop", "primary"]).default("off"),
+  // 等待状态进 ImagePullBackOff/CrashLoopBackOff 等 FATAL waiting 多久后翻 failed。
+  // K8s 社区惯例 60s；registry 限速 / 短暂网络抖动通常 < 30s。
+  WAITING_FATAL_GRACE_SEC: z.coerce.number().int().positive().default(60),
+  // pod 进终态后给 callback 多少时间到达；超时则 watcher 接管翻 failed。
+  // 默认 60s，覆盖 /finish 序列化大 stdout/files + 网络往返。
+  TERMINAL_RECONCILE_GRACE_SEC: z.coerce.number().int().positive().default(60),
   // Per-tool runner images (#53 Phase 2 / #78). K8s is the only execution mode.
   RUNNER_IMAGE_GUIDELLM: z.string().min(1),
   RUNNER_IMAGE_VEGETA: z.string().min(1),
