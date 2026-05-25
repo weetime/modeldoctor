@@ -224,3 +224,27 @@ export const endpointReportsResponseSchema = z.object({
   items: z.array(endpointReportSchema),
 });
 export type EndpointReportsResponse = z.infer<typeof endpointReportsResponseSchema>;
+
+// ── Report shared storage — Phase 2 of #237 ─────────────────────────
+// Object keys the runner writes and ReportLoader reads.
+// Keep in sync with apps/benchmark-runner/runner/storage_keys.py.
+export const reportStorageKeys = (runId: string) => ({
+  meta: `${runId}/meta.json`,
+  result: `${runId}/result.json`,
+  stdout: `${runId}/stdout.log`,
+  stderr: `${runId}/stderr.log`,
+  file: (alias: string) => `${runId}/files/${alias}`,
+});
+
+export const reportMetaSchema = z.object({
+  toolVersion: z.string().max(50),
+  startTimeIso: z.string().datetime(),
+});
+export type ReportMeta = z.infer<typeof reportMetaSchema>;
+
+export const reportResultSchema = z.object({
+  exitCode: z.number().int(),
+  finishTimeIso: z.string().datetime(),
+  files: z.record(z.string()), // alias → relative path under <runId>/
+});
+export type ReportResult = z.infer<typeof reportResultSchema>;
