@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { benchmarkSchema, listBenchmarksQuerySchema, reportStorageKeys, reportMetaSchema, reportResultSchema } from "./benchmark.js";
+import {
+  benchmarkSchema,
+  listBenchmarksQuerySchema,
+  reportMetaSchema,
+  reportResultSchema,
+  reportStorageKeys,
+} from "./benchmark.js";
 
 describe("benchmarkSchema (baselineFor wiring)", () => {
   it("accepts baselineFor as null", () => {
@@ -54,7 +60,12 @@ describe("reportStorageKeys", () => {
 
 describe("reportMetaSchema", () => {
   it("accepts a valid meta payload", () => {
-    expect(reportMetaSchema.parse({ toolVersion: "guidellm 0.2.1", startTimeIso: "2026-05-25T00:00:00.000Z" })).toBeTruthy();
+    expect(
+      reportMetaSchema.parse({
+        toolVersion: "guidellm 0.2.1",
+        startTimeIso: "2026-05-25T00:00:00.000Z",
+      }),
+    ).toBeTruthy();
   });
   it("rejects missing startTimeIso", () => {
     expect(() => reportMetaSchema.parse({ toolVersion: "x" })).toThrow();
@@ -63,11 +74,13 @@ describe("reportMetaSchema", () => {
 
 describe("reportResultSchema", () => {
   it("accepts a valid result payload", () => {
-    expect(reportResultSchema.parse({
-      exitCode: 0,
-      finishTimeIso: "2026-05-25T01:00:00.000Z",
-      files: { "report-json": "files/report.json" },
-    })).toBeTruthy();
+    expect(
+      reportResultSchema.parse({
+        exitCode: 0,
+        finishTimeIso: "2026-05-25T01:00:00.000Z",
+        files: { "report-json": "files/report.json" },
+      }),
+    ).toBeTruthy();
   });
 });
 
