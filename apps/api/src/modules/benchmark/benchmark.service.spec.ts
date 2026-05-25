@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException, NotFoundException } from "@nest
 import type { ConfigService } from "@nestjs/config";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as hmacToken from "../../common/hmac/hmac-token.js";
 import type { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import type { ConnectionService } from "../connection/connection.service.js";
@@ -61,8 +60,6 @@ vi.mock("@modeldoctor/tool-adapters", async (orig) => {
 });
 
 const ENV_DEFAULTS: Record<string, unknown> = {
-  BENCHMARK_CALLBACK_SECRET: "x".repeat(32),
-  BENCHMARK_CALLBACK_URL: "http://api/",
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
@@ -424,60 +421,6 @@ describe("BenchmarkService.cancel — driver-error path", () => {
     await expect(svc.cancel("b1", "u1")).rejects.toThrow(/apiserver flake/);
     const row = await repo.findById("b1");
     expect(row?.status).toBe("running"); // NOT canceled
-  });
-});
-
-describe("BenchmarkService.start — callback TTL", () => {
-  let repo: MockRepo;
-  let svc: BenchmarkService;
-
-  beforeEach(() => {
-    repo = new MockRepo();
-    // Config default is 1800; adapter mock returns 1800 by default too.
-    // For this describe block we override the adapter to return 7200 to confirm
-    // the TTL is sourced from the adapter, not from the config default.
-    svc = build(repo, { BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800 });
-    vi.clearAllMocks();
-  });
-
-  it("signs token with adapter.getMaxDurationSeconds(params), not config default", async () => {
-    // Override the byTool stub so getMaxDurationSeconds returns 7200
-    // (simulating a 2h guidellm soak run).
-    const adapters = await import("@modeldoctor/tool-adapters");
-    const orig = adapters.byTool;
-    (adapters as { byTool: typeof orig }).byTool = (() => ({
-      name: "guidellm",
-      scenarios: ["inference", "capacity"],
-      paramsSchema: { parse: (x: unknown) => x },
-      reportSchema: { parse: (x: unknown) => x },
-      paramDefaults: {},
-      buildCommand: () => ({
-        argv: ["echo", "hi"],
-        env: {},
-        secretEnv: {},
-        outputFiles: { report: "report.json" },
-      }),
-      parseProgress: () => null,
-      parseFinalReport: () => ({ tool: "guidellm" as const, data: {} }),
-      getMaxDurationSeconds: () => 7200,
-    })) as unknown as typeof orig;
-
-    // Spy on signCallbackToken to capture the ttlSeconds argument.
-    const signSpy = vi.spyOn(hmacToken, "signCallbackToken");
-
-    try {
-      repo.setup(
-        makeBenchmarkRow({ id: "b1", userId: "u1", connectionId: "c1", status: "pending" }),
-      );
-      await svc.start("b1");
-
-      // adapter returns 7200; CALLBACK_TTL_SLACK_SECONDS = 15 * 60 = 900.
-      // Expected ttl = 7200 + 900 = 8100.
-      expect(signSpy).toHaveBeenCalledWith("b1", expect.any(Buffer), 8100);
-    } finally {
-      signSpy.mockRestore();
-      (adapters as { byTool: typeof orig }).byTool = orig;
-    }
   });
 });
 

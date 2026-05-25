@@ -67,8 +67,6 @@ const mockConnections = {
 };
 
 const ENV_DEFAULTS: Record<string, unknown> = {
-  BENCHMARK_CALLBACK_SECRET: "x".repeat(32),
-  BENCHMARK_CALLBACK_URL: "http://api/",
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
