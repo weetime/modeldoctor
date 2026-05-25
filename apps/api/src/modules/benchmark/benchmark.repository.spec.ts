@@ -4,25 +4,23 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
 
+const configServiceMock = {
+  provide: ConfigService,
+  useValue: {
+    get: (key: string) => {
+      if (key === "DATABASE_URL") return process.env.DATABASE_URL;
+      return undefined;
+    },
+  },
+};
+
 describe("BenchmarkRepository", () => {
   let repo: BenchmarkRepository;
   let prisma: PrismaService;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
-      providers: [
-        BenchmarkRepository,
-        PrismaService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) => {
-              if (key === "DATABASE_URL") return process.env.DATABASE_URL;
-              return undefined;
-            },
-          },
-        },
-      ],
+      providers: [BenchmarkRepository, PrismaService, configServiceMock],
     }).compile();
 
     repo = moduleRef.get(BenchmarkRepository);
@@ -219,5 +217,71 @@ describe("BenchmarkRepository", () => {
 
     const n = await repo.countActiveByName(user.id, "shared-name");
     expect(n).toBe(2);
+  });
+});
+
+describe("BenchmarkRepository.updateGuarded", () => {
+  let repo: BenchmarkRepository;
+  let prisma: PrismaService;
+
+  beforeEach(async () => {
+    const mod = await Test.createTestingModule({
+      providers: [BenchmarkRepository, PrismaService, configServiceMock],
+    }).compile();
+    repo = mod.get(BenchmarkRepository);
+    prisma = mod.get(PrismaService);
+    await prisma.baseline.deleteMany();
+    await prisma.benchmark.deleteMany();
+    await prisma.user.deleteMany();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("updates when current status is in allowedStatuses", async () => {
+    const b = await prisma.benchmark.create({
+      data: {
+        name: "t",
+        scenario: "chat",
+        tool: "guidellm",
+        params: {},
+        status: "running",
+      },
+    });
+    const updated = await repo.updateGuarded(b.id, ["pending", "submitted", "running"], {
+      status: "failed",
+      statusMessage: "watcher: test",
+    });
+    expect(updated).not.toBeNull();
+    expect(updated?.status).toBe("failed");
+    expect(updated?.statusMessage).toBe("watcher: test");
+  });
+
+  it("returns null when current status is NOT in allowedStatuses", async () => {
+    const b = await prisma.benchmark.create({
+      data: {
+        name: "t",
+        scenario: "chat",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+      },
+    });
+    const updated = await repo.updateGuarded(b.id, ["pending", "submitted", "running"], {
+      status: "failed",
+      statusMessage: "should not apply",
+    });
+    expect(updated).toBeNull();
+    const reloaded = await prisma.benchmark.findUnique({ where: { id: b.id } });
+    expect(reloaded?.status).toBe("completed");
+    expect(reloaded?.statusMessage).toBeNull();
+  });
+
+  it("returns null when row does not exist", async () => {
+    const updated = await repo.updateGuarded("00000000-0000-0000-0000-000000000000", ["running"], {
+      status: "failed",
+    });
+    expect(updated).toBeNull();
   });
 });

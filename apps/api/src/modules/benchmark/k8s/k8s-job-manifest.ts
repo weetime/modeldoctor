@@ -1,5 +1,6 @@
 import type { V1Job, V1Secret } from "@kubernetes/client-node";
 import type { BenchmarkRunInput } from "./k8s-benchmark-runner.js";
+import { RUNNER_CONTAINER_NAME } from "./runner-container.js";
 
 export function jobName(runId: string): string {
   return `run-${runId}`;
@@ -94,7 +95,7 @@ export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOption
           restartPolicy: "Never",
           containers: [
             {
-              name: "runner",
+              name: RUNNER_CONTAINER_NAME,
               image: ctx.image,
               imagePullPolicy: "IfNotPresent",
               env,

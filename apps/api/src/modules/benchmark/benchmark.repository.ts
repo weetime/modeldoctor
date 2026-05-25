@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
+import { IN_PROGRESS_STATES } from "./constants.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({
   include: {
@@ -134,6 +135,29 @@ export class BenchmarkRepository {
     });
   }
 
+  /**
+   * Conditional update: only writes when current `status` is in `allowedStatuses`.
+   * Returns the updated row, or `null` if the guard rejected the write (row not
+   * found OR status outside allowed set).
+   *
+   * Implementation uses Prisma's `updateMany` with a `where: { status: { in } }`
+   * filter; if `count === 0` the guard rejected. Followed by a `findUnique` to
+   * return the new row. Two queries instead of one, but cleaner than raw SQL
+   * and the watcher path is low-volume.
+   */
+  async updateGuarded(
+    id: string,
+    allowedStatuses: readonly string[],
+    input: UpdateBenchmarkInput,
+  ): Promise<PrismaBenchmark | null> {
+    const result = await this.prisma.benchmark.updateMany({
+      where: { id, status: { in: [...allowedStatuses] } },
+      data: input as Prisma.BenchmarkUpdateInput,
+    });
+    if (result.count === 0) return null;
+    return this.prisma.benchmark.findUnique({ where: { id } });
+  }
+
   delete(id: string): Promise<PrismaBenchmark> {
     return this.prisma.benchmark.delete({ where: { id } });
   }
@@ -143,8 +167,21 @@ export class BenchmarkRepository {
       where: {
         userId,
         name,
-        status: { in: ["pending", "submitted", "running"] },
+        status: { in: [...IN_PROGRESS_STATES] },
       },
+    });
+  }
+
+  /**
+   * List benchmarks whose status is in the given set. Used by StartupReconciler
+   * to find IN_PROGRESS benchmarks at boot time and reconcile against cluster
+   * state. Bounded at 500 rows for safety; in practice the IN_PROGRESS set is
+   * tiny (benchmarks finish in minutes, not hours).
+   */
+  async listByStatus(statuses: readonly string[]): Promise<PrismaBenchmark[]> {
+    return this.prisma.benchmark.findMany({
+      where: { status: { in: [...statuses] } },
+      take: 500,
     });
   }
 

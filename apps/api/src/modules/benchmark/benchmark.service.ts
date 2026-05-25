@@ -28,16 +28,10 @@ import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-tem
 import { ConnectionService } from "../connection/connection.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
+import { IN_PROGRESS_STATES, isInProgressStatus, TERMINAL_STATES } from "./constants.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
 import { readP95LatencyMs } from "./metrics.js";
-
-const TERMINAL_STATES = ["completed", "failed", "canceled"] as const;
-
-const IN_PROGRESS_STATES = ["pending", "submitted", "running"] as const;
-function isInProgressStatus(status: string): boolean {
-  return (IN_PROGRESS_STATES as readonly string[]).includes(status);
-}
 
 /** Safety cap for the per-user/per-window query the reports endpoint
  * issues. In practice user × 30-day windows are << 1000 rows; this
