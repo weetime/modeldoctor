@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
+import { IN_PROGRESS_STATES } from "./constants.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({
   include: {
@@ -166,7 +167,7 @@ export class BenchmarkRepository {
       where: {
         userId,
         name,
-        status: { in: ["pending", "submitted", "running"] },
+        status: { in: [...IN_PROGRESS_STATES] },
       },
     });
   }

@@ -1,8 +1,9 @@
 import type { BenchmarkChartsResponse, HistogramBucket } from "@modeldoctor/contracts";
 import { Injectable, Logger } from "@nestjs/common";
+import { TERMINAL_STATES } from "./constants.js";
 
 const HISTOGRAM_BIN_COUNT = 30;
-const TERMINAL_STATES = new Set(["completed", "failed", "canceled"]);
+const TERMINAL_STATES_SET = new Set<string>(TERMINAL_STATES);
 
 interface ExtractInput {
   id: string;
@@ -23,7 +24,7 @@ export class BenchmarkChartsService {
   extract(row: ExtractInput): BenchmarkChartsResponse {
     const empty: BenchmarkChartsResponse = { latencyCdf: null, ttftHistogram: null };
 
-    if (!TERMINAL_STATES.has(row.status)) return empty;
+    if (!TERMINAL_STATES_SET.has(row.status)) return empty;
     const files = (row.rawOutput?.files ?? null) as Record<string, string> | null;
     if (!files) return empty;
 
