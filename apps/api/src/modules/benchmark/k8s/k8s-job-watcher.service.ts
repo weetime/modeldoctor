@@ -45,7 +45,13 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     if (this.informer) {
-      await this.informer.stop();
+      try {
+        await this.informer.stop();
+      } catch (e) {
+        // Don't let a shutdown-time informer error block other onModuleDestroy
+        // hooks or surface as an unhandled rejection in CI logs.
+        this.log.warn(`informer.stop() threw during shutdown: ${(e as Error).message}`);
+      }
       this.log.log("K8s watcher stopped");
     }
   }
