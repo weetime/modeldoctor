@@ -136,4 +136,28 @@ describe("ReportLoader", () => {
     await loader.tryLoad("r1");
     expect(deps.notify.emit).not.toHaveBeenCalled();
   });
+
+  it("files total > 500MB → updateGuarded(failed) with 'exceed' statusMessage", async () => {
+    // Create a fake Buffer with .length=400MB without actually allocating that memory
+    const fake400MB = Buffer.alloc(0);
+    Object.defineProperty(fake400MB, "length", { value: 400 * 1024 * 1024 });
+    (deps.storage.readBytes as ReturnType<typeof vi.fn>).mockResolvedValue(fake400MB);
+    // Two files each 400MB → total 800MB → cap blown on second iteration
+    (deps.storage.readJson as ReturnType<typeof vi.fn>).mockImplementation(async (k: string) => {
+      if (k.endsWith("meta.json")) return fixtureMeta;
+      if (k.endsWith("result.json"))
+        return { ...fixtureResult, files: { a: "files/a.bin", b: "files/b.bin" } };
+      throw new Error(`unexpected key ${k}`);
+    });
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({
+        status: "failed",
+        statusMessage: expect.stringContaining("exceed"),
+      }),
+    );
+  });
 });

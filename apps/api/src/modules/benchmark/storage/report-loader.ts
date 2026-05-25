@@ -10,6 +10,7 @@ import type { ReportStorage } from "./report-storage.js";
 
 const STATUS_MESSAGE_MAX = 2048;
 const RAW_OUTPUT_TAIL_MAX = 64 * 1024;
+const REPORT_FILES_TOTAL_MAX_BYTES = 500 * 1024 * 1024;
 
 export interface ReportLoaderDeps {
   storage: ReportStorage;
@@ -106,9 +107,15 @@ export class ReportLoader {
     fileMap: Record<string, string>,
   ): Promise<Record<string, Buffer>> {
     const entries: Array<[string, Buffer]> = [];
+    let totalSize = 0;
     for (const [alias, relPath] of Object.entries(fileMap)) {
       const key = `${runId}/${relPath}`;
-      entries.push([alias, await this.deps.storage.readBytes(key)]);
+      const bytes = await this.deps.storage.readBytes(key);
+      totalSize += bytes.length;
+      if (totalSize > REPORT_FILES_TOTAL_MAX_BYTES) {
+        throw new Error(`report files exceed ${REPORT_FILES_TOTAL_MAX_BYTES} bytes limit`);
+      }
+      entries.push([alias, bytes]);
     }
     return Object.fromEntries(entries);
   }
