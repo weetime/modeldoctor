@@ -43,4 +43,14 @@ export const E2E_ENV_DEFAULTS = {
   ALERTMANAGER_WEBHOOK_SECRET: required("ALERTMANAGER_WEBHOOK_SECRET"),
   MCP_BEARER_TOKEN: required("MCP_BEARER_TOKEN"),
   MCP_USER_ID: required("MCP_USER_ID"),
+  // Watcher: tests override the production default ("primary") back to "off"
+  // so informers don't attempt to connect to a real K8s API server.
+  K8S_WATCHER_MODE: required("K8S_WATCHER_MODE"),
+  // S3: placeholder values — tests mock the AWS SDK client and never hit a
+  // real endpoint; these just satisfy env schema validation at boot.
+  S3_ENDPOINT: required("S3_ENDPOINT"),
+  S3_ACCESS_KEY: required("S3_ACCESS_KEY"),
+  S3_SECRET_KEY: required("S3_SECRET_KEY"),
+  S3_BUCKET: required("S3_BUCKET"),
+  S3_REGION: required("S3_REGION"),
 } as const;

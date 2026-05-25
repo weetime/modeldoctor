@@ -53,11 +53,20 @@ export const EnvSchema = z.object({
   // K8s job runner config — subprocess driver removed in #101.
   BENCHMARK_CALLBACK_URL: z.string().url(),
   BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
-  // K8s watcher (Phase 1: backstop only).
+  // K8s watcher mode.
   //   off: informer 不启动（开发本机默认）
   //   backstop: informer 启动，只做 FATAL waiting / terminal-no-callback 兜底
-  //   primary: Phase 2 之后才用，本 phase 不实施
-  K8S_WATCHER_MODE: z.enum(["off", "backstop", "primary"]).default("off"),
+  //   primary: Phase 2 — watcher 是状态机主驱动，callback 降为兜底
+  K8S_WATCHER_MODE: z.enum(["off", "backstop", "primary"]).default("primary"),
+  // S3-compatible object storage — used by S3ReportStorage to persist run
+  // artifacts (stdout, files) so the watcher can read them after pod exit.
+  // S3_REGION defaults to us-east-1: MinIO ignores it but AWS SDK requires a
+  // non-empty region string.
+  S3_ENDPOINT: z.string().url(),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  S3_BUCKET: z.string().min(1),
+  S3_REGION: z.string().default("us-east-1"),
   // 等待状态进 ImagePullBackOff/CrashLoopBackOff 等 FATAL waiting 多久后翻 failed。
   // K8s 社区惯例 60s；registry 限速 / 短暂网络抖动通常 < 30s。
   WAITING_FATAL_GRACE_SEC: z.coerce.number().int().positive().default(60),
