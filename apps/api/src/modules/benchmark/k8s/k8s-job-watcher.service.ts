@@ -95,9 +95,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     const runId = this.extractRunId(pod);
     if (!runId) return;
 
-    const now = new Date();
-    this.trackTiming(pod, runId, now);
-
     let bench: Awaited<ReturnType<BenchmarkRepository["findById"]>>;
     try {
       bench = await this.deps.repo.findById(runId);
@@ -106,6 +103,9 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     if (!bench) return;
+
+    const now = new Date();
+    this.trackTiming(pod, runId, now);
 
     const transition = reduce({
       pod,
