@@ -1,7 +1,7 @@
 import type { ObjectCache, V1Pod } from "@kubernetes/client-node";
 import { Injectable, Logger } from "@nestjs/common";
-import { IN_PROGRESS_STATES } from "../constants.js";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
+import { IN_PROGRESS_STATES } from "../constants.js";
 
 const RUN_ID_LABEL = "modeldoctor.ai/run-id";
 const MAX_RECONCILE_ROWS = 500;
@@ -28,8 +28,7 @@ export class StartupReconciler {
       // Hit the listByStatus cap — there may be more IN_PROGRESS benchmarks
       // that we silently dropped. Surface this so ops knows to investigate.
       this.log.warn(
-        `reconcile: listByStatus hit the ${MAX_RECONCILE_ROWS}-row cap; ` +
-          `additional IN_PROGRESS benchmarks may be unreconciled`,
+        `reconcile: listByStatus hit the ${MAX_RECONCILE_ROWS}-row cap; additional IN_PROGRESS benchmarks may be unreconciled`,
       );
     }
     this.log.log(`reconcile: ${inProgress.length} IN_PROGRESS benchmark(s) to check`);

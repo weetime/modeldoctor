@@ -1,6 +1,6 @@
 import type { V1Pod } from "@kubernetes/client-node";
 import { describe, expect, it, vi } from "vitest";
-import { StartupReconciler, type ReconcilerDeps } from "./startup-reconciler.js";
+import { type ReconcilerDeps, StartupReconciler } from "./startup-reconciler.js";
 
 function podWithRunId(runId: string): V1Pod {
   return {

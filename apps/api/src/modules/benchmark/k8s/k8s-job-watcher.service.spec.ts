@@ -1,6 +1,11 @@
 import type { Informer, V1Pod } from "@kubernetes/client-node";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { podFailed, podPendingWaiting, podRunId, podSucceeded } from "./__fixtures__/pod-fixtures.js";
+import {
+  podFailed,
+  podPendingWaiting,
+  podRunId,
+  podSucceeded,
+} from "./__fixtures__/pod-fixtures.js";
 import { K8sJobWatcherService, type WatcherDeps } from "./k8s-job-watcher.service.js";
 
 function makeFakeInformer() {
@@ -12,13 +17,13 @@ function makeFakeInformer() {
   } = {
     on: vi.fn((verb: string, cb: (arg: unknown) => void) => {
       if (!handlers.has(verb)) handlers.set(verb, []);
-      handlers.get(verb)!.push(cb);
+      handlers.get(verb)?.push(cb);
     }),
     off: vi.fn(),
     start: vi.fn(async () => undefined),
     stop: vi.fn(async () => undefined),
     fire: (verb: string, payload: unknown) => {
-      handlers.get(verb)?.forEach((cb) => cb(payload));
+      for (const cb of handlers.get(verb) ?? []) cb(payload);
     },
   } as unknown as Informer<V1Pod> & {
     fire: (verb: string, payload: unknown) => void;

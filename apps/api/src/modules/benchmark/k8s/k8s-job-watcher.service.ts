@@ -1,7 +1,7 @@
 import type { Informer, V1Pod } from "@kubernetes/client-node";
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { IN_PROGRESS_STATES } from "../constants.js";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
+import { IN_PROGRESS_STATES } from "../constants.js";
 import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
 

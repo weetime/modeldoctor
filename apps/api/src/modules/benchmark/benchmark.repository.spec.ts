@@ -249,11 +249,10 @@ describe("BenchmarkRepository.updateGuarded", () => {
         status: "running",
       },
     });
-    const updated = await repo.updateGuarded(
-      b.id,
-      ["pending", "submitted", "running"],
-      { status: "failed", statusMessage: "watcher: test" },
-    );
+    const updated = await repo.updateGuarded(b.id, ["pending", "submitted", "running"], {
+      status: "failed",
+      statusMessage: "watcher: test",
+    });
     expect(updated).not.toBeNull();
     expect(updated?.status).toBe("failed");
     expect(updated?.statusMessage).toBe("watcher: test");
@@ -269,11 +268,10 @@ describe("BenchmarkRepository.updateGuarded", () => {
         status: "completed",
       },
     });
-    const updated = await repo.updateGuarded(
-      b.id,
-      ["pending", "submitted", "running"],
-      { status: "failed", statusMessage: "should not apply" },
-    );
+    const updated = await repo.updateGuarded(b.id, ["pending", "submitted", "running"], {
+      status: "failed",
+      statusMessage: "should not apply",
+    });
     expect(updated).toBeNull();
     const reloaded = await prisma.benchmark.findUnique({ where: { id: b.id } });
     expect(reloaded?.status).toBe("completed");
@@ -281,11 +279,9 @@ describe("BenchmarkRepository.updateGuarded", () => {
   });
 
   it("returns null when row does not exist", async () => {
-    const updated = await repo.updateGuarded(
-      "00000000-0000-0000-0000-000000000000",
-      ["running"],
-      { status: "failed" },
-    );
+    const updated = await repo.updateGuarded("00000000-0000-0000-0000-000000000000", ["running"], {
+      status: "failed",
+    });
     expect(updated).toBeNull();
   });
 });

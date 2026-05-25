@@ -6,7 +6,7 @@ import {
   podRunning,
   podSucceeded,
 } from "./__fixtures__/pod-fixtures.js";
-import { DEFAULT_FATAL_WAITING_REASONS, reduce, type ReducerConfig } from "./pod-state-reducer.js";
+import { DEFAULT_FATAL_WAITING_REASONS, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 
 const CONFIG: ReducerConfig = {
   fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,

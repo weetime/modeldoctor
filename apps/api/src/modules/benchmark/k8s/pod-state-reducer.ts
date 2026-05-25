@@ -102,9 +102,7 @@ export function reduce(input: ReducerInput): DesiredTransition {
             kind: "failed-terminal",
             exitCode: term?.exitCode ?? -1,
             reason: term?.reason ?? "PodFailed",
-            message: truncate(
-              term ? `${term.reason}: ${term.message}` : "pod in Failed phase",
-            ),
+            message: truncate(term ? `${term.reason}: ${term.message}` : "pod in Failed phase"),
           };
         }
         // Phase Succeeded implies all containers exited 0 by K8s contract — no need to

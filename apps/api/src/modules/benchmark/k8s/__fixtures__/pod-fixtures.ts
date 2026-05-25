@@ -23,7 +23,10 @@ export function podRunId(): string {
 }
 
 export function podPending(): V1Pod {
-  return { ...BASE, status: { phase: "Pending", conditions: [{ type: "PodScheduled", status: "True" }] } };
+  return {
+    ...BASE,
+    status: { phase: "Pending", conditions: [{ type: "PodScheduled", status: "True" }] },
+  };
 }
 
 export function podPendingWaiting(reason: string, message = "test"): V1Pod {
