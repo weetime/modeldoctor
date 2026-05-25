@@ -128,33 +128,11 @@ export const createBenchmarkRequestSchema = z.object({
 export type CreateBenchmarkRequest = z.infer<typeof createBenchmarkRequestSchema>;
 
 // ── Internal callback schemas (runner pod → API) ─────────────────────
-export const benchmarkStateCallbackSchema = z.object({
-  state: z.literal("running"),
-  toolVersion: z.string().max(50).optional(),
-});
-export type BenchmarkStateCallback = z.infer<typeof benchmarkStateCallbackSchema>;
-
 export const benchmarkLogCallbackSchema = z.object({
   stream: z.enum(["stdout", "stderr"]),
   lines: z.array(z.string().max(64 * 1024)).max(2000),
 });
 export type BenchmarkLogCallback = z.infer<typeof benchmarkLogCallbackSchema>;
-
-export const benchmarkFinishCallbackSchema = z.object({
-  state: z.enum(["completed", "failed"]),
-  exitCode: z.number().int(),
-  // Full stdout/stderr captured during the run; capped on the runner side
-  // to ~16 KB tail apiece for /log live stream, but /finish ships the full
-  // text. The /finish endpoint raises body-size to 10 MB to accommodate
-  // full reports + outputs.
-  stdout: z.string(),
-  stderr: z.string(),
-  // alias → base64-encoded file bytes. Aliases are stable per-tool and
-  // align with the adapter's BuildCommandResult.outputFiles map.
-  files: z.record(z.string()),
-  message: z.string().max(2048).optional(),
-});
-export type BenchmarkFinishCallback = z.infer<typeof benchmarkFinishCallbackSchema>;
 
 // ── Charts response (GET /api/benchmarks/:id/charts) ─────────────────
 // Server derives these from rawOutput.files.* on demand; not persisted.

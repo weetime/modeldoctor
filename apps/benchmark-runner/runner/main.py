@@ -30,10 +30,9 @@ LOG_LINE_MAX_BYTES = 64 * 1024
 LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
 # S3 enforces its own object size limits; output files stream via put_file
 # (multipart-aware for objects >5 MB), so no in-memory cap is needed here.
-# Cap version string length stored in meta.json. The contract
-# (`benchmarkStateCallbackSchema.toolVersion`) hard-caps at 50; truncating
-# here mirrors that so a tool with a verbose `--version` banner doesn't
-# violate the cap.
+# Cap version string length stored in meta.json. The reportMetaSchema
+# toolVersion field hard-caps at 50; truncating here mirrors that so a tool
+# with a verbose `--version` banner doesn't violate the cap.
 TOOL_VERSION_MAX_CHARS = 50
 TOOL_VERSION_TIMEOUT_SEC = 10
 
