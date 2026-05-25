@@ -5,6 +5,11 @@ import { PodLogStreamer } from "./pod-log-streamer.js";
 
 function makeK8sLogMock(streams: PassThrough[]) {
   let i = 0;
+  // Silence "unhandled" warnings eagerly: when the test pre-destroys multiple
+  // streams before run() has a chance to pipe them, late streams emit 'error'
+  // on the next tick — before their log() call fires and before the production
+  // 'pipe' handler in PodLogStreamer can attach an error listener.
+  for (const s of streams) s.on("error", () => {});
   return {
     log: vi.fn(async (_ns, _pod, _container, sink) => {
       const passthrough = streams[i++];

@@ -59,9 +59,8 @@ export class PodLogStreamer {
         streamReject = rej;
       });
 
-      // clean end
-      passthrough.on("end", () => streamResolve());
-      // destroy without error (abort())
+      // destroy without error (abort()) or clean end — 'close' fires in both
+      // cases, giving a single resolve path per stream lifecycle.
       passthrough.on("close", () => streamResolve());
       // destroy with error (stream failure)
       passthrough.on("error", (e) => streamReject(e));
@@ -87,7 +86,7 @@ export class PodLogStreamer {
       // src.destroyed and immediately destroy the sink.
       // In production the K8s client writes and calls sink.destroy(err)
       // directly, so the 'pipe' listener is an inert no-op.
-      passthrough.on("pipe", (src: PassThrough) => {
+      passthrough.once("pipe", (src: PassThrough) => {
         if (src.destroyed) {
           // Source already dead; propagate its error (or a generic one) now.
           if (!passthrough.destroyed) {
@@ -96,7 +95,7 @@ export class PodLogStreamer {
             );
           }
         } else {
-          src.on("error", (e: Error) => {
+          src.once("error", (e: Error) => {
             if (!passthrough.destroyed) passthrough.destroy(e);
           });
         }
