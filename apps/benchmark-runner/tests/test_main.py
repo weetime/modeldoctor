@@ -1,19 +1,17 @@
 """Tests for the generic tool-agnostic wrapper in runner.main.
 
 The wrapper reads MD_* env, spawns the given argv, batches stdout/stderr
-lines into /log POSTs, then POSTs /finish with full buffers + base64-encoded
-output files.
+lines into /log POSTs, then writes meta.json → files → stdout/stderr →
+result.json (sentinel) to S3.
 """
 
 from __future__ import annotations
 
-import base64
 import io
 import json
-import logging
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest_mock import MockerFixture
@@ -99,137 +97,203 @@ class TestInjectApiKeyIntoBackendKwargs:
             main_mod._inject_api_key_into_backend_kwargs(argv)
 
 
-@pytest.fixture
-def patched_callbacks(mocker: MockerFixture) -> dict[str, MagicMock]:
-    """Patch every callback function on runner.main."""
+# ── S3-write order and exit-code propagation ────────────────────────────
+
+
+def _s3_env(md_env: dict[str, str]) -> dict[str, str]:
+    """Merge minimal S3 env vars into an md_env dict."""
     return {
-        "post_state_running": mocker.patch("runner.main.post_state_running"),
-        "post_log_batch": mocker.patch("runner.main.post_log_batch"),
-        "post_finish": mocker.patch("runner.main.post_finish"),
+        **md_env,
+        "S3_ENDPOINT": "http://localhost:9999",
+        "S3_ACCESS_KEY": "k",
+        "S3_SECRET_KEY": "s",
+        "S3_BUCKET": "b",
+        "S3_REGION": "us-east-1",
     }
 
 
-def test_happy_path_posts_state_running_and_finish_completed(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-) -> None:
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    # detect_tool_version invokes subprocess.run; stub it out so the test
-    # is hermetic (no dependency on a host `echo --version`).
-    mocker.patch("runner.main.detect_tool_version", return_value=None)
-
-    rc = main_mod.main()
-
-    assert rc == 0
-    assert patched_callbacks["post_state_running"].call_count == 1
-    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
-    assert sr_kwargs["benchmark_id"] == "b-test"
-    assert sr_kwargs["token"] == "hmac-test-token"
-
-    assert patched_callbacks["post_finish"].call_count == 1
-    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
-    assert finish_kwargs["state"] == "completed"
-    assert finish_kwargs["exit_code"] == 0
-    assert finish_kwargs["stdout"] == "hello"
-    assert finish_kwargs["stderr"] == ""
-    assert finish_kwargs["files"] == {}
-    assert finish_kwargs["message"] is None
-
-
-def test_failure_path_posts_finish_failed_with_message(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-) -> None:
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    proc = _fake_proc(stdout=b"", stderr=b"BOOM\n", returncode=1)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    mocker.patch("runner.main.detect_tool_version", return_value=None)
-
-    rc = main_mod.main()
-
-    # Wrapper itself always exits 0 — failure is conveyed via /finish state.
-    assert rc == 0
-    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
-    assert finish_kwargs["state"] == "failed"
-    assert finish_kwargs["exit_code"] == 1
-    assert finish_kwargs["stderr"] == "BOOM"
-    assert finish_kwargs["message"] == "tool exited with code 1"
-
-
-def test_output_file_collected_as_base64(
-    patched_callbacks: dict[str, MagicMock],
+def test_main_writes_meta_then_result_last(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
     tmp_path: Path,
 ) -> None:
-    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"report": "report.json"})
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    """meta.json is first; result.json is the sentinel written last."""
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
 
-    # Place the output file in tmp_path and run the wrapper with cwd=tmp_path.
+    writer = MagicMock()
+    calls: list[tuple[str, str]] = []
+    writer.put_json.side_effect = lambda key, _obj: calls.append(("json", key))
+    writer.put_text.side_effect = lambda key, _text: calls.append(("text", key))
+    writer.put_file.side_effect = lambda key, _path: calls.append(("file", key))
+
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
+
+    assert rc == 0
+    # meta.json must be first write of any kind
+    assert calls[0] == ("json", "b-test/meta.json")
+    # result.json must be the last json call (sentinel)
+    json_calls = [c for c in calls if c[0] == "json"]
+    assert json_calls[-1] == ("json", "b-test/result.json")
+
+
+def test_main_propagates_subprocess_exit_code(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """main() returns proc.returncode, not always 0."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["false"])  # always exits 1
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
+
+    assert rc == 1
+    # result.json still written even on failure (watcher needs sentinel)
+    keys_written = [call.args[0] for call in writer.put_json.call_args_list]
+    assert "b-test/result.json" in keys_written
+
+
+def test_main_raises_when_s3_put_fails(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """S3 write failure propagates as an exception (no try/except swallowing)."""
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    writer = MagicMock()
+    writer.put_json.side_effect = RuntimeError("s3 down")
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        with pytest.raises(RuntimeError, match="s3 down"):
+            main_mod.main()
+
+
+def test_output_file_uploaded_to_s3(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Output files present on disk are uploaded via put_file; absent files are silently skipped."""
+    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"report": "report.json"})
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
     (tmp_path / "report.json").write_bytes(b"REPORT_BYTES")
     mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
-    # Path.cwd() is also used to resolve output files.
     mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
-
-    proc = _fake_proc(stdout=b"hello\n", stderr=b"", returncode=0)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    mocker.patch("runner.main.detect_tool_version", return_value=None)
-
-    rc = main_mod.main()
-
-    assert rc == 0
-    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
-    assert "report" in files
-    assert files["report"] == base64.b64encode(b"REPORT_BYTES").decode("ascii")
-
-
-def test_missing_output_file_silently_dropped(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-    tmp_path: Path,
-) -> None:
-    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"missing": "nope.txt"})
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
-    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
-
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
 
-    rc = main_mod.main()
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
 
     assert rc == 0
-    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
-    assert files == {}
+    # put_file called with correct S3 key
+    writer.put_file.assert_called_once_with(
+        "b-test/files/report",
+        str(tmp_path / "report.json"),
+    )
+    # result.json files map records relative path
+    result_payload = writer.put_json.call_args_list[-1].args[1]
+    assert result_payload["files"] == {"report": "files/report"}
+
+
+def test_missing_output_file_silently_dropped(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Output files that don't exist on disk are silently excluded from files_map."""
+    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"missing": "nope.txt"})
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
+
+    assert rc == 0
+    writer.put_file.assert_not_called()
+    result_payload = writer.put_json.call_args_list[-1].args[1]
+    assert result_payload["files"] == {}
+
+
+def test_meta_json_contains_tool_version(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """meta.json carries the detected tool version."""
+    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "benchmark", "run"])
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value="guidellm 0.5.2")
+
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
+
+    assert rc == 0
+    meta_key, meta_payload = writer.put_json.call_args_list[0].args
+    assert meta_key == "b-test/meta.json"
+    assert meta_payload["toolVersion"] == "guidellm 0.5.2"
+    assert "startTimeIso" in meta_payload
 
 
 def test_log_batches_posted_with_correct_kwargs(
-    patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
+    tmp_path: Path,
 ) -> None:
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
     # Several lines so the end-of-stream flush has something to send.
     stdout_blob = b"line one\nline two\nline three\n"
     proc = _fake_proc(stdout=stdout_blob, stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
+    mock_post_log = mocker.patch("runner.main.post_log_batch")
 
-    rc = main_mod.main()
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
 
     assert rc == 0
-    assert patched_callbacks["post_log_batch"].call_count >= 1
+    assert mock_post_log.call_count >= 1
 
     # All stdout-stream calls should target benchmark_id=b-test and stream=stdout.
     stdout_calls = [
         c
-        for c in patched_callbacks["post_log_batch"].call_args_list
+        for c in mock_post_log.call_args_list
         if c.kwargs.get("stream") == "stdout"
     ]
     assert len(stdout_calls) >= 1
@@ -245,18 +309,22 @@ def test_log_batches_posted_with_correct_kwargs(
     assert "line two" in all_lines
     assert "line three" in all_lines
 
-    # And /finish should include the tail stdout (within LOG_TAIL_MAX_BYTES).
-    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
-    assert finish_kwargs["stdout"] == "line one\nline two\nline three"
+    # stdout.log written to S3 should include all lines
+    text_calls = {call.args[0]: call.args[1] for call in writer.put_text.call_args_list}
+    assert "b-test/stdout.log" in text_calls
+    assert "line one" in text_calls["b-test/stdout.log"]
+    assert "line three" in text_calls["b-test/stdout.log"]
 
 
 def test_stdout_tail_caps_at_64kb(
-    patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
+    tmp_path: Path,
 ) -> None:
-    """StreamPump.full is bounded at LOG_TAIL_MAX_BYTES; /finish receives the tail."""
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    """StreamPump.full is bounded at LOG_TAIL_MAX_BYTES; stdout.log receives the tail."""
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
     # Build 200 distinguishable lines (~1 KB each) so we can prove FIFO
     # eviction: the first lines must be dropped, the last must survive.
     lines_in = [f"line-{i:04d}-" + "x" * (1023 - 11) for i in range(200)]
@@ -265,22 +333,28 @@ def test_stdout_tail_caps_at_64kb(
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
 
-    rc = main_mod.main()
+    writer = MagicMock()
+    captured_stdout: list[str] = []
+
+    def capture_put_text(key: str, text: str) -> None:
+        if key.endswith("stdout.log"):
+            captured_stdout.append(text)
+
+    writer.put_text.side_effect = capture_put_text
+
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
 
     assert rc == 0
-    finish_kwargs = patched_callbacks["post_finish"].call_args.kwargs
-    captured = finish_kwargs["stdout"]
+    assert len(captured_stdout) == 1
+    captured = captured_stdout[0]
     captured_bytes = len(captured.encode("utf-8"))
-    # Upper bound: the join produces N-1 newlines, so the on-the-wire
-    # bytes are always strictly less than the cap. The +1 accounting in
-    # StreamPump charges +1 per line (for the join newline), so once we
-    # evict to fit the cap, the actual bytes are ≤ cap - 1.
+    # Upper bound: within the cap
     assert captured_bytes <= main_mod.LOG_TAIL_MAX_BYTES, (
         f"stdout {captured_bytes} bytes exceeded cap {main_mod.LOG_TAIL_MAX_BYTES}"
     )
-    # Lower bound: the buffer should actually be near-full — fed 200 KB,
-    # expect the tail to be within 1 KB of the cap (room for the last
-    # partial line eviction).
+    # Lower bound: near-full
     assert captured_bytes >= main_mod.LOG_TAIL_MAX_BYTES - 1024, (
         f"stdout {captured_bytes} bytes is suspiciously below cap {main_mod.LOG_TAIL_MAX_BYTES}"
     )
@@ -298,19 +372,24 @@ def test_stdout_tail_caps_at_64kb(
 
 
 def test_redaction_in_log_line(
-    patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
+    tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", '--backend-kwargs={"api_key":"sk-secret"}'])
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
 
-    with caplog.at_level("INFO", logger="runner"):
-        rc = main_mod.main()
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        with caplog.at_level("INFO", logger="runner"):
+            rc = main_mod.main()
 
     assert rc == 0
     log_text = "\n".join(r.message for r in caplog.records)
@@ -319,9 +398,9 @@ def test_redaction_in_log_line(
 
 
 def test_injected_api_key_is_redacted_in_log(
-    patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
+    tmp_path: Path,
     caplog,
 ) -> None:
     """End-to-end: env-set OPENAI_API_KEY merges into --backend-kwargs at
@@ -329,19 +408,25 @@ def test_injected_api_key_is_redacted_in_log(
     line so the secret never appears in stdout/captured pod logs."""
     md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "--backend-kwargs={}"])
     md_env_minimal["OPENAI_API_KEY"] = "sk-from-env-secret"
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
     proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
-    with caplog.at_level("INFO", logger="runner"):
-        main_mod.main()
+
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        with caplog.at_level("INFO", logger="runner"):
+            main_mod.main()
+
     log_text = "\n".join(r.message for r in caplog.records)
     assert "***REDACTED***" in log_text
     assert "sk-from-env-secret" not in log_text
 
 
 def test_missing_required_env_raises_key_error(
-    patched_callbacks: dict[str, MagicMock],
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
 ) -> None:
@@ -367,41 +452,6 @@ def test_redacted_helper_redacts_backend_kwargs() -> None:
     out = main_mod._redacted(argv)
     assert out[0] == "guidellm"
     assert out[1] == "--backend-kwargs=***REDACTED***"
-
-
-def test_oversized_output_file_skipped_with_warning(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Output files over OUTPUT_FILE_MAX_BYTES are skipped rather than OOMing."""
-    md_env_minimal["MD_OUTPUT_FILES"] = json.dumps({"attack": "attack.bin"})
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-
-    # Write a small file but lower the cap to 1 KB so the test stays fast.
-    big_file = tmp_path / "attack.bin"
-    big_file.write_bytes(b"B" * 2048)  # 2 KB — over the patched 1 KB cap
-    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
-    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
-    mocker.patch("runner.main.OUTPUT_FILE_MAX_BYTES", 1024)
-
-    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    mocker.patch("runner.main.detect_tool_version", return_value=None)
-
-    with caplog.at_level("WARNING", logger="runner"):
-        rc = main_mod.main()
-
-    assert rc == 0
-    files = patched_callbacks["post_finish"].call_args.kwargs["files"]
-    assert "attack" not in files, "oversized file must not appear in /finish files"
-
-    warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
-    assert any("exceeds" in msg and "attack" in msg for msg in warning_messages), (
-        f"expected a warning about 'attack' exceeding cap; got: {warning_messages}"
-    )
 
 
 def test_materialize_input_files_symlinks_into_cwd(
@@ -494,45 +544,3 @@ class TestDetectToolVersion:
         out = main_mod.detect_tool_version("guidellm")
         assert out is not None
         assert len(out) == main_mod.TOOL_VERSION_MAX_CHARS
-
-
-def test_state_running_callback_includes_detected_tool_version(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-) -> None:
-    """End-to-end: main() detects argv[0]'s --version and forwards it as
-    tool_version on the /state callback so the BFF can persist it on the
-    benchmark row."""
-    md_env_minimal["MD_ARGV"] = json.dumps(["guidellm", "benchmark", "run"])
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    mocker.patch("runner.main.detect_tool_version", return_value="guidellm 0.5.2")
-
-    rc = main_mod.main()
-
-    assert rc == 0
-    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
-    assert sr_kwargs["tool_version"] == "guidellm 0.5.2"
-    assert sr_kwargs["benchmark_id"] == "b-test"
-
-
-def test_state_running_callback_passes_none_when_version_undetectable(
-    patched_callbacks: dict[str, MagicMock],
-    md_env_minimal: dict[str, str],
-    mocker: MockerFixture,
-) -> None:
-    """When the tool isn't on PATH, main() still posts /state — just with
-    tool_version=None — so the benchmark transitions to running."""
-    md_env_minimal["MD_ARGV"] = json.dumps(["nonexistent-tool"])
-    mocker.patch.dict("os.environ", md_env_minimal, clear=True)
-    proc = _fake_proc(stdout=b"", stderr=b"", returncode=0)
-    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
-    mocker.patch("runner.main.detect_tool_version", return_value=None)
-
-    rc = main_mod.main()
-
-    assert rc == 0
-    sr_kwargs = patched_callbacks["post_state_running"].call_args.kwargs
-    assert sr_kwargs["tool_version"] is None
