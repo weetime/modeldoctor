@@ -15,17 +15,9 @@ import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.controller.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
+import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
 import { StartupReconciler } from "./k8s/startup-reconciler.js";
 import { SseHub } from "./sse/sse-hub.service.js";
-
-const FATAL_WAITING_REASONS = [
-  "ImagePullBackOff",
-  "CrashLoopBackOff",
-  "ErrImagePull",
-  "CreateContainerConfigError",
-  "CreateContainerError",
-  "InvalidImageName",
-] as const;
 
 async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeConfig> {
   const k8s = await import("@kubernetes/client-node");
@@ -90,7 +82,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         }) as number;
 
         const reducerConfig = {
-          fatalWaitingReasons: FATAL_WAITING_REASONS,
+          fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,
           waitingFatalGraceSec,
           terminalReconcileGraceSec,
         };

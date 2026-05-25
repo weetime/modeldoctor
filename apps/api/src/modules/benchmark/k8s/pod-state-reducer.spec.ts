@@ -6,17 +6,10 @@ import {
   podRunning,
   podSucceeded,
 } from "./__fixtures__/pod-fixtures.js";
-import { reduce, type ReducerConfig } from "./pod-state-reducer.js";
+import { DEFAULT_FATAL_WAITING_REASONS, reduce, type ReducerConfig } from "./pod-state-reducer.js";
 
 const CONFIG: ReducerConfig = {
-  fatalWaitingReasons: [
-    "ImagePullBackOff",
-    "CrashLoopBackOff",
-    "ErrImagePull",
-    "CreateContainerConfigError",
-    "CreateContainerError",
-    "InvalidImageName",
-  ],
+  fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,
   waitingFatalGraceSec: 60,
   terminalReconcileGraceSec: 60,
 };
@@ -75,14 +68,7 @@ describe("PodStateReducer", () => {
   });
 
   describe("FATAL waiting → failed-pre-start", () => {
-    for (const reason of [
-      "ImagePullBackOff",
-      "CrashLoopBackOff",
-      "ErrImagePull",
-      "CreateContainerConfigError",
-      "CreateContainerError",
-      "InvalidImageName",
-    ]) {
+    for (const reason of DEFAULT_FATAL_WAITING_REASONS) {
       it(`flags ${reason} after grace`, () => {
         const firstSeen = new Date(NOW.getTime() - 61_000);
         const r = reduce({

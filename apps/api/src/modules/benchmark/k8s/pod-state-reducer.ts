@@ -1,6 +1,22 @@
 import type { V1Pod } from "@kubernetes/client-node";
 import { isInProgressStatus } from "../constants.js";
 
+/**
+ * Pod waiting reasons we treat as "won't self-recover" — once the grace
+ * period elapses, the watcher marks the benchmark failed.
+ *
+ * Source: K8s kubelet container statuses + image-puller error codes.
+ * Update if K8s introduces new fatal reasons or if ops needs to recategorize.
+ */
+export const DEFAULT_FATAL_WAITING_REASONS = [
+  "ImagePullBackOff",
+  "CrashLoopBackOff",
+  "ErrImagePull",
+  "CreateContainerConfigError",
+  "CreateContainerError",
+  "InvalidImageName",
+] as const;
+
 export interface ReducerConfig {
   fatalWaitingReasons: readonly string[];
   waitingFatalGraceSec: number;
