@@ -1,5 +1,7 @@
 import type { V1Pod } from "@kubernetes/client-node";
 
+const FIXED_TIME = new Date("2026-05-25T09:00:00Z");
+
 const RUN_ID = "run-abc";
 
 const BASE: V1Pod = {
@@ -55,7 +57,7 @@ export function podRunning(): V1Pod {
           restartCount: 0,
           image: "x:latest",
           imageID: "x@sha256:abc",
-          state: { running: { startedAt: new Date() } },
+          state: { running: { startedAt: FIXED_TIME } },
         },
       ],
     },
@@ -74,7 +76,7 @@ export function podSucceeded(): V1Pod {
           restartCount: 0,
           image: "x:latest",
           imageID: "x@sha256:abc",
-          state: { terminated: { exitCode: 0, reason: "Completed", finishedAt: new Date() } },
+          state: { terminated: { exitCode: 0, reason: "Completed", finishedAt: FIXED_TIME } },
         },
       ],
     },
@@ -93,7 +95,7 @@ export function podFailed(exitCode = 1, reason = "Error", message = "tool exit 1
           restartCount: 0,
           image: "x:latest",
           imageID: "x@sha256:abc",
-          state: { terminated: { exitCode, reason, message, finishedAt: new Date() } },
+          state: { terminated: { exitCode, reason, message, finishedAt: FIXED_TIME } },
         },
       ],
     },

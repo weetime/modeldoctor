@@ -25,6 +25,8 @@ export interface ReducerInput {
   config: ReducerConfig;
 }
 
+/** 2 KiB cap: statusMessage is TEXT in Postgres but watcher-sourced messages
+ *  are diagnostic, not data — truncate to keep DB rows compact and UI usable. */
 const MAX_MSG_LEN = 2048;
 
 function truncate(s: string): string {
@@ -89,7 +91,8 @@ export function reduce(input: ReducerInput): DesiredTransition {
             ),
           };
         }
-        // Succeeded but benchmark still IN_PROGRESS = runner exited 0 but no callback arrived.
+        // Phase Succeeded implies all containers exited 0 by K8s contract — no need to
+        // inspect getTerminated(). Failure here means "runner finished but never called back".
         return {
           kind: "failed-terminal",
           exitCode: 0,

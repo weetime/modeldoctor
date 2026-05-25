@@ -202,8 +202,11 @@ describe("PodStateReducer", () => {
         now: NOW,
         config: CONFIG,
       });
+      expect(r.kind).toBe("failed-terminal");
       if (r.kind === "failed-terminal") {
         expect(r.message.length).toBeLessThanOrEqual(2048);
+        // Prefix must survive truncation — losing "Error: " would erase reason context.
+        expect(r.message.startsWith("Error: ")).toBe(true);
       }
     });
   });
