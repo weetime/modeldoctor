@@ -14,6 +14,10 @@ const LABELS = {
   "app.kubernetes.io/managed-by": "modeldoctor-api",
 };
 
+/** Operator-created Secret holding S3 credentials shared across all benchmark Jobs.
+ *  Per-run Secret (callback token + tool API keys) stays separate. */
+const STORAGE_SECRET_NAME = "md-benchmark-storage";
+
 // Encode an inputFiles alias into a Secret-key-safe form. Aliases are
 // arbitrary strings (e.g. "targets.txt"); Secret keys must be DNS-
 // segment-like ([A-Za-z0-9._-]). Base64-url-no-pad gives a deterministic
@@ -99,7 +103,10 @@ export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOption
               image: ctx.image,
               imagePullPolicy: "IfNotPresent",
               env,
-              envFrom: [{ secretRef: { name: secretName(ctx.runId) } }],
+              envFrom: [
+                { secretRef: { name: secretName(ctx.runId) } },
+                { secretRef: { name: STORAGE_SECRET_NAME } },
+              ],
               ...(hasInputFiles
                 ? {
                     volumeMounts: [

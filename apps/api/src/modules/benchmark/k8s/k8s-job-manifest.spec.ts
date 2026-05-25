@@ -32,12 +32,23 @@ describe("buildSecretManifest", () => {
 });
 
 describe("buildJobManifest", () => {
-  it("references the per-run Secret via envFrom", () => {
+  it("references the per-run Secret and storage Secret via envFrom", () => {
     const j = buildJobManifest(ctx, { namespace: "ns" });
     expect(j.metadata?.name).toBe("run-abc123");
     const c = j.spec?.template.spec?.containers[0];
     expect(c?.image).toBe("ghcr.io/example/runner:latest");
-    expect(c?.envFrom).toContainEqual({ secretRef: { name: "run-abc123" } });
+    expect(c?.envFrom).toEqual([
+      { secretRef: { name: "run-abc123" } },
+      { secretRef: { name: "md-benchmark-storage" } },
+    ]);
+  });
+
+  it("envFrom includes md-benchmark-storage Secret", () => {
+    const j = buildJobManifest(ctx, { namespace: "ns" });
+    const c = j.spec?.template.spec?.containers[0];
+    expect(c?.envFrom).toContainEqual(
+      expect.objectContaining({ secretRef: expect.objectContaining({ name: "md-benchmark-storage" }) }),
+    );
   });
 
   it("ships non-secret env values directly + MD_* control vars", () => {
