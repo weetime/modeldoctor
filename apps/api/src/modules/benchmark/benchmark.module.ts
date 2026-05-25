@@ -14,7 +14,8 @@ import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkFilesController } from "./benchmark-files.controller.js";
-import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.controller.js";
+import { K8S_LOG_CLIENT, K8S_NAMESPACE, PodLogStreamerFactory } from "./k8s/pod-log-streamer-factory.js";
+import { PodLogStreamerPool } from "./k8s/pod-log-streamer-pool.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
@@ -41,7 +42,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     BaselineModule,
     NotificationsModule,
   ],
-  controllers: [BenchmarkController, BenchmarkCallbackController, BenchmarkFilesController],
+  controllers: [BenchmarkController, BenchmarkFilesController],
   providers: [
     PrismaService,
     BenchmarkRepository,
@@ -89,18 +90,42 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
       ): ReportLoader => new ReportLoader({ storage, repo, notify, sse }),
     },
     {
+      provide: K8S_NAMESPACE,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>): string =>
+        (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string | undefined)
+          ?? "modeldoctor-benchmarks",
+    },
+    {
+      provide: K8S_LOG_CLIENT,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService<Env, true>): Promise<Pick<import("@kubernetes/client-node").Log, "log">> => {
+        const mode = config.get("K8S_WATCHER_MODE", { infer: true }) as WatcherMode;
+        if (mode === "off") {
+          // Tests / dev never call into real K8s — return a stub that throws if used.
+          return { log: async () => { throw new Error("K8S_LOG_CLIENT unavailable in mode=off"); } };
+        }
+        const k8s = await import("@kubernetes/client-node");
+        const kc = await loadKubeConfig(config);
+        return new k8s.Log(kc);
+      },
+    },
+    PodLogStreamerFactory,
+    PodLogStreamerPool,
+    {
       // K8sJobWatcherService — Phase 2 primary watcher.
       // useFactory loads KubeConfig + builds Informer factory + StartupReconciler.
       // Note: WatcherDeps is constructor-injected as a single object (not 6
       // separate @Inject calls) so the makeInformer factory closure can capture
       // the KubeConfig + namespace without leaking them into module-level DI.
       provide: K8sJobWatcherService,
-      inject: [ConfigService, BenchmarkRepository, ReportLoader, REPORT_STORAGE],
+      inject: [ConfigService, BenchmarkRepository, ReportLoader, REPORT_STORAGE, PodLogStreamerPool],
       useFactory: async (
         config: ConfigService<Env, true>,
         repo: BenchmarkRepository,
         reportLoader: ReportLoader,
         storage: ReportStorage,
+        pool: PodLogStreamerPool,
       ): Promise<K8sJobWatcherService> => {
         const mode = config.get("K8S_WATCHER_MODE", { infer: true }) as WatcherMode;
         const namespace = config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string;
@@ -136,6 +161,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
               reportLoader,
             }),
             reportLoader,
+            pool,
           });
         }
 
@@ -171,6 +197,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           repo,
           reconciler,
           reportLoader,
+          pool,
         });
       },
     },
