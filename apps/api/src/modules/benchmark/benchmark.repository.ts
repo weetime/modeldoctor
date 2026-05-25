@@ -151,7 +151,7 @@ export class BenchmarkRepository {
   ): Promise<PrismaBenchmark | null> {
     const result = await this.prisma.benchmark.updateMany({
       where: { id, status: { in: [...allowedStatuses] } },
-      data: input,
+      data: input as Prisma.BenchmarkUpdateInput,
     });
     if (result.count === 0) return null;
     return this.prisma.benchmark.findUnique({ where: { id } });
