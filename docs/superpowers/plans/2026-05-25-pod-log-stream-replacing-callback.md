@@ -1392,7 +1392,7 @@ import { BenchmarkCallbackController } from "./callbacks/benchmark-callback.cont
 - [ ] **Step 6.3: Typecheck module**
 
 ```bash
-pnpm -F @modeldoctor/api typecheck
+pnpm -F @modeldoctor/api type-check
 ```
 
 Expected: PASS. If `BenchmarkCallbackController` deleted but the file still exists (it does — Phase 7 deletes it), the import was just dropped — fine. Pool / factory / namespace provider should resolve.
@@ -1698,7 +1698,7 @@ Expected: PASS.
 - [ ] **Step 7.10: Typecheck — expected to fail on BenchmarkRunInput.callback / adapter.callback (closed by Phase 9)**
 
 ```bash
-pnpm -F @modeldoctor/api typecheck
+pnpm -F @modeldoctor/api type-check
 ```
 
 Expected: FAIL with errors like `Property 'callback' is missing in type 'BuildCommandContext'` or similar — these close in Phase 9. **Document the failing files in commit message**.
@@ -2079,7 +2079,7 @@ pnpm -F @modeldoctor/tool-adapters test
 - [ ] **Step 9.9: Full typecheck**
 
 ```bash
-pnpm -F @modeldoctor/api typecheck
+pnpm -F @modeldoctor/api type-check
 ```
 
 Expected: **PASS now** (Phase 7's intentional gap closes here).
@@ -2308,7 +2308,7 @@ EOF
 - [ ] **Step 12.1: Full workspace typecheck**
 
 ```bash
-pnpm -r typecheck
+pnpm -r type-check
 ```
 
 Expected: all packages green.
@@ -2380,7 +2380,7 @@ addresses #237
 
 ## Test plan
 
-- [ ] `pnpm -r typecheck` green
+- [ ] `pnpm -r type-check` green
 - [ ] `pnpm -r lint` green
 - [ ] `pnpm -r test` green
 - [ ] `pnpm -F @modeldoctor/api test:e2e` green (includes Phase 11 e2e)
