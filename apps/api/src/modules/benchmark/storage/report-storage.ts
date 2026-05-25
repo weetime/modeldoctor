@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 /**
  * Report-side read interface for shared object storage (MinIO / S3).
  *
@@ -12,6 +14,8 @@ export interface ReportStorage {
   readJson<T>(key: string): Promise<T>;
   readText(key: string): Promise<string>;
   readBytes(key: string): Promise<Buffer>;
+  /** Returns a Readable stream without draining the object into memory. */
+  readStream(key: string): Promise<Readable>;
 }
 
 export const REPORT_STORAGE = Symbol("REPORT_STORAGE");

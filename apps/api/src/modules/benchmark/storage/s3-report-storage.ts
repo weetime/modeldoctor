@@ -58,4 +58,10 @@ export class S3ReportStorage implements ReportStorage {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     return Buffer.concat(chunks);
   }
+
+  async readStream(key: string): Promise<Readable> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!res.Body) throw new Error(`S3 GetObject ${key} returned empty body`);
+    return res.Body as Readable;
+  }
 }

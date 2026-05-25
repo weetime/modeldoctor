@@ -61,4 +61,13 @@ describe("S3ReportStorage", () => {
     const storage = makeStorage();
     expect((await storage.readBytes("run-1/files/x")).toString("utf8")).toBe("binary");
   });
+
+  it("readStream() returns Readable", async () => {
+    s3Mock.on(GetObjectCommand).resolves({ Body: bodyFromString("stream-content") as never });
+    const storage = makeStorage();
+    const stream = await storage.readStream("run-1/files/x");
+    const chunks: Buffer[] = [];
+    for await (const c of stream) chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+    expect(Buffer.concat(chunks).toString("utf8")).toBe("stream-content");
+  });
 });

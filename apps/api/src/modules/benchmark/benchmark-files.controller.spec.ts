@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { ForbiddenException, NotFoundException, StreamableFile } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { BenchmarkFilesController } from "./benchmark-files.controller.js";
@@ -17,6 +18,7 @@ function makeCtrl(opts: { bench?: Bench | null; fileBytes?: Buffer }) {
     readBytes: vi.fn(async () => opts.fileBytes ?? Buffer.from("data")),
     readJson: vi.fn(),
     readText: vi.fn(),
+    readStream: vi.fn(async () => Readable.from([opts.fileBytes ?? Buffer.from("data")])),
   };
   return {
     ctrl: new BenchmarkFilesController(repo as never, storage as never),
@@ -64,7 +66,7 @@ describe("BenchmarkFilesController", () => {
     });
     const out = await ctrl.getFile(userAdmin as never, "r1", "report.json");
     expect(out).toBeInstanceOf(StreamableFile);
-    expect(storage.readBytes).toHaveBeenCalledWith("r1/files/report.json");
+    expect(storage.readStream).toHaveBeenCalledWith("r1/files/report.json");
   });
 
   it("404 when alias not in rawOutput.files", async () => {
@@ -95,6 +97,6 @@ describe("BenchmarkFilesController", () => {
     });
     const out = await ctrl.getFile(userU1 as never, "r1", "report.json");
     expect(out).toBeInstanceOf(StreamableFile);
-    expect(storage.readBytes).toHaveBeenCalledWith("r1/files/report.json");
+    expect(storage.readStream).toHaveBeenCalledWith("r1/files/report.json");
   });
 });

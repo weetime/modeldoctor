@@ -45,7 +45,7 @@ export class BenchmarkFilesController {
     if (!relPath) throw new NotFoundException(`alias ${alias} not in this benchmark's files`);
 
     const key = `${id}/${relPath}`;
-    const bytes = await this.storage.readBytes(key);
-    return new StreamableFile(bytes, { disposition: `attachment; filename="${alias}"` });
+    const stream = await this.storage.readStream(key);
+    return new StreamableFile(stream, { disposition: `attachment; filename="${alias}"` });
   }
 }
