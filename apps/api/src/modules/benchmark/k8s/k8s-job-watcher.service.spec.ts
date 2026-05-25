@@ -44,6 +44,12 @@ function makeDeps(mode: WatcherMode = "backstop"): {
   repo: { findById: ReturnType<typeof vi.fn>; updateGuarded: ReturnType<typeof vi.fn> };
   reconciler: { run: ReturnType<typeof vi.fn> };
   reportLoader: { tryLoad: ReturnType<typeof vi.fn> };
+  pool: {
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+    drainAndStop: ReturnType<typeof vi.fn>;
+    has: ReturnType<typeof vi.fn>;
+  };
 } {
   const informer = makeFakeInformer();
   const repo = {
@@ -52,6 +58,12 @@ function makeDeps(mode: WatcherMode = "backstop"): {
   };
   const reconciler = { run: vi.fn(async () => undefined) };
   const reportLoader = { tryLoad: vi.fn(async () => {}) };
+  const pool = {
+    start: vi.fn(),
+    stop: vi.fn(),
+    drainAndStop: vi.fn(async () => {}),
+    has: vi.fn(() => false),
+  };
   return {
     deps: {
       mode,
@@ -65,11 +77,13 @@ function makeDeps(mode: WatcherMode = "backstop"): {
       repo: repo as never,
       reconciler: reconciler as never,
       reportLoader: reportLoader as never,
+      pool: pool as never,
     },
     informer,
     repo,
     reconciler,
     reportLoader,
+    pool,
   };
 }
 
@@ -281,5 +295,63 @@ describe("K8sJobWatcherService — primary mode", () => {
       ["pending", "submitted", "running"],
       expect.objectContaining({ status: "failed" }),
     );
+  });
+});
+
+describe("Phase 3 — pod log streamer", () => {
+  it("Running pod (ready, status=submitted, mode=primary) calls pool.start", async () => {
+    const { deps, informer, repo, pool } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted", tool: "guidellm" });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    informer.fire("add", podRunning());
+    await new Promise((r) => setImmediate(r));
+    expect(pool.start).toHaveBeenCalledWith(podRunId(), expect.any(String), "guidellm");
+  });
+
+  it("Running pod in mode=backstop does NOT call pool.start", async () => {
+    const { deps, informer, repo, pool } = makeDeps("backstop");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted", tool: "guidellm" });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    informer.fire("add", podRunning());
+    await new Promise((r) => setImmediate(r));
+    expect(pool.start).not.toHaveBeenCalled();
+  });
+
+  it("Succeeded pod calls pool.drainAndStop(5000) before reportLoader.tryLoad", async () => {
+    const { deps, informer, repo, pool, reportLoader } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "running", tool: "guidellm" });
+    const callOrder: string[] = [];
+    pool.drainAndStop.mockImplementation(async () => { callOrder.push("drain"); });
+    reportLoader.tryLoad.mockImplementation(async () => { callOrder.push("tryLoad"); });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    informer.fire("update", podSucceeded());
+    await new Promise((r) => setImmediate(r));
+    expect(pool.drainAndStop).toHaveBeenCalledWith(podRunId(), 5000);
+    expect(callOrder).toEqual(["drain", "tryLoad"]);
+  });
+
+  it("Failed pod calls pool.drainAndStop(0) before repo.updateGuarded", async () => {
+    const { deps, informer, repo, pool } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "running", tool: "guidellm" });
+    const callOrder: string[] = [];
+    pool.drainAndStop.mockImplementation(async () => { callOrder.push("drain"); });
+    repo.updateGuarded.mockImplementation(async () => { callOrder.push("update"); return { id: podRunId() } as never; });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    informer.fire("update", podFailed());
+    await new Promise((r) => setImmediate(r));
+    expect(pool.drainAndStop).toHaveBeenCalledWith(podRunId(), 0);
+    expect(callOrder).toEqual(["drain", "update"]);
+  });
+
+  it("pod delete event calls pool.stop", async () => {
+    const { deps, informer, pool } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    informer.fire("delete", podRunning());
+    expect(pool.stop).toHaveBeenCalledWith(podRunId());
   });
 });
