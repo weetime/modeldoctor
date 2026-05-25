@@ -88,15 +88,21 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           terminalReconcileGraceSec,
         };
 
-        // Stub reportLoader — replaced in T12 when S3ReportStorage + ReportLoader
-        // are wired as proper NestJS providers. Until then this satisfies the
-        // WatcherDeps type and prevents type-check failures.
+        // Stub reportLoader + reportStorage — replaced in T12 when S3ReportStorage
+        // + ReportLoader are wired as proper NestJS providers. Until then these
+        // satisfy the ReconcilerDeps / WatcherDeps types and prevent type-check failures.
         const reportLoaderStub: ReportLoader = {
           tryLoad: async (runId: string) => {
             // TODO(T12): replace with injected ReportLoader
             void runId;
           },
         } as unknown as ReportLoader;
+        const reportStorageStub = {
+          exists: async (_key: string) => false,
+          readJson: async (_key: string) => { throw new Error("not implemented"); },
+          readText: async (_key: string) => { throw new Error("not implemented"); },
+          readBytes: async (_key: string) => { throw new Error("not implemented"); },
+        };
 
         if (mode === "off") {
           // mode=off: build a service that no-ops on init/destroy. Avoids
@@ -113,6 +119,8 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
               namespace,
               repo,
               podCache: { get: () => undefined, list: () => [] },
+              storage: reportStorageStub,
+              reportLoader: reportLoaderStub,
             }),
             reportLoader: reportLoaderStub,
           });
@@ -139,6 +147,8 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           namespace,
           repo,
           podCache: informer,
+          storage: reportStorageStub,
+          reportLoader: reportLoaderStub,
         });
 
         return new K8sJobWatcherService({
