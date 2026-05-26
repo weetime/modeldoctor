@@ -267,20 +267,20 @@ def test_meta_json_contains_tool_version(
     assert "startTimeIso" in meta_payload
 
 
-def test_log_batches_posted_with_correct_kwargs(
+def test_stdout_written_to_s3_with_all_lines(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
     tmp_path: Path,
 ) -> None:
+    """Tail buffer retains and uploads all lines to S3."""
     mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
     mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
     mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
-    # Several lines so the end-of-stream flush has something to send.
+    # Several lines so we test that all are retained in the tail.
     stdout_blob = b"line one\nline two\nline three\n"
     proc = _fake_proc(stdout=stdout_blob, stderr=b"", returncode=0)
     mocker.patch("runner.main.subprocess.Popen", return_value=proc)
     mocker.patch("runner.main.detect_tool_version", return_value=None)
-    mock_post_log = mocker.patch("runner.main.post_log_batch")
 
     writer = MagicMock()
     with patch("runner.main.S3Writer") as MockS3:
@@ -288,27 +288,11 @@ def test_log_batches_posted_with_correct_kwargs(
         rc = main_mod.main()
 
     assert rc == 0
-    assert mock_post_log.call_count >= 1
-
-    # All stdout-stream calls should target benchmark_id=b-test and stream=stdout.
-    stdout_calls = [c for c in mock_post_log.call_args_list if c.kwargs.get("stream") == "stdout"]
-    assert len(stdout_calls) >= 1
-    for c in stdout_calls:
-        assert c.kwargs["benchmark_id"] == "b-test"
-        assert isinstance(c.kwargs["lines"], list)
-
-    # Across all stdout batches we should have observed every line at least once.
-    all_lines: list[str] = []
-    for c in stdout_calls:
-        all_lines.extend(c.kwargs["lines"])
-    assert "line one" in all_lines
-    assert "line two" in all_lines
-    assert "line three" in all_lines
-
     # stdout.log written to S3 should include all lines
     text_calls = {call.args[0]: call.args[1] for call in writer.put_text.call_args_list}
     assert "b-test/stdout.log" in text_calls
     assert "line one" in text_calls["b-test/stdout.log"]
+    assert "line two" in text_calls["b-test/stdout.log"]
     assert "line three" in text_calls["b-test/stdout.log"]
 
 
@@ -426,8 +410,8 @@ def test_missing_required_env_raises_key_error(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
 ) -> None:
-    """Config errors before any callback is possible should propagate as KeyError."""
-    del md_env_minimal["MD_CALLBACK_URL"]
+    """Config errors should propagate as KeyError."""
+    del md_env_minimal["MD_BENCHMARK_ID"]
     mocker.patch.dict("os.environ", md_env_minimal, clear=True)
     # Popen should never be reached.
     popen = mocker.patch("runner.main.subprocess.Popen")

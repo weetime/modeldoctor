@@ -1,5 +1,5 @@
-"""Generic tool wrapper. Reads MD_* env, spawns argv, batches /log,
-collects outputFiles, writes report to S3.
+"""Generic tool wrapper. Reads MD_* env, spawns argv, collects outputFiles,
+writes report to S3.
 
 Phase 3 of #53: replaces the guidellm-specific runner. This file
 contains zero tool-specific knowledge.
@@ -13,16 +13,13 @@ import os
 import subprocess
 import sys
 import threading
-import time
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
 
-from runner.callback import post_log_batch
 from runner.s3_writer import S3Writer
 from runner.storage_keys import file_key, keys_for
 
-LOG_BATCH_INTERVAL_SEC = 0.25
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
 # stdout.log/stderr.log are post-mortem only (/log already streamed
@@ -72,28 +69,18 @@ def detect_tool_version(tool: str) -> str | None:
 
 
 class StreamPump:
-    """Drains a file-like stream into a full-buffer + a /log batch sender."""
+    """Drains a subprocess pipe into a bounded tail buffer (LOG_TAIL_MAX_BYTES).
+    Phase 3: API now reads live logs directly via K8s pods/log:get; runner
+    only retains the tail for the post-mortem stdout.log / stderr.log writes
+    to S3 (Phase 2 path)."""
 
-    def __init__(
-        self,
-        stream,
-        name: str,
-        callback_url: str,
-        token: str,
-        benchmark_id: str,
-    ):
+    def __init__(self, stream, name: str):
         self.stream = stream
         self.name = name
-        self.callback_url = callback_url
-        self.token = token
-        self.benchmark_id = benchmark_id
-        self.buffer: list[str] = []
         self.full: deque[str] = deque()
         self.full_bytes: int = 0
-        self._stop = threading.Event()
 
     def run(self) -> None:
-        last_flush = time.monotonic()
         while True:
             line_bytes = self.stream.readline()
             if not line_bytes:
@@ -104,35 +91,11 @@ class StreamPump:
                 line = repr(line_bytes)
             line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
             self.full.append(line)
-            # +1 accounts for the \n that "\n".join(...) will reinsert on
-            # read — keeps the byte accounting consistent with the output size.
+            # +1 accounts for the \n that "\n".join(...) reinserts on read
             self.full_bytes += len(line.encode("utf-8")) + 1
-            # Evict oldest lines until we are within the tail-byte cap so that
-            # a 30-min benchmark's worth of progress output cannot exhaust RSS.
             while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
                 evicted = self.full.popleft()
                 self.full_bytes -= len(evicted.encode("utf-8")) + 1
-            self.buffer.append(line)
-            now = time.monotonic()
-            if now - last_flush >= LOG_BATCH_INTERVAL_SEC:
-                self._flush()
-                last_flush = now
-        self._flush()
-
-    def _flush(self) -> None:
-        if not self.buffer:
-            return
-        try:
-            post_log_batch(
-                callback_url=self.callback_url,
-                token=self.token,
-                benchmark_id=self.benchmark_id,
-                stream=self.name,
-                lines=self.buffer,
-            )
-        except Exception as e:
-            log.warning("post_log_batch failed: %s", e)
-        self.buffer = []
 
 
 def _materialize_input_files() -> None:
@@ -202,8 +165,6 @@ def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
 
 
 def main() -> int:
-    callback_url = os.environ["MD_CALLBACK_URL"]
-    token = os.environ["MD_CALLBACK_TOKEN"]
     benchmark_id = os.environ["MD_BENCHMARK_ID"]
     argv = json.loads(os.environ["MD_ARGV"])
     output_files = json.loads(os.environ["MD_OUTPUT_FILES"])
@@ -240,8 +201,8 @@ def main() -> int:
         cwd=os.getcwd(),
     )
 
-    out_pump = StreamPump(proc.stdout, "stdout", callback_url, token, benchmark_id)
-    err_pump = StreamPump(proc.stderr, "stderr", callback_url, token, benchmark_id)
+    out_pump = StreamPump(proc.stdout, "stdout")
+    err_pump = StreamPump(proc.stderr, "stderr")
     t1 = threading.Thread(target=out_pump.run, daemon=True)
     t2 = threading.Thread(target=err_pump.run, daemon=True)
     t1.start()
