@@ -1,7 +1,7 @@
 import type { ToolName } from "@modeldoctor/tool-adapters";
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { PodLogStreamer } from "./pod-log-streamer.js";
-import type { PodLogStreamerFactory } from "./pod-log-streamer-factory.js";
+import { PodLogStreamerFactory } from "./pod-log-streamer-factory.js";
 import { ProgressThrottle } from "./progress-throttle.js";
 
 const PROGRESS_THROTTLE_WINDOW_MS = 1000;
