@@ -1,63 +1,32 @@
 #!/usr/bin/env bash
-# Build all benchmark-runner wrapper images and import into the
-# local k3d cluster. Tag is the short git SHA of the most recent commit
-# that touched apps/benchmark-runner/, so devs never need to remember
-# to bump :devN — pulling the branch + running this script always
-# produces a tag that matches the source state.
+# Build all benchmark-runner wrapper images and import into the local k3d cluster.
+# Tag is the short git SHA of the most recent commit that touched
+# apps/benchmark-runner/, so devs never need to remember to bump :devN.
+#
+# Runner images are thin: they just COPY runner/ on top of stable base images
+# already in ghcr.io/weetime/. Run build-base-images.sh first if the base
+# images are not yet in the registry or need a version bump.
 #
 # Usage:
-#   ./tools/build-runner-images.sh           # build + import to k3d cluster "modeldoctor"
+#   ./tools/build-runner-images.sh               # build + import to k3d cluster "modeldoctor"
 #   ./tools/build-runner-images.sh --no-import   # build only, skip k3d import
-#   K3D_CLUSTER=other ./tools/build-runner-images.sh  # different cluster
+#   K3D_CLUSTER=other ./tools/build-runner-images.sh
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# ---------------------------------------------------------------------------
-# vegeta pre-download — fetch both arch binaries on the host (where TLS works)
-# so the Dockerfile can COPY them instead of curling inside the builder.
-# ---------------------------------------------------------------------------
-VEGETA_VERSION=12.13.0
-VEGETA_SHA256_AMD64=e8759ce45c14e18374bdccd3ba6068197bc3a9f9b7e484db3837f701b9d12e61
-VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e4133bba
-VEGETA_BIN_DIR="apps/benchmark-runner/images/.vegeta-binaries"
-
-mkdir -p "$VEGETA_BIN_DIR"
-trap 'rm -rf "$VEGETA_BIN_DIR"' EXIT
-
-for ARCH in amd64 arm64; do
-  DEST="$VEGETA_BIN_DIR/vegeta_linux_${ARCH}"
-  if [[ -f "$DEST" ]]; then
-    echo "==> vegeta_linux_${ARCH} already present, skipping download"
-    continue
-  fi
-  URL="https://github.com/tsenart/vegeta/releases/download/v${VEGETA_VERSION}/vegeta_${VEGETA_VERSION}_linux_${ARCH}.tar.gz"
-  TARBALL="/tmp/vegeta_${ARCH}.tar.gz"
-  echo "==> Downloading vegeta v${VEGETA_VERSION} (${ARCH})"
-  curl -fsSL "$URL" -o "$TARBALL"
-  if [[ "$ARCH" == "amd64" ]]; then SHA="$VEGETA_SHA256_AMD64"; else SHA="$VEGETA_SHA256_ARM64"; fi
-  echo "${SHA}  ${TARBALL}" | sha256sum -c -
-  tar -xzf "$TARBALL" -C "$VEGETA_BIN_DIR" vegeta
-  mv "$VEGETA_BIN_DIR/vegeta" "$DEST"
-  rm "$TARBALL"
-done
-# ---------------------------------------------------------------------------
-
 # Compute content-addressed tag from the latest commit affecting the
-# runner subtree. Falls back to the current HEAD if no path filter
-# matches (e.g. on a fresh worktree before any runner change).
+# runner subtree. Falls back to HEAD if no path filter matches (e.g. on a
+# fresh worktree before any runner change).
 TAG="$(git log -1 --format=%h -- apps/benchmark-runner/ 2>/dev/null || true)"
 if [[ -z "${TAG:-}" ]]; then
   TAG="$(git rev-parse --short HEAD)"
 fi
 
-# If there are uncommitted changes in the runner subtree, append a
-# dirty-marker plus a timestamp. Plain `-dirty` would not distinguish
-# two consecutive iterative builds (same tag → docker/k8s cache hits,
-# stale image). Timestamp guarantees each iterative build gets a
-# unique tag so k3d image import + pod restart picks it up.
+# Append dirty-marker + timestamp for uncommitted changes so each iterative
+# build gets a unique tag (plain -dirty would collide on consecutive builds).
 if [[ -n "$(git status --porcelain apps/benchmark-runner/)" ]]; then
   TAG="${TAG}-dirty-$(date +%s)"
 fi
