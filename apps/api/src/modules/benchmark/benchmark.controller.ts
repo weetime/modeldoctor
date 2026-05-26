@@ -18,17 +18,23 @@ import {
   Get,
   Header,
   HttpCode,
+  type MessageEvent,
   Param,
   Post,
   Query,
+  Sse,
   UseGuards,
 } from "@nestjs/common";
+import { EMPTY, type Observable, from } from "rxjs";
+import { map, switchMap } from "rxjs/operators";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
+import { isInProgressStatus } from "./constants.js";
+import { SseHub } from "./sse/sse-hub.service.js";
 
 @Controller("benchmarks")
 @UseGuards(JwtAuthGuard)
@@ -36,6 +42,7 @@ export class BenchmarkController {
   constructor(
     private readonly service: BenchmarkService,
     private readonly charts: BenchmarkChartsService,
+    private readonly sse: SseHub,
   ) {}
 
   @Get()
@@ -83,6 +90,20 @@ export class BenchmarkController {
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
+  /** Live log stream for an in-flight benchmark.
+   *  EventSource cannot set custom headers, so the JWT is accepted via
+   *  the `?token=` query param (handled by JwtStrategy.fromExtractors). */
+  @Sse(":id/events")
+  events(@CurrentUser() user: JwtPayload, @Param("id") id: string): Observable<MessageEvent> {
+    const isAdmin = user.roles.includes("admin");
+    return from(this.service.findByIdOrFail(id, isAdmin ? undefined : user.sub)).pipe(
+      switchMap((bench) =>
+        isInProgressStatus(bench.status) ? this.sse.subscribe(id) : EMPTY,
+      ),
+      map((evt) => ({ data: evt }) as MessageEvent),
+    );
   }
 
   @Get(":id/charts")

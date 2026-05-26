@@ -6,7 +6,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSec
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
+import { type LogEvent, useRunEventStream } from "./useRunEventStream";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
   benchmarkKeys,
@@ -57,32 +58,65 @@ import { SetBaselineDialog } from "./SetBaselineDialog";
  * Polls via `useBenchmarkDetail`; once the backend writes a terminal status
  * the parent flips to the metrics + raw-output report layout.
  */
-function RunningSection({ benchmark }: { benchmark: Benchmark }) {
+function RunningSection({
+  benchmark,
+  logLines,
+}: {
+  benchmark: Benchmark;
+  logLines: LogEvent[];
+}) {
   const { t } = useTranslation("benchmarks");
   const [now, setNow] = useState(() => Date.now());
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handle = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(handle);
   }, []);
 
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logLines]);
+
   const startedAt = benchmark.startedAt ?? benchmark.createdAt;
   const elapsedSec = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
   const isPending = benchmark.status === "pending" || benchmark.status === "submitted";
 
   return (
-    <output
-      aria-live="polite"
-      className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
-    >
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
-      <div className="text-sm font-medium">
-        {isPending ? t("detail.running.pending") : t("detail.running.title")}
-      </div>
-      <div className="text-xs text-muted-foreground tabular-nums">
-        {t("detail.running.elapsed", { sec: elapsedSec })}
-      </div>
-    </output>
+    <div className="space-y-4">
+      <output
+        aria-live="polite"
+        className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
+        <div className="text-sm font-medium">
+          {isPending ? t("detail.running.pending") : t("detail.running.title")}
+        </div>
+        <div className="text-xs text-muted-foreground tabular-nums">
+          {t("detail.running.elapsed", { sec: elapsedSec })}
+        </div>
+      </output>
+      {logLines.length > 0 && (
+        <pre className="max-h-[320px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs whitespace-pre-wrap break-all">
+          {logLines.map((l, i) => (
+            <span
+              key={i}
+              className={
+                l.level === "error"
+                  ? "text-destructive"
+                  : l.level === "warn"
+                    ? "text-yellow-500"
+                    : undefined
+              }
+            >
+              {l.line}
+              {"\n"}
+            </span>
+          ))}
+          <div ref={logEndRef} />
+        </pre>
+      )}
+    </div>
   );
 }
 
@@ -221,6 +255,9 @@ export function BenchmarkDetailPage() {
     return () => setActivePath(null);
   }, [benchmark, setActivePath]);
 
+  const isTerminal = benchmark ? isTerminalStatus(benchmark.status) : true;
+  const logLines = useRunEventStream(benchmark?.id, !isTerminal);
+
   if (isLoading) {
     return (
       <>
@@ -267,7 +304,6 @@ export function BenchmarkDetailPage() {
   });
 
   const isBaseline = benchmark.baselineFor !== null;
-  const isTerminal = isTerminalStatus(benchmark.status);
   // CreateBenchmarkRequest requires non-null connectionId; orphaned benchmarks
   // (FK SET NULL after Connection delete) cannot be cloned without picking a
   // new connection, and the spec is one-click rerun without an edit step.
@@ -410,7 +446,7 @@ export function BenchmarkDetailPage() {
         {isTerminal ? (
           <BenchmarkDetailTabs benchmark={benchmark} connection={rerunConnection ?? null} />
         ) : (
-          <RunningSection benchmark={benchmark} />
+          <RunningSection benchmark={benchmark} logLines={logLines} />
         )}
       </div>
 
