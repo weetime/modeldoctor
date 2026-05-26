@@ -155,8 +155,13 @@ describe("PodLogStreamer", () => {
     const s1 = new PassThrough();
     const k8s = makeK8sLogMock([s1]);
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, () => {}, fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      () => {},
+      fakeLog,
     );
     const done = streamer.run();
     // Trigger error → enter reconnect backoff (1s)
