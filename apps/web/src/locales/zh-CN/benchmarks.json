@@ -169,7 +169,9 @@
       "toggle": "原始输出（JSON）"
     },
     "logs": {
-      "toggle": "日志"
+      "toggle": "日志",
+      "stdout": "标准输出（stdout）",
+      "stderr": "标准错误（stderr）"
     },
     "baseline": {
       "setButton": "设为基线",

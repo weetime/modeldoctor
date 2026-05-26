@@ -3,6 +3,31 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
+function CollapseBlock({
+  label,
+  content,
+  defaultOpen = false,
+}: {
+  label: string;
+  content: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <Button variant="ghost" size="sm" onClick={() => setOpen((s) => !s)}>
+        {open ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />}
+        {label}
+      </Button>
+      {open && (
+        <pre className="mt-2 max-h-[400px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs whitespace-pre-wrap break-all">
+          {content}
+        </pre>
+      )}
+    </div>
+  );
+}
+
 export function BenchmarkDetailRawOutput({
   rawOutput,
   logs,
@@ -11,44 +36,30 @@ export function BenchmarkDetailRawOutput({
   logs: string | null;
 }) {
   const { t } = useTranslation("benchmarks");
-  const [showRaw, setShowRaw] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
+
+  const stdout = (rawOutput?.stdout as string | undefined) ?? "";
+  const stderr = (rawOutput?.stderr as string | undefined) ?? "";
+  // rawOutput minus stdout/stderr for the raw JSON block
+  const rawRest = rawOutput
+    ? Object.fromEntries(Object.entries(rawOutput).filter(([k]) => k !== "stdout" && k !== "stderr"))
+    : null;
 
   return (
     <div className="space-y-3">
-      {rawOutput && Object.keys(rawOutput).length > 0 && (
-        <div>
-          <Button variant="ghost" size="sm" onClick={() => setShowRaw((s) => !s)}>
-            {showRaw ? (
-              <ChevronDown className="mr-1 h-4 w-4" />
-            ) : (
-              <ChevronRight className="mr-1 h-4 w-4" />
-            )}{" "}
-            {t("detail.rawOutput.toggle")}
-          </Button>
-          {showRaw && (
-            <pre className="mt-2 max-h-[400px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs">
-              {JSON.stringify(rawOutput, null, 2)}
-            </pre>
-          )}
-        </div>
+      {stdout.trim() && (
+        <CollapseBlock label={t("detail.logs.stdout")} content={stdout} defaultOpen />
+      )}
+      {stderr.trim() && (
+        <CollapseBlock label={t("detail.logs.stderr")} content={stderr} />
       )}
       {logs && (
-        <div>
-          <Button variant="ghost" size="sm" onClick={() => setShowLogs((s) => !s)}>
-            {showLogs ? (
-              <ChevronDown className="mr-1 h-4 w-4" />
-            ) : (
-              <ChevronRight className="mr-1 h-4 w-4" />
-            )}{" "}
-            {t("detail.logs.toggle")}
-          </Button>
-          {showLogs && (
-            <pre className="mt-2 max-h-[400px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs">
-              {logs}
-            </pre>
-          )}
-        </div>
+        <CollapseBlock label={t("detail.logs.toggle")} content={logs} />
+      )}
+      {rawRest && Object.keys(rawRest).length > 0 && (
+        <CollapseBlock
+          label={t("detail.rawOutput.toggle")}
+          content={JSON.stringify(rawRest, null, 2)}
+        />
       )}
     </div>
   );

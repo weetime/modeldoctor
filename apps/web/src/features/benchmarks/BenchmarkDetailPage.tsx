@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useDeleteBaseline } from "@/features/baseline/queries";
 import { useConnection } from "@/features/connections/queries";
 import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSection";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
@@ -212,6 +213,13 @@ export function BenchmarkDetailPage() {
   const cancelBenchmark = useCancelBenchmark();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
+  const setActivePath = useSidebarStore((s) => s.setActivePath);
+
+  useEffect(() => {
+    if (!benchmark) return;
+    setActivePath(`/benchmarks/${benchmark.scenario}`);
+    return () => setActivePath(null);
+  }, [benchmark, setActivePath]);
 
   if (isLoading) {
     return (

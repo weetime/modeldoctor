@@ -169,7 +169,9 @@
       "toggle": "Raw output (JSON)"
     },
     "logs": {
-      "toggle": "Logs"
+      "toggle": "Logs",
+      "stdout": "stdout",
+      "stderr": "stderr"
     },
     "baseline": {
       "setButton": "Set as baseline",
