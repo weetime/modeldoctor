@@ -81,7 +81,11 @@ describe("ProgressThrottle", () => {
   });
 
   it("swallows repo.update errors (progress is best-effort)", async () => {
-    const repo = { update: vi.fn(async () => { throw new Error("db down"); }) };
+    const repo = {
+      update: vi.fn(async () => {
+        throw new Error("db down");
+      }),
+    };
     const throttle = new ProgressThrottle("r1", repo as never, 1000, () => 1_000);
     throttle.tick(0.1);
     await flushMicrotasks();

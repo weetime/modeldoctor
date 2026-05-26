@@ -1,5 +1,5 @@
-import { Logger } from "@nestjs/common";
 import { PassThrough } from "node:stream";
+import { Logger } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { PodLogStreamer } from "./pod-log-streamer.js";
 
@@ -11,13 +11,15 @@ function makeK8sLogMock(streams: PassThrough[]) {
   // 'pipe' handler in PodLogStreamer can attach an error listener.
   for (const s of streams) s.on("error", () => {});
   return {
-    log: vi.fn(async (_ns: unknown, _pod: unknown, _container: unknown, sink: unknown, _opts?: unknown) => {
-      const passthrough = streams[i++];
-      if (!passthrough) throw new Error(`k8sLog.log called too many times (i=${i})`);
-      // Pipe our test passthrough → caller's sink so 'end'/'error' propagate
-      passthrough.pipe(sink as PassThrough);
-      return { abort: vi.fn() };
-    }),
+    log: vi.fn(
+      async (_ns: unknown, _pod: unknown, _container: unknown, sink: unknown, _opts?: unknown) => {
+        const passthrough = streams[i++];
+        if (!passthrough) throw new Error(`k8sLog.log called too many times (i=${i})`);
+        // Pipe our test passthrough → caller's sink so 'end'/'error' propagate
+        passthrough.pipe(sink as PassThrough);
+        return { abort: vi.fn() };
+      },
+    ),
   };
 }
 
@@ -29,8 +31,13 @@ describe("PodLogStreamer", () => {
     const k8s = makeK8sLogMock([stream]);
     const lines: string[] = [];
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, (l) => lines.push(l), fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      (l) => lines.push(l),
+      fakeLog,
     );
     const done = streamer.run();
     stream.write("alpha\n");
@@ -47,8 +54,13 @@ describe("PodLogStreamer", () => {
     const k8s = makeK8sLogMock([s1, s2]);
     const lines: string[] = [];
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, (l) => lines.push(l), fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      (l) => lines.push(l),
+      fakeLog,
     );
     const done = streamer.run();
     s1.write("first\n");
@@ -68,8 +80,13 @@ describe("PodLogStreamer", () => {
     const streams = [new PassThrough(), new PassThrough(), new PassThrough()];
     const k8s = makeK8sLogMock(streams);
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, () => {}, fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      () => {},
+      fakeLog,
     );
     const done = streamer.run();
     for (const s of streams) s.destroy(new Error("boom"));
@@ -82,13 +99,18 @@ describe("PodLogStreamer", () => {
     const s1 = new PassThrough();
     const k8s = makeK8sLogMock([s1]);
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, () => {}, fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      () => {},
+      fakeLog,
     );
     const done = streamer.run();
     s1.write("x\n");
     streamer.abort();
-    s1.destroy(new Error("after abort"));  // should not trigger reconnect
+    s1.destroy(new Error("after abort")); // should not trigger reconnect
     await done;
     expect(k8s.log).toHaveBeenCalledTimes(1);
   });
@@ -97,8 +119,13 @@ describe("PodLogStreamer", () => {
     const s1 = new PassThrough();
     const k8s = makeK8sLogMock([s1]);
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, () => {}, fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      () => {},
+      fakeLog,
     );
     void streamer.run();
     await streamer.drainOrTimeout(0);
@@ -109,8 +136,13 @@ describe("PodLogStreamer", () => {
     const s1 = new PassThrough();
     const k8s = makeK8sLogMock([s1]);
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
-      k8s as never, () => {}, fakeLog,
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
+      k8s as never,
+      () => {},
+      fakeLog,
     );
     void streamer.run();
     // No EOF — should timeout
@@ -124,9 +156,15 @@ describe("PodLogStreamer", () => {
     const k8s = makeK8sLogMock([stream]);
     let count = 0;
     const streamer = new PodLogStreamer(
-      "r1", "pod-r1", "runner", "ns",
+      "r1",
+      "pod-r1",
+      "runner",
+      "ns",
       k8s as never,
-      () => { count++; throw new Error("oops"); },
+      () => {
+        count++;
+        throw new Error("oops");
+      },
       fakeLog,
     );
     const done = streamer.run();

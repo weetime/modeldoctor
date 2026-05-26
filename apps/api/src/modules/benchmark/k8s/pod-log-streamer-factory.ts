@@ -1,7 +1,7 @@
+import { Writable } from "node:stream";
 import type * as k8s from "@kubernetes/client-node";
 import { byTool, type ProgressEvent, type ToolName } from "@modeldoctor/tool-adapters";
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { Writable } from "node:stream";
 import { BenchmarkRepository } from "../benchmark.repository.js";
 import { SseHub } from "../sse/sse-hub.service.js";
 import { PodLogStreamer } from "./pod-log-streamer.js";
@@ -20,7 +20,7 @@ export class PodLogStreamerFactory {
   private readonly logger = new Logger(PodLogStreamerFactory.name);
 
   constructor(
-    public readonly repo: BenchmarkRepository,  // public: ProgressThrottle ctor needs it
+    public readonly repo: BenchmarkRepository, // public: ProgressThrottle ctor needs it
     private readonly sse: SseHub,
     @Inject(K8S_LOG_CLIENT) private readonly k8sLog: Pick<k8s.Log, "log">,
     @Inject(K8S_NAMESPACE) private readonly namespace: string,
@@ -28,9 +28,17 @@ export class PodLogStreamerFactory {
 
   /** Synchronous — tool is passed in; no async bench lookup (watcher already
    *  has bench loaded when it calls pool.start). */
-  create(runId: string, podName: string, tool: ToolName, throttle: ProgressThrottle): PodLogStreamer {
+  create(
+    runId: string,
+    podName: string,
+    tool: ToolName,
+    throttle: ProgressThrottle,
+  ): PodLogStreamer {
     return new PodLogStreamer(
-      runId, podName, RUNNER_CONTAINER_NAME, this.namespace,
+      runId,
+      podName,
+      RUNNER_CONTAINER_NAME,
+      this.namespace,
       this.k8sLog,
       this.buildHandleLine(runId, tool, throttle),
       new Logger(`PodLogStreamer:${runId}`),
@@ -38,7 +46,11 @@ export class PodLogStreamerFactory {
   }
 
   /** Exposed for unit tests. */
-  buildHandleLine(runId: string, tool: ToolName, throttle: ProgressThrottle): (line: string) => void {
+  buildHandleLine(
+    runId: string,
+    tool: ToolName,
+    throttle: ProgressThrottle,
+  ): (line: string) => void {
     const adapter = byTool(tool);
     return (line: string) => {
       let evt: ProgressEvent | null;
@@ -58,7 +70,11 @@ export class PodLogStreamerFactory {
    *  missing pods/log permission → boot fail. Other errors are logged
    *  and swallowed (apiserver transient flake should not block boot). */
   async probeRbac(): Promise<void> {
-    const sink = new Writable({ write(_c, _e, cb) { cb(); } });
+    const sink = new Writable({
+      write(_c, _e, cb) {
+        cb();
+      },
+    });
     try {
       await this.k8sLog.log(this.namespace, "__rbac-probe__", RUNNER_CONTAINER_NAME, sink, {
         follow: false,
@@ -71,9 +87,7 @@ export class PodLogStreamerFactory {
         );
       }
       // 404 or transient — log only, do not fail boot
-      this.logger.log(
-        `RBAC probe non-fatal error (expected on 404): ${msg.slice(0, 200)}`,
-      );
+      this.logger.log(`RBAC probe non-fatal error (expected on 404): ${msg.slice(0, 200)}`);
     }
   }
 }

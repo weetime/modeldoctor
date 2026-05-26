@@ -1,11 +1,11 @@
 import type { Informer, V1Pod } from "@kubernetes/client-node";
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { ToolName } from "@modeldoctor/tool-adapters";
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import type { ReportLoader } from "../storage/report-loader.js";
-import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import type { PodLogStreamerPool } from "./pod-log-streamer-pool.js";
+import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import { getRunnerStatus } from "./runner-container.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
 
@@ -124,11 +124,11 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
     // Phase 3: idempotent attach. Informer replay on startup gives free bootstrap.
     if (
-      this.deps.mode === "primary"
-      && pod.status?.phase === "Running"
-      && getRunnerStatus(pod)?.ready === true
-      && (bench.status === "submitted" || bench.status === "running")
-      && pod.metadata?.name
+      this.deps.mode === "primary" &&
+      pod.status?.phase === "Running" &&
+      getRunnerStatus(pod)?.ready === true &&
+      (bench.status === "submitted" || bench.status === "running") &&
+      pod.metadata?.name
     ) {
       this.deps.pool.start(runId, pod.metadata.name, bench.tool as ToolName);
     }

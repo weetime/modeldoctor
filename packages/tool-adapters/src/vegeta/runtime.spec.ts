@@ -34,7 +34,6 @@ describe("vegeta.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-
     });
     expect(r.argv[0]).toBe("/bin/sh");
     expect(r.argv[1]).toBe("-c");
@@ -48,7 +47,6 @@ describe("vegeta.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-
     });
     expect(r.inputFiles?.["targets.txt"]).toBeDefined();
     expect(r.inputFiles?.["targets.txt"]).toContain("Authorization: Bearer sk-test");
@@ -64,7 +62,6 @@ describe("vegeta.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-
     });
     expect(r.outputFiles.report).toBe("report.txt");
     expect(r.outputFiles.attack).toBe("attack.bin");
@@ -75,7 +72,6 @@ describe("vegeta.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-
     });
     expect(r.outputFiles.latencies).toBe("attack.ndjson");
   });
@@ -85,7 +81,6 @@ describe("vegeta.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-
     });
     expect(r.argv[2]).toContain("vegeta encode -to=json < attack.bin > attack.ndjson");
   });
@@ -101,7 +96,6 @@ describe("vegeta.buildCommand", () => {
         body: '{"model":"bge-m3","input":"hi"}',
       },
       connection: baseConn,
-
     });
     expect(r.inputFiles?.["targets.txt"]).toContain("POST http://localhost:8000/embeddings");
     expect(r.inputFiles?.["targets.txt"]).not.toContain("/v1/embeddings");
@@ -118,7 +112,6 @@ describe("vegeta.buildCommand", () => {
         body: '{"model":"m","messages":[]}',
       },
       connection: { ...baseConn, baseUrl: "http://localhost:8000/" },
-
     });
     expect(r.inputFiles?.["targets.txt"]).toContain(
       "POST http://localhost:8000/v1/chat/completions",
@@ -137,7 +130,6 @@ describe("vegeta.buildCommand", () => {
         body: '{"model":"OVERRIDE","input":"custom"}',
       },
       connection: baseConn,
-
     });
     expect(r.inputFiles?.["request.json"]).toBe('{"model":"OVERRIDE","input":"custom"}');
     // connection.model "Qwen2.5-0.5B-Instruct" should NOT have been re-injected.

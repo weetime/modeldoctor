@@ -14,10 +14,14 @@ import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkFilesController } from "./benchmark-files.controller.js";
-import { K8S_LOG_CLIENT, K8S_NAMESPACE, PodLogStreamerFactory } from "./k8s/pod-log-streamer-factory.js";
-import { PodLogStreamerPool } from "./k8s/pod-log-streamer-pool.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
+import {
+  K8S_LOG_CLIENT,
+  K8S_NAMESPACE,
+  PodLogStreamerFactory,
+} from "./k8s/pod-log-streamer-factory.js";
+import { PodLogStreamerPool } from "./k8s/pod-log-streamer-pool.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
 import { StartupReconciler } from "./k8s/startup-reconciler.js";
 import { SseHub } from "./sse/sse-hub.service.js";
@@ -93,17 +97,23 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
       provide: K8S_NAMESPACE,
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>): string =>
-        (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string | undefined)
-          ?? "modeldoctor-benchmarks",
+        (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string | undefined) ??
+        "modeldoctor-benchmarks",
     },
     {
       provide: K8S_LOG_CLIENT,
       inject: [ConfigService],
-      useFactory: async (config: ConfigService<Env, true>): Promise<Pick<import("@kubernetes/client-node").Log, "log">> => {
+      useFactory: async (
+        config: ConfigService<Env, true>,
+      ): Promise<Pick<import("@kubernetes/client-node").Log, "log">> => {
         const mode = config.get("K8S_WATCHER_MODE", { infer: true }) as WatcherMode;
         if (mode === "off") {
           // Tests / dev never call into real K8s — return a stub that throws if used.
-          return { log: async () => { throw new Error("K8S_LOG_CLIENT unavailable in mode=off"); } };
+          return {
+            log: async () => {
+              throw new Error("K8S_LOG_CLIENT unavailable in mode=off");
+            },
+          };
         }
         const k8s = await import("@kubernetes/client-node");
         const kc = await loadKubeConfig(config);
@@ -119,7 +129,13 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
       // separate @Inject calls) so the makeInformer factory closure can capture
       // the KubeConfig + namespace without leaking them into module-level DI.
       provide: K8sJobWatcherService,
-      inject: [ConfigService, BenchmarkRepository, ReportLoader, REPORT_STORAGE, PodLogStreamerPool],
+      inject: [
+        ConfigService,
+        BenchmarkRepository,
+        ReportLoader,
+        REPORT_STORAGE,
+        PodLogStreamerPool,
+      ],
       useFactory: async (
         config: ConfigService<Env, true>,
         repo: BenchmarkRepository,

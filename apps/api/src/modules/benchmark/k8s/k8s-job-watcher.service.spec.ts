@@ -323,8 +323,12 @@ describe("Phase 3 — pod log streamer", () => {
     const { deps, informer, repo, pool, reportLoader } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "running", tool: "guidellm" });
     const callOrder: string[] = [];
-    pool.drainAndStop.mockImplementation(async () => { callOrder.push("drain"); });
-    reportLoader.tryLoad.mockImplementation(async () => { callOrder.push("tryLoad"); });
+    pool.drainAndStop.mockImplementation(async () => {
+      callOrder.push("drain");
+    });
+    reportLoader.tryLoad.mockImplementation(async () => {
+      callOrder.push("tryLoad");
+    });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
     informer.fire("update", podSucceeded());
@@ -337,8 +341,13 @@ describe("Phase 3 — pod log streamer", () => {
     const { deps, informer, repo, pool } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "running", tool: "guidellm" });
     const callOrder: string[] = [];
-    pool.drainAndStop.mockImplementation(async () => { callOrder.push("drain"); });
-    repo.updateGuarded.mockImplementation(async () => { callOrder.push("update"); return { id: podRunId() } as never; });
+    pool.drainAndStop.mockImplementation(async () => {
+      callOrder.push("drain");
+    });
+    repo.updateGuarded.mockImplementation(async () => {
+      callOrder.push("update");
+      return { id: podRunId() } as never;
+    });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
     informer.fire("update", podFailed());

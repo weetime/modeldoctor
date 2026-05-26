@@ -1,7 +1,7 @@
-import type * as k8s from "@kubernetes/client-node";
-import type { Logger } from "@nestjs/common";
 import * as readline from "node:readline";
 import { PassThrough } from "node:stream";
+import type * as k8s from "@kubernetes/client-node";
+import type { Logger } from "@nestjs/common";
 
 type StreamerState = "IDLE" | "STREAMING" | "RECONNECTING" | "STOPPED";
 
@@ -10,7 +10,9 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 
 function createDeferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
   let resolve!: (v: T) => void;
-  const promise = new Promise<T>((res) => { resolve = res; });
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
   return { promise, resolve };
 }
 
@@ -75,7 +77,9 @@ export class PodLogStreamer {
           this.log.warn(`handleLine threw for ${this.runId}: ${(e as Error).message}`);
         }
       });
-      rl.on("error", () => { /* handled via passthrough events */ });
+      rl.on("error", () => {
+        /* handled via passthrough events */
+      });
 
       // Forward errors from any piped source to the sink.
       // In tests, k8sLog.log() pipes a PassThrough into our sink. Node.js
@@ -91,7 +95,8 @@ export class PodLogStreamer {
           // Source already dead; propagate its error (or a generic one) now.
           if (!passthrough.destroyed) {
             passthrough.destroy(
-              (src as unknown as { errored?: Error }).errored ?? new Error("piped from destroyed stream"),
+              (src as unknown as { errored?: Error }).errored ??
+                new Error("piped from destroyed stream"),
             );
           }
         } else {
@@ -106,7 +111,11 @@ export class PodLogStreamer {
 
       try {
         this.currentReq = await this.k8sLog.log(
-          this.namespace, this.podName, this.container, passthrough, opts,
+          this.namespace,
+          this.podName,
+          this.container,
+          passthrough,
+          opts,
         );
         await streamDone;
         this.consecutiveFailures = 0;
@@ -130,7 +139,9 @@ export class PodLogStreamer {
       }
     }
     if (this.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      this.log.warn(`giving up on log stream for ${this.runId} after ${MAX_CONSECUTIVE_FAILURES} failures`);
+      this.log.warn(
+        `giving up on log stream for ${this.runId} after ${MAX_CONSECUTIVE_FAILURES} failures`,
+      );
     }
     this.state = "STOPPED";
     this.eof.resolve();

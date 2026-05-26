@@ -16,11 +16,15 @@ function makePool() {
     probeRbac,
     create: vi.fn(() => {
       let runResolve!: () => void;
-      const runPromise = new Promise<void>((r) => { runResolve = r; });
+      const runPromise = new Promise<void>((r) => {
+        runResolve = r;
+      });
       const instance = {
         run: vi.fn(() => runPromise),
         abort: vi.fn(() => runResolve()),
-        drainOrTimeout: vi.fn(async () => { runResolve(); }),
+        drainOrTimeout: vi.fn(async () => {
+          runResolve();
+        }),
         runResolve,
       };
       streamerInstances.push(instance);
