@@ -10,7 +10,6 @@ const ctx: BenchmarkRunInput = {
     secretEnv: { API_KEY: "k" },
     outputFiles: { report: "report.json" },
   },
-  callback: { url: "http://api/", token: "tk" },
   image: "img:latest",
 };
 

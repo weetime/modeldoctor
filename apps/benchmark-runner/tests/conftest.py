@@ -16,8 +16,6 @@ def md_env_minimal() -> dict[str, str]:
     """
     return {
         "MD_BENCHMARK_ID": "b-test",
-        "MD_CALLBACK_URL": "http://api.test.svc:3001",
-        "MD_CALLBACK_TOKEN": "hmac-test-token",
         "MD_ARGV": json.dumps(["echo", "hello"]),
         "MD_OUTPUT_FILES": json.dumps({}),
     }

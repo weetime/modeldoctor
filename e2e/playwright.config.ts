@@ -67,9 +67,6 @@ export default defineConfig({
         PORT: String(E2E_API_PORT),
         DATABASE_URL: TEST_DATABASE_URL,
         CORS_ORIGINS: `http://localhost:${E2E_WEB_PORT}`,
-        // Override .env.test's placeholder callback URL with the real e2e API
-        // origin so HMAC-signed callbacks actually reach the test server.
-        BENCHMARK_CALLBACK_URL: `http://localhost:${E2E_API_PORT}/api/runs/callback`,
         // Quiet logs during e2e — pino logs at info+ by default.
         LOG_LEVEL: "warn",
       },

@@ -48,10 +48,6 @@ export const EnvSchema = z.object({
     },
     { message: "must be a base64 string that decodes to exactly 32 bytes" },
   ),
-  // Secret used to derive per-run HMAC callback tokens.
-  BENCHMARK_CALLBACK_SECRET: z.string().min(32),
-  // K8s job runner config — subprocess driver removed in #101.
-  BENCHMARK_CALLBACK_URL: z.string().url(),
   BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
   // K8s watcher mode.
   //   off: informer 不启动（开发本机默认）
@@ -133,7 +129,7 @@ export const EnvSchema = z.object({
   // --- Alertmanager webhook receiver (P0 closed loop) ---
   // Shared secret for Alertmanager → ModelDoctor webhook. Verified per
   // request via HMAC-SHA256 in the X-ModelDoctor-Signature header.
-  // Length matches BENCHMARK_CALLBACK_SECRET.
+  // 32-byte minimum — same minimum we historically used for HMAC secrets.
   ALERTMANAGER_WEBHOOK_SECRET: z.string().min(32),
 
   // --- MCP server (V1) ---

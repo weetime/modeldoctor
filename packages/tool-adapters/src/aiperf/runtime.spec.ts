@@ -34,7 +34,6 @@ const plan: BuildCommandPlan<AiperfParams> = {
     tokenizerHfId: null,
     prometheusDatasource: null,
   },
-  callback: { url: "http://api/", token: "tk" },
 };
 
 describe("aiperf.buildCommand", () => {

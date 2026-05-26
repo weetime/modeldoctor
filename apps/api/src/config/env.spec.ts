@@ -11,8 +11,6 @@ const validEnv = () => ({
   DATABASE_URL: "postgresql://u:p@h:5432/d",
   JWT_ACCESS_SECRET: "x".repeat(48),
   CONNECTION_API_KEY_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-  BENCHMARK_CALLBACK_SECRET: "y".repeat(48),
-  BENCHMARK_CALLBACK_URL: "http://localhost:3001",
   ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
@@ -65,8 +63,6 @@ describe("validateEnv", () => {
       "DATABASE_URL",
       "JWT_ACCESS_SECRET",
       "CONNECTION_API_KEY_ENCRYPTION_KEY",
-      "BENCHMARK_CALLBACK_SECRET",
-      "BENCHMARK_CALLBACK_URL",
       "ALERTMANAGER_WEBHOOK_SECRET",
       "RUNNER_IMAGE_GUIDELLM",
       "RUNNER_IMAGE_VEGETA",
@@ -103,12 +99,6 @@ describe("validateEnv", () => {
 
   it("rejects non-URL DATABASE_URL", () => {
     expect(() => validateEnv({ ...validEnv(), DATABASE_URL: "not-a-url" })).toThrow(/DATABASE_URL/);
-  });
-
-  it("rejects BENCHMARK_CALLBACK_SECRET shorter than 32 chars", () => {
-    expect(() => validateEnv({ ...validEnv(), BENCHMARK_CALLBACK_SECRET: "x".repeat(31) })).toThrow(
-      /BENCHMARK_CALLBACK_SECRET/,
-    );
   });
 
   it("rejects CONNECTION_API_KEY_ENCRYPTION_KEY that decodes to ≠ 32 bytes", () => {

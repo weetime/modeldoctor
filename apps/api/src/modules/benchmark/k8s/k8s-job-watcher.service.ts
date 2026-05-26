@@ -1,8 +1,10 @@
 import type { Informer, V1Pod } from "@kubernetes/client-node";
+import type { ToolName } from "@modeldoctor/tool-adapters";
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import type { ReportLoader } from "../storage/report-loader.js";
+import type { PodLogStreamerPool } from "./pod-log-streamer-pool.js";
 import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import { getRunnerStatus } from "./runner-container.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
@@ -19,6 +21,7 @@ export interface WatcherDeps {
   repo: BenchmarkRepository;
   reconciler: StartupReconciler;
   reportLoader: ReportLoader;
+  pool: PodLogStreamerPool;
 }
 
 @Injectable()
@@ -118,6 +121,17 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     });
 
     await this.execute(runId, transition, now);
+
+    // Phase 3: idempotent attach. Informer replay on startup gives free bootstrap.
+    if (
+      this.deps.mode === "primary" &&
+      pod.status?.phase === "Running" &&
+      getRunnerStatus(pod)?.ready === true &&
+      (bench.status === "submitted" || bench.status === "running") &&
+      pod.metadata?.name
+    ) {
+      this.deps.pool.start(runId, pod.metadata.name, bench.tool as ToolName);
+    }
   }
 
   private handlePodDelete(pod: V1Pod): void {
@@ -125,6 +139,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     if (!runId) return;
     this.firstFatalWaitingAt.delete(runId);
     this.firstTerminalAt.delete(runId);
+    this.deps.pool.stop(runId);
   }
 
   private async execute(runId: string, t: DesiredTransition, now: Date): Promise<void> {
@@ -146,6 +161,10 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       }
 
       case "load-report": {
+        // Phase 3: drain log streamer up to 5s before flipping status, so SSE
+        // close (inside ReportLoader.tryLoad finally) does not race the last
+        // lines emitted by the runner just before exit.
+        await this.deps.pool.drainAndStop(runId, 5000);
         // Fire-and-forget — ReportLoader handles its own errors and writes.
         void this.deps.reportLoader.tryLoad(runId);
         return;
@@ -153,6 +172,8 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
       case "failed-pre-start":
       case "failed-terminal": {
+        // Phase 3: stderr is already in S3 via Phase 2; no need to wait for drain.
+        await this.deps.pool.drainAndStop(runId, 0);
         try {
           const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
             status: "failed",

@@ -127,13 +127,6 @@ export const createBenchmarkRequestSchema = z.object({
 });
 export type CreateBenchmarkRequest = z.infer<typeof createBenchmarkRequestSchema>;
 
-// ── Internal callback schemas (runner pod → API) ─────────────────────
-export const benchmarkLogCallbackSchema = z.object({
-  stream: z.enum(["stdout", "stderr"]),
-  lines: z.array(z.string().max(64 * 1024)).max(2000),
-});
-export type BenchmarkLogCallback = z.infer<typeof benchmarkLogCallbackSchema>;
-
 // ── Charts response (GET /api/benchmarks/:id/charts) ─────────────────
 // Server derives these from rawOutput.files.* on demand; not persisted.
 export const histogramBucketSchema = z.object({

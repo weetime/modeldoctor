@@ -19,7 +19,6 @@ import {
 import { ConfigService } from "@nestjs/config";
 import type { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
-import { signCallbackToken } from "../../common/hmac/hmac-token.js";
 import { formatZodError } from "../../common/zod/format-zod-error.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -38,16 +37,10 @@ import { readP95LatencyMs } from "./metrics.js";
  * exists only to bound worst-case memory if a power user runs many
  * thousands of tests. */
 const MAX_REPORT_ROWS = 5000;
-// 15-minute slack on top of adapter.getMaxDurationSeconds(): a final /finish
-// callback shouldn't be rejected if the runner overruns by clock skew or
-// shutdown grace.
-const CALLBACK_TTL_SLACK_SECONDS = 15 * 60;
 
 @Injectable()
 export class BenchmarkService {
   private readonly log = new Logger(BenchmarkService.name);
-  private readonly callbackSecret: Buffer;
-  private readonly callbackUrl: string;
 
   constructor(
     private readonly repo: BenchmarkRepository,
@@ -58,25 +51,7 @@ export class BenchmarkService {
     private readonly baselines: BaselineService,
     private readonly prisma: PrismaService,
     private readonly notify: NotifyService,
-  ) {
-    const secret = this.config.get("BENCHMARK_CALLBACK_SECRET", { infer: true }) as
-      | string
-      | undefined;
-    if (!secret) {
-      throw new Error(
-        "BenchmarkService: BENCHMARK_CALLBACK_SECRET is required. Env schema must enforce presence outside test mode.",
-      );
-    }
-    this.callbackSecret = Buffer.from(secret, "utf8");
-
-    const url = this.config.get("BENCHMARK_CALLBACK_URL", { infer: true }) as string | undefined;
-    if (!url) {
-      throw new Error(
-        "BenchmarkService: BENCHMARK_CALLBACK_URL is required. Env schema must enforce presence outside test mode.",
-      );
-    }
-    this.callbackUrl = url;
-  }
+  ) {}
 
   async findById(id: string): Promise<Benchmark | null> {
     const row = await this.repo.findById(id);
@@ -206,12 +181,6 @@ export class BenchmarkService {
     try {
       const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
       const adapter = byTool(row.tool as ToolName);
-      const adapterMaxDuration = adapter.getMaxDurationSeconds(row.params);
-      const callbackToken = signCallbackToken(
-        row.id,
-        this.callbackSecret,
-        adapterMaxDuration + CALLBACK_TTL_SLACK_SECONDS,
-      );
       const buildResult = adapter.buildCommand({
         runId: row.id,
         params: row.params,
@@ -224,13 +193,11 @@ export class BenchmarkService {
           tokenizerHfId: conn.tokenizerHfId,
           prometheusDatasource: conn.prometheusDatasource,
         },
-        callback: { url: this.callbackUrl, token: callbackToken },
       });
       const result = await this.runner.start({
         runId: row.id,
         tool: row.tool as ToolName,
         buildResult,
-        callback: { url: this.callbackUrl, token: callbackToken },
         image: imageForTool(row.tool as ToolName, this.config),
       });
       handle = result.handle;

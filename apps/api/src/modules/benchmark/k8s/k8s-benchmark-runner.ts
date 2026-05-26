@@ -17,7 +17,6 @@ export interface BenchmarkRunInput {
   runId: string;
   tool: ToolName;
   buildResult: BuildCommandResult;
-  callback: { url: string; token: string };
   image: string;
 }
 
@@ -27,8 +26,9 @@ export type BenchmarkRunHandle = string;
 /**
  * Launches benchmark Jobs in K8s. The single execution backend for
  * ModelDoctor (subprocess + driver-factory abstraction were removed in
- * #101). Lifecycle progression after `start()` flows through HTTP
- * callbacks; this class only handles spawn + cancel + cleanup.
+ * #101). Lifecycle progression after `start()` flows through the K8s
+ * watcher + pod log stream (Phase 1–3); this class only handles
+ * spawn + cancel + cleanup.
  *
  * Wired via `useFactory` in `BenchmarkModule` so the kube client is
  * loaded lazily (skipping the import in test mode where we never run
