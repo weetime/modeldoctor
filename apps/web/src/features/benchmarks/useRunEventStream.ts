@@ -3,6 +3,8 @@ import { useAuthStore } from "@/stores/auth-store";
 
 export type LogEvent = { kind: "log"; level: "info" | "warn" | "error"; line: string };
 
+const MAX_LINES = 2000;
+
 /**
  * Opens an EventSource to /api/benchmarks/:id/events and collects log lines
  * while the benchmark is in flight. Closes automatically when `enabled`
@@ -36,7 +38,10 @@ export function useRunEventStream(runId: string | undefined, enabled: boolean): 
       try {
         const evt = JSON.parse(e.data as string) as { kind?: string; level?: string; line?: string };
         if (evt.kind === "log" && typeof evt.line === "string") {
-          setLines((prev) => [...prev, evt as LogEvent]);
+          setLines((prev) => {
+            const next = [...prev, evt as LogEvent];
+            return next.length > MAX_LINES ? next.slice(next.length - MAX_LINES) : next;
+          });
         }
       } catch {
         // ignore malformed frames

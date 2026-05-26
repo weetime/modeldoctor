@@ -171,7 +171,8 @@
     "logs": {
       "toggle": "Logs",
       "stdout": "stdout",
-      "stderr": "stderr"
+      "stderr": "stderr",
+      "empty": "No logs available"
     },
     "baseline": {
       "setButton": "Set as baseline",
@@ -242,7 +243,8 @@
     "tabs": {
       "overview": "Overview",
       "raw": "Raw output",
-      "request": "Request · Response"
+      "request": "Request · Response",
+      "logs": "Run Logs"
     },
     "requestSetup": {
       "title": "Request setup",

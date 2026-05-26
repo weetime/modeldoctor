@@ -53,70 +53,91 @@ import { UnknownReport } from "./reports/UnknownReport";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
 
-/**
- * Pre-terminal placeholder rendered while the benchmark is still in flight.
- * Polls via `useBenchmarkDetail`; once the backend writes a terminal status
- * the parent flips to the metrics + raw-output report layout.
- */
-function RunningSection({
-  benchmark,
-  logLines,
-}: {
-  benchmark: Benchmark;
-  logLines: LogEvent[];
-}) {
+/** Spinner + elapsed time shown in the Overview tab while a run is in flight. */
+function RunningSection({ benchmark }: { benchmark: Benchmark }) {
   const { t } = useTranslation("benchmarks");
   const [now, setNow] = useState(() => Date.now());
-  const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handle = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(handle);
   }, []);
 
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logLines]);
-
   const startedAt = benchmark.startedAt ?? benchmark.createdAt;
   const elapsedSec = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
   const isPending = benchmark.status === "pending" || benchmark.status === "submitted";
 
   return (
-    <div className="space-y-4">
-      <output
-        aria-live="polite"
-        className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
-      >
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
-        <div className="text-sm font-medium">
-          {isPending ? t("detail.running.pending") : t("detail.running.title")}
-        </div>
-        <div className="text-xs text-muted-foreground tabular-nums">
-          {t("detail.running.elapsed", { sec: elapsedSec })}
-        </div>
-      </output>
-      {logLines.length > 0 && (
-        <pre className="max-h-[320px] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs whitespace-pre-wrap break-all">
-          {logLines.map((l, i) => (
-            <span
-              key={i}
-              className={
-                l.level === "error"
-                  ? "text-destructive"
-                  : l.level === "warn"
-                    ? "text-yellow-500"
-                    : undefined
-              }
-            >
-              {l.line}
-              {"\n"}
-            </span>
-          ))}
-          <div ref={logEndRef} />
-        </pre>
-      )}
-    </div>
+    <output
+      aria-live="polite"
+      className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border p-12 text-center"
+    >
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
+      <div className="text-sm font-medium">
+        {isPending ? t("detail.running.pending") : t("detail.running.title")}
+      </div>
+      <div className="text-xs text-muted-foreground tabular-nums">
+        {t("detail.running.elapsed", { sec: elapsedSec })}
+      </div>
+    </output>
+  );
+}
+
+/** Dark terminal-style log panel. Shows live SSE lines during run; stdout
+ *  from rawOutput after completion. Survives page refresh via DB fallback. */
+function LogPanel({
+  logLines,
+  stdout,
+}: {
+  logLines: LogEvent[];
+  stdout: string;
+}) {
+  const { t } = useTranslation("benchmarks");
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logLines, stdout]);
+
+  const hasLive = logLines.length > 0;
+  const hasStdout = stdout.trim().length > 0;
+
+  if (!hasLive && !hasStdout) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-md border border-border bg-zinc-950 text-xs text-zinc-500">
+        {t("detail.logs.empty")}
+      </div>
+    );
+  }
+
+  if (hasStdout) {
+    return (
+      <pre className="max-h-[60vh] min-h-48 overflow-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-200 whitespace-pre-wrap break-all">
+        {stdout}
+        <div ref={logEndRef} />
+      </pre>
+    );
+  }
+
+  return (
+    <pre className="max-h-[60vh] min-h-48 overflow-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all">
+      {logLines.map((l, i) => (
+        <span
+          key={i}
+          className={
+            l.level === "error"
+              ? "text-red-400"
+              : l.level === "warn"
+                ? "text-yellow-400"
+                : "text-zinc-200"
+          }
+        >
+          {l.line}
+          {"\n"}
+        </span>
+      ))}
+      <div ref={logEndRef} />
+    </pre>
   );
 }
 
@@ -153,21 +174,27 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
 function BenchmarkDetailTabs({
   benchmark,
   connection,
+  logLines,
 }: {
   benchmark: Benchmark;
   connection: ConnectionPublic | null;
+  logLines: LogEvent[];
 }) {
   const { t } = useTranslation("benchmarks");
-  const showCharts = benchmark.tool !== "prefix-cache-probe";
+  const isTerminal = isTerminalStatus(benchmark.status);
+  const showCharts = isTerminal && benchmark.tool !== "prefix-cache-probe";
   // Engine Metrics is reachable when the connection is bound to a Prometheus
   // datasource and the benchmark has a definite time window.
   const showEngineMetrics = Boolean(
-    connection?.prometheusDatasource &&
+    isTerminal &&
+      connection?.prometheusDatasource &&
       connection.serverKind &&
       benchmark.startedAt &&
       benchmark.completedAt,
   );
   const [active, setActive] = useState<string>("overview");
+
+  const stdout = (benchmark.rawOutput as { stdout?: string } | null)?.stdout ?? "";
 
   return (
     <Tabs value={active} onValueChange={setActive} className="w-full">
@@ -177,17 +204,24 @@ function BenchmarkDetailTabs({
         {showEngineMetrics && (
           <TabsTrigger value="engine">{t("detail.engineMetrics.title")}</TabsTrigger>
         )}
-        <TabsTrigger value="request">{t("detail.tabs.request")}</TabsTrigger>
+        <TabsTrigger value="logs">{t("detail.tabs.logs")}</TabsTrigger>
+        {isTerminal && <TabsTrigger value="request">{t("detail.tabs.request")}</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
-        {benchmark.baselineId && (
-          <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
+        {isTerminal ? (
+          <>
+            {benchmark.baselineId && (
+              <DetailVerdictRow benchmark={benchmark} baselineId={benchmark.baselineId} />
+            )}
+            <section>
+              <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
+              <ReportSection benchmark={benchmark} />
+            </section>
+          </>
+        ) : (
+          <RunningSection benchmark={benchmark} />
         )}
-        <section>
-          <h3 className="mb-3 text-sm font-semibold">{t("detail.metrics.title")}</h3>
-          <ReportSection benchmark={benchmark} />
-        </section>
       </TabsContent>
 
       {showCharts && (
@@ -206,13 +240,19 @@ function BenchmarkDetailTabs({
         </TabsContent>
       )}
 
-      <TabsContent value="request" className="space-y-6">
-        <RequestSetupSection benchmark={benchmark} />
-        <BenchmarkDetailRawOutput
-          rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
-          logs={benchmark.logs}
-        />
+      <TabsContent value="logs">
+        <LogPanel logLines={isTerminal ? [] : logLines} stdout={isTerminal ? stdout : ""} />
       </TabsContent>
+
+      {isTerminal && (
+        <TabsContent value="request" className="space-y-6">
+          <RequestSetupSection benchmark={benchmark} />
+          <BenchmarkDetailRawOutput
+            rawOutput={benchmark.rawOutput as Record<string, unknown> | null}
+            logs={benchmark.logs}
+          />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
@@ -249,11 +289,12 @@ export function BenchmarkDetailPage() {
   const navigate = useNavigate();
   const setActivePath = useSidebarStore((s) => s.setActivePath);
 
+  const scenario = benchmark?.scenario;
   useEffect(() => {
-    if (!benchmark) return;
-    setActivePath(`/benchmarks/${benchmark.scenario}`);
+    if (!scenario) return;
+    setActivePath(`/benchmarks/${scenario}`);
     return () => setActivePath(null);
-  }, [benchmark, setActivePath]);
+  }, [scenario, setActivePath]);
 
   const isTerminal = benchmark ? isTerminalStatus(benchmark.status) : true;
   const logLines = useRunEventStream(benchmark?.id, !isTerminal);
@@ -443,11 +484,11 @@ export function BenchmarkDetailPage() {
             })()}
           </details>
         )}
-        {isTerminal ? (
-          <BenchmarkDetailTabs benchmark={benchmark} connection={rerunConnection ?? null} />
-        ) : (
-          <RunningSection benchmark={benchmark} logLines={logLines} />
-        )}
+        <BenchmarkDetailTabs
+          benchmark={benchmark}
+          connection={rerunConnection ?? null}
+          logLines={logLines}
+        />
       </div>
 
       <SetBaselineDialog

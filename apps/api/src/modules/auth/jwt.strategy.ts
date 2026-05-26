@@ -21,17 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // JWT verification must set JWT_ACCESS_SECRET themselves.
     const secret = config.get("JWT_ACCESS_SECRET", { infer: true }) ?? "";
     super({
-      // SSE endpoints (EventSource) cannot set custom headers, so we also
-      // accept the token as a `?token=` query param as a fallback.
-      // All JWT cryptographic validation still applies.
-      jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-        // biome-ignore lint/suspicious/noExplicitAny: passport-jwt req is untyped
-        (req: any) => {
-          const t = req?.query?.token;
-          return typeof t === "string" ? t : null;
-        },
-      ]),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: secret,
     });

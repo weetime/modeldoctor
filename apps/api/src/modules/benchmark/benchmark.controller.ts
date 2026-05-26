@@ -28,9 +28,11 @@ import {
 import { EMPTY, type Observable, from } from "rxjs";
 import { map, switchMap } from "rxjs/operators";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
+import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { SseJwtAuthGuard } from "../auth/sse-jwt-auth.guard.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { isInProgressStatus } from "./constants.js";
@@ -93,8 +95,11 @@ export class BenchmarkController {
   }
 
   /** Live log stream for an in-flight benchmark.
-   *  EventSource cannot set custom headers, so the JWT is accepted via
-   *  the `?token=` query param (handled by JwtStrategy.fromExtractors). */
+   *  @Public() bypasses the class-level JwtAuthGuard; SseJwtAuthGuard then
+   *  validates the JWT via Authorization header OR `?token=` query param,
+   *  which EventSource requires since it cannot set custom headers. */
+  @Public()
+  @UseGuards(SseJwtAuthGuard)
   @Sse(":id/events")
   events(@CurrentUser() user: JwtPayload, @Param("id") id: string): Observable<MessageEvent> {
     const isAdmin = user.roles.includes("admin");
