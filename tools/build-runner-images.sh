@@ -8,8 +8,9 @@
 # images are not yet in the registry or need a version bump.
 #
 # Usage:
-#   ./tools/build-runner-images.sh               # build + import to k3d cluster "modeldoctor"
-#   ./tools/build-runner-images.sh --no-import   # build only, skip k3d import
+#   ./tools/build-runner-images.sh                      # build + import all five
+#   ./tools/build-runner-images.sh vegeta evalscope     # specific tools only
+#   ./tools/build-runner-images.sh --no-import          # build only, skip k3d import
 #   K3D_CLUSTER=other ./tools/build-runner-images.sh
 
 set -euo pipefail
@@ -33,36 +34,43 @@ fi
 
 K3D_CLUSTER="${K3D_CLUSTER:-modeldoctor}"
 IMPORT=true
-if [[ "${1:-}" == "--no-import" ]]; then
-  IMPORT=false
+TOOLS=()
+for arg in "$@"; do
+  case "$arg" in
+    --no-import) IMPORT=false ;;
+    guidellm|vegeta|prefix-cache-probe|evalscope|aiperf) TOOLS+=("$arg") ;;
+    *) echo "Unknown argument: $arg" >&2; exit 1 ;;
+  esac
+done
+if [[ ${#TOOLS[@]} -eq 0 ]]; then
+  TOOLS=(guidellm vegeta prefix-cache-probe evalscope aiperf)
 fi
 
-echo "==> Building runner images at tag :$TAG"
+echo "==> Runner images at tag :$TAG (tools: ${TOOLS[*]})"
 
-for tool in guidellm vegeta prefix-cache-probe evalscope aiperf; do
+for tool in "${TOOLS[@]}"; do
   image="md-runner-${tool}:${TAG}"
-  echo "==> docker build $image"
-  docker build \
-    -f "apps/benchmark-runner/images/${tool}.Dockerfile" \
-    -t "$image" \
-    apps/benchmark-runner/
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    echo "==> ${image} already exists locally, skipping build"
+  else
+    echo "==> docker build ${image}"
+    docker build \
+      -f "apps/benchmark-runner/images/${tool}.Dockerfile" \
+      -t "$image" \
+      apps/benchmark-runner/
+  fi
 done
 
 if [[ "$IMPORT" == "true" ]]; then
   echo "==> k3d image import (cluster: $K3D_CLUSTER)"
-  k3d image import \
-    "md-runner-guidellm:${TAG}" \
-    "md-runner-vegeta:${TAG}" \
-    "md-runner-prefix-cache-probe:${TAG}" \
-    "md-runner-evalscope:${TAG}" \
-    "md-runner-aiperf:${TAG}" \
-    -c "$K3D_CLUSTER"
+  IMPORT_ARGS=()
+  for tool in "${TOOLS[@]}"; do IMPORT_ARGS+=("md-runner-${tool}:${TAG}"); done
+  k3d image import "${IMPORT_ARGS[@]}" -c "$K3D_CLUSTER"
 fi
 
 echo
 echo "==> Done. Set these in your .env (or export RUNNER_IMAGE_TAG=$TAG):"
-echo "RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:${TAG}"
-echo "RUNNER_IMAGE_VEGETA=md-runner-vegeta:${TAG}"
-echo "RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:${TAG}"
-echo "RUNNER_IMAGE_EVALSCOPE=md-runner-evalscope:${TAG}"
-echo "RUNNER_IMAGE_AIPERF=md-runner-aiperf:${TAG}"
+for tool in "${TOOLS[@]}"; do
+  VAR="RUNNER_IMAGE_$(echo "$tool" | tr '-' '_' | tr '[:lower:]' '[:upper:]')"
+  echo "${VAR}=md-runner-${tool}:${TAG}"
+done
