@@ -151,6 +151,26 @@ describe("PodLogStreamer", () => {
     expect(Date.now() - t0).toBeGreaterThanOrEqual(190);
   });
 
+  it("abort() during reconnect backoff returns promptly (does NOT wait out sleep)", async () => {
+    const s1 = new PassThrough();
+    const k8s = makeK8sLogMock([s1]);
+    const streamer = new PodLogStreamer(
+      "r1", "pod-r1", "runner", "ns",
+      k8s as never, () => {}, fakeLog,
+    );
+    const done = streamer.run();
+    // Trigger error → enter reconnect backoff (1s)
+    s1.destroy(new Error("boom"));
+    // Wait briefly to let the loop reach the sleep, but well under the 1s backoff
+    await new Promise((r) => setTimeout(r, 50));
+    const t0 = Date.now();
+    streamer.abort();
+    await done;
+    const elapsed = Date.now() - t0;
+    // run() should return well within 100ms of abort, not wait the remaining 950ms
+    expect(elapsed).toBeLessThan(200);
+  });
+
   it("handleLine throw does not crash the loop", async () => {
     const stream = new PassThrough();
     const k8s = makeK8sLogMock([stream]);

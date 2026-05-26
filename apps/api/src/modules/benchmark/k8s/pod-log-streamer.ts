@@ -34,6 +34,8 @@ export class PodLogStreamer {
   private currentSink: PassThrough | null = null;
   private consecutiveFailures = 0;
   private readonly eof = createDeferred<void>();
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectResolve: (() => void) | null = null;
 
   constructor(
     private readonly runId: string,
@@ -132,9 +134,19 @@ export class PodLogStreamer {
         this.state = "RECONNECTING";
         const idx = this.consecutiveFailures - 1;
         const backoff = RECONNECT_BACKOFF_MS[idx] ?? RECONNECT_BACKOFF_MS.at(-1)!;
-        await sleep(backoff);
+        await new Promise<void>((resolve) => {
+          this.reconnectResolve = resolve;
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.reconnectResolve = null;
+            resolve();
+          }, backoff);
+        });
       } finally {
         rl.close();
+        if (!passthrough.destroyed) {
+          passthrough.destroy();
+        }
         this.currentSink = null;
       }
     }
@@ -150,6 +162,15 @@ export class PodLogStreamer {
   abort(): void {
     if (this.state === "STOPPED") return;
     this.state = "STOPPED";
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.reconnectResolve) {
+      const r = this.reconnectResolve;
+      this.reconnectResolve = null;
+      r();
+    }
     try {
       this.currentReq?.abort();
     } catch {
