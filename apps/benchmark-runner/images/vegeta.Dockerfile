@@ -9,7 +9,7 @@ WORKDIR /app
 COPY runner runner
 
 # Pinned to match pyproject.toml's requests>=2.31,<3 declaration.
-RUN pip install --no-cache-dir 'requests>=2.31,<3'
+RUN pip install --no-cache-dir 'requests>=2.31,<3' 'boto3>=1.34,<2'
 
 RUN useradd --create-home --shell /sbin/nologin runner \
     && chown -R runner:runner /app
