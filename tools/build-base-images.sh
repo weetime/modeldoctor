@@ -11,6 +11,7 @@
 #   ./tools/build-base-images.sh vegeta            # single tool
 #   ./tools/build-base-images.sh evalscope aiperf  # two tools
 #   ./tools/build-base-images.sh --no-push         # local test, skip push
+#   ./tools/build-base-images.sh --force           # rebuild even if tag already in registry
 
 set -euo pipefail
 
@@ -35,10 +36,12 @@ SHAREGPT_URL="https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unf
 # Argument parsing
 # ---------------------------------------------------------------------------
 PUSH=true
+FORCE=false
 TOOLS=()
 for arg in "$@"; do
   case "$arg" in
     --no-push) PUSH=false ;;
+    --force)   FORCE=true ;;
     vegeta|evalscope|aiperf) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
@@ -51,6 +54,9 @@ fi
 # Helpers
 # ---------------------------------------------------------------------------
 contains() { local e; for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done; return 1; }
+
+# Returns 0 if the image manifest already exists in the remote registry.
+image_exists_remote() { docker buildx imagetools inspect "$1" >/dev/null 2>&1; }
 
 # Cross-platform SHA256 check (Linux: sha256sum, macOS: shasum -a 256).
 verify_sha256() {
@@ -69,6 +75,11 @@ build_and_push() {
   local tool="$1" version="$2"
   local image="${REGISTRY}/md-base-${tool}:${version}"
   echo
+  # Skip if already in registry (only in push mode; --no-push always rebuilds locally).
+  if [[ "$PUSH" == "true" ]] && [[ "$FORCE" == "false" ]] && image_exists_remote "$image"; then
+    echo "==> ${image} already in registry, skipping (use --force to rebuild)"
+    return
+  fi
   if [[ "$PUSH" == "true" ]]; then
     # Multi-platform push via buildx so amd64 and arm64 users share one tag.
     echo "==> Building + pushing multi-platform ${image}"
