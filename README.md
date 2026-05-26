@@ -113,7 +113,7 @@ Health check: `GET /api/health` returns 200 with `{"status":"ok","info":{"databa
 | `BENCHMARK_RUNNER_IMAGE` | **Yes** (driver=`k8s`) | — | Container image for the runner (e.g. `gpustack/benchmark-runner:v0.0.4`) |
 | `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS` | No | `1800` | Default `--max-seconds` cap applied to runs |
 
-In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers. Other `**Yes** (non-test)` keys follow the same rule.
+In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers. Other **Yes** (non-test) keys follow the same rule.
 
 ### Benchmark feature local workflows
 
