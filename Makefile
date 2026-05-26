@@ -33,14 +33,16 @@ _IMPORT_FLAG := $(if $(filter 0,$(IMPORT)),--no-import,)
 
 # ── Base images ───────────────────────────────────────────────────────────────
 
-base: $(addprefix base-,$(BASE_TOOLS))
+base:
+	bash tools/build-base-images.sh $(_BASE_FLAGS)
 
 $(addprefix base-,$(BASE_TOOLS)): base-%:
 	bash tools/build-base-images.sh $(_BASE_FLAGS) $*
 
 # ── Runner images ─────────────────────────────────────────────────────────────
 
-runner: $(addprefix runner-,$(RUNNER_TOOLS))
+runner:
+	K3D_CLUSTER=$(K3D_CLUSTER) bash tools/build-runner-images.sh $(_IMPORT_FLAG)
 
 $(addprefix runner-,$(RUNNER_TOOLS)): runner-%:
 	K3D_CLUSTER=$(K3D_CLUSTER) bash tools/build-runner-images.sh $(_IMPORT_FLAG) $*

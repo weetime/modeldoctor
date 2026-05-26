@@ -75,10 +75,15 @@ build_and_push() {
   local tool="$1" version="$2"
   local image="${REGISTRY}/md-base-${tool}:${version}"
   echo
-  # Skip if already in registry (only in push mode; --no-push always rebuilds locally).
-  if [[ "$PUSH" == "true" ]] && [[ "$FORCE" == "false" ]] && image_exists_remote "$image"; then
-    echo "==> ${image} already in registry, skipping (use --force to rebuild)"
-    return
+  # Skip if already exists: remote registry check for push mode, local image check for --no-push.
+  if [[ "$FORCE" == "false" ]]; then
+    if [[ "$PUSH" == "true" ]] && image_exists_remote "$image"; then
+      echo "==> ${image} already in registry, skipping (use --force to rebuild)"
+      return
+    elif [[ "$PUSH" == "false" ]] && docker image inspect "$image" >/dev/null 2>&1; then
+      echo "==> ${image} already built locally, skipping (use --force to rebuild)"
+      return
+    fi
   fi
   if [[ "$PUSH" == "true" ]]; then
     # Multi-platform push via buildx so amd64 and arm64 users share one tag.

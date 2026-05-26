@@ -71,6 +71,6 @@ fi
 echo
 echo "==> Done. Set these in your .env (or export RUNNER_IMAGE_TAG=$TAG):"
 for tool in "${TOOLS[@]}"; do
-  VAR="RUNNER_IMAGE_$(echo "$tool" | tr '[:lower:]-' '[:upper:]_')"
+  VAR="RUNNER_IMAGE_$(echo "$tool" | tr '-' '_' | tr '[:lower:]' '[:upper:]')"
   echo "${VAR}=md-runner-${tool}:${TAG}"
 done
