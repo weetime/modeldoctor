@@ -9,7 +9,7 @@ import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-
 import { getRunnerStatus } from "./runner-container.js";
 import type { StartupReconciler } from "./startup-reconciler.js";
 
-export type WatcherMode = "off" | "backstop" | "primary";
+export type WatcherMode = "off" | "primary";
 
 const RUN_ID_LABEL = "modeldoctor.ai/run-id";
 
@@ -29,7 +29,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(K8sJobWatcherService.name);
   private informer: Informer<V1Pod> | null = null;
   private readonly firstFatalWaitingAt = new Map<string, Date>();
-  private readonly firstTerminalAt = new Map<string, Date>();
   private consecutiveErrors = 0;
 
   constructor(private readonly deps: WatcherDeps) {}
@@ -76,7 +75,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
   /** Updates in-memory tracking maps based on current pod state. */
   private trackTiming(pod: V1Pod, runId: string, now: Date): void {
-    const phase = pod.status?.phase;
     const waitingReason = getRunnerStatus(pod)?.state?.waiting?.reason;
     const isFatalWaiting =
       !!waitingReason && this.deps.reducerConfig.fatalWaitingReasons.includes(waitingReason);
@@ -85,12 +83,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       if (!this.firstFatalWaitingAt.has(runId)) this.firstFatalWaitingAt.set(runId, now);
     } else {
       this.firstFatalWaitingAt.delete(runId);
-    }
-
-    if (phase === "Failed" || phase === "Succeeded") {
-      if (!this.firstTerminalAt.has(runId)) this.firstTerminalAt.set(runId, now);
-    } else {
-      this.firstTerminalAt.delete(runId);
     }
   }
 
@@ -114,17 +106,14 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       pod,
       currentStatus: bench.status,
       firstFatalWaitingAt: this.firstFatalWaitingAt.get(runId) ?? null,
-      firstTerminalAt: this.firstTerminalAt.get(runId) ?? null,
       now,
       config: this.deps.reducerConfig,
-      mode: this.deps.mode === "off" ? "backstop" : this.deps.mode,
     });
 
     await this.execute(runId, transition, now);
 
     // Phase 3: idempotent attach. Informer replay on startup gives free bootstrap.
     if (
-      this.deps.mode === "primary" &&
       pod.status?.phase === "Running" &&
       getRunnerStatus(pod)?.ready === true &&
       (bench.status === "submitted" || bench.status === "running") &&
@@ -138,7 +127,6 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     const runId = this.extractRunId(pod);
     if (!runId) return;
     this.firstFatalWaitingAt.delete(runId);
-    this.firstTerminalAt.delete(runId);
     this.deps.pool.stop(runId);
   }
 

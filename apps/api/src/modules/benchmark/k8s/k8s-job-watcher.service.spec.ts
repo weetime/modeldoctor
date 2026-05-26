@@ -1,5 +1,5 @@
 import type { Informer, V1Pod } from "@kubernetes/client-node";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   podFailed,
   podPendingWaiting,
@@ -38,7 +38,7 @@ function makeFakeInformer() {
   return informer;
 }
 
-function makeDeps(mode: WatcherMode = "backstop"): {
+function makeDeps(mode: WatcherMode = "primary"): {
   deps: WatcherDeps;
   informer: ReturnType<typeof makeFakeInformer>;
   repo: { findById: ReturnType<typeof vi.fn>; updateGuarded: ReturnType<typeof vi.fn> };
@@ -71,7 +71,6 @@ function makeDeps(mode: WatcherMode = "backstop"): {
       reducerConfig: {
         fatalWaitingReasons: ["ImagePullBackOff"],
         waitingFatalGraceSec: 60,
-        terminalReconcileGraceSec: 60,
       },
       makeInformer: () => informer as unknown as Informer<V1Pod>,
       repo: repo as never,
@@ -87,46 +86,42 @@ function makeDeps(mode: WatcherMode = "backstop"): {
   };
 }
 
-describe("K8sJobWatcherService", () => {
-  describe("mode=off", () => {
-    it("does NOT start informer or run reconciler on init", async () => {
-      const { deps, informer, reconciler } = makeDeps("off");
-      const svc = new K8sJobWatcherService(deps);
-      await svc.onModuleInit();
-      expect(informer.start).not.toHaveBeenCalled();
-      expect(reconciler.run).not.toHaveBeenCalled();
-    });
+describe("K8sJobWatcherService — lifecycle", () => {
+  it("mode=off does NOT start informer or run reconciler", async () => {
+    const { deps, informer, reconciler } = makeDeps("off");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    expect(informer.start).not.toHaveBeenCalled();
+    expect(reconciler.run).not.toHaveBeenCalled();
   });
 
-  describe("mode=backstop", () => {
-    it("starts informer + runs reconciler on init", async () => {
-      const { deps, informer, reconciler } = makeDeps("backstop");
-      const svc = new K8sJobWatcherService(deps);
-      await svc.onModuleInit();
-      expect(informer.start).toHaveBeenCalledOnce();
-      expect(reconciler.run).toHaveBeenCalledOnce();
-    });
+  it("mode=primary starts informer + runs reconciler on init", async () => {
+    const { deps, informer, reconciler } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    expect(informer.start).toHaveBeenCalledOnce();
+    expect(reconciler.run).toHaveBeenCalledOnce();
+  });
 
-    it("stops informer on destroy", async () => {
-      const { deps, informer } = makeDeps("backstop");
-      const svc = new K8sJobWatcherService(deps);
-      await svc.onModuleInit();
-      await svc.onModuleDestroy();
-      expect(informer.stop).toHaveBeenCalledOnce();
-    });
+  it("stops informer on destroy", async () => {
+    const { deps, informer } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    await svc.onModuleDestroy();
+    expect(informer.stop).toHaveBeenCalledOnce();
+  });
 
-    it("is destroy-safe when init never ran", async () => {
-      const { deps, informer } = makeDeps("backstop");
-      const svc = new K8sJobWatcherService(deps);
-      await svc.onModuleDestroy();
-      expect(informer.stop).not.toHaveBeenCalled();
-    });
+  it("is destroy-safe when init never ran", async () => {
+    const { deps, informer } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleDestroy();
+    expect(informer.stop).not.toHaveBeenCalled();
   });
 });
 
 describe("K8sJobWatcherService event handling", () => {
   it("ADD with FATAL waiting → starts tracking + no immediate update", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
+    const { deps, informer, repo } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted" });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
@@ -138,7 +133,7 @@ describe("K8sJobWatcherService event handling", () => {
   });
 
   it("UPDATE after grace with FATAL waiting → updateGuarded(failed)", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
+    const { deps, informer, repo } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted" });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
@@ -161,7 +156,7 @@ describe("K8sJobWatcherService event handling", () => {
   });
 
   it("UPDATE with non-fatal waiting clears firstFatalWaitingAt", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
+    const { deps, informer, repo } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted" });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
@@ -173,47 +168,20 @@ describe("K8sJobWatcherService event handling", () => {
     expect(state.firstFatalWaitingAt.has(podRunId())).toBe(false);
   });
 
-  it("UPDATE with Succeeded pod after grace + IN_PROGRESS → failed-terminal", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
-    repo.findById.mockResolvedValue({ id: podRunId(), status: "running" });
-    const svc = new K8sJobWatcherService(deps);
-    await svc.onModuleInit();
-    (svc as unknown as { firstTerminalAt: Map<string, Date> }).firstTerminalAt.set(
-      podRunId(),
-      new Date(Date.now() - 120_000),
-    );
-
-    informer.fire("update", podSucceeded());
-    await new Promise((r) => setTimeout(r, 5));
-    expect(repo.updateGuarded).toHaveBeenCalledWith(
-      podRunId(),
-      ["pending", "submitted", "running"],
-      expect.objectContaining({
-        status: "failed",
-        statusMessage: expect.stringMatching(/no callback|never arrived/i),
-      }),
-    );
-  });
-
   it("DELETE clears in-memory state for the runId", async () => {
-    const { deps, informer } = makeDeps("backstop");
+    const { deps, informer } = makeDeps("primary");
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
-    const state = svc as unknown as {
-      firstFatalWaitingAt: Map<string, Date>;
-      firstTerminalAt: Map<string, Date>;
-    };
+    const state = svc as unknown as { firstFatalWaitingAt: Map<string, Date> };
     state.firstFatalWaitingAt.set(podRunId(), new Date());
-    state.firstTerminalAt.set(podRunId(), new Date());
 
     informer.fire("delete", podFailed());
     await new Promise((r) => setTimeout(r, 5));
     expect(state.firstFatalWaitingAt.has(podRunId())).toBe(false);
-    expect(state.firstTerminalAt.has(podRunId())).toBe(false);
   });
 
   it("ignores pods without modeldoctor.ai/run-id label", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
+    const { deps, informer, repo } = makeDeps("primary");
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
     informer.fire("add", {
@@ -225,29 +193,17 @@ describe("K8sJobWatcherService event handling", () => {
   });
 
   it("ignores benchmarks already in terminal state", async () => {
-    const { deps, informer, repo } = makeDeps("backstop");
+    const { deps, informer, repo } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "completed" });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
-    (svc as unknown as { firstTerminalAt: Map<string, Date> }).firstTerminalAt.set(
-      podRunId(),
-      new Date(Date.now() - 120_000),
-    );
     informer.fire("update", podSucceeded());
     await new Promise((r) => setTimeout(r, 5));
     expect(repo.updateGuarded).not.toHaveBeenCalled();
   });
 });
 
-describe("K8sJobWatcherService — primary mode", () => {
-  it("mode=primary starts informer + runs reconciler on init (no throw)", async () => {
-    const { deps, informer, reconciler } = makeDeps("primary");
-    const svc = new K8sJobWatcherService(deps);
-    await svc.onModuleInit();
-    expect(informer.start).toHaveBeenCalledOnce();
-    expect(reconciler.run).toHaveBeenCalledOnce();
-  });
-
+describe("K8sJobWatcherService — reduce → execute branches", () => {
   it("Succeeded pod → reportLoader.tryLoad called with runId", async () => {
     const { deps, informer, repo, reportLoader } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "running" });
@@ -279,14 +235,13 @@ describe("K8sJobWatcherService — primary mode", () => {
     );
   });
 
-  it("Failed pod (primary) → updateGuarded(IN_PROGRESS_STATES, { status: 'failed' }) immediately (no grace)", async () => {
+  it("Failed pod → updateGuarded(IN_PROGRESS_STATES, { status: 'failed' }) immediately (no grace)", async () => {
     const { deps, informer, repo } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "running" });
     repo.updateGuarded.mockResolvedValue({ id: podRunId() });
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleInit();
 
-    // No firstTerminalAt seed needed — primary mode ignores grace period for Failed
     informer.fire("update", podFailed(1, "Error", "tool exit 1"));
     await new Promise((r) => setTimeout(r, 5));
 
@@ -299,7 +254,7 @@ describe("K8sJobWatcherService — primary mode", () => {
 });
 
 describe("Phase 3 — pod log streamer", () => {
-  it("Running pod (ready, status=submitted, mode=primary) calls pool.start", async () => {
+  it("Running ready pod + status=submitted calls pool.start", async () => {
     const { deps, informer, repo, pool } = makeDeps("primary");
     repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted", tool: "guidellm" });
     const svc = new K8sJobWatcherService(deps);
@@ -307,16 +262,6 @@ describe("Phase 3 — pod log streamer", () => {
     informer.fire("add", podRunning());
     await new Promise((r) => setImmediate(r));
     expect(pool.start).toHaveBeenCalledWith(podRunId(), expect.any(String), "guidellm");
-  });
-
-  it("Running pod in mode=backstop does NOT call pool.start", async () => {
-    const { deps, informer, repo, pool } = makeDeps("backstop");
-    repo.findById.mockResolvedValue({ id: podRunId(), status: "submitted", tool: "guidellm" });
-    const svc = new K8sJobWatcherService(deps);
-    await svc.onModuleInit();
-    informer.fire("add", podRunning());
-    await new Promise((r) => setImmediate(r));
-    expect(pool.start).not.toHaveBeenCalled();
   });
 
   it("Succeeded pod calls pool.drainAndStop(5000) before reportLoader.tryLoad", async () => {

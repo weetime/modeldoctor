@@ -19,16 +19,14 @@ async function bootstrap(): Promise<void> {
 
   app.use(cookieParser());
 
-  // Bump JSON body limit. The default ~100 KB rejects benchmark runner
-  // metrics callbacks: a guidellm run with 500+ requests posts a
-  // rawMetrics blob that can exceed 16 MB once per-request entries are
-  // included (observed: 413 against /api/internal/benchmarks/:id/finish).
-  // 64 MB covers realistic max-requests=1000 runs while still capping a
-  // malicious upload. The throttler (100 req/min global) prevents
-  // body-size DoS amplification. Long-term: stream the report to object
-  // storage and have the callback carry only a reference path.
-  app.use(json({ limit: "64mb" }));
-  app.use(urlencoded({ limit: "64mb", extended: true }));
+  // JSON body limit. Express default ~100 KB is too tight for two realistic
+  // payloads: (1) Alertmanager webhook posts fan-out groups that can hold
+  // dozens of alerts at once, and (2) `POST /api/quality-gate/evaluations/import`
+  // accepts user-uploaded dataset JSON. 1 MB covers both with headroom while
+  // still capping malicious uploads — the throttler (100 req/min global)
+  // prevents body-size DoS amplification on top.
+  app.use(json({ limit: "1mb" }));
+  app.use(urlencoded({ limit: "1mb", extended: true }));
 
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   const origins = config.get("CORS_ORIGINS", { infer: true });

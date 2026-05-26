@@ -148,14 +148,10 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         const waitingFatalGraceSec = config.get("WAITING_FATAL_GRACE_SEC", {
           infer: true,
         }) as number;
-        const terminalReconcileGraceSec = config.get("TERMINAL_RECONCILE_GRACE_SEC", {
-          infer: true,
-        }) as number;
 
         const reducerConfig = {
           fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,
           waitingFatalGraceSec,
-          terminalReconcileGraceSec,
         };
 
         if (mode === "off") {
@@ -181,7 +177,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           });
         }
 
-        // mode=backstop or primary — real informer + reconciler
+        // mode=primary — real informer + reconciler
         const k8s = await import("@kubernetes/client-node");
         const kc = await loadKubeConfig(config);
         const coreV1: CoreV1Api = kc.makeApiClient(k8s.CoreV1Api);

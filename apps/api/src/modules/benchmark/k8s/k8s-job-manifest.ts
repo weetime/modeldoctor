@@ -15,7 +15,7 @@ const LABELS = {
 };
 
 /** Operator-created Secret holding S3 credentials shared across all benchmark Jobs.
- *  Per-run Secret (callback token + tool API keys) stays separate. */
+ *  Per-run Secret (tool API keys, input files) stays separate. */
 const STORAGE_SECRET_NAME = "md-benchmark-storage";
 
 // Encode an inputFiles alias into a Secret-key-safe form. Aliases are
