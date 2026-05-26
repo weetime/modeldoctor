@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Build all benchmark-runner wrapper images and import into the
-# local k3d cluster. Tag is the short git SHA of the most recent commit
-# that touched apps/benchmark-runner/, so devs never need to remember
-# to bump :devN — pulling the branch + running this script always
-# produces a tag that matches the source state.
+# Build all benchmark-runner wrapper images and import into the local k3d cluster.
+# Tag is the short git SHA of the most recent commit that touched
+# apps/benchmark-runner/, so devs never need to remember to bump :devN.
+#
+# Runner images are thin: they just COPY runner/ on top of stable base images
+# already in ghcr.io/weetime/. Run build-base-images.sh first if the base
+# images are not yet in the registry or need a version bump.
 #
 # Usage:
-#   ./tools/build-runner-images.sh           # build + import to k3d cluster "modeldoctor"
+#   ./tools/build-runner-images.sh               # build + import to k3d cluster "modeldoctor"
 #   ./tools/build-runner-images.sh --no-import   # build only, skip k3d import
-#   K3D_CLUSTER=other ./tools/build-runner-images.sh  # different cluster
+#   K3D_CLUSTER=other ./tools/build-runner-images.sh
 
 set -euo pipefail
 
@@ -16,18 +18,15 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # Compute content-addressed tag from the latest commit affecting the
-# runner subtree. Falls back to the current HEAD if no path filter
-# matches (e.g. on a fresh worktree before any runner change).
+# runner subtree. Falls back to HEAD if no path filter matches (e.g. on a
+# fresh worktree before any runner change).
 TAG="$(git log -1 --format=%h -- apps/benchmark-runner/ 2>/dev/null || true)"
 if [[ -z "${TAG:-}" ]]; then
   TAG="$(git rev-parse --short HEAD)"
 fi
 
-# If there are uncommitted changes in the runner subtree, append a
-# dirty-marker plus a timestamp. Plain `-dirty` would not distinguish
-# two consecutive iterative builds (same tag → docker/k8s cache hits,
-# stale image). Timestamp guarantees each iterative build gets a
-# unique tag so k3d image import + pod restart picks it up.
+# Append dirty-marker + timestamp for uncommitted changes so each iterative
+# build gets a unique tag (plain -dirty would collide on consecutive builds).
 if [[ -n "$(git status --porcelain apps/benchmark-runner/)" ]]; then
   TAG="${TAG}-dirty-$(date +%s)"
 fi
