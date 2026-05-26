@@ -7,9 +7,9 @@
 #
 # Then update aiperf.Dockerfile's FROM line to the new tag.
 #
-# NOTE: if the HuggingFace curl step fails with a TLS error inside Docker
-# Desktop for Mac, run build-base-images.sh with --sharegpt-host-download
-# (downloads the 672 MB file on the host first, then COPYs it in).
+# build-base-images.sh pre-downloads the ShareGPT corpus on the host to work
+# around Docker Desktop for Mac TLS failures (curl error 35) to huggingface.co
+# inside the builder. The corpus is then COPYed in rather than fetched here.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -23,11 +23,6 @@ RUN pip install --no-cache-dir "aiperf==${AIPERF_VERSION}"
 # air-gapped clusters. aiperf's ShareGPTLoader resolves
 # `.cache/aiperf/datasets/<filename>` relative to WORKDIR (/app).
 WORKDIR /app
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
-    && mkdir -p /app/.cache/aiperf/datasets \
-    && curl -fL --retry 3 --retry-delay 5 \
-        --output /app/.cache/aiperf/datasets/ShareGPT_V3_unfiltered_cleaned_split.json \
-        https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json \
-    && apt-get purge -y --auto-remove curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /app/.cache/aiperf/datasets
+COPY images/.sharegpt/ShareGPT_V3_unfiltered_cleaned_split.json \
+     /app/.cache/aiperf/datasets/ShareGPT_V3_unfiltered_cleaned_split.json
