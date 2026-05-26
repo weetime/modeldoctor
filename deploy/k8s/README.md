@@ -41,7 +41,6 @@ Then in your API env (paste the tags printed by the script):
 ```bash
 # K8s is the only execution mode (#101) — no driver toggle.
 export BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
-export BENCHMARK_CALLBACK_URL=http://host.k3d.internal:3001
 export RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:<sha-from-script>
 export RUNNER_IMAGE_VEGETA=md-runner-vegeta:<sha-from-script>
 export RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:<sha-from-script>
