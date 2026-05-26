@@ -16,7 +16,11 @@ function CollapseBlock({
   return (
     <div>
       <Button variant="ghost" size="sm" onClick={() => setOpen((s) => !s)}>
-        {open ? <ChevronDown className="mr-1 h-4 w-4" /> : <ChevronRight className="mr-1 h-4 w-4" />}
+        {open ? (
+          <ChevronDown className="mr-1 h-4 w-4" />
+        ) : (
+          <ChevronRight className="mr-1 h-4 w-4" />
+        )}
         {label}
       </Button>
       {open && (
@@ -41,7 +45,9 @@ export function BenchmarkDetailRawOutput({
   const stderr = (rawOutput?.stderr as string | undefined) ?? "";
   // rawOutput minus stdout/stderr for the raw JSON block
   const rawRest = rawOutput
-    ? Object.fromEntries(Object.entries(rawOutput).filter(([k]) => k !== "stdout" && k !== "stderr"))
+    ? Object.fromEntries(
+        Object.entries(rawOutput).filter(([k]) => k !== "stdout" && k !== "stderr"),
+      )
     : null;
 
   return (
@@ -49,12 +55,8 @@ export function BenchmarkDetailRawOutput({
       {stdout.trim() && (
         <CollapseBlock label={t("detail.logs.stdout")} content={stdout} defaultOpen />
       )}
-      {stderr.trim() && (
-        <CollapseBlock label={t("detail.logs.stderr")} content={stderr} />
-      )}
-      {logs && (
-        <CollapseBlock label={t("detail.logs.toggle")} content={logs} />
-      )}
+      {stderr.trim() && <CollapseBlock label={t("detail.logs.stderr")} content={stderr} />}
+      {logs && <CollapseBlock label={t("detail.logs.toggle")} content={logs} />}
       {rawRest && Object.keys(rawRest).length > 0 && (
         <CollapseBlock
           label={t("detail.rawOutput.toggle")}

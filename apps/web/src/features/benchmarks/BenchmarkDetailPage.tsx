@@ -32,7 +32,6 @@ import { EngineMetricsSection } from "@/features/engine-metrics/EngineMetricsSec
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { BenchmarkDetailMetadata } from "./BenchmarkDetailMetadata";
 import { BenchmarkDetailRawOutput } from "./BenchmarkDetailRawOutput";
-import { type LogEvent, useRunEventStream } from "./useRunEventStream";
 import { DetailVerdictRow } from "./compare/DetailVerdictRow";
 import {
   benchmarkKeys,
@@ -52,6 +51,7 @@ import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
 import { UnknownReport } from "./reports/UnknownReport";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
+import { type LogEvent, useRunEventStream } from "./useRunEventStream";
 
 /** Spinner + elapsed time shown in the Overview tab while a run is in flight. */
 function RunningSection({ benchmark }: { benchmark: Benchmark }) {
@@ -85,13 +85,7 @@ function RunningSection({ benchmark }: { benchmark: Benchmark }) {
 
 /** Dark terminal-style log panel. Shows live SSE lines during run; stdout
  *  from rawOutput after completion. Survives page refresh via DB fallback. */
-function LogPanel({
-  logLines,
-  stdout,
-}: {
-  logLines: LogEvent[];
-  stdout: string;
-}) {
+function LogPanel({ logLines, stdout }: { logLines: LogEvent[]; stdout: string }) {
   const { t } = useTranslation("benchmarks");
   const logEndRef = useRef<HTMLDivElement>(null);
 

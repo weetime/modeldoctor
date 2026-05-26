@@ -36,7 +36,11 @@ export function useRunEventStream(runId: string | undefined, enabled: boolean): 
 
     es.onmessage = (e) => {
       try {
-        const evt = JSON.parse(e.data as string) as { kind?: string; level?: string; line?: string };
+        const evt = JSON.parse(e.data as string) as {
+          kind?: string;
+          level?: string;
+          line?: string;
+        };
         if (evt.kind === "log" && typeof evt.line === "string") {
           setLines((prev) => {
             const next = [...prev, evt as LogEvent];
