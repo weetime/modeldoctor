@@ -90,7 +90,7 @@ function LogPanel({ logLines, stdout }: { logLines: LogEvent[]; stdout: string }
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    logEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [logLines, stdout]);
 
   const hasLive = logLines.length > 0;
@@ -235,7 +235,7 @@ function BenchmarkDetailTabs({
       )}
 
       <TabsContent value="logs">
-        <LogPanel logLines={isTerminal ? [] : logLines} stdout={isTerminal ? stdout : ""} />
+        <LogPanel logLines={logLines} stdout={stdout} />
       </TabsContent>
 
       {isTerminal && (

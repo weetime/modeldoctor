@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { SseJwtAuthGuard } from "../auth/sse-jwt-auth.guard.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
@@ -13,6 +14,7 @@ import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
+import { SseHub } from "./sse/sse-hub.service.js";
 
 // Stub adapter registry to avoid pulling in the real (Phase 1 stubbed) adapters'
 // buildCommand which throws "not implemented". The controller spec only needs
@@ -107,9 +109,15 @@ describe("BenchmarkController", () => {
           useValue: { existsById: vi.fn(async () => false) },
         },
         { provide: NotifyService, useValue: { emit: vi.fn() } },
+        {
+          provide: SseHub,
+          useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(SseJwtAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -501,9 +509,15 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
           useValue: { existsById: vi.fn(async () => false) },
         },
         { provide: NotifyService, useValue: { emit: vi.fn() } },
+        {
+          provide: SseHub,
+          useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(SseJwtAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -621,9 +635,15 @@ describe("BenchmarkController.reportsByConnection", () => {
       providers: [
         { provide: BenchmarkService, useValue: svc },
         { provide: BenchmarkChartsService, useValue: {} },
+        {
+          provide: SseHub,
+          useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(SseJwtAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
     controller = moduleRef.get(BenchmarkController);
