@@ -159,7 +159,10 @@ describe("BenchmarkDetailPage", () => {
   });
 
   it("renders metadata + Request·Response tab exposes raw output and logs toggles", async () => {
-    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark());
+    // rawOutput needs a non-stdout/stderr key to trigger the "Raw output (JSON)" block.
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ rawOutput: { stdout: "ok", report: { tool: "guidellm" } } }),
+    );
     const user = userEvent.setup();
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     expect(await screen.findByRole("heading", { name: "smoke" })).toBeInTheDocument();
