@@ -11,35 +11,21 @@
 # ~10 MB vegeta) and contains no ML dependencies.
 #
 # peterevans/vegeta is stale (last published 2020, vegeta 12.8.4). We
-# download the canonical binary directly from tsenart/vegeta releases.
-# Pin to v12.13.0 — bumping is a deliberate PR.
+# use a pre-downloaded vegeta binary (fetched by build-runner-images.sh on
+# the host before docker build, to avoid TLS failures inside the builder).
+# Pin to v12.13.0 — bumping is a deliberate PR; update SHA256 constants in
+# build-runner-images.sh alongside the version bump.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Download the vegeta static binary for the target platform.
-# The binary is a single statically-linked executable; no extra deps needed.
-ARG VEGETA_VERSION=12.13.0
-ARG VEGETA_SHA256_AMD64=e8759ce45c14e18374bdccd3ba6068197bc3a9f9b7e484db3837f701b9d12e61
-ARG VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e4133bba
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends curl ca-certificates; \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb; \
-    ARCH="$(dpkg --print-architecture)"; \
-    case "${ARCH}" in \
-      amd64)  VEGETA_ARCH="linux_amd64"; VEGETA_SHA="${VEGETA_SHA256_AMD64}" ;; \
-      arm64)  VEGETA_ARCH="linux_arm64"; VEGETA_SHA="${VEGETA_SHA256_ARM64}" ;; \
-      *)      echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
-    esac; \
-    curl -fsSL "https://github.com/tsenart/vegeta/releases/download/v${VEGETA_VERSION}/vegeta_${VEGETA_VERSION}_${VEGETA_ARCH}.tar.gz" \
-      -o /tmp/vegeta.tar.gz; \
-    echo "${VEGETA_SHA}  /tmp/vegeta.tar.gz" | sha256sum -c -; \
-    tar -xzf /tmp/vegeta.tar.gz -C /tmp vegeta; \
-    install -m 0755 /tmp/vegeta /usr/local/bin/vegeta; \
-    rm /tmp/vegeta.tar.gz; \
-    vegeta --version
+# TARGETARCH is auto-populated by BuildKit ("amd64" or "arm64").
+# build-runner-images.sh downloads both binaries to images/.vegeta-binaries/
+# before invoking docker build; the directory is gitignored.
+ARG TARGETARCH
+COPY images/.vegeta-binaries/vegeta_linux_${TARGETARCH} /usr/local/bin/vegeta
+RUN chmod 0755 /usr/local/bin/vegeta && vegeta --version
 
 WORKDIR /app
 

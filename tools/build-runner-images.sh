@@ -15,6 +15,36 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ---------------------------------------------------------------------------
+# vegeta pre-download — fetch both arch binaries on the host (where TLS works)
+# so the Dockerfile can COPY them instead of curling inside the builder.
+# ---------------------------------------------------------------------------
+VEGETA_VERSION=12.13.0
+VEGETA_SHA256_AMD64=e8759ce45c14e18374bdccd3ba6068197bc3a9f9b7e484db3837f701b9d12e61
+VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e4133bba
+VEGETA_BIN_DIR="apps/benchmark-runner/images/.vegeta-binaries"
+
+mkdir -p "$VEGETA_BIN_DIR"
+trap 'rm -rf "$VEGETA_BIN_DIR"' EXIT
+
+for ARCH in amd64 arm64; do
+  DEST="$VEGETA_BIN_DIR/vegeta_linux_${ARCH}"
+  if [[ -f "$DEST" ]]; then
+    echo "==> vegeta_linux_${ARCH} already present, skipping download"
+    continue
+  fi
+  URL="https://github.com/tsenart/vegeta/releases/download/v${VEGETA_VERSION}/vegeta_${VEGETA_VERSION}_linux_${ARCH}.tar.gz"
+  TARBALL="/tmp/vegeta_${ARCH}.tar.gz"
+  echo "==> Downloading vegeta v${VEGETA_VERSION} (${ARCH})"
+  curl -fsSL "$URL" -o "$TARBALL"
+  if [[ "$ARCH" == "amd64" ]]; then SHA="$VEGETA_SHA256_AMD64"; else SHA="$VEGETA_SHA256_ARM64"; fi
+  echo "${SHA}  ${TARBALL}" | sha256sum -c -
+  tar -xzf "$TARBALL" -C "$VEGETA_BIN_DIR" vegeta
+  mv "$VEGETA_BIN_DIR/vegeta" "$DEST"
+  rm "$TARBALL"
+done
+# ---------------------------------------------------------------------------
+
 # Compute content-addressed tag from the latest commit affecting the
 # runner subtree. Falls back to the current HEAD if no path filter
 # matches (e.g. on a fresh worktree before any runner change).
