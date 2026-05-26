@@ -108,14 +108,12 @@ Health check: `GET /api/health` returns 200 with `{"status":"ok","info":{"databa
 | `JWT_REFRESH_EXPIRES_DAYS` | No | `7` | Refresh-token TTL (also the `md_refresh` cookie's Max-Age) |
 | `DISABLE_FIRST_USER_ADMIN` | No | `false` | When `true`, the first user registered is NOT auto-promoted to the `admin` role |
 | `BENCHMARK_DRIVER` | No | `subprocess` | `subprocess` (local guidellm) or `k8s` (creates a `batch/v1/Job`) |
-| `BENCHMARK_CALLBACK_URL` | **Yes** (non-test) | — | Base URL the runner posts back to (e.g. `http://localhost:3001`, `http://host.k3d.internal:3001`, or `http://modeldoctor-api.modeldoctor.svc:3001`) |
 | `CONNECTION_API_KEY_ENCRYPTION_KEY` | **Yes** (non-test) | — | 32-byte AES-256 key, base64-encoded — encrypts user-supplied benchmark API keys at rest. Also used by the LLM judge provider (`llm_judge_providers.api_key_cipher`). |
-| `BENCHMARK_CALLBACK_SECRET` | **Yes** (non-test) | — | ≥ 32 chars; per-run HMAC token signing key |
 | `BENCHMARK_K8S_NAMESPACE` | No | `modeldoctor-benchmarks` | Namespace where benchmark Jobs and Secrets land (only used when driver is `k8s`) |
 | `BENCHMARK_RUNNER_IMAGE` | **Yes** (driver=`k8s`) | — | Container image for the runner (e.g. `gpustack/benchmark-runner:v0.0.4`) |
 | `BENCHMARK_DEFAULT_MAX_DURATION_SECONDS` | No | `1800` | Default `--max-seconds` cap applied to runs |
 
-In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers. The `BENCHMARK_*` non-test-required keys follow the same rule.
+In `NODE_ENV=test`, both `DATABASE_URL` and `JWT_ACCESS_SECRET` become optional so unit tests can boot `AppModule` without a real database. The e2e suite sets both itself via `vitest.e2e.config.mts` + testcontainers. Other `**Yes** (non-test)` keys follow the same rule.
 
 ### Benchmark feature local workflows
 
@@ -134,7 +132,6 @@ which benchmark-runner
 
 # Generate secrets, then start the dev server.
 echo "CONNECTION_API_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> apps/api/.env
-echo "BENCHMARK_CALLBACK_SECRET=$(openssl rand -base64 48)" >> apps/api/.env
 pnpm dev
 ```
 
