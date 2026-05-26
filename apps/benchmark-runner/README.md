@@ -4,10 +4,11 @@ Thin Python wrapper around benchmark tools
 ([guidellm](https://github.com/neuralmagic/guidellm) via
 [gpustack/benchmark-runner](https://hub.docker.com/r/gpustack/benchmark-runner),
 and [vegeta](https://github.com/tsenart/vegeta))
-that runs a single benchmark against an OpenAI-compatible target and POSTs
-lifecycle + output back to ModelDoctor's API.
+that runs a single benchmark against an OpenAI-compatible target and writes
+lifecycle + output to the shared report-storage bucket; the ModelDoctor API
+picks them up via a K8s pod watcher (state) and a pod-log stream (live logs).
 
-This image is launched by Phase 3's `K8sJobDriver` and `SubprocessDriver`.
+This image is launched by the `K8sJobDriver` and `SubprocessDriver`.
 You should rarely run it directly except for image-level smoke testing.
 
 As of Phase 3 (#53) there is **one image per tool** — `images/guidellm.Dockerfile`
@@ -60,73 +61,85 @@ The guidellm base is pinned to `gpustack/benchmark-runner:v0.0.3` — bumping
 is a deliberate PR with new fixture-based metrics-mapper tests, since
 guidellm's report schema occasionally renames fields between versions.
 
-## Environment-variable contract (MD_* vars)
+## Environment-variable contract
 
-The wrapper reads these env vars at startup — set by both `K8sJobDriver` (as
-Pod env) and `SubprocessDriver` (as process env) before launching the container:
+The wrapper reads these env vars at startup — set by both `K8sJobDriver` (Pod
+env + per-run Secret + shared storage Secret) and `SubprocessDriver` (process
+env) before launching the container.
+
+**Wrapper inputs (per run):**
 
 | Variable | Required | Description |
 |---|---|---|
-| `MD_BENCHMARK_ID` | yes | Opaque benchmark identifier (UUID). Used as the path segment in callback URLs. |
-| `MD_CALLBACK_URL` | yes | Base URL of the ModelDoctor API (e.g. `http://api:3000`). Trailing slash is tolerated. |
-| `MD_CALLBACK_TOKEN` | yes | Bearer token included in every callback POST (`Authorization: Bearer <token>`). |
+| `MD_BENCHMARK_ID` | yes | Opaque benchmark identifier (UUID). Used as the object-store key prefix (e.g. `<id>/result.json`). |
 | `MD_ARGV` | yes | JSON array — the full argv to exec (e.g. `["vegeta","attack",...]`). The wrapper execs this verbatim. |
-| `MD_OUTPUT_FILES` | yes | JSON object mapping alias → relative file path (e.g. `{"result":"result.json"}`). After the tool exits the wrapper base64-encodes each existing file and includes it in `/finish`. |
+| `MD_OUTPUT_FILES` | yes | JSON object mapping alias → relative file path (e.g. `{"result":"result.json"}`). After the tool exits the wrapper uploads each existing file to `<id>/files/<alias>` in the shared report-storage bucket. |
 | `MD_INPUT_FILE_PATHS` | no | JSON object mapping alias → absolute mount path. K8s mode only — the wrapper symlinks each source path into cwd so the tool's relative argv paths resolve correctly. Subprocess driver writes files directly to cwd and omits this var. |
 
-### Callback URLs (API v2, introduced in #53)
+**Report-storage credentials (shared across runs; injected via the `md-benchmark-storage` Secret in K8s mode):**
 
-All callbacks are relative to `MD_CALLBACK_URL`:
+| Variable | Required | Description |
+|---|---|---|
+| `S3_ENDPOINT` | yes | Endpoint URL of the shared object store (e.g. `http://minio:9000`). |
+| `S3_ACCESS_KEY` | yes | Access key id for the object store. |
+| `S3_SECRET_KEY` | yes | Secret access key for the object store. |
+| `S3_BUCKET` | yes | Bucket the wrapper writes into. Same bucket the API reads from. |
+| `S3_REGION` | no | Defaults to `us-east-1` — harmless against MinIO, but required by the boto3 client. |
 
-| Event | Method + path |
-|---|---|
-| Tool started | `POST api/internal/benchmarks/<benchmark_id>/state` — `{"state":"running","toolVersion":"<tool> <version>"?}` (toolVersion captured at boot via `<tool> --version`, optional) |
-| Log lines (streaming, every 250 ms) | `POST api/internal/benchmarks/<benchmark_id>/log` — `{"stream":"stdout"\|"stderr","lines":[...]}` |
-| Tool finished (terminal) | `POST api/internal/benchmarks/<benchmark_id>/finish` — `{"state":"completed"\|"failed","exitCode":N,"stdout":"...","stderr":"...","files":{...},"message":"..."}` |
+**Tool API keys (forwarded into argv at exec time):**
 
-The wrapper always exits 0 itself; tool failure is conveyed via `state: "failed"` in `/finish`.
+| Variable | Required | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | no | Merged into any `--backend-kwargs={...}` JSON in `MD_ARGV` (for guidellm). Set via the per-run Secret in K8s mode. |
+
+### Report storage layout
+
+The wrapper writes a fixed set of objects to `S3_BUCKET` keyed by `MD_BENCHMARK_ID`. The shape matches `reportStorageKeys` in `packages/contracts/src/benchmark.ts` — runner writes, API reads, both must agree.
+
+| Step | Object key | When written |
+|---|---|---|
+| 1. Start metadata | `<id>/meta.json` — `{toolVersion, startTimeIso}` | Before exec, after `<tool> --version` capture |
+| 2. Output files | `<id>/files/<alias>` (multipart upload for >5 MB) | After tool exits, only for files that exist |
+| 3. Captured stdout/stderr | `<id>/stdout.log` and `<id>/stderr.log` | After tool exits, full buffered tail from `StreamPump` |
+| 4. Terminal sentinel | `<id>/result.json` — `{exitCode, finishTimeIso, files}` | LAST. API treats its presence as "storage complete". |
+
+The wrapper propagates the tool's exit code (`pod.phase == Succeeded` ↔ exit 0; non-zero ↔ `pod.phase == Failed`). The K8s job-watcher in the API reconciles pod state against the `result.json` sentinel and updates the benchmark row in Postgres; live stdout/stderr is tailed via the K8s pod-log API rather than pushed from the runner.
 
 ## Running the image (manual smoke test)
+
+The smoke tests below require an S3-compatible object store reachable from
+the container — a local MinIO works fine. The examples assume MinIO at
+`http://host.docker.internal:9000` with the default `minioadmin` credentials
+and a pre-created bucket named `modeldoctor-dev`.
 
 ### Sanity check — simplest possible test
 
 ```bash
 docker run --rm \
   -e MD_BENCHMARK_ID=smoke-01 \
-  -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
-  -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["echo","hello from runner"]' \
   -e MD_OUTPUT_FILES='{}' \
+  -e S3_ENDPOINT=http://host.docker.internal:9000 \
+  -e S3_ACCESS_KEY=minioadmin \
+  -e S3_SECRET_KEY=minioadmin \
+  -e S3_BUCKET=modeldoctor-dev \
   md-runner-vegeta:dev3
 ```
 
-Expected: the wrapper POSTs `state=running`, execs `echo hello from runner`,
-streams the line to `/log`, then POSTs `/finish` with `state=completed` and exits 0.
+Expected: the wrapper writes `smoke-01/meta.json`, execs `echo hello from runner`,
+then writes `smoke-01/stdout.log`, `smoke-01/stderr.log`, and finally
+`smoke-01/result.json`. Exit code 0.
 
-To observe the callbacks, run this stub server in a second terminal:
-
-```python
-# stub_callback.py
-from aiohttp import web
-
-async def echo(request: web.Request) -> web.Response:
-    body = await request.json()
-    print(f"{request.method} {request.path} <- {body}")
-    return web.Response(status=200)
-
-app = web.Application()
-app.router.add_route("*", "/{tail:.*}", echo)
-web.run_app(app, port=3001)
-```
+To verify, point any S3 client at the same endpoint:
 
 ```bash
-python stub_callback.py   # terminal 2 — listens on :3001
-```
+# Using the AWS CLI against MinIO
+aws --endpoint-url http://localhost:9000 s3 ls s3://modeldoctor-dev/smoke-01/
+# expect: meta.json, stdout.log, stderr.log, result.json
 
-Expected output in stub terminal:
-1. `POST /api/internal/benchmarks/smoke-01/state <- {'state': 'running', 'toolVersion': '...'}`  (toolVersion is included only when `<argv[0]> --version` succeeds)
-2. `POST /api/internal/benchmarks/smoke-01/log <- {'stream': 'stdout', 'lines': ['hello from runner']}`
-3. `POST /api/internal/benchmarks/smoke-01/finish <- {'state': 'completed', 'exitCode': 0, ...}`
+aws --endpoint-url http://localhost:9000 s3 cp s3://modeldoctor-dev/smoke-01/result.json -
+# expect: {"exitCode": 0, "finishTimeIso": "...", "files": {}}
+```
 
 (Linux Docker without Desktop: replace `host.docker.internal` with
 `172.17.0.1`, or pass `--add-host=host.docker.internal:host-gateway`.)
@@ -136,10 +149,12 @@ Expected output in stub terminal:
 ```bash
 docker run --rm \
   -e MD_BENCHMARK_ID=dev-$(date +%s) \
-  -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
-  -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["sh","-c","echo GET https://httpbin.org/get | vegeta attack -rate=1 -duration=3s | vegeta report -type=json -output=result.json"]' \
   -e MD_OUTPUT_FILES='{"result":"result.json"}' \
+  -e S3_ENDPOINT=http://host.docker.internal:9000 \
+  -e S3_ACCESS_KEY=minioadmin \
+  -e S3_SECRET_KEY=minioadmin \
+  -e S3_BUCKET=modeldoctor-dev \
   md-runner-vegeta:dev3
 ```
 
@@ -148,10 +163,12 @@ docker run --rm \
 ```bash
 docker run --rm \
   -e MD_BENCHMARK_ID=dev-$(date +%s) \
-  -e MD_CALLBACK_URL=http://host.docker.internal:3001 \
-  -e MD_CALLBACK_TOKEN=dev-token \
   -e MD_ARGV='["benchmark-runner","benchmark","run","--target","https://your-vllm-host/v1","--model","facebook/opt-125m","--max-requests","10","--output-path","report.json"]' \
   -e MD_OUTPUT_FILES='{"report":"report.json"}' \
+  -e S3_ENDPOINT=http://host.docker.internal:9000 \
+  -e S3_ACCESS_KEY=minioadmin \
+  -e S3_SECRET_KEY=minioadmin \
+  -e S3_BUCKET=modeldoctor-dev \
   md-runner-guidellm:dev3
 ```
 

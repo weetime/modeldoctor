@@ -14,7 +14,6 @@ dependencies = [
   # new fixture-based metrics-mapper tests. Local dev installs only the
   # runner's own runtime deps below.
   "boto3>=1.34,<2",
-  "requests>=2.31,<3",
 ]
 
 [project.optional-dependencies]
