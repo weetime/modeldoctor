@@ -25,7 +25,7 @@ import {
   Sse,
   UseGuards,
 } from "@nestjs/common";
-import { EMPTY, type Observable, from } from "rxjs";
+import { EMPTY, from, type Observable } from "rxjs";
 import { map, switchMap } from "rxjs/operators";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
@@ -104,9 +104,7 @@ export class BenchmarkController {
   events(@CurrentUser() user: JwtPayload, @Param("id") id: string): Observable<MessageEvent> {
     const isAdmin = user.roles.includes("admin");
     return from(this.service.findByIdOrFail(id, isAdmin ? undefined : user.sub)).pipe(
-      switchMap((bench) =>
-        isInProgressStatus(bench.status) ? this.sse.subscribe(id) : EMPTY,
-      ),
+      switchMap((bench) => (isInProgressStatus(bench.status) ? this.sse.subscribe(id) : EMPTY)),
       map((evt) => ({ data: evt }) as MessageEvent),
     );
   }
