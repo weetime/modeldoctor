@@ -37,7 +37,6 @@ const INPUTS_MOUNT_PATH = "/workdir/inputs";
 export function buildSecretManifest(ctx: BenchmarkRunInput, namespace: string): V1Secret {
   const stringData: Record<string, string> = {
     ...ctx.buildResult.secretEnv,
-    MD_CALLBACK_TOKEN: ctx.callback.token,
   };
   for (const [alias, content] of Object.entries(ctx.buildResult.inputFiles ?? {})) {
     stringData[encodeAlias(alias)] = content;
@@ -62,7 +61,6 @@ export interface JobManifestOptions {
 export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOptions): V1Job {
   const env: { name: string; value: string }[] = [
     { name: "MD_BENCHMARK_ID", value: ctx.runId },
-    { name: "MD_CALLBACK_URL", value: ctx.callback.url },
     { name: "MD_ARGV", value: JSON.stringify(ctx.buildResult.argv) },
     { name: "MD_OUTPUT_FILES", value: JSON.stringify(ctx.buildResult.outputFiles) },
   ];

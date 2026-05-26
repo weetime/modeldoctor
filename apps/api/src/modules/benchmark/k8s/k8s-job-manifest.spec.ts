@@ -12,7 +12,6 @@ const ctx: BenchmarkRunInput = {
     inputFiles: { "targets.txt": "POST http://x" },
     outputFiles: { report: "report.json" },
   },
-  callback: { url: "http://api/", token: "tk" },
   image: "ghcr.io/example/runner:latest",
 };
 
@@ -59,22 +58,11 @@ describe("buildJobManifest", () => {
     expect(env).toContainEqual({ name: "FOO", value: "bar" });
     expect(env).toContainEqual({ name: "BAZ", value: "qux" });
     expect(env).toContainEqual({ name: "MD_BENCHMARK_ID", value: "abc123" });
-    expect(env).toContainEqual({ name: "MD_CALLBACK_URL", value: "http://api/" });
     expect(env).toContainEqual({ name: "MD_ARGV", value: JSON.stringify(ctx.buildResult.argv) });
     expect(env).toContainEqual({
       name: "MD_OUTPUT_FILES",
       value: JSON.stringify(ctx.buildResult.outputFiles),
     });
-  });
-
-  it("does NOT put callback token in env value (must come from Secret via envFrom)", () => {
-    const j = buildJobManifest(ctx, { namespace: "ns" });
-    const env = j.spec?.template.spec?.containers[0].env ?? [];
-    const tokenEntry = env.find((e) => e.name === "MD_CALLBACK_TOKEN");
-    expect(tokenEntry).toBeUndefined();
-
-    const s = buildSecretManifest(ctx, "ns");
-    expect(s.stringData?.MD_CALLBACK_TOKEN).toBe("tk");
   });
 
   it("mounts inputFiles via volume sourced from the Secret", () => {

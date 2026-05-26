@@ -34,7 +34,7 @@ describe("prefix-cache-probe.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv[0]).toBe("python");
     expect(r.argv[1]).toBe("/app/probe.py");
@@ -53,7 +53,7 @@ describe("prefix-cache-probe.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv.join(" ")).not.toContain("sk-test");
     expect(r.secretEnv.OPENAI_API_KEY).toBe("sk-test");
@@ -66,7 +66,7 @@ describe("prefix-cache-probe.buildCommand", () => {
         runId: "r1",
         params: baseParams,
         connection: conn,
-        callback: { url: "http://api/", token: "tk" },
+  
       }),
     ).toThrow(/Prometheus datasource/);
   });
@@ -87,7 +87,7 @@ describe("prefix-cache-probe.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: conn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.secretEnv.PROM_BEARER_TOKEN).toBe("supersecret");
     expect(r.argv.join(" ")).not.toContain("supersecret");
@@ -101,7 +101,7 @@ describe("prefix-cache-probe.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.secretEnv.PROM_BEARER_TOKEN).toBeUndefined();
   });
@@ -111,7 +111,7 @@ describe("prefix-cache-probe.buildCommand", () => {
       runId: "r1",
       params: baseParams,
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.outputFiles.result).toBe("result.json");
   });

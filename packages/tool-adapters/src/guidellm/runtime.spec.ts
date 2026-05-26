@@ -49,7 +49,7 @@ describe("guidellm.buildCommand", () => {
         validateBackend: true,
       },
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv[0]).toBe("guidellm");
     expect(r.argv).toContain("--target=http://localhost:8000");
@@ -76,7 +76,7 @@ describe("guidellm.buildCommand", () => {
         validateBackend: true,
       },
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv.join(" ")).not.toContain("sk-test");
     // Reasonable place: backend-kwargs JSON. We accept either explicit
@@ -100,7 +100,7 @@ describe("guidellm.buildCommand", () => {
         validateBackend: true,
       },
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv).toContain("--rate-type=constant");
     expect(r.argv).toContain("--rate=10");
@@ -123,7 +123,7 @@ describe("guidellm.buildCommand", () => {
         validateBackend: true,
       },
       connection: baseConn,
-      callback: { url: "http://api/", token: "tk" },
+
     });
     expect(r.argv).toContain("--rate-type=throughput");
     expect(r.argv).toContain("--rate=75");
@@ -154,7 +154,7 @@ describe("guidellm.buildCommand", () => {
         tokenizerHfId: null,
         prometheusDatasource: null,
       },
-      callback: { url: "http://cb", token: "t" },
+
     });
     expect(result.argv.some((a) => a.startsWith("--backend-kwargs="))).toBe(true);
     const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
@@ -188,7 +188,7 @@ describe("guidellm.buildCommand", () => {
         tokenizerHfId: null,
         prometheusDatasource: null,
       },
-      callback: { url: "http://cb", token: "t" },
+
     });
     const flag = result.argv.find((a) => a.startsWith("--backend-kwargs="));
     if (!flag) throw new Error("--backend-kwargs= not found in argv");
@@ -208,7 +208,7 @@ describe("guidellm.buildCommand", () => {
         tokenizerHfId: "Qwen/Connection",
         prometheusDatasource: null,
       },
-      callback: { url: "http://cb", token: "t" },
+
     });
     expect(result.argv).toContain("--processor=Qwen/Per-Run");
   });
@@ -226,7 +226,7 @@ describe("guidellm.buildCommand", () => {
         tokenizerHfId: "Qwen/Connection",
         prometheusDatasource: null,
       },
-      callback: { url: "http://cb", token: "t" },
+
     });
     expect(result.argv).toContain("--processor=Qwen/Connection");
   });
@@ -244,7 +244,7 @@ describe("guidellm.buildCommand", () => {
         tokenizerHfId: null,
         prometheusDatasource: null,
       },
-      callback: { url: "http://cb", token: "t" },
+
     });
     expect(result.argv.find((a) => a.startsWith("--processor="))).toBeUndefined();
   });

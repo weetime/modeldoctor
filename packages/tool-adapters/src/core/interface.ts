@@ -67,7 +67,6 @@ export interface BuildCommandPlan<TParams = unknown> {
       bearerToken: string | null;
     } | null;
   };
-  callback: { url: string; token: string };
 }
 
 // ── buildCommand output ───────────────────────────────────────────────

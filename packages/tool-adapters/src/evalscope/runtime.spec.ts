@@ -34,7 +34,6 @@ const plan: BuildCommandPlan<EvalscopeParams> = {
     tokenizerHfId: null,
     prometheusDatasource: null,
   },
-  callback: { url: "http://api/", token: "tk" },
 };
 
 describe("evalscope.buildCommand", () => {
