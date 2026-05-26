@@ -21,7 +21,6 @@ export const DEFAULT_FATAL_WAITING_REASONS = [
 export interface ReducerConfig {
   fatalWaitingReasons: readonly string[];
   waitingFatalGraceSec: number;
-  terminalReconcileGraceSec: number;
 }
 
 export type DesiredTransition =
@@ -37,12 +36,8 @@ export interface ReducerInput {
   /** Earliest time the watcher service observed this pod in a FATAL waiting state.
    *  null if not currently in FATAL waiting OR this is the first observation. */
   firstFatalWaitingAt: Date | null;
-  /** Earliest time the watcher service observed this pod in a terminal phase.
-   *  null if not in terminal phase. */
-  firstTerminalAt: Date | null;
   now: Date;
   config: ReducerConfig;
-  mode: "backstop" | "primary";
 }
 
 /** 2 KiB cap: statusMessage is TEXT in Postgres but watcher-sourced messages
@@ -72,67 +67,11 @@ function getTerminated(pod: V1Pod): { exitCode: number; reason: string; message:
 }
 
 export function reduce(input: ReducerInput): DesiredTransition {
-  const { pod, currentStatus, firstFatalWaitingAt, firstTerminalAt, now, config } = input;
+  const { pod, currentStatus, firstFatalWaitingAt, now, config } = input;
 
   // Hard guard: never touch benchmarks that are already in a terminal state.
   if (!isInProgressStatus(currentStatus)) return { kind: "noop" };
 
-  if (input.mode === "primary") {
-    return reducePrimary(input);
-  }
-  // fall through to existing backstop body
-
-  const phase = pod.status?.phase;
-
-  // 1. FATAL waiting (pre-start failure)
-  const waiting = getWaitingReason(pod);
-  if (waiting && config.fatalWaitingReasons.includes(waiting.reason)) {
-    if (firstFatalWaitingAt) {
-      const elapsedSec = (now.getTime() - firstFatalWaitingAt.getTime()) / 1000;
-      if (elapsedSec >= config.waitingFatalGraceSec) {
-        return {
-          kind: "failed-pre-start",
-          reason: waiting.reason,
-          message: truncate(`${waiting.reason}: ${waiting.message}`),
-        };
-      }
-    }
-    return { kind: "noop" };
-  }
-
-  // 2. Terminal phase (Succeeded or Failed) + benchmark still IN_PROGRESS + grace elapsed
-  if (phase === "Failed" || phase === "Succeeded") {
-    if (firstTerminalAt) {
-      const elapsedSec = (now.getTime() - firstTerminalAt.getTime()) / 1000;
-      if (elapsedSec >= config.terminalReconcileGraceSec) {
-        const term = getTerminated(pod);
-        if (phase === "Failed") {
-          return {
-            kind: "failed-terminal",
-            exitCode: term?.exitCode ?? -1,
-            reason: term?.reason ?? "PodFailed",
-            message: truncate(term ? `${term.reason}: ${term.message}` : "pod in Failed phase"),
-          };
-        }
-        // Phase Succeeded implies all containers exited 0 by K8s contract — no need to
-        // inspect getTerminated(). Failure here means "runner finished but never called back".
-        return {
-          kind: "failed-terminal",
-          exitCode: 0,
-          reason: "NoCallback",
-          message: "runner pod succeeded but callback never arrived",
-        };
-      }
-    }
-    return { kind: "noop" };
-  }
-
-  // 3. Running / Pending / Unknown — backstop does nothing.
-  return { kind: "noop" };
-}
-
-function reducePrimary(input: ReducerInput): DesiredTransition {
-  const { pod, currentStatus, firstFatalWaitingAt, now, config } = input;
   const phase = pod.status?.phase;
 
   // 1. Succeeded → trigger ReportLoader

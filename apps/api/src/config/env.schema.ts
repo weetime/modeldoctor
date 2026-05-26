@@ -38,7 +38,8 @@ export const EnvSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
   // 32-byte base64-encoded AES-256 key used to encrypt user-supplied API
-  // keys at rest. The run callback path persists encrypted connection rows.
+  // keys at rest. Decrypted on-demand when assembling per-run Secrets
+  // (k8s-job-manifest.ts) and when an adapter needs the cleartext key.
   CONNECTION_API_KEY_ENCRYPTION_KEY: z.string().refine(
     (v) => {
       // Reject obviously non-base64 input. Buffer.from is permissive (it
@@ -50,10 +51,9 @@ export const EnvSchema = z.object({
   ),
   BENCHMARK_K8S_NAMESPACE: z.string().min(1).default("modeldoctor-benchmarks"),
   // K8s watcher mode.
-  //   off: informer 不启动（开发本机默认）
-  //   backstop: informer 启动，只做 FATAL waiting / terminal-no-callback 兜底
-  //   primary: Phase 2 — watcher 是状态机主驱动，callback 降为兜底
-  K8S_WATCHER_MODE: z.enum(["off", "backstop", "primary"]).default("primary"),
+  //   off:     informer 不启动（开发本机 / 单元测试）—— 没有 pod 状态机驱动
+  //   primary: informer 启动，作为状态机主驱动（生产 + e2e）
+  K8S_WATCHER_MODE: z.enum(["off", "primary"]).default("primary"),
   // S3-compatible object storage — used by S3ReportStorage to persist run
   // artifacts (stdout, files) so the watcher can read them after pod exit.
   // S3_REGION defaults to us-east-1: MinIO ignores it but AWS SDK requires a
@@ -66,9 +66,6 @@ export const EnvSchema = z.object({
   // 等待状态进 ImagePullBackOff/CrashLoopBackOff 等 FATAL waiting 多久后翻 failed。
   // K8s 社区惯例 60s；registry 限速 / 短暂网络抖动通常 < 30s。
   WAITING_FATAL_GRACE_SEC: z.coerce.number().int().positive().default(60),
-  // pod 进终态后给 callback 多少时间到达；超时则 watcher 接管翻 failed。
-  // 默认 60s，覆盖 /finish 序列化大 stdout/files + 网络往返。
-  TERMINAL_RECONCILE_GRACE_SEC: z.coerce.number().int().positive().default(60),
   // Per-tool runner images (#53 Phase 2 / #78). K8s is the only execution mode.
   RUNNER_IMAGE_GUIDELLM: z.string().min(1),
   RUNNER_IMAGE_VEGETA: z.string().min(1),

@@ -4,7 +4,6 @@ import {
   podFailed,
   podPending,
   podPendingWaiting,
-  podRunning,
   podSucceeded,
 } from "./__fixtures__/pod-fixtures.js";
 import { DEFAULT_FATAL_WAITING_REASONS, type ReducerConfig, reduce } from "./pod-state-reducer.js";
@@ -12,7 +11,6 @@ import { DEFAULT_FATAL_WAITING_REASONS, type ReducerConfig, reduce } from "./pod
 const CONFIG: ReducerConfig = {
   fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,
   waitingFatalGraceSec: 60,
-  terminalReconcileGraceSec: 60,
 };
 
 const NOW = new Date("2026-05-25T10:00:00Z");
@@ -24,10 +22,8 @@ describe("PodStateReducer", () => {
         pod: podSucceeded(),
         currentStatus: "completed",
         firstFatalWaitingAt: null,
-        firstTerminalAt: null,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
@@ -37,23 +33,8 @@ describe("PodStateReducer", () => {
         pod: podPending(),
         currentStatus: "submitted",
         firstFatalWaitingAt: null,
-        firstTerminalAt: null,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
-      });
-      expect(r.kind).toBe("noop");
-    });
-
-    it("returns noop on Running (backstop does not flip to running)", () => {
-      const r = reduce({
-        pod: podRunning(),
-        currentStatus: "submitted",
-        firstFatalWaitingAt: null,
-        firstTerminalAt: null,
-        now: NOW,
-        config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
@@ -63,10 +44,8 @@ describe("PodStateReducer", () => {
         pod: podPendingWaiting("ContainerCreating"),
         currentStatus: "submitted",
         firstFatalWaitingAt: null,
-        firstTerminalAt: null,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
@@ -80,10 +59,8 @@ describe("PodStateReducer", () => {
           pod: podPendingWaiting(reason, "details here"),
           currentStatus: "submitted",
           firstFatalWaitingAt: firstSeen,
-          firstTerminalAt: null,
           now: NOW,
           config: CONFIG,
-          mode: "backstop",
         });
         expect(r.kind).toBe("failed-pre-start");
         if (r.kind === "failed-pre-start") {
@@ -99,10 +76,8 @@ describe("PodStateReducer", () => {
         pod: podPendingWaiting("ImagePullBackOff"),
         currentStatus: "submitted",
         firstFatalWaitingAt: firstSeen,
-        firstTerminalAt: null,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
@@ -112,26 +87,21 @@ describe("PodStateReducer", () => {
         pod: podPendingWaiting("ImagePullBackOff"),
         currentStatus: "submitted",
         firstFatalWaitingAt: null,
-        firstTerminalAt: null,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
   });
 
-  describe("terminal phase + IN_PROGRESS → failed-terminal (after grace)", () => {
-    it("Failed pod after grace → failed-terminal with exitCode/reason/message", () => {
-      const firstTerm = new Date(NOW.getTime() - 61_000);
+  describe("terminal phase", () => {
+    it("Failed pod → failed-terminal immediately with exitCode/reason/message", () => {
       const r = reduce({
         pod: podFailed(137, "OOMKilled", "Memory limit exceeded"),
         currentStatus: "running",
         firstFatalWaitingAt: null,
-        firstTerminalAt: firstTerm,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("failed-terminal");
       if (r.kind === "failed-terminal") {
@@ -141,48 +111,24 @@ describe("PodStateReducer", () => {
       }
     });
 
-    it("Succeeded pod after grace + IN_PROGRESS → failed-terminal (silent runner)", () => {
-      const firstTerm = new Date(NOW.getTime() - 61_000);
+    it("Succeeded pod + IN_PROGRESS → load-report (ReportLoader takes over)", () => {
       const r = reduce({
         pod: podSucceeded(),
         currentStatus: "running",
         firstFatalWaitingAt: null,
-        firstTerminalAt: firstTerm,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
-      expect(r.kind).toBe("failed-terminal");
-      if (r.kind === "failed-terminal") {
-        expect(r.exitCode).toBe(0);
-        expect(r.message).toMatch(/callback never arrived|no callback/i);
-      }
-    });
-
-    it("Failed pod within grace window → noop (give callback a chance)", () => {
-      const firstTerm = new Date(NOW.getTime() - 30_000);
-      const r = reduce({
-        pod: podFailed(),
-        currentStatus: "running",
-        firstFatalWaitingAt: null,
-        firstTerminalAt: firstTerm,
-        now: NOW,
-        config: CONFIG,
-        mode: "backstop",
-      });
-      expect(r.kind).toBe("noop");
+      expect(r.kind).toBe("load-report");
     });
 
     it("Terminal pod + benchmark already terminal → noop", () => {
-      const firstTerm = new Date(NOW.getTime() - 999_000);
       const r = reduce({
         pod: podSucceeded(),
         currentStatus: "completed",
         firstFatalWaitingAt: null,
-        firstTerminalAt: firstTerm,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("noop");
     });
@@ -191,15 +137,12 @@ describe("PodStateReducer", () => {
   describe("statusMessage construction", () => {
     it("truncates long messages to 2048 chars", () => {
       const longMsg = "x".repeat(5000);
-      const firstTerm = new Date(NOW.getTime() - 61_000);
       const r = reduce({
         pod: podFailed(1, "Error", longMsg),
         currentStatus: "running",
         firstFatalWaitingAt: null,
-        firstTerminalAt: firstTerm,
         now: NOW,
         config: CONFIG,
-        mode: "backstop",
       });
       expect(r.kind).toBe("failed-terminal");
       if (r.kind === "failed-terminal") {
@@ -211,11 +154,10 @@ describe("PodStateReducer", () => {
   });
 });
 
-describe("PodStateReducer — primary mode", () => {
+describe("PodStateReducer — Running → running transition", () => {
   const baseConfig: ReducerConfig = {
     fatalWaitingReasons: ["ImagePullBackOff", "CrashLoopBackOff"],
     waitingFatalGraceSec: 60,
-    terminalReconcileGraceSec: 60,
   };
   const now = new Date("2026-05-25T01:00:00Z");
 
@@ -225,44 +167,6 @@ describe("PodStateReducer — primary mode", () => {
       status: { phase: "Pending", ...status },
     } as V1Pod;
   }
-
-  it("Succeeded + IN_PROGRESS → load-report", () => {
-    const out = reduce({
-      pod: makePod({ phase: "Succeeded" }),
-      currentStatus: "running",
-      firstFatalWaitingAt: null,
-      firstTerminalAt: null,
-      now,
-      config: baseConfig,
-      mode: "primary",
-    });
-    expect(out).toEqual({ kind: "load-report" });
-  });
-
-  it("Failed + IN_PROGRESS → failed-terminal (no grace)", () => {
-    const out = reduce({
-      pod: makePod({
-        phase: "Failed",
-        containerStatuses: [
-          {
-            name: "runner",
-            ready: false,
-            image: "x",
-            imageID: "x",
-            restartCount: 0,
-            state: { terminated: { exitCode: 1, reason: "Error", message: "boom" } },
-          },
-        ],
-      }),
-      currentStatus: "running",
-      firstFatalWaitingAt: null,
-      firstTerminalAt: null,
-      now,
-      config: baseConfig,
-      mode: "primary",
-    });
-    expect(out).toMatchObject({ kind: "failed-terminal", exitCode: 1, reason: "Error" });
-  });
 
   it("Running + container ready + status=submitted → running", () => {
     const startedAt = "2026-05-25T00:50:00Z";
@@ -282,10 +186,8 @@ describe("PodStateReducer — primary mode", () => {
       }),
       currentStatus: "submitted",
       firstFatalWaitingAt: null,
-      firstTerminalAt: null,
       now,
       config: baseConfig,
-      mode: "primary",
     });
     expect(out).toEqual({ kind: "running", startedAt: new Date(startedAt) });
   });
@@ -307,73 +209,31 @@ describe("PodStateReducer — primary mode", () => {
       }),
       currentStatus: "submitted",
       firstFatalWaitingAt: null,
-      firstTerminalAt: null,
       now,
       config: baseConfig,
-      mode: "primary",
     });
     expect(out).toEqual({ kind: "noop" });
   });
 
-  it("Pending + ImagePullBackOff + grace not elapsed → noop", () => {
+  it("Running + status=running (already marked) → noop", () => {
     const out = reduce({
       pod: makePod({
-        phase: "Pending",
+        phase: "Running",
         containerStatuses: [
           {
             name: "runner",
-            ready: false,
+            ready: true,
             image: "x",
             imageID: "x",
             restartCount: 0,
-            state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
+            state: { running: { startedAt: new Date(now) } },
           },
         ],
       }),
-      currentStatus: "submitted",
-      firstFatalWaitingAt: new Date(now.getTime() - 30_000),
-      firstTerminalAt: null,
-      now,
-      config: baseConfig,
-      mode: "primary",
-    });
-    expect(out).toEqual({ kind: "noop" });
-  });
-
-  it("Pending + ImagePullBackOff + grace elapsed → failed-pre-start", () => {
-    const out = reduce({
-      pod: makePod({
-        phase: "Pending",
-        containerStatuses: [
-          {
-            name: "runner",
-            ready: false,
-            image: "x",
-            imageID: "x",
-            restartCount: 0,
-            state: { waiting: { reason: "ImagePullBackOff", message: "no such image" } },
-          },
-        ],
-      }),
-      currentStatus: "submitted",
-      firstFatalWaitingAt: new Date(now.getTime() - 70_000),
-      firstTerminalAt: null,
-      now,
-      config: baseConfig,
-      mode: "primary",
-    });
-    expect(out).toMatchObject({ kind: "failed-pre-start", reason: "ImagePullBackOff" });
-  });
-
-  it("any phase + terminal benchmark status → noop", () => {
-    const out = reduce({
-      pod: makePod({ phase: "Succeeded" }),
-      currentStatus: "completed",
+      currentStatus: "running",
       firstFatalWaitingAt: null,
-      firstTerminalAt: null,
       now,
       config: baseConfig,
-      mode: "primary",
     });
     expect(out).toEqual({ kind: "noop" });
   });

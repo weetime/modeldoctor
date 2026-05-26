@@ -19,16 +19,18 @@ async function bootstrap(): Promise<void> {
 
   app.use(cookieParser());
 
-  // Bump JSON body limit. The default ~100 KB rejects benchmark runner
-  // metrics callbacks: a guidellm run with 500+ requests posts a
-  // rawMetrics blob that can exceed 16 MB once per-request entries are
-  // included (observed: 413 against /api/internal/benchmarks/:id/finish).
-  // 64 MB covers realistic max-requests=1000 runs while still capping a
-  // malicious upload. The throttler (100 req/min global) prevents
-  // body-size DoS amplification. Long-term: stream the report to object
-  // storage and have the callback carry only a reference path.
-  app.use(json({ limit: "64mb" }));
-  app.use(urlencoded({ limit: "64mb", extended: true }));
+  // JSON body limit. Express default ~100 KB is too tight for the realistic
+  // large posters: `POST /api/quality-gate/evaluations/import` accepts
+  // user-uploaded LLM evaluation datasets (prompt + response + metadata per
+  // row) that routinely run to several megabytes for a few-hundred-row test
+  // set. 10 MB covers typical client datasets with headroom; the throttler
+  // (100 req/min global) caps DoS amplification on top.
+  //
+  // app.use(json(...)) registers globally on Express before NestJS routing,
+  // so this CANNOT be raised per-route with standard @Body decorators —
+  // raising the global limit is the path of least surprise.
+  app.use(json({ limit: "10mb" }));
+  app.use(urlencoded({ limit: "10mb", extended: true }));
 
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   const origins = config.get("CORS_ORIGINS", { infer: true });
