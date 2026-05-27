@@ -152,7 +152,9 @@
       "createdAt": "创建于",
       "startedAt": "开始于",
       "completedAt": "结束于",
-      "duration": "时长"
+      "duration": "时长",
+      "job": "运行实例（K8s Job）",
+      "jobCopied": "已复制 kubectl logs 命令"
     },
     "statusMessage": {
       "title": "失败原因"
@@ -172,7 +174,7 @@
       "toggle": "日志",
       "stdout": "标准输出（stdout）",
       "stderr": "标准错误（stderr）",
-      "empty": "暂无日志"
+      "empty": "此次运行没有控制台输出（结果见「概览」「分布」标签页）"
     },
     "baseline": {
       "setButton": "设为基线",

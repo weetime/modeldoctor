@@ -83,31 +83,49 @@ function RunningSection({ benchmark }: { benchmark: Benchmark }) {
   );
 }
 
-/** Dark terminal-style log panel. Shows live SSE lines during run; stdout
- *  from rawOutput after completion. Survives page refresh via DB fallback. */
-function LogPanel({ logLines, stdout }: { logLines: LogEvent[]; stdout: string }) {
+/** Dark terminal-style log panel. Shows live SSE lines during a run; the
+ *  combined stdout+stderr from rawOutput after completion. Survives page
+ *  refresh via the DB fallback. */
+function LogPanel({
+  logLines,
+  stdout,
+  stderr,
+}: {
+  logLines: LogEvent[];
+  stdout: string;
+  stderr: string;
+}) {
   const { t } = useTranslation("benchmarks");
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  // Post-mortem the runner stores stdout and stderr as separate S3 objects, so
+  // chronological interleaving is lost — show stdout then stderr. Many tools
+  // log entirely to one stream (guidellm/evalscope write to stderr), so the
+  // panel must render both or a successful run looks empty.
+  const stored = [stdout, stderr]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("\n");
+
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [logLines, stdout]);
+  }, [logLines, stored]);
 
   const hasLive = logLines.length > 0;
-  const hasStdout = stdout.trim().length > 0;
+  const hasStored = stored.length > 0;
 
-  if (!hasLive && !hasStdout) {
+  if (!hasLive && !hasStored) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-md border border-border bg-zinc-950 text-xs text-zinc-500">
+      <div className="flex h-48 items-center justify-center rounded-md border border-border bg-zinc-950 px-6 text-center text-xs text-zinc-500">
         {t("detail.logs.empty")}
       </div>
     );
   }
 
-  if (hasStdout) {
+  if (hasStored) {
     return (
       <pre className="max-h-[60vh] min-h-48 overflow-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-200 whitespace-pre-wrap break-all">
-        {stdout}
+        {stored}
         <div ref={logEndRef} />
       </pre>
     );
@@ -188,7 +206,9 @@ function BenchmarkDetailTabs({
   );
   const [active, setActive] = useState<string>("overview");
 
-  const stdout = (benchmark.rawOutput as { stdout?: string } | null)?.stdout ?? "";
+  const rawLogs = benchmark.rawOutput as { stdout?: string; stderr?: string } | null;
+  const stdout = rawLogs?.stdout ?? "";
+  const stderr = rawLogs?.stderr ?? "";
 
   return (
     <Tabs value={active} onValueChange={setActive} className="w-full">
@@ -235,7 +255,7 @@ function BenchmarkDetailTabs({
       )}
 
       <TabsContent value="logs">
-        <LogPanel logLines={logLines} stdout={stdout} />
+        <LogPanel logLines={logLines} stdout={stdout} stderr={stderr} />
       </TabsContent>
 
       {isTerminal && (
