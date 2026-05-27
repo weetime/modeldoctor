@@ -86,6 +86,11 @@ class StreamPump:
         self.sink = sink
         self.full: deque[str] = deque()
         self.full_bytes: int = 0
+        # Guards full/full_bytes. The pump runs on a daemon thread while main()
+        # snapshots the tail after join(timeout=5), which may elapse with the
+        # thread still alive under unusual EOF behavior — iterating the deque
+        # mid-append would raise "deque mutated during iteration".
+        self._lock = threading.Lock()
 
     def run(self) -> None:
         while True:
@@ -99,14 +104,22 @@ class StreamPump:
             line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
             # Tee to the pod log (flush so it streams live). A broken sink must
             # not kill the pump — the S3 tail is the source of truth post-mortem.
+            # Kept outside the lock so a slow flush never blocks snapshot().
             with contextlib.suppress(ValueError, OSError):
                 print(line, file=self.sink, flush=True)
-            self.full.append(line)
-            # +1 accounts for the \n that "\n".join(...) reinserts on read
-            self.full_bytes += len(line.encode("utf-8")) + 1
-            while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
-                evicted = self.full.popleft()
-                self.full_bytes -= len(evicted.encode("utf-8")) + 1
+            with self._lock:
+                self.full.append(line)
+                # +1 accounts for the \n that "\n".join(...) reinserts on read
+                self.full_bytes += len(line.encode("utf-8")) + 1
+                while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
+                    evicted = self.full.popleft()
+                    self.full_bytes -= len(evicted.encode("utf-8")) + 1
+
+    def snapshot(self) -> list[str]:
+        """Copy the tail buffer under the lock so a still-running pump thread
+        can't trigger a 'deque mutated during iteration' RuntimeError."""
+        with self._lock:
+            return list(self.full)
 
 
 def _materialize_input_files() -> None:
@@ -263,12 +276,12 @@ def main() -> int:
         s3.put_file(file_key(benchmark_id, alias), str(full))
         files_map[alias] = rel
 
-    # 3. Upload stdout/stderr (tailed buffer from StreamPump)
-    # Snapshot deques into lists in case a daemon pump thread is still
-    # alive after join(timeout=5) — protects against "deque mutated
-    # during iteration" RuntimeError under unusual EOF behavior.
-    s3.put_text(keys.stdout, "\n".join(list(out_pump.full)))
-    s3.put_text(keys.stderr, "\n".join(list(err_pump.full)))
+    # 3. Upload stdout/stderr (tailed buffer from StreamPump).
+    # snapshot() copies under the pump's lock so a daemon pump thread still
+    # alive after join(timeout=5) (unusual EOF behavior) can't trigger a
+    # "deque mutated during iteration" RuntimeError mid-read.
+    s3.put_text(keys.stdout, "\n".join(out_pump.snapshot()))
+    s3.put_text(keys.stderr, "\n".join(err_pump.snapshot()))
 
     # 4. Sentinel — result.json LAST. API uses this to determine "storage complete".
     s3.put_json(

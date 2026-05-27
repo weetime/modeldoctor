@@ -367,6 +367,13 @@ def test_subprocess_output_teed_to_pod_log(
     assert "tool-stderr-line" in captured.err
 
 
+def test_streampump_snapshot_returns_buffered_lines() -> None:
+    """snapshot() returns a stable copy of the tail buffer (locked read)."""
+    pump = main_mod.StreamPump(io.BytesIO(b"a\nb\nc\n"), "stdout", io.StringIO())
+    pump.run()
+    assert pump.snapshot() == ["a", "b", "c"]
+
+
 def test_stdout_tail_caps_at_64kb(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,
