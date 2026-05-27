@@ -9,7 +9,7 @@
 #   client-side probe.
 # - No KV cache utilization metric. The `infer:cache:*` namespace
 #   stays empty for TGI (PagedAttention is internal black-box).
-# - The metric for ITL is `tgi_request_mean_time_per_token_duration`
+# - The metric for TPOT/ITL is `tgi_request_mean_time_per_token_duration`
 #   (a histogram of per-request average), not strict inter-token timing.
 
 apiVersion: monitoring.coreos.com/v1
@@ -51,11 +51,11 @@ spec:
             histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
           labels:
             engine: tgi
-        - record: infer:request:itl_seconds:p95
+        - record: infer:request:tpot_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi
-        - record: infer:request:itl_seconds:p99
+        - record: infer:request:tpot_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi

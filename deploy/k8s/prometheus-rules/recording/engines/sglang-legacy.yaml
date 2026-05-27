@@ -46,15 +46,15 @@ spec:
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: infer:request:itl_seconds:p50
+        - record: infer:request:tpot_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: infer:request:itl_seconds:p95
+        - record: infer:request:tpot_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: infer:request:itl_seconds:p99
+        - record: infer:request:tpot_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
