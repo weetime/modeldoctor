@@ -1,16 +1,20 @@
-# PrometheusRule: vLLM V0 (0.5.x – 0.6.x legacy engine)
+# PrometheusRule: vLLM V0 (0.5.x – 0.6.x legacy) — version-SPECIFIC metrics only
 #
-# Normalizes vLLM V0 raw metrics into the `modeldoctor:*` namespace.
-# Apply ONLY when your inference workload is vLLM 0.5.x or 0.6.x.
-# For vLLM 0.7+ (V1 engine), apply vllm-v1.yaml instead — do not apply both.
+# Shared metrics (request lifecycle, throughput — same raw name as V1) live
+# in vllm-common.yaml, which attaches the engine label per instance via a
+# discriminator join. This file carries ONLY metrics whose raw name is
+# specific to V0.
 #
-# Hard-coded label `engine="vllm-v0"` is injected on every recorded
-# metric so downstream alert/dashboard queries can select by engine.
+# IMPORTANT — deprecated-alias guard: some vLLM builds emit V0 metric names
+# (gpu_cache_usage_perc, time_per_output_token_seconds, …) as DEPRECATED
+# ALIASES even while running the V1 engine. So "V0 raw name present" does
+# NOT prove a V0 engine. Every rule here is gated with
+# `unless on (instance, model_name) vllm:kv_cache_usage_perc` — i.e. emit
+# only for instances that do NOT also expose the V1 cache metric. This keeps
+# V0 series off dual-emitting V1 instances (which vllm-v1.yaml owns) and
+# matches the engine_id discriminator in vllm-common.yaml (V1 wins).
 #
-# Source label expectations:
-# - Scrape config must expose `model_name` on all vllm:* metrics
-#   (vLLM exports it by default in V0).
-# - `instance` label distinguishes replicas.
+# Apply alongside vllm-common.yaml whenever V0 is present.
 
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -26,91 +30,44 @@ spec:
     - name: modeldoctor.vllm-v0.request
       interval: 30s
       rules:
-        - record: modeldoctor:request:running
-          expr: vllm:num_requests_running
+        # V0: time_per_output_token_seconds (V1 renamed to inter_token_latency)
+        - record: infer:request:tpot_seconds:p50
+          expr: |
+            histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
-        - record: modeldoctor:request:waiting
-          expr: vllm:num_requests_waiting
+        - record: infer:request:tpot_seconds:p95
+          expr: |
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
-        - record: modeldoctor:request:swapped
-          expr: vllm:num_requests_swapped
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:preempted_total
-          expr: vllm:num_preemptions_total
-          labels:
-            engine: vllm-v0
-        # TTFT P50 / P95 / P99 over 5m
-        - record: modeldoctor:request:ttft_seconds:p50
-          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:ttft_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:ttft_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # ITL (inter-token latency, i.e. TPOT)
-        - record: modeldoctor:request:itl_seconds:p50
-          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:itl_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:itl_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # E2E latency
-        - record: modeldoctor:request:e2e_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:request:e2e_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # Queue time
-        - record: modeldoctor:request:queue_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:request_queue_time_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-
-    - name: modeldoctor.vllm-v0.throughput
-      interval: 30s
-      rules:
-        - record: modeldoctor:throughput:prompt_tokens_total
-          expr: vllm:prompt_tokens_total
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:throughput:generation_tokens_total
-          expr: vllm:generation_tokens_total
-          labels:
-            engine: vllm-v0
-        - record: modeldoctor:throughput:generation_rate_tps
-          expr: sum by (model_name, instance) (rate(vllm:generation_tokens_total[1m]))
+        - record: infer:request:tpot_seconds:p99
+          expr: |
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
 
     - name: modeldoctor.vllm-v0.cache
       interval: 30s
       rules:
-        - record: modeldoctor:cache:kv_usage_ratio
-          expr: vllm:gpu_cache_usage_perc
+        - record: infer:cache:kv_usage_ratio
+          expr: |
+            vllm:gpu_cache_usage_perc
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
-        - record: modeldoctor:cache:prefix_hit_ratio
-          expr: vllm:gpu_prefix_cache_hit_rate
+        - record: infer:cache:prefix_hit_ratio
+          expr: |
+            vllm:gpu_prefix_cache_hit_rate
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
-        - record: modeldoctor:cache:swap_usage_ratio
-          expr: vllm:cpu_cache_usage_perc
+        - record: infer:cache:swap_usage_ratio
+          expr: |
+            vllm:cpu_cache_usage_perc
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0

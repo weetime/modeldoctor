@@ -1,0 +1,38 @@
+# Deploy-time overlay: stamp the label kube-prometheus-stack's
+# Prometheus.spec.ruleSelector requires ({release: prometheus}) WITHOUT
+# polluting the engine-neutral base rule files.
+#
+# Edit `release: <value>` to match your cluster's
+# `kubectl -n <ns> get prometheus -o jsonpath='{.items[*].spec.ruleSelector}'`.
+#
+# This set is recording-only (produces infer:* series). Add alerts/*.yaml
+# below once Alertmanager routing to ModelDoctor's webhook is configured.
+#
+# Apply:  kubectl apply -k deploy/k8s/prometheus-rules/
+# Remove: kubectl delete -k deploy/k8s/prometheus-rules/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ruleNamespaceSelector on the healthy Prometheus is {} (any namespace),
+# so landing them next to the stack is just tidy, not required.
+namespace: prometheus
+
+# `labels` (not `commonLabels`) with includeSelectors:false → adds to
+# metadata.labels only. Safe to extend this kustomization with
+# ServiceMonitors later without corrupting their selectors.
+labels:
+  - pairs:
+      release: prometheus
+    includeSelectors: false
+
+resources:
+  # vLLM common (shared metrics; auto-attributes engine per instance via the
+  # kv_cache_usage_perc / gpu_cache_usage_perc discriminator). Apply always.
+  - recording/engines/vllm-common.yaml
+  # Version-SPECIFIC metrics. 4pd runs mixed V0+V1, and these files now only
+  # define version-exclusive raw names, so applying BOTH is safe (no overlap).
+  - recording/engines/vllm-v0.yaml
+  - recording/engines/vllm-v1.yaml
+  # DCGM is scraped; NVIDIA branch populates. NPU branch stays empty until
+  # npu-exporter is scraped into this Prometheus.
+  - recording/accelerator/accelerator.yaml

@@ -1,6 +1,6 @@
 # PrometheusRule: KV cache + prefix cache alerts
 #
-# Queries `modeldoctor:cache:*` only — engine-agnostic.
+# Queries `infer:cache:*` only — engine-agnostic.
 # TGI and SGLang-without-prefix-cache will naturally produce empty
 # series and these alerts stay silent for those engines.
 #
@@ -21,7 +21,7 @@ spec:
     - name: modeldoctor.alerts.cache
       rules:
         - alert: ModelDoctorKvCacheHigh
-          expr: modeldoctor:cache:kv_usage_ratio > 0.85
+          expr: infer:cache:kv_usage_ratio > 0.85
           for: 5m
           labels:
             severity: warning
@@ -35,7 +35,7 @@ spec:
             modeldoctor_required_context: "request:ttft_seconds, request:preempted_total"
 
         - alert: ModelDoctorKvCacheCritical
-          expr: modeldoctor:cache:kv_usage_ratio > 0.95
+          expr: infer:cache:kv_usage_ratio > 0.95
           for: 1m
           labels:
             severity: critical
@@ -51,9 +51,9 @@ spec:
           # Drops below 30% hit rate AND there's meaningful traffic.
           # Without the rate guard, idle systems trip this trivially.
           expr: |
-            modeldoctor:cache:prefix_hit_ratio < 0.3
+            infer:cache:prefix_hit_ratio < 0.3
             and on (engine, model_name, instance)
-            rate(modeldoctor:throughput:prompt_tokens_total[5m]) > 10
+            rate(infer:throughput:prompt_tokens_total[5m]) > 10
           for: 10m
           labels:
             severity: info

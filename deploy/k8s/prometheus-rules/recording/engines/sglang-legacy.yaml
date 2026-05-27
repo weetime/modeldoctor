@@ -26,43 +26,43 @@ spec:
     - name: modeldoctor.sglang-legacy.request
       interval: 30s
       rules:
-        - record: modeldoctor:request:running
+        - record: infer:request:running
           expr: sglang:num_running_reqs
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:waiting
+        - record: infer:request:waiting
           expr: sglang:num_queue_reqs
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:ttft_seconds:p50
+        - record: infer:request:ttft_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:ttft_seconds:p95
+        - record: infer:request:ttft_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:ttft_seconds:p99
+        - record: infer:request:ttft_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang:time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:itl_seconds:p50
+        - record: infer:request:tpot_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:itl_seconds:p95
+        - record: infer:request:tpot_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:itl_seconds:p99
+        - record: infer:request:tpot_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang:time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:e2e_seconds:p95
+        - record: infer:request:e2e_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang:e2e_request_latency_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:request:e2e_seconds:p99
+        - record: infer:request:e2e_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang:e2e_request_latency_seconds_bucket[5m])))
           labels:
             engine: sglang-legacy
@@ -70,15 +70,15 @@ spec:
     - name: modeldoctor.sglang-legacy.throughput
       interval: 30s
       rules:
-        - record: modeldoctor:throughput:prompt_tokens_total
+        - record: infer:throughput:prompt_tokens_total
           expr: sglang:prompt_tokens_total
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:throughput:generation_tokens_total
+        - record: infer:throughput:generation_tokens_total
           expr: sglang:generation_tokens_total
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:throughput:generation_rate_tps
+        - record: infer:throughput:generation_rate_tps
           expr: sglang:gen_throughput
           labels:
             engine: sglang-legacy
@@ -86,11 +86,11 @@ spec:
     - name: modeldoctor.sglang-legacy.cache
       interval: 30s
       rules:
-        - record: modeldoctor:cache:kv_usage_ratio
+        - record: infer:cache:kv_usage_ratio
           expr: sglang:token_usage
           labels:
             engine: sglang-legacy
-        - record: modeldoctor:cache:prefix_hit_ratio
+        - record: infer:cache:prefix_hit_ratio
           expr: sglang:cache_hit_rate
           labels:
             engine: sglang-legacy
