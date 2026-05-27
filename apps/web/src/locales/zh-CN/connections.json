@@ -41,7 +41,7 @@
       "queryParamsPlaceholder": "key=value",
       "tokenizerHfId": "Tokenizer（HuggingFace 模型 ID，可选）",
       "tokenizerHfIdPlaceholder": "例如 Qwen/Qwen2.5-0.5B-Instruct",
-      "tokenizerHfIdHelp": "当连接的模型名称不是 HuggingFace 标识符时设置（如 gen-studio_* 等本地服务名称）。用于 guidellm 基准测试。",
+      "tokenizerHfIdHelp": "当连接的模型名称不是 HuggingFace 标识符时设置（如 gen-studio_* 等本地服务名称）。用于 guidellm 和 aiperf 基准测试的合成数据生成与分词。",
       "serverKind": "推理引擎",
       "serverKindPlaceholder": "选择…",
       "serverKindHelp": "推理引擎类型决定 Prometheus 指标的命名空间，关联 Engine Metrics 看板。",

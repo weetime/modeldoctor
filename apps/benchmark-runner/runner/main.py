@@ -120,14 +120,43 @@ def _materialize_input_files() -> None:
 
 
 def _redacted(argv: list[str]) -> list[str]:
-    """Mask --backend-kwargs= JSON since it can contain api_key."""
+    """Mask secrets in argv for logging: --backend-kwargs= JSON (may contain
+    api_key) and the value following --api-key (evalscope auth)."""
     out: list[str] = []
+    mask_next = False
     for a in argv:
+        if mask_next:
+            out.append("***REDACTED***")
+            mask_next = False
+            continue
         if a.startswith("--backend-kwargs="):
             out.append("--backend-kwargs=***REDACTED***")
+        elif a == "--api-key":
+            out.append(a)
+            mask_next = True
         else:
             out.append(a)
     return out
+
+
+# Sentinel emitted by adapters that must pass the API key as a CLI flag the
+# tool reads ONLY from argv (e.g. evalscope `--api-key`, which ignores env).
+# The adapter puts this placeholder in argv so the secret never lands in the
+# K8s Job manifest / MD_ARGV; the runner swaps in OPENAI_API_KEY (from the
+# per-run Secret, via secretEnv) immediately before Popen. Mirrors the guidellm
+# api_key handling but for tools without an env-var or backend-kwargs channel.
+# Contract: packages/tool-adapters/src/evalscope/runtime.ts.
+OPENAI_API_KEY_SENTINEL = "__MD_OPENAI_API_KEY__"
+
+
+def _inject_api_key_sentinel(argv: list[str]) -> list[str]:
+    """Replace the OPENAI_API_KEY sentinel token in argv with the real key.
+
+    If OPENAI_API_KEY is unset, the sentinel becomes an empty string (the tool
+    then sees an empty --api-key, equivalent to no auth configured).
+    """
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    return [api_key if a == OPENAI_API_KEY_SENTINEL else a for a in argv]
 
 
 def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
@@ -193,6 +222,7 @@ def main() -> int:
     )
 
     argv = _inject_api_key_into_backend_kwargs(argv)
+    argv = _inject_api_key_sentinel(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
     proc = subprocess.Popen(  # noqa: S603
         argv,

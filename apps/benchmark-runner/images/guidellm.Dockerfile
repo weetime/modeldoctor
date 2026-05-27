@@ -13,13 +13,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Runner deps BEFORE `COPY runner` so editing runner/ doesn't bust this layer
+# and reinstall on every image rebuild. boto3 = the wrapper's only declared dep
+# (pyproject.toml); requests is pinned defensively — don't drop the constraint
+# or pip will silently grab requests 3.x when it ships.
+RUN pip install --no-cache-dir --disable-pip-version-check 'requests>=2.31,<3' 'boto3>=1.34,<2'
+
 # Copy the wrapper. Tests are excluded by .dockerignore.
 COPY runner runner
-
-# Pinned to match pyproject.toml's requests>=2.31,<3 declaration. Don't drop
-# the version constraint here — pip install requests is otherwise unconstrained
-# and will silently grab requests 3.x when it ships.
-RUN pip install --no-cache-dir 'requests>=2.31,<3' 'boto3>=1.34,<2'
 
 # Run as a non-root user.
 RUN useradd --create-home --shell /sbin/nologin runner \

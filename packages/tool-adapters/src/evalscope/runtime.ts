@@ -6,17 +6,27 @@ import type {
 } from "../core/interface.js";
 import { type EvalscopeParams, evalscopeReportSchema } from "./schema.js";
 
-// LongAlpaca-12k + HC3-Chinese (openqa) are baked into the evalscope runner
-// image at build time (apps/benchmark-runner/images/evalscope.Dockerfile)
-// so air-gapped clusters never hit modelscope.cn at run time. `random` is
-// fully synthetic and needs no dataset path.
-const BAKED_DATASET_PATHS: Record<string, string> = {
-  longalpaca: "/opt/evalscope-datasets/longalpaca",
-  openqa: "/opt/evalscope-datasets/openqa/open_qa.jsonl",
-};
+// Datasets are baked into the runner image and read locally via --dataset-path
+// (the cluster can't reach modelscope.cn — pod TLS to it fails — so evalscope's
+// default auto-download is not an option). Per evalscope's source:
+//   - longalpaca: its native plugin's --dataset-path reader does json.loads() of a
+//     single JSON-array file, which doesn't fit ModelScope's CSV layout. We instead
+//     bake a flattened one-prompt-per-line file and use the streaming `line_by_line`
+//     reader (see evalscope.base.Dockerfile). `--min/max-prompt-length` is in chars.
+//   - openqa: its native plugin reads a jsonl via --dataset-path directly.
+//   - random: fully synthetic, no dataset file.
+const LONGALPACA_PROMPTS = "/opt/evalscope-datasets/longalpaca.txt";
+const OPENQA_JSONL = "/opt/evalscope-datasets/openqa/open_qa.jsonl";
 
 const OUTPUTS_DIR = "out";
 const RUN_NAME = "evalscope-run";
+
+// evalscope `perf` reads the API key ONLY from --api-key (it ignores env vars),
+// so unlike aiperf (env) / guidellm (--backend-kwargs) the key must travel in
+// argv. To keep the secret out of the K8s Job manifest / MD_ARGV we emit this
+// sentinel; the runner swaps in OPENAI_API_KEY (secretEnv, per-run Secret) at
+// exec time. Contract: apps/benchmark-runner/runner/main.py::OPENAI_API_KEY_SENTINEL.
+const OPENAI_API_KEY_SENTINEL = "__MD_OPENAI_API_KEY__";
 
 export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildCommandResult {
   const { params, connection } = plan;
@@ -35,16 +45,23 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
     "openai",
     "--model",
     connection.model,
+    // Sentinel — runner replaces with OPENAI_API_KEY at exec time (see above).
+    "--api-key",
+    OPENAI_API_KEY_SENTINEL,
     "--parallel",
     String(params.parallel),
     "--number",
     String(params.number),
-    "--dataset",
-    params.dataset,
   ];
 
-  const datasetPath = BAKED_DATASET_PATHS[params.dataset];
-  if (datasetPath) argv.push("--dataset-path", datasetPath);
+  // Map the logical dataset to evalscope's reader + the baked local file.
+  if (params.dataset === "longalpaca") {
+    argv.push("--dataset", "line_by_line", "--dataset-path", LONGALPACA_PROMPTS);
+  } else if (params.dataset === "openqa") {
+    argv.push("--dataset", "openqa", "--dataset-path", OPENQA_JSONL);
+  } else {
+    argv.push("--dataset", params.dataset); // random — synthetic, no file
+  }
 
   argv.push(
     "--min-prompt-length",
@@ -63,19 +80,22 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
   // Always emit one or the other so the runtime is explicit about which mode.
   argv.push(params.stream ? "--stream" : "--no-stream");
 
-  // --outputs-dir + --no-timestamp + --name pin a stable output path:
-  //   <OUTPUTS_DIR>/<RUN_NAME>/benchmark_summary.json
-  //   <OUTPUTS_DIR>/<RUN_NAME>/benchmark_percentile.json
-  // Without --no-timestamp, evalscope inserts a YYYYMMDD_HHMMSS directory.
+  // --outputs-dir + --no-timestamp + --name pin the output path. evalscope runs
+  // as a multi-benchmark sweep (even for a single parallel/number), writing each
+  // combo into a `parallel_<P>_number_<N>` subdir, so the reports land at:
+  //   <OUTPUTS_DIR>/<RUN_NAME>/parallel_<P>_number_<N>/benchmark_{summary,percentile}.json
+  // (--no-timestamp drops the YYYYMMDD_HHMMSS dir; closed-loop ⇒ "parallel_" prefix.)
   argv.push("--outputs-dir", OUTPUTS_DIR, "--no-timestamp", "--name", RUN_NAME);
+
+  const runDir = `${OUTPUTS_DIR}/${RUN_NAME}/parallel_${params.parallel}_number_${params.number}`;
 
   return {
     argv,
     env: {},
     secretEnv: { OPENAI_API_KEY: connection.apiKey },
     outputFiles: {
-      summary: `${OUTPUTS_DIR}/${RUN_NAME}/benchmark_summary.json`,
-      percentile: `${OUTPUTS_DIR}/${RUN_NAME}/benchmark_percentile.json`,
+      summary: `${runDir}/benchmark_summary.json`,
+      percentile: `${runDir}/benchmark_percentile.json`,
     },
   };
 }

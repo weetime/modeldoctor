@@ -91,6 +91,21 @@ describe("aiperf.buildCommand", () => {
     expect(r.argv).not.toContain("--public-dataset");
   });
 
+  it("emits --tokenizer when connection.tokenizerHfId is set", () => {
+    const r = buildCommand({
+      ...plan,
+      connection: { ...plan.connection, tokenizerHfId: "Qwen/Qwen2.5-0.5B-Instruct" },
+    });
+    const idx = r.argv.indexOf("--tokenizer");
+    expect(idx).toBeGreaterThan(-1);
+    expect(r.argv[idx + 1]).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+  });
+
+  it("omits --tokenizer when connection.tokenizerHfId is null", () => {
+    const r = buildCommand(plan);
+    expect(r.argv).not.toContain("--tokenizer");
+  });
+
   it("omits --random-seed when seed is not set", () => {
     const r = buildCommand({
       ...plan,

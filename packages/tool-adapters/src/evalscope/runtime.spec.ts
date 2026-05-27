@@ -48,14 +48,16 @@ describe("evalscope.buildCommand", () => {
       "openai",
       "--model",
       "gen-studio_Qwen3-32B-rJIp",
+      "--api-key",
+      "__MD_OPENAI_API_KEY__",
       "--parallel",
       "16",
       "--number",
       "128",
       "--dataset",
-      "longalpaca",
+      "line_by_line",
       "--dataset-path",
-      "/opt/evalscope-datasets/longalpaca",
+      "/opt/evalscope-datasets/longalpaca.txt",
       "--min-prompt-length",
       "11000",
       "--max-prompt-length",
@@ -76,6 +78,16 @@ describe("evalscope.buildCommand", () => {
     expect(result.secretEnv?.OPENAI_API_KEY).toBe("sk-test");
   });
 
+  it("passes --api-key as a sentinel (real key stays out of argv, only in secretEnv)", () => {
+    const result = buildCommand(plan);
+    const idx = result.argv.indexOf("--api-key");
+    expect(idx).toBeGreaterThan(-1);
+    expect(result.argv[idx + 1]).toBe("__MD_OPENAI_API_KEY__");
+    // The real key must never appear in argv (it would leak into MD_ARGV).
+    expect(result.argv).not.toContain("sk-test");
+    expect(result.secretEnv?.OPENAI_API_KEY).toBe("sk-test");
+  });
+
   it("uses /v1/completions in --url when apiPath set to completions", () => {
     const result = buildCommand({
       ...plan,
@@ -84,16 +96,27 @@ describe("evalscope.buildCommand", () => {
     expect(result.argv).toContain("http://10.0.0.5:8000/v1/completions");
   });
 
-  it("passes --dataset-path for openqa (baked HC3-Chinese open_qa.jsonl)", () => {
-    const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "openqa" } });
-    const idx = result.argv.indexOf("--dataset-path");
-    expect(idx).toBeGreaterThan(-1);
-    expect(result.argv[idx + 1]).toBe("/opt/evalscope-datasets/openqa/open_qa.jsonl");
+  it("longalpaca → line_by_line reader with the baked flattened prompt file", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "longalpaca" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("line_by_line");
+    const pi = r.argv.indexOf("--dataset-path");
+    expect(r.argv[pi + 1]).toBe("/opt/evalscope-datasets/longalpaca.txt");
   });
 
-  it("does not pass --dataset-path for random (synthetic dataset)", () => {
-    const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "random" } });
-    expect(result.argv).not.toContain("--dataset-path");
+  it("openqa → native openqa reader with the baked jsonl", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "openqa" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("openqa");
+    const pi = r.argv.indexOf("--dataset-path");
+    expect(r.argv[pi + 1]).toBe("/opt/evalscope-datasets/openqa/open_qa.jsonl");
+  });
+
+  it("random → synthetic, no --dataset-path", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "random" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("random");
+    expect(r.argv).not.toContain("--dataset-path");
   });
 
   it("omits --seed when not provided", () => {
@@ -113,11 +136,11 @@ describe("evalscope.buildCommand", () => {
     expect(result.argv).not.toContain("--stream");
   });
 
-  it("declares both output files (summary + percentile)", () => {
-    const result = buildCommand(plan);
+  it("declares both output files under the parallel_<P>_number_<N> run subdir", () => {
+    const result = buildCommand(plan); // baseParams: parallel 16, number 128
     expect(result.outputFiles).toEqual({
-      summary: "out/evalscope-run/benchmark_summary.json",
-      percentile: "out/evalscope-run/benchmark_percentile.json",
+      summary: "out/evalscope-run/parallel_16_number_128/benchmark_summary.json",
+      percentile: "out/evalscope-run/parallel_16_number_128/benchmark_percentile.json",
     });
   });
 

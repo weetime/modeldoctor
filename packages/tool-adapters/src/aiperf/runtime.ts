@@ -24,6 +24,15 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
     params.endpointType,
   ];
 
+  // AIPerf needs a real HF tokenizer for synthetic prompt generation AND
+  // client-side token counting. connection.model is frequently a served name
+  // (e.g. gen-studio_*) that 401s against huggingface.co, so pass the
+  // connection-level tokenizerHfId when set. Without it AIPerf aborts with
+  // "Failed to load tokenizer '<model>'". Mirrors guidellm's --processor.
+  if (connection.tokenizerHfId) {
+    argv.push("--tokenizer", connection.tokenizerHfId);
+  }
+
   // --streaming is a presence-only boolean toggle (no --no-streaming form).
   // Streaming off = simply omit the flag.
   if (params.streaming) argv.push("--streaming");
