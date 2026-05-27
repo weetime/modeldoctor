@@ -7,6 +7,7 @@ contains zero tool-specific knowledge.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -16,14 +17,15 @@ import threading
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TextIO
 
 from runner.s3_writer import S3Writer
 from runner.storage_keys import file_key, keys_for
 
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
-# stdout.log/stderr.log are post-mortem only (/log already streamed
-# everything live), so 64 KB per stream is sufficient for triage.
+# stdout.log/stderr.log are post-mortem only (the live stream is the pod log,
+# which StreamPump tees to), so 64 KB per stream is sufficient for triage.
 LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
 # S3 enforces its own object size limits; output files stream via put_file
 # (multipart-aware for objects >5 MB), so no in-memory cap is needed here.
@@ -69,16 +71,26 @@ def detect_tool_version(tool: str) -> str | None:
 
 
 class StreamPump:
-    """Drains a subprocess pipe into a bounded tail buffer (LOG_TAIL_MAX_BYTES).
-    Phase 3: API now reads live logs directly via K8s pods/log:get; runner
-    only retains the tail for the post-mortem stdout.log / stderr.log writes
-    to S3 (Phase 2 path)."""
+    """Tees a subprocess pipe to ``sink`` (the runner's own stdout/stderr) AND
+    into a bounded tail buffer (LOG_TAIL_MAX_BYTES).
 
-    def __init__(self, stream, name: str):
+    The tee is what makes the tool's output visible *live*: the API reads the
+    K8s pod log via pods/log:get, and ``kubectl logs`` reads the same stream.
+    Without it the pod log carries only the runner's own ``[runner]`` framing
+    lines and the tool's actual output would surface only post-mortem in the
+    S3 stdout.log / stderr.log objects (the tail buffer below)."""
+
+    def __init__(self, stream, name: str, sink: TextIO):
         self.stream = stream
         self.name = name
+        self.sink = sink
         self.full: deque[str] = deque()
         self.full_bytes: int = 0
+        # Guards full/full_bytes. The pump runs on a daemon thread while main()
+        # snapshots the tail after join(timeout=5), which may elapse with the
+        # thread still alive under unusual EOF behavior — iterating the deque
+        # mid-append would raise "deque mutated during iteration".
+        self._lock = threading.Lock()
 
     def run(self) -> None:
         while True:
@@ -90,12 +102,24 @@ class StreamPump:
             except Exception:
                 line = repr(line_bytes)
             line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
-            self.full.append(line)
-            # +1 accounts for the \n that "\n".join(...) reinserts on read
-            self.full_bytes += len(line.encode("utf-8")) + 1
-            while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
-                evicted = self.full.popleft()
-                self.full_bytes -= len(evicted.encode("utf-8")) + 1
+            # Tee to the pod log (flush so it streams live). A broken sink must
+            # not kill the pump — the S3 tail is the source of truth post-mortem.
+            # Kept outside the lock so a slow flush never blocks snapshot().
+            with contextlib.suppress(ValueError, OSError):
+                print(line, file=self.sink, flush=True)
+            with self._lock:
+                self.full.append(line)
+                # +1 accounts for the \n that "\n".join(...) reinserts on read
+                self.full_bytes += len(line.encode("utf-8")) + 1
+                while self.full_bytes > LOG_TAIL_MAX_BYTES and self.full:
+                    evicted = self.full.popleft()
+                    self.full_bytes -= len(evicted.encode("utf-8")) + 1
+
+    def snapshot(self) -> list[str]:
+        """Copy the tail buffer under the lock so a still-running pump thread
+        can't trigger a 'deque mutated during iteration' RuntimeError."""
+        with self._lock:
+            return list(self.full)
 
 
 def _materialize_input_files() -> None:
@@ -231,8 +255,8 @@ def main() -> int:
         cwd=os.getcwd(),
     )
 
-    out_pump = StreamPump(proc.stdout, "stdout")
-    err_pump = StreamPump(proc.stderr, "stderr")
+    out_pump = StreamPump(proc.stdout, "stdout", sys.stdout)
+    err_pump = StreamPump(proc.stderr, "stderr", sys.stderr)
     t1 = threading.Thread(target=out_pump.run, daemon=True)
     t2 = threading.Thread(target=err_pump.run, daemon=True)
     t1.start()
@@ -252,12 +276,12 @@ def main() -> int:
         s3.put_file(file_key(benchmark_id, alias), str(full))
         files_map[alias] = rel
 
-    # 3. Upload stdout/stderr (tailed buffer from StreamPump)
-    # Snapshot deques into lists in case a daemon pump thread is still
-    # alive after join(timeout=5) — protects against "deque mutated
-    # during iteration" RuntimeError under unusual EOF behavior.
-    s3.put_text(keys.stdout, "\n".join(list(out_pump.full)))
-    s3.put_text(keys.stderr, "\n".join(list(err_pump.full)))
+    # 3. Upload stdout/stderr (tailed buffer from StreamPump).
+    # snapshot() copies under the pump's lock so a daemon pump thread still
+    # alive after join(timeout=5) (unusual EOF behavior) can't trigger a
+    # "deque mutated during iteration" RuntimeError mid-read.
+    s3.put_text(keys.stdout, "\n".join(out_pump.snapshot()))
+    s3.put_text(keys.stderr, "\n".join(err_pump.snapshot()))
 
     # 4. Sentinel — result.json LAST. API uses this to determine "storage complete".
     s3.put_json(

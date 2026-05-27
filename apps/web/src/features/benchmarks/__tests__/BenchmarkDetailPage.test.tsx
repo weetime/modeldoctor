@@ -635,6 +635,33 @@ describe("BenchmarkDetailPage", () => {
     expect(screen.getByText(/No stderr captured|没有捕获到 stderr 输出/i)).toBeInTheDocument();
   });
 
+  it("shows stderr in the Run Logs tab for a completed run that logged only to stderr", async () => {
+    // Regression: guidellm --disable-console writes nothing to stdout; its
+    // output lands in stderr. The Run Logs tab used to render stdout only and
+    // showed "No logs available" for such successful runs.
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "completed",
+        rawOutput: { stdout: "", stderr: "Warning: unauthenticated HF Hub request", files: {} },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await screen.findByRole("heading", { name: "smoke" });
+    await user.click(screen.getByRole("tab", { name: /Run Logs|运行日志/i }));
+    expect(await screen.findByText(/unauthenticated HF Hub request/)).toBeInTheDocument();
+    expect(screen.queryByText(/No console output|没有控制台输出/i)).not.toBeInTheDocument();
+  });
+
+  it("surfaces the K8s job name when driverHandle is set", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({ driverHandle: "modeldoctor-benchmarks/run-abc123" }),
+    );
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    expect(await screen.findByText("run-abc123")).toBeInTheDocument();
+    expect(screen.getByText("modeldoctor-benchmarks")).toBeInTheDocument();
+  });
+
   it("renders Save-as-Template button when status is completed", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });

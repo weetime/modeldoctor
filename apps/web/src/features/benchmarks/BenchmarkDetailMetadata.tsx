@@ -1,7 +1,11 @@
 import type { Benchmark } from "@modeldoctor/contracts";
 import { format, formatDistanceStrict } from "date-fns";
+import { Copy } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { copyToClipboard } from "@/lib/clipboard";
 import { StatusBadge } from "./status-display";
 
 function fmtDate(iso: string | null): string {
@@ -41,7 +45,49 @@ export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark })
       <Row label={t("detail.metadata.duration")}>
         {fmtDuration(benchmark.startedAt, benchmark.completedAt)}
       </Row>
+      {benchmark.driverHandle && <JobRow handle={benchmark.driverHandle} />}
     </dl>
+  );
+}
+
+/** Surfaces the K8s job that ran this benchmark so operators can pull pod logs
+ *  directly (`driverHandle` is "<namespace>/<jobName>"). The copy button yields
+ *  a ready-to-run `kubectl logs` command. */
+function JobRow({ handle }: { handle: string }) {
+  const { t } = useTranslation("benchmarks");
+  const slash = handle.indexOf("/");
+  const namespace = slash >= 0 ? handle.slice(0, slash) : null;
+  const jobName = slash >= 0 ? handle.slice(slash + 1) : handle;
+  const kubectlCmd = namespace
+    ? `kubectl logs -n ${namespace} job/${jobName}`
+    : `kubectl logs job/${jobName}`;
+  return (
+    <Row label={t("detail.metadata.job")}>
+      <div className="flex flex-col">
+        <span className="flex items-center gap-1.5">
+          <code className="font-mono text-xs break-all">{jobName}</code>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0"
+            title={kubectlCmd}
+            onClick={() => {
+              void copyToClipboard(kubectlCmd).then((ok) => {
+                toast[ok ? "success" : "error"](
+                  t(ok ? "detail.metadata.jobCopied" : "detail.metadata.jobCopyFailed"),
+                );
+              });
+            }}
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
+        </span>
+        {namespace && (
+          <span className="text-xs font-normal text-muted-foreground">{namespace}</span>
+        )}
+      </div>
+    </Row>
   );
 }
 

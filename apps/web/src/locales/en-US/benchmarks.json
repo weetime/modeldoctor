@@ -152,7 +152,10 @@
       "createdAt": "Created",
       "startedAt": "Started",
       "completedAt": "Completed",
-      "duration": "Duration"
+      "duration": "Duration",
+      "job": "Run (K8s Job)",
+      "jobCopied": "kubectl logs command copied",
+      "jobCopyFailed": "Copy failed"
     },
     "statusMessage": {
       "title": "Failure reason"
@@ -172,7 +175,7 @@
       "toggle": "Logs",
       "stdout": "stdout",
       "stderr": "stderr",
-      "empty": "No logs available"
+      "empty": "This run produced no console output (see the Overview / Distributions tabs for results)"
     },
     "baseline": {
       "setButton": "Set as baseline",
