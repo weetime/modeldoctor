@@ -24,8 +24,7 @@ spec:
           # for 10 minutes = noisy neighbor.
           expr: |
             infer:gateway:input_tokens_rate
-            /
-            ignoring (ai_consumer) group_left
+            / on (ai_route, ai_cluster, ai_model) group_left
             sum by (ai_route, ai_cluster, ai_model) (infer:gateway:input_tokens_rate)
             > 0.7
           for: 10m
@@ -47,7 +46,7 @@ spec:
           # (long context, no prefix cache hit).
           expr: |
             infer:gateway:ttft_seconds:avg
-            >
+            > on (ai_route, ai_cluster, ai_model) group_left
             (avg by (ai_route, ai_cluster, ai_model) (infer:gateway:ttft_seconds:avg)) * 2
             and
             infer:gateway:ttft_seconds:avg > 2
