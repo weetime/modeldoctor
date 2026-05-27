@@ -34,6 +34,46 @@ def _fake_proc(
     return proc
 
 
+class TestInjectApiKeySentinel:
+    """Adapters that pass the key as a CLI flag (evalscope --api-key) emit a
+    sentinel so the secret stays out of MD_ARGV; the runner swaps in the real
+    OPENAI_API_KEY at exec time.
+    """
+
+    SENT = main_mod.OPENAI_API_KEY_SENTINEL
+
+    def test_replaces_sentinel_with_env_key(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["evalscope", "perf", "--api-key", self.SENT, "--parallel", "8"]
+        out = main_mod._inject_api_key_sentinel(argv)
+        assert out == ["evalscope", "perf", "--api-key", "sk-secret", "--parallel", "8"]
+
+    def test_no_op_when_no_sentinel(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"OPENAI_API_KEY": "sk-secret"}, clear=False)
+        argv = ["aiperf", "profile", "--tokenizer", "Qwen/Qwen2.5-0.5B-Instruct"]
+        assert main_mod._inject_api_key_sentinel(argv) == argv
+
+    def test_empty_string_when_env_unset(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {}, clear=True)
+        argv = ["evalscope", "perf", "--api-key", self.SENT]
+        assert main_mod._inject_api_key_sentinel(argv) == ["evalscope", "perf", "--api-key", ""]
+
+
+class TestRedacted:
+    """The 'running:' log line must not leak secrets."""
+
+    def test_masks_api_key_value(self) -> None:
+        argv = ["evalscope", "perf", "--api-key", "sk-secret", "--parallel", "8"]
+        out = main_mod._redacted(argv)
+        assert out == ["evalscope", "perf", "--api-key", "***REDACTED***", "--parallel", "8"]
+        assert "sk-secret" not in out
+
+    def test_masks_backend_kwargs(self) -> None:
+        argv = ["guidellm", '--backend-kwargs={"api_key": "sk-secret"}']
+        out = main_mod._redacted(argv)
+        assert out == ["guidellm", "--backend-kwargs=***REDACTED***"]
+
+
 class TestInjectApiKeyIntoBackendKwargs:
     """The wrapper merges OPENAI_API_KEY into any --backend-kwargs= JSON
     so guidellm receives api_key. genai-perf and vegeta don't use this

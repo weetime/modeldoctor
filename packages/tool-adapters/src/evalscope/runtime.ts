@@ -18,6 +18,13 @@ const BAKED_DATASET_PATHS: Record<string, string> = {
 const OUTPUTS_DIR = "out";
 const RUN_NAME = "evalscope-run";
 
+// evalscope `perf` reads the API key ONLY from --api-key (it ignores env vars),
+// so unlike aiperf (env) / guidellm (--backend-kwargs) the key must travel in
+// argv. To keep the secret out of the K8s Job manifest / MD_ARGV we emit this
+// sentinel; the runner swaps in OPENAI_API_KEY (secretEnv, per-run Secret) at
+// exec time. Contract: apps/benchmark-runner/runner/main.py::OPENAI_API_KEY_SENTINEL.
+const OPENAI_API_KEY_SENTINEL = "__MD_OPENAI_API_KEY__";
+
 export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildCommandResult {
   const { params, connection } = plan;
   const trimmedBase = connection.baseUrl.replace(/\/+$/, "");
@@ -35,6 +42,9 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
     "openai",
     "--model",
     connection.model,
+    // Sentinel — runner replaces with OPENAI_API_KEY at exec time (see above).
+    "--api-key",
+    OPENAI_API_KEY_SENTINEL,
     "--parallel",
     String(params.parallel),
     "--number",

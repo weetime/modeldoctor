@@ -48,6 +48,8 @@ describe("evalscope.buildCommand", () => {
       "openai",
       "--model",
       "gen-studio_Qwen3-32B-rJIp",
+      "--api-key",
+      "__MD_OPENAI_API_KEY__",
       "--parallel",
       "16",
       "--number",
@@ -73,6 +75,16 @@ describe("evalscope.buildCommand", () => {
       "--name",
       "evalscope-run",
     ]);
+    expect(result.secretEnv?.OPENAI_API_KEY).toBe("sk-test");
+  });
+
+  it("passes --api-key as a sentinel (real key stays out of argv, only in secretEnv)", () => {
+    const result = buildCommand(plan);
+    const idx = result.argv.indexOf("--api-key");
+    expect(idx).toBeGreaterThan(-1);
+    expect(result.argv[idx + 1]).toBe("__MD_OPENAI_API_KEY__");
+    // The real key must never appear in argv (it would leak into MD_ARGV).
+    expect(result.argv).not.toContain("sk-test");
     expect(result.secretEnv?.OPENAI_API_KEY).toBe("sk-test");
   });
 
