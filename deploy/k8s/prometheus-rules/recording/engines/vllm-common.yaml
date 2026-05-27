@@ -14,8 +14,10 @@
 # from a version-EXCLUSIVE, always-emitted gauge:
 #   - vllm:kv_cache_usage_perc  exists ONLY on V1  -> engine=vllm-v1
 #   - vllm:gpu_cache_usage_perc exists ONLY on V0  -> engine=vllm-v0
-# (V1 renamed gpu_cache_usage_perc -> kv_cache_usage_perc, so the two are
-# mutually exclusive: an instance matches exactly one.)
+# (V1 renamed gpu_cache_usage_perc -> kv_cache_usage_perc. Some vLLM builds
+# keep gpu_* as a DEPRECATED ALIAS, so the two are NOT naturally exclusive:
+# V0 is defined as gpu_* present AND kv_* absent (see the engine_id rules),
+# giving exactly one identity per instance. Presence of the V1 name wins.)
 #
 # Apply this file whenever ANY vLLM (V0 and/or V1) is present, together
 # with vllm-v0.yaml / vllm-v1.yaml (which carry the version-SPECIFIC
@@ -50,8 +52,15 @@ spec:
           expr: group by (instance, model_name) (vllm:kv_cache_usage_perc)
           labels:
             engine: vllm-v1
+        # V0 = has gpu_cache_usage_perc AND NOT kv_cache_usage_perc. The
+        # `unless` makes V1 win when a build dual-emits both names, so each
+        # instance gets exactly one engine_id (else the group_left joins below
+        # error with "multiple matches" and produce nothing).
         - record: infer:meta:engine_id
-          expr: group by (instance, model_name) (vllm:gpu_cache_usage_perc)
+          expr: |
+            group by (instance, model_name) (vllm:gpu_cache_usage_perc)
+            unless
+            group by (instance, model_name) (vllm:kv_cache_usage_perc)
           labels:
             engine: vllm-v0
 

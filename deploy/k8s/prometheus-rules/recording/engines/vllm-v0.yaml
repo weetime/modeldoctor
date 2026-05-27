@@ -1,16 +1,18 @@
 # PrometheusRule: vLLM V0 (0.5.x – 0.6.x legacy) — version-SPECIFIC metrics only
 #
-# Shared metrics (request lifecycle, throughput — same raw name as V1)
-# live in vllm-common.yaml, which attaches the engine label per instance
-# via a discriminator join. This file carries ONLY metrics whose RAW NAME
-# is unique to V0, so a static engine=vllm-v0 label is unambiguous and
-# safe even on a mixed (V0+V1) fleet — V1 pods do not expose these names.
+# Shared metrics (request lifecycle, throughput — same raw name as V1) live
+# in vllm-common.yaml, which attaches the engine label per instance via a
+# discriminator join. This file carries ONLY metrics whose raw name is
+# specific to V0.
 #
-# V0-specific raw names (vs V1):
-# - vllm:gpu_cache_usage_perc        (V1: vllm:kv_cache_usage_perc)
-# - vllm:time_per_output_token_seconds (V1: vllm:inter_token_latency_seconds)
-# - vllm:gpu_prefix_cache_hit_rate   (V1: prefix_cache_hits / _queries pair)
-# - vllm:cpu_cache_usage_perc        (removed in V1 — swap model changed)
+# IMPORTANT — deprecated-alias guard: some vLLM builds emit V0 metric names
+# (gpu_cache_usage_perc, time_per_output_token_seconds, …) as DEPRECATED
+# ALIASES even while running the V1 engine. So "V0 raw name present" does
+# NOT prove a V0 engine. Every rule here is gated with
+# `unless on (instance, model_name) vllm:kv_cache_usage_perc` — i.e. emit
+# only for instances that do NOT also expose the V1 cache metric. This keeps
+# V0 series off dual-emitting V1 instances (which vllm-v1.yaml owns) and
+# matches the engine_id discriminator in vllm-common.yaml (V1 wins).
 #
 # Apply alongside vllm-common.yaml whenever V0 is present.
 
@@ -30,15 +32,21 @@ spec:
       rules:
         # V0: time_per_output_token_seconds (V1 renamed to inter_token_latency)
         - record: infer:request:tpot_seconds:p50
-          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+          expr: |
+            histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
         - record: infer:request:tpot_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+          expr: |
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
         - record: infer:request:tpot_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+          expr: |
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
 
@@ -46,14 +54,20 @@ spec:
       interval: 30s
       rules:
         - record: infer:cache:kv_usage_ratio
-          expr: vllm:gpu_cache_usage_perc
+          expr: |
+            vllm:gpu_cache_usage_perc
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
         - record: infer:cache:prefix_hit_ratio
-          expr: vllm:gpu_prefix_cache_hit_rate
+          expr: |
+            vllm:gpu_prefix_cache_hit_rate
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
         - record: infer:cache:swap_usage_ratio
-          expr: vllm:cpu_cache_usage_perc
+          expr: |
+            vllm:cpu_cache_usage_perc
+            unless on (instance, model_name) vllm:kv_cache_usage_perc
           labels:
             engine: vllm-v0
