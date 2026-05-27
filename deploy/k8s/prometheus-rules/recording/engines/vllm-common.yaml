@@ -1,0 +1,119 @@
+# PrometheusRule: vLLM common (version-agnostic) recording rules
+#
+# These normalize the vLLM metrics whose RAW NAME is identical across V0
+# and V1 (num_requests_*, num_preemptions, time_to_first_token,
+# e2e_request_latency, request_queue_time, prompt/generation_tokens).
+# Because the names are shared, a per-version file cannot own them without
+# double-counting on a mixed (V0+V1) fleet. They live here ONCE and get
+# their `engine` label attached PER INSTANCE via a join with
+# infer:meta:engine_id.
+#
+# infer:meta:engine_id is a value-1 identity series, one per
+# (instance, model_name), tagged with the detected vLLM major version.
+# The version is detected NON-INVASIVELY (no scrape/pod-label changes)
+# from a version-EXCLUSIVE, always-emitted gauge:
+#   - vllm:kv_cache_usage_perc  exists ONLY on V1  -> engine=vllm-v1
+#   - vllm:gpu_cache_usage_perc exists ONLY on V0  -> engine=vllm-v0
+# (V1 renamed gpu_cache_usage_perc -> kv_cache_usage_perc, so the two are
+# mutually exclusive: an instance matches exactly one.)
+#
+# Apply this file whenever ANY vLLM (V0 and/or V1) is present, together
+# with vllm-v0.yaml / vllm-v1.yaml (which carry the version-SPECIFIC
+# metrics). On a mixed fleet, apply BOTH version files — they only define
+# version-exclusive raw names, so no double-counting.
+#
+# Caveats:
+# - Instances we cannot version-identify (no discriminator gauge) are
+#   fail-closed: they produce no infer:* here.
+# - If a future vLLM major renames the discriminator gauge again, add a
+#   new engine_id line (version-is-engine maintenance).
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-vllm-common
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/engine: vllm-common
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    # Single group: infer:meta:engine_id is defined FIRST so the joins
+    # below observe it within the same evaluation cycle (Prometheus
+    # evaluates the rules of a group sequentially, in order).
+    - name: modeldoctor.vllm-common.recording
+      interval: 30s
+      rules:
+        # --- per-instance version identity (non-invasive discriminator) ---
+        - record: infer:meta:engine_id
+          expr: group by (instance, model_name) (vllm:kv_cache_usage_perc)
+          labels:
+            engine: vllm-v1
+        - record: infer:meta:engine_id
+          expr: group by (instance, model_name) (vllm:gpu_cache_usage_perc)
+          labels:
+            engine: vllm-v0
+
+        # --- request lifecycle (shared raw names) ---
+        # sum by (instance, model_name) strips the source `engine="0"`
+        # (vLLM's engine-index label) and pod/container clutter so the
+        # group_left(engine) join has no label collision; the normalized
+        # identity is (instance, model_name, engine).
+        - record: infer:request:running
+          expr: |
+            sum by (instance, model_name) (vllm:num_requests_running)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:waiting
+          expr: |
+            sum by (instance, model_name) (vllm:num_requests_waiting)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        # swapped: V0-only in practice, but kept here (joined) so that if a
+        # V1 build ever emits it, it is attributed correctly rather than
+        # mislabeled vllm-v0.
+        - record: infer:request:swapped
+          expr: |
+            sum by (instance, model_name) (vllm:num_requests_swapped)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:preempted_total
+          expr: |
+            sum by (instance, model_name) (vllm:num_preemptions_total)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:ttft_seconds:p50
+          expr: |
+            histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:ttft_seconds:p95
+          expr: |
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:ttft_seconds:p99
+          expr: |
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:e2e_seconds:p95
+          expr: |
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:e2e_seconds:p99
+          expr: |
+            histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:queue_seconds:p95
+          expr: |
+            histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:request_queue_time_seconds_bucket[5m])))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+
+        # --- throughput (shared raw names) ---
+        - record: infer:throughput:prompt_tokens_total
+          expr: |
+            sum by (instance, model_name) (vllm:prompt_tokens_total)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:throughput:generation_tokens_total
+          expr: |
+            sum by (instance, model_name) (vllm:generation_tokens_total)
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:throughput:generation_rate_tps
+          expr: |
+            sum by (model_name, instance) (rate(vllm:generation_tokens_total[1m]))
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id

@@ -1,16 +1,18 @@
-# PrometheusRule: vLLM V0 (0.5.x – 0.6.x legacy engine)
+# PrometheusRule: vLLM V0 (0.5.x – 0.6.x legacy) — version-SPECIFIC metrics only
 #
-# Normalizes vLLM V0 raw metrics into the `infer:*` namespace.
-# Apply ONLY when your inference workload is vLLM 0.5.x or 0.6.x.
-# For vLLM 0.7+ (V1 engine), apply vllm-v1.yaml instead — do not apply both.
+# Shared metrics (request lifecycle, throughput — same raw name as V1)
+# live in vllm-common.yaml, which attaches the engine label per instance
+# via a discriminator join. This file carries ONLY metrics whose RAW NAME
+# is unique to V0, so a static engine=vllm-v0 label is unambiguous and
+# safe even on a mixed (V0+V1) fleet — V1 pods do not expose these names.
 #
-# Hard-coded label `engine="vllm-v0"` is injected on every recorded
-# metric so downstream alert/dashboard queries can select by engine.
+# V0-specific raw names (vs V1):
+# - vllm:gpu_cache_usage_perc        (V1: vllm:kv_cache_usage_perc)
+# - vllm:time_per_output_token_seconds (V1: vllm:inter_token_latency_seconds)
+# - vllm:gpu_prefix_cache_hit_rate   (V1: prefix_cache_hits / _queries pair)
+# - vllm:cpu_cache_usage_perc        (removed in V1 — swap model changed)
 #
-# Source label expectations:
-# - Scrape config must expose `model_name` on all vllm:* metrics
-#   (vLLM exports it by default in V0).
-# - `instance` label distinguishes replicas.
+# Apply alongside vllm-common.yaml whenever V0 is present.
 
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -26,36 +28,7 @@ spec:
     - name: modeldoctor.vllm-v0.request
       interval: 30s
       rules:
-        - record: infer:request:running
-          expr: vllm:num_requests_running
-          labels:
-            engine: vllm-v0
-        - record: infer:request:waiting
-          expr: vllm:num_requests_waiting
-          labels:
-            engine: vllm-v0
-        - record: infer:request:swapped
-          expr: vllm:num_requests_swapped
-          labels:
-            engine: vllm-v0
-        - record: infer:request:preempted_total
-          expr: vllm:num_preemptions_total
-          labels:
-            engine: vllm-v0
-        # TTFT P50 / P95 / P99 over 5m
-        - record: infer:request:ttft_seconds:p50
-          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: infer:request:ttft_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: infer:request:ttft_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_to_first_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # TPOT (time per output token, a.k.a. ITL)
+        # V0: time_per_output_token_seconds (V1 renamed to inter_token_latency)
         - record: infer:request:tpot_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
           labels:
@@ -66,36 +39,6 @@ spec:
             engine: vllm-v0
         - record: infer:request:tpot_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:time_per_output_token_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # E2E latency
-        - record: infer:request:e2e_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        - record: infer:request:e2e_seconds:p99
-          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-        # Queue time
-        - record: infer:request:queue_seconds:p95
-          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:request_queue_time_seconds_bucket[5m])))
-          labels:
-            engine: vllm-v0
-
-    - name: modeldoctor.vllm-v0.throughput
-      interval: 30s
-      rules:
-        - record: infer:throughput:prompt_tokens_total
-          expr: vllm:prompt_tokens_total
-          labels:
-            engine: vllm-v0
-        - record: infer:throughput:generation_tokens_total
-          expr: vllm:generation_tokens_total
-          labels:
-            engine: vllm-v0
-        - record: infer:throughput:generation_rate_tps
-          expr: sum by (model_name, instance) (rate(vllm:generation_tokens_total[1m]))
           labels:
             engine: vllm-v0
 
