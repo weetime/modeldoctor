@@ -9,8 +9,9 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# httpx for the probe; requests pinned to match runner wrapper's pyproject.
-RUN pip install --no-cache-dir \
+# Deps BEFORE COPY so editing runner/ doesn't reinstall them. httpx drives the
+# probe; boto3 = the wrapper's declared dep; requests pinned defensively.
+RUN pip install --no-cache-dir --disable-pip-version-check \
         'httpx>=0.27,<1' \
         'requests>=2.31,<3' \
         'boto3>=1.34,<2'
