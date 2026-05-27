@@ -136,11 +136,11 @@ describe("evalscope.buildCommand", () => {
     expect(result.argv).not.toContain("--stream");
   });
 
-  it("declares both output files (summary + percentile)", () => {
-    const result = buildCommand(plan);
+  it("declares both output files under the parallel_<P>_number_<N> run subdir", () => {
+    const result = buildCommand(plan); // baseParams: parallel 16, number 128
     expect(result.outputFiles).toEqual({
-      summary: "out/evalscope-run/benchmark_summary.json",
-      percentile: "out/evalscope-run/benchmark_percentile.json",
+      summary: "out/evalscope-run/parallel_16_number_128/benchmark_summary.json",
+      percentile: "out/evalscope-run/parallel_16_number_128/benchmark_percentile.json",
     });
   });
 

@@ -80,19 +80,22 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
   // Always emit one or the other so the runtime is explicit about which mode.
   argv.push(params.stream ? "--stream" : "--no-stream");
 
-  // --outputs-dir + --no-timestamp + --name pin a stable output path:
-  //   <OUTPUTS_DIR>/<RUN_NAME>/benchmark_summary.json
-  //   <OUTPUTS_DIR>/<RUN_NAME>/benchmark_percentile.json
-  // Without --no-timestamp, evalscope inserts a YYYYMMDD_HHMMSS directory.
+  // --outputs-dir + --no-timestamp + --name pin the output path. evalscope runs
+  // as a multi-benchmark sweep (even for a single parallel/number), writing each
+  // combo into a `parallel_<P>_number_<N>` subdir, so the reports land at:
+  //   <OUTPUTS_DIR>/<RUN_NAME>/parallel_<P>_number_<N>/benchmark_{summary,percentile}.json
+  // (--no-timestamp drops the YYYYMMDD_HHMMSS dir; closed-loop ⇒ "parallel_" prefix.)
   argv.push("--outputs-dir", OUTPUTS_DIR, "--no-timestamp", "--name", RUN_NAME);
+
+  const runDir = `${OUTPUTS_DIR}/${RUN_NAME}/parallel_${params.parallel}_number_${params.number}`;
 
   return {
     argv,
     env: {},
     secretEnv: { OPENAI_API_KEY: connection.apiKey },
     outputFiles: {
-      summary: `${OUTPUTS_DIR}/${RUN_NAME}/benchmark_summary.json`,
-      percentile: `${OUTPUTS_DIR}/${RUN_NAME}/benchmark_percentile.json`,
+      summary: `${runDir}/benchmark_summary.json`,
+      percentile: `${runDir}/benchmark_percentile.json`,
     },
   };
 }
