@@ -336,6 +336,37 @@ def test_stdout_written_to_s3_with_all_lines(
     assert "line three" in text_calls["b-test/stdout.log"]
 
 
+def test_subprocess_output_teed_to_pod_log(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """StreamPump tees the tool's stdout/stderr to the runner's own
+    stdout/stderr so the lines land in the K8s pod log for live streaming
+    (API pods/log + kubectl logs), not only in the post-mortem S3 objects."""
+    mocker.patch.dict("os.environ", _s3_env(md_env_minimal), clear=True)
+    mocker.patch("runner.main.Path.cwd", return_value=tmp_path)
+    mocker.patch("runner.main.os.getcwd", return_value=str(tmp_path))
+    proc = _fake_proc(
+        stdout=b"tool-stdout-line\n",
+        stderr=b"tool-stderr-line\n",
+        returncode=0,
+    )
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    writer = MagicMock()
+    with patch("runner.main.S3Writer") as MockS3:
+        MockS3.from_env.return_value = writer
+        rc = main_mod.main()
+
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "tool-stdout-line" in captured.out
+    assert "tool-stderr-line" in captured.err
+
+
 def test_stdout_tail_caps_at_64kb(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,

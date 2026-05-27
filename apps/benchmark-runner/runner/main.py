@@ -7,6 +7,7 @@ contains zero tool-specific knowledge.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -16,14 +17,15 @@ import threading
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TextIO
 
 from runner.s3_writer import S3Writer
 from runner.storage_keys import file_key, keys_for
 
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
-# stdout.log/stderr.log are post-mortem only (/log already streamed
-# everything live), so 64 KB per stream is sufficient for triage.
+# stdout.log/stderr.log are post-mortem only (the live stream is the pod log,
+# which StreamPump tees to), so 64 KB per stream is sufficient for triage.
 LOG_TAIL_MAX_BYTES = 64 * 1024  # per stream
 # S3 enforces its own object size limits; output files stream via put_file
 # (multipart-aware for objects >5 MB), so no in-memory cap is needed here.
@@ -69,14 +71,19 @@ def detect_tool_version(tool: str) -> str | None:
 
 
 class StreamPump:
-    """Drains a subprocess pipe into a bounded tail buffer (LOG_TAIL_MAX_BYTES).
-    Phase 3: API now reads live logs directly via K8s pods/log:get; runner
-    only retains the tail for the post-mortem stdout.log / stderr.log writes
-    to S3 (Phase 2 path)."""
+    """Tees a subprocess pipe to ``sink`` (the runner's own stdout/stderr) AND
+    into a bounded tail buffer (LOG_TAIL_MAX_BYTES).
 
-    def __init__(self, stream, name: str):
+    The tee is what makes the tool's output visible *live*: the API reads the
+    K8s pod log via pods/log:get, and ``kubectl logs`` reads the same stream.
+    Without it the pod log carries only the runner's own ``[runner]`` framing
+    lines and the tool's actual output would surface only post-mortem in the
+    S3 stdout.log / stderr.log objects (the tail buffer below)."""
+
+    def __init__(self, stream, name: str, sink: TextIO):
         self.stream = stream
         self.name = name
+        self.sink = sink
         self.full: deque[str] = deque()
         self.full_bytes: int = 0
 
@@ -90,6 +97,10 @@ class StreamPump:
             except Exception:
                 line = repr(line_bytes)
             line = line.rstrip("\n")[:LOG_LINE_MAX_BYTES]
+            # Tee to the pod log (flush so it streams live). A broken sink must
+            # not kill the pump — the S3 tail is the source of truth post-mortem.
+            with contextlib.suppress(ValueError, OSError):
+                print(line, file=self.sink, flush=True)
             self.full.append(line)
             # +1 accounts for the \n that "\n".join(...) reinserts on read
             self.full_bytes += len(line.encode("utf-8")) + 1
@@ -231,8 +242,8 @@ def main() -> int:
         cwd=os.getcwd(),
     )
 
-    out_pump = StreamPump(proc.stdout, "stdout")
-    err_pump = StreamPump(proc.stderr, "stderr")
+    out_pump = StreamPump(proc.stdout, "stdout", sys.stdout)
+    err_pump = StreamPump(proc.stderr, "stderr", sys.stderr)
     t1 = threading.Thread(target=out_pump.run, daemon=True)
     t2 = threading.Thread(target=err_pump.run, daemon=True)
     t1.start()
