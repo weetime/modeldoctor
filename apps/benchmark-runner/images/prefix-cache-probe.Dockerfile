@@ -12,7 +12,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # httpx for the probe; requests pinned to match runner wrapper's pyproject.
 RUN pip install --no-cache-dir \
         'httpx>=0.27,<1' \
-        'requests>=2.31,<3'
+        'requests>=2.31,<3' \
+        'boto3>=1.34,<2'
 
 WORKDIR /app
 

@@ -19,6 +19,7 @@ describe("tgi manifest", () => {
   it("snapshot of rendered PromQL is stable", () => {
     const rendered = tgiManifest.metrics.map((m) => ({
       key: m.key,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: PromQL placeholder
       exprs: m.promql.map((v) => v.expr.replaceAll("${model}", "test-model")),
     }));
     expect(rendered).toMatchSnapshot();

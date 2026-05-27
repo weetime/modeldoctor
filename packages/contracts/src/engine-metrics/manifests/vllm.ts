@@ -3,6 +3,7 @@ import type { EngineManifest, EngineMetricSpec } from "../../engine-metrics.js";
 // M is the literal placeholder string `${model}` — service.fetchSnapshot
 // does the runtime replacement. We assign it once to a constant so the
 // surrounding template-literal noise stays readable.
+// biome-ignore lint/suspicious/noTemplateCurlyInString: PromQL template variable, not a JS expression
 const M = "${model}";
 
 const metrics: EngineMetricSpec[] = [

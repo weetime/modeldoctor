@@ -33,6 +33,7 @@ describe("vllm manifest", () => {
   it("snapshot of all rendered PromQL strings is stable", () => {
     const rendered = vllmManifest.metrics.map((m) => ({
       key: m.key,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: PromQL placeholder
       exprs: m.promql.map((v) => v.expr.replace("${model}", "test-model")),
     }));
     expect(rendered).toMatchSnapshot();

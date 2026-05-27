@@ -18,17 +18,25 @@ import {
   Get,
   Header,
   HttpCode,
+  type MessageEvent,
   Param,
   Post,
   Query,
+  Sse,
   UseGuards,
 } from "@nestjs/common";
+import { EMPTY, from, type Observable } from "rxjs";
+import { map, switchMap } from "rxjs/operators";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
+import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { SseJwtAuthGuard } from "../auth/sse-jwt-auth.guard.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
+import { isInProgressStatus } from "./constants.js";
+import { SseHub } from "./sse/sse-hub.service.js";
 
 @Controller("benchmarks")
 @UseGuards(JwtAuthGuard)
@@ -36,6 +44,7 @@ export class BenchmarkController {
   constructor(
     private readonly service: BenchmarkService,
     private readonly charts: BenchmarkChartsService,
+    private readonly sse: SseHub,
   ) {}
 
   @Get()
@@ -83,6 +92,21 @@ export class BenchmarkController {
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
+  /** Live log stream for an in-flight benchmark.
+   *  @Public() bypasses the class-level JwtAuthGuard; SseJwtAuthGuard then
+   *  validates the JWT via Authorization header OR `?token=` query param,
+   *  which EventSource requires since it cannot set custom headers. */
+  @Public()
+  @UseGuards(SseJwtAuthGuard)
+  @Sse(":id/events")
+  events(@CurrentUser() user: JwtPayload, @Param("id") id: string): Observable<MessageEvent> {
+    const isAdmin = user.roles.includes("admin");
+    return from(this.service.findByIdOrFail(id, isAdmin ? undefined : user.sub)).pipe(
+      switchMap((bench) => (isInProgressStatus(bench.status) ? this.sse.subscribe(id) : EMPTY)),
+      map((evt) => ({ data: evt }) as MessageEvent),
+    );
   }
 
   @Get(":id/charts")

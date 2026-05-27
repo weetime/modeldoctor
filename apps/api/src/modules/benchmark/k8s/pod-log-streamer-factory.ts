@@ -53,13 +53,12 @@ export class PodLogStreamerFactory {
   ): (line: string) => void {
     const adapter = byTool(tool);
     return (line: string) => {
-      let evt: ProgressEvent | null;
+      let evt: ProgressEvent;
       try {
-        evt = adapter.parseProgress(line);
+        evt = adapter.parseProgress(line) ?? { kind: "log", level: "info", line };
       } catch {
         evt = { kind: "log", level: "warn", line };
       }
-      if (!evt) return;
       this.sse.publish(runId, evt);
       if (evt.kind === "progress") throttle.tick(evt.pct);
     };

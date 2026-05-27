@@ -41,12 +41,16 @@ describe("PodLogStreamerFactory", () => {
     expect(repo.update).toHaveBeenCalledWith("r1", { progress: 0.5 });
   });
 
-  it("buildHandleLine ignores parseProgress returning null", () => {
+  it("buildHandleLine forwards non-progress lines as info log events", () => {
     const { factory, sse, repo } = makeFactory();
     const throttle = new ProgressThrottle("r1", repo as never, 1000);
     const handle = factory.buildHandleLine("r1", "guidellm", throttle);
     handle("not a progress line");
-    expect(sse.publish).not.toHaveBeenCalled();
+    expect(sse.publish).toHaveBeenCalledWith("r1", {
+      kind: "log",
+      level: "info",
+      line: "not a progress line",
+    });
   });
 
   it("buildHandleLine wraps parseProgress throw in fallback log event", () => {

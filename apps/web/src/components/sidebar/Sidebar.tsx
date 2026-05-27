@@ -35,37 +35,42 @@ interface ItemRowProps {
 }
 
 function ItemRow({ item, t, railCollapsed }: ItemRowProps) {
+  const activePath = useSidebarStore((s) => s.activePath);
   const Icon = item.icon;
   const label = t(item.labelKey);
   const link = (
     <NavLink
       to={item.to}
       aria-label={railCollapsed ? label : undefined}
-      className={({ isActive }) =>
-        cn(
+      className={({ isActive }) => {
+        const active = isActive || activePath === item.to;
+        return cn(
           "group relative flex items-center rounded-md text-sm",
           "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-          isActive && "bg-accent/50 text-foreground",
+          active && "bg-accent/50 text-foreground",
           railCollapsed ? "justify-center px-0 py-2" : "gap-2 px-3 py-1.5",
-        )
-      }
+        );
+      }}
     >
-      {({ isActive }) => (
-        <>
-          {isActive ? (
-            <span
-              className={cn(
-                "absolute rounded-r bg-foreground",
-                railCollapsed
-                  ? "left-0 top-1/2 h-5 w-0.5 -translate-y-1/2"
-                  : "left-0 top-1.5 h-5 w-0.5",
-              )}
-            />
-          ) : null}
-          <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-          {railCollapsed ? null : <span className="flex-1">{label}</span>}
-        </>
-      )}
+      {({ isActive }) => {
+        const active = isActive || activePath === item.to;
+        return (
+          <>
+            {active ? (
+              <span
+                className={cn(
+                  "absolute rounded-r bg-foreground",
+                  railCollapsed
+                    ? "left-0 top-1/2 h-5 w-0.5 -translate-y-1/2"
+                    : "left-0 top-1.5 h-5 w-0.5",
+                )}
+              />
+            ) : null}
+            <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            {railCollapsed ? null : <span className="flex-1">{label}</span>}
+          </>
+        );
+      }}
     </NavLink>
   );
 

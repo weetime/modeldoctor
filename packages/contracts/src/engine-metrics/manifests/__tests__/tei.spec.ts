@@ -18,6 +18,7 @@ describe("tei manifest", () => {
   it("snapshot is stable", () => {
     const rendered = teiManifest.metrics.map((m) => ({
       key: m.key,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: PromQL placeholder
       exprs: m.promql.map((v) => v.expr.replaceAll("${model}", "test-model")),
     }));
     expect(rendered).toMatchSnapshot();

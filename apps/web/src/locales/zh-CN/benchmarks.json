@@ -169,7 +169,10 @@
       "toggle": "原始输出（JSON）"
     },
     "logs": {
-      "toggle": "日志"
+      "toggle": "日志",
+      "stdout": "标准输出（stdout）",
+      "stderr": "标准错误（stderr）",
+      "empty": "暂无日志"
     },
     "baseline": {
       "setButton": "设为基线",
@@ -240,7 +243,8 @@
     "tabs": {
       "overview": "概览",
       "raw": "原始输出",
-      "request": "请求 · 响应"
+      "request": "请求 · 响应",
+      "logs": "运行日志"
     },
     "requestSetup": {
       "title": "请求设置",
