@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { copyToClipboard } from "@/lib/clipboard";
 import { StatusBadge } from "./status-display";
 
 function fmtDate(iso: string | null): string {
@@ -72,8 +73,11 @@ function JobRow({ handle }: { handle: string }) {
             className="h-5 w-5 shrink-0"
             title={kubectlCmd}
             onClick={() => {
-              void navigator.clipboard.writeText(kubectlCmd);
-              toast.success(t("detail.metadata.jobCopied"));
+              void copyToClipboard(kubectlCmd).then((ok) => {
+                toast[ok ? "success" : "error"](
+                  t(ok ? "detail.metadata.jobCopied" : "detail.metadata.jobCopyFailed"),
+                );
+              });
             }}
           >
             <Copy className="h-3 w-3" />

@@ -154,7 +154,8 @@
       "completedAt": "Completed",
       "duration": "Duration",
       "job": "Run (K8s Job)",
-      "jobCopied": "kubectl logs command copied"
+      "jobCopied": "kubectl logs command copied",
+      "jobCopyFailed": "Copy failed"
     },
     "statusMessage": {
       "title": "Failure reason"
