@@ -1,6 +1,6 @@
 # PrometheusRule: Gateway / multi-tenant alerts
 #
-# Queries `modeldoctor:gateway:*` only — Higress-sourced. This is the
+# Queries `infer:gateway:*` only — Higress-sourced. This is the
 # only layer that knows ai_consumer (tenant / API key) identity, so
 # tenant-isolation alerts must live here.
 #
@@ -23,10 +23,10 @@ spec:
           # A single consumer driving > 70% of input tokens on a model
           # for 10 minutes = noisy neighbor.
           expr: |
-            modeldoctor:gateway:input_tokens_rate
+            infer:gateway:input_tokens_rate
             /
             ignoring (ai_consumer) group_left
-            sum by (ai_route, ai_cluster, ai_model) (modeldoctor:gateway:input_tokens_rate)
+            sum by (ai_route, ai_cluster, ai_model) (infer:gateway:input_tokens_rate)
             > 0.7
           for: 10m
           labels:
@@ -46,11 +46,11 @@ spec:
           # model are fine = likely consumer-specific prompt pattern
           # (long context, no prefix cache hit).
           expr: |
-            modeldoctor:gateway:ttft_seconds:avg
+            infer:gateway:ttft_seconds:avg
             >
-            (avg by (ai_route, ai_cluster, ai_model) (modeldoctor:gateway:ttft_seconds:avg)) * 2
+            (avg by (ai_route, ai_cluster, ai_model) (infer:gateway:ttft_seconds:avg)) * 2
             and
-            modeldoctor:gateway:ttft_seconds:avg > 2
+            infer:gateway:ttft_seconds:avg > 2
           for: 10m
           labels:
             severity: info

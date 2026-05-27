@@ -1,6 +1,6 @@
 # PrometheusRule: Accelerator (GPU/NPU) alerts
 #
-# Queries `modeldoctor:accelerator:*` only — vendor-agnostic.
+# Queries `infer:accelerator:*` only — vendor-agnostic.
 # Distinguishes NVIDIA vs Ascend via the `device_kind` label.
 #
 # Scenario covered (per survey §8):
@@ -19,7 +19,7 @@ spec:
     - name: modeldoctor.alerts.accelerator
       rules:
         - alert: ModelDoctorAcceleratorUnhealthy
-          expr: modeldoctor:accelerator:health_status == 0
+          expr: infer:accelerator:health_status == 0
           for: 2m
           labels:
             severity: critical
@@ -33,7 +33,7 @@ spec:
             modeldoctor_required_context: "accelerator:error_total, accelerator:temperature_celsius"
 
         - alert: ModelDoctorAcceleratorTempHigh
-          expr: modeldoctor:accelerator:temperature_celsius > 85
+          expr: infer:accelerator:temperature_celsius > 85
           for: 5m
           labels:
             severity: warning
@@ -48,7 +48,7 @@ spec:
         - alert: ModelDoctorAcceleratorTempCritical
           # NVIDIA H100 throttle is ~87°C; A100 ~85°C; Ascend 910B ~85°C.
           # 95° is a conservative critical line — adjust per device class.
-          expr: modeldoctor:accelerator:temperature_celsius > 95
+          expr: infer:accelerator:temperature_celsius > 95
           for: 1m
           labels:
             severity: critical
@@ -60,7 +60,7 @@ spec:
               cooling and consider draining workloads from this node.
 
         - alert: ModelDoctorAcceleratorMemoryHigh
-          expr: modeldoctor:accelerator:memory_usage_ratio > 0.95
+          expr: infer:accelerator:memory_usage_ratio > 0.95
           for: 5m
           labels:
             severity: warning
@@ -72,7 +72,7 @@ spec:
               KV cache will start evicting; OOM imminent if load grows.
 
         - alert: ModelDoctorAcceleratorErrors
-          expr: increase(modeldoctor:accelerator:error_total[5m]) > 0
+          expr: increase(infer:accelerator:error_total[5m]) > 0
           for: 1m
           labels:
             severity: warning

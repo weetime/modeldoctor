@@ -21,43 +21,43 @@ spec:
     - name: modeldoctor.sglang-v0-5-4plus.request
       interval: 30s
       rules:
-        - record: modeldoctor:request:running
+        - record: infer:request:running
           expr: sglang_num_running_reqs
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:waiting
+        - record: infer:request:waiting
           expr: sglang_num_queue_reqs
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:ttft_seconds:p50
+        - record: infer:request:ttft_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:ttft_seconds:p95
+        - record: infer:request:ttft_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:ttft_seconds:p99
+        - record: infer:request:ttft_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_time_to_first_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:itl_seconds:p50
+        - record: infer:request:itl_seconds:p50
           expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:itl_seconds:p95
+        - record: infer:request:itl_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:itl_seconds:p99
+        - record: infer:request:itl_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_time_per_output_token_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:e2e_seconds:p95
+        - record: infer:request:e2e_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(sglang_e2e_request_latency_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:request:e2e_seconds:p99
+        - record: infer:request:e2e_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(sglang_e2e_request_latency_seconds_bucket[5m])))
           labels:
             engine: sglang-v0.5.4plus
@@ -65,15 +65,15 @@ spec:
     - name: modeldoctor.sglang-v0-5-4plus.throughput
       interval: 30s
       rules:
-        - record: modeldoctor:throughput:prompt_tokens_total
+        - record: infer:throughput:prompt_tokens_total
           expr: sglang_prompt_tokens_total
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:throughput:generation_tokens_total
+        - record: infer:throughput:generation_tokens_total
           expr: sglang_generation_tokens_total
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:throughput:generation_rate_tps
+        - record: infer:throughput:generation_rate_tps
           expr: sglang_gen_throughput
           labels:
             engine: sglang-v0.5.4plus
@@ -81,11 +81,11 @@ spec:
     - name: modeldoctor.sglang-v0-5-4plus.cache
       interval: 30s
       rules:
-        - record: modeldoctor:cache:kv_usage_ratio
+        - record: infer:cache:kv_usage_ratio
           expr: sglang_token_usage
           labels:
             engine: sglang-v0.5.4plus
-        - record: modeldoctor:cache:prefix_hit_ratio
+        - record: infer:cache:prefix_hit_ratio
           expr: sglang_cache_hit_rate
           labels:
             engine: sglang-v0.5.4plus

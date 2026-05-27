@@ -2,7 +2,7 @@
 #
 # Normalizes hardware metrics from both NVIDIA GPUs (via DCGM Exporter)
 # and Huawei Ascend NPUs (via npu-exporter) into a single
-# `modeldoctor:accelerator:*` namespace, distinguished by the
+# `infer:accelerator:*` namespace, distinguished by the
 # `device_kind` label:
 #   - device_kind="nvidia"  → sourced from DCGM_FI_*
 #   - device_kind="ascend"  → sourced from npu_chip_info_*
@@ -12,7 +12,7 @@
 # pure-NVIDIA cluster will simply leave the Ascend rules silent.
 #
 # We deliberately do not produce engine-level alerts in this file —
-# alerts that query `modeldoctor:accelerator:*` live in
+# alerts that query `infer:accelerator:*` live in
 # alerts/accelerator.yaml.
 
 apiVersion: monitoring.coreos.com/v1
@@ -28,37 +28,37 @@ spec:
     - name: modeldoctor.accelerator.nvidia
       interval: 30s
       rules:
-        - record: modeldoctor:accelerator:utilization_ratio
+        - record: infer:accelerator:utilization_ratio
           expr: DCGM_FI_DEV_GPU_UTIL / 100
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:memory_used_bytes
+        - record: infer:accelerator:memory_used_bytes
           # DCGM reports MiB; convert to bytes.
           expr: DCGM_FI_DEV_FB_USED * 1024 * 1024
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:memory_total_bytes
+        - record: infer:accelerator:memory_total_bytes
           expr: DCGM_FI_DEV_FB_TOTAL * 1024 * 1024
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:memory_usage_ratio
+        - record: infer:accelerator:memory_usage_ratio
           expr: DCGM_FI_DEV_FB_USED / clamp_min(DCGM_FI_DEV_FB_TOTAL, 1)
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:temperature_celsius
+        - record: infer:accelerator:temperature_celsius
           expr: DCGM_FI_DEV_GPU_TEMP
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:power_watts
+        - record: infer:accelerator:power_watts
           expr: DCGM_FI_DEV_POWER_USAGE
           labels:
             device_kind: nvidia
         # Health = 1 when no XID errors in the last 5m, else 0.
-        - record: modeldoctor:accelerator:health_status
+        - record: infer:accelerator:health_status
           expr: (increase(DCGM_FI_DEV_XID_ERRORS[5m]) == bool 0)
           labels:
             device_kind: nvidia
-        - record: modeldoctor:accelerator:error_total
+        - record: infer:accelerator:error_total
           expr: DCGM_FI_DEV_XID_ERRORS
           labels:
             device_kind: nvidia
@@ -66,36 +66,36 @@ spec:
     - name: modeldoctor.accelerator.ascend
       interval: 30s
       rules:
-        - record: modeldoctor:accelerator:utilization_ratio
+        - record: infer:accelerator:utilization_ratio
           expr: npu_chip_info_utilization / 100
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:memory_used_bytes
+        - record: infer:accelerator:memory_used_bytes
           # npu-exporter reports DDR in MB; convert to bytes (1 MB = 1024*1024).
           expr: npu_chip_info_used_memory * 1024 * 1024
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:memory_total_bytes
+        - record: infer:accelerator:memory_total_bytes
           expr: npu_chip_info_total_memory * 1024 * 1024
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:memory_usage_ratio
+        - record: infer:accelerator:memory_usage_ratio
           expr: npu_chip_info_used_memory / clamp_min(npu_chip_info_total_memory, 1)
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:temperature_celsius
+        - record: infer:accelerator:temperature_celsius
           expr: npu_chip_info_temperature
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:power_watts
+        - record: infer:accelerator:power_watts
           expr: npu_chip_info_power
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:health_status
+        - record: infer:accelerator:health_status
           expr: npu_chip_info_health_status
           labels:
             device_kind: ascend
-        - record: modeldoctor:accelerator:error_total
+        - record: infer:accelerator:error_total
           expr: npu_chip_info_error_code != bool 0
           labels:
             device_kind: ascend

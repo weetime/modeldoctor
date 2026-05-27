@@ -2,7 +2,7 @@
 
 PrometheusRule CRDs (kube-prometheus-operator format) that normalize raw
 inference-engine, gateway, and accelerator metrics into the
-`modeldoctor:*` namespace, then declare SLO alerts on top.
+`infer:*` namespace, then declare SLO alerts on top.
 
 Background and design rationale:
 [`docs/superpowers/research/2026-05-15-inference-engine-metrics-survey.md`](../../../docs/superpowers/research/2026-05-15-inference-engine-metrics-survey.md).
@@ -21,7 +21,7 @@ recording/
     higress.yaml                  ← apply if you run Higress AI Statistics
   accelerator/
     accelerator.yaml              ← unified NVIDIA + Ascend; safe to always apply
-alerts/                           ← apply all four; they consume `modeldoctor:*` only
+alerts/                           ← apply all four; they consume `infer:*` only
   request-slo.yaml                ← TTFT, queue, hang, preemption
   cache.yaml                      ← KV / prefix cache pressure
   accelerator.yaml                ← GPU/NPU health, thermal, memory
@@ -80,7 +80,7 @@ your `Prometheus` resource).
 
 - Higress LLM duration counters are converted **microseconds → seconds**
   (divide by `1e6`). Some legacy plugin builds report milliseconds —
-  if your normalized `modeldoctor:gateway:llm_duration_seconds:avg`
+  if your normalized `infer:gateway:llm_duration_seconds:avg`
   is suspiciously 1000x off, change the divisor to `1e3` in
   `recording/gateway/higress.yaml`.
 - DCGM `FB_USED` / `FB_TOTAL` are MiB; we convert to bytes.

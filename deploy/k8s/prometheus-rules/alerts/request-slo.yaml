@@ -1,6 +1,6 @@
 # PrometheusRule: Request-level SLO alerts
 #
-# Queries the normalized `modeldoctor:request:*` namespace ONLY — engine-
+# Queries the normalized `infer:request:*` namespace ONLY — engine-
 # agnostic. As long as at least one recording rule (vllm-v0 / vllm-v1 /
 # sglang-* / tgi) is applied, these alerts will fire correctly. If no
 # engine recording rule is applied, the underlying series are simply
@@ -27,7 +27,7 @@ spec:
     - name: modeldoctor.alerts.request-slo
       rules:
         - alert: ModelDoctorTtftP99High
-          expr: modeldoctor:request:ttft_seconds:p99 > 5
+          expr: infer:request:ttft_seconds:p99 > 5
           for: 5m
           labels:
             severity: warning
@@ -42,7 +42,7 @@ spec:
             modeldoctor_required_context: "kv_usage_ratio, request:waiting, request:preempted_total"
 
         - alert: ModelDoctorTtftP99Critical
-          expr: modeldoctor:request:ttft_seconds:p99 > 15
+          expr: infer:request:ttft_seconds:p99 > 15
           for: 2m
           labels:
             severity: critical
@@ -55,7 +55,7 @@ spec:
               dependency degraded.
 
         - alert: ModelDoctorQueueBacklog
-          expr: modeldoctor:request:waiting > 50
+          expr: infer:request:waiting > 50
           for: 5m
           labels:
             severity: warning
@@ -71,9 +71,9 @@ spec:
           # engine is hung or completely idle. AI layer can disambiguate
           # by checking external traffic counters.
           expr: |
-            (modeldoctor:request:running == 0)
+            (infer:request:running == 0)
             and on (engine, model_name, instance)
-            (rate(modeldoctor:throughput:generation_tokens_total[10m]) == 0)
+            (rate(infer:throughput:generation_tokens_total[10m]) == 0)
           for: 10m
           labels:
             severity: warning
@@ -86,7 +86,7 @@ spec:
               the engine is hung. Cross-check with gateway QPS.
 
         - alert: ModelDoctorPreemptionStorm
-          expr: rate(modeldoctor:request:preempted_total[5m]) > 0.1
+          expr: rate(infer:request:preempted_total[5m]) > 0.1
           for: 5m
           labels:
             severity: warning

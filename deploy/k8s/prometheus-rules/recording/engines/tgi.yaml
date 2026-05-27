@@ -1,13 +1,13 @@
 # PrometheusRule: TGI (Text Generation Inference) 1.x / 2.x
 #
-# Normalizes TGI raw metrics into the `modeldoctor:*` namespace.
+# Normalizes TGI raw metrics into the `infer:*` namespace.
 # Hard-coded label `engine="tgi"` is injected on every recorded metric.
 #
 # TGI quirks (see docs/superpowers/research/2026-05-15-inference-engine-metrics-survey.md §3):
 # - No native TTFT metric. We derive it from queue_duration + prefill
 #   forward duration. This is an approximation — for strict SLO use a
 #   client-side probe.
-# - No KV cache utilization metric. The `modeldoctor:cache:*` namespace
+# - No KV cache utilization metric. The `infer:cache:*` namespace
 #   stays empty for TGI (PagedAttention is internal black-box).
 # - The metric for ITL is `tgi_request_mean_time_per_token_duration`
 #   (a histogram of per-request average), not strict inter-token timing.
@@ -26,48 +26,48 @@ spec:
     - name: modeldoctor.tgi.request
       interval: 30s
       rules:
-        - record: modeldoctor:request:running
+        - record: infer:request:running
           expr: tgi_batch_current_size
           labels:
             engine: tgi
-        - record: modeldoctor:request:waiting
+        - record: infer:request:waiting
           expr: tgi_queue_size
           labels:
             engine: tgi
         # Derived TTFT: queue + prefill forward.
         # tgi_batch_forward_duration has a `stage` label distinguishing
         # "prefill" vs "decode".
-        - record: modeldoctor:request:ttft_seconds:p95
+        - record: infer:request:ttft_seconds:p95
           expr: |
             histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
             +
             histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:ttft_seconds:p99
+        - record: infer:request:ttft_seconds:p99
           expr: |
             histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
             +
             histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_batch_forward_duration_bucket{stage="prefill"}[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:itl_seconds:p95
+        - record: infer:request:itl_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:itl_seconds:p99
+        - record: infer:request:itl_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_mean_time_per_token_duration_bucket[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:e2e_seconds:p95
+        - record: infer:request:e2e_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_duration_bucket[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:e2e_seconds:p99
+        - record: infer:request:e2e_seconds:p99
           expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(tgi_request_duration_bucket[5m])))
           labels:
             engine: tgi
-        - record: modeldoctor:request:queue_seconds:p95
+        - record: infer:request:queue_seconds:p95
           expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(tgi_request_queue_duration_bucket[5m])))
           labels:
             engine: tgi
@@ -75,15 +75,15 @@ spec:
     - name: modeldoctor.tgi.throughput
       interval: 30s
       rules:
-        - record: modeldoctor:throughput:prompt_tokens_total
+        - record: infer:throughput:prompt_tokens_total
           expr: sum by (model_name, instance)(tgi_request_input_length_sum)
           labels:
             engine: tgi
-        - record: modeldoctor:throughput:generation_tokens_total
+        - record: infer:throughput:generation_tokens_total
           expr: sum by (model_name, instance)(tgi_request_generated_tokens_sum)
           labels:
             engine: tgi
-        - record: modeldoctor:throughput:generation_rate_tps
+        - record: infer:throughput:generation_rate_tps
           expr: sum by (model_name, instance)(rate(tgi_request_generated_tokens_sum[1m]))
           labels:
             engine: tgi
