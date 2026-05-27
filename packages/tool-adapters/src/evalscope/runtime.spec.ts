@@ -55,9 +55,9 @@ describe("evalscope.buildCommand", () => {
       "--number",
       "128",
       "--dataset",
-      "longalpaca",
+      "line_by_line",
       "--dataset-path",
-      "/opt/evalscope-datasets/longalpaca",
+      "/opt/evalscope-datasets/longalpaca.txt",
       "--min-prompt-length",
       "11000",
       "--max-prompt-length",
@@ -96,16 +96,27 @@ describe("evalscope.buildCommand", () => {
     expect(result.argv).toContain("http://10.0.0.5:8000/v1/completions");
   });
 
-  it("passes --dataset-path for openqa (baked HC3-Chinese open_qa.jsonl)", () => {
-    const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "openqa" } });
-    const idx = result.argv.indexOf("--dataset-path");
-    expect(idx).toBeGreaterThan(-1);
-    expect(result.argv[idx + 1]).toBe("/opt/evalscope-datasets/openqa/open_qa.jsonl");
+  it("longalpaca → line_by_line reader with the baked flattened prompt file", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "longalpaca" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("line_by_line");
+    const pi = r.argv.indexOf("--dataset-path");
+    expect(r.argv[pi + 1]).toBe("/opt/evalscope-datasets/longalpaca.txt");
   });
 
-  it("does not pass --dataset-path for random (synthetic dataset)", () => {
-    const result = buildCommand({ ...plan, params: { ...baseParams, dataset: "random" } });
-    expect(result.argv).not.toContain("--dataset-path");
+  it("openqa → native openqa reader with the baked jsonl", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "openqa" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("openqa");
+    const pi = r.argv.indexOf("--dataset-path");
+    expect(r.argv[pi + 1]).toBe("/opt/evalscope-datasets/openqa/open_qa.jsonl");
+  });
+
+  it("random → synthetic, no --dataset-path", () => {
+    const r = buildCommand({ ...plan, params: { ...baseParams, dataset: "random" } });
+    const di = r.argv.indexOf("--dataset");
+    expect(r.argv[di + 1]).toBe("random");
+    expect(r.argv).not.toContain("--dataset-path");
   });
 
   it("omits --seed when not provided", () => {

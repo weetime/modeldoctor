@@ -6,14 +6,17 @@ import type {
 } from "../core/interface.js";
 import { type EvalscopeParams, evalscopeReportSchema } from "./schema.js";
 
-// LongAlpaca-12k + HC3-Chinese (openqa) are baked into the evalscope runner
-// image at build time (apps/benchmark-runner/images/evalscope.Dockerfile)
-// so air-gapped clusters never hit modelscope.cn at run time. `random` is
-// fully synthetic and needs no dataset path.
-const BAKED_DATASET_PATHS: Record<string, string> = {
-  longalpaca: "/opt/evalscope-datasets/longalpaca",
-  openqa: "/opt/evalscope-datasets/openqa/open_qa.jsonl",
-};
+// Datasets are baked into the runner image and read locally via --dataset-path
+// (the cluster can't reach modelscope.cn — pod TLS to it fails — so evalscope's
+// default auto-download is not an option). Per evalscope's source:
+//   - longalpaca: its native plugin's --dataset-path reader does json.loads() of a
+//     single JSON-array file, which doesn't fit ModelScope's CSV layout. We instead
+//     bake a flattened one-prompt-per-line file and use the streaming `line_by_line`
+//     reader (see evalscope.base.Dockerfile). `--min/max-prompt-length` is in chars.
+//   - openqa: its native plugin reads a jsonl via --dataset-path directly.
+//   - random: fully synthetic, no dataset file.
+const LONGALPACA_PROMPTS = "/opt/evalscope-datasets/longalpaca.txt";
+const OPENQA_JSONL = "/opt/evalscope-datasets/openqa/open_qa.jsonl";
 
 const OUTPUTS_DIR = "out";
 const RUN_NAME = "evalscope-run";
@@ -49,12 +52,16 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
     String(params.parallel),
     "--number",
     String(params.number),
-    "--dataset",
-    params.dataset,
   ];
 
-  const datasetPath = BAKED_DATASET_PATHS[params.dataset];
-  if (datasetPath) argv.push("--dataset-path", datasetPath);
+  // Map the logical dataset to evalscope's reader + the baked local file.
+  if (params.dataset === "longalpaca") {
+    argv.push("--dataset", "line_by_line", "--dataset-path", LONGALPACA_PROMPTS);
+  } else if (params.dataset === "openqa") {
+    argv.push("--dataset", "openqa", "--dataset-path", OPENQA_JSONL);
+  } else {
+    argv.push("--dataset", params.dataset); // random — synthetic, no file
+  }
 
   argv.push(
     "--min-prompt-length",
