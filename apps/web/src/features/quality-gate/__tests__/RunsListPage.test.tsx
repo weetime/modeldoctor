@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -12,7 +11,7 @@ vi.mock("../queries", () => ({
     data: {
       items: [
         {
-          id: "r1",
+          id: "r1abc123def456",
           status: "COMPLETED",
           createdAt: "2026-05-12T00:00:00Z",
           processedSamples: 3,
@@ -30,7 +29,7 @@ vi.mock("../queries", () => ({
           endpointB: null,
         },
         {
-          id: "r2",
+          id: "r2xyz789ghi012",
           status: "COMPLETED",
           createdAt: "2026-05-13T00:00:00Z",
           processedSamples: 3,
@@ -80,18 +79,9 @@ function P({ children }: { children: React.ReactNode }) {
 }
 
 describe("RunsListPage", () => {
-  it("renders runs in a table with a checkbox per row", () => {
+  it("renders one row per run with id-link to detail page", () => {
     render(<RunsListPage />, { wrapper: P });
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
-  });
-
-  it("shows compare toolbar when ≥1 row selected", async () => {
-    render(<RunsListPage />, { wrapper: P });
-    const checkboxes = screen.getAllByRole("checkbox");
-    await userEvent.click(checkboxes[0]);
-    expect(screen.getByText(/已选 1/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /对比所选/ })).toBeDisabled();
-    await userEvent.click(checkboxes[1]);
-    expect(screen.getByRole("button", { name: /对比所选/ })).toBeEnabled();
+    expect(screen.getByText("r1abc123def4")).toBeInTheDocument();
+    expect(screen.getByText("r2xyz789ghi0")).toBeInTheDocument();
   });
 });

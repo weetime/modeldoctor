@@ -109,7 +109,6 @@
       "judgeAvgBaseline": "Judge 均分 (对比 run)",
       "baselineModeBanner": "与历史 run 对比: Run #{{runId}}",
       "baselineViewLink": "查看对比 run →",
-      "addToCompareButton": "📊 加入对比",
       "endpointsTitle": "端点信息",
       "endpointAColumn": "Endpoint A",
       "endpointBColumn": "Endpoint B",
@@ -160,12 +159,6 @@
       "cancelled": "已取消"
     },
     "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" },
-    "selection": {
-      "count": "已选 {{count}}",
-      "compareSelected": "📊 对比所选",
-      "clear": "取消选择",
-      "needTwo": "至少选择 2 个 run 才能对比"
-    },
     "filters": {
       "any": "全部",
       "status": "状态",
@@ -239,13 +232,6 @@
     "duplicateButton": "复制为我的",
     "duplicateSuccess": "已复制为「{{name}}」",
     "duplicateError": "复制失败：{{message}}"
-  },
-  "savedCompare": {
-    "section": "质量评测",
-    "passRateA": "通过率 A",
-    "passRateB": "通过率 B",
-    "regression": "回归",
-    "unknown": "—"
   },
   "playground": {
     "bannerTitle": "复现自评测 · 样本 #{{suffix}}",
