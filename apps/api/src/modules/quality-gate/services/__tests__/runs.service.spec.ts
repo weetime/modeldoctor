@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { RunsService } from "../runs.service.js";
+import { NO_LLM_JUDGE_PROVIDER_MSG, RunsService } from "../runs.service.js";
 
 function build() {
   const repo = {
@@ -215,5 +215,73 @@ describe("RunsService", () => {
     expect(m.repo.createPending).toHaveBeenCalledWith(
       expect.objectContaining({ baselineRunIdAtExecution: null, endpointBId: "b" }),
     );
+  });
+
+  it("rejects with BadRequest when llm-judge sample requires provider but none is configured", async () => {
+    const m = build();
+    m.evaluationsRepo.get.mockResolvedValueOnce({
+      id: "e1",
+      userId: "u1",
+      version: 2,
+      samples: [
+        {
+          id: "s",
+          idx: 0,
+          prompt: "Q",
+          expected: "A",
+          judgeConfig: {
+            kind: "llm-judge",
+            rubric: "Score the response quality",
+            scale: "pass-fail",
+          },
+        },
+      ],
+      baselineRunId: null,
+    });
+    m.llmJudge.getDecrypted.mockResolvedValueOnce(null);
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+      m.llmJudge as never,
+    );
+    await expect(
+      svc.create("u1", { evaluationId: "e1", endpointAId: "c1", gateConfig: { passRateMin: 0.9 } }),
+    ).rejects.toThrow(NO_LLM_JUDGE_PROVIDER_MSG);
+  });
+
+  it("rejects with BadRequest when llm-judge sample requires provider but provider is disabled", async () => {
+    const m = build();
+    m.evaluationsRepo.get.mockResolvedValueOnce({
+      id: "e1",
+      userId: "u1",
+      version: 2,
+      samples: [
+        {
+          id: "s",
+          idx: 0,
+          prompt: "Q",
+          expected: "A",
+          judgeConfig: {
+            kind: "llm-judge",
+            rubric: "Score the response quality",
+            scale: "pass-fail",
+          },
+        },
+      ],
+      baselineRunId: null,
+    });
+    m.llmJudge.getDecrypted.mockResolvedValueOnce({ enabled: false });
+    const svc = new RunsService(
+      m.repo as never,
+      m.evaluationsRepo as never,
+      m.connections as never,
+      m.executor as never,
+      m.llmJudge as never,
+    );
+    await expect(
+      svc.create("u1", { evaluationId: "e1", endpointAId: "c1", gateConfig: { passRateMin: 0.9 } }),
+    ).rejects.toThrow(NO_LLM_JUDGE_PROVIDER_MSG);
   });
 });

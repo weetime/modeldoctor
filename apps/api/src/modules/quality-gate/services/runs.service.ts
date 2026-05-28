@@ -11,6 +11,14 @@ import { RunsRepository } from "../repositories/runs.repository.js";
 import { EvaluationsService } from "./evaluations.service.js";
 import { QualityGateRunExecutor } from "./run-executor.service.js";
 
+// Exported so unit tests can assert the exact message without duplicating it.
+// If the Settings page label ever moves, both this constant and the i18n key
+// `settings.ai.title` need updating together.
+export const NO_LLM_JUDGE_PROVIDER_MSG =
+  "This evaluation requires an LLM judge. " +
+  "No enabled LLM judge provider is configured. " +
+  "Configure one at Settings → AI Diagnostics.";
+
 @Injectable()
 export class RunsService {
   constructor(
@@ -50,11 +58,7 @@ export class RunsService {
     if (needsLlmJudge) {
       const provider = await this.llmJudge.getDecrypted();
       if (!provider?.enabled) {
-        throw new BadRequestException(
-          "This evaluation requires an LLM judge. " +
-            "No enabled LLM judge provider is configured. " +
-            "Configure one at Settings → AI Diagnostics.",
-        );
+        throw new BadRequestException(NO_LLM_JUDGE_PROVIDER_MSG);
       }
     }
 
