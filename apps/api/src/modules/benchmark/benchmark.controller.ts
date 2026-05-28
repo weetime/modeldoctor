@@ -25,6 +25,7 @@ import {
   Sse,
   UseGuards,
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { EMPTY, from, type Observable } from "rxjs";
 import { map, switchMap } from "rxjs/operators";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
@@ -38,6 +39,8 @@ import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { isInProgressStatus } from "./constants.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 
+@ApiTags("benchmarks")
+@ApiBearerAuth()
 @Controller("benchmarks")
 @UseGuards(JwtAuthGuard)
 export class BenchmarkController {
@@ -47,6 +50,7 @@ export class BenchmarkController {
     private readonly sse: SseHub,
   ) {}
 
+  @ApiOperation({ summary: "List benchmarks (scope=mine by default; scope=all is admin-only)" })
   @Get()
   async list(
     @CurrentUser() user: JwtPayload,
@@ -61,6 +65,7 @@ export class BenchmarkController {
     return this.service.list(query, query.scope === "all" ? undefined : user.sub);
   }
 
+  @ApiOperation({ summary: "Aggregated benchmark reports grouped by connection over a date range" })
   @Get("reports/by-connection")
   reportsByConnection(
     @CurrentUser() user: JwtPayload,
@@ -70,11 +75,13 @@ export class BenchmarkController {
     return this.service.getByConnectionReports(user.sub, range ?? "30d");
   }
 
+  @ApiOperation({ summary: "Get a benchmark by ID (owner or admin)" })
   @Get(":id")
   detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
     return this.service.findByIdOrFail(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
+  @ApiOperation({ summary: "Submit a new benchmark run" })
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -83,11 +90,13 @@ export class BenchmarkController {
     return this.service.create(user.sub, body);
   }
 
+  @ApiOperation({ summary: "Cancel an in-flight benchmark" })
   @Post(":id/cancel")
   cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
     return this.service.cancel(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
+  @ApiOperation({ summary: "Delete a benchmark and its artifacts" })
   @Delete(":id")
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
@@ -98,6 +107,9 @@ export class BenchmarkController {
    *  @Public() bypasses the class-level JwtAuthGuard; SseJwtAuthGuard then
    *  validates the JWT via Authorization header OR `?token=` query param,
    *  which EventSource requires since it cannot set custom headers. */
+  @ApiOperation({
+    summary: "Server-Sent Events stream for a running benchmark (token via Bearer or ?token=)",
+  })
   @Public()
   @UseGuards(SseJwtAuthGuard)
   @Sse(":id/events")
@@ -109,6 +121,7 @@ export class BenchmarkController {
     );
   }
 
+  @ApiOperation({ summary: "Extracted chart-ready data series from a benchmark's raw output" })
   @Get(":id/charts")
   @Header("Cache-Control", "private, max-age=86400")
   async getCharts(

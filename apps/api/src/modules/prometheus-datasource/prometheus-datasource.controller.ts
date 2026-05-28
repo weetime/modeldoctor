@@ -23,6 +23,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { parseCustomHeaders } from "../../common/http/parse-custom-headers.js";
@@ -39,16 +40,20 @@ function actorFrom(user: JwtPayload): PrometheusDatasourceActor {
   return { sub: user.sub, isAdmin: user.roles.includes("admin") };
 }
 
+@ApiTags("prometheus-datasources")
+@ApiBearerAuth()
 @Controller("prometheus-datasources")
 @UseGuards(JwtAuthGuard)
 export class PrometheusDatasourceController {
   constructor(private readonly svc: PrometheusDatasourceService) {}
 
+  @ApiOperation({ summary: "List configured Prometheus datasources" })
   @Get()
   list(@CurrentUser() user: JwtPayload): Promise<ListPrometheusDatasourcesResponse> {
     return this.svc.list(actorFrom(user));
   }
 
+  @ApiOperation({ summary: "Get a Prometheus datasource by ID" })
   @Get(":id")
   getOne(
     @CurrentUser() user: JwtPayload,
@@ -57,6 +62,7 @@ export class PrometheusDatasourceController {
     return this.svc.getOne(actorFrom(user), id);
   }
 
+  @ApiOperation({ summary: "Create a Prometheus datasource (admin-only)" })
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -66,6 +72,7 @@ export class PrometheusDatasourceController {
     return this.svc.create(actorFrom(user), body);
   }
 
+  @ApiOperation({ summary: "Patch a Prometheus datasource" })
   @Patch(":id")
   update(
     @CurrentUser() user: JwtPayload,
@@ -76,6 +83,7 @@ export class PrometheusDatasourceController {
     return this.svc.update(actorFrom(user), id, body);
   }
 
+  @ApiOperation({ summary: "Delete a Prometheus datasource" })
   @Delete(":id")
   remove(
     @CurrentUser() user: JwtPayload,
@@ -84,6 +92,7 @@ export class PrometheusDatasourceController {
     return this.svc.remove(actorFrom(user), id);
   }
 
+  @ApiOperation({ summary: "Promote a Prometheus datasource to the default" })
   @Post(":id/set-default")
   setDefault(
     @CurrentUser() user: JwtPayload,
@@ -92,9 +101,7 @@ export class PrometheusDatasourceController {
     return this.svc.setDefault(actorFrom(user), id);
   }
 
-  // Shallow probe — reuses the verifyPrometheus helper that powered the old
-  // `kind=prometheus` verify-kind branch. Admin-only because this would let
-  // an unauthenticated user use the api as an outbound HTTP proxy otherwise.
+  @ApiOperation({ summary: "Probe a Prometheus URL for buildinfo + version (admin-only)" })
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post("verify")
   async verify(

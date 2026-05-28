@@ -13,6 +13,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
@@ -27,6 +28,7 @@ import {
 import { AlertsService } from "./alerts.service.js";
 import { AlertExplainerService } from "./explainer.service.js";
 
+@ApiTags("alerts")
 @Controller("alerts")
 export class AlertsController {
   private readonly log = new Logger(AlertsController.name);
@@ -52,6 +54,9 @@ export class AlertsController {
    *               type: Bearer
    *               credentials: <shared-secret matching ALERTMANAGER_WEBHOOK_SECRET>
    */
+  @ApiOperation({
+    summary: "Alertmanager webhook ingest (Bearer-token authenticated, not JWT)",
+  })
   @Public()
   @Post("webhook")
   @HttpCode(202)
@@ -86,6 +91,8 @@ export class AlertsController {
     }
   }
 
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List alerts for the current user, optionally filtered by connection" })
   @Get()
   list(
     @CurrentUser() user: JwtPayload,
@@ -94,6 +101,8 @@ export class AlertsController {
     return this.alerts.listForUser(user.sub, query);
   }
 
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get a single alert event with its AI explanation" })
   @Get(":id")
   async get(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     const row = await this.alerts.getForUser(user.sub, id);

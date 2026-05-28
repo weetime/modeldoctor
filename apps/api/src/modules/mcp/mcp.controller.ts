@@ -1,4 +1,5 @@
 import { All, Controller, InternalServerErrorException, Req, Res, UseGuards } from "@nestjs/common";
+import { ApiExcludeController } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { McpAuthGuard } from "./mcp.guard.js";
@@ -14,6 +15,9 @@ import { McpService } from "./mcp.service.js";
  * McpAuthGuard (fixed env-pinned bearer token) — totally separate from the
  * web app's rotating JWT, see mcp.guard.ts for rationale.
  */
+// Excluded from OpenAPI: this is the JSON-RPC transport for the MCP server,
+// not a REST endpoint. Its protocol is described by the MCP spec, not OpenAPI.
+@ApiExcludeController()
 @Controller("mcp")
 @Public()
 @UseGuards(McpAuthGuard)

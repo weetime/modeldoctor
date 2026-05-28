@@ -4,6 +4,7 @@ import type {
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
+import { MODALITY_BODY_TEMPLATES } from "./body-templates.js";
 import { type VegetaParams, type VegetaReport, vegetaReportSchema } from "./schema.js";
 
 export const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
@@ -15,15 +16,7 @@ export const API_TYPE_TO_PATH: Record<VegetaParams["apiType"], string> = {
   images: "/v1/images/generations",
 };
 
-export const API_TYPE_TO_BODY: Record<VegetaParams["apiType"], (model: string) => string> = {
-  chat: (m) => JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
-  "chat-vision": (m) =>
-    JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
-  "chat-audio": (m) => JSON.stringify({ model: m, messages: [{ role: "user", content: "hello" }] }),
-  embeddings: (m) => JSON.stringify({ model: m, input: "hello" }),
-  rerank: (m) => JSON.stringify({ model: m, query: "what is 2+2", documents: ["four", "five"] }),
-  images: (m) => JSON.stringify({ model: m, prompt: "a cat" }),
-};
+export const API_TYPE_TO_BODY = MODALITY_BODY_TEMPLATES;
 
 export function buildCommand(plan: BuildCommandPlan<VegetaParams>): BuildCommandResult {
   const { params, connection } = plan;

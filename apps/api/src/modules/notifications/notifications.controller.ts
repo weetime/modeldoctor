@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
@@ -14,6 +15,8 @@ import {
 } from "./notifications.dto.js";
 import { SubscriptionsService } from "./subscriptions.service.js";
 
+@ApiTags("notifications")
+@ApiBearerAuth()
 @Controller("notifications")
 export class NotificationsController {
   constructor(
@@ -22,11 +25,13 @@ export class NotificationsController {
     private readonly dispatcher: DispatcherService,
   ) {}
 
+  @ApiOperation({ summary: "List notification channels (Slack / Feishu / DingTalk webhooks)" })
   @Get("channels")
   list(@CurrentUser() user: JwtPayload) {
     return this.channels.list(user.sub);
   }
 
+  @ApiOperation({ summary: "Create a notification channel" })
   @Post("channels")
   create(
     @CurrentUser() user: JwtPayload,
@@ -35,6 +40,7 @@ export class NotificationsController {
     return this.channels.create(user.sub, body);
   }
 
+  @ApiOperation({ summary: "Update a notification channel" })
   @Patch("channels/:id")
   update(
     @CurrentUser() user: JwtPayload,
@@ -44,12 +50,14 @@ export class NotificationsController {
     return this.channels.update(user.sub, id, body);
   }
 
+  @ApiOperation({ summary: "Delete a notification channel" })
   @Delete("channels/:id")
   @HttpCode(204)
   async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.channels.delete(user.sub, id);
   }
 
+  @ApiOperation({ summary: "Send a test notification through the channel" })
   @Post("channels/:id/test")
   async test(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     try {
@@ -64,11 +72,13 @@ export class NotificationsController {
     }
   }
 
+  @ApiOperation({ summary: "List notification subscriptions" })
   @Get("subscriptions")
   listSubs(@CurrentUser() user: JwtPayload) {
     return this.subscriptions.list(user.sub);
   }
 
+  @ApiOperation({ summary: "Create a notification subscription" })
   @Post("subscriptions")
   createSub(
     @CurrentUser() user: JwtPayload,
@@ -77,6 +87,7 @@ export class NotificationsController {
     return this.subscriptions.create(user.sub, body);
   }
 
+  @ApiOperation({ summary: "Delete a notification subscription" })
   @Delete("subscriptions/:id")
   @HttpCode(204)
   async removeSub(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {

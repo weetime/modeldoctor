@@ -17,17 +17,21 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
 import { RunsService } from "../services/runs.service.js";
 
+@ApiTags("quality-gate")
+@ApiBearerAuth()
 @Controller("quality-gate/runs")
 @UseGuards(JwtAuthGuard)
 export class RunsController {
   constructor(private readonly svc: RunsService) {}
 
+  @ApiOperation({ summary: "List Quality-Gate smoke-test runs" })
   @Get()
   list(
     @CurrentUser() user: JwtPayload,
@@ -36,6 +40,7 @@ export class RunsController {
     return this.svc.list(user.sub, q);
   }
 
+  @ApiOperation({ summary: "Submit a new Quality-Gate run" })
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -44,23 +49,27 @@ export class RunsController {
     return this.svc.create(user.sub, body);
   }
 
+  @ApiOperation({ summary: "Get a Quality-Gate run by ID" })
   @Get(":id")
   get(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.svc.get(user.sub, id);
   }
 
+  @ApiOperation({ summary: "Cancel an in-flight Quality-Gate run" })
   @Post(":id/cancel")
   async cancel(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     await this.svc.cancel(user.sub, id);
     return { ok: true };
   }
 
+  @ApiOperation({ summary: "Delete a Quality-Gate run and its samples" })
   @Delete(":id")
   @HttpCode(204)
   remove(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.svc.delete(user.sub, id);
   }
 
+  @ApiOperation({ summary: "List per-sample results for a Quality-Gate run" })
   @Get(":id/samples")
   samples(
     @CurrentUser() user: JwtPayload,
