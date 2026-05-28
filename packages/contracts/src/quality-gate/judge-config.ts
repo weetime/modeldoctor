@@ -24,7 +24,6 @@ const llmJudge = z.object({
   rubric: z.string().min(10).max(4000),
   scale: z.enum(["0-1", "0-5", "pass-fail"]),
   passThreshold: z.number().optional(),
-  judgeModel: z.object({ connectionId: z.string() }).optional(),
 });
 
 const baseUnion = z.discriminatedUnion("kind", [exactMatch, contains, regex, llmJudge]);

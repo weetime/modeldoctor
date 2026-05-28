@@ -3,10 +3,10 @@ import type { Judge } from "./types.js";
 
 type Config = Extract<JudgeConfig, { kind: "llm-judge" }>;
 
-// Thin shape from the AI Diagnostics service: factory only needs runJudge(prompts) → { content }.
-// At wiring time the real adapter delegates to the diagnostics service.
+// Thin shape over the singleton LLM judge provider. At wiring time the real
+// adapter delegates to `LlmJudgeService.getDecrypted()` + `chatCompletion`.
 export interface LlmJudgeService {
-  runJudge(input: { systemPrompt: string; userPrompt: string; connectionId?: string }): Promise<{
+  runJudge(input: { systemPrompt: string; userPrompt: string }): Promise<{
     content: string;
   }>;
 }
@@ -50,7 +50,6 @@ export function createLlmJudge(service: LlmJudgeService): Judge<Config> {
         const resp = await service.runJudge({
           systemPrompt: buildSystemPrompt(config.rubric, config.scale),
           userPrompt: buildUserPrompt(ctx),
-          connectionId: config.judgeModel?.connectionId,
         });
         let parsed: { score: number; reason: string };
         try {

@@ -6,9 +6,18 @@ import type {
 } from "@modeldoctor/contracts";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConnectionService } from "../../connection/connection.service.js";
+import { LlmJudgeService } from "../../llm-judge/llm-judge.service.js";
 import { RunsRepository } from "../repositories/runs.repository.js";
 import { EvaluationsService } from "./evaluations.service.js";
 import { QualityGateRunExecutor } from "./run-executor.service.js";
+
+// Exported so unit tests can assert the exact message without duplicating it.
+// If the Settings page label ever moves, both this constant and the i18n key
+// `settings.ai.title` need updating together.
+export const NO_LLM_JUDGE_PROVIDER_MSG =
+  "This evaluation requires an LLM judge. " +
+  "No enabled LLM judge provider is configured. " +
+  "Configure one at Settings → AI Diagnostics.";
 
 @Injectable()
 export class RunsService {
@@ -17,6 +26,7 @@ export class RunsService {
     private readonly evaluations: EvaluationsService,
     private readonly connections: ConnectionService,
     private readonly executor: QualityGateRunExecutor,
+    private readonly llmJudge: LlmJudgeService,
   ) {}
 
   list(userId: string, q: ListRunsQuery) {
@@ -43,6 +53,15 @@ export class RunsService {
   async create(userId: string, body: CreateRunRequest): Promise<EvaluationRun> {
     const evaluation = await this.evaluations.get(userId, body.evaluationId);
     if (!evaluation) throw new NotFoundException(`evaluation ${body.evaluationId} not found`);
+
+    const needsLlmJudge = evaluation.samples.some((s) => s.judgeConfig.kind === "llm-judge");
+    if (needsLlmJudge) {
+      const provider = await this.llmJudge.getDecrypted();
+      if (!provider?.enabled) {
+        throw new BadRequestException(NO_LLM_JUDGE_PROVIDER_MSG);
+      }
+    }
+
     const connA = await this.connections
       .findOwnedPublic(userId, body.endpointAId)
       .catch(() => null);
