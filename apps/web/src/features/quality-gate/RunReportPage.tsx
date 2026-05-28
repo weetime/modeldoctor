@@ -1,7 +1,7 @@
 import type { EvaluationSample, RunSample } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { RunOverview } from "./components/RunOverview";
@@ -51,20 +51,11 @@ export function RunReportPage() {
         subtitle={t("runs.report.subtitle")}
         breadcrumbs={breadcrumbs}
         rightSlot={
-          <div className="flex items-center gap-2">
-            {run.status === "RUNNING" && (
-              <Button variant="outline" onClick={() => cancel.mutate()}>
-                {t("runs.report.cancel")}
-              </Button>
-            )}
-            {run.status === "COMPLETED" && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
-                  {t("runs.report.addToCompareButton")}
-                </Link>
-              </Button>
-            )}
-          </div>
+          run.status === "RUNNING" ? (
+            <Button variant="outline" onClick={() => cancel.mutate()}>
+              {t("runs.report.cancel")}
+            </Button>
+          ) : undefined
         }
       />
       <div className="px-8 py-6 space-y-6">

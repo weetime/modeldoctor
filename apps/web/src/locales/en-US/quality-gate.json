@@ -109,7 +109,6 @@
       "judgeAvgBaseline": "Judge Avg (comparison)",
       "baselineModeBanner": "Compared against Run #{{runId}}",
       "baselineViewLink": "View comparison run →",
-      "addToCompareButton": "📊 Add to Compare",
       "endpointsTitle": "Endpoints",
       "endpointAColumn": "Endpoint A",
       "endpointBColumn": "Endpoint B",
@@ -160,12 +159,6 @@
       "cancelled": "Cancelled"
     },
     "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" },
-    "selection": {
-      "count": "Selected {{count}}",
-      "compareSelected": "📊 Compare selected",
-      "clear": "Clear",
-      "needTwo": "Select at least 2 runs to compare"
-    },
     "filters": {
       "any": "Any",
       "status": "Status",
@@ -239,13 +232,6 @@
     "duplicateButton": "Copy to mine",
     "duplicateSuccess": "Copied as \"{{name}}\"",
     "duplicateError": "Copy failed: {{message}}"
-  },
-  "savedCompare": {
-    "section": "Quality Evaluations",
-    "passRateA": "Pass Rate A",
-    "passRateB": "Pass Rate B",
-    "regression": "Regressions",
-    "unknown": "—"
   },
   "playground": {
     "bannerTitle": "Reproduced from evaluation · sample #{{suffix}}",

@@ -1,4 +1,4 @@
-import type { Benchmark, CompareNarrative, GateResult, RunStatus } from "@modeldoctor/contracts";
+import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,8 +15,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { GateStatusBadge } from "@/features/quality-gate/components/GateStatusBadge";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { AiAnalysisPanel } from "./AiAnalysisPanel";
 import { exportPageAsHtml } from "./exportHtml";
@@ -41,7 +39,6 @@ export function SavedCompareDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const { t } = useTranslation("benchmarks");
   const { t: tSidebar } = useTranslation("sidebar");
-  const { t: tQg } = useTranslation("quality-gate");
   const navigate = useNavigate();
   const query = useSavedCompare(id);
   const provider = useLlmJudgeProvider();
@@ -147,41 +144,6 @@ export function SavedCompareDetailPage() {
           context={sc.context}
           environmentLines={environmentLines}
         />
-        {sc.evaluationRuns && sc.evaluationRuns.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-2">{tQg("savedCompare.section")}</h3>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
-              {sc.evaluationRuns.map((r) => (
-                <Card key={r.id} className="p-3 space-y-2">
-                  <GateStatusBadge
-                    status={(r.status ?? "PENDING") as RunStatus}
-                    gateResult={(r.gateResult ?? null) as GateResult | null}
-                  />
-                  <div className="text-xs text-muted-foreground">
-                    {sc.stageLabels[r.id] ?? r.id.slice(0, 8)}
-                  </div>
-                  <div className="text-sm">
-                    {tQg("savedCompare.passRateA")}:{" "}
-                    {r.aggregateMetrics?.passRateA != null
-                      ? `${(r.aggregateMetrics.passRateA * 100).toFixed(1)}%`
-                      : tQg("savedCompare.unknown")}
-                  </div>
-                  {r.aggregateMetrics?.passRateB != null && (
-                    <div className="text-sm">
-                      {tQg("savedCompare.passRateB")}:{" "}
-                      {(r.aggregateMetrics.passRateB * 100).toFixed(1)}%
-                    </div>
-                  )}
-                  {r.aggregateMetrics?.regressionCount != null && (
-                    <div className="text-sm">
-                      {tQg("savedCompare.regression")}: {r.aggregateMetrics.regressionCount}
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
         <AiAnalysisPanel
           narrative={narrative}
           onGenerate={() => void generate()}

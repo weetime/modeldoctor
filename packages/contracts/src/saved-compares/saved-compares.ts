@@ -3,13 +3,26 @@ import { z } from "zod";
 export const stageLabelsSchema = z.record(z.string(), z.string().min(1).max(64));
 export type StageLabels = z.infer<typeof stageLabelsSchema>;
 
+// Defense-in-depth: each benchmark must have a stage label, and the baseline
+// (when set) must reference one of the benchmarks. The UI's create flows
+// already build stageLabels from benchmarkIds, but this guards the server
+// boundary against misconfigured callers.
+const isValidCompareConfig = (s: {
+  benchmarkIds: string[];
+  stageLabels: Record<string, string>;
+  baselineId?: string | null;
+}): boolean => {
+  const hasValidLabels = s.benchmarkIds.every((id) => id in s.stageLabels);
+  const hasValidBaseline = !s.baselineId || s.benchmarkIds.includes(s.baselineId);
+  return hasValidLabels && hasValidBaseline;
+};
+
 export const savedCompareSchema = z
   .object({
     id: z.string(),
     userId: z.string(),
     name: z.string().min(1).max(200),
     benchmarkIds: z.array(z.string()).max(10),
-    evaluationRunIds: z.array(z.string()).max(10).default([]),
     stageLabels: stageLabelsSchema,
     baselineId: z.string().nullable(),
     context: z.string().nullable(),
@@ -18,12 +31,16 @@ export const savedCompareSchema = z
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
-  .refine((s) => s.benchmarkIds.length + s.evaluationRunIds.length >= 2, {
+  .refine((s) => s.benchmarkIds.length >= 2, {
     message: "validation.compareMinRuns",
     path: ["benchmarkIds"],
   })
-  .refine((s) => s.benchmarkIds.length + s.evaluationRunIds.length <= 10, {
+  .refine((s) => s.benchmarkIds.length <= 10, {
     message: "validation.compareMaxRuns",
+    path: ["benchmarkIds"],
+  })
+  .refine(isValidCompareConfig, {
+    message: "validation.invalidCompareConfiguration",
     path: ["benchmarkIds"],
   });
 export type SavedCompare = z.infer<typeof savedCompareSchema>;
@@ -32,23 +49,26 @@ export const createSavedCompareRequestSchema = z
   .object({
     name: z.string().min(1).max(200),
     benchmarkIds: z.array(z.string()).max(10),
-    evaluationRunIds: z.array(z.string()).max(10).default([]),
     stageLabels: stageLabelsSchema,
     baselineId: z.string().nullable().optional(),
     context: z.string().max(10_000).nullable().optional(),
   })
-  .refine((s) => s.benchmarkIds.length + s.evaluationRunIds.length >= 2, {
+  .refine((s) => s.benchmarkIds.length >= 2, {
     message: "validation.compareMinRuns",
     path: ["benchmarkIds"],
   })
-  .refine((s) => s.benchmarkIds.length + s.evaluationRunIds.length <= 10, {
+  .refine((s) => s.benchmarkIds.length <= 10, {
     message: "validation.compareMaxRuns",
+    path: ["benchmarkIds"],
+  })
+  .refine(isValidCompareConfig, {
+    message: "validation.invalidCompareConfiguration",
     path: ["benchmarkIds"],
   });
 export type CreateSavedCompareRequest = z.infer<typeof createSavedCompareRequestSchema>;
 
-// Server-side hydrated detail response — backend fans out benchmarkIds /
-// evaluationRunIds and embeds the referenced rows (or marks them `missing`).
+// Server-side hydrated detail response — backend fans out benchmarkIds
+// and embeds the referenced rows (or marks them `missing`).
 export interface HydratedBenchmarkRef {
   id: string;
   stageLabel: string;
@@ -61,32 +81,8 @@ export interface HydratedBenchmarkRef {
   createdAt?: string;
 }
 
-/** Subset of EvaluationRun.aggregateMetrics surfaced in the hydrated
- * saved-compare response. Kept narrower than the storage type so the UI
- * can render fields directly without unknown-narrowing dance. */
-export interface HydratedEvaluationAggregateMetrics {
-  passRateA?: number;
-  passRateB?: number;
-  judgeAvgA?: number;
-  judgeAvgB?: number;
-  regressionCount?: number;
-  improvementCount?: number;
-  totalErrors?: number;
-}
-
-export interface HydratedEvaluationRunRef {
-  id: string;
-  stageLabel: string;
-  missing: boolean;
-  status?: string;
-  gateResult?: string | null;
-  aggregateMetrics?: HydratedEvaluationAggregateMetrics | null;
-  createdAt?: string;
-}
-
 export type HydratedSavedCompare = SavedCompare & {
   benchmarks: HydratedBenchmarkRef[];
-  evaluationRuns: HydratedEvaluationRunRef[];
 };
 
 export const updateSavedCompareRequestSchema = z.object({

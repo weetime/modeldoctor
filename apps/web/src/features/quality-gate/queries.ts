@@ -123,17 +123,6 @@ export function useDeleteRun() {
   });
 }
 
-export function useEvaluationRunsByIds(ids: string[]) {
-  return useQuery({
-    queryKey: ["quality-gate", "runs-by-ids", ids.slice().sort().join(",")],
-    queryFn: async () => {
-      const results = await Promise.all(ids.map((id) => qgApi.getRun(id)));
-      return results;
-    },
-    enabled: ids.length > 0,
-  });
-}
-
 // ── Run Samples ───────────────────────────────────────────────────────────────
 
 export function useRunSamples(
