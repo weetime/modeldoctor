@@ -49,11 +49,11 @@ describe("evaluationSchema", () => {
       version: 1,
       samples: [],
       totalSamples: 0,
-      baselineRunId: null,
       isOfficial: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
     expect(e.version).toBe(1);
+    expect("baselineRunId" in e).toBe(false);
   });
 });
