@@ -59,12 +59,6 @@ export class EvaluationsRepository {
       data.version = existing.version + 1;
       data.totalSamples = body.samples.length;
     }
-    if (body.baselineRunId !== undefined) {
-      data.baselineRun =
-        body.baselineRunId === null
-          ? { disconnect: true }
-          : { connect: { id: body.baselineRunId } };
-    }
 
     const row = await this.prisma.evaluation.update({ where: { id }, data });
     return this.toDto(row);
@@ -87,7 +81,6 @@ export class EvaluationsRepository {
     version: number;
     samples: unknown;
     totalSamples: number;
-    baselineRunId: string | null;
     isOfficial: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -99,7 +92,6 @@ export class EvaluationsRepository {
     version: row.version,
     samples: row.samples as EvaluationSample[],
     totalSamples: row.totalSamples,
-    baselineRunId: row.baselineRunId,
     isOfficial: row.isOfficial,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

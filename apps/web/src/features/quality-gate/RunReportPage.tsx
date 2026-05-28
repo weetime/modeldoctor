@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
-import { PinBaselineButton } from "./components/PinBaselineButton";
 import { RunOverview } from "./components/RunOverview";
 import { SampleDetailDrawer } from "./components/SampleDetailDrawer";
 import { SamplesTable } from "./components/SamplesTable";
@@ -59,14 +58,11 @@ export function RunReportPage() {
               </Button>
             )}
             {run.status === "COMPLETED" && (
-              <>
-                <PinBaselineButton evaluationId={run.evaluationId} runId={run.id} />
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
-                    {t("runs.report.addToCompareButton")}
-                  </Link>
-                </Button>
-              </>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/benchmarks/compare/saved/new?evaluationRunIds=${run.id}`}>
+                  {t("runs.report.addToCompareButton")}
+                </Link>
+              </Button>
             )}
           </div>
         }

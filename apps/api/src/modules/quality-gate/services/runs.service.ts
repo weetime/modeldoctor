@@ -73,24 +73,12 @@ export class RunsService {
       if (!connB) throw new NotFoundException(`endpointB connection ${body.endpointBId} not found`);
     }
 
-    // Resolve baseline:
-    // undefined → use evaluation.baselineRunId (pin)
-    // null      → explicit skip, no baseline
-    // string    → validate + use that run
-    //
-    // Dual mode wins over baseline. When endpointBId is set, baseline is forced null
-    // regardless of pin or implicit fallback. Contract-level mutex catches explicit
-    // string overrides; this guard catches the implicit "evaluation has a pin"
-    // fallback path that would otherwise silently activate baseline mode and make
-    // the executor ignore endpointBId.
+    // Baseline resolution. Dual mode wins: when endpointBId is set, baseline
+    // is forced null (executor would otherwise ignore endpointBId). Contract
+    // refine catches the explicit "both" case; this guard catches a stray
+    // string slipping through alongside endpointBId.
     let baselineRunIdAtExecution: string | null = null;
-    if (body.endpointBId) {
-      baselineRunIdAtExecution = null;
-    } else if (body.baselineRunIdOverride === undefined) {
-      baselineRunIdAtExecution = evaluation.baselineRunId ?? null;
-    } else if (body.baselineRunIdOverride === null) {
-      baselineRunIdAtExecution = null;
-    } else {
+    if (body.endpointBId == null && body.baselineRunIdOverride != null) {
       const override = await this.repo.findById(userId, body.baselineRunIdOverride);
       if (!override) {
         throw new NotFoundException(`baseline run ${body.baselineRunIdOverride} not found`);

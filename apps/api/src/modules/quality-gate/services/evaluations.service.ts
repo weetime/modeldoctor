@@ -11,16 +11,12 @@ import {
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
 import { EvaluationsRepository } from "../repositories/evaluations.repository.js";
-import { RunsRepository } from "../repositories/runs.repository.js";
 
 const newSampleId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 12);
 
 @Injectable()
 export class EvaluationsService {
-  constructor(
-    private readonly repo: EvaluationsRepository,
-    private readonly runsRepo: RunsRepository,
-  ) {}
+  constructor(private readonly repo: EvaluationsRepository) {}
 
   list(userId: string) {
     return this.repo.list(userId);
@@ -34,10 +30,8 @@ export class EvaluationsService {
   async update(userId: string, id: string, body: UpdateEvaluationRequest) {
     const existing = await this.repo.findById(userId, id);
     if (!existing) throw new NotFoundException(`evaluation ${id} not found`);
-    // Official (built-in) evaluations are fully read-only. baselineRunId
-    // included: pins are eval-level (shared across all viewers), so allowing
-    // one user to pin on a shared official eval would mutate other users'
-    // view of the same row. To pin, users must duplicate first.
+    // Official (built-in) evaluations are fully read-only — users must
+    // duplicate first to modify name/description/samples.
     if (existing.isOfficial) {
       throw new BadRequestException(
         `evaluation ${id} is official and read-only; duplicate it first to make changes`,
@@ -174,37 +168,5 @@ export class EvaluationsService {
 
   private assignIds(samples: EvaluationSampleInput[]): EvaluationSample[] {
     return samples.map((s, i) => ({ ...s, id: s.id || newSampleId(), idx: i }));
-  }
-
-  async setBaseline(userId: string, evaluationId: string, runId: string | null) {
-    const evaluation = await this.repo.findById(userId, evaluationId);
-    if (!evaluation) throw new NotFoundException(`evaluation ${evaluationId} not found`);
-
-    // Official evaluations are read-only — pinning is row-level state shared
-    // across all viewers, so allowing per-user pins on built-ins would leak
-    // across users. Force a duplicate-first workflow.
-    if (evaluation.isOfficial) {
-      throw new BadRequestException(
-        `evaluation ${evaluationId} is official; duplicate it first to pin a baseline`,
-      );
-    }
-
-    if (runId !== null) {
-      const run = await this.runsRepo.findById(userId, runId);
-      if (!run) throw new NotFoundException(`run ${runId} not found`);
-      if (run.evaluationId !== evaluationId) {
-        throw new BadRequestException(`run ${runId} belongs to a different evaluation`);
-      }
-      if (run.status !== "COMPLETED") {
-        throw new BadRequestException(`run ${runId} must be COMPLETED to be pinned as baseline`);
-      }
-      // Gate verdict (PASSED / WARNING / FAILED) intentionally not checked here.
-      // Baseline is a user-chosen comparison reference, not a "known-good" marker —
-      // industry mainstream (LangSmith / Braintrust / Vellum) lets users pin any
-      // completed run, including ones that didn't meet the gate, so they can
-      // track movement away from a known-broken state.
-    }
-
-    return this.repo.update(userId, evaluationId, { baselineRunId: runId });
   }
 }

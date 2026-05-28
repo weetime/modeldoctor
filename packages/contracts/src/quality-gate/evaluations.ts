@@ -29,7 +29,6 @@ export const evaluationSchema = z.object({
   version: z.number().int().positive(),
   samples: z.array(evaluationSampleSchema),
   totalSamples: z.number().int().nonnegative(),
-  baselineRunId: z.string().nullable(),
   // Official built-in evaluations (seeded by the platform). Read-only — users
   // cannot modify name/description/samples or delete; they can run against
   // them and duplicate them as a starting point for their own evaluations.
@@ -50,7 +49,6 @@ export const updateEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   samples: z.array(evaluationSampleInputSchema).min(1).max(500).optional(),
-  baselineRunId: z.string().nullable().optional(),
 });
 export type UpdateEvaluationRequest = z.infer<typeof updateEvaluationRequestSchema>;
 

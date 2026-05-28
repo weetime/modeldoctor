@@ -38,8 +38,6 @@ vi.mock("../queries", () => ({
   useRun: () => ({ data: mockRun }),
   useCancelRun: () => ({ mutate: vi.fn() }),
   useRunSamples: () => ({ data: mockSamples }),
-  useEvaluation: () => ({ data: { id: "e1", baselineRunId: null } }),
-  useSetBaseline: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {

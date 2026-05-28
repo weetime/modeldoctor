@@ -123,14 +123,14 @@ describe("Quality Gate e2e", () => {
   }, 180_000);
 });
 
-describe("baseline pin flow", () => {
-  it("pin → new run completes with baseline delta + gate verdict", async () => {
+describe("baseline (comparison run) flow", () => {
+  it("explicit baselineRunIdOverride → new run completes with delta + gate verdict", async () => {
     // 1. Create an evaluation with a small sample set
     const ev = await request(ctx.app.getHttpServer())
       .post("/api/quality-gate/evaluations")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "pin-flow-test",
+        name: "comparison-run-flow-test",
         samples: [
           { prompt: "Q1", expected: "A", judgeConfig: { kind: "exact-match" } },
           { prompt: "Q2", expected: "B", judgeConfig: { kind: "exact-match" } },
@@ -163,27 +163,16 @@ describe("baseline pin flow", () => {
     );
     expect(["COMPLETED", "FAILED"]).toContain(baselineTerminal.status);
 
-    // 3. Pin this run as baseline
-    await request(ctx.app.getHttpServer())
-      .patch(`/api/quality-gate/evaluations/${evaluationId}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ baselineRunId: baselineRun.body.id })
-      .expect(200);
-
-    // Verify pin shows up in GET
-    const evAfter = await request(ctx.app.getHttpServer())
-      .get(`/api/quality-gate/evaluations/${evaluationId}`)
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
-    expect(evAfter.body.baselineRunId).toBe(baselineRun.body.id);
-
-    // 4. Create a new run; should auto-use the pin
+    // 3. Create a NEW run with an explicit per-run baseline pick.
+    // There is no longer a per-evaluation pin — every comparison is opt-in
+    // at run-creation time via baselineRunIdOverride.
     const newRun = await request(ctx.app.getHttpServer())
       .post("/api/quality-gate/runs")
       .set("Authorization", `Bearer ${token}`)
       .send({
         evaluationId,
         endpointAId: connId,
+        baselineRunIdOverride: baselineRun.body.id,
         gateConfig: { passRateMin: 0.5, regressionMax: 0 },
       })
       .expect(201);
@@ -205,42 +194,27 @@ describe("baseline pin flow", () => {
     }
   }, 120_000);
 
-  it("explicit baselineRunIdOverride=null skips the pin", async () => {
+  it("no override → baselineRunIdAtExecution is null", async () => {
     const ev2 = await request(ctx.app.getHttpServer())
       .post("/api/quality-gate/evaluations")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "pin-flow-test-2",
+        name: "no-comparison-test",
         samples: [{ prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } }],
       })
       .expect(201);
-    const connId = await createConnection("conn-skip");
-    const baselineRun = await request(ctx.app.getHttpServer())
-      .post("/api/quality-gate/runs")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ evaluationId: ev2.body.id, endpointAId: connId, gateConfig: { passRateMin: 0.5 } })
-      .expect(201);
-
-    await waitForRunStatus(ctx, token, baselineRun.body.id, ["COMPLETED", "FAILED"], 30_000);
-
-    await request(ctx.app.getHttpServer())
-      .patch(`/api/quality-gate/evaluations/${ev2.body.id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ baselineRunId: baselineRun.body.id })
-      .expect(200);
-
-    const newRun = await request(ctx.app.getHttpServer())
+    const connId = await createConnection("conn-no-comparison");
+    const run = await request(ctx.app.getHttpServer())
       .post("/api/quality-gate/runs")
       .set("Authorization", `Bearer ${token}`)
       .send({
         evaluationId: ev2.body.id,
         endpointAId: connId,
-        baselineRunIdOverride: null,
         gateConfig: { passRateMin: 0.5 },
       })
       .expect(201);
-    expect(newRun.body.baselineRunIdAtExecution).toBeNull();
-  }, 120_000);
+    expect(run.body.baselineRunIdAtExecution).toBeNull();
+  }, 60_000);
 });
 
 describe("LLM judge guard at run creation", () => {

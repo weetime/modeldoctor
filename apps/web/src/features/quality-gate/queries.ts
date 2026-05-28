@@ -73,18 +73,6 @@ export function useImportEvaluation() {
   });
 }
 
-export function useSetBaseline(evaluationId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (runId: string | null) =>
-      qgApi.updateEvaluation(evaluationId, { baselineRunId: runId }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: KEY.evaluation(evaluationId) });
-      qc.invalidateQueries({ queryKey: KEY.evaluations });
-    },
-  });
-}
-
 // ── Runs ─────────────────────────────────────────────────────────────────────
 
 export function useRuns(filter: Partial<Parameters<typeof qgApi.listRuns>[0]> = {}) {
