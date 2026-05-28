@@ -5,14 +5,18 @@ import { MODALITY_BODY_TEMPLATES } from "./body-templates.js";
 const MODEL = "Qwen2.5-0.5B-Instruct";
 
 describe("MODALITY_BODY_TEMPLATES — JSON validity", () => {
-  it.each(["chat", "chat-vision", "chat-audio", "embeddings", "rerank", "images"] as const)(
-    "%s default body parses as JSON with the requested model",
-    (apiType) => {
-      const raw = MODALITY_BODY_TEMPLATES[apiType](MODEL);
-      const parsed = JSON.parse(raw);
-      expect(parsed.model).toBe(MODEL);
-    },
-  );
+  it.each([
+    "chat",
+    "chat-vision",
+    "chat-audio",
+    "embeddings",
+    "rerank",
+    "images",
+  ] as const)("%s default body parses as JSON with the requested model", (apiType) => {
+    const raw = MODALITY_BODY_TEMPLATES[apiType](MODEL);
+    const parsed = JSON.parse(raw);
+    expect(parsed.model).toBe(MODEL);
+  });
 });
 
 describe("MODALITY_BODY_TEMPLATES — chat-vision shape", () => {
@@ -20,9 +24,7 @@ describe("MODALITY_BODY_TEMPLATES — chat-vision shape", () => {
     const body = JSON.parse(MODALITY_BODY_TEMPLATES["chat-vision"](MODEL));
     const message = body.messages[0];
     expect(Array.isArray(message.content)).toBe(true);
-    const imageParts = message.content.filter(
-      (p: { type: string }) => p.type === "image_url",
-    );
+    const imageParts = message.content.filter((p: { type: string }) => p.type === "image_url");
     expect(imageParts).toHaveLength(1);
     expect(imageParts[0].image_url.url).toMatch(/^data:image\/png;base64,/);
   });
@@ -40,9 +42,7 @@ describe("MODALITY_BODY_TEMPLATES — chat-audio shape", () => {
     const body = JSON.parse(MODALITY_BODY_TEMPLATES["chat-audio"](MODEL));
     const message = body.messages[0];
     expect(Array.isArray(message.content)).toBe(true);
-    const audioParts = message.content.filter(
-      (p: { type: string }) => p.type === "input_audio",
-    );
+    const audioParts = message.content.filter((p: { type: string }) => p.type === "input_audio");
     expect(audioParts).toHaveLength(1);
     expect(audioParts[0].input_audio.format).toBe("wav");
     expect(typeof audioParts[0].input_audio.data).toBe("string");

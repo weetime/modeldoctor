@@ -9,22 +9,27 @@ import {
   upsertLlmJudgeProviderSchema,
 } from "@modeldoctor/contracts";
 import { Body, Controller, Delete, Get, HttpCode, Post, Put, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "./llm-judge.service.js";
 
+@ApiTags("llm-judge")
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller("llm-judge")
 export class LlmJudgeController {
   constructor(private readonly svc: LlmJudgeService) {}
 
+  @ApiOperation({ summary: "Return the LLM-judge provider config (api key omitted)" })
   @Get("provider")
   async get() {
     const p = await this.svc.getPublic();
     return p ? llmJudgeProviderPublicSchema.parse(p) : null;
   }
 
+  @ApiOperation({ summary: "Create or replace the LLM-judge provider config" })
   @Put("provider")
   async put(
     @Body(new ZodValidationPipe(upsertLlmJudgeProviderSchema)) body: UpsertLlmJudgeProvider,
@@ -32,12 +37,14 @@ export class LlmJudgeController {
     return this.svc.upsert(body);
   }
 
+  @ApiOperation({ summary: "Clear the LLM-judge provider config" })
   @Delete("provider")
   @HttpCode(204)
   async del() {
     await this.svc.delete();
   }
 
+  @ApiOperation({ summary: "Send a one-shot ping to verify the provider config works" })
   @Post("test")
   async test(
     @Body(new ZodValidationPipe(testLlmJudgeRequestSchema)) body: TestLlmJudgeRequest,

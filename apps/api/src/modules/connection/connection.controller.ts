@@ -23,6 +23,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
@@ -31,6 +32,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ConnectionService } from "./connection.service.js";
 import { DiscoveryService } from "./discovery/discovery.service.js";
 
+@ApiTags("connections")
+@ApiBearerAuth()
 @Controller("connections")
 @UseGuards(JwtAuthGuard)
 export class ConnectionController {
@@ -39,11 +42,13 @@ export class ConnectionController {
     private readonly discoveryService: DiscoveryService,
   ) {}
 
+  @ApiOperation({ summary: "List connections (model endpoints + gateways) owned by the user" })
   @Get()
   list(@CurrentUser() user: JwtPayload): Promise<ListConnectionsResponse> {
     return this.service.list(user.sub);
   }
 
+  @ApiOperation({ summary: "Create a new connection (the response carries the api key once)" })
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -52,11 +57,13 @@ export class ConnectionController {
     return this.service.create(user.sub, body);
   }
 
+  @ApiOperation({ summary: "Get a connection by ID (key is omitted from the response)" })
   @Get(":id")
   detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ConnectionPublic> {
     return this.service.findOwnedPublic(user.sub, id);
   }
 
+  @ApiOperation({ summary: "Reveal the decrypted api key for the connection (rate-limited)" })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Get(":id/reveal-key")
   revealKey(
@@ -66,6 +73,7 @@ export class ConnectionController {
     return this.service.revealApiKey(user.sub, id);
   }
 
+  @ApiOperation({ summary: "Probe an endpoint and infer its capabilities (kind, model list)" })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("discover")
   discover(
@@ -74,6 +82,7 @@ export class ConnectionController {
     return this.discoveryService.discover(body);
   }
 
+  @ApiOperation({ summary: "Patch a connection (re-encrypts the key when supplied)" })
   @Patch(":id")
   update(
     @CurrentUser() user: JwtPayload,
@@ -83,6 +92,7 @@ export class ConnectionController {
     return this.service.update(user.sub, id, body);
   }
 
+  @ApiOperation({ summary: "Delete a connection (cascades to its benchmarks and subscribers)" })
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {

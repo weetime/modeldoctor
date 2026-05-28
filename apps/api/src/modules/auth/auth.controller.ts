@@ -16,6 +16,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator.js";
@@ -63,6 +64,7 @@ function clearAuthCookies(res: Response): void {
   res.clearCookie(SESSION_COOKIE, { path: "/" });
 }
 
+@ApiTags("auth")
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -71,6 +73,7 @@ export class AuthController {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
+  @ApiOperation({ summary: "Register a new user (issues access + refresh tokens)" })
   @Public()
   @Post("register")
   async register(
@@ -96,6 +99,7 @@ export class AuthController {
     };
   }
 
+  @ApiOperation({ summary: "Log in with email + password" })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post("login")
@@ -122,6 +126,7 @@ export class AuthController {
     };
   }
 
+  @ApiOperation({ summary: "Rotate the access token via the refresh cookie" })
   @Public()
   @Post("refresh")
   async refresh(
@@ -153,6 +158,8 @@ export class AuthController {
     };
   }
 
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Revoke the current refresh token and clear cookies" })
   @Post("logout")
   async logout(
     @Req() req: Request,
@@ -164,6 +171,8 @@ export class AuthController {
     return { ok: true };
   }
 
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Return the authenticated user's profile" })
   @UseGuards(JwtAuthGuard)
   @Get("me")
   async me(@Req() req: Request & { user: JwtPayload }): Promise<PublicUser> {
