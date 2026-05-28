@@ -98,21 +98,6 @@ export class CompareSynthesizeService {
         ),
       )
       .digest("hex");
-    const evalRunsDigest = createHash("sha256")
-      .update(
-        JSON.stringify(
-          (sc.evaluationRuns ?? []).map((r) => ({
-            id: r.id,
-            gateResult: r.gateResult ?? null,
-            metrics: r.missing
-              ? null
-              : createHash("sha256")
-                  .update(JSON.stringify(r.aggregateMetrics ?? {}))
-                  .digest("hex"),
-          })),
-        ),
-      )
-      .digest("hex");
     return createHash("sha256")
       .update(
         JSON.stringify({
@@ -121,7 +106,6 @@ export class CompareSynthesizeService {
           stageLabels: sc.stageLabels,
           context: sc.context,
           runsDigest,
-          evalRunsDigest,
           locale,
         }),
       )
@@ -135,12 +119,6 @@ export class CompareSynthesizeService {
       runs: zh ? "基准运行" : "Runs",
       deleted: zh ? "(数据已删除)" : "(data deleted)",
       baseline: zh ? "基线阶段" : "Baseline stage",
-      qualityHeader: zh ? "质量评测结果" : "Quality (evaluation) results",
-      gate: zh ? "门禁" : "gate",
-      passRate: zh ? "通过率" : "pass rate",
-      regressionCount: zh ? "回归数" : "regression count",
-      judgeAvg: zh ? "判分均值" : "judge avg",
-      errors: zh ? "错误数" : "errors",
       jsonReminder: zh
         ? "严格按 JSON schema 输出。"
         : "Respond strictly as JSON matching the schema.",
@@ -166,23 +144,6 @@ export class CompareSynthesizeService {
     if (sc.baselineId) {
       const bl = sc.benchmarks.find((b) => b.id === sc.baselineId);
       if (bl) lines.push(`${L.baseline}: ${bl.stageLabel}`);
-    }
-    if (sc.evaluationRuns && sc.evaluationRuns.length > 0) {
-      lines.push(`${L.qualityHeader} (${sc.evaluationRuns.length}):`);
-      for (const r of sc.evaluationRuns) {
-        if (r.missing) {
-          lines.push(`- [${r.stageLabel}] ${L.deleted}`);
-          continue;
-        }
-        const m = r.aggregateMetrics as Record<string, unknown> | null;
-        lines.push(
-          `- [${r.stageLabel}]: ${L.gate} ${r.gateResult ?? r.status ?? "n/a"}, ` +
-            `${L.passRate} ${m?.passRateB != null ? m.passRateB : (m?.passRateA ?? "n/a")}, ` +
-            `${L.regressionCount} ${m?.regressionCount ?? "n/a"}, ` +
-            `${L.judgeAvg} ${m?.judgeAvgB != null ? m.judgeAvgB : (m?.judgeAvgA ?? "n/a")}, ` +
-            `${L.errors} ${m?.totalErrors ?? 0}`,
-        );
-      }
     }
     lines.push(L.jsonReminder);
     return lines.join("\n");

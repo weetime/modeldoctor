@@ -1,7 +1,6 @@
 import type {
   CreateSavedCompareRequest,
   HydratedBenchmarkRef,
-  HydratedEvaluationRunRef,
   HydratedSavedCompare,
   SavedCompare,
   UpdateSavedCompareRequest,
@@ -19,7 +18,6 @@ export class SavedComparesService {
     userId: string;
     name: string;
     benchmarkIds: string[];
-    evaluationRunIds: string[];
     stageLabels: unknown;
     baselineId: string | null;
     context: string | null;
@@ -33,7 +31,6 @@ export class SavedComparesService {
       userId: row.userId,
       name: row.name,
       benchmarkIds: row.benchmarkIds,
-      evaluationRunIds: row.evaluationRunIds,
       stageLabels: row.stageLabels as Record<string, string>,
       baselineId: row.baselineId,
       context: row.context,
@@ -48,16 +45,11 @@ export class SavedComparesService {
     if (new Set(body.benchmarkIds).size !== body.benchmarkIds.length) {
       throw new BadRequestException("benchmarkIds must be unique");
     }
-    const evaluationRunIds = body.evaluationRunIds ?? [];
-    if (new Set(evaluationRunIds).size !== evaluationRunIds.length) {
-      throw new BadRequestException("evaluationRunIds must be unique");
-    }
     const row = await this.prisma.savedCompare.create({
       data: {
         userId,
         name: body.name,
         benchmarkIds: body.benchmarkIds,
-        evaluationRunIds,
         stageLabels: body.stageLabels,
         baselineId: body.baselineId ?? null,
         context: body.context ?? null,
@@ -86,7 +78,6 @@ export class SavedComparesService {
     if (!sc) return null;
     const labels = sc.stageLabels;
 
-    // Hydrate benchmark runs
     const benchmarks = await this.prisma.benchmark.findMany({
       where: { id: { in: sc.benchmarkIds } },
     });
@@ -107,33 +98,7 @@ export class SavedComparesService {
       };
     });
 
-    // Hydrate evaluation runs (owner-scoped)
-    const evaluationRunIds = sc.evaluationRunIds ?? [];
-    const hydratedEvaluationRuns: HydratedEvaluationRunRef[] = [];
-    if (evaluationRunIds.length > 0) {
-      const evaluationRuns = await this.prisma.evaluationRun.findMany({
-        where: { id: { in: evaluationRunIds }, userId },
-      });
-      const evaluationRunById = new Map(evaluationRuns.map((r) => [r.id, r]));
-      for (const rid of evaluationRunIds) {
-        const r = evaluationRunById.get(rid);
-        if (!r) {
-          hydratedEvaluationRuns.push({ id: rid, stageLabel: labels[rid] ?? "?", missing: true });
-        } else {
-          hydratedEvaluationRuns.push({
-            id: r.id,
-            stageLabel: labels[rid] ?? "?",
-            missing: false,
-            status: r.status,
-            gateResult: r.gateResult,
-            aggregateMetrics: r.aggregateMetrics as HydratedEvaluationRunRef["aggregateMetrics"],
-            createdAt: r.createdAt.toISOString(),
-          });
-        }
-      }
-    }
-
-    return { ...sc, benchmarks: hydratedBenchmarks, evaluationRuns: hydratedEvaluationRuns };
+    return { ...sc, benchmarks: hydratedBenchmarks };
   }
 
   async update(userId: string, id: string, body: UpdateSavedCompareRequest): Promise<SavedCompare> {

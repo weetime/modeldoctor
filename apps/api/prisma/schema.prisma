@@ -347,7 +347,6 @@ model SavedCompare {
   userId           String    @map("user_id")
   name             String
   benchmarkIds     String[]  @map("benchmark_ids")
-  evaluationRunIds String[]  @default([]) @map("evaluation_run_ids")
   stageLabels      Json      @map("stage_labels")
   baselineId       String?   @map("baseline_id")
   context          String?   @db.Text
