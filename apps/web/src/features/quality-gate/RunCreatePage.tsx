@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { BaselinePickerDialog } from "./components/BaselinePickerDialog";
 import { GateConfigForm } from "./components/GateConfigForm";
-import { useCreateRun, useEvaluation, useEvaluations } from "./queries";
+import { useCreateRun, useEvaluations } from "./queries";
 
 export function RunCreatePage() {
   const nav = useNavigate();
@@ -44,7 +44,7 @@ export function RunCreatePage() {
       evaluationId: "",
       endpointAId: "",
       endpointBId: undefined,
-      baselineRunIdOverride: undefined,
+      baselineRunIdOverride: null,
       gateConfig: { passRateMin: 0.9 },
     },
   });
@@ -54,19 +54,10 @@ export function RunCreatePage() {
   const endpointBId = form.watch("endpointBId");
   const baselineOverride = form.watch("baselineRunIdOverride");
 
-  const evaluation = useEvaluation(evaluationId || undefined);
-  const pinnedBaselineId = evaluation.data?.baselineRunId ?? null;
-
-  // Effective baseline = pin unless explicitly overridden:
-  //  override === undefined → use pin
-  //  override === null      → skip (no baseline)
-  //  override is string     → use that
-  const effectiveBaselineId =
-    baselineOverride === undefined
-      ? pinnedBaselineId
-      : baselineOverride === null
-        ? null
-        : baselineOverride;
+  // Baseline is opt-in: null = no comparison run, string = picked one.
+  // Dual-endpoint via endpointBId is the other comparison path, mutually
+  // exclusive at the contract level.
+  const effectiveBaselineId = baselineOverride ?? null;
   const baselineModeActive = effectiveBaselineId !== null;
 
   // Single-endpoint is the default (industry mainstream: LangSmith / Braintrust
@@ -74,8 +65,8 @@ export function RunCreatePage() {
   // post-hoc). Dual-endpoint is opt-in via a + button.
   const [showEndpointB, setShowEndpointB] = useState(false);
 
-  // Entering baseline mode (eval has pin, override !== null) forces single-
-  // endpoint: clear any B value AND collapse the B section.
+  // Baseline mode forces single-endpoint: clear any B value AND collapse the
+  // B section.
   useEffect(() => {
     if (baselineModeActive) {
       if (endpointBId) {
@@ -93,6 +84,15 @@ export function RunCreatePage() {
       form.setValue("endpointBId", undefined, { shouldDirty: true, shouldValidate: true });
     }
   }, [endpointAId, endpointBId, form]);
+
+  // Clear any baseline pick when user switches to a different evaluation —
+  // a run from eval A can't be a baseline for eval B.
+  useEffect(() => {
+    if (baselineOverride != null) {
+      form.setValue("baselineRunIdOverride", null, { shouldDirty: true, shouldValidate: true });
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: only react to evaluationId switch
+  }, [evaluationId]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -136,75 +136,16 @@ export function RunCreatePage() {
                         <SelectContent>
                           {evaluations.data?.map((e) => (
                             <SelectItem key={e.id} value={e.id}>
-                              {e.baselineRunId ? "📌 " : ""}
                               {e.name} ({e.totalSamples})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      {t("runs.form.evaluationPinHint")}
-                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* Baseline banner — only when evaluation has pin AND override !== null */}
-              {evaluationId && pinnedBaselineId && baselineOverride !== null && (
-                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm space-y-2">
-                  <div className="font-medium">{t("runs.form.baselineBanner")}</div>
-                  <div className="text-muted-foreground">
-                    {t("runs.form.baselineBannerBody", {
-                      runId: effectiveBaselineId?.slice(0, 12),
-                      date: "",
-                      verdict: "",
-                    })}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPickerOpen(true)}
-                    >
-                      {t("runs.form.baselineChangeButton")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        form.setValue("baselineRunIdOverride", null, { shouldDirty: true })
-                      }
-                    >
-                      {t("runs.form.baselineSkipButton")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {baselineOverride === null && pinnedBaselineId && (
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">
-                    {t("runs.form.baselineSkippedHint")}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="link"
-                    className="h-auto p-0 text-xs"
-                    onClick={() =>
-                      form.setValue("baselineRunIdOverride", undefined, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
-                  >
-                    {t("runs.form.baselineRestoreButton")}
-                  </Button>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
@@ -265,6 +206,60 @@ export function RunCreatePage() {
                   />
                 )}
               </div>
+
+              {/* Comparison-run picker — only available in single-endpoint mode.
+                  Picking a historical run reuses its per-sample outputs as the
+                  comparison side (no second endpoint call needed). */}
+              {evaluationId && !endpointBId && (
+                <div className="space-y-2">
+                  {baselineModeActive ? (
+                    <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm space-y-2">
+                      <div className="font-medium">{t("runs.form.comparisonRunActive")}</div>
+                      <div className="text-muted-foreground">
+                        {t("runs.form.comparisonRunActiveBody", {
+                          runId: effectiveBaselineId?.slice(0, 12),
+                        })}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPickerOpen(true)}
+                        >
+                          {t("runs.form.changeComparisonRunButton")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            form.setValue("baselineRunIdOverride", null, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          {t("runs.form.clearComparisonRunButton")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    !showEndpointB && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-0 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setPickerOpen(true)}
+                      >
+                        {t("runs.form.pickComparisonRunButton")}
+                      </Button>
+                    )
+                  )}
+                </div>
+              )}
+
               {!baselineModeActive && !showEndpointB && (
                 <Button
                   type="button"
