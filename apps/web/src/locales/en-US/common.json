@@ -92,8 +92,9 @@
     "invalidEnum": "Please select a valid option",
     "apiKeyControlChar": "API key must not contain control characters",
     "apiKeyTrim": "API key must not have leading or trailing whitespace",
-    "compareMinRuns": "A compare requires at least 2 runs (benchmarks + evaluations combined)",
-    "compareMaxRuns": "A compare can include at most 10 runs (benchmarks + evaluations combined)",
+    "compareMinRuns": "A compare requires at least 2 benchmarks",
+    "compareMaxRuns": "A compare can include at most 10 benchmarks",
+    "invalidCompareConfiguration": "Invalid compare configuration: every benchmark needs a stage label, and the baseline must be one of the selected benchmarks",
     "runDualVsBaselineExclusive": "Cannot enable dual-endpoint and baseline-run comparison at the same time",
     "endpointABMustDiffer": "Endpoint A and Endpoint B must be different connections"
   }

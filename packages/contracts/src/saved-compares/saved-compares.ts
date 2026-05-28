@@ -3,6 +3,20 @@ import { z } from "zod";
 export const stageLabelsSchema = z.record(z.string(), z.string().min(1).max(64));
 export type StageLabels = z.infer<typeof stageLabelsSchema>;
 
+// Defense-in-depth: each benchmark must have a stage label, and the baseline
+// (when set) must reference one of the benchmarks. The UI's create flows
+// already build stageLabels from benchmarkIds, but this guards the server
+// boundary against misconfigured callers.
+const isValidCompareConfig = (s: {
+  benchmarkIds: string[];
+  stageLabels: Record<string, string>;
+  baselineId?: string | null;
+}): boolean => {
+  const hasValidLabels = s.benchmarkIds.every((id) => id in s.stageLabels);
+  const hasValidBaseline = !s.baselineId || s.benchmarkIds.includes(s.baselineId);
+  return hasValidLabels && hasValidBaseline;
+};
+
 export const savedCompareSchema = z
   .object({
     id: z.string(),
@@ -24,6 +38,10 @@ export const savedCompareSchema = z
   .refine((s) => s.benchmarkIds.length <= 10, {
     message: "validation.compareMaxRuns",
     path: ["benchmarkIds"],
+  })
+  .refine(isValidCompareConfig, {
+    message: "validation.invalidCompareConfiguration",
+    path: ["benchmarkIds"],
   });
 export type SavedCompare = z.infer<typeof savedCompareSchema>;
 
@@ -41,6 +59,10 @@ export const createSavedCompareRequestSchema = z
   })
   .refine((s) => s.benchmarkIds.length <= 10, {
     message: "validation.compareMaxRuns",
+    path: ["benchmarkIds"],
+  })
+  .refine(isValidCompareConfig, {
+    message: "validation.invalidCompareConfiguration",
     path: ["benchmarkIds"],
   });
 export type CreateSavedCompareRequest = z.infer<typeof createSavedCompareRequestSchema>;
