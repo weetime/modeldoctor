@@ -18,7 +18,7 @@ function repoMock() {
 describe("EvaluationsService", () => {
   it("create calls repo and returns dto", async () => {
     const r = repoMock();
-    const svc = new EvaluationsService(r as never, undefined as never);
+    const svc = new EvaluationsService(r as never);
     const out = await svc.create(userId, {
       name: "x",
       samples: [
@@ -31,7 +31,7 @@ describe("EvaluationsService", () => {
 
   it("importFromCsv parses CSV rows into samples", async () => {
     const r = repoMock();
-    const svc = new EvaluationsService(r as never, undefined as never);
+    const svc = new EvaluationsService(r as never);
     const csv = [
       "prompt,expected,judgeKind,judgeConfig,tags",
       `"What is 2+2?","4","exact-match",,`,
@@ -45,12 +45,12 @@ describe("EvaluationsService", () => {
 
   it("parseCsv rejects unknown judgeKind", async () => {
     const r = repoMock();
-    const svc = new EvaluationsService(r as never, undefined as never);
+    const svc = new EvaluationsService(r as never);
     await expect(svc.parseCsv("prompt,expected,judgeKind\nQ,A,wat")).rejects.toThrow();
   });
 
   it("parseCsv preserves newlines inside quoted fields (RFC-4180)", async () => {
-    const svc = new EvaluationsService(repoMock() as never, undefined as never);
+    const svc = new EvaluationsService(repoMock() as never);
     const csv =
       'prompt,expected,judgeKind\n"line one\nline two","ok","exact-match"\n"single","ok2","exact-match"';
     const samples = await svc.parseCsv(csv);
@@ -60,108 +60,11 @@ describe("EvaluationsService", () => {
   });
 
   it("parseCsv matches headers case-insensitively", async () => {
-    const svc = new EvaluationsService(repoMock() as never, undefined as never);
+    const svc = new EvaluationsService(repoMock() as never);
     const csv = "Prompt,Expected,JudgeKind\nQ,A,exact-match";
     const samples = await svc.parseCsv(csv);
     expect(samples.length).toBe(1);
     expect(samples[0].prompt).toBe("Q");
-  });
-});
-
-describe("setBaseline", () => {
-  const userId = "u1";
-  const evaluationId = "ev1";
-  const runId = "run-pinned";
-
-  function build() {
-    const repo = {
-      findById: vi.fn().mockResolvedValue({
-        id: evaluationId,
-        userId,
-        name: "demo",
-        baselineRunId: null,
-      }),
-      update: vi.fn().mockImplementation(async (_u, id, body) => ({
-        id,
-        userId,
-        name: "demo",
-        baselineRunId: body.baselineRunId ?? null,
-      })),
-    };
-    const runsRepo = {
-      findById: vi.fn().mockResolvedValue({
-        id: runId,
-        userId,
-        evaluationId,
-        status: "COMPLETED",
-        gateResult: "PASSED",
-      }),
-    };
-    return { repo, runsRepo };
-  }
-
-  it("pins a completed run owned by the user", async () => {
-    const { repo, runsRepo } = build();
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    const out = await svc.setBaseline(userId, evaluationId, runId);
-    expect(out.baselineRunId).toBe(runId);
-    expect(repo.update).toHaveBeenCalledWith(userId, evaluationId, { baselineRunId: runId });
-  });
-
-  it("unpins when runId is null", async () => {
-    const { repo, runsRepo } = build();
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    const out = await svc.setBaseline(userId, evaluationId, null);
-    expect(out.baselineRunId).toBeNull();
-    expect(repo.update).toHaveBeenCalledWith(userId, evaluationId, { baselineRunId: null });
-  });
-
-  it("rejects when run belongs to different evaluation", async () => {
-    const { repo, runsRepo } = build();
-    runsRepo.findById.mockResolvedValueOnce({
-      id: runId,
-      userId,
-      evaluationId: "different-eval",
-      status: "COMPLETED",
-    });
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(
-      /belongs to a different evaluation/,
-    );
-  });
-
-  it("rejects when run is not COMPLETED", async () => {
-    const { repo, runsRepo } = build();
-    runsRepo.findById.mockResolvedValueOnce({
-      id: runId,
-      userId,
-      evaluationId,
-      status: "RUNNING",
-    });
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(/must be COMPLETED/);
-  });
-
-  it("rejects when run not found / not owned", async () => {
-    const { repo, runsRepo } = build();
-    runsRepo.findById.mockResolvedValueOnce(null);
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, evaluationId, runId)).rejects.toThrow(/run .* not found/);
-  });
-
-  it("allows pinning a completed run regardless of gate verdict (industry-aligned)", async () => {
-    const { repo, runsRepo } = build();
-    runsRepo.findById.mockResolvedValueOnce({
-      id: runId,
-      userId,
-      evaluationId,
-      status: "COMPLETED",
-      gateResult: "FAILED",
-    });
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    const out = await svc.setBaseline(userId, evaluationId, runId);
-    expect(out.baselineRunId).toBe(runId);
-    expect(repo.update).toHaveBeenCalledWith(userId, evaluationId, { baselineRunId: runId });
   });
 });
 
@@ -180,7 +83,6 @@ describe("Official evaluation guards", () => {
           { id: "s0", idx: 0, prompt: "Q", expected: "A", judgeConfig: { kind: "exact-match" } },
         ],
         isOfficial: true,
-        baselineRunId: null,
       }),
       update: vi.fn(),
       delete: vi.fn(),
@@ -194,40 +96,19 @@ describe("Official evaluation guards", () => {
     };
   }
 
-  it("update rejects ANY change on official evaluations (including baselineRunId)", async () => {
+  it("update rejects any change on official evaluations", async () => {
     const repo = buildOfficialRepo();
-    const svc = new EvaluationsService(repo as never, undefined as never);
+    const svc = new EvaluationsService(repo as never);
 
     await expect(svc.update(userId, officialId, { name: "hacked" })).rejects.toThrow(
       /is official and read-only/,
-    );
-    await expect(svc.update(userId, officialId, { baselineRunId: "run-x" })).rejects.toThrow(
-      /is official and read-only/,
-    );
-    expect(repo.update).not.toHaveBeenCalled();
-  });
-
-  it("setBaseline rejects on official evaluations (pin would leak across users)", async () => {
-    const repo = buildOfficialRepo();
-    const runsRepo = {
-      findById: vi.fn().mockResolvedValue({
-        id: "run-x",
-        userId,
-        evaluationId: officialId,
-        status: "COMPLETED",
-        gateResult: "PASSED",
-      }),
-    };
-    const svc = new EvaluationsService(repo as never, runsRepo as never);
-    await expect(svc.setBaseline(userId, officialId, "run-x")).rejects.toThrow(
-      /is official; duplicate it first/,
     );
     expect(repo.update).not.toHaveBeenCalled();
   });
 
   it("delete rejects official evaluations", async () => {
     const repo = buildOfficialRepo();
-    const svc = new EvaluationsService(repo as never, undefined as never);
+    const svc = new EvaluationsService(repo as never);
     await expect(svc.delete(userId, officialId)).rejects.toThrow(
       /is official and cannot be deleted/,
     );
@@ -236,7 +117,7 @@ describe("Official evaluation guards", () => {
 
   it("duplicate creates a user-owned copy with name suffix", async () => {
     const repo = buildOfficialRepo();
-    const svc = new EvaluationsService(repo as never, undefined as never);
+    const svc = new EvaluationsService(repo as never);
     const out = await svc.duplicate(userId, officialId);
     expect(out.id).toBe("ev_copy");
     expect(repo.create).toHaveBeenCalledWith(
@@ -251,7 +132,7 @@ describe("Official evaluation guards", () => {
   it("duplicate rejects when source not found / not accessible", async () => {
     const repo = buildOfficialRepo();
     repo.findById.mockResolvedValueOnce(null);
-    const svc = new EvaluationsService(repo as never, undefined as never);
+    const svc = new EvaluationsService(repo as never);
     await expect(svc.duplicate(userId, "missing")).rejects.toThrow(/not found/);
   });
 });
