@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
 let ctx: E2EContext;
@@ -241,4 +241,158 @@ describe("baseline pin flow", () => {
       .expect(201);
     expect(newRun.body.baselineRunIdAtExecution).toBeNull();
   }, 120_000);
+});
+
+describe("LLM judge guard at run creation", () => {
+  // The LLM judge provider is a singleton row in llm_judge_providers.
+  // Each test below sets the desired state explicitly via the /api/llm-judge/provider
+  // endpoint, then exercises POST /api/quality-gate/runs to assert the guard.
+
+  afterEach(() => deleteProvider());
+
+  async function deleteProvider() {
+    // Tolerate 404 (no row to delete) so tests are independent of file ordering.
+    await request(ctx.app.getHttpServer())
+      .delete("/api/llm-judge/provider")
+      .set("Authorization", `Bearer ${token}`)
+      .then(() => undefined)
+      .catch(() => undefined);
+  }
+
+  async function upsertProvider(opts: { enabled: boolean }) {
+    await request(ctx.app.getHttpServer())
+      .put("/api/llm-judge/provider")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        baseUrl: "https://judge.example/v1",
+        apiKey: "sk-test",
+        model: "judge-model",
+        enabled: opts.enabled,
+      })
+      .expect(200);
+  }
+
+  async function createLlmJudgeEval(name: string) {
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/evaluations")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name,
+        samples: [
+          {
+            id: "s0",
+            idx: 0,
+            prompt: "summarise: the sky is blue",
+            expected: "blue sky",
+            judgeConfig: {
+              kind: "llm-judge",
+              rubric:
+                "Score 1 if the summary mentions blue and sky, otherwise 0.",
+              scale: "pass-fail",
+            },
+          },
+        ],
+      })
+      .expect(201);
+    return r.body.id as string;
+  }
+
+  async function createExactMatchEval(name: string) {
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/evaluations")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name,
+        samples: [
+          {
+            id: "s0",
+            idx: 0,
+            prompt: "echo hi",
+            expected: "hi",
+            judgeConfig: { kind: "exact-match" },
+          },
+        ],
+      })
+      .expect(201);
+    return r.body.id as string;
+  }
+
+  it("rejects with 400 when eval has llm-judge samples and no provider configured", async () => {
+    await deleteProvider();
+    const evalId = await createLlmJudgeEval("guard-no-provider");
+    const conn = await createConnection("guard-target-1");
+
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/runs")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        evaluationId: evalId,
+        endpointAId: conn,
+        gateConfig: { passRateMin: 0.9 },
+      })
+      .expect(400);
+
+    expect(String(r.body.message ?? r.text)).toMatch(
+      /No enabled LLM judge provider/i,
+    );
+  }, 60_000);
+
+  it("rejects with 400 when provider exists but enabled=false", async () => {
+    await upsertProvider({ enabled: false });
+    const evalId = await createLlmJudgeEval("guard-disabled-provider");
+    const conn = await createConnection("guard-target-2");
+
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/runs")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        evaluationId: evalId,
+        endpointAId: conn,
+        gateConfig: { passRateMin: 0.9 },
+      })
+      .expect(400);
+
+    expect(String(r.body.message ?? r.text)).toMatch(
+      /No enabled LLM judge provider/i,
+    );
+  }, 60_000);
+
+  it("succeeds when llm-judge eval has an enabled provider", async () => {
+    await upsertProvider({ enabled: true });
+    const evalId = await createLlmJudgeEval("guard-happy-path");
+    const conn = await createConnection("guard-target-3");
+
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/runs")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        evaluationId: evalId,
+        endpointAId: conn,
+        gateConfig: { passRateMin: 0.9 },
+      })
+      .expect(201);
+
+    expect(r.body.id).toBeTruthy();
+    expect(["PENDING", "RUNNING", "COMPLETED", "FAILED"]).toContain(
+      r.body.status,
+    );
+  }, 60_000);
+
+  it("succeeds when eval has only non-llm-judge samples even without provider", async () => {
+    await deleteProvider();
+    const evalId = await createExactMatchEval("guard-no-llm-judge-needed");
+    const conn = await createConnection("guard-target-4");
+
+    const r = await request(ctx.app.getHttpServer())
+      .post("/api/quality-gate/runs")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        evaluationId: evalId,
+        endpointAId: conn,
+        gateConfig: { passRateMin: 0.9 },
+      })
+      .expect(201);
+
+    expect(r.body.id).toBeTruthy();
+  }, 60_000);
 });

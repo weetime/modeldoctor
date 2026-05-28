@@ -24,7 +24,10 @@ function build() {
     findOwnedPublic: vi.fn().mockResolvedValue({ id: "c", userId: "u1" }),
   };
   const executor = { start: vi.fn(), cancel: vi.fn() };
-  return { repo, evaluationsRepo, connections, executor };
+  const llmJudge = {
+    getDecrypted: vi.fn().mockResolvedValue({ enabled: true }),
+  };
+  return { repo, evaluationsRepo, connections, executor, llmJudge };
 }
 
 describe("RunsService", () => {
@@ -36,6 +39,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await expect(
       svc.create("u1", { evaluationId: "x", endpointAId: "c", gateConfig: { passRateMin: 0.9 } }),
@@ -48,6 +52,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     const r = await svc.create("u1", {
       evaluationId: "e1",
@@ -68,6 +73,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await svc.cancel("u1", "r1");
     expect(m.executor.cancel).toHaveBeenCalledWith("r1");
@@ -89,6 +95,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await svc.create("u1", {
       evaluationId: "e1",
@@ -116,6 +123,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await svc.create("u1", {
       evaluationId: "e1",
@@ -141,6 +149,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await svc.create("u1", {
       evaluationId: "e1",
@@ -167,6 +176,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await expect(
       svc.create("u1", {
@@ -194,6 +204,7 @@ describe("RunsService", () => {
       m.evaluationsRepo as never,
       m.connections as never,
       m.executor as never,
+      m.llmJudge as never,
     );
     await svc.create("u1", {
       evaluationId: "e1",
