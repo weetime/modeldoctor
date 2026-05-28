@@ -370,17 +370,14 @@ model Evaluation {
   version       Int      @default(1)
   samples       Json
   totalSamples  Int      @default(0) @map("total_samples")
-  baselineRunId String?  @map("baseline_run_id")
   isOfficial    Boolean  @default(false) @map("is_official")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  runs        EvaluationRun[] @relation("EvalRuns")
-  baselineRun EvaluationRun?  @relation("EvalBaseline", fields: [baselineRunId], references: [id], onDelete: SetNull)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs EvaluationRun[] @relation("EvalRuns")
 
   @@index([userId, createdAt])
-  @@index([baselineRunId])
   @@index([isOfficial])
   @@map("evaluations")
 }
@@ -406,12 +403,11 @@ model EvaluationRun {
   createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  evaluation          Evaluation            @relation("EvalRuns", fields: [evaluationId], references: [id], onDelete: Restrict)
-  endpointA           Connection            @relation("EvalEndpointA", fields: [endpointAId], references: [id], onDelete: Restrict)
-  endpointB           Connection?           @relation("EvalEndpointB", fields: [endpointBId], references: [id], onDelete: Restrict)
-  samples             EvaluationRunSample[]
-  pinnedAsBaselineFor Evaluation[]          @relation("EvalBaseline")
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  evaluation Evaluation            @relation("EvalRuns", fields: [evaluationId], references: [id], onDelete: Restrict)
+  endpointA  Connection            @relation("EvalEndpointA", fields: [endpointAId], references: [id], onDelete: Restrict)
+  endpointB  Connection?           @relation("EvalEndpointB", fields: [endpointBId], references: [id], onDelete: Restrict)
+  samples    EvaluationRunSample[]
 
   @@index([userId, createdAt])
   @@index([evaluationId])
