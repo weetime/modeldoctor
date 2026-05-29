@@ -99,7 +99,12 @@ async function main() {
   for (const { id, cn } of SUBJECTS) {
     const rows = parseCsv(readFileSync(join(dir, "test", `${id}.csv`), "utf-8"));
     const header = rows[0];
-    const col = (name) => header.indexOf(name);
+    if (!header) throw new Error(`${id}.csv is empty`);
+    const col = (name) => {
+      const i = header.indexOf(name);
+      if (i === -1) throw new Error(`${id}.csv missing column "${name}" (header: ${header})`);
+      return i;
+    };
     const [qi, ai, bi, ci, di, ansi] = [
       col("Question"),
       col("A"),
