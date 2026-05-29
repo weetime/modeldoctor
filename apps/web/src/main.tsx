@@ -4,6 +4,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/globals.css";
+import "./styles/primer-report.css";
 import i18n from "./lib/i18n";
 import { useLocaleStore } from "./stores/locale-store";
 

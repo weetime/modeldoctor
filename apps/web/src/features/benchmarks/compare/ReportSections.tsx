@@ -13,6 +13,8 @@ export interface ReportRun extends StageRun {
 export interface ReportSectionsProps {
   runs: ReportRun[];
   baselineId: string | null;
+  /** Kept for backward compatibility with BenchmarkComparePage callers — narrative
+   *  rendering itself now lives in `<SavedCompareReport>`. */
   narrative: CompareNarrative | null;
   context: string | null;
   /** Pre-derived per-run "connection / model / tool / version" lines. */
@@ -20,23 +22,19 @@ export interface ReportSectionsProps {
 }
 
 /**
- * 7-section saved-compare report layout shared between the ad-hoc Compare page and the
- * SavedCompareDetail page. Sections (in order):
- *   1. TL;DR (narrative.tldr)
- *   2. Test matrix (per-run table)
- *   3. CompareGrid (existing metric grid)
- *   4. Charts (StageBarChartsSection — bare grid, no extra border; chart already has chrome)
- *   5. Analysis (narrative.analysis)
- *   6. Conclusion (narrative.conclusion)
- *   7. Test environment (environmentLines + free-text context)
+ * Pre-narrative "raw matrix" preview. Renders the per-run table + the metric
+ * grid + the four bar charts. Used by:
+ *   - BenchmarkComparePage (ad-hoc compare, no narrative yet)
+ *   - SavedCompareDetailPage when the saved compare has no narrative yet
  *
- * `data-report-root` is exposed for the future export-as-HTML utility (Task 18) so it
- * can serialize a single subtree.
+ * The narrative deep report (Hero + summary cards + 6 sections + figures)
+ * is rendered by `<SavedCompareReport>`, not here.
+ *
+ * `data-report-root` is exposed for the export-as-HTML utility.
  */
 export function ReportSections({
   runs,
   baselineId,
-  narrative,
   context,
   environmentLines,
 }: ReportSectionsProps) {
@@ -45,26 +43,7 @@ export function ReportSections({
 
   return (
     <div data-report-root className="space-y-8">
-      {/* 1. TL;DR */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionTldr")}</h2>
-        {narrative ? (
-          <ul className="space-y-2">
-            {narrative.tldr.map((row, i) => (
-              <li key={i} className="rounded-md border border-border p-3">
-                <div className="font-medium">{row.headline}</div>
-                <div className="text-sm text-muted-foreground">{row.oneLine}</div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            {t("savedCompare.report.narrativeMissing")}
-          </div>
-        )}
-      </section>
-
-      {/* 2. Test matrix */}
+      {/* 1. Test matrix */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionMatrix")}</h2>
         <div className="overflow-x-auto rounded-md border border-border">
@@ -101,7 +80,7 @@ export function ReportSections({
         </div>
       </section>
 
-      {/* 3. CompareGrid */}
+      {/* 2. CompareGrid */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionGrid")}</h2>
         <CompareGrid
@@ -110,50 +89,18 @@ export function ReportSections({
         />
       </section>
 
-      {/* 4. Charts — bare grid; StageBarChart already provides border+padding chrome. */}
+      {/* 3. Charts */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionCharts")}</h2>
         <StageBarChartsSection runs={livingRuns} />
       </section>
 
-      {/* 5. Analysis */}
-      {narrative && narrative.analysis.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionAnalysis")}</h2>
-          <div className="space-y-3">
-            {narrative.analysis.map((row, i) => (
-              <div key={i}>
-                <div className="text-sm font-medium">{row.metricLabel}</div>
-                <div className="text-sm text-muted-foreground">{row.body}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* 6. Conclusion */}
-      {narrative ? (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">
-            {t("savedCompare.report.sectionConclusion")}
-          </h2>
-          <p>{narrative.conclusion.recommendation}</p>
-          {narrative.conclusion.caveats.length > 0 ? (
-            <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">
-              {narrative.conclusion.caveats.map((c, i) => (
-                <li key={i}>{c}</li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* 7. Test environment */}
+      {/* 4. Test environment */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionEnv")}</h2>
         <ul className="space-y-1 text-sm text-muted-foreground">
-          {environmentLines.map((line, i) => (
-            <li key={i}>{line}</li>
+          {environmentLines.map((line) => (
+            <li key={line}>{line}</li>
           ))}
         </ul>
         {context ? (

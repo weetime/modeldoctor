@@ -8,10 +8,8 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
-import { AiAnalysisPanel } from "./AiAnalysisPanel";
 import { CompareToolbar } from "./CompareToolbar";
 import { type ReportRun, ReportSections } from "./ReportSections";
 import { SaveCompareDialog } from "./SaveCompareDialog";
@@ -51,7 +49,6 @@ export function BenchmarkComparePage() {
   const { t: tSidebar } = useTranslation("sidebar");
   const [searchParams, setSearchParams] = useSearchParams();
   const [saveOpen, setSaveOpen] = useState(false);
-  const provider = useLlmJudgeProvider();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
   //   - missing            → "user hasn't chosen yet, fall back to inferred default"
@@ -228,12 +225,6 @@ export function BenchmarkComparePage() {
               narrative={null}
               context={null}
               environmentLines={environmentLines}
-            />
-            <AiAnalysisPanel
-              narrative={null}
-              onGenerate={() => setSaveOpen(true)}
-              canGenerate={!!provider.data?.enabled}
-              isGenerating={false}
             />
             <SaveCompareDialog
               open={saveOpen}

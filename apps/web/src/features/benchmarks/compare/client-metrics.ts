@@ -1,3 +1,4 @@
+import type { FigureRefId } from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 
 export interface PromptMetricsSummary {
@@ -38,4 +39,30 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
         ? null
         : { p50: e2eP50, p90: e2eP90, p99: e2eP99 },
   };
+}
+
+/**
+ * Given a set of per-run `summaryMetrics` blobs, return the set of figure
+ * `refId`s that have enough data to render. The LLM and the React renderer
+ * both consult this so:
+ *   - the prompt can tell the model "don't pick the stage-bars-ttft-p95 refId
+ *     because none of the runs carry a ttft distribution"
+ *   - the renderer can fall back to a "data unavailable" placeholder if the
+ *     LLM picked one anyway (recovery for old narratives, drift, etc.)
+ *
+ * Keep this in sync with the server's mirror in
+ * `apps/api/src/modules/saved-compares/metrics.ts#availableFigureRefIds`.
+ */
+export function availableFigureRefIds(summaries: unknown[]): Set<FigureRefId> {
+  const out = new Set<FigureRefId>();
+  if (summaries.length === 0) return out;
+  const perRun = summaries.map((m) => summarizeForPrompt(m));
+  if (perRun.some((s) => s.throughput !== null)) out.add("stage-bars-throughput");
+  if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
+  if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
+  if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
+  // compare-grid only needs any of throughput/err/ttft/e2e — always available
+  // when there's at least one summary; degrades cell-by-cell.
+  out.add("compare-grid");
+  return out;
 }

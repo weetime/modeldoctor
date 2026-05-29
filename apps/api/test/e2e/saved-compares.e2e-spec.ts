@@ -4,9 +4,58 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 vi.mock("../../src/modules/insights/llm-client.js", () => ({
   chatCompletion: vi.fn(async () => ({
     content: JSON.stringify({
-      tldr: [{ headline: "QPS up", oneLine: "B is 27% faster" }],
-      analysis: [{ metricLabel: "QPS", body: "Cache hit explains the gain." }],
-      conclusion: { recommendation: "Pick B for throughput.", caveats: [] },
+      schemaVersion: 2,
+      locale: "zh-CN",
+      hero: {
+        eyebrow: "MODELDOCTOR · 双 stage 对比",
+        title: "stage B 吞吐 3.8 req/s 领先 A 27%",
+        subtitle: "B 吞吐 3.8 req/s 比 A 高 27%,但错误率非零。",
+        metaItems: [{ label: "tool", value: "guidellm" }],
+      },
+      summaryCards: [
+        { label: "B 吞吐", value: "3.8", unit: "req/s", tone: "success", trend: "领先 27%" },
+        { label: "B 错误率", value: "1.0", unit: "%", tone: "danger" },
+      ],
+      sections: [
+        {
+          id: "summary",
+          num: "01",
+          title: "stage B 吞吐 3.8 req/s 领先 A 27%",
+          bodyMarkdown: "B 吞吐 3.8 req/s 高于 A 3.0,A 错误率 0,B 1%。",
+        },
+        {
+          id: "scope",
+          num: "02",
+          title: "两 stage guidellm 推理对比",
+          bodyMarkdown: "对比 A / B 两个 stage 的吞吐与错误率。",
+        },
+        {
+          id: "method",
+          num: "03",
+          title: "guidellm + 1000 req 样本固定",
+          bodyMarkdown: "工具 guidellm,每 stage 1000 请求。",
+        },
+        {
+          id: "results",
+          num: "04",
+          title: "B 在 TTFT / E2E / 吞吐三项均领先",
+          bodyMarkdown: "B 吞吐 3.8,A 3.0。TTFT p50 B 80 ms,A 100 ms。",
+        },
+        {
+          id: "caveats",
+          num: "05",
+          title: "B 错误率 1% 需复测",
+          bodyMarkdown: "B 10/1000 失败,建议复测确认。",
+        },
+        {
+          id: "advice",
+          num: "06",
+          title: "吞吐优先选 B",
+          bodyMarkdown: "吞吐优先 B,错误率 0 严格场景 A。",
+        },
+      ],
+      figures: [],
+      lintWarnings: [],
     }),
     latencyMs: 100,
   })),
@@ -126,7 +175,9 @@ describe("/api/saved-compares (e2e)", () => {
       .expect(201);
 
     expect(r1.body.fromCache).toBe(false);
-    expect(r1.body.narrative.tldr).toHaveLength(1);
+    expect(r1.body.narrative.schemaVersion).toBe(2);
+    expect(r1.body.narrative.sections).toHaveLength(6);
+    expect(r1.body.narrative.hero.title).toContain("3.8");
 
     const r2 = await request(ctx.app.getHttpServer())
       .post(`/api/saved-compares/${sc.body.id}/synthesize`)

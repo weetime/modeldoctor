@@ -396,7 +396,22 @@
       "chartE2eTitle": "e2e latency percentiles (ms)",
       "chartExtraTitle": "Cache hit / extra metrics",
       "narrativeMissing": "AI analysis not generated yet.",
-      "generateButton": "Generate AI analysis"
+      "generateButton": "Generate AI analysis",
+      "toc": "Contents"
+    },
+    "reportPage": {
+      "loading": "Loading report…",
+      "notFound": "Report not found",
+      "backToList": "Back to comparisons",
+      "notGenerated": "This comparison does not have an AI report yet.",
+      "openDetailToGenerate": "Open detail page to generate",
+      "backToDetail": "Back to detail",
+      "printPdf": "Print / PDF"
+    },
+    "classification": {
+      "internal": "Internal",
+      "partner": "Partner",
+      "public": "Public"
     },
     "errors": {
       "providerMissing": "LLM provider not configured",
