@@ -1,5 +1,5 @@
 import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
-import { Sparkles } from "lucide-react";
+import { Printer, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { exportPageAsHtml } from "./exportHtml";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 import { type ReportRun, ReportSections } from "./ReportSections";
+import { SavedCompareReport } from "./SavedCompareReport";
 
 function extractParamsSummary(params: unknown): {
   workload?: string;
@@ -96,6 +97,10 @@ export function SavedCompareDetailPage() {
     if (root) void exportPageAsHtml(root, sc.name);
   }
 
+  function onPrint() {
+    window.print();
+  }
+
   const breadcrumbs = [
     { label: tSidebar("groups.benchmarks") },
     { label: t("compare.title"), to: "/benchmarks/compare/saved" },
@@ -109,6 +114,12 @@ export function SavedCompareDetailPage() {
         breadcrumbs={breadcrumbs}
         rightSlot={
           <div className="flex items-center gap-2">
+            {narrative ? (
+              <Button variant="outline" onClick={onPrint}>
+                <Printer className="mr-1.5 h-4 w-4" />
+                {t("savedCompare.detail.exportPdf", { defaultValue: "Print / PDF" })}
+              </Button>
+            ) : null}
             <Button variant="outline" onClick={onExport}>
               {t("savedCompare.detail.export")}
             </Button>
@@ -136,8 +147,14 @@ export function SavedCompareDetailPage() {
           </div>
         }
       />
-      <div className="space-y-6 px-8 py-6">
-        {!narrative ? (
+      {narrative ? (
+        <SavedCompareReport
+          narrative={narrative}
+          runs={reportRuns}
+          printHeader={`ModelDoctor · ${sc.name}`}
+        />
+      ) : (
+        <div className="space-y-6 px-8 py-6">
           <div className="flex items-center justify-between gap-4 rounded-md border border-violet-200 bg-violet-50/40 p-4 dark:border-violet-900 dark:bg-violet-950/20">
             <div>
               <div className="flex items-center gap-1.5 text-sm font-semibold">
@@ -165,15 +182,15 @@ export function SavedCompareDetailPage() {
                 : t("savedCompare.report.generateButton", { defaultValue: "Generate report" })}
             </Button>
           </div>
-        ) : null}
-        <ReportSections
-          runs={reportRuns}
-          baselineId={sc.baselineId}
-          narrative={narrative}
-          context={sc.context}
-          environmentLines={environmentLines}
-        />
-      </div>
+          <ReportSections
+            runs={reportRuns}
+            baselineId={sc.baselineId}
+            narrative={null}
+            context={sc.context}
+            environmentLines={environmentLines}
+          />
+        </div>
+      )}
     </>
   );
 }

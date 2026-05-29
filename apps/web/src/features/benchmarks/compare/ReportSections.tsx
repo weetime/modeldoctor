@@ -13,6 +13,8 @@ export interface ReportRun extends StageRun {
 export interface ReportSectionsProps {
   runs: ReportRun[];
   baselineId: string | null;
+  /** Kept for backward compatibility with BenchmarkComparePage callers — narrative
+   *  rendering itself now lives in `<SavedCompareReport>`. */
   narrative: CompareNarrative | null;
   context: string | null;
   /** Pre-derived per-run "connection / model / tool / version" lines. */
@@ -20,24 +22,19 @@ export interface ReportSectionsProps {
 }
 
 /**
- * Phase 1 transitional report layout. The narrative is now produced under the
- * new (schemaVersion: 2) shape with hero / summaryCards / sections / figures,
- * but is rendered here in plain (non-Primer) chrome. Phase 2 replaces this file
- * with `SavedCompareReport.tsx` running the full Primer visual system.
+ * Pre-narrative "raw matrix" preview. Renders the per-run table + the metric
+ * grid + the four bar charts. Used by:
+ *   - BenchmarkComparePage (ad-hoc compare, no narrative yet)
+ *   - SavedCompareDetailPage when the saved compare has no narrative yet
  *
- * Structure (in order):
- *   - Test matrix (per-run table)
- *   - CompareGrid (metric grid)
- *   - Charts (StageBarChartsSection)
- *   - Narrative (Hero + Summary Cards + 6 sections + figure captions) — when present
- *   - Test environment (environmentLines + free-text context)
+ * The narrative deep report (Hero + summary cards + 6 sections + figures)
+ * is rendered by `<SavedCompareReport>`, not here.
  *
- * `data-report-root` is exposed for the existing export-as-HTML utility.
+ * `data-report-root` is exposed for the export-as-HTML utility.
  */
 export function ReportSections({
   runs,
   baselineId,
-  narrative,
   context,
   environmentLines,
 }: ReportSectionsProps) {
@@ -98,110 +95,7 @@ export function ReportSections({
         <StageBarChartsSection runs={livingRuns} />
       </section>
 
-      {/* 4. Narrative (Phase 1 placeholder rendering) */}
-      {narrative ? (
-        <section className="space-y-6">
-          <header className="space-y-2">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              {narrative.hero.eyebrow}
-            </div>
-            <h2 className="text-2xl font-semibold leading-tight">{narrative.hero.title}</h2>
-            <p className="text-base text-muted-foreground">{narrative.hero.subtitle}</p>
-            {narrative.hero.metaItems.length > 0 ? (
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-1 pt-2 text-sm md:grid-cols-4">
-                {narrative.hero.metaItems.map((m) => (
-                  <div key={m.label} className="flex gap-2">
-                    <dt className="text-muted-foreground">{m.label}</dt>
-                    <dd className="font-medium">{m.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </header>
-
-          {narrative.summaryCards.length > 0 ? (
-            <div
-              className="grid gap-3"
-              style={{
-                gridTemplateColumns: `repeat(${narrative.summaryCards.length}, minmax(0, 1fr))`,
-              }}
-            >
-              {narrative.summaryCards.map((c) => (
-                <div
-                  key={c.label}
-                  className="rounded-md border border-border bg-card p-4"
-                  data-tone={c.tone}
-                >
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                    {c.label}
-                  </div>
-                  <div className="mt-1 text-2xl font-semibold leading-none">
-                    {c.value}
-                    {c.unit ? (
-                      <span className="ml-1 text-sm font-normal text-muted-foreground">
-                        {c.unit}
-                      </span>
-                    ) : null}
-                  </div>
-                  {c.trend ? (
-                    <div className="mt-1 text-sm text-muted-foreground">{c.trend}</div>
-                  ) : null}
-                  {c.foot ? (
-                    <div className="mt-1 text-xs text-muted-foreground">{c.foot}</div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {narrative.sections.map((s) => (
-            <article key={s.id} className="space-y-3" id={`section-${s.id}`}>
-              <h3 className="text-lg font-semibold">
-                <span className="mr-2 font-mono text-sm text-muted-foreground">{s.num}</span>
-                {s.title}
-              </h3>
-              {/* Phase 1: render bodyMarkdown as paragraph-separated preformatted text.
-                  Phase 2 swaps in react-markdown + remark-gfm for tables and bold. */}
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                {s.bodyMarkdown}
-              </div>
-            </article>
-          ))}
-
-          {narrative.figures.length > 0 ? (
-            <div className="space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
-              <div className="font-medium">Figure captions:</div>
-              <ul className="list-disc pl-5">
-                {narrative.figures.map((f) => (
-                  <li key={f.id}>
-                    <span className="font-mono text-xs">{f.refId}</span> · {f.caption}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {narrative.lintWarnings.length > 0 ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-              <div className="mb-1 font-semibold">
-                {t("savedCompare.report.lintWarnings", { defaultValue: "Style warnings" })} (
-                {narrative.lintWarnings.length})
-              </div>
-              <ul className="list-disc pl-4">
-                {narrative.lintWarnings.slice(0, 10).map((w, i) => (
-                  <li key={i}>
-                    <span className="font-mono">{w.code}</span>
-                    {w.sectionId ? <span> @ {w.sectionId}</span> : null}
-                    {w.sample ? <span> — &quot;{w.sample}&quot;</span> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* 5. Test environment */}
+      {/* 4. Test environment */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionEnv")}</h2>
         <ul className="space-y-1 text-sm text-muted-foreground">
