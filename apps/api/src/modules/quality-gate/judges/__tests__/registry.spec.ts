@@ -34,4 +34,12 @@ describe("judgeRegistry", () => {
       ),
     ).toMatchObject({ passed: true });
   });
+  it("dispatches to multiple-choice", async () => {
+    expect(
+      await r.apply(
+        { kind: "multiple-choice", answer: "C" },
+        { question: "Q", expected: "", answer: "答案是 C" },
+      ),
+    ).toMatchObject({ passed: true });
+  });
 });

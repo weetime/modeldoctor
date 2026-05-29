@@ -31,4 +31,24 @@ describe("judgeConfigSchema", () => {
     const c = judgeConfigSchema.parse({ kind: "llm-judge", rubric: "ten chars +", scale: "0-5" });
     expect(c.kind).toBe("llm-judge");
   });
+  it("accepts multiple-choice with default A-D labels", () => {
+    expect(judgeConfigSchema.parse({ kind: "multiple-choice", answer: "C" })).toMatchObject({
+      kind: "multiple-choice",
+      answer: "C",
+    });
+  });
+  it("rejects multiple-choice answer not in labels", () => {
+    expect(() => judgeConfigSchema.parse({ kind: "multiple-choice", answer: "E" })).toThrow(
+      /not in labels/,
+    );
+  });
+  it("accepts multiple-choice with custom labels", () => {
+    expect(
+      judgeConfigSchema.parse({
+        kind: "multiple-choice",
+        answer: "E",
+        labels: ["A", "B", "C", "D", "E"],
+      }),
+    ).toMatchObject({ kind: "multiple-choice" });
+  });
 });

@@ -1,0 +1,842 @@
+[
+  {
+    "id": "smp_ceval_advanced_mathematics_0",
+    "idx": 0,
+    "prompt": "以下是一道关于「高等数学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n求极限：$\\lim_{x\\rightarrow0}\\frac{\\int_{x^2}^x{\\frac{\\sin\\left(xt\\right)}{t}}\\mathrm{d}t}{x^2}=$____\nA. $\\frac{5}{6}$\nB. 1\nC. $\\frac{7}{6}$\nD. $\\frac{4}{3}$",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "advanced_mathematics"
+    ]
+  },
+  {
+    "id": "smp_ceval_advanced_mathematics_1",
+    "idx": 1,
+    "prompt": "以下是一道关于「高等数学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设$n$为正整数，求极限：$\\lim_{x\\rightarrow+\\infty}\\left[\\frac{x^n}{\\left(x-1\\right)\\left(x-2\\right)\\cdots\\left(x-n\\right)}\\right]^x=$____\nA. $e^{\\frac{(n-1)(n+1)}{2}}$\nB. $e^{\\frac{(n-1)n}{2}}$\nC. $e^{\\frac{n(n+1)}{2}}$\nD. $e^{\\frac{n^{2}}{2}}$",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "advanced_mathematics"
+    ]
+  },
+  {
+    "id": "smp_ceval_advanced_mathematics_2",
+    "idx": 2,
+    "prompt": "以下是一道关于「高等数学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设平面区域$D$由直线$y=\\frac{1}{2}x-\\frac{1}{2\\sqrt{5}}$、$y=2x-\\frac{2}{\\sqrt{5}}$和$y=x$围成，函数$z=3xy+3$在$D$上的最大值和最小值分别是M和m，则____\nA. $M=6,m=3$\nB. $M=\\dfrac{27}{5},m=3$\nC. $M=\\dfrac{18}{5},m=3$\nD. $M={\\frac{27}{5}},m={\\frac{117}{40}}$",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "advanced_mathematics"
+    ]
+  },
+  {
+    "id": "smp_ceval_advanced_mathematics_3",
+    "idx": 3,
+    "prompt": "以下是一道关于「高等数学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设函数$f\\left(x\\right)$连续，且$f\\left(x\\right)>0$，求积分：$int_0^1{\\ln f\\left(x+t\\right)}\\mathrm{d}t=$____\nA. $\\int_0^x{\\ln \\frac{f\\left( t+2 \\right)}{f\\left( t \\right)}}\\mathrm{d}t+\\int_0^1{\\ln f\\left( t \\right)}\\mathrm{d}t$\nB. $\\int_0^1{\\ln \\frac{f\\left( t+2 \\right)}{f\\left( t \\right)}}\\mathrm{d}t+\\int_0^1{\\ln f\\left( t \\right)}\\mathrm{d}t$\nC. $\\int_0^2x{\\ln \\frac{f\\left( t+1 \\right)}{f\\left( t \\right)}}\\mathrm{d}t+\\int_0^1{\\ln f\\left( t \\right)}\\mathrm{d}t$\nD. $\\int_0^x{\\ln \\frac{f\\left( t+2 \\right)}{f\\left( t \\right)}}\\mathrm{d}t+\\int_0^1{\\ln f\\left( t \\right)}\\mathrm{d}t$",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "advanced_mathematics"
+    ]
+  },
+  {
+    "id": "smp_ceval_advanced_mathematics_4",
+    "idx": 4,
+    "prompt": "以下是一道关于「高等数学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设有界区域$\\Omega$由平面$2x+y+2z=2$与三个坐标平面围成，$\\Sigma$为整个表面的外侧；\\\\计算曲面积分：$I=\\iint_{\\Sigma}{\\left(x^2+1\\right)\\mathrm{d}y\\mathrm{d}z-2y\\mathrm{d}z\\mathrm{d}x+3z\\mathrm{d}x\\mathrm{d}y}=$____\nA. $\\frac{1}{2}$\nB. 1\nC. $\\frac{3}{2}$\nD. $\\frac{5}{2}$",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "advanced_mathematics"
+    ]
+  },
+  {
+    "id": "smp_ceval_computer_network_0",
+    "idx": 5,
+    "prompt": "以下是一道关于「计算机网络」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n使用位填充方法，以01111110为位首flag，数据为011011111111111111110010，求问传送时要添加几个0____\nA. 1\nB. 2\nC. 3\nD. 4",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "computer_network"
+    ]
+  },
+  {
+    "id": "smp_ceval_computer_network_1",
+    "idx": 6,
+    "prompt": "以下是一道关于「计算机网络」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在802.3标准中，发送帧之前需要____\nA. 等待冲突\nB. 等待令牌\nC. 监听介质\nD. 接受一个帧",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "computer_network"
+    ]
+  },
+  {
+    "id": "smp_ceval_computer_network_2",
+    "idx": 7,
+    "prompt": "以下是一道关于「计算机网络」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\nTCP端对端通信作用于____\nA. 主机之间\nB. 网络之间\nC. 进程之间\nD. 主机到网络",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "computer_network"
+    ]
+  },
+  {
+    "id": "smp_ceval_computer_network_3",
+    "idx": 8,
+    "prompt": "以下是一道关于「计算机网络」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n对于传输层来说错误的是____\nA. TCP是全双工协议\nB. TCP是字节流协议\nC. TCP和UDP协议不能使用同一个端口\nD. TSAD是IP和端口的组合",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "computer_network"
+    ]
+  },
+  {
+    "id": "smp_ceval_computer_network_4",
+    "idx": 9,
+    "prompt": "以下是一道关于「计算机网络」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n已知当前TCP连接的RTT值为35ms，连续收到3个确认报文段，它们比相应的数据报文段的发送时间滞后了27ms、30ms与21ms。假设α=0.2，则第三个确认报文段到达后新的RTT估计值为____。\nA. 33.4ms\nB. 32.7ms\nC. 21ms\nD. 30.4ms",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "computer_network"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_physics_0",
+    "idx": 10,
+    "prompt": "以下是一道关于「大学物理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\nα粒子在加速器中被加速，当其质量为静止质量的 3 倍时，其动能为静止能量的____\nA. 2倍\nB. 3倍\nC. 4倍\nD. 5倍",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "college_physics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_physics_1",
+    "idx": 11,
+    "prompt": "以下是一道关于「大学物理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n有三个直径相同的金属小球，小球1和2带等量同号电荷，两者的距离远大于小球直径，相互作用力为F。小球3不带电，装有绝缘手柄．用小球3先和小球1碰一下，接着又和小球2碰一下，然后移去。则此时小球1和2之间的相互作用力为____\nA. F/4\nB. 3F/8\nC. F/2\nD. 3F/4",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "college_physics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_physics_2",
+    "idx": 12,
+    "prompt": "以下是一道关于「大学物理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在双缝干涉实验中，两条缝的宽度原来是相等的。若其中一缝的宽度略变窄(缝中心位置不变)，则____\nA. 干涉条纹的间距变宽\nB. 干涉条纹的间距变窄\nC. 干涉条纹的间距不变，但原极小处的强度不再为零\nD. 不再发生干涉现象",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "college_physics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_physics_3",
+    "idx": 13,
+    "prompt": "以下是一道关于「大学物理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设用频率为ν_1和ν_2的两种单色光，先后照射同一种金属均能产生光电效应。已知金属的红限频率为ν_0，测得两次照射时的遏止电压|U_{a2}|=2|U_{a1}|，则这两种单色光的频率有如下关系：____\nA. ν_2=ν_1-ν_0\nB. ν_2=ν_1+ν_0\nC. ν_2=2ν_1-ν_0\nD. ν_2=ν_1-2ν_0",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "college_physics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_physics_4",
+    "idx": 14,
+    "prompt": "以下是一道关于「大学物理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n两瓶不同种类的理想气体，它们的温度和压强都相同，但体积不同，则单位体积内的气体分子数$n$，单位体积内的气体分子的总平动动能($E_K/V$)，单位体积内的气体质量$\\rho$，分别有如下关系：____\nA. $n$不同，($E_K/V$)不同，$\\rho$不同\nB. $n$不同，($E_K/V$)不同，$\\rho$相同\nC. $n$相同，($E_K/V$)相同，$\\rho$不同\nD. $n$相同，($E_K/V$)相同，$\\rho$相同",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "college_physics"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_chemistry_0",
+    "idx": 15,
+    "prompt": "以下是一道关于「高中化学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n对于淀粉和纤维素两种物质，下列说法正确的是____\nA. 两者都能水解，且水解的最终产物相同\nB. 两者含C、H、O三种元素的质量分数相同，且互为同分异构体\nC. 它们都属于糖类，且都是溶于水的高分子化合物\nD. 都可 用$\\left ( C_6H_6O_5\\right )_n$表示，但淀粉能发生银镜反应，而纤维素不能",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "high_school_chemistry"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_chemistry_1",
+    "idx": 16,
+    "prompt": "以下是一道关于「高中化学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\na mol $Na_2O_2$和 b mol $NaHCO_3$固体混合后，在密闭容器中加热到250℃，使其充分反应，当排出气体为两种气体时，a︰b不可能为：____\nA. $3︰4$\nB. $3︰2$\nC. $2︰3$\nD. $4︰5$",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "high_school_chemistry"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_chemistry_2",
+    "idx": 17,
+    "prompt": "以下是一道关于「高中化学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\nX、Y、Z、W、R是5种短周期元素，其原子序数依次增大。X是周期表中原子半径最小的元素，Y原子最外层电子数是次外层电子数的3倍，Z、W、R处于同一周期，R与Y处于同一主族，Z、W原子的核外电子数之和与Y、R原子的核外电子数之和相等。下列说法正确的是____\nA. 元素Y、Z、W具有相同电子层结构的离子，其半径依次增大\nB. 元素X不能与元素Y形成化合物$X_2Y_2$\nC. 元素Y、R分别与元素X形成的化合物的热稳定性：$X_mY > X_mR$\nD. 元素W、R的最高价氧化物的水化物都是强酸",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "high_school_chemistry"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_chemistry_3",
+    "idx": 18,
+    "prompt": "以下是一道关于「高中化学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列家庭小实验最合理的是____\nA. 将适量的苏打粉放在容器中加热，观察气体的产生\nB. 在洁净的水杯中先加入小苏打粉，再加入食醋，观察气体的产生\nC. 往稀白粥中加入少量加碘食盐，检验加碘食盐中含有$I_2$\nD. 在一瓣橘子上插入两根铜线并与小灯泡连接，验证电流的产生",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "high_school_chemistry"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_chemistry_4",
+    "idx": 19,
+    "prompt": "以下是一道关于「高中化学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列反应的离子方程式中正确的是____\nA. 氯气与水反应:$Cl_2+H_2O = 2H^+ + Cl^- + ClO^-$\nB. 氯气通入冷的氢氧化钠溶液中：$2Cl_2+2OH^- = 3Cl^- + ClO^- +H_2O$\nC. 氯化亚铁溶液中滴加过量新制氯水：$2Fe^{2+} + Cl_2 = 2Fe^{3+} + 2Cl^-$\nD. 少量碳酸钙固体加入足量稀盐酸中：$CO_3^{2-}+2H^+ = CO_2\\uparrow +H_2O$",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "high_school_chemistry"
+    ]
+  },
+  {
+    "id": "smp_ceval_probability_and_statistics_0",
+    "idx": 20,
+    "prompt": "以下是一道关于「概率统计」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设随机变量$X$和$Y$相互独立，且X$\\sim N(0，1)，Y\\sim N(0$，2)，则$D\\left(X^2Y^2\\right)=$____\nA. 10\nB. 20\nC. 32\nD. 45",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "probability_and_statistics"
+    ]
+  },
+  {
+    "id": "smp_ceval_probability_and_statistics_1",
+    "idx": 21,
+    "prompt": "以下是一道关于「概率统计」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设随机变量$(X,Y)$的概率密度为$f(x,y)=\\left\\{\\begin{array}{cc}6y,&0<x<1,0<y<x，\\\\0,&\\text{其他.}\\end{array}\\right.$,$$\\text{则}P\\left(X>\\frac{1}{2}\\mid Y=\\frac{1}{3}\\right)=$$____\nA. $\\frac{3}{4}$\nB. $\\frac{2}{3}$\nC. $\\frac{1}{4}$\nD. $\\frac{1}{3}$",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "probability_and_statistics"
+    ]
+  },
+  {
+    "id": "smp_ceval_probability_and_statistics_2",
+    "idx": 22,
+    "prompt": "以下是一道关于「概率统计」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n总体的简单样本,$\\bar{X}$为样本均值,则$D(\\bar{X})=$____\nA. $\\frac{3}{80}$\nB. $\\frac{9}{16}$\nC. $\\frac{3}{1600}$\nD. $\\frac{3}{160}$",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "probability_and_statistics"
+    ]
+  },
+  {
+    "id": "smp_ceval_probability_and_statistics_3",
+    "idx": 23,
+    "prompt": "以下是一道关于「概率统计」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设总体$X$服从拉普拉斯分布$f(x,\\lambda)=\\frac{1}{4\\lambda}e^{-\\frac{|x|}{2\\lambda}},-\\infty<x<\\infty$,其中$\\lambda>0$。则$E(|X|)=$____\nA. $\\frac{1}{2 \\lambda}$\nB. $\\frac{1}{\\lambda}$\nC. $2 \\lambda$\nD. $\\lambda$",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "probability_and_statistics"
+    ]
+  },
+  {
+    "id": "smp_ceval_probability_and_statistics_4",
+    "idx": 24,
+    "prompt": "以下是一道关于「概率统计」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n设$X_1,X_2,\\cdots X_{12}$是来自正态总体$X\\sim N\\left(0,\\sigma^2\\right)$的简单样本,随机变量$Y=\\frac{\\sum_{i=1}^6X_i^2}{\\sum_{j=1}^6X_{j+6}^2}$服从的分布为:____\nA. $\\chi^2(6)$\nB. $\\chi^2(1)$\nC. $F(5,5)$\nD. $F(6,6)$",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "probability_and_statistics"
+    ]
+  },
+  {
+    "id": "smp_ceval_chinese_language_and_literature_0",
+    "idx": 25,
+    "prompt": "以下是一道关于「中国语言文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n英语名词“lab”(实验室)原来的形式是“laboratory”，这在词的形成方式上属于____。\nA. 直接成词\nB. 变形成词\nC. 变性成词\nD. 逆序成词",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "chinese_language_and_literature"
+    ]
+  },
+  {
+    "id": "smp_ceval_chinese_language_and_literature_1",
+    "idx": 26,
+    "prompt": "以下是一道关于「中国语言文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n音位是____。\nA. 最小的语音语义结合体\nB. 一个语音系统中能区别意义的最小语音单位\nC. 语言中最小的能区别意义的语音特征单位\nD. 语言中有区别性特征的最小语音单位",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "chinese_language_and_literature"
+    ]
+  },
+  {
+    "id": "smp_ceval_chinese_language_and_literature_2",
+    "idx": 27,
+    "prompt": "以下是一道关于「中国语言文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列语言中，属于印欧语系拉丁语族的语言是____。\nA. 英语\nB. 俄语\nC. 德语\nD. 法语",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "chinese_language_and_literature"
+    ]
+  },
+  {
+    "id": "smp_ceval_chinese_language_and_literature_3",
+    "idx": 28,
+    "prompt": "以下是一道关于「中国语言文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《史记·高祖本纪》：“今则来，沛公恐不得有此。”句中“则”的用法是____。\nA. 表示承接\nB. 表示转折\nC. 表示假设\nD. 表示因果",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "chinese_language_and_literature"
+    ]
+  },
+  {
+    "id": "smp_ceval_chinese_language_and_literature_4",
+    "idx": 29,
+    "prompt": "以下是一道关于「中国语言文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《四世同堂》中的冠晓荷是____。\nA. 老派市民的形象\nB. 革命者的形象\nC. 正直的知识分子形象\nD. 民族败类的形象",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "chinese_language_and_literature"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_history_0",
+    "idx": 30,
+    "prompt": "以下是一道关于「高中历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n据美国钢铁业统计，1870年，美国有钢铁企业808个，工人7.8万人，钢产量320万吨，投资额1210万美元；到1900年，美国有钢铁企业669个，工人27.2万人，钢产量2950万吨，投资额5.9亿美元。这一数据反映的19世纪后期美国钢铁业发展变化的主要特征是____\nA. 行业竞争激烈\nB. 生产和资本走向集中\nC. 企业规模保持稳定\nD. 劳动生产率快速提高",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "high_school_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_history_1",
+    "idx": 31,
+    "prompt": "以下是一道关于「高中历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n昭示着中华人民共和国的最高权力属于人民的标志是：____\nA. 人民代表大会制度的确立\nB. 新中国的成立\nC. 社会主义制度的初步确立\nD. 政治协商制度的形成",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "high_school_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_history_2",
+    "idx": 32,
+    "prompt": "以下是一道关于「高中历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n隋唐时期，陆路与海上“丝绸之路”基本畅通，唐朝设市舶司主管对外港口贸易，宋代对招商有成效的官吏实行提高级别待遇的政策，泉州、广州接此执行。可见，唐宋时期海外贸易的活跃是____\nA. 政府政策推动的结果\nB. 造船业发达的产物\nC. 重农政策松动的表现\nD. 丝织业兴盛的体现",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "high_school_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_history_3",
+    "idx": 33,
+    "prompt": "以下是一道关于「高中历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n2020年，深圳经济特区建立40周年。四十年来，深圳地区生产总值出1979年的1.96亿元增长到2019年的2.6927万亿元，按可比价格计算，增长2491倍，年均增长21.6%，实现了由一座落后的边陲小镇到具有全球影响力的国际化大都市的历史性跨越。深圳快速崛起的重要原因是____\nA. 率先展开了经济体制改革\nB. 较早建立了市场经济体制\nC. 改革开放政策的持续推动\nD. 毗邻香港地理条件较优越",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "high_school_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_high_school_history_4",
+    "idx": 34,
+    "prompt": "以下是一道关于「高中历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n李四光是我国20世纪杰出的科学家，他对祖国的贡献是____\nA. 研究“两弹一星”\nB. 为我国勘探石油提供了理论依据\nC. 培育出高产水稻\nD. 研制出巨型计算机",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "high_school_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_economics_0",
+    "idx": 35,
+    "prompt": "以下是一道关于「大学经济学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在完全竞争厂商的短期均衡产量上，AR小于SAC但大于AVC，则厂商____\nA. 亏损，立即停产\nB. 亏损，但应继续生产\nC. 亏损，生产或不生产都可以\nD. 获得正常利润，继续生产",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "college_economics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_economics_1",
+    "idx": 36,
+    "prompt": "以下是一道关于「大学经济学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在一般情况下，供给曲线____\nA. 向右上方倾斜\nB. 向右下方倾斜\nC. 斜率为正\nD. 斜率为负",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "college_economics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_economics_2",
+    "idx": 37,
+    "prompt": "以下是一道关于「大学经济学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n无差异曲线上任一点斜率的绝对值代表了____\nA. 消费者为了提高效用而获得另一些商品时愿意放弃的某一种商品的数量\nB. 消费者花在各种商品上的货币总值\nC. 两种商品的价格的价格比率\nD. 在确保消费者效用不变的情况下，一种商品和另一种商品的交换比率",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "college_economics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_economics_3",
+    "idx": 38,
+    "prompt": "以下是一道关于「大学经济学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n若供给曲线上每一点的点弹性都等于1，则供给曲线只能是一条____\nA. 过原点的45线\nB. 过原点的直线\nC. 平行于横轴的直线\nD. 垂直于横轴的直线",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "college_economics"
+    ]
+  },
+  {
+    "id": "smp_ceval_college_economics_4",
+    "idx": 39,
+    "prompt": "以下是一道关于「大学经济学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n技术进步一般会导致____\nA. 供给曲线右移\nB. 供给量沿着供给曲线减少\nC. 一个人增加他所消费的所有商品的数量\nD. 供给量沿着供给曲线增加",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "college_economics"
+    ]
+  },
+  {
+    "id": "smp_ceval_law_0",
+    "idx": 40,
+    "prompt": "以下是一道关于「法学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列关于法律推理的表述，能够成立的是____。\nA. 演绎推理是一种或然性推理\nB. 归纳推理是从一般知识推出个别知识的推理\nC. 类比推理是判例法国家运用的一种基本的法律推理方法\nD. 辩证推理实际上是一种立法活动",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "law"
+    ]
+  },
+  {
+    "id": "smp_ceval_law_1",
+    "idx": 41,
+    "prompt": "以下是一道关于「法学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n某住宅小区业主从事的下列行为中，不必将相关情况告知物业服务人的情形是____。\nA. 业主甲将其房屋出租给赵某\nB. 业主乙在其住宅上设立居住权供其弟居住\nC. 业主丙依法将建筑区划内的绿地改造成花园\nD. 业主丁在其住宅上设立地役权",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "law"
+    ]
+  },
+  {
+    "id": "smp_ceval_law_2",
+    "idx": 42,
+    "prompt": "以下是一道关于「法学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n张某在甲期刊社发表了一篇颇具价值的学术论文，但未作版权说明。乙期刊社将该学术论文作为资料刊登。则乙期刊社的行为____。\nA. 属于合理使用，不必向著作权人支付报酬\nB. 属于侵犯著作权的行为\nC. 不必经甲期刊社同意，但应向其支付报酬\nD. 不必经张某同意，但应向其支付报酬",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "law"
+    ]
+  },
+  {
+    "id": "smp_ceval_law_3",
+    "idx": 43,
+    "prompt": "以下是一道关于「法学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n关于我国宪法修改，下列哪一选项是正确的____。\nA. 我国修宪实践中既有对宪法的部分修改，也有对宪法的全面修改\nB. 经1/10以上的全国人大代表提议，可以启动宪法修改程序\nC. 全国人大常委会是法定的修宪主体\nD. 宪法修正案是我国宪法规定的宪法修改方式",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "law"
+    ]
+  },
+  {
+    "id": "smp_ceval_law_4",
+    "idx": 44,
+    "prompt": "以下是一道关于「法学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列选项中，可以适用不当得利主张请求权的情形是____。\nA. 甲为自己正在读大学的弟弟乙支付学费，后甲要求乙返还\nB. 丙明知不欠丁的钱而执意向丁还钱，后丙要求丁返还该金钱\nC. 张某偿还了欠李某的赌债，后张某要求李某返还赌资\nD. 陈某和吴某同在河边放牛，后陈某的一头牛走入吴某的牛群中，而吴某对此并不知情",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "law"
+    ]
+  },
+  {
+    "id": "smp_ceval_marxism_0",
+    "idx": 45,
+    "prompt": "以下是一道关于「马克思主义基本原理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“坐地日行八万里，巡六遥看一千河”，这一著名诗句包含的哲理是____\nA. 物质运动的客观性和时空的主观性的统一\nB. 物质运动的无限性和时空的有限性的统一\nC. 时空的无限性和有限性的统一\nD. 运动的绝对性和静止的相对性的统一",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "marxism"
+    ]
+  },
+  {
+    "id": "smp_ceval_marxism_1",
+    "idx": 46,
+    "prompt": "以下是一道关于「马克思主义基本原理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n我党一贯倡导并长期保持的优良学风是____\nA. 艰苦奋斗\nB. 实事求是\nC. 理论联系实际\nD. 勤俭节约",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "marxism"
+    ]
+  },
+  {
+    "id": "smp_ceval_marxism_2",
+    "idx": 47,
+    "prompt": "以下是一道关于「马克思主义基本原理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n马克思主义哲学认为，世界在本质上是____\nA. 各种实物的总和\nB. 物质和精神的统一\nC. 多样性的物质统一\nD. 主观与客体的统一",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "marxism"
+    ]
+  },
+  {
+    "id": "smp_ceval_marxism_3",
+    "idx": 48,
+    "prompt": "以下是一道关于「马克思主义基本原理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n事物的质是指____\nA. 构成事物内在要素的总和\nB. 组成事物基本要素的内在联系\nC. 一事物区别与其他事物的内在规定性\nD. 事物的规模、发展程度和速度等规定性",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "marxism"
+    ]
+  },
+  {
+    "id": "smp_ceval_marxism_4",
+    "idx": 49,
+    "prompt": "以下是一道关于「马克思主义基本原理」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n列宁对辩证唯物主义物质范畴的定义是通过____界定的\nA. 物质和意识的关系\nB. 个别与一般的关系\nC. 哲学与具体科学的关系\nD. 认识与实践的关系",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "marxism"
+    ]
+  },
+  {
+    "id": "smp_ceval_logic_0",
+    "idx": 50,
+    "prompt": "以下是一道关于「逻辑学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n许多公司目前都为雇员免费提供健身、缓解压力或戒烟的服务项目。这些项目增加了员工的生产力，减少了缺勤率，并降低了员工的健康保险费。因此，这些服务项目不但有益于公司，而且有利于员工个人。以下哪项如果为真，最能构成对上述论证的支持?____\nA. 健身是公司为员工所提供的最常见的服务项目。\nB. 有研究表明，在有压力的管理环境中，训练对许多人都是无效的。\nC. 有规律的锻炼可以减少心脏病发病率并使人的精力更加充沛。\nD. 过快地参加大运动量的健身活动有时会造成运动伤害。",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "logic"
+    ]
+  },
+  {
+    "id": "smp_ceval_logic_1",
+    "idx": 51,
+    "prompt": "以下是一道关于「逻辑学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n某组织改选领导班子实行这样一条规则：如果候选人多于一个，那么候选人必须同意被提名，并且在表态之前，必须被告之其他的候选人是谁。如果事实上只有当候选人同意被提名后才能知道实际的候选人是谁，那么以下哪项是对上述规则最准确的评价?____\nA. 实行该规则，使得被提名的候选人的人数比不实行该规则要多。\nB. 实行该规则，使得被提名的候选人的人数比不实行该规则要少。\nC. 实行该规则，没有候选人可能被提名。\nD. 实行该规则，被提名的候选人最多只可能是一个。",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "logic"
+    ]
+  },
+  {
+    "id": "smp_ceval_logic_2",
+    "idx": 52,
+    "prompt": "以下是一道关于「逻辑学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n社会成员的幸福感是可以运用现代手段精确量化的。衡量一项社会改革措施是否成功，要看社会成员的幸福感总量是否增加。S市最近推出的福利改革明显增加了公务员的幸福感总量，因此，这项改革措施是成功的。以下哪项如果为真，最能削弱上述论证?____\nA. 上述改革措施并没有增加s市所有公务员的幸福感。\nB. S市公务员只占全市社会成员很小的比例。\nC. 上述改革措施在增加公务员幸福感总量的同时，减少了S市民营企业人员的幸福感总量。\nD. 上述改革措施在增加公务员幸福感总量的同时，减少了S市全体社会成员的幸福感总量。",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "logic"
+    ]
+  },
+  {
+    "id": "smp_ceval_logic_3",
+    "idx": 53,
+    "prompt": "以下是一道关于「逻辑学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n某市2018年的人口发展报告显示，该市常住人口1170万，其中常住外来人口440万，户籍人口730万。从区级人口分布情况来看，该市G区常住人口240万，居各区之首；H区常住人口200万，位居第二；同时，这两个区也是吸纳外来人口较多的区域，两个区常住外来人口200万，占全市常住外来人口的45％以上。根据以上陈述，可以得出以下哪项？____\nA. 该市G区的户籍人口比H区的常住外来人口多。\nB. 该市H区的户籍人口比G区的常住外来人口多。\nC. 该市H区的户籍人口比H区的常住外来人口多。\nD. 该市G区的户籍人口比G区的常住外来人口多。",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "logic"
+    ]
+  },
+  {
+    "id": "smp_ceval_logic_4",
+    "idx": 54,
+    "prompt": "以下是一道关于「逻辑学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n陈先生在鼓励他的孩子时说道：“不要害怕暂时的困难和挫折。不经历风雨怎么见彩虹?”他孩子不服气地说：“您说得不对。我经历了那么多风雨，怎么就没见到彩虹呢?”陈先生孩子的回答最适宜用来反驳以下哪项____\nA. 即使经历了风雨，也可能见不到彩虹。\nB. 只要经历了风雨，就可以见到彩虹。\nC. 只有经历风雨，才能见到彩虹。\nD. 如果想见到彩虹，就必须经历风雨。",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "logic"
+    ]
+  },
+  {
+    "id": "smp_ceval_modern_chinese_history_0",
+    "idx": 55,
+    "prompt": "以下是一道关于「近代史纲要」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n1944年4月至1945年1月，日本发动打通中国大陆交通线的战役是____\nA. 忻口战役\nB. 淞沪战役\nC. 豫湘桂战役\nD. 枣宜会战",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "modern_chinese_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_modern_chinese_history_1",
+    "idx": 56,
+    "prompt": "以下是一道关于「近代史纲要」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n大革命时期的统一战线和抗日民族统一战线____\nA. 都有共同的政治纲领\nB. 均采取党内合作方式\nC. 全具有反帝反封建性质\nD. 皆有各阶层广泛参加",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": [
+      "ceval",
+      "modern_chinese_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_modern_chinese_history_2",
+    "idx": 57,
+    "prompt": "以下是一道关于「近代史纲要」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列不平等条约中，赔款数额最多的是____\nA. 《南京条约》\nB. 《北京条约》\nC. 《马关条约》\nD. 《辛丑条约》",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": [
+      "ceval",
+      "modern_chinese_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_modern_chinese_history_3",
+    "idx": 58,
+    "prompt": "以下是一道关于「近代史纲要」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n中国共产党发出“停止内战，一致抗日”的号召是在____\nA. 蒋介石对中央苏区第四次“围剿”时\nB. “何梅协定”签订后\nC. 瓦窑堡会议期间\nD. 西安事变发生后",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": [
+      "ceval",
+      "modern_chinese_history"
+    ]
+  },
+  {
+    "id": "smp_ceval_modern_chinese_history_4",
+    "idx": 59,
+    "prompt": "以下是一道关于「近代史纲要」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n1949年9月21日，中国人民政治协商会议第一届全体会议通过了具有临时宪法作用的是____\nA. 《中华民国临时约法》\nB. 《和平宪法》\nC. 《中国人民政治协商会议共同纲领》\nD. 《中华人民共和国宪法》",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": [
+      "ceval",
+      "modern_chinese_history"
+    ]
+  }
+]

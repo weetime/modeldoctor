@@ -65,6 +65,7 @@
     "contains": "contains",
     "regex": "regex",
     "llm-judge": "llm-judge",
+    "multiple-choice": "multiple-choice",
     "caseSensitive": "Case sensitive",
     "substringsLabel": "Substrings (comma-separated)",
     "modeLabel": "Mode",
@@ -75,7 +76,11 @@
     "rubricLabel": "Rubric",
     "rubricPlaceholder": "Score the assistant if it…",
     "scaleLabel": "Scale",
-    "thresholdLabel": "Pass threshold (defaults by scale)"
+    "thresholdLabel": "Pass threshold (defaults by scale)",
+    "answerLabel": "Correct option",
+    "answerPlaceholder": "e.g. C",
+    "labelsLabel": "Option labels (comma-separated, blank = A,B,C,D)",
+    "labelsPlaceholder": "A, B, C, D"
   },
   "runs": {
     "title": "Evaluation Runs",

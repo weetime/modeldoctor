@@ -2,6 +2,7 @@ import type { JudgeConfig, JudgeOutcome } from "@modeldoctor/contracts";
 import { containsJudge } from "./contains.js";
 import { exactMatchJudge } from "./exact-match.js";
 import { createLlmJudge, type LlmJudgeService } from "./llm-judge.js";
+import { multipleChoiceJudge } from "./multiple-choice.js";
 import { regexJudge } from "./regex.js";
 import type { Judge, JudgeContext } from "./types.js";
 
@@ -16,6 +17,7 @@ export function createJudgeRegistry(llmService: LlmJudgeService): JudgeRegistry 
     contains: containsJudge as Judge,
     regex: regexJudge as Judge,
     "llm-judge": llmJudge as Judge,
+    "multiple-choice": multipleChoiceJudge as Judge,
   };
 
   return {
