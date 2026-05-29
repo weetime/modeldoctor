@@ -108,8 +108,11 @@ const LIST_ITEM_LINE_RE = /^(?:[-*+]|\d+\.)\s+/;
  */
 function paragraphsForBoldDensity(paragraph: string): string[] {
   const lines = paragraph.split("\n");
+  // Single-line paragraphs are by far the common case in prose. Skip the
+  // every() + regex tests on the hot path.
+  if (lines.length <= 1) return [paragraph];
   const isAllListLines = lines.every((l) => l.trim() === "" || LIST_ITEM_LINE_RE.test(l.trim()));
-  if (isAllListLines && lines.length > 1) {
+  if (isAllListLines) {
     return lines.map((l) => l.trim()).filter((l) => l.length > 0);
   }
   return [paragraph];
