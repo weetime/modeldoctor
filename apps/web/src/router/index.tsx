@@ -14,6 +14,7 @@ import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInference
 import { BenchmarkKvCacheStressPage } from "@/features/benchmarks/BenchmarkKvCacheStressPage";
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
+import { ReportPage } from "@/features/benchmarks/compare/ReportPage";
 import { SavedCompareDetailPage } from "@/features/benchmarks/compare/SavedCompareDetailPage";
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
@@ -60,6 +61,9 @@ export const routes: RouteObject[] = [
     element: <ProtectedRoute />,
     errorElement: <ErrorPage />,
     children: [
+      // Standalone report viewer — no AppShell so the report takes full viewport.
+      // Still under ProtectedRoute so it inherits the same auth gate.
+      { path: "/reports/:id", element: <ReportPage /> },
       {
         path: "/",
         element: <AppShell />,

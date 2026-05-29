@@ -421,10 +421,10 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  /* Hide app chrome */
-  header,
-  nav,
-  aside,
+  /* Hide standalone-report top bar + the report's own TOC + everything outside
+     `.primer-report` (e.g. the app shell sidebar that may still be in the DOM
+     on the embedded-report path). */
+  .pr-app-bar,
   .pr-toc {
     display: none !important;
   }
