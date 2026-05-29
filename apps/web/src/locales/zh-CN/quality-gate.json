@@ -1,11 +1,17 @@
 {
-  "nav": { "title": "质量门" },
+  "nav": {
+    "title": "质量门"
+  },
   "evaluations": {
     "title": "评测集",
     "subtitle": "管理评测样本与判分规则；任意运行都引用某一个评测集快照。",
     "create": "新建评测集",
     "empty": "还没有评测集",
-    "col": { "name": "名称", "samples": "样本数", "updatedAt": "更新时间" },
+    "col": {
+      "name": "名称",
+      "samples": "样本数",
+      "updatedAt": "更新时间"
+    },
     "runsCol": {
       "id": "运行 ID",
       "evaluation": "评测集",
@@ -163,7 +169,11 @@
       "failed": "失败",
       "cancelled": "已取消"
     },
-    "gateResult": { "passed": "通过", "warning": "警告", "failed": "未通过" },
+    "gateResult": {
+      "passed": "通过",
+      "warning": "警告",
+      "failed": "未通过"
+    },
     "filters": {
       "any": "全部",
       "status": "状态",
@@ -210,15 +220,32 @@
       "prevPage": "上一页",
       "nextPage": "下一页"
     },
-    "sampleDrawer": { "title": "样本", "detail": "详情" }
+    "sampleDrawer": {
+      "title": "样本",
+      "detail": "详情"
+    }
   },
   "gate": {
     "passRateMin": "通过率下限 / passRateMin",
     "regressionMax": "回归数上限 / regressionMax",
     "judgeScoreMin": "Judge 均分下限 / judgeScoreMin"
   },
+  "gen": {
+    "sectionTitle": "生成参数",
+    "sectionDescription": "控制本次 run 的模型调用参数；会随 run 快照记录，便于复现。",
+    "thinkingLabel": "思考模式 (thinking)",
+    "thinkingAuto": "自动（用模型默认）",
+    "thinkingOff": "关闭（推理模型直接作答）",
+    "thinkingOn": "开启（需更大 max_tokens）",
+    "thinkingHint": "选择题/短答评测建议关闭：避免 Qwen3 等推理模型把 token 预算耗在思考上、导致答案被截断。仅对 vLLM 类端点生效。",
+    "maxTokensLabel": "最大 token 数",
+    "temperatureLabel": "温度",
+    "summaryLabel": "生成参数"
+  },
   "detail": {
-    "actions": { "detail": "详情" },
+    "actions": {
+      "detail": "详情"
+    },
     "delete": {
       "button": "删除",
       "title": "删除 {{name}}？",

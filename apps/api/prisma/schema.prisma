@@ -377,6 +377,7 @@ model Evaluation {
   version       Int      @default(1)
   samples       Json
   totalSamples  Int      @default(0) @map("total_samples")
+  genConfig     Json?    @map("gen_config")
   isOfficial    Boolean  @default(false) @map("is_official")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -398,6 +399,7 @@ model EvaluationRun {
   endpointAId              String                @map("endpoint_a_id")
   endpointBId              String?               @map("endpoint_b_id")
   gateConfig               Json                  @map("gate_config")
+  genConfig                Json?                 @map("gen_config")
   status                   EvaluationRunStatus   @default(PENDING)
   gateResult               EvaluationGateResult? @map("gate_result")
   aggregateMetrics         Json?                 @map("aggregate_metrics")

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { evaluationSampleSchema } from "./evaluations.js";
+import { genConfigSchema } from "./gen-config.js";
 
 export const runStatusSchema = z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]);
 export type RunStatus = z.infer<typeof runStatusSchema>;
@@ -67,6 +68,7 @@ export const evaluationRunSchema = z.object({
   endpointA: connectionRefSchema.nullable(),
   endpointB: connectionRefSchema.nullable(),
   gateConfig: gateConfigSchema,
+  genConfig: genConfigSchema,
   status: runStatusSchema,
   gateResult: gateResultSchema.nullable(),
   aggregateMetrics: aggregateMetricsSchema.nullable(),
@@ -87,6 +89,9 @@ export const createRunRequestSchema = z
     endpointBId: z.string().optional(),
     baselineRunIdOverride: z.string().nullable().optional(),
     gateConfig: gateConfigSchema,
+    // Per-run override of generation params. Partial — merged over the
+    // evaluation's default and the schema defaults at run creation.
+    genConfig: genConfigSchema.partial().optional(),
   })
   .refine((r) => r.endpointBId == null || r.endpointBId !== r.endpointAId, {
     message: "validation.endpointABMustDiffer",

@@ -1,10 +1,12 @@
-import type { JudgeConfig } from "@modeldoctor/contracts";
+import type { GenConfig, JudgeConfig } from "@modeldoctor/contracts";
+import { DEFAULT_GEN_CONFIG } from "@modeldoctor/contracts";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import pLimit from "p-limit";
 import { EndpointCaller } from "../endpoint-caller.js";
 import { computeGateResult } from "../gate/compute-gate-result.js";
 import { aggregateMetrics, computeDelta } from "../gate/sample-aggregation.js";
 import { JudgesService } from "../judges/judges.service.js";
+import { stripThink } from "../judges/strip-think.js";
 import { RunsRepository } from "../repositories/runs.repository.js";
 
 const SAMPLE_CONCURRENCY = 4;
@@ -26,6 +28,7 @@ interface FullRun {
     }>;
   };
   gateConfig: import("@modeldoctor/contracts").GateConfig;
+  genConfig?: GenConfig | null;
   baselineRunIdAtExecution?: string | null;
 }
 
@@ -79,6 +82,7 @@ export class QualityGateRunExecutor implements OnModuleInit, OnModuleDestroy {
       const baselineMode = run.baselineRunIdAtExecution != null;
 
       const samples = run.evaluationSnapshot.samples;
+      const gen = run.genConfig ?? DEFAULT_GEN_CONFIG;
       await Promise.all(
         samples.map((s) =>
           sampleLimit(async () => {
@@ -90,13 +94,14 @@ export class QualityGateRunExecutor implements OnModuleInit, OnModuleDestroy {
               run.userId,
               s.prompt,
               ac.signal,
+              gen,
             );
             if (ac.signal.aborted) return;
             const judgedA = await judgeLimit(() =>
               this.judges.apply(s.judgeConfig, {
                 question: s.prompt,
                 expected: s.expected,
-                answer: callA.rawAnswer,
+                answer: stripThink(callA.rawAnswer),
               }),
             );
             if (s.judgeConfig.kind === "llm-judge") judgeCalls++;
@@ -121,6 +126,7 @@ export class QualityGateRunExecutor implements OnModuleInit, OnModuleDestroy {
                 run.userId,
                 s.prompt,
                 ac.signal,
+                gen,
               );
               callB = result;
               if (!ac.signal.aborted) {
@@ -128,7 +134,7 @@ export class QualityGateRunExecutor implements OnModuleInit, OnModuleDestroy {
                   this.judges.apply(s.judgeConfig, {
                     question: s.prompt,
                     expected: s.expected,
-                    answer: result.rawAnswer,
+                    answer: stripThink(result.rawAnswer),
                   }),
                 );
                 if (s.judgeConfig.kind === "llm-judge") judgeCalls++;

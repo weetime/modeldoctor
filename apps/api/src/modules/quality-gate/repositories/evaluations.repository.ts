@@ -2,6 +2,7 @@ import type {
   CreateEvaluationRequest,
   Evaluation,
   EvaluationSample,
+  GenConfig,
   UpdateEvaluationRequest,
 } from "@modeldoctor/contracts";
 import { Injectable, NotFoundException } from "@nestjs/common";
@@ -39,6 +40,7 @@ export class EvaluationsRepository {
         description: body.description ?? null,
         samples: body.samples as unknown as object,
         totalSamples: body.samples.length,
+        genConfig: (body.genConfig ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     });
     return this.toDto(row);
@@ -58,6 +60,10 @@ export class EvaluationsRepository {
       data.samples = body.samples as unknown as Prisma.InputJsonValue;
       data.version = existing.version + 1;
       data.totalSamples = body.samples.length;
+    }
+    if (body.genConfig !== undefined) {
+      data.genConfig =
+        body.genConfig === null ? Prisma.JsonNull : (body.genConfig as Prisma.InputJsonValue);
     }
 
     const row = await this.prisma.evaluation.update({ where: { id }, data });
@@ -81,6 +87,7 @@ export class EvaluationsRepository {
     version: number;
     samples: unknown;
     totalSamples: number;
+    genConfig: unknown;
     isOfficial: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -92,6 +99,7 @@ export class EvaluationsRepository {
     version: row.version,
     samples: row.samples as EvaluationSample[],
     totalSamples: row.totalSamples,
+    genConfig: (row.genConfig as Partial<GenConfig> | null) ?? null,
     isOfficial: row.isOfficial,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

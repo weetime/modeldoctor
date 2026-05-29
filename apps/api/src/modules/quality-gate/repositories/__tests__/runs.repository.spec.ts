@@ -79,9 +79,11 @@ describe("RunsRepository", () => {
       endpointAId: connA,
       endpointBId: connB,
       gateConfig: { passRateMin: 0.9 },
+      genConfig: { maxTokens: 2048, temperature: 0, thinking: "auto" },
     });
     expect(r.status).toBe("PENDING");
     expect(r.totalSamples).toBe(1);
+    expect(r.genConfig).toMatchObject({ thinking: "auto", maxTokens: 2048 });
   });
 
   it("transitions PENDING → RUNNING → COMPLETED with gate result", async () => {
@@ -92,6 +94,7 @@ describe("RunsRepository", () => {
       evaluationSnapshot: { samples: [] },
       endpointAId: connA,
       gateConfig: { passRateMin: 0.9 },
+      genConfig: { maxTokens: 2048, temperature: 0, thinking: "auto" },
     });
     await repo.markRunning(r.id);
     const updated = await repo.markCompleted(
@@ -119,6 +122,7 @@ describe("RunsRepository", () => {
       endpointAId: connA,
       endpointBId: connB,
       gateConfig: { passRateMin: 0.9 },
+      genConfig: { maxTokens: 2048, temperature: 0, thinking: "auto" },
     });
     await repo.saveSample({
       runId: r.id,
@@ -146,6 +150,7 @@ describe("RunsRepository", () => {
       evaluationSnapshot: { samples: [] },
       endpointAId: connA,
       gateConfig: { passRateMin: 0.9 },
+      genConfig: { maxTokens: 2048, temperature: 0, thinking: "auto" },
     });
     await repo.markRunning(r.id);
     const count = await repo.sweepRunningOnBoot();
