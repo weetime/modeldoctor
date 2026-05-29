@@ -26,7 +26,22 @@ const llmJudge = z.object({
   passThreshold: z.number().optional(),
 });
 
-const baseUnion = z.discriminatedUnion("kind", [exactMatch, contains, regex, llmJudge]);
+// Multiple-choice (MCQ): the prompt presents labelled options (A/B/C/D…) and the
+// model is asked to output the chosen label. The judge extracts the label from the
+// model's free-form answer and compares it to `answer`. `labels` defaults to A–D.
+const multipleChoice = z.object({
+  kind: z.literal("multiple-choice"),
+  answer: z.string().min(1).max(8),
+  labels: z.array(z.string().min(1).max(8)).min(2).max(26).optional(),
+});
+
+const baseUnion = z.discriminatedUnion("kind", [
+  exactMatch,
+  contains,
+  regex,
+  llmJudge,
+  multipleChoice,
+]);
 
 export const judgeConfigSchema = baseUnion.superRefine((cfg, ctx) => {
   if (cfg.kind === "regex") {
@@ -37,6 +52,18 @@ export const judgeConfigSchema = baseUnion.superRefine((cfg, ctx) => {
         code: z.ZodIssueCode.custom,
         path: ["pattern"],
         message: `invalid regex: ${(e as Error).message}`,
+      });
+    }
+  }
+  if (cfg.kind === "multiple-choice") {
+    const labels = cfg.labels ?? ["A", "B", "C", "D"];
+    const norm = (s: string) => s.trim().toUpperCase();
+    const labelSet = new Set(labels.map(norm));
+    if (!labelSet.has(norm(cfg.answer))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["answer"],
+        message: `answer "${cfg.answer}" not in labels [${labels.join(", ")}]`,
       });
     }
   }
