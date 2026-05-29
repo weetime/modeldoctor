@@ -2,13 +2,79 @@ import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const validNarrative = {
+  schemaVersion: 2,
+  locale: "zh-CN",
+  hero: {
+    eyebrow: "MODELDOCTOR · 双 stage 对比",
+    title: "stage B 吞吐 3.8 req/s 领先 stage A 27%",
+    subtitle:
+      "对比 A / B 两个 stage 的 guidellm 跑测,B 吞吐 3.8 req/s 比 A 3.0 高 27%,但 B 错误率 1% 非零。",
+    metaItems: [{ label: "tool", value: "guidellm" }],
+  },
+  summaryCards: [
+    {
+      label: "stage B 吞吐",
+      value: "3.8",
+      unit: "req/s",
+      tone: "success",
+      trend: "领先 A 27%",
+    },
+    {
+      label: "stage B 错误率",
+      value: "1.0",
+      unit: "%",
+      tone: "danger",
+      foot: "10/1000 失败",
+    },
+  ],
+  sections: [
+    {
+      id: "summary",
+      num: "01",
+      title: "stage B 吞吐 3.8 req/s 领先 A 27%,但错误率 1%",
+      bodyMarkdown:
+        "stage B 吞吐 3.8 req/s 比 A 3.0 高 27%。\n\nB 错误率 1.0%,A 0.0%,B 在压力档出现少量失败。\n\nTTFT 与 E2E 三档百分位 B 全面更低。",
+    },
+    {
+      id: "scope",
+      num: "02",
+      title: "本次对比聚焦 A / B 两 stage 的吞吐与错误率",
+      bodyMarkdown: "对比 guidellm inference scenario 下两个 stage 的吞吐与延迟。",
+    },
+    {
+      id: "method",
+      num: "03",
+      title: "硬件与工具固定:guidellm + inference + 同 1000 req 样本",
+      bodyMarkdown: "工具 guidellm,scenario inference,每 stage 1000 请求。",
+    },
+    {
+      id: "results",
+      num: "04",
+      title: "stage B 在 TTFT / E2E / 吞吐三项均领先",
+      bodyMarkdown:
+        "stage B 吞吐 3.8 req/s,A 3.0,B 高 27%。\n\nTTFT p50 B 80 ms 比 A 100 ms 低 20 ms。\n\nE2E p99 B 2700 ms 比 A 3000 ms 低 10%。",
+    },
+    {
+      id: "caveats",
+      num: "05",
+      title: "B 错误率 1% 非零,稳态性需复测确认",
+      bodyMarkdown: "B 有 10/1000 失败,A 0。建议加跑一次窗口确认非偶发。",
+    },
+    {
+      id: "advice",
+      num: "06",
+      title: "吞吐优先选 B,SLO 严格场景仍建议 A",
+      bodyMarkdown: "吞吐优先 → B。错误率 0 要求 → A。",
+    },
+  ],
+  figures: [{ id: "f1", refId: "compare-grid", caption: "B 在四项指标全面领先 A。" }],
+  lintWarnings: [],
+};
+
 vi.mock("../insights/llm-client.js", () => ({
   chatCompletion: vi.fn(async () => ({
-    content: JSON.stringify({
-      tldr: [{ headline: "QPS 提升", oneLine: "Y-CPU QPS 比 baseline 高 27%" }],
-      analysis: [{ metricLabel: "QPS", body: "缓存命中提高使 prefill 减少。" }],
-      conclusion: { recommendation: "在低错误率优先场景推荐 LMCache。", caveats: [] },
-    }),
+    content: JSON.stringify(validNarrative),
     latencyMs: 100,
   })),
 }));
@@ -111,9 +177,19 @@ describe("CompareSynthesizeService", () => {
     savedCompareId = sc.id;
   });
 
-  it("calls LLM and persists narrative", async () => {
+  it("calls LLM and persists narrative in new schema", async () => {
     const r = await svc.synthesize(userId, savedCompareId, { locale: "zh-CN" });
-    expect(r.narrative.tldr).toHaveLength(1);
+    expect(r.narrative.schemaVersion).toBe(2);
+    expect(r.narrative.hero.title).toContain("3.8");
+    expect(r.narrative.sections).toHaveLength(6);
+    expect(r.narrative.sections.map((s) => s.id)).toEqual([
+      "summary",
+      "scope",
+      "method",
+      "results",
+      "caveats",
+      "advice",
+    ]);
     expect(r.fromCache).toBe(false);
     const refreshed = await prisma.savedCompare.findUnique({ where: { id: savedCompareId } });
     expect(refreshed?.narrative).not.toBeNull();

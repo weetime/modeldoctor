@@ -1,4 +1,5 @@
 import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
-import { AiAnalysisPanel } from "./AiAnalysisPanel";
 import { exportPageAsHtml } from "./exportHtml";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 import { type ReportRun, ReportSections } from "./ReportSections";
@@ -137,19 +137,41 @@ export function SavedCompareDetailPage() {
         }
       />
       <div className="space-y-6 px-8 py-6">
+        {!narrative ? (
+          <div className="flex items-center justify-between gap-4 rounded-md border border-violet-200 bg-violet-50/40 p-4 dark:border-violet-900 dark:bg-violet-950/20">
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                {t("savedCompare.report.generateTitle", {
+                  defaultValue: "Generate AI report",
+                })}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("savedCompare.report.generateHint", {
+                  defaultValue: "60-90s deep report — Hero + 6 sections + summary cards (zh-CN).",
+                })}
+              </p>
+              {synth.error ? (
+                <p className="mt-1 text-xs text-destructive">{synth.error.message}</p>
+              ) : null}
+            </div>
+            <Button
+              onClick={() => void generate()}
+              disabled={!provider.data?.enabled || synth.isPending}
+            >
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              {synth.isPending
+                ? t("savedCompare.report.generating", { defaultValue: "Generating…" })
+                : t("savedCompare.report.generateButton", { defaultValue: "Generate report" })}
+            </Button>
+          </div>
+        ) : null}
         <ReportSections
           runs={reportRuns}
           baselineId={sc.baselineId}
           narrative={narrative}
           context={sc.context}
           environmentLines={environmentLines}
-        />
-        <AiAnalysisPanel
-          narrative={narrative}
-          onGenerate={() => void generate()}
-          canGenerate={!!provider.data?.enabled}
-          isGenerating={synth.isPending}
-          errorMessage={synth.error?.message}
         />
       </div>
     </>
