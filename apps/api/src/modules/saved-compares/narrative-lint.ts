@@ -98,6 +98,26 @@ function countBoldSpans(paragraph: string): number {
   return mdBold + htmlBold;
 }
 
+const LIST_ITEM_LINE_RE = /^(?:[-*+]|\d+\.)\s+/;
+
+/**
+ * For bold-density only: split paragraphs further by treating each markdown
+ * list item as its own scope. Bulleted / numbered lists with a leading
+ * `**label**:` per item are legitimate writing — they should not trip the
+ * per-paragraph density rule just because the list has ≥3 items.
+ */
+function paragraphsForBoldDensity(paragraph: string): string[] {
+  const lines = paragraph.split("\n");
+  // Single-line paragraphs are by far the common case in prose. Skip the
+  // every() + regex tests on the hot path.
+  if (lines.length <= 1) return [paragraph];
+  const isAllListLines = lines.every((l) => l.trim() === "" || LIST_ITEM_LINE_RE.test(l.trim()));
+  if (isAllListLines) {
+    return lines.map((l) => l.trim()).filter((l) => l.length > 0);
+  }
+  return [paragraph];
+}
+
 // ─── Main entry ──────────────────────────────────────────────────────────
 
 /**
@@ -157,13 +177,17 @@ export function lintNarrative(narrative: CompareNarrative, _inputNumbers: number
     const paragraphs = paragraphsExcludingCode(body);
 
     for (const para of paragraphs) {
-      // Bold density per paragraph.
-      if (countBoldSpans(para) >= 3) {
-        warnings.push({
-          code: "bold-density",
-          sectionId: section.id,
-          sample: para.slice(0, 120),
-        });
+      // Bold density — list items are each their own scope (4 bullets ×
+      // 1 **label** each ≠ "over-bolded paragraph").
+      for (const scope of paragraphsForBoldDensity(para)) {
+        if (countBoldSpans(scope) >= 3) {
+          warnings.push({
+            code: "bold-density",
+            sectionId: section.id,
+            sample: scope.slice(0, 120),
+          });
+          break;
+        }
       }
 
       // Decimal precision ≥3.
