@@ -5,7 +5,6 @@ import {
   type CompareSynthesizeResponse,
   compareNarrativeSchema,
   type HydratedSavedCompare,
-  type LintWarning,
 } from "@modeldoctor/contracts";
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { LruCache } from "../insights/cache.js";

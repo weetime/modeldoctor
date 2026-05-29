@@ -129,8 +129,8 @@ export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompar
                 ⚠ Style warnings ({narrative.lintWarnings.length})
               </span>
               <ul style={{ margin: "6px 0 0", paddingLeft: 20 }}>
-                {narrative.lintWarnings.slice(0, 10).map((w, i) => (
-                  <li key={i}>
+                {narrative.lintWarnings.slice(0, 10).map((w) => (
+                  <li key={`${w.code}-${w.sectionId ?? "_"}-${w.sample}`}>
                     <code>{w.code}</code>
                     {w.sectionId ? <> @ {w.sectionId}</> : null}
                     {w.sample ? <> — &quot;{w.sample}&quot;</> : null}

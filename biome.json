@@ -61,6 +61,14 @@
           "style": { "noCommonJs": "off" }
         }
       }
+    },
+    {
+      "includes": ["**/apps/web/src/styles/primer-report.css"],
+      "linter": {
+        "rules": {
+          "complexity": { "noImportantStyles": "off" }
+        }
+      }
     }
   ]
 }

@@ -426,6 +426,7 @@
 @media print {
   @page {
     size: A4 landscape;
+    /* biome-ignore lint/suspicious/noShorthandPropertyOverrides: @page only accepts the shorthand */
     margin: 10mm 11mm 12mm;
   }
   html,

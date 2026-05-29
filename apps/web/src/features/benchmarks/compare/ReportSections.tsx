@@ -99,8 +99,8 @@ export function ReportSections({
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionEnv")}</h2>
         <ul className="space-y-1 text-sm text-muted-foreground">
-          {environmentLines.map((line, i) => (
-            <li key={i}>{line}</li>
+          {environmentLines.map((line) => (
+            <li key={line}>{line}</li>
           ))}
         </ul>
         {context ? (
