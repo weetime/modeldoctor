@@ -98,6 +98,9 @@ export function RunCreatePage() {
 
   // Pre-fill gen params from the selected evaluation's default (built-in MCQ
   // sets ship thinking:"off"); schema defaults fill the rest. User can override.
+  // Depend ONLY on evaluationId (primitive), not evaluations.data — a background
+  // refetch hands back a new array reference and would otherwise re-run this and
+  // clobber the user's manual gen-param edits.
   useEffect(() => {
     const ev = evaluations.data?.find((e) => e.id === evaluationId);
     if (!ev) return;
@@ -106,8 +109,8 @@ export function RunCreatePage() {
       { thinking: "auto", maxTokens: 2048, temperature: 0, ...(ev.genConfig ?? {}) },
       { shouldValidate: true },
     );
-    // biome-ignore lint/correctness/useExhaustiveDependencies: react to eval switch
-  }, [evaluationId, evaluations.data]);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: pre-fill only on eval switch
+  }, [evaluationId]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
 
