@@ -28,10 +28,15 @@ describe("resolveGenConfig (defaults < eval < run)", () => {
     expect(resolveGenConfig()).toEqual(DEFAULT_GEN_CONFIG);
   });
   it("eval default overrides schema default", () => {
-    expect(resolveGenConfig({ thinking: "off" })).toMatchObject({ thinking: "off", maxTokens: 2048 });
+    expect(resolveGenConfig({ thinking: "off" })).toMatchObject({
+      thinking: "off",
+      maxTokens: 2048,
+    });
   });
   it("run override beats eval default", () => {
-    expect(resolveGenConfig({ thinking: "off", maxTokens: 512 }, { maxTokens: 4096 })).toMatchObject({
+    expect(
+      resolveGenConfig({ thinking: "off", maxTokens: 512 }, { maxTokens: 4096 }),
+    ).toMatchObject({
       thinking: "off",
       maxTokens: 4096,
     });

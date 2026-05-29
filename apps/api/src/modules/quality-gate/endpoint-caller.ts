@@ -1,4 +1,8 @@
-import { DEFAULT_GEN_CONFIG, type EndpointCallResult, type GenConfig } from "@modeldoctor/contracts";
+import {
+  DEFAULT_GEN_CONFIG,
+  type EndpointCallResult,
+  type GenConfig,
+} from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import { ConnectionService } from "../connection/connection.service.js";
 
