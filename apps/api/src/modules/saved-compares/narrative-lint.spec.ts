@@ -171,6 +171,48 @@ describe("narrative-lint — bold density", () => {
     );
     expect(out.some((w) => w.code === "bold-density")).toBe(false);
   });
+
+  it("does NOT flag a bulleted list with one **label** per item", () => {
+    const out = lintNarrative(
+      replaceSection(baseNarrative(), "advice", {
+        bodyMarkdown:
+          "- **场景**:对话、RAG 等存在重复前缀的请求。\n- **配置**:开启 prefix-cache + flashattn。\n- **监控**:关注 p90/p99 延迟。",
+      }),
+      [],
+    );
+    expect(out.some((w) => w.code === "bold-density")).toBe(false);
+  });
+
+  it("does NOT flag a numbered list with one **label** per item", () => {
+    const out = lintNarrative(
+      replaceSection(baseNarrative(), "caveats", {
+        bodyMarkdown:
+          "1. **单次运行**:每个配置仅运行一次,未提供方差。\n2. **p90/p99 持平**:TTFT 和 E2E 的尾部分位在 Baseline 和 Optimized 中相同。\n3. **数据有限**:仅 3 个 stage 对比。",
+      }),
+      [],
+    );
+    expect(out.some((w) => w.code === "bold-density")).toBe(false);
+  });
+
+  it("still flags ≥3 bold inside a single non-list paragraph", () => {
+    const out = lintNarrative(
+      replaceSection(baseNarrative(), "results", {
+        bodyMarkdown: "在 **par=32** 高压档下,**vLLM** 吞吐 **12.4 req/s** 领先 SGLang。",
+      }),
+      [],
+    );
+    expect(out.some((w) => w.code === "bold-density")).toBe(true);
+  });
+
+  it("still flags ≥3 bold within a single bullet line", () => {
+    const out = lintNarrative(
+      replaceSection(baseNarrative(), "advice", {
+        bodyMarkdown: "- **vLLM** 吞吐 **12.4 req/s** 比 SGLang **9.0 req/s** 高 38%。",
+      }),
+      [],
+    );
+    expect(out.some((w) => w.code === "bold-density")).toBe(true);
+  });
 });
 
 describe("narrative-lint — decimal precision", () => {
