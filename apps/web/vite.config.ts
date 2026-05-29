@@ -48,6 +48,10 @@ export default defineConfig({
       "/api": {
         target: `http://localhost:${API_PORT}`,
         changeOrigin: true,
+        // SavedCompare report generation can take 60-180s. Default proxy
+        // timeout is 5min so this is mostly defensive, but be explicit.
+        timeout: 200_000,
+        proxyTimeout: 200_000,
       },
     },
   },

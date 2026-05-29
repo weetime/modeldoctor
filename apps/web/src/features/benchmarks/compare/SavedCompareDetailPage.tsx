@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { exportPageAsHtml } from "./exportHtml";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
+import { ReportProgress } from "./ReportProgress";
 import { type ReportRun, ReportSections } from "./ReportSections";
 
 function extractParamsSummary(params: unknown): {
@@ -167,6 +168,7 @@ export function SavedCompareDetailPage() {
                   </>
                 ) : null}
               </p>
+              <ReportProgress active={synth.isPending} />
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -196,12 +198,13 @@ export function SavedCompareDetailPage() {
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {t("savedCompare.report.generateHint", {
-                  defaultValue: "60-90s deep report — Hero + 6 sections + summary cards (zh-CN).",
+                  defaultValue: "60-180s deep report — Hero + 6 sections + summary cards (zh-CN).",
                 })}
               </p>
               {synth.error ? (
                 <p className="mt-1 text-xs text-destructive">{synth.error.message}</p>
               ) : null}
+              <ReportProgress active={synth.isPending} />
             </div>
             <Button
               onClick={() => void generate()}
