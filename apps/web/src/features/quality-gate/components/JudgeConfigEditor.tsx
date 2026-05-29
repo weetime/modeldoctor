@@ -195,10 +195,15 @@ export function JudgeConfigEditor({ namePrefix }: JudgeConfigEditorProps) {
               <FormItem>
                 <FormLabel>{t("judges.labelsLabel")}</FormLabel>
                 <FormControl>
+                  {/* Uncontrolled: a controlled value bound to `.join(", ")` would
+                      strip commas/spaces on every keystroke and block typing extra
+                      labels. Parse on blur instead. `key={kind}` resets the field
+                      when the judge kind switches. */}
                   <Input
-                    value={(field.value as string[] | undefined)?.join(", ") ?? ""}
+                    key={kind}
+                    defaultValue={(field.value as string[] | undefined)?.join(", ") ?? ""}
                     placeholder={t("judges.labelsPlaceholder")}
-                    onChange={(e) => {
+                    onBlur={(e) => {
                       const parsed = e.target.value
                         .split(",")
                         .map((s) => s.trim())
