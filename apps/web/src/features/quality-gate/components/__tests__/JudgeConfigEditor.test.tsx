@@ -63,6 +63,16 @@ describe("JudgeConfigEditor", () => {
     expect(screen.getByDisplayValue("rubric ten chars")).toBeInTheDocument();
   });
 
+  it("multiple-choice kind shows the correct-option input", () => {
+    render(
+      <Harness defaultValues={{ judgeConfig: { kind: "multiple-choice", answer: "C" } }}>
+        <JudgeConfigEditor namePrefix="judgeConfig" />
+      </Harness>,
+    );
+    expect(screen.getByDisplayValue("C")).toBeInTheDocument();
+    expect(screen.getByText("正确选项")).toBeInTheDocument();
+  });
+
   it("changing kind via the selector resets to defaults for the new kind", () => {
     render(
       <Harness defaultValues={{ judgeConfig: { kind: "exact-match" } }}>

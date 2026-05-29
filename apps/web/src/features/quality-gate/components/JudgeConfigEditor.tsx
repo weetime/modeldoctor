@@ -27,6 +27,7 @@ const KIND_DEFAULTS: Record<JudgeConfig["kind"], JudgeConfig> = {
   contains: { kind: "contains", substrings: [], mode: "all" },
   regex: { kind: "regex", pattern: "" },
   "llm-judge": { kind: "llm-judge", rubric: "", scale: "0-5" },
+  "multiple-choice": { kind: "multiple-choice", answer: "A" },
 };
 
 export function JudgeConfigEditor({ namePrefix }: JudgeConfigEditorProps) {
@@ -60,6 +61,7 @@ export function JudgeConfigEditor({ namePrefix }: JudgeConfigEditorProps) {
                   <SelectItem value="contains">{t("judges.contains")}</SelectItem>
                   <SelectItem value="regex">{t("judges.regex")}</SelectItem>
                   <SelectItem value="llm-judge">{t("judges.llm-judge")}</SelectItem>
+                  <SelectItem value="multiple-choice">{t("judges.multiple-choice")}</SelectItem>
                 </SelectContent>
               </Select>
             </FormControl>
@@ -158,6 +160,51 @@ export function JudgeConfigEditor({ namePrefix }: JudgeConfigEditorProps) {
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value || undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+
+      {kind === "multiple-choice" && (
+        <>
+          <FormField
+            control={control}
+            name={`${namePrefix}.answer`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("judges.answerLabel")}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder={t("judges.answerPlaceholder")}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`${namePrefix}.labels`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("judges.labelsLabel")}</FormLabel>
+                <FormControl>
+                  <Input
+                    value={(field.value as string[] | undefined)?.join(", ") ?? ""}
+                    placeholder={t("judges.labelsPlaceholder")}
+                    onChange={(e) => {
+                      const parsed = e.target.value
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean);
+                      field.onChange(parsed.length > 0 ? parsed : undefined);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

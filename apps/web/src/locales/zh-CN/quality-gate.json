@@ -65,6 +65,7 @@
     "contains": "关键词包含",
     "regex": "正则",
     "llm-judge": "LLM 评分",
+    "multiple-choice": "单项选择题",
     "caseSensitive": "区分大小写",
     "substringsLabel": "子串列表（逗号分隔）",
     "modeLabel": "模式",
@@ -75,7 +76,11 @@
     "rubricLabel": "评分准则",
     "rubricPlaceholder": "判断助手是否...",
     "scaleLabel": "分制",
-    "thresholdLabel": "通过阈值（不填则按分制推断）"
+    "thresholdLabel": "通过阈值（不填则按分制推断）",
+    "answerLabel": "正确选项",
+    "answerPlaceholder": "如 C",
+    "labelsLabel": "选项标签（逗号分隔，留空默认 A,B,C,D）",
+    "labelsPlaceholder": "A, B, C, D"
   },
   "runs": {
     "title": "评测运行",
