@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { genConfigSchema } from "./gen-config.js";
 import { judgeConfigSchema } from "./judge-config.js";
 
 export const evaluationSampleSchema = z.object({
@@ -29,6 +30,10 @@ export const evaluationSchema = z.object({
   version: z.number().int().positive(),
   samples: z.array(evaluationSampleSchema),
   totalSamples: z.number().int().nonnegative(),
+  // Eval-level default generation params (e.g. built-in MCQ sets ship
+  // thinking:"off"). Used as the run-create form's initial values; per-run
+  // overrides win. Null → fall back to schema defaults.
+  genConfig: genConfigSchema.partial().nullable(),
   // Official built-in evaluations (seeded by the platform). Read-only — users
   // cannot modify name/description/samples or delete; they can run against
   // them and duplicate them as a starting point for their own evaluations.
@@ -42,6 +47,7 @@ export const createEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
   samples: z.array(evaluationSampleInputSchema).min(1).max(500),
+  genConfig: genConfigSchema.partial().nullable().optional(),
 });
 export type CreateEvaluationRequest = z.infer<typeof createEvaluationRequestSchema>;
 
@@ -49,6 +55,7 @@ export const updateEvaluationRequestSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   samples: z.array(evaluationSampleInputSchema).min(1).max(500).optional(),
+  genConfig: genConfigSchema.partial().nullable().optional(),
 });
 export type UpdateEvaluationRequest = z.infer<typeof updateEvaluationRequestSchema>;
 
