@@ -4,6 +4,7 @@ import type {
   ListRunSamplesQuery,
   ListRunsQuery,
 } from "@modeldoctor/contracts";
+import { resolveGenConfig } from "@modeldoctor/contracts";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConnectionService } from "../../connection/connection.service.js";
 import { LlmJudgeService } from "../../llm-judge/llm-judge.service.js";
@@ -96,6 +97,10 @@ export class RunsService {
       baselineRunIdAtExecution = override.id;
     }
 
+    // Layer: schema defaults < eval-level default < per-run override. Snapshot
+    // the resolved config onto the run for reproducibility.
+    const genConfig = resolveGenConfig(evaluation.genConfig, body.genConfig);
+
     const pending = await this.repo.createPending({
       userId,
       evaluationId: evaluation.id,
@@ -104,6 +109,7 @@ export class RunsService {
       endpointAId: body.endpointAId,
       endpointBId: body.endpointBId ?? null,
       gateConfig: body.gateConfig,
+      genConfig,
       baselineRunIdAtExecution,
     });
 

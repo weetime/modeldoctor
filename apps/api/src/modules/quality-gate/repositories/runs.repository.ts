@@ -2,11 +2,13 @@ import type {
   AggregateMetrics,
   EvaluationRun,
   GateResult,
+  GenConfig,
   ListRunSamplesQuery,
   ListRunSamplesResponse,
   ListRunsQuery,
   RunSample,
 } from "@modeldoctor/contracts";
+import { DEFAULT_GEN_CONFIG } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import type { EvaluationRunStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -21,6 +23,7 @@ export interface CreatePendingInput {
   endpointAId: string;
   endpointBId?: string | null;
   gateConfig: object;
+  genConfig: GenConfig;
   baselineRunIdAtExecution?: string | null;
 }
 
@@ -48,6 +51,7 @@ export class RunsRepository {
         endpointAId: input.endpointAId,
         endpointBId: input.endpointBId ?? null,
         gateConfig: input.gateConfig,
+        genConfig: input.genConfig,
         totalSamples: total,
         baselineRunIdAtExecution: input.baselineRunIdAtExecution ?? null,
       },
@@ -251,6 +255,7 @@ export class RunsRepository {
         endpointBId: true,
         evaluationSnapshot: true,
         gateConfig: true,
+        genConfig: true,
         baselineRunIdAtExecution: true,
       },
     });
@@ -260,6 +265,7 @@ export class RunsRepository {
       userId: row.userId,
       endpointAId: row.endpointAId,
       endpointBId: row.endpointBId,
+      genConfig: (row.genConfig as GenConfig | null) ?? null,
       evaluationSnapshot: row.evaluationSnapshot as {
         samples: Array<{
           id: string;
@@ -302,6 +308,7 @@ export class RunsRepository {
     endpointA: row.endpointA ? toConnectionRef(row.endpointA) : null,
     endpointB: row.endpointB ? toConnectionRef(row.endpointB) : null,
     gateConfig: row.gateConfig as EvaluationRun["gateConfig"],
+    genConfig: (row.genConfig as GenConfig | null) ?? DEFAULT_GEN_CONFIG,
     status: row.status as EvaluationRun["status"],
     gateResult: row.gateResult,
     aggregateMetrics: row.aggregateMetrics as EvaluationRun["aggregateMetrics"],
@@ -335,6 +342,7 @@ type RunRowWithEndpoints = {
   endpointA: ConnectionRow | null;
   endpointB: ConnectionRow | null;
   gateConfig: unknown;
+  genConfig: unknown;
   status: EvaluationRunStatus;
   gateResult: GateResult | null;
   aggregateMetrics: unknown;

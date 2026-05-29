@@ -905,6 +905,10 @@ interface BuiltInEvaluationSeed {
     judgeConfig: unknown;
     tags?: string[];
   }>;
+  // Eval-level default generation params (run-create pre-fills these). MCQ sets
+  // ship thinking:"off" so reasoning models (Qwen3 etc.) answer directly instead
+  // of burning the token budget on <think> and getting truncated.
+  genConfig?: { maxTokens?: number; temperature?: number; thinking?: "auto" | "on" | "off" };
 }
 
 const BUILT_IN_EVALUATIONS: BuiltInEvaluationSeed[] = [
@@ -1523,6 +1527,9 @@ const BUILT_IN_EVALUATIONS: BuiltInEvaluationSeed[] = [
     description:
       "从 C-Eval 抽样的 60 道中文单项选择题，覆盖 12 个学科（数学/物理/化学/计算机/经济/法学/历史/文学等），使用 multiple-choice 判分器检测模型对中文学科知识的准确性。数据源 C-Eval（CC-BY-NC-SA-4.0，非商用），仅供自用评测。",
     samples: cevalSamples,
+    // Short-answer MCQ: disable thinking so reasoning models (Qwen3 etc.) emit
+    // the answer letter directly instead of being truncated mid-<think>.
+    genConfig: { thinking: "off" },
   },
 ];
 
@@ -1536,6 +1543,7 @@ async function seedBuiltInEvaluations(): Promise<void> {
         description: ev.description,
         samples: validatedSamples,
         totalSamples: validatedSamples.length,
+        genConfig: ev.genConfig ?? Prisma.JsonNull,
         isOfficial: true,
       },
       create: {
@@ -1545,6 +1553,7 @@ async function seedBuiltInEvaluations(): Promise<void> {
         description: ev.description,
         samples: validatedSamples,
         totalSamples: validatedSamples.length,
+        genConfig: ev.genConfig ?? Prisma.JsonNull,
         isOfficial: true,
       },
     });
