@@ -1,3 +1,4 @@
+import type { FigureRefId } from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters";
 
 export function readP95Latency(m: unknown): number | null {
@@ -49,4 +50,22 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
         ? null
         : { p50: e2eP50, p90: e2eP90, p99: e2eP99 },
   };
+}
+
+/**
+ * Server-side mirror of `apps/web/src/features/benchmarks/compare/client-metrics.ts#availableFigureRefIds`.
+ * Returns the figure `refId`s that can render against the given summaries.
+ * The prompt sends this set to the LLM so it doesn't pick a refId for which
+ * the data is not there (e.g. asking for ttft from vegeta gateway runs).
+ */
+export function availableFigureRefIds(summaries: unknown[]): Set<FigureRefId> {
+  const out = new Set<FigureRefId>();
+  if (summaries.length === 0) return out;
+  const perRun = summaries.map((m) => summarizeForPrompt(m));
+  if (perRun.some((s) => s.throughput !== null)) out.add("stage-bars-throughput");
+  if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
+  if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
+  if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
+  out.add("compare-grid");
+  return out;
 }

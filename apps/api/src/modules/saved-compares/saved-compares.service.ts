@@ -1,4 +1,5 @@
 import type {
+  Classification,
   CreateSavedCompareRequest,
   HydratedBenchmarkRef,
   HydratedSavedCompare,
@@ -21,6 +22,9 @@ export class SavedComparesService {
     stageLabels: unknown;
     baselineId: string | null;
     context: string | null;
+    classification: string;
+    clientName: string | null;
+    version: number;
     narrative: unknown;
     narrativeAt: Date | null;
     createdAt: Date;
@@ -34,6 +38,9 @@ export class SavedComparesService {
       stageLabels: row.stageLabels as Record<string, string>,
       baselineId: row.baselineId,
       context: row.context,
+      classification: row.classification as Classification,
+      clientName: row.clientName,
+      version: row.version,
       narrative: row.narrative,
       narrativeAt: row.narrativeAt ? row.narrativeAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
@@ -53,6 +60,8 @@ export class SavedComparesService {
         stageLabels: body.stageLabels,
         baselineId: body.baselineId ?? null,
         context: body.context ?? null,
+        classification: body.classification ?? "internal",
+        clientName: body.clientName ?? null,
       },
     });
     return this.serialize(row);
@@ -111,6 +120,8 @@ export class SavedComparesService {
         stageLabels: body.stageLabels ?? undefined,
         baselineId: body.baselineId === undefined ? undefined : body.baselineId,
         context: body.context === undefined ? undefined : body.context,
+        classification: body.classification ?? undefined,
+        clientName: body.clientName === undefined ? undefined : body.clientName,
       },
     });
     return this.serialize(row);
@@ -123,9 +134,16 @@ export class SavedComparesService {
   }
 
   async setNarrative(id: string, narrative: unknown, generatedAt: Date): Promise<void> {
+    // Bump `version` on every narrative write so the Hero meta reflects how
+    // many times the user has regenerated. First write moves 1 → 2; the
+    // initial row default is 1.
     await this.prisma.savedCompare.update({
       where: { id },
-      data: { narrative: narrative as Prisma.InputJsonValue, narrativeAt: generatedAt },
+      data: {
+        narrative: narrative as Prisma.InputJsonValue,
+        narrativeAt: generatedAt,
+        version: { increment: 1 },
+      },
     });
   }
 }

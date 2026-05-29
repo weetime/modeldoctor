@@ -1,3 +1,4 @@
+import type { Classification } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateSavedCompare } from "./queries";
 
@@ -41,6 +49,8 @@ export function SaveCompareDialog({
   const [name, setName] = useState("");
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [ctx, setCtx] = useState(context);
+  const [classification, setClassification] = useState<Classification>("internal");
+  const [clientName, setClientName] = useState("");
 
   const allLabelled = runs.every((r) => labels[r.id]?.trim());
   const canSubmit = name.trim().length > 0 && allLabelled && !create.isPending;
@@ -53,6 +63,8 @@ export function SaveCompareDialog({
       stageLabels: Object.fromEntries(runs.map((r) => [r.id, labels[r.id].trim()])),
       baselineId: baselineId ?? undefined,
       context: ctx.trim() || undefined,
+      classification,
+      clientName: clientName.trim() || undefined,
     });
     onOpenChange(false);
     navigate(`/benchmarks/compare/saved/${sc.id}`);
@@ -107,6 +119,39 @@ export function SaveCompareDialog({
               onChange={(e) => setCtx(e.target.value)}
               placeholder={t("savedCompare.dialog.contextPlaceholder")}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="sc-classification">
+                {t("savedCompare.dialog.classificationLabel", { defaultValue: "Classification" })}
+              </Label>
+              <Select
+                value={classification}
+                onValueChange={(v) => setClassification(v as Classification)}
+              >
+                <SelectTrigger id="sc-classification">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">internal</SelectItem>
+                  <SelectItem value="partner">partner</SelectItem>
+                  <SelectItem value="public">public</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="sc-client">
+                {t("savedCompare.dialog.clientLabel", { defaultValue: "Client / customer" })}
+              </Label>
+              <Input
+                id="sc-client"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder={t("savedCompare.dialog.clientPlaceholder", {
+                  defaultValue: "(optional, surfaces in report Hero)",
+                })}
+              />
+            </div>
           </div>
           {create.error ? (
             <div className="text-sm text-rose-600">{create.error.message}</div>

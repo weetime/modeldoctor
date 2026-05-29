@@ -350,6 +350,14 @@ model SavedCompare {
   stageLabels      Json      @map("stage_labels")
   baselineId       String?   @map("baseline_id")
   context          String?   @db.Text
+  /// 'public' | 'partner' | 'internal'. Drives the Hero meta + future
+  /// distribution gates (e.g. partner-tier reports may auto-redact).
+  classification   String    @default("internal")
+  /// Free-text client / customer name surfaced in the report Hero meta.
+  clientName       String?   @map("client_name")
+  /// Monotonically increasing version stamp, bumped by the UI when the
+  /// user regenerates or edits the report. Surfaced in Hero meta.
+  version          Int       @default(1)
   narrative        Json?
   narrativeAt      DateTime? @map("narrative_at") @db.Timestamptz(3)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

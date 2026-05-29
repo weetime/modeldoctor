@@ -371,6 +371,25 @@
 .primer-report .pr-figure-caption strong {
   color: var(--pr-fg-default);
 }
+.primer-report .pr-figure-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  color: var(--pr-fg-muted);
+  font-size: 13px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--pr-bg-subtle),
+    var(--pr-bg-subtle) 8px,
+    var(--pr-bg-muted) 8px,
+    var(--pr-bg-muted) 9px
+  );
+}
+.primer-report .pr-figure-placeholder strong {
+  font-family: var(--pr-mono);
+  color: var(--pr-fg-default);
+  margin-right: 6px;
+}
 
 /* ─── Callout & lint warnings ───────────────────────────────────────────── */
 .primer-report .pr-callout {

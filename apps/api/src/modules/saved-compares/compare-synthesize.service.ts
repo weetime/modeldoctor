@@ -11,7 +11,7 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 import { LruCache } from "../insights/cache.js";
 import { type ChatMessage, chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
-import { summarizeForPrompt } from "./metrics.js";
+import { availableFigureRefIds, summarizeForPrompt } from "./metrics.js";
 import { isBlockingWarning, lintNarrative } from "./narrative-lint.js";
 import { buildRetryFeedback, COMPARE_SYS_PROMPT_EN, COMPARE_SYS_PROMPT_ZH } from "./prompts.js";
 import { SavedComparesService } from "./saved-compares.service.js";
@@ -84,13 +84,40 @@ export class CompareSynthesizeService {
       warnings = retriedWarnings;
     }
 
-    parsed = { ...parsed, lintWarnings: warnings };
+    parsed = {
+      ...parsed,
+      hero: this.augmentHero(parsed.hero, sc),
+      lintWarnings: warnings,
+    };
 
     const generatedAt = new Date();
     await this.svc.setNarrative(id, parsed, generatedAt);
     this.cache.set(key, { generatedAt: generatedAt.toISOString(), narrative: parsed });
 
     return { narrative: parsed, generatedAt: generatedAt.toISOString(), fromCache: false };
+  }
+
+  /**
+   * Prepend server-controlled meta items to whatever the LLM emitted, so the
+   * Hero always reflects the SavedCompare row's classification / client /
+   * version regardless of whether the prompt taught the model about them.
+   * Caps at 8 total meta items (schema limit).
+   */
+  private augmentHero(
+    hero: CompareNarrative["hero"],
+    sc: HydratedSavedCompare,
+  ): CompareNarrative["hero"] {
+    // setNarrative bumps version after this call, so display = stored + 1.
+    const nextVersion = sc.version + 1;
+    const serverMeta: CompareNarrative["hero"]["metaItems"] = [
+      { label: "Classification", value: sc.classification },
+      ...(sc.clientName ? [{ label: "Client", value: sc.clientName }] : []),
+      { label: "Version", value: `v${nextVersion}` },
+    ];
+    // Dedupe by label (case-insensitive): server meta wins.
+    const serverLabels = new Set(serverMeta.map((m) => m.label.toLowerCase()));
+    const llmMeta = hero.metaItems.filter((m) => !serverLabels.has(m.label.toLowerCase()));
+    return { ...hero, metaItems: [...serverMeta, ...llmMeta].slice(0, 8) };
   }
 
   private async callAndParse(
@@ -227,6 +254,22 @@ export class CompareSynthesizeService {
         lines.push("", L.baselineHeader, `stage ${bl.stageLabel} (id ${bl.id.slice(0, 8)})`);
       }
     }
+
+    // Tell the LLM which figure refIds actually have data behind them, so it
+    // does not pick a refId for which the bar chart will render empty. Keys
+    // outside this list MUST NOT appear in `figures[*].refId`.
+    const available = availableFigureRefIds(
+      sc.benchmarks.filter((b) => !b.missing).map((b) => b.summaryMetrics),
+    );
+    lines.push(
+      "",
+      zh ? "## 可用图表 refId" : "## Available figure refIds",
+      zh
+        ? "本次数据集仅支持以下 refId,figures[].refId 不得使用此清单外的值:"
+        : "Only these refIds may appear in `figures[].refId` — others will render empty:",
+      ...[...available].map((r) => `- ${r}`),
+    );
+
     lines.push("", L.reminder);
     return lines.join("\n");
   }

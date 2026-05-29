@@ -1,6 +1,6 @@
 import type { FigureRefId } from "@modeldoctor/contracts";
 import { StageBarChart, type StageBarDatum } from "@/components/charts/StageBarChart";
-import { summarizeForPrompt } from "./client-metrics";
+import { availableFigureRefIds, summarizeForPrompt } from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
 
 export interface FigureRendererProps {
@@ -14,11 +14,32 @@ export interface FigureRendererProps {
  * Renders a figure by `refId` referencing existing chart components. The LLM
  * picks the refId; the data comes from `runs`. Single source of styling means
  * AI-generated reports look identical regardless of which figure the AI chose.
+ *
+ * If the underlying runs do not carry the data this refId needs (e.g. vegeta
+ * has no TTFT distribution), we render an inline "data unavailable" placeholder
+ * instead of an empty chart. The server-side prompt also receives the same
+ * availability set so the LLM can avoid picking the refId in the first place.
  */
 export function FigureRenderer({ refId, runs, caption, figureNumber }: FigureRendererProps) {
   const summaries = runs
     .filter((r) => r.benchmark !== null)
     .map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));
+
+  const available = availableFigureRefIds(runs.map((r) => r.summaryMetrics));
+  if (!available.has(refId)) {
+    return (
+      <figure className="pr-figure">
+        <div className="pr-figure-body pr-figure-placeholder">
+          <span>
+            <strong>{refId}</strong> — data unavailable for these runs
+          </span>
+        </div>
+        <figcaption className="pr-figure-caption">
+          <strong>Figure {figureNumber}</strong> · {caption}
+        </figcaption>
+      </figure>
+    );
+  }
 
   let chart: React.ReactNode = null;
 

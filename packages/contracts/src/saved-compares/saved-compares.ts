@@ -3,6 +3,9 @@ import { z } from "zod";
 export const stageLabelsSchema = z.record(z.string(), z.string().min(1).max(64));
 export type StageLabels = z.infer<typeof stageLabelsSchema>;
 
+export const classificationSchema = z.enum(["public", "partner", "internal"]);
+export type Classification = z.infer<typeof classificationSchema>;
+
 // Defense-in-depth: each benchmark must have a stage label, and the baseline
 // (when set) must reference one of the benchmarks. The UI's create flows
 // already build stageLabels from benchmarkIds, but this guards the server
@@ -26,6 +29,9 @@ export const savedCompareSchema = z
     stageLabels: stageLabelsSchema,
     baselineId: z.string().nullable(),
     context: z.string().nullable(),
+    classification: classificationSchema.default("internal"),
+    clientName: z.string().max(120).nullable(),
+    version: z.number().int().positive().default(1),
     narrative: z.unknown().nullable(), // shape lives in compare-narrative.ts; kept loose here
     narrativeAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
@@ -52,6 +58,8 @@ export const createSavedCompareRequestSchema = z
     stageLabels: stageLabelsSchema,
     baselineId: z.string().nullable().optional(),
     context: z.string().max(10_000).nullable().optional(),
+    classification: classificationSchema.optional(),
+    clientName: z.string().max(120).nullable().optional(),
   })
   .refine((s) => s.benchmarkIds.length >= 2, {
     message: "validation.compareMinRuns",
@@ -90,6 +98,8 @@ export const updateSavedCompareRequestSchema = z.object({
   stageLabels: stageLabelsSchema.optional(),
   baselineId: z.string().nullable().optional(),
   context: z.string().max(10_000).nullable().optional(),
+  classification: classificationSchema.optional(),
+  clientName: z.string().max(120).nullable().optional(),
 });
 export type UpdateSavedCompareRequest = z.infer<typeof updateSavedCompareRequestSchema>;
 
