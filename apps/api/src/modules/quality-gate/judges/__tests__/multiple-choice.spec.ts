@@ -21,6 +21,16 @@ describe("extractChoice", () => {
   it("returns null when no label present", () => expect(extractChoice("不知道", L)).toBeNull());
   it("supports custom labels beyond D", () =>
     expect(extractChoice("我选 E", ["A", "B", "C", "D", "E"])).toBe("E"));
+  it("marker 我选 beats earlier distractor", () =>
+    expect(extractChoice("A 是错的，我选 C", L)).toBe("C"));
+  it("marker 正确选项是", () => expect(extractChoice("正确选项是 B", L)).toBe("B"));
+  it("marker 选项", () => expect(extractChoice("选项 D", L)).toBe("D"));
+  it("digit boundary: does not match label glued to a digit", () =>
+    expect(extractChoice("参考编号 A1 不是答案", L)).toBeNull());
+  it("numeric labels: '10' does not match label '1'", () =>
+    expect(extractChoice("总数为 10 个", ["1", "2", "3", "4"])).toBeNull());
+  it("longest-first: 'APPLE' not shadowed by prefix label 'APP'", () =>
+    expect(extractChoice("答案是 APPLE", ["APP", "APPLE"])).toBe("APPLE"));
 });
 
 describe("multipleChoiceJudge", () => {

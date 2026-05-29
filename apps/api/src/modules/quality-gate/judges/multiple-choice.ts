@@ -13,22 +13,28 @@ function escapeRegExp(s: string): string {
  * Extract the option label the model picked from its free-form answer.
  * Common shapes handled: "C", "C.", "(C)", "答案是 C", "正确答案：C", "C. 北京".
  * Strategy: prefer a label that follows an explicit answer marker; otherwise take
- * the first label that appears standalone (not glued to other latin letters).
+ * the first label that appears standalone (not glued to other alphanumeric chars).
  */
 export function extractChoice(text: string, labels: string[]): string | null {
-  const alt = labels.map((l) => escapeRegExp(l.toUpperCase())).join("|");
+  // Longest-first so a label that is a prefix of another (e.g. "APP" vs "APPLE")
+  // can't shadow the longer one in the regex alternation.
+  const alt = [...labels]
+    .map((l) => escapeRegExp(l.toUpperCase()))
+    .sort((a, b) => b.length - a.length)
+    .join("|");
   const up = text.toUpperCase();
 
-  // 1) marker-based: "答案/正确答案/应选/选/answer (is)" ... <label>
+  // 1) marker-based: "答案/正确答案/正确选项/选项/应选/选/answer (is)" ... <label>.
+  // Boundary `[A-Z0-9]` avoids matching "A" in "A1" or a digit label in "10".
   const marker = new RegExp(
-    `(?:正确答案|答案|应选|选择|答|ANSWER(?:\\s+IS)?)\\s*(?:是|为|应该是|应为|:|：|\\.)?\\s*[（(\\[【]?\\s*(${alt})(?![A-Z])`,
+    `(?:正确答案|正确选项|答案|选项|应选|选择|选|答|ANSWER(?:\\s+IS)?)\\s*(?:是|为|应该是|应为|:|：|\\.)?\\s*[（(\\[【]?\\s*(${alt})(?![A-Z0-9])`,
     "i",
   );
   const mm = up.match(marker);
   if (mm) return mm[1];
 
-  // 2) first standalone label (not surrounded by other latin letters)
-  const standalone = new RegExp(`(?<![A-Z])(${alt})(?![A-Z])`, "i");
+  // 2) first standalone label (not surrounded by other alphanumeric characters)
+  const standalone = new RegExp(`(?<![A-Z0-9])(${alt})(?![A-Z0-9])`, "i");
   const sm = up.match(standalone);
   if (sm) return sm[1];
 
