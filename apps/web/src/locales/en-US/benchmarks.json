@@ -396,7 +396,8 @@
       "chartE2eTitle": "e2e latency percentiles (ms)",
       "chartExtraTitle": "Cache hit / extra metrics",
       "narrativeMissing": "AI analysis not generated yet.",
-      "generateButton": "Generate AI analysis"
+      "generateButton": "Generate AI analysis",
+      "toc": "Contents"
     },
     "errors": {
       "providerMissing": "LLM provider not configured",

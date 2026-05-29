@@ -1,5 +1,6 @@
 import type { CompareNarrative, SectionId } from "@modeldoctor/contracts";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { FigureRenderer } from "./FigureRenderer";
@@ -25,6 +26,7 @@ export interface SavedCompareReportProps {
  *   - Sticky left-rail TOC with scroll-spy
  */
 export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompareReportProps) {
+  const { t } = useTranslation("benchmarks");
   const sections = narrative.sections;
   const figuresBySection = useMemo(() => {
     const map = new Map<SectionId, typeof narrative.figures>();
@@ -65,8 +67,13 @@ export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompar
   return (
     <div className="primer-report" data-report-root data-print-header={printHeader ?? ""}>
       <div className="pr-layout">
-        <nav className="pr-toc" aria-label="目录">
-          <div className="pr-toc-title">目录</div>
+        <nav
+          className="pr-toc"
+          aria-label={t("savedCompare.report.toc", { defaultValue: "Contents" })}
+        >
+          <div className="pr-toc-title">
+            {t("savedCompare.report.toc", { defaultValue: "Contents" })}
+          </div>
           <ul>
             {sections.map((s) => (
               <li key={s.id}>

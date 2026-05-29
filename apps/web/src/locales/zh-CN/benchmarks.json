@@ -396,7 +396,8 @@
       "chartE2eTitle": "e2e 延迟分位（ms）",
       "chartExtraTitle": "缓存命中 / 额外指标",
       "narrativeMissing": "尚未生成 AI 分析。",
-      "generateButton": "生成 AI 分析"
+      "generateButton": "生成 AI 分析",
+      "toc": "目录"
     },
     "errors": {
       "providerMissing": "未配置 LLM 服务",
