@@ -1,0 +1,662 @@
+[
+  {
+    "id": "smp_cmmlu_ancient_chinese_0",
+    "idx": 0,
+    "prompt": "以下是一道关于「古代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列句中，括号内的词意义解释正确的一句是\nA. 好仁者，無以尚之。(尚：时尚)\nB. 小人懷璧，不可以越鄉。(越：超越)\nC. 大道之行也，天下爲公，選賢舆能，講信脩睦。(舆：推举)\nD. 舉儉力孝弟，罰偷廳，而惰民惡之；決獄不避，貴强恶之。(狱：监狱)",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "ancient_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_ancient_chinese_1",
+    "idx": 1,
+    "prompt": "以下是一道关于「古代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n按照传统的“六书”体例，“吹”字应属\nA. 会意\nB. 指事\nC. 象形\nD. 形声",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "ancient_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_ancient_chinese_2",
+    "idx": 2,
+    "prompt": "以下是一道关于「古代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“辟”和“避”的关系是\nA. 繁简字\nB. 通假字\nC. 古今字\nD. 异体字",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "ancient_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_ancient_chinese_3",
+    "idx": 3,
+    "prompt": "以下是一道关于「古代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列句中，有名词用作动词的一句是\nA. 女股肱周室，以夾輔先王。\nB. 我醉，汝道苦我，何故?\nC. 單于使使曉武，會論虞常，欲因此時降武。\nD. 公子纠敗，召忽死之。",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "ancient_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_ancient_chinese_4",
+    "idx": 4,
+    "prompt": "以下是一道关于「古代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列句中，“是”充当判断句系词的一句是\nA. 客人不知其是商君也。\nB. 臣聞七十里爲政於天下者，湯是也。\nC. 故外戶而不閉，是謂大同。\nD. 輕死而暴，是小人之勇也。",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "ancient_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_history_0",
+    "idx": 5,
+    "prompt": "以下是一道关于「中国历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n随着中国民族资本主义产生和发展，工商业者群体意识逐渐形成，作为一种新的社会力量，工商业者在创办实业、抵制洋货、收回利权、立宪运动、民主革命、抗日救亡等众多社会事务中日益显示出自身的实力和存在价值。对此，下列历史解释正确的是\nA. 工商业者是倡导革命的新中坚力量\nB. 工商业者依旧属于传统的社会群体\nC. 工商业者投身社会事务是有利可图\nD. 工商业者推动了近代中国社会发展",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_history"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_history_1",
+    "idx": 6,
+    "prompt": "以下是一道关于「中国历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n乾隆时江南地主“所居在城或他州异县，地亩山场皆委之佃户”。苏州甚至出现“土著安业者田不满百亩，余皆佃农也。上田半归于郡城之富户”。由此可知，当时江南\nA. 个体农耕为主要生产形式\nB. 农业中商品化生产普遍\nC. 农业生产利润微不足道\nD. 土地所有权变更极为频繁",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_history"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_history_2",
+    "idx": 7,
+    "prompt": "以下是一道关于「中国历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《新全球史》记载，从公元前6世纪开始，铁制农具在中国骤然增加，铁犁、铁镐、铁镰刀和铁耙在乡村里成为日常用具，这一现象给当时社会发展带来的影响不包括\nA. “庶人食力，工商食官”\nB. “除井田，民得买卖”\nC. “宗庙之牺为畎亩之勤”\nD. “秋七月，初税田”",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_history"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_history_3",
+    "idx": 8,
+    "prompt": "以下是一道关于「中国历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n据研究，1853年，印度人均消费英国棉纱、棉布9.09便士，而中国是0.94便士。这反映出当时中国\nA. 经济受到鸦片战争的破坏\nB. 实行保护本国经济的政策\nC. 经济的发展水平低于印度\nD. 传统的小农经济根深蒂固",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_history"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_history_4",
+    "idx": 9,
+    "prompt": "以下是一道关于「中国历史」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n孔子曾提出过“君子和而不同”的思想，意思是“和谐而又不千篇一律，不同而又不互相冲突”，运用这种思想处理不同社会制度国家间关系取得成功的范例是\nA. 日内瓦会议的圆满成功\nB. 万隆会议的圆满成功\nC. 签订《中苏友好同盟互助条约》\nD. 香港、澳门回归",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_history"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_literature_0",
+    "idx": 10,
+    "prompt": "以下是一道关于「中国文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《日出》的结构采用的是\nA. 散点透视法\nB. 回溯法\nC. 拴桩法\nD. 心理分析法",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_literature"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_literature_1",
+    "idx": 11,
+    "prompt": "以下是一道关于「中国文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n以眉间尺为父报仇作为中心线索的小说是\nA. 《九十九度中》\nB. 《蜗牛在荆棘上》\nC. 《铸剑》\nD. 《山峡中》",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_literature"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_literature_2",
+    "idx": 12,
+    "prompt": "以下是一道关于「中国文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“他只是遗憾／他的祖先没有像他一样想过／不然，见到大海的该是他了”。以此作为结尾的诗歌是\nA. 韩东的《山民》\nB. 曾卓的《悬崖边的树》\nC. 骆一禾的《岁月》\nD. 绿原的《重读<圣经>》",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_literature"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_literature_3",
+    "idx": 13,
+    "prompt": "以下是一道关于「中国文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列含有小说《伤逝》的鲁迅作品集是\nA. 《朝花夕拾》\nB. 《呐喊》\nC. 《故事新编》\nD. 《彷徨》",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_literature"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_literature_4",
+    "idx": 14,
+    "prompt": "以下是一道关于「中国文学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n汪静之属于\nA. 现代派诗人\nB. 象征诗派诗人\nC. 湖畔诗人\nD. 小诗诗人",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_literature"]
+  },
+  {
+    "id": "smp_cmmlu_traditional_chinese_medicine_0",
+    "idx": 15,
+    "prompt": "以下是一道关于「中医」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“泻南补北”法适用于\nA. 肾阴虚而肝阳亢\nB. 肾阴虚而相火动\nC. 心阴虚而心阳亢\nD. 肾阴虚而心火旺",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "traditional_chinese_medicine"]
+  },
+  {
+    "id": "smp_cmmlu_traditional_chinese_medicine_1",
+    "idx": 16,
+    "prompt": "以下是一道关于「中医」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n由于暑性升散，故致病可见\nA. 易耗气伤津\nB. 易为阳热症状\nC. 易生风动血\nD. 易伤人体上部及肌表",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "traditional_chinese_medicine"]
+  },
+  {
+    "id": "smp_cmmlu_traditional_chinese_medicine_2",
+    "idx": 17,
+    "prompt": "以下是一道关于「中医」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“血之府”是指\nA. 肝\nB. 脉\nC. 冲脉\nD. 心",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "traditional_chinese_medicine"]
+  },
+  {
+    "id": "smp_cmmlu_traditional_chinese_medicine_3",
+    "idx": 18,
+    "prompt": "以下是一道关于「中医」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“大实有羸状”的病机应属于\nA. 真虚假实\nB. 虚实夹杂\nC. 真实假虚\nD. 虚中夹实",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "traditional_chinese_medicine"]
+  },
+  {
+    "id": "smp_cmmlu_traditional_chinese_medicine_4",
+    "idx": 19,
+    "prompt": "以下是一道关于「中医」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在五行生克关系中，下列哪项是错误的？\nA. 木克土\nB. 火生土\nC. 水克木\nD. 金生水",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "traditional_chinese_medicine"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_food_culture_0",
+    "idx": 20,
+    "prompt": "以下是一道关于「中国饮食文化」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n从这些饮食思想出发，中国人选择了“五谷为养、五果为助、五畜为益、五菜为充” 为饮食结 构，其中“五果”是指\nA. 李、杏、枣、桃、栗\nB. 李、杏、蕉、橘、柿\nC. 李、杏、枣、桃、柿\nD. 李、杏、蕉、桃、栗",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_food_culture"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_food_culture_1",
+    "idx": 21,
+    "prompt": "以下是一道关于「中国饮食文化」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n我国酒器之多，种类之繁，造形之美，堪为世界之冠。商周时期酒器尤为复杂，其中不包括\nA. 盛酒器\nB. 饮酒器\nC. 分酒器\nD. 煮酒器",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_food_culture"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_food_culture_2",
+    "idx": 22,
+    "prompt": "以下是一道关于「中国饮食文化」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n伊尹与商汤关于烹调方面的对话，就是饮食文化史上最早的文献\nA. 《吕氏春秋·本味》\nB. 《论语·乡党》\nC. 《尚书·酒诰》\nD. 《礼记·内则》",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_food_culture"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_food_culture_3",
+    "idx": 23,
+    "prompt": "以下是一道关于「中国饮食文化」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n现代宴会礼仪不包括\nA. 宴会饮酒礼仪\nB. 吃甜品礼仪\nC. 宴会饮食方礼仪\nD. 饮茶礼仪礼仪",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_food_culture"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_food_culture_4",
+    "idx": 24,
+    "prompt": "以下是一道关于「中国饮食文化」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下列菜肴中，不属于淮扬菜名菜的是\nA. 三套鸭\nB. 蟹粉狮子头\nC. 大煮干丝\nD. 汤爆双脆",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_food_culture"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_driving_rule_0",
+    "idx": 25,
+    "prompt": "以下是一道关于「中国驾驶规则」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《中华人民共和国道路交通安全法》是为了维护道路交通秩序，（），提高通行效率。\nA. 圆满完成运输任务\nB. 保护公民合法权益\nC. 减少交通事故\nD. 保证车辆高速行驶",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_driving_rule"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_driving_rule_1",
+    "idx": 26,
+    "prompt": "以下是一道关于「中国驾驶规则」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n制动时车轮最容易抱死的路面是\nA. 沙土路\nB. 混凝土路\nC. 土路\nD. 冰雪路面",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_driving_rule"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_driving_rule_2",
+    "idx": 27,
+    "prompt": "以下是一道关于「中国驾驶规则」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n禁令标志的作用是。\nA. 禁止或限制车辆和行人交通行为\nB. 传递道路方向、地点、距离信息\nC. 指示车辆和行人行进\nD. 警告车辆和行人注意危险地点",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_driving_rule"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_driving_rule_3",
+    "idx": 28,
+    "prompt": "以下是一道关于「中国驾驶规则」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n以欺骗、贿赂等不正当手段取得驾驶证被依法撤销驾驶许可的，多长时间不得重新申请驾驶许可\nA. 5年内\nB. 终身\nC. 3年内\nD. 1年内",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_driving_rule"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_driving_rule_4",
+    "idx": 29,
+    "prompt": "以下是一道关于「中国驾驶规则」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n驾驶机动车遇到沙尘、冰雹、雨、雾、结冰等气象条件如何行驶\nA. 保持匀速行驶\nB. 适当提高车速\nC. 按平常速度行驶\nD. 降低行驶速度",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_driving_rule"]
+  },
+  {
+    "id": "smp_cmmlu_ethnology_0",
+    "idx": 30,
+    "prompt": "以下是一道关于「民族学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n到目前为止，我国少数民族自治地方的数量是\nA. 125个\nB. 155个\nC. 124个\nD. 145个",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "ethnology"]
+  },
+  {
+    "id": "smp_cmmlu_ethnology_1",
+    "idx": 31,
+    "prompt": "以下是一道关于「民族学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n个人的民族成份，只能依据（）的民族成份确定\nA. 父亲\nB. 不能确定\nC. 母亲\nD. 父亲或母亲",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "ethnology"]
+  },
+  {
+    "id": "smp_cmmlu_ethnology_2",
+    "idx": 32,
+    "prompt": "以下是一道关于「民族学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在社会主义初级阶段，我国的民族问题主要集中表现为\nA. 少数民族和民族地区要求加快发展经济文化事业\nB. 各民族间由于某些思想观念引起的现实的矛盾和纠纷\nC. 国家怎样向民族地区给予更多公共财政支持的问题\nD. 解决东部地区与西部少数民族地区间的经济差距问题",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "ethnology"]
+  },
+  {
+    "id": "smp_cmmlu_ethnology_3",
+    "idx": 33,
+    "prompt": "以下是一道关于「民族学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n到目前为止，我国已经实行民族区域自治制度的民族有\nA. 46个\nB. 44个\nC. 45个\nD. 47个",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "ethnology"]
+  },
+  {
+    "id": "smp_cmmlu_ethnology_4",
+    "idx": 34,
+    "prompt": "以下是一道关于「民族学」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n新中国的民族平等主张直接来源于：\nA. 封建社会的一般平等观\nB. 资产阶级的民族平等观\nC. 马克思主义的民族平等观\nD. 工人阶级的民族平等观",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "ethnology"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_foreign_policy_0",
+    "idx": 35,
+    "prompt": "以下是一道关于「中国外交政策」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n尼克松在回顾1972年访华时说：“我知道，1954年在……时福斯特·杜勒斯（当时的美国国务卿）拒绝同周（周恩来）握手，使他身受侮辱。因此我走完梯级时决心伸出我的手，一边向他走去。当我们的手相握的时候，一个时代结束了，另一个时代开始了。”对上述材料理解正确的是\nA. 尼克松与周恩来握手意味着美国彻底放弃了遏制中国政策\nB. 尼克松否定了福斯特·杜勒斯的对华态度\nC. 中美关系对20世纪70年代的国际关系有重要影响\nD. 省略部分应是万隆会议",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_foreign_policy"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_foreign_policy_1",
+    "idx": 36,
+    "prompt": "以下是一道关于「中国外交政策」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n我国外交政策的准确表述是\nA. 和平外交政策\nB. 独立自主的和平外交政策\nC. 独立自主的外交政策\nD. 维护世界和平、促进共同发展的外交政策",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_foreign_policy"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_foreign_policy_2",
+    "idx": 37,
+    "prompt": "以下是一道关于「中国外交政策」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n周恩来总理强调，为了抵抗美国的侵略和威胁，同苏联结盟是必要的，但是“不能把自己的党和国家的独立性丢掉”；在“万隆会议”上，周恩来对于各国因社会制度和意识形态的不同而产生的矛盾与分歧，鲜明地提出了“求同存异”的方针，说“中国代表团是来求团结而不是来吵架的”。这说明\nA. 独立自主的和平外交政策是新中国外交的根本保证\nB. “求同存异”是我国处理与亚非国家关系的基本原则\nC. 与苏联结盟，是抵抗美国对中国侵略与威胁的根本保证\nD. 在中苏结盟时期，我国的外交政策与苏联保持高度一致",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_foreign_policy"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_foreign_policy_3",
+    "idx": 38,
+    "prompt": "以下是一道关于「中国外交政策」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在学习《打开外交新局面》后，某班同学对20世纪70年代中国外交的一些重大事件的发生提出了一些说法，其中不正确的是\nA. 1972年《中美联合公报》承认了一个中国的原则\nB. 中美关系的改善和中日建交使国际上掀起了一个同中国建交的热潮\nC. 尼克松访华标志着中美正式建立外交关系\nD. 乒乓外交打开了中美人民友好交往的大门",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_foreign_policy"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_foreign_policy_4",
+    "idx": 39,
+    "prompt": "以下是一道关于「中国外交政策」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n1971年，乔冠华率中国代表团参知了第26届联大，在这次会议上，乔冠华开怀大笑，西方记者把乔冠华的笑描述为 “震碎了议会大厦的玻璃”。乔冠华开怀大笑是因为\nA. 中国促成了五大常任理事国首脑的会晤\nB. 中国首次提出和平共处五项原则\nC. 中国恢复在联合国的合法席位\nD. 中国提出的“求同存异”方针，促成了会议的成功",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_foreign_policy"]
+  },
+  {
+    "id": "smp_cmmlu_modern_chinese_0",
+    "idx": 40,
+    "prompt": "以下是一道关于「现代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在下面的例句中，表示“经历”意义、轻读的“过”是\nA. 喝过了汤再吃饭\nB. 见过周恩来总理的人非常都尊重他\nC. 过了一天又一天\nD. 小李吃过饭就走了 ",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "modern_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_modern_chinese_1",
+    "idx": 41,
+    "prompt": "以下是一道关于「现代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n由⼀般原理推导出关于个别情况的结论，这种论证⽅法是\nA. 归纳法\nB. 对⽐法\nC. 类⽐法\nD. 演绎法",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "modern_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_modern_chinese_2",
+    "idx": 42,
+    "prompt": "以下是一道关于「现代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n根据句法结构二重性理论，下面关于主语、宾语的正确的说法是\nA. 主语一定是施事，宾语一定是受事\nB. 主语一定是施事，但是宾语不一定是受事\nC. 主语不一定是施事，但宾语一定是受事\nD. 主语不一定是施事，宾语也不一字是受事",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "modern_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_modern_chinese_3",
+    "idx": 43,
+    "prompt": "以下是一道关于「现代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n在“我买的书”这个结构中，共包含\nA. 两种结构\nB. 四种结构\nC. 一种结构 \nD. 三种结构",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "modern_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_modern_chinese_4",
+    "idx": 44,
+    "prompt": "以下是一道关于「现代汉语」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“花儿”的正确拼音应写成\nA. huār\nB. huāer\nC. huā-er\nD. huā",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "modern_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_civil_service_exam_0",
+    "idx": 45,
+    "prompt": "以下是一道关于「中国公务员考试」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n国际男子足球比赛中，人们常结合各国的历史、地理、文化等因素，给予参赛队伍别称。下列国家与其别称对应不恰当的是\nA. 意大利：高卢雄鸡\nB. 阿根廷：潘帕斯雄鹰\nC. 英格兰：三狮军团\nD. 伊朗：波斯铁骑",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_civil_service_exam"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_civil_service_exam_1",
+    "idx": 46,
+    "prompt": "以下是一道关于「中国公务员考试」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\nA、B两地各有一批相同数量的货物箱需由某运输队用卡车完成交换，假设每辆卡车运送的货物箱数量相同，运输队首先从A地出发，中途10辆卡车因抛锚彻底退出这次运输，使得其余车辆必须每车再多运2箱，到达B地卸货后又有15辆卡车不返程，参与返程的卡车每辆都需比出发时多装运6箱。那么两地共有货物多少箱\nA. 3600\nB. 4000\nC. 1800\nD. 2000",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_civil_service_exam"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_civil_service_exam_2",
+    "idx": 47,
+    "prompt": "以下是一道关于「中国公务员考试」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n党的十九大报告指出，发展必须是科学发展，必须坚定不移贯彻创新、协调、绿色、开放、共享的发展理念。下列与之有关的说法，正确的有几项?a创新发展注重的是解决发展动力问题；b协调发展注重的是解决社会公平正义问题；c绿色发展注重的是解决人与自然和谐共生问题；d开放发展注重的是解决发展内外联动问题；e共享发展注重的是解决发展不平衡问题\nA. 4\nB. 1\nC. 3\nD. 2",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_civil_service_exam"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_civil_service_exam_3",
+    "idx": 48,
+    "prompt": "以下是一道关于「中国公务员考试」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n2014年是第二次世界大战爆发75周年，3月28日，国家主席习近平在德国科尔伯基金会发表演讲，谈到二战时引用到的名言是\nA. 历史的道路不是涅瓦大街上的人行道，它完全是在田野中前进的\nB. 胜利不会向我走来，我必须自己走向胜利\nC. 世界上最宽阔的是海洋，比海洋更宽阔的是天空，比天空更宽阔的是人的胸怀\nD. 谁忘记历史，谁就会在灵魂上生病",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_civil_service_exam"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_civil_service_exam_4",
+    "idx": 49,
+    "prompt": "以下是一道关于「中国公务员考试」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“心诚则灵，心不诚则不灵”的说法是\nA. 认为世界是绝对精神外化的客观唯心主义观点\nB. 主张物质和意识具有统一性的辩证唯物主义观点\nC. 夸大了意识能动作用的唯心主义观点\nD. 主张思想就是物质的庸俗唯物主义观点",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_civil_service_exam"]
+  },
+  {
+    "id": "smp_cmmlu_elementary_chinese_0",
+    "idx": 50,
+    "prompt": "以下是一道关于「小学语文」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n唱念做打是中国戏曲表演的四种艺术手段，也是戏曲表演的四项基本功，其中“做”指的是\nA. 舞蹈动作\nB. 器械表演\nC. 肢体动作\nD. 面部表情",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "elementary_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_elementary_chinese_1",
+    "idx": 51,
+    "prompt": "以下是一道关于「小学语文」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n以下几位诗人中，不是边塞诗人的是\nA. 高适\nB. 王昌龄\nC. 岑参\nD. 孟浩然",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "elementary_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_elementary_chinese_2",
+    "idx": 52,
+    "prompt": "以下是一道关于「小学语文」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n下面哪个是农历五月的别称\nA. 桃月\nB. 荷月\nC. 榴月\nD. 杏月",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "elementary_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_elementary_chinese_3",
+    "idx": 53,
+    "prompt": "以下是一道关于「小学语文」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n“初出茅庐”中的“茅庐”本意是指谁的的住处\nA. 诸葛亮\nB. 司马迁\nC. 刘备\nD. 司马光",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "elementary_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_elementary_chinese_4",
+    "idx": 54,
+    "prompt": "以下是一道关于「小学语文」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n《霸王别姬》是京剧中的名段，“虞姬”这一角色在京剧中属于\nA. 青衣\nB. 武生\nC. 文丑\nD. 花旦",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "elementary_chinese"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_teacher_qualification_0",
+    "idx": 55,
+    "prompt": "以下是一道关于「中国教师资格」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n社会成员经由教育的培养，刷选和提高，可以在不同的社会区域、社会层次、职业岗位以及科层组织之间转化和调动。这种教育功能是\nA. 文化传递功能\nB. 社会流动性功能\nC. 社会改造功能\nD. 人口控制功能",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_teacher_qualification"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_teacher_qualification_1",
+    "idx": 56,
+    "prompt": "以下是一道关于「中国教师资格」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n我国先秦时期，主张“有教无类”，倡导“因材施教”的教育家是\nA. 庄子\nB. 孟子\nC. 荀子\nD. 孔子",
+    "expected": "D",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "D"
+    },
+    "tags": ["cmmlu", "chinese_teacher_qualification"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_teacher_qualification_2",
+    "idx": 57,
+    "prompt": "以下是一道关于「中国教师资格」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n由于生源存在差异，某中学将学生按入学成绩高低，分为快慢班，该学校的做法\nA. 错误，不利于均衡发展\nB. 正确，有利于资源配置\nC. 错误，不利于教育公平\nD. 正确，有利于因材施教",
+    "expected": "C",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "C"
+    },
+    "tags": ["cmmlu", "chinese_teacher_qualification"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_teacher_qualification_3",
+    "idx": 58,
+    "prompt": "以下是一道关于「中国教师资格」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n老师经常自觉的对自己的讲课过程进行分析，进行全面深入的归纳和总结，以不断的改善自觉的教学行为，提高自觉的教学水平，李老师的做法基于以下哪种专业发展方式\nA. 教学研究\nB. 教学反思\nC. 教学实施\nD. 自我发展",
+    "expected": "B",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "B"
+    },
+    "tags": ["cmmlu", "chinese_teacher_qualification"]
+  },
+  {
+    "id": "smp_cmmlu_chinese_teacher_qualification_4",
+    "idx": 59,
+    "prompt": "以下是一道关于「中国教师资格」的单项选择题，请只回答正确选项的字母（A/B/C/D），不要解释。\n\n初中生钱某屡次在学校偷盗其他同学的财务。学校对钱某的正确处理方法是\nA. 学校提出申请，送工读学校进行矫治\nB. 扭送公安机关，依规开除钱某的学籍\nC. 劝说钱某退学\nD. 责令钱某转学",
+    "expected": "A",
+    "judgeConfig": {
+      "kind": "multiple-choice",
+      "answer": "A"
+    },
+    "tags": ["cmmlu", "chinese_teacher_qualification"]
+  }
+]
