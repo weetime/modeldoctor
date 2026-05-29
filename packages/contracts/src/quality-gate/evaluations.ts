@@ -32,8 +32,8 @@ export const evaluationSchema = z.object({
   totalSamples: z.number().int().nonnegative(),
   // Eval-level default generation params (e.g. built-in MCQ sets ship
   // thinking:"off"). Used as the run-create form's initial values; per-run
-  // overrides win. Null → fall back to schema defaults.
-  genConfig: genConfigSchema.partial().nullable(),
+  // overrides win. Absent/null → fall back to schema defaults.
+  genConfig: genConfigSchema.partial().nullable().optional(),
   // Official built-in evaluations (seeded by the platform). Read-only — users
   // cannot modify name/description/samples or delete; they can run against
   // them and duplicate them as a starting point for their own evaluations.
