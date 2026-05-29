@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { BaselinePickerDialog } from "./components/BaselinePickerDialog";
 import { GateConfigForm } from "./components/GateConfigForm";
+import { GenConfigForm } from "./components/GenConfigForm";
 import { useCreateRun, useEvaluations } from "./queries";
 
 export function RunCreatePage() {
@@ -46,6 +47,7 @@ export function RunCreatePage() {
       endpointBId: undefined,
       baselineRunIdOverride: null,
       gateConfig: { passRateMin: 0.9 },
+      genConfig: { thinking: "auto", maxTokens: 2048, temperature: 0 },
     },
   });
 
@@ -93,6 +95,19 @@ export function RunCreatePage() {
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: only react to evaluationId switch
   }, [evaluationId]);
+
+  // Pre-fill gen params from the selected evaluation's default (built-in MCQ
+  // sets ship thinking:"off"); schema defaults fill the rest. User can override.
+  useEffect(() => {
+    const ev = evaluations.data?.find((e) => e.id === evaluationId);
+    if (!ev) return;
+    form.setValue(
+      "genConfig",
+      { thinking: "auto", maxTokens: 2048, temperature: 0, ...(ev.genConfig ?? {}) },
+      { shouldValidate: true },
+    );
+    // biome-ignore lint/correctness/useExhaustiveDependencies: react to eval switch
+  }, [evaluationId, evaluations.data]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -283,6 +298,10 @@ export function RunCreatePage() {
                     : undefined
                 }
               />
+            </FormSection>
+
+            <FormSection title={t("gen.sectionTitle")} description={t("gen.sectionDescription")}>
+              <GenConfigForm namePrefix="genConfig" />
             </FormSection>
 
             <FormActions

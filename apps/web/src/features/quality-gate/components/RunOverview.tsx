@@ -53,6 +53,12 @@ export function RunOverview({ run }: { run: EvaluationRun }) {
 
       <GateRulesSection gateConfig={run.gateConfig} metrics={m} />
 
+      <div className="text-xs text-muted-foreground">
+        {t("gen.summaryLabel")}: thinking {run.genConfig.thinking} · max_tokens{" "}
+        {run.genConfig.maxTokens} · temp {run.genConfig.temperature}
+        {run.genConfig.stop?.length ? ` · stop ${run.genConfig.stop.length}` : ""}
+      </div>
+
       {m && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <div>

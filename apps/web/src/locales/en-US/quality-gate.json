@@ -1,11 +1,17 @@
 {
-  "nav": { "title": "Quality Gate" },
+  "nav": {
+    "title": "Quality Gate"
+  },
   "evaluations": {
     "title": "Evaluation Sets",
     "subtitle": "Manage evaluation samples and judge rules; every run references a snapshot of one set.",
     "create": "New Evaluation Set",
     "empty": "No evaluation sets yet",
-    "col": { "name": "Name", "samples": "Samples", "updatedAt": "Updated" },
+    "col": {
+      "name": "Name",
+      "samples": "Samples",
+      "updatedAt": "Updated"
+    },
     "runsCol": {
       "id": "Run ID",
       "evaluation": "Evaluation",
@@ -163,7 +169,11 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
-    "gateResult": { "passed": "Passed", "warning": "Warning", "failed": "Failed" },
+    "gateResult": {
+      "passed": "Passed",
+      "warning": "Warning",
+      "failed": "Failed"
+    },
     "filters": {
       "any": "Any",
       "status": "Status",
@@ -210,15 +220,32 @@
       "prevPage": "Previous",
       "nextPage": "Next"
     },
-    "sampleDrawer": { "title": "Sample", "detail": "Details" }
+    "sampleDrawer": {
+      "title": "Sample",
+      "detail": "Details"
+    }
   },
   "gate": {
     "passRateMin": "Min Pass Rate",
     "regressionMax": "Max Regressions",
     "judgeScoreMin": "Min Judge Score"
   },
+  "gen": {
+    "sectionTitle": "Generation parameters",
+    "sectionDescription": "Model-call params for this run; snapshotted onto the run for reproducibility.",
+    "thinkingLabel": "Thinking",
+    "thinkingAuto": "Auto (model default)",
+    "thinkingOff": "Off (reasoning models answer directly)",
+    "thinkingOn": "On (needs larger max_tokens)",
+    "thinkingHint": "Recommended Off for MCQ / short-answer evals: stops reasoning models (Qwen3 etc.) from spending the token budget on thinking and truncating the answer. vLLM-style endpoints only.",
+    "maxTokensLabel": "Max tokens",
+    "temperatureLabel": "Temperature",
+    "summaryLabel": "Generation params"
+  },
   "detail": {
-    "actions": { "detail": "Details" },
+    "actions": {
+      "detail": "Details"
+    },
     "delete": {
       "button": "Delete",
       "title": "Delete {{name}}?",

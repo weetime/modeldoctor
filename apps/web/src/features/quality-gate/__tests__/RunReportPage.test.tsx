@@ -15,6 +15,7 @@ const mockRun = {
   endpointAId: "a",
   endpointBId: null,
   gateConfig: { passRateMin: 0.9 },
+  genConfig: { maxTokens: 2048, temperature: 0, thinking: "auto" as const },
   status: "COMPLETED" as const,
   gateResult: "PASSED" as const,
   aggregateMetrics: {
