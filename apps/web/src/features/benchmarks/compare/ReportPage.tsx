@@ -1,5 +1,6 @@
 import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
 import { ArrowLeft, Printer } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useSavedCompare } from "./queries";
@@ -33,21 +34,26 @@ function extractParamsSummary(
  */
 export function ReportPage() {
   const { id = "" } = useParams<{ id: string }>();
+  const { t } = useTranslation("benchmarks");
   const query = useSavedCompare(id);
 
   if (query.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 text-sm text-muted-foreground">
-        Loading report…
+        {t("savedCompare.reportPage.loading", { defaultValue: "Loading report…" })}
       </div>
     );
   }
   if (!query.data) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2">
-        <p className="text-sm text-muted-foreground">Report not found</p>
+        <p className="text-sm text-muted-foreground">
+          {t("savedCompare.reportPage.notFound", { defaultValue: "Report not found" })}
+        </p>
         <Button variant="outline" asChild>
-          <Link to="/benchmarks/compare/saved">Back to comparisons</Link>
+          <Link to="/benchmarks/compare/saved">
+            {t("savedCompare.reportPage.backToList", { defaultValue: "Back to comparisons" })}
+          </Link>
         </Button>
       </div>
     );
@@ -60,10 +66,16 @@ export function ReportPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3">
         <p className="text-sm text-muted-foreground">
-          This comparison does not have an AI report yet.
+          {t("savedCompare.reportPage.notGenerated", {
+            defaultValue: "This comparison does not have an AI report yet.",
+          })}
         </p>
         <Button asChild>
-          <Link to={`/benchmarks/compare/saved/${sc.id}`}>Open detail page to generate</Link>
+          <Link to={`/benchmarks/compare/saved/${sc.id}`}>
+            {t("savedCompare.reportPage.openDetailToGenerate", {
+              defaultValue: "Open detail page to generate",
+            })}
+          </Link>
         </Button>
       </div>
     );
@@ -101,7 +113,7 @@ export function ReportPage() {
             <Button variant="ghost" size="sm" asChild>
               <Link to={`/benchmarks/compare/saved/${sc.id}`}>
                 <ArrowLeft className="mr-1 h-4 w-4" />
-                Back to detail
+                {t("savedCompare.reportPage.backToDetail", { defaultValue: "Back to detail" })}
               </Link>
             </Button>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -113,7 +125,7 @@ export function ReportPage() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onPrint}>
               <Printer className="mr-1.5 h-4 w-4" />
-              Print / PDF
+              {t("savedCompare.reportPage.printPdf", { defaultValue: "Print / PDF" })}
             </Button>
           </div>
         </div>

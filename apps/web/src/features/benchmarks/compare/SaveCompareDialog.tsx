@@ -133,9 +133,15 @@ export function SaveCompareDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="internal">internal</SelectItem>
-                  <SelectItem value="partner">partner</SelectItem>
-                  <SelectItem value="public">public</SelectItem>
+                  <SelectItem value="internal">
+                    {t("savedCompare.classification.internal", { defaultValue: "Internal" })}
+                  </SelectItem>
+                  <SelectItem value="partner">
+                    {t("savedCompare.classification.partner", { defaultValue: "Partner" })}
+                  </SelectItem>
+                  <SelectItem value="public">
+                    {t("savedCompare.classification.public", { defaultValue: "Public" })}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

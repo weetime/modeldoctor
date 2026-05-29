@@ -143,8 +143,8 @@ function FourMetricTable({ runs }: { runs: ReportRun[] }) {
           <th>Stage</th>
           <th style={{ textAlign: "right" }}>QPS</th>
           <th style={{ textAlign: "right" }}>Err %</th>
-          <th style={{ textAlign: "right" }}>TTFT p95</th>
-          <th style={{ textAlign: "right" }}>E2E p95</th>
+          <th style={{ textAlign: "right" }}>TTFT p90</th>
+          <th style={{ textAlign: "right" }}>E2E p90</th>
         </tr>
       </thead>
       <tbody>

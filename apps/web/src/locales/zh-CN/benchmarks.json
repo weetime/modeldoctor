@@ -399,6 +399,20 @@
       "generateButton": "生成 AI 分析",
       "toc": "目录"
     },
+    "reportPage": {
+      "loading": "正在加载报告…",
+      "notFound": "未找到报告",
+      "backToList": "返回对比列表",
+      "notGenerated": "该对比尚未生成 AI 报告。",
+      "openDetailToGenerate": "打开详情页生成",
+      "backToDetail": "返回详情",
+      "printPdf": "打印 / 导出 PDF"
+    },
+    "classification": {
+      "internal": "内部",
+      "partner": "合作方",
+      "public": "公开"
+    },
     "errors": {
       "providerMissing": "未配置 LLM 服务",
       "providerGoSettings": "前往设置",

@@ -32,6 +32,18 @@ const BANNED_ADVERBS = [
   "全面深入",
 ] as const;
 
+// Pre-compiled detectors. CJK terms don't have word boundaries so we fall
+// back to substring; English terms use \b...\b for word-level match.
+const BANNED_ADVERB_DETECTORS: Array<{ adverb: string; test: (lower: string) => boolean }> =
+  BANNED_ADVERBS.map((adverb) => {
+    const isCn = /[一-鿿]/.test(adverb);
+    if (isCn) {
+      return { adverb, test: (raw: string) => raw.includes(adverb) };
+    }
+    const re = new RegExp(`\\b${adverb}\\b`, "i");
+    return { adverb, test: (lower: string) => re.test(lower) };
+  });
+
 const LLM_SELF_REFERENCE_RES = [
   /Generated with Claude/i,
   /🤖/u,
@@ -176,16 +188,17 @@ export function lintNarrative(narrative: CompareNarrative, _inputNumbers: number
         }
       }
 
-      // Banned adverbs — case-insensitive word match for English, substring
-      // for Chinese (no word boundaries in CJK).
+      // Banned adverbs — pre-compiled detectors. CJK terms test against the
+      // raw paragraph (no word boundaries); English terms use case-insensitive
+      // word-boundary regex.
       const lower = para.toLowerCase();
-      for (const adverb of BANNED_ADVERBS) {
-        const isCn = /[一-鿿]/.test(adverb);
-        if (isCn ? para.includes(adverb) : new RegExp(`\\b${adverb}\\b`, "i").test(lower)) {
+      for (const det of BANNED_ADVERB_DETECTORS) {
+        const isCn = /[一-鿿]/.test(det.adverb);
+        if (det.test(isCn ? para : lower)) {
           warnings.push({
             code: "banned-adverb",
             sectionId: section.id,
-            sample: adverb,
+            sample: det.adverb,
           });
           break;
         }
