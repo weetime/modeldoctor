@@ -26,6 +26,25 @@ export interface PromContext {
   }>;
 }
 
+export interface PromQueryResult {
+  datasource: { id: string; name: string };
+  query: string;
+  kind: "instant" | "range";
+  truncated: boolean;
+  series: Array<{
+    labels: Record<string, string>;
+    /** instant queries carry a single `value`; range queries carry `samples`.
+     * `null` means a present-but-non-finite Prometheus value ("NaN"/"+Inf"),
+     * distinct from "no data" — not a JSON.stringify artifact. */
+    value?: number | null;
+    samples?: Array<{ at: string; value: number | null }>;
+  }>;
+}
+
+export type PromQueryOpts =
+  | { kind: "instant"; at?: Date }
+  | { kind: "range"; from: Date; to: Date; step: number };
+
 // Query window around `startsAt`. We look 15min before for the lead-up and
 // 5min after so a recently-firing alert still has at least some post-trigger
 // shape to ground the narrative on.
@@ -34,6 +53,18 @@ const WINDOW_AFTER_MS = 5 * 60 * 1000;
 const STEP_SECONDS = 15;
 const TIMEOUT_MS = 5_000;
 const MAX_SERIES = 5;
+const MAX_QUERY_SERIES = 20;
+const MAX_SAMPLES_PER_SERIES = 120;
+
+/** Prometheus encodes stale/non-finite values as the strings "NaN" / "+Inf" /
+ * "-Inf"; `Number()` turns these into NaN which `JSON.stringify` would silently
+ * coerce to `null`. Map them to an explicit `null` so "present-but-non-finite"
+ * is distinguishable downstream. */
+function finiteOrNull(v: string | undefined): number | null {
+  if (v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * Fetches the metric window referenced by an alert, given the datasource the
@@ -77,6 +108,102 @@ export class PrometheusFetcherService {
   }
   _test_resolveExpr(event: AlertEvent) {
     return this.resolveExpr(event);
+  }
+
+  /** Resolve a datasource for an MCP query by explicit id, by a connection's
+   * binding, or the workspace default. Mirrors the alert-path precedence. */
+  async resolveDatasourceByRef(ref: {
+    datasourceId?: string;
+    connectionId?: string;
+  }): Promise<PrometheusDatasource | null> {
+    if (ref.datasourceId) {
+      return this.prisma.prometheusDatasource.findUnique({ where: { id: ref.datasourceId } });
+    }
+    if (ref.connectionId) {
+      const conn = await this.prisma.connection.findUnique({
+        where: { id: ref.connectionId },
+        include: { prometheusDatasource: true },
+      });
+      if (conn?.prometheusDatasource) return conn.prometheusDatasource;
+    }
+    return this.prisma.prometheusDatasource.findFirst({ where: { isDefault: true } });
+  }
+
+  /** Run an arbitrary read-only PromQL query through the same secured fetch
+   * path as alert grounding (bearer decrypt + SSRF guard + bounded read). */
+  async runQuery(
+    ds: PrometheusDatasource,
+    query: string,
+    opts: PromQueryOpts,
+  ): Promise<PromQueryResult> {
+    const base = ds.baseUrl.replace(/\/$/, "");
+    const url =
+      opts.kind === "instant"
+        ? new URL(`${base}/api/v1/query`)
+        : new URL(`${base}/api/v1/query_range`);
+    url.searchParams.set("query", query);
+    if (opts.kind === "instant") {
+      url.searchParams.set("time", String(Math.floor((opts.at ?? new Date()).getTime() / 1000)));
+    } else {
+      url.searchParams.set("start", String(Math.floor(opts.from.getTime() / 1000)));
+      url.searchParams.set("end", String(Math.floor(opts.to.getTime() / 1000)));
+      url.searchParams.set("step", String(opts.step));
+    }
+
+    const headers = this.buildAuthHeaders(ds);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await this.safeFetch(url, { headers }, controller.signal);
+      if (!res.ok) throw new Error(`prom ${res.status}`);
+      const body = (await this.readBoundedJson(res)) as {
+        status: string;
+        data?: { resultType: string; result?: Array<Record<string, unknown>> };
+      } | null;
+      if (!body || body.status !== "success" || !body.data?.result) {
+        return { datasource: { id: ds.id, name: ds.name }, query, kind: opts.kind, truncated: false, series: [] };
+      }
+      const raw = body.data.result;
+      const truncated = raw.length > MAX_QUERY_SERIES;
+      const series = raw.slice(0, MAX_QUERY_SERIES).map((row) => {
+        const labels = (row.metric as Record<string, string>) ?? {};
+        if (opts.kind === "instant") {
+          const v = (row.value as [number, string] | undefined)?.[1];
+          return { labels, value: finiteOrNull(v) };
+        }
+        const values = (row.values as Array<[number, string]> | undefined) ?? [];
+        return {
+          labels,
+          samples: values.slice(-MAX_SAMPLES_PER_SERIES).map(([ts, v]) => ({
+            at: new Date(ts * 1000).toISOString(),
+            value: finiteOrNull(v),
+          })),
+        };
+      });
+      return { datasource: { id: ds.id, name: ds.name }, query, kind: opts.kind, truncated, series };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** Shared bearer-decrypt + custom-header assembly. NOTE: unlike the private
+   * alert `queryRange` (which degrades to null on decrypt failure), this throws
+   * a sanitized error — the public `runQuery` contract is throw-on-error and
+   * the caller (MCP tool) decides how to surface it. Don't mix the two policies. */
+  private buildAuthHeaders(ds: PrometheusDatasource): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (ds.bearerCipher) {
+      try {
+        headers.Authorization = `Bearer ${decrypt(ds.bearerCipher, this.key)}`;
+      } catch (e) {
+        const err = e as Error;
+        this.log.error(`Datasource ${ds.id} bearer decrypt failed: ${err.message}`, err.stack);
+        throw new Error(`datasource ${ds.id} bearer decryption failed`);
+      }
+    }
+    const extra = parseCustomHeaders(ds.customHeaders);
+    if (extra) Object.assign(headers, extra);
+    return headers;
   }
 
   /**
