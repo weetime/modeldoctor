@@ -178,6 +178,127 @@ Example — *"Point my gpt-4o connection at the secondary Prometheus."*
 
 Passing `datasourceId: null` unbinds the connection (downstream engine-metrics / benchmark adapters will see `prometheusDatasource = null` on the connection).
 
+## Actuation (V1.1)
+
+### Overview
+
+The following tools extend ModelDoctor's MCP surface to let an agent not only observe
+an inference fleet but also act on it — running benchmarks, quality-gate evaluations,
+and live PromQL queries.
+
+### Execute tool handshake (dry-run + confirm)
+
+`run_benchmark` and `run_quality_gate` are **execute-class** tools: they dispatch
+Kubernetes Jobs and consume GPU. To prevent an agent from firing expensive operations
+without human intent, both tools use a two-step dry-run → confirm handshake:
+
+1. Call the tool **without** `confirmToken`. The tool validates your params, returns a
+   `dryRun: true` plan showing what it will create, and attaches a `confirmToken`.
+2. Review the plan. Call the tool again with the **same params** plus `confirmToken` to
+   actually execute.
+
+The `confirmToken` is a stateless HMAC that binds the exact action name, the canonical
+form of the params, and an issue timestamp. It expires in **10 minutes** and cannot be
+replayed against different params — the agent cannot swap a tiny dry-run payload for a
+large real one.
+
+### `MCP_ALLOW_EXECUTE`
+
+Set `MCP_ALLOW_EXECUTE=false` in `apps/api/.env` to put the MCP endpoint in
+**read-only** mode. In read-only mode `run_benchmark` and `run_quality_gate` are not
+registered at all (they will not appear in `tools/list`); the five read tools below
+remain. Default is `true`.
+
+### Tool table
+
+| Tool | Use case |
+|---|---|
+| `query_prometheus` | Run read-only PromQL against a connection's datasource |
+| `get_engine_metric_catalog` | List an engine's metric keys + PromQL templates |
+| `compare_benchmarks` | Align 2–5 benchmarks' metrics side by side |
+| `get_benchmark` | Poll a single benchmark to terminal status |
+| `get_quality_gate_run` | Poll a single quality-gate run |
+| `run_benchmark` | Start a benchmark (dry-run + confirm; gated by `MCP_ALLOW_EXECUTE`) |
+| `run_quality_gate` | Start a quality-gate run (dry-run + confirm; gated by `MCP_ALLOW_EXECUTE`) |
+
+#### `run_benchmark`
+
+Input:
+
+```ts
+{
+  scenario: string;        // e.g. "inference", "capacity", "gateway"
+  tool: string;            // e.g. "guidellm", "vegeta"
+  connectionId: string;    // target connection id (from list_connections)
+  name: string;            // run name (1–128 chars)
+  params: Record<string, unknown>;   // tool/scenario params (see templates or web UI)
+  templateId?: string;     // optional base template id
+  baselineId?: string;     // optional baseline benchmark id
+  confirmToken?: string;   // omit for dry-run; supply (from a prior dry-run) to execute
+}
+```
+
+**Step 1 — Dry-run** (omit `confirmToken`):
+
+```jsonc
+// tool call
+{
+  "tool": "run_benchmark",
+  "args": {
+    "scenario": "inference",
+    "tool": "guidellm",
+    "connectionId": "conn_…",
+    "name": "nightly throughput",
+    "params": { "maxConcurrency": 32, "duration": "5m" }
+  }
+}
+
+// response (structuredContent)
+{
+  "dryRun": true,
+  "willCreate": "benchmark (Kubernetes Job, consumes GPU)",
+  "target": {
+    "connectionId": "conn_…",
+    "scenario": "inference",
+    "tool": "guidellm"
+  },
+  "request": { /* normalised params — confirm these look correct */ },
+  "confirmToken": "eyJhY3Rpb24iOi…",
+  "note": "Re-call run_benchmark with the SAME params plus this confirmToken to execute."
+}
+```
+
+**Step 2 — Execute** (same params + `confirmToken` from step 1):
+
+```jsonc
+// tool call
+{
+  "tool": "run_benchmark",
+  "args": {
+    "scenario": "inference",
+    "tool": "guidellm",
+    "connectionId": "conn_…",
+    "name": "nightly throughput",
+    "params": { "maxConcurrency": 32, "duration": "5m" },
+    "confirmToken": "eyJhY3Rpb24iOi…"
+  }
+}
+
+// response (structuredContent) — the created Benchmark row
+{
+  "id": "bm_01h…",
+  "status": "running",
+  "scenario": "inference",
+  "tool": "guidellm",
+  "connectionId": "conn_…",
+  "name": "nightly throughput"
+}
+```
+
+After execute, poll status with `get_benchmark(benchmarkId)` until `status` reaches a
+terminal state (`completed` / `failed` / `cancelled`), then call `compare_benchmarks`
+to compare against a baseline.
+
 ## Adding a new tool
 
 1. Create `tools/<name>.tool.ts` with a `register<Name>(server, deps)`

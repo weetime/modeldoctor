@@ -61,6 +61,6 @@ export { PROMETHEUS_FETCHER_CONFIG };
       },
     },
   ],
-  exports: [AlertsService, SubscribersService],
+  exports: [AlertsService, SubscribersService, PrometheusFetcherService],
 })
 export class AlertsModule {}

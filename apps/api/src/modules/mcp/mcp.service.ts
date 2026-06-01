@@ -4,8 +4,11 @@ import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
 import { AlertsService } from "../alerts/alerts.service.js";
+import { PrometheusFetcherService } from "../alerts/prometheus-fetcher.service.js";
 import { SubscribersService } from "../alerts/subscribers.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
 import { ConnectionService } from "../connection/connection.service.js";
@@ -15,15 +18,24 @@ import { ChannelsService } from "../notifications/channels.service.js";
 import { DispatcherService } from "../notifications/dispatcher.service.js";
 import { SubscriptionsService } from "../notifications/subscriptions.service.js";
 import { PrometheusDatasourceService } from "../prometheus-datasource/prometheus-datasource.service.js";
+import { RunsService } from "../quality-gate/services/runs.service.js";
+import { ConfirmTokenService } from "./confirm-token.service.js";
+import { registerCompareBenchmarks } from "./tools/compare-benchmarks.tool.js";
 import { registerCreateChannel } from "./tools/create-channel.tool.js";
 import { registerDiscoverConnection } from "./tools/discover-connection.tool.js";
 import { registerGetAlertExplanation } from "./tools/get-alert-explanation.tool.js";
+import { registerGetBenchmark } from "./tools/get-benchmark.tool.js";
+import { registerGetEngineMetricCatalog } from "./tools/get-engine-metric-catalog.tool.js";
+import { registerGetQualityGateRun } from "./tools/get-quality-gate-run.tool.js";
 import { registerListAlerts } from "./tools/list-alerts.tool.js";
 import { registerListBenchmarks } from "./tools/list-benchmarks.tool.js";
 import { registerListChannels } from "./tools/list-channels.tool.js";
 import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
+import { registerQueryPrometheus } from "./tools/query-prometheus.tool.js";
+import { registerRunBenchmark } from "./tools/run-benchmark.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
+import { registerRunQualityGate } from "./tools/run-quality-gate.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
@@ -66,6 +78,10 @@ export class McpService {
     private readonly alerts: AlertsService,
     private readonly subscribers: SubscribersService,
     private readonly prometheusDatasources: PrometheusDatasourceService,
+    private readonly promFetcher: PrometheusFetcherService,
+    private readonly runs: RunsService,
+    private readonly confirmTokens: ConfirmTokenService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async handleRequest(
@@ -85,6 +101,8 @@ export class McpService {
     // been deleted between server start and this call, we treat them as
     // non-admin — the underlying service will then raise its own NotFound
     // or Forbidden, which is the same end-state the REST layer presents.
+    const allowExecute = this.config.get("MCP_ALLOW_EXECUTE", { infer: true });
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { roles: true },
@@ -103,6 +121,10 @@ export class McpService {
       alerts: this.alerts,
       subscribers: this.subscribers,
       prometheusDatasources: this.prometheusDatasources,
+      promFetcher: this.promFetcher,
+      runs: this.runs,
+      confirmTokens: this.confirmTokens,
+      allowExecute,
       notificationsTest: async (channelId: string) => {
         try {
           await this.dispatcher.testChannel(
@@ -131,6 +153,16 @@ export class McpService {
     registerListPrometheusDatasources(server, deps);
     registerSetConnectionPrometheusSource(server, deps);
     registerSetDefaultPrometheusDatasource(server, deps);
+    registerQueryPrometheus(server, deps);
+    registerGetEngineMetricCatalog(server, deps);
+    registerCompareBenchmarks(server, deps);
+    registerGetBenchmark(server, deps);
+    registerGetQualityGateRun(server, deps);
+
+    if (deps.allowExecute) {
+      registerRunBenchmark(server, deps);
+      registerRunQualityGate(server, deps);
+    }
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -169,5 +201,9 @@ export interface McpToolDeps {
   alerts: AlertsService;
   subscribers: SubscribersService;
   prometheusDatasources: PrometheusDatasourceService;
+  promFetcher: PrometheusFetcherService;
+  runs: RunsService;
+  confirmTokens: ConfirmTokenService;
+  allowExecute: boolean;
   notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }
