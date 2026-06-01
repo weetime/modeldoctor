@@ -6,6 +6,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service.js";
 import { AlertsService } from "../alerts/alerts.service.js";
+import { PrometheusFetcherService } from "../alerts/prometheus-fetcher.service.js";
 import { SubscribersService } from "../alerts/subscribers.service.js";
 import { BenchmarkService } from "../benchmark/benchmark.service.js";
 import { ConnectionService } from "../connection/connection.service.js";
@@ -25,6 +26,7 @@ import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
+import { registerQueryPrometheus } from "./tools/query-prometheus.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
 import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
@@ -66,6 +68,7 @@ export class McpService {
     private readonly alerts: AlertsService,
     private readonly subscribers: SubscribersService,
     private readonly prometheusDatasources: PrometheusDatasourceService,
+    private readonly promFetcher: PrometheusFetcherService,
   ) {}
 
   async handleRequest(
@@ -103,6 +106,7 @@ export class McpService {
       alerts: this.alerts,
       subscribers: this.subscribers,
       prometheusDatasources: this.prometheusDatasources,
+      promFetcher: this.promFetcher,
       notificationsTest: async (channelId: string) => {
         try {
           await this.dispatcher.testChannel(
@@ -131,6 +135,7 @@ export class McpService {
     registerListPrometheusDatasources(server, deps);
     registerSetConnectionPrometheusSource(server, deps);
     registerSetDefaultPrometheusDatasource(server, deps);
+    registerQueryPrometheus(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -169,5 +174,6 @@ export interface McpToolDeps {
   alerts: AlertsService;
   subscribers: SubscribersService;
   prometheusDatasources: PrometheusDatasourceService;
+  promFetcher: PrometheusFetcherService;
   notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }
