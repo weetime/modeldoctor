@@ -26,6 +26,7 @@ import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
+import { registerCompareBenchmarks } from "./tools/compare-benchmarks.tool.js";
 import { registerGetEngineMetricCatalog } from "./tools/get-engine-metric-catalog.tool.js";
 import { registerQueryPrometheus } from "./tools/query-prometheus.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
@@ -138,6 +139,7 @@ export class McpService {
     registerSetDefaultPrometheusDatasource(server, deps);
     registerQueryPrometheus(server, deps);
     registerGetEngineMetricCatalog(server, deps);
+    registerCompareBenchmarks(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
