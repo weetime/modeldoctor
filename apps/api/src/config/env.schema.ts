@@ -137,6 +137,10 @@ export const EnvSchema = z.object({
   // User ids are Prisma cuid()s, not UUIDs — just require a non-empty
   // string and let the first tool call surface a 404 if it doesn't match.
   MCP_USER_ID: z.string().min(1).optional(),
+  // Gate the execute-class MCP tools (run_benchmark / run_quality_gate). They
+  // use a dry-run + confirm-token handshake but still let an agent spend GPU;
+  // set false for a read-only MCP deployment.
+  MCP_ALLOW_EXECUTE: envBoolean.default(true),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
