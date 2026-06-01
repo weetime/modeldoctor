@@ -36,6 +36,7 @@ import { registerGetEngineMetricCatalog } from "./tools/get-engine-metric-catalo
 import { registerGetQualityGateRun } from "./tools/get-quality-gate-run.tool.js";
 import { registerQueryPrometheus } from "./tools/query-prometheus.tool.js";
 import { registerRunBenchmark } from "./tools/run-benchmark.tool.js";
+import { registerRunQualityGate } from "./tools/run-quality-gate.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
 import { registerSubscribeConnection } from "./tools/subscribe-connection.tool.js";
@@ -160,6 +161,7 @@ export class McpService {
 
     if (deps.allowExecute) {
       registerRunBenchmark(server, deps);
+      registerRunQualityGate(server, deps);
     }
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
