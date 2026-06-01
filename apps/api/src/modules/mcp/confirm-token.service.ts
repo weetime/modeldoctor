@@ -5,6 +5,9 @@ import { ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 
 const TTL_MS = 10 * 60_000;
+// Allow only a small clock-skew window into the future. Without a tight bound,
+// a token dated +TTL would stay valid for ~2×TTL of real time.
+const CLOCK_SKEW_MS = 60_000;
 
 export type VerifyResult = { ok: true } | { ok: false; reason: string };
 
@@ -54,9 +57,10 @@ export class ConfirmTokenService {
     }
     if (decoded.action !== action) return { ok: false, reason: "action_mismatch" };
     if (nowMs - decoded.ts > TTL_MS) return { ok: false, reason: "expired" };
-    // Reject future-dated tokens (clock skew or a pre-minted token): without
-    // this, a negative age is never > TTL so the token would never expire.
-    if (decoded.ts - nowMs > TTL_MS) return { ok: false, reason: "not_yet_valid" };
+    // Reject future-dated tokens beyond the clock-skew allowance (a negative
+    // age is otherwise never > TTL, so the token would never expire — and a
+    // far-future ts would extend its effective lifetime up to ~2×TTL).
+    if (decoded.ts - nowMs > CLOCK_SKEW_MS) return { ok: false, reason: "not_yet_valid" };
     const expected = this.sign(decoded.action, payload, decoded.ts);
     const a = Buffer.from(decoded.sig);
     const b = Buffer.from(expected);
@@ -75,6 +79,11 @@ export class ConfirmTokenService {
 /** Deterministic JSON: object keys sorted recursively so key order never
  * changes the signature. */
 export function stableStringify(value: unknown): string {
+  // Honor toJSON (Date, Prisma Decimal, …) before key-sorting: Object.entries
+  // on such objects returns [], which would collapse them all to "{}".
+  if (value && typeof (value as { toJSON?: unknown }).toJSON === "function") {
+    return stableStringify((value as { toJSON: () => unknown }).toJSON());
+  }
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   // Mirror JSON.stringify's null-coercion for undefined array holes so two
   // distinct payloads can't collapse to the same string (`[1,,3]`).

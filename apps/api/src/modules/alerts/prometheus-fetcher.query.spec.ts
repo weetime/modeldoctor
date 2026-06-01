@@ -62,6 +62,7 @@ describe("PrometheusFetcherService.runQuery", () => {
             result: [
               { metric: { a: "1" }, value: [1750000000, "+Inf"] },
               { metric: { a: "2" }, value: [1750000000, "NaN"] },
+              { metric: { a: "3" }, value: [1750000000, ""] },
             ],
           },
         }),
@@ -71,6 +72,8 @@ describe("PrometheusFetcherService.runQuery", () => {
     const out = await svc.runQuery(DS, "up", { kind: "instant" });
     expect(out.series[0]?.value).toBeNull();
     expect(out.series[1]?.value).toBeNull();
+    // empty string must NOT become 0 (Number("") === 0)
+    expect(out.series[2]?.value).toBeNull();
   });
 
   it("truncates series beyond the cap", async () => {

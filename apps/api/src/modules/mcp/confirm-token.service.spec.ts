@@ -1,6 +1,6 @@
 // apps/api/src/modules/mcp/confirm-token.service.spec.ts
 import { describe, expect, it } from "vitest";
-import { ConfirmTokenService } from "./confirm-token.service.js";
+import { ConfirmTokenService, stableStringify } from "./confirm-token.service.js";
 
 function svc() {
   // ConfigService stub: only get("MCP_BEARER_TOKEN") is read.
@@ -60,7 +60,7 @@ describe("ConfirmTokenService", () => {
     });
   });
 
-  it("rejects a future-dated token (clock skew / pre-minted)", () => {
+  it("rejects a future-dated token beyond clock skew", () => {
     const s = svc();
     const token = s.issue("run_benchmark", { x: 1 }, T0 + 20 * 60_000);
     expect(s.verify("run_benchmark", { x: 1 }, token, T0)).toEqual({
@@ -69,8 +69,25 @@ describe("ConfirmTokenService", () => {
     });
   });
 
+  it("accepts a token within the clock-skew window (issued slightly ahead)", () => {
+    const s = svc();
+    const token = s.issue("run_benchmark", { x: 1 }, T0 + 30_000);
+    expect(s.verify("run_benchmark", { x: 1 }, token, T0).ok).toBe(true);
+  });
+
   it("rejects a malformed token", () => {
     const s = svc();
     expect(s.verify("run_benchmark", { x: 1 }, "not-a-token", T0).ok).toBe(false);
+  });
+});
+
+describe("stableStringify", () => {
+  it("honors toJSON (Date) instead of collapsing to {}", () => {
+    const d = new Date("2026-01-02T03:04:05.000Z");
+    expect(stableStringify(d)).toBe(JSON.stringify("2026-01-02T03:04:05.000Z"));
+    // and two different dates must NOT collide
+    const a = stableStringify({ at: new Date("2026-01-01T00:00:00Z") });
+    const b = stableStringify({ at: new Date("2026-06-01T00:00:00Z") });
+    expect(a).not.toBe(b);
   });
 });

@@ -60,8 +60,10 @@ const MAX_SAMPLES_PER_SERIES = 120;
  * "-Inf"; `Number()` turns these into NaN which `JSON.stringify` would silently
  * coerce to `null`. Map them to an explicit `null` so "present-but-non-finite"
  * is distinguishable downstream. */
-function finiteOrNull(v: string | undefined): number | null {
-  if (v === undefined) return null;
+function finiteOrNull(v: string | undefined | null): number | null {
+  // Guard "" / null explicitly: Number("") and Number(null) are both 0, which
+  // would mis-map a missing value to a real 0 measurement.
+  if (v === undefined || v === null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
