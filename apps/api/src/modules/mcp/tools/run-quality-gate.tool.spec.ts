@@ -50,6 +50,21 @@ describe("run_quality_gate tool", () => {
     expect(out.structuredContent.id).toBe("r1");
   });
 
+  it("confirm (bad token) returns isError and does NOT create", async () => {
+    const create = vi.fn();
+    const verify = vi.fn().mockReturnValue({ ok: false, reason: "expired" });
+    const deps = {
+      userId: "u1",
+      runs: { create },
+      confirmTokens: { issue: vi.fn(), verify },
+    } as unknown as McpToolDeps;
+    const { server, calls } = makeServer();
+    registerRunQualityGate(server, deps);
+    const out = (await calls[0]?.handler({ ...REQ, confirmToken: "BAD" })) as { isError?: boolean };
+    expect(create).not.toHaveBeenCalled();
+    expect(out.isError).toBe(true);
+  });
+
   it("confirm (valid token) surfaces a create() failure as isError", async () => {
     const create = vi.fn().mockRejectedValue(new Error("quota exceeded"));
     const verify = vi.fn().mockReturnValue({ ok: true });

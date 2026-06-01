@@ -43,4 +43,21 @@ describe("get_engine_metric_catalog tool", () => {
     const out = (await calls[0]?.handler({ connectionId: "c1" })) as { isError?: boolean };
     expect(out.isError).toBe(true);
   });
+
+  it("surfaces a not-found connection as isError", async () => {
+    const deps = {
+      userId: "u1",
+      connections: {
+        findOwnedPublic: vi.fn().mockRejectedValue(new Error("Connection cx not found")),
+      },
+    } as unknown as McpToolDeps;
+    const { server, calls } = makeServer();
+    registerGetEngineMetricCatalog(server, deps);
+    const out = (await calls[0]?.handler({ connectionId: "cx" })) as {
+      isError?: boolean;
+      content: Array<{ text: string }>;
+    };
+    expect(out.isError).toBe(true);
+    expect(out.content[0]?.text).toContain("cx not found");
+  });
 });

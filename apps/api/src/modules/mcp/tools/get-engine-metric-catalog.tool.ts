@@ -24,8 +24,19 @@ export function registerGetEngineMetricCatalog(server: McpServer, deps: McpToolD
     },
     async (input) => {
       // Public (non-decrypting) getter: we only need serverKind — no reason to
-      // decrypt the connection's API key just to read a static manifest.
-      const conn = await deps.connections.findOwnedPublic(deps.userId, input.connectionId);
+      // decrypt the connection's API key just to read a static manifest. Surface
+      // not-found with a tool-name prefix, consistent with the other read tools.
+      let conn: Awaited<ReturnType<McpToolDeps["connections"]["findOwnedPublic"]>>;
+      try {
+        conn = await deps.connections.findOwnedPublic(deps.userId, input.connectionId);
+      } catch (e) {
+        return {
+          content: [
+            { type: "text", text: `get_engine_metric_catalog failed: ${(e as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
       const manifest = conn.serverKind ? getEngineManifest(conn.serverKind as never) : null;
       if (!manifest) {
         return {
