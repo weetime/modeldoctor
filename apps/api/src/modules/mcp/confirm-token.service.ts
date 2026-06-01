@@ -33,14 +33,23 @@ export class ConfirmTokenService {
     return Buffer.from(JSON.stringify({ action, ts, sig }), "utf8").toString("base64url");
   }
 
-  verify(action: string, payload: unknown, token: string, nowMs: number = Date.now()): VerifyResult {
+  verify(
+    action: string,
+    payload: unknown,
+    token: string,
+    nowMs: number = Date.now(),
+  ): VerifyResult {
     let decoded: { action?: string; ts?: number; sig?: string };
     try {
       decoded = JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
     } catch {
       return { ok: false, reason: "malformed" };
     }
-    if (typeof decoded.action !== "string" || typeof decoded.ts !== "number" || typeof decoded.sig !== "string") {
+    if (
+      typeof decoded.action !== "string" ||
+      typeof decoded.ts !== "number" ||
+      typeof decoded.sig !== "string"
+    ) {
       return { ok: false, reason: "malformed" };
     }
     if (decoded.action !== action) return { ok: false, reason: "action_mismatch" };

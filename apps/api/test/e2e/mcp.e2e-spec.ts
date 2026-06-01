@@ -51,4 +51,57 @@ describe("MCP /mcp tools registry (e2e)", () => {
     expect(names).toContain("get_alert_explanation");
     expect(names).toContain("subscribe_connection");
   });
+
+  it("tools/list includes the new actuation tools", async () => {
+    const res = await request(ctx.app.getHttpServer())
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${TOKEN}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({ jsonrpc: "2.0", method: "tools/list", id: 1, params: {} })
+      .buffer(true);
+    const raw = (res.text ?? "").toString();
+    const m = raw.match(/^data:\s*(\{.*\})\s*$/m);
+    const json = JSON.parse(m?.[1] ?? "{}") as { result?: { tools?: Array<{ name: string }> } };
+    const names = (json.result?.tools ?? []).map((t) => t.name);
+    // read tools always present
+    expect(names).toContain("query_prometheus");
+    expect(names).toContain("get_engine_metric_catalog");
+    expect(names).toContain("compare_benchmarks");
+    expect(names).toContain("get_benchmark");
+    expect(names).toContain("get_quality_gate_run");
+    // execute tools present because .env.test leaves MCP_ALLOW_EXECUTE at its
+    // default (true)
+    expect(names).toContain("run_benchmark");
+    expect(names).toContain("run_quality_gate");
+  });
+
+  it("run_benchmark dry-run returns a confirmToken without creating a Job", async () => {
+    const res = await request(ctx.app.getHttpServer())
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${TOKEN}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        id: 2,
+        params: {
+          name: "run_benchmark",
+          arguments: {
+            scenario: "inference",
+            tool: "guidellm",
+            connectionId: "does-not-need-to-exist-for-dry-run",
+            name: "e2e dry-run",
+            params: {},
+          },
+        },
+      })
+      .buffer(true);
+    const raw = (res.text ?? "").toString();
+    const m = raw.match(/^data:\s*(\{.*\})\s*$/m);
+    const json = JSON.parse(m?.[1] ?? "{}") as {
+      result?: { structuredContent?: { dryRun?: boolean; confirmToken?: string } };
+    };
+    expect(json.result?.structuredContent?.dryRun).toBe(true);
+    expect(typeof json.result?.structuredContent?.confirmToken).toBe("string");
+  });
 });

@@ -23,9 +23,13 @@ describe("query_prometheus tool", () => {
   it("resolves the datasource then runs the query", async () => {
     const ds = { id: "ds1", name: "p" };
     const resolveDatasourceByRef = vi.fn().mockResolvedValue(ds);
-    const runQuery = vi
-      .fn()
-      .mockResolvedValue({ datasource: ds, query: "up", kind: "instant", truncated: false, series: [] });
+    const runQuery = vi.fn().mockResolvedValue({
+      datasource: ds,
+      query: "up",
+      kind: "instant",
+      truncated: false,
+      series: [],
+    });
     const deps = { promFetcher: { resolveDatasourceByRef, runQuery } } as unknown as McpToolDeps;
     const { server, calls } = makeServer();
     registerQueryPrometheus(server, deps);
@@ -33,7 +37,10 @@ describe("query_prometheus tool", () => {
     const out = (await calls[0]?.handler({ connectionId: "c1", query: "up" })) as {
       structuredContent: { kind: string };
     };
-    expect(resolveDatasourceByRef).toHaveBeenCalledWith({ connectionId: "c1", datasourceId: undefined });
+    expect(resolveDatasourceByRef).toHaveBeenCalledWith({
+      connectionId: "c1",
+      datasourceId: undefined,
+    });
     expect(runQuery).toHaveBeenCalledWith(ds, "up", { kind: "instant" });
     expect(out.structuredContent.kind).toBe("instant");
   });
@@ -50,9 +57,13 @@ describe("query_prometheus tool", () => {
 
   it("forwards a range query with from/to/step", async () => {
     const ds = { id: "ds1", name: "p" };
-    const runQuery = vi
-      .fn()
-      .mockResolvedValue({ datasource: ds, query: "up", kind: "range", truncated: false, series: [] });
+    const runQuery = vi.fn().mockResolvedValue({
+      datasource: ds,
+      query: "up",
+      kind: "range",
+      truncated: false,
+      series: [],
+    });
     const deps = {
       promFetcher: { resolveDatasourceByRef: vi.fn().mockResolvedValue(ds), runQuery },
     } as unknown as McpToolDeps;

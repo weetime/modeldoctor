@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { alignBenchmarkMetrics } from "../metrics-align.js";
 import type { McpToolDeps } from "../mcp.service.js";
+import { alignBenchmarkMetrics } from "../metrics-align.js";
 import { registerTool } from "./_register.js";
 
 type Input = { benchmarkIds: string[] };

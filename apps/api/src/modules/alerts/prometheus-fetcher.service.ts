@@ -161,7 +161,13 @@ export class PrometheusFetcherService {
         data?: { resultType: string; result?: Array<Record<string, unknown>> };
       } | null;
       if (!body || body.status !== "success" || !body.data?.result) {
-        return { datasource: { id: ds.id, name: ds.name }, query, kind: opts.kind, truncated: false, series: [] };
+        return {
+          datasource: { id: ds.id, name: ds.name },
+          query,
+          kind: opts.kind,
+          truncated: false,
+          series: [],
+        };
       }
       const raw = body.data.result;
       const truncated = raw.length > MAX_QUERY_SERIES;
@@ -180,7 +186,13 @@ export class PrometheusFetcherService {
           })),
         };
       });
-      return { datasource: { id: ds.id, name: ds.name }, query, kind: opts.kind, truncated, series };
+      return {
+        datasource: { id: ds.id, name: ds.name },
+        query,
+        kind: opts.kind,
+        truncated,
+        series,
+      };
     } finally {
       clearTimeout(timer);
     }

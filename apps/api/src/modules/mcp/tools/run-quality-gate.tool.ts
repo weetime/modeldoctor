@@ -53,7 +53,11 @@ export function registerRunQualityGate(server: McpServer, deps: McpToolDeps): vo
         const plan = {
           dryRun: true,
           willCreate: "quality-gate run (issues model calls + judging)",
-          target: { evaluationId: req.evaluationId, endpointAId: req.endpointAId, endpointBId: req.endpointBId },
+          target: {
+            evaluationId: req.evaluationId,
+            endpointAId: req.endpointAId,
+            endpointBId: req.endpointBId,
+          },
           request: req,
           confirmToken: token,
           note: "Re-call run_quality_gate with the SAME params plus this confirmToken to execute.",
@@ -87,7 +91,9 @@ export function registerRunQualityGate(server: McpServer, deps: McpToolDeps): vo
         };
       } catch (e) {
         return {
-          content: [{ type: "text", text: `run_quality_gate execution failed: ${(e as Error).message}` }],
+          content: [
+            { type: "text", text: `run_quality_gate execution failed: ${(e as Error).message}` },
+          ],
           isError: true,
         };
       }

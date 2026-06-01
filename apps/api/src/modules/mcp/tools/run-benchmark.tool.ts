@@ -24,12 +24,16 @@ export function registerRunBenchmark(server: McpServer, deps: McpToolDeps): void
         "consumes GPU). Poll status with get_benchmark. Token binds the exact params and " +
         "expires in 10 minutes.",
       inputShape: {
-        scenario: z.string().describe("inference | capacity | gateway | prefix-cache-validation | kv-cache-stress"),
+        scenario: z
+          .string()
+          .describe("inference | capacity | gateway | prefix-cache-validation | kv-cache-stress"),
         tool: z.string().describe("guidellm | vegeta | prefix-cache-probe | evalscope | aiperf"),
         connectionId: z.string().min(1).describe("Target connection id."),
         name: z.string().min(1).max(128).describe("Run name."),
         description: z.string().max(2048).optional().describe("Optional run description."),
-        params: z.record(z.unknown()).describe("Tool/scenario params (see a template or the web create form)."),
+        params: z
+          .record(z.unknown())
+          .describe("Tool/scenario params (see a template or the web create form)."),
         templateId: z.string().optional(),
         parentBenchmarkId: z.string().optional().describe("Benchmark to branch from."),
         baselineId: z.string().optional(),
@@ -81,7 +85,9 @@ export function registerRunBenchmark(server: McpServer, deps: McpToolDeps): void
         };
       } catch (e) {
         return {
-          content: [{ type: "text", text: `run_benchmark execution failed: ${(e as Error).message}` }],
+          content: [
+            { type: "text", text: `run_benchmark execution failed: ${(e as Error).message}` },
+          ],
           isError: true,
         };
       }
