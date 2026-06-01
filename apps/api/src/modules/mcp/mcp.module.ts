@@ -6,6 +6,7 @@ import { ConnectionModule } from "../connection/connection.module.js";
 import { DiagnosticsModule } from "../diagnostics/diagnostics.module.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { PrometheusDatasourceModule } from "../prometheus-datasource/prometheus-datasource.module.js";
+import { QualityGateModule } from "../quality-gate/quality-gate.module.js";
 import { McpController } from "./mcp.controller.js";
 import { McpAuthGuard } from "./mcp.guard.js";
 import { McpService } from "./mcp.service.js";
@@ -19,6 +20,7 @@ import { McpService } from "./mcp.service.js";
     NotificationsModule,
     AlertsModule,
     PrometheusDatasourceModule,
+    QualityGateModule,
   ],
   controllers: [McpController],
   providers: [McpService, McpAuthGuard],

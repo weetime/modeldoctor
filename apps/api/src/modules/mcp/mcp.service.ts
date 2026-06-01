@@ -26,8 +26,11 @@ import { registerListConnections } from "./tools/list-connections.tool.js";
 import { registerListPrometheusDatasources } from "./tools/list-prometheus-datasources.tool.js";
 import { registerRunDiagnostics } from "./tools/run-diagnostics.tool.js";
 import { registerSetConnectionPrometheusSource } from "./tools/set-connection-prometheus-source.tool.js";
+import { RunsService } from "../quality-gate/services/runs.service.js";
 import { registerCompareBenchmarks } from "./tools/compare-benchmarks.tool.js";
+import { registerGetBenchmark } from "./tools/get-benchmark.tool.js";
 import { registerGetEngineMetricCatalog } from "./tools/get-engine-metric-catalog.tool.js";
+import { registerGetQualityGateRun } from "./tools/get-quality-gate-run.tool.js";
 import { registerQueryPrometheus } from "./tools/query-prometheus.tool.js";
 import { registerSetDefaultPrometheusDatasource } from "./tools/set-default-prometheus-datasource.tool.js";
 import { registerSubscribe } from "./tools/subscribe.tool.js";
@@ -71,6 +74,7 @@ export class McpService {
     private readonly subscribers: SubscribersService,
     private readonly prometheusDatasources: PrometheusDatasourceService,
     private readonly promFetcher: PrometheusFetcherService,
+    private readonly runs: RunsService,
   ) {}
 
   async handleRequest(
@@ -109,6 +113,7 @@ export class McpService {
       subscribers: this.subscribers,
       prometheusDatasources: this.prometheusDatasources,
       promFetcher: this.promFetcher,
+      runs: this.runs,
       notificationsTest: async (channelId: string) => {
         try {
           await this.dispatcher.testChannel(
@@ -140,6 +145,8 @@ export class McpService {
     registerQueryPrometheus(server, deps);
     registerGetEngineMetricCatalog(server, deps);
     registerCompareBenchmarks(server, deps);
+    registerGetBenchmark(server, deps);
+    registerGetQualityGateRun(server, deps);
 
     // Stateless mode — every request is a fresh JSON-RPC roundtrip with
     // no cross-request session state. Matches Claude Code's typical
@@ -179,5 +186,6 @@ export interface McpToolDeps {
   subscribers: SubscribersService;
   prometheusDatasources: PrometheusDatasourceService;
   promFetcher: PrometheusFetcherService;
+  runs: RunsService;
   notificationsTest: (channelId: string) => Promise<{ ok: boolean; error?: string }>;
 }
