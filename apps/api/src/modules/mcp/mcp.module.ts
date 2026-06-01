@@ -10,6 +10,7 @@ import { QualityGateModule } from "../quality-gate/quality-gate.module.js";
 import { McpController } from "./mcp.controller.js";
 import { McpAuthGuard } from "./mcp.guard.js";
 import { McpService } from "./mcp.service.js";
+import { ConfirmTokenService } from "./confirm-token.service.js";
 
 @Module({
   imports: [
@@ -23,6 +24,6 @@ import { McpService } from "./mcp.service.js";
     QualityGateModule,
   ],
   controllers: [McpController],
-  providers: [McpService, McpAuthGuard],
+  providers: [McpService, McpAuthGuard, ConfirmTokenService],
 })
 export class McpModule {}
