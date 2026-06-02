@@ -14,6 +14,7 @@ import { BenchmarkRepository } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import { BenchmarkChartsService } from "./benchmark-charts.service.js";
 import { BenchmarkFilesController } from "./benchmark-files.controller.js";
+import { BenchmarkReconciler } from "./k8s/benchmark-reconciler.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { K8sJobWatcherService, type WatcherMode } from "./k8s/k8s-job-watcher.service.js";
 import {
@@ -23,7 +24,6 @@ import {
 } from "./k8s/pod-log-streamer-factory.js";
 import { PodLogStreamerPool } from "./k8s/pod-log-streamer-pool.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
-import { StartupReconciler } from "./k8s/startup-reconciler.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 import { ReportLoader } from "./storage/report-loader.js";
 import { REPORT_STORAGE, type ReportStorage } from "./storage/report-storage.js";
@@ -124,7 +124,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     PodLogStreamerPool,
     {
       // K8sJobWatcherService — Phase 2 primary watcher.
-      // useFactory loads KubeConfig + builds Informer factory + StartupReconciler.
+      // useFactory loads KubeConfig + builds Informer factory + BenchmarkReconciler.
       // Note: WatcherDeps is constructor-injected as a single object (not 6
       // separate @Inject calls) so the makeInformer factory closure can capture
       // the KubeConfig + namespace without leaking them into module-level DI.
@@ -148,6 +148,10 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         const waitingFatalGraceSec = config.get("WAITING_FATAL_GRACE_SEC", {
           infer: true,
         }) as number;
+        const reconcileIntervalMs =
+          (config.get("BENCHMARK_RECONCILE_INTERVAL_SEC", { infer: true }) as number) * 1000;
+        const orphanMinAgeMs =
+          (config.get("BENCHMARK_ORPHAN_MIN_AGE_SEC", { infer: true }) as number) * 1000;
 
         const reducerConfig = {
           fatalWaitingReasons: DEFAULT_FATAL_WAITING_REASONS,
@@ -165,15 +169,16 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
               throw new Error("makeInformer called in mode=off");
             },
             repo,
-            reconciler: new StartupReconciler({
-              namespace,
+            reconciler: new BenchmarkReconciler({
               repo,
-              podCache: { get: () => undefined, list: () => [] },
+              listLivePods: async () => [],
               storage,
               reportLoader,
             }),
             reportLoader,
             pool,
+            reconcileIntervalMs: 0,
+            orphanMinAgeMs: 0,
           });
         }
 
@@ -193,10 +198,12 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
             labelSelector,
           );
         const informer = k8s.makeInformer<V1Pod>(kc, podPath, listFn, labelSelector);
-        const reconciler = new StartupReconciler({
-          namespace,
+        // Reconciler reads pods via a FRESH API list (not the informer cache) so
+        // it stays a valid safety net even when the informer's cache is stale
+        // because the watch stream died.
+        const reconciler = new BenchmarkReconciler({
           repo,
-          podCache: informer,
+          listLivePods: async () => (await listFn()).body.items,
           storage,
           reportLoader,
         });
@@ -210,6 +217,8 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           reconciler,
           reportLoader,
           pool,
+          reconcileIntervalMs,
+          orphanMinAgeMs,
         });
       },
     },

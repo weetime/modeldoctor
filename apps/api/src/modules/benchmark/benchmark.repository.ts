@@ -173,7 +173,7 @@ export class BenchmarkRepository {
   }
 
   /**
-   * List benchmarks whose status is in the given set. Used by StartupReconciler
+   * List benchmarks whose status is in the given set. Used by BenchmarkReconciler
    * to find IN_PROGRESS benchmarks at boot time and reconcile against cluster
    * state. Bounded at 500 rows for safety; in practice the IN_PROGRESS set is
    * tiny (benchmarks finish in minutes, not hours).
