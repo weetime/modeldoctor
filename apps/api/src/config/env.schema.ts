@@ -66,6 +66,14 @@ export const EnvSchema = z.object({
   // 等待状态进 ImagePullBackOff/CrashLoopBackOff 等 FATAL waiting 多久后翻 failed。
   // K8s 社区惯例 60s；registry 限速 / 短暂网络抖动通常 < 30s。
   WAITING_FATAL_GRACE_SEC: z.coerce.number().int().positive().default(60),
+  // 周期性 reconcile 兜底间隔（秒）。informer 是状态机主驱动，但 @kubernetes/client-node
+  // 的 informer 遇到非-410 watch 错误后只会停掉（README 要求手动 restart）；即便我们已在
+  // error handler 里重启它，再叠一层周期 reconcile 才能彻底消除「informer 死掉 = 全断」单点。
+  // 0 = 关闭周期兜底（仅靠 informer + 启动时 reconcile）。
+  BENCHMARK_RECONCILE_INTERVAL_SEC: z.coerce.number().int().min(0).default(30),
+  // 周期 reconcile 把「无 pod 且无 result.json」判为孤儿 failed 前，benchmark 至少要存活这么久。
+  // 防止 submit→Job/pod 尚未创建的瞬时竞态把刚提交的 run 误杀。
+  BENCHMARK_ORPHAN_MIN_AGE_SEC: z.coerce.number().int().positive().default(60),
   // Per-tool runner images (#53 Phase 2 / #78). K8s is the only execution mode.
   RUNNER_IMAGE_GUIDELLM: z.string().min(1),
   RUNNER_IMAGE_VEGETA: z.string().min(1),

@@ -38,7 +38,10 @@ function makeFakeInformer() {
   return informer;
 }
 
-function makeDeps(mode: WatcherMode = "primary"): {
+function makeDeps(
+  mode: WatcherMode = "primary",
+  overrides: Partial<WatcherDeps> = {},
+): {
   deps: WatcherDeps;
   informer: ReturnType<typeof makeFakeInformer>;
   repo: { findById: ReturnType<typeof vi.fn>; updateGuarded: ReturnType<typeof vi.fn> };
@@ -77,6 +80,13 @@ function makeDeps(mode: WatcherMode = "primary"): {
       reconciler: reconciler as never,
       reportLoader: reportLoader as never,
       pool: pool as never,
+      // Periodic sweep off by default so lifecycle tests see exactly one
+      // reconciler.run() (the startup call); 0-delay backoff makes restart
+      // deterministic across a single macrotask.
+      reconcileIntervalMs: 0,
+      orphanMinAgeMs: 60_000,
+      backoffMs: () => 0,
+      ...overrides,
     },
     informer,
     repo,
@@ -116,6 +126,75 @@ describe("K8sJobWatcherService — lifecycle", () => {
     const svc = new K8sJobWatcherService(deps);
     await svc.onModuleDestroy();
     expect(informer.stop).not.toHaveBeenCalled();
+  });
+});
+
+describe("K8sJobWatcherService — informer resilience", () => {
+  it("restarts the informer after a non-410 watch error", async () => {
+    const { deps, informer } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    expect(informer.start).toHaveBeenCalledOnce(); // initial start
+
+    informer.fire("error", new Error("ECONNRESET"));
+    await new Promise((r) => setTimeout(r, 5)); // let the 0-delay restart timer fire
+
+    expect(informer.start).toHaveBeenCalledTimes(2); // restarted
+  });
+
+  it("does NOT restart the informer once destroyed (stopped)", async () => {
+    const { deps, informer } = makeDeps("primary");
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    await svc.onModuleDestroy();
+    informer.start.mockClear();
+
+    informer.fire("error", new Error("late error during shutdown"));
+    await new Promise((r) => setTimeout(r, 5));
+
+    expect(informer.start).not.toHaveBeenCalled();
+  });
+
+  it("keeps retrying when a restart attempt itself fails", async () => {
+    const { deps, informer } = makeDeps("primary");
+    informer.start
+      .mockResolvedValueOnce(undefined) // init
+      .mockRejectedValueOnce(new Error("list failed")) // first restart fails
+      .mockResolvedValue(undefined); // retry succeeds
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+
+    informer.fire("error", new Error("ECONNRESET"));
+    await new Promise((r) => setTimeout(r, 20)); // failed restart + reschedule + retry
+
+    // init + failed restart + successful retry
+    expect(informer.start.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("K8sJobWatcherService — periodic reconcile", () => {
+  it("does not schedule a periodic sweep when interval is 0", async () => {
+    const { deps, reconciler } = makeDeps("primary", { reconcileIntervalMs: 0 });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    await new Promise((r) => setTimeout(r, 20));
+    await svc.onModuleDestroy();
+    expect(reconciler.run).toHaveBeenCalledOnce(); // only the startup run
+  });
+
+  it("runs a periodic reconcile with orphanMinAgeMs when interval > 0", async () => {
+    const { deps, reconciler } = makeDeps("primary", {
+      reconcileIntervalMs: 10,
+      orphanMinAgeMs: 60_000,
+    });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    await new Promise((r) => setTimeout(r, 35)); // ~3 ticks
+    await svc.onModuleDestroy();
+
+    expect(reconciler.run.mock.calls.length).toBeGreaterThan(1);
+    // startup run() takes no args; periodic runs pass the orphan grace
+    expect(reconciler.run).toHaveBeenCalledWith({ orphanMinAgeMs: 60_000 });
   });
 });
 
