@@ -146,6 +146,41 @@ describe("BenchmarkReconciler", () => {
     );
   });
 
+  it("result.json exists but tryLoad throws → logs, does NOT orphan-fail or pod-check", async () => {
+    const { deps, repo, listLivePods, reportLoader } = makeDeps({ storageExists: true });
+    repo.listByStatus.mockResolvedValue([oldRow("r1")]);
+    reportLoader.tryLoad.mockRejectedValueOnce(new Error("findById blew up"));
+
+    await new BenchmarkReconciler(deps).run();
+
+    expect(reportLoader.tryLoad).toHaveBeenCalledWith("r1");
+    // Must NOT fall through to the pod check / orphan path.
+    expect(listLivePods).not.toHaveBeenCalled();
+    expect(repo.updateGuarded).not.toHaveBeenCalled();
+  });
+
+  it("one benchmark's updateGuarded throwing does not skip the rest", async () => {
+    const { deps, repo } = makeDeps({ livePods: [] }); // both are orphans
+    repo.listByStatus.mockResolvedValue([oldRow("a"), oldRow("b")]);
+    repo.updateGuarded
+      .mockRejectedValueOnce(new Error("db blip")) // a fails
+      .mockResolvedValueOnce({ id: "b" }); // b still attempted
+
+    await new BenchmarkReconciler(deps).run();
+
+    expect(repo.updateGuarded).toHaveBeenCalledTimes(2);
+    expect(repo.updateGuarded).toHaveBeenCalledWith("b", expect.anything(), expect.anything());
+  });
+
+  it("listLivePods throwing aborts the sweep (never orphan-fails on a K8s outage)", async () => {
+    const { deps, repo, listLivePods } = makeDeps();
+    listLivePods.mockRejectedValueOnce(new Error("k8s api down"));
+    repo.listByStatus.mockResolvedValue([oldRow("a")]);
+
+    await expect(new BenchmarkReconciler(deps).run()).rejects.toThrow("k8s api down");
+    expect(repo.updateGuarded).not.toHaveBeenCalled();
+  });
+
   describe("orphan grace window (periodic mode)", () => {
     it("does NOT orphan-fail a run younger than orphanMinAgeMs", async () => {
       const { deps, repo } = makeDeps({ livePods: [] });

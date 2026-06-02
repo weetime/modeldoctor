@@ -196,6 +196,29 @@ describe("K8sJobWatcherService — periodic reconcile", () => {
     // startup run() takes no args; periodic runs pass the orphan grace
     expect(reconciler.run).toHaveBeenCalledWith({ orphanMinAgeMs: 60_000 });
   });
+
+  it("does not overlap: skips a tick while the previous reconcile is in flight", async () => {
+    const { deps, reconciler } = makeDeps("primary", { reconcileIntervalMs: 10 });
+    // startup run() resolves immediately; the first periodic run() (called with
+    // opts) hangs, so every later tick must be skipped by the isReconciling lock.
+    let releasePeriodic: () => void = () => {};
+    const periodicGate = new Promise<void>((res) => {
+      releasePeriodic = res;
+    });
+    reconciler.run.mockImplementation((opts?: unknown) =>
+      opts ? periodicGate : Promise.resolve(undefined),
+    );
+
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+    await new Promise((r) => setTimeout(r, 45)); // ~4 ticks would fire without the lock
+
+    // startup(1) + exactly one in-flight periodic(1); all later ticks skipped.
+    expect(reconciler.run).toHaveBeenCalledTimes(2);
+
+    releasePeriodic();
+    await svc.onModuleDestroy();
+  });
 });
 
 describe("K8sJobWatcherService event handling", () => {

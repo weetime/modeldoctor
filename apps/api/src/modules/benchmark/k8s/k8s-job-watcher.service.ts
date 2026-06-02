@@ -45,6 +45,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
   private readonly firstFatalWaitingAt = new Map<string, Date>();
   private consecutiveErrors = 0;
   private stopped = false;
+  private isReconciling = false;
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
   private reconcileTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -81,9 +82,19 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
     if (this.deps.reconcileIntervalMs > 0) {
       this.reconcileTimer = setInterval(() => {
+        // Skip if the previous sweep is still running (slow K8s API / DB) so
+        // reconciles never pile up and double the load.
+        if (this.isReconciling) {
+          this.log.warn("periodic reconcile skipped: previous run still in progress");
+          return;
+        }
+        this.isReconciling = true;
         void this.deps.reconciler
           .run({ orphanMinAgeMs: this.deps.orphanMinAgeMs })
-          .catch((e) => this.log.warn(`periodic reconcile failed: ${(e as Error).message}`));
+          .catch((e) => this.log.warn(`periodic reconcile failed: ${(e as Error).message}`))
+          .finally(() => {
+            this.isReconciling = false;
+          });
       }, this.deps.reconcileIntervalMs);
       this.reconcileTimer.unref?.();
       this.log.log(
@@ -121,10 +132,17 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     if (this.stopped || !this.informer) return;
     try {
       await this.informer.start();
+      // onModuleDestroy may have fired while start() was in flight; if so, undo
+      // the restart so we don't leak a running watch past shutdown.
+      if (this.stopped) {
+        await this.informer.stop().catch(() => undefined);
+        return;
+      }
       // A successful (re)connect fires the "connect" event, which resets
       // consecutiveErrors; nothing else to do here.
       this.log.log("informer restart requested after error");
     } catch (err) {
+      if (this.stopped) return; // shutting down — don't log/retry
       this.consecutiveErrors += 1;
       this.log.warn(
         `informer restart failed (#${this.consecutiveErrors}): ${(err as Error).message}; retrying`,
