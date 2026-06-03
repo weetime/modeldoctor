@@ -11,6 +11,8 @@ export interface SavedCompareReportProps {
   runs: ReportRun[];
   /** Optional print-time header text (one-line, gray). */
   printHeader?: string;
+  /** Inline on the compare page: no TOC, no scroll-spy, no data-report-root. */
+  embedded?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface SavedCompareReportProps {
  *   - Lint-warning callout (when present)
  *   - Sticky left-rail TOC with scroll-spy
  */
-export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompareReportProps) {
+export function SavedCompareReport({ narrative, runs, printHeader, embedded = false }: SavedCompareReportProps) {
   const { t } = useTranslation("benchmarks");
   const sections = narrative.sections;
   const figuresBySection = useMemo(() => {
@@ -42,6 +44,7 @@ export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompar
   // Scroll-spy: highlight TOC entry for the section currently in view.
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
   useEffect(() => {
+    if (embedded) return;
     function onScroll() {
       let nearest: string = sections[0]?.id ?? "";
       for (const s of sections) {
@@ -56,7 +59,7 @@ export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompar
     document.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => document.removeEventListener("scroll", onScroll);
-  }, [sections]);
+  }, [sections, embedded]);
 
   let figureCounter = 0;
   function nextFigureNumber(): number {
@@ -65,28 +68,30 @@ export function SavedCompareReport({ narrative, runs, printHeader }: SavedCompar
   }
 
   return (
-    <div className="primer-report" data-report-root data-print-header={printHeader ?? ""}>
-      <div className="pr-layout">
-        <nav
-          className="pr-toc"
-          aria-label={t("savedCompare.report.toc", { defaultValue: "Contents" })}
-        >
-          <div className="pr-toc-title">
-            {t("savedCompare.report.toc", { defaultValue: "Contents" })}
-          </div>
-          <ul>
-            {sections.map((s) => (
-              <li key={s.id}>
-                <a
-                  href={`#pr-section-${s.id}`}
-                  className={activeId === s.id ? "active" : undefined}
-                >
-                  {s.num} {s.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+    <div className="primer-report" {...(embedded ? {} : { "data-report-root": true })} data-print-header={printHeader ?? ""}>
+      <div className={`pr-layout${embedded ? " pr-layout-embedded" : ""}`}>
+        {embedded ? null : (
+          <nav
+            className="pr-toc"
+            aria-label={t("savedCompare.report.toc", { defaultValue: "Contents" })}
+          >
+            <div className="pr-toc-title">
+              {t("savedCompare.report.toc", { defaultValue: "Contents" })}
+            </div>
+            <ul>
+              {sections.map((s) => (
+                <li key={s.id}>
+                  <a
+                    href={`#pr-section-${s.id}`}
+                    className={activeId === s.id ? "active" : undefined}
+                  >
+                    {s.num} {s.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
         <main className="pr-canvas">
           {/* Hero */}
