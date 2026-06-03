@@ -1,8 +1,8 @@
 import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
 import { ExternalLink, RefreshCw, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/page-header";
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ import { exportPageAsHtml } from "./exportHtml";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 import { ReportProgress } from "./ReportProgress";
 import { type ReportRun, ReportSections } from "./ReportSections";
+import { SavedCompareReport } from "./SavedCompareReport";
 
 function extractParamsSummary(params: unknown): {
   workload?: string;
@@ -36,7 +37,7 @@ function extractParamsSummary(params: unknown): {
   };
 }
 
-export function SavedCompareDetailPage() {
+export function SavedComparePage() {
   const { id = "" } = useParams<{ id: string }>();
   const { t } = useTranslation("benchmarks");
   const { t: tSidebar } = useTranslation("sidebar");
@@ -46,6 +47,39 @@ export function SavedCompareDetailPage() {
   const synth = useSynthesizeSavedCompare(id);
   const del = useDeleteSavedCompare();
   const [narrativeOverride, setNarrativeOverride] = useState<CompareNarrative | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoGenFired = useRef(false);
+
+  const generate = useCallback(async () => {
+    const r = await synth.mutateAsync({ locale: "zh-CN" });
+    setNarrativeOverride(r.narrative);
+  }, [synth.mutateAsync]);
+
+  // Ad-hoc -> generate bridge: the compare page navigates here with ?generate=1
+  // after a save-and-generate. Fire synthesize once, then strip the flag.
+  useEffect(() => {
+    if (autoGenFired.current) return;
+    if (searchParams.get("generate") !== "1") return;
+    const sc = query.data;
+    if (!sc || sc.narrative) {
+      if (sc?.narrative) {
+        autoGenFired.current = true;
+        setSearchParams({}, { replace: true });
+      }
+      return;
+    }
+    if (!provider.data?.enabled || synth.isPending) return;
+    autoGenFired.current = true;
+    setSearchParams({}, { replace: true });
+    void generate();
+  }, [
+    searchParams,
+    query.data,
+    provider.data?.enabled,
+    synth.isPending,
+    setSearchParams,
+    generate,
+  ]);
 
   if (query.isLoading) {
     return (
@@ -82,11 +116,6 @@ export function SavedCompareDetailPage() {
   );
   const narrative = narrativeOverride ?? (sc.narrative as CompareNarrative | null);
 
-  async function generate() {
-    const r = await synth.mutateAsync({ locale: "zh-CN" });
-    setNarrativeOverride(r.narrative);
-  }
-
   async function onDelete() {
     await del.mutateAsync(id);
     navigate("/benchmarks/compare/saved");
@@ -114,7 +143,7 @@ export function SavedCompareDetailPage() {
               <Button asChild>
                 <Link to={`/reports/${sc.id}`}>
                   <ExternalLink className="mr-1.5 h-4 w-4" />
-                  {t("savedCompare.detail.openReport", { defaultValue: "Open report" })}
+                  {t("savedCompare.report.openPrint")}
                 </Link>
               </Button>
             ) : null}
@@ -182,7 +211,7 @@ export function SavedCompareDetailPage() {
               <Button asChild>
                 <Link to={`/reports/${sc.id}`}>
                   <ExternalLink className="mr-1.5 h-4 w-4" />
-                  {t("savedCompare.detail.openReport", { defaultValue: "Open report" })}
+                  {t("savedCompare.report.openPrint")}
                 </Link>
               </Button>
             </div>
@@ -217,6 +246,15 @@ export function SavedCompareDetailPage() {
             </Button>
           </div>
         )}
+
+        {narrative ? (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">{t("savedCompare.report.inlineHeading")}</h2>
+            <div className="overflow-hidden rounded-md border border-border">
+              <SavedCompareReport narrative={narrative} runs={reportRuns} embedded />
+            </div>
+          </section>
+        ) : null}
 
         <ReportSections
           runs={reportRuns}
