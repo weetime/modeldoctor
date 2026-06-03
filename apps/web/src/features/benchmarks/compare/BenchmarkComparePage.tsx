@@ -49,6 +49,7 @@ export function BenchmarkComparePage() {
   const { t: tSidebar } = useTranslation("sidebar");
   const [searchParams, setSearchParams] = useSearchParams();
   const [saveOpen, setSaveOpen] = useState(false);
+  const [generateAfterSave, setGenerateAfterSave] = useState(false);
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
   //   - missing            → "user hasn't chosen yet, fall back to inferred default"
@@ -217,7 +218,25 @@ export function BenchmarkComparePage() {
               <Button variant="outline" asChild>
                 <Link to="/benchmarks/compare/saved">{t("savedCompare.savedListLink")}</Link>
               </Button>
-              <Button onClick={() => setSaveOpen(true)}>{t("savedCompare.saveButton")}</Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setGenerateAfterSave(false);
+                    setSaveOpen(true);
+                  }}
+                >
+                  {t("savedCompare.compare.saveOnly")}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setGenerateAfterSave(true);
+                    setSaveOpen(true);
+                  }}
+                >
+                  {t("savedCompare.compare.generate")}
+                </Button>
+              </div>
             </div>
             <ReportSections
               runs={reportRuns}
@@ -232,6 +251,7 @@ export function BenchmarkComparePage() {
               runs={successfulBenchmarks.map((r) => ({ id: r.id, name: r.name, tool: r.tool }))}
               baselineId={defaultBaseline}
               context=""
+              generateAfterSave={generateAfterSave}
             />
           </>
         )}
