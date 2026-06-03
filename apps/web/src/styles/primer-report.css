@@ -50,21 +50,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark .primer-report {
-  --pr-bg-canvas: #0d1117;
-  --pr-bg-subtle: #161b22;
-  --pr-bg-muted: #21262d;
-  --pr-fg-default: #e6edf3;
-  --pr-fg-muted: #8d96a0;
-  --pr-fg-subtle: #6e7681;
-  --pr-border-default: #30363d;
-  --pr-border-muted: #21262d;
-  --pr-accent-subtle: #0e2a52;
-  --pr-success-subtle: #033a16;
-  --pr-danger-subtle: #5a0c0c;
-  --pr-attention-subtle: #4e3d0e;
-}
-
 .primer-report a {
   color: var(--pr-accent-fg);
   text-decoration: none;
@@ -95,6 +80,11 @@
   grid-template-columns: 240px minmax(0, 1fr);
   gap: 32px;
   align-items: start;
+}
+/* Embedded mode (inline on the compare page): drop the TOC column so the
+ * canvas flows full-width. Overrides the grid set on .pr-layout. */
+.primer-report .pr-layout-embedded {
+  display: block;
 }
 .primer-report .pr-toc {
   position: sticky;
