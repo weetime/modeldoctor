@@ -118,7 +118,7 @@ export function SavedComparesListPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge
-                        variant={hasReport ? "default" : "outline"}
+                        variant={hasReport ? "success" : "outline"}
                         className="gap-1 text-[10px]"
                       >
                         <FileText className="h-3 w-3" />
@@ -126,7 +126,7 @@ export function SavedComparesListPage() {
                           ? t("savedCompare.list.reportReady")
                           : t("savedCompare.list.reportPending")}
                       </Badge>
-                      <Badge variant="secondary" className="text-[10px]">
+                      <Badge variant="default" className="text-[10px]">
                         {t(`savedCompare.classification.${item.classification}`)}
                       </Badge>
                     </div>
