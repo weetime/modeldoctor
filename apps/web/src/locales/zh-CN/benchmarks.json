@@ -352,8 +352,11 @@
     }
   },
   "savedCompare": {
-    "saveButton": "保存对比",
     "savedListLink": "历史对比",
+    "compare": {
+      "generate": "生成 AI 解读",
+      "saveOnly": "仅保存"
+    },
     "dialog": {
       "title": "保存为可分享对比报告",
       "nameLabel": "名称",
@@ -363,6 +366,7 @@
       "contextLabel": "测试环境与上下文（可选）",
       "contextPlaceholder": "硬件、镜像版本、为什么对比、已知踩坑……",
       "submit": "保存并跳转",
+      "submitGenerate": "保存并生成",
       "cancel": "取消"
     },
     "list": {
@@ -397,6 +401,8 @@
       "chartExtraTitle": "缓存命中 / 额外指标",
       "narrativeMissing": "尚未生成 AI 分析。",
       "generateButton": "生成 AI 分析",
+      "openPrint": "打开打印视图",
+      "inlineHeading": "AI 解读",
       "toc": "目录"
     },
     "reportPage": {

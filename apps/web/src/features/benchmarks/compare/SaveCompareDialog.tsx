@@ -34,6 +34,8 @@ export interface SaveCompareDialogProps {
   runs: SaveCompareDialogRun[];
   baselineId: string | null;
   context: string;
+  /** When true, navigate to the saved page with ?generate=1 so it auto-synthesizes. */
+  generateAfterSave?: boolean;
 }
 
 export function SaveCompareDialog({
@@ -42,6 +44,7 @@ export function SaveCompareDialog({
   runs,
   baselineId,
   context,
+  generateAfterSave = false,
 }: SaveCompareDialogProps) {
   const { t } = useTranslation("benchmarks");
   const navigate = useNavigate();
@@ -67,7 +70,8 @@ export function SaveCompareDialog({
       clientName: clientName.trim() || undefined,
     });
     onOpenChange(false);
-    navigate(`/benchmarks/compare/saved/${sc.id}`);
+    const suffix = generateAfterSave ? "?generate=1" : "";
+    navigate(`/benchmarks/compare/saved/${sc.id}${suffix}`);
   }
 
   return (
@@ -168,7 +172,9 @@ export function SaveCompareDialog({
             {t("savedCompare.dialog.cancel")}
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
-            {t("savedCompare.dialog.submit")}
+            {generateAfterSave
+              ? t("savedCompare.dialog.submitGenerate")
+              : t("savedCompare.dialog.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
