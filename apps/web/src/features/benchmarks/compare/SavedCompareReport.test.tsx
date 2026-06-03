@@ -20,13 +20,13 @@ const narrative: CompareNarrative = {
 describe("SavedCompareReport", () => {
   it("renders the TOC nav in standalone mode", () => {
     const { container } = render(<SavedCompareReport narrative={narrative} runs={[]} />);
-    expect(container.querySelector(".pr-toc")).not.toBeNull();
+    expect(screen.getByRole("navigation", { name: /contents/i })).toBeInTheDocument();
     expect(container.querySelector("[data-report-root]")).not.toBeNull();
   });
 
   it("drops the TOC nav and data-report-root in embedded mode", () => {
     const { container } = render(<SavedCompareReport narrative={narrative} runs={[]} embedded />);
-    expect(container.querySelector(".pr-toc")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: /contents/i })).not.toBeInTheDocument();
     expect(container.querySelector(".pr-layout-embedded")).not.toBeNull();
     expect(container.querySelector("[data-report-root]")).toBeNull();
     expect(screen.getByRole("heading", { name: "Hero Title" })).toBeInTheDocument();

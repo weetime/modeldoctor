@@ -48,6 +48,7 @@ export function SavedComparePage() {
   const del = useDeleteSavedCompare();
   const [narrativeOverride, setNarrativeOverride] = useState<CompareNarrative | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const generateParam = searchParams.get("generate");
   const autoGenFired = useRef(false);
 
   const generate = useCallback(async () => {
@@ -55,17 +56,20 @@ export function SavedComparePage() {
     setNarrativeOverride(r.narrative);
   }, [synth.mutateAsync]);
 
+  // Depend on primitives, not the whole query.data / searchParams objects, so
+  // background refetches and unrelated URL changes don't re-run this effect.
+  const scId = query.data?.id;
+  const hasNarrative = !!query.data?.narrative;
+
   // Ad-hoc -> generate bridge: the compare page navigates here with ?generate=1
   // after a save-and-generate. Fire synthesize once, then strip the flag.
   useEffect(() => {
     if (autoGenFired.current) return;
-    if (searchParams.get("generate") !== "1") return;
-    const sc = query.data;
-    if (!sc || sc.narrative) {
-      if (sc?.narrative) {
-        autoGenFired.current = true;
-        setSearchParams({}, { replace: true });
-      }
+    if (generateParam !== "1") return;
+    if (!scId) return; // data not loaded yet — wait, don't strip
+    if (hasNarrative) {
+      autoGenFired.current = true;
+      setSearchParams({}, { replace: true });
       return;
     }
     if (!provider.data?.enabled || synth.isPending) return;
@@ -73,8 +77,9 @@ export function SavedComparePage() {
     setSearchParams({}, { replace: true });
     void generate();
   }, [
-    searchParams,
-    query.data,
+    generateParam,
+    scId,
+    hasNarrative,
     provider.data?.enabled,
     synth.isPending,
     setSearchParams,
