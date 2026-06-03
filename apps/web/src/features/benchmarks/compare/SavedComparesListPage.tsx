@@ -29,9 +29,13 @@ import { Input } from "@/components/ui/input";
 import { useDeleteSavedCompare, useSavedCompares } from "./queries";
 
 /** Stage labels are a record keyed by benchmarkId; preserve insertion order
- * (baseline-first by construction) and de-dupe in case two runs share a label. */
+ * (baseline-first by construction) and de-dupe in case two runs share a label.
+ * The API response is type-cast, not runtime-validated, so guard against a
+ * null/corrupt `stageLabels` (Object.values(null) would throw) and drop any
+ * empty labels rather than render blank chips. */
 function stageLabelList(item: SavedCompare): string[] {
-  return [...new Set(Object.values(item.stageLabels))];
+  if (!item.stageLabels) return [];
+  return [...new Set(Object.values(item.stageLabels).filter(Boolean))];
 }
 
 export function SavedComparesListPage() {
@@ -126,9 +130,11 @@ export function SavedComparesListPage() {
                           ? t("savedCompare.list.reportReady")
                           : t("savedCompare.list.reportPending")}
                       </Badge>
-                      <Badge variant="default" className="text-[10px]">
-                        {t(`savedCompare.classification.${item.classification}`)}
-                      </Badge>
+                      {item.classification && (
+                        <Badge variant="default" className="text-[10px]">
+                          {t(`savedCompare.classification.${item.classification}`)}
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-1 flex-col gap-3 text-sm">
