@@ -354,6 +354,10 @@
   "savedCompare": {
     "saveButton": "Save comparison",
     "savedListLink": "Saved comparisons",
+    "compare": {
+      "generate": "Generate AI report",
+      "saveOnly": "Save only"
+    },
     "dialog": {
       "title": "Save as a shareable report",
       "nameLabel": "Name",
@@ -363,6 +367,7 @@
       "contextLabel": "Test environment & context (optional)",
       "contextPlaceholder": "Hardware, image tags, motivation, known issues…",
       "submit": "Save and view",
+      "submitGenerate": "Save & generate",
       "cancel": "Cancel"
     },
     "list": {
@@ -380,7 +385,8 @@
       "editContext": "Edit context",
       "deleteTitle": "Delete this report",
       "deleteBody": "This cannot be undone.",
-      "missingBenchmark": "Data deleted"
+      "missingBenchmark": "Data deleted",
+      "openReport": "Open report"
     },
     "report": {
       "sectionTldr": "Overview / TL;DR",
@@ -397,6 +403,8 @@
       "chartExtraTitle": "Cache hit / extra metrics",
       "narrativeMissing": "AI analysis not generated yet.",
       "generateButton": "Generate AI analysis",
+      "openPrint": "Open print view",
+      "inlineHeading": "AI analysis",
       "toc": "Contents"
     },
     "reportPage": {
