@@ -27,7 +27,12 @@ export interface SavedCompareReportProps {
  *   - Lint-warning callout (when present)
  *   - Sticky left-rail TOC with scroll-spy
  */
-export function SavedCompareReport({ narrative, runs, printHeader, embedded = false }: SavedCompareReportProps) {
+export function SavedCompareReport({
+  narrative,
+  runs,
+  printHeader,
+  embedded = false,
+}: SavedCompareReportProps) {
   const { t } = useTranslation("benchmarks");
   const sections = narrative.sections;
   const figuresBySection = useMemo(() => {
@@ -68,7 +73,11 @@ export function SavedCompareReport({ narrative, runs, printHeader, embedded = fa
   }
 
   return (
-    <div className="primer-report" {...(embedded ? {} : { "data-report-root": true })} data-print-header={printHeader ?? ""}>
+    <div
+      className="primer-report"
+      {...(embedded ? {} : { "data-report-root": true })}
+      data-print-header={printHeader ?? ""}
+    >
       <div className={`pr-layout${embedded ? " pr-layout-embedded" : ""}`}>
         {embedded ? null : (
           <nav

@@ -352,7 +352,6 @@
     }
   },
   "savedCompare": {
-    "saveButton": "保存对比",
     "savedListLink": "历史对比",
     "compare": {
       "generate": "生成 AI 解读",
@@ -385,8 +384,7 @@
       "editContext": "编辑上下文",
       "deleteTitle": "删除该对比报告",
       "deleteBody": "此操作不可撤销。",
-      "missingBenchmark": "数据已删除",
-      "openReport": "打开报告"
+      "missingBenchmark": "数据已删除"
     },
     "report": {
       "sectionTldr": "概述 / TL;DR",

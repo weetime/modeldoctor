@@ -352,7 +352,6 @@
     }
   },
   "savedCompare": {
-    "saveButton": "Save comparison",
     "savedListLink": "Saved comparisons",
     "compare": {
       "generate": "Generate AI report",
@@ -385,8 +384,7 @@
       "editContext": "Edit context",
       "deleteTitle": "Delete this report",
       "deleteBody": "This cannot be undone.",
-      "missingBenchmark": "Data deleted",
-      "openReport": "Open report"
+      "missingBenchmark": "Data deleted"
     },
     "report": {
       "sectionTldr": "Overview / TL;DR",
