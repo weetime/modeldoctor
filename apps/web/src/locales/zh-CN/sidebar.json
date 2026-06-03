@@ -17,6 +17,7 @@
     "benchmarkGateway": "网关压测",
     "benchmarkPrefixCache": "Prefix-cache 验证",
     "endpointReports": "测试洞察",
+    "compareReports": "对比报告",
     "benchmarkTemplates": "测试模板",
     "qualityGateEvaluations": "评测方案",
     "qualityGateRuns": "评测运行",
