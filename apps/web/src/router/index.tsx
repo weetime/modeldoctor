@@ -14,7 +14,8 @@ import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInference
 import { BenchmarkKvCacheStressPage } from "@/features/benchmarks/BenchmarkKvCacheStressPage";
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
-import { ReportPage } from "@/features/benchmarks/compare/ReportPage";
+import { ReportDetailPage } from "@/features/benchmarks/compare/ReportDetailPage";
+import { ReportPreviewPage } from "@/features/benchmarks/compare/ReportPreviewPage";
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
@@ -53,11 +54,11 @@ function RedirectToInsights() {
   return <Navigate to={`/insights/${connectionId}${search}`} replace />;
 }
 
-// Key by `:id` so the report page remounts on report→report navigation,
+// Key by `:id` so the detail page remounts on report→report navigation,
 // resetting its per-report state instead of leaking it across reports.
-function ReportPageRoute() {
+function ReportDetailRoute() {
   const { id } = useParams<{ id: string }>();
-  return <ReportPage key={id} />;
+  return <ReportDetailPage key={id} />;
 }
 
 export const routes: RouteObject[] = [
@@ -67,9 +68,10 @@ export const routes: RouteObject[] = [
     element: <ProtectedRoute />,
     errorElement: <ErrorPage />,
     children: [
-      // Standalone report viewer — no AppShell so the report takes full viewport.
-      // Still under ProtectedRoute so it inherits the same auth gate.
-      { path: "/reports/:id", element: <ReportPageRoute /> },
+      // Standalone report PREVIEW — no AppShell so the report takes full
+      // viewport and the print DOM stays clean. The themed in-app detail page
+      // lives at `/reports/:id` inside AppShell (see below).
+      { path: "/reports/:id/preview", element: <ReportPreviewPage /> },
       {
         path: "/",
         element: <AppShell />,
@@ -93,6 +95,7 @@ export const routes: RouteObject[] = [
           },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
+          { path: "reports/:id", element: <ReportDetailRoute /> },
           { path: "benchmarks/reports", element: <EndpointReportsPage /> },
           { path: "benchmarks/reports/:connectionId", element: <RedirectToInsights /> },
           { path: "insights/:connectionId", element: <InsightsDetailPage /> },

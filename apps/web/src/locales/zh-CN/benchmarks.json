@@ -385,6 +385,7 @@
       "columnActions": "操作"
     },
     "detail": {
+      "preview": "预览",
       "regenerate": "重新生成 AI 分析",
       "export": "导出 HTML",
       "editName": "编辑名称",
