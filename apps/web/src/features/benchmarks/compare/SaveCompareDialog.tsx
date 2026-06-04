@@ -71,7 +71,7 @@ export function SaveCompareDialog({
     });
     onOpenChange(false);
     const suffix = generateAfterSave ? "?generate=1" : "";
-    navigate(`/benchmarks/compare/saved/${sc.id}${suffix}`);
+    navigate(`/reports/${sc.id}${suffix}`);
   }
 
   return (

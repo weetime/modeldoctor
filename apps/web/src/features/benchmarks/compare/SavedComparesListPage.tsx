@@ -92,7 +92,7 @@ export function SavedComparesListPage() {
                   <CardHeader className="space-y-2 pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <Link
-                        to={`/benchmarks/compare/saved/${item.id}`}
+                        to={`/reports/${item.id}`}
                         className="font-semibold leading-tight hover:text-primary hover:underline"
                       >
                         {item.name}
@@ -162,7 +162,7 @@ export function SavedComparesListPage() {
                     </div>
                     <div className="mt-auto pt-1">
                       <Button asChild variant="outline" size="sm" className="gap-1">
-                        <Link to={`/benchmarks/compare/saved/${item.id}`}>
+                        <Link to={`/reports/${item.id}`}>
                           {tCommon("actions.detail")}
                           <ArrowRight className="h-4 w-4" />
                         </Link>

@@ -25,7 +25,6 @@ export interface ReportSectionsProps {
  * Pre-narrative "raw matrix" preview. Renders the per-run table + the metric
  * grid + the four bar charts. Used by:
  *   - BenchmarkComparePage (ad-hoc compare, no narrative)
- *   - SavedComparePage (raw matrix below the inline AI narrative)
  *
  * The narrative deep report (Hero + summary cards + 6 sections + figures)
  * is rendered by `<SavedCompareReport>`, not here.

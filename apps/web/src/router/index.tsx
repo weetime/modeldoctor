@@ -15,7 +15,6 @@ import { BenchmarkKvCacheStressPage } from "@/features/benchmarks/BenchmarkKvCac
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { ReportPage } from "@/features/benchmarks/compare/ReportPage";
-import { SavedComparePage } from "@/features/benchmarks/compare/SavedComparePage";
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
 import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
@@ -87,7 +86,6 @@ export const routes: RouteObject[] = [
           },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
-          { path: "benchmarks/compare/saved/:id", element: <SavedComparePage /> },
           { path: "benchmarks/reports", element: <EndpointReportsPage /> },
           { path: "benchmarks/reports/:connectionId", element: <RedirectToInsights /> },
           { path: "insights/:connectionId", element: <InsightsDetailPage /> },

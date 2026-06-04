@@ -110,7 +110,7 @@ describe("SavedComparesListPage", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("Study A")).toBeInTheDocument());
     const titleLink = screen.getByText("Study A").closest("a");
-    expect(titleLink).toHaveAttribute("href", "/benchmarks/compare/saved/sc1");
+    expect(titleLink).toHaveAttribute("href", "/reports/sc1");
   });
 
   it("opens delete confirmation from the card menu", async () => {

@@ -410,7 +410,12 @@
       "generateButton": "生成 AI 分析",
       "openPrint": "打开打印视图",
       "inlineHeading": "AI 解读",
-      "toc": "目录"
+      "toc": "目录",
+      "sourceTitle": "数据来源 · 关联 Benchmark",
+      "sourceStage": "阶段",
+      "sourceName": "Benchmark",
+      "sourceTool": "工具",
+      "sourceScenario": "场景"
     },
     "reportPage": {
       "loading": "正在加载报告…",
