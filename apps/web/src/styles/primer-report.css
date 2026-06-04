@@ -438,6 +438,13 @@
   .pr-toc {
     display: none !important;
   }
+  /* The "data source · associated benchmarks" table is an on-screen navigation
+     aid (links to each benchmark); a printed/PDF report doesn't need it. Bare
+     single-class selector to match the `.pr-app-bar` / `.pr-toc` hide cluster
+     above and avoid a descending-specificity warning. */
+  .pr-source {
+    display: none !important;
+  }
   .primer-report {
     background: #fff !important;
     font-size: 10.5px;
