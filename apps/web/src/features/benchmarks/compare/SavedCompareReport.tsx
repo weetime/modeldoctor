@@ -2,6 +2,7 @@ import type { CompareNarrative, SectionId } from "@modeldoctor/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
+import { Link } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { FigureRenderer } from "./FigureRenderer";
 import type { ReportRun } from "./ReportSections";
@@ -180,6 +181,43 @@ export function SavedCompareReport({
               ))}
             </section>
           ))}
+
+          {/* Data source — which benchmarks this report is built from. Identity
+              columns only (no metrics); names deep-link to the benchmark detail.
+              Sits before the footer so the footer truly closes the document. */}
+          {runs.length > 0 ? (
+            <section className="pr-sec">
+              <h3>{t("savedCompare.report.sourceTitle")}</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("savedCompare.report.sourceStage")}</th>
+                    <th>{t("savedCompare.report.sourceName")}</th>
+                    <th>{t("savedCompare.report.sourceTool")}</th>
+                    <th>{t("savedCompare.report.sourceScenario")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.stageLabel}</td>
+                      <td>
+                        {r.benchmark ? (
+                          <Link to={`/benchmarks/${r.id}`}>{r.benchmark.name ?? r.id}</Link>
+                        ) : (
+                          <span className="opacity-60">
+                            {t("savedCompare.detail.missingBenchmark")}
+                          </span>
+                        )}
+                      </td>
+                      <td>{r.tool || "—"}</td>
+                      <td>{r.scenario || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
 
           <div className="pr-footer">
             ModelDoctor SavedCompare report · schemaVersion {narrative.schemaVersion} ·{" "}

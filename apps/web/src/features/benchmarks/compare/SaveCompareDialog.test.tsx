@@ -37,7 +37,7 @@ function renderDialog(generateAfterSave: boolean) {
               />
             }
           />
-          <Route path="/benchmarks/compare/saved/:id" element={<Loc />} />
+          <Route path="/reports/:id" element={<Loc />} />
         </Routes>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -67,9 +67,7 @@ describe("SaveCompareDialog navigation", () => {
   it("navigates to the saved page without generate flag when generateAfterSave is false", async () => {
     renderDialog(false);
     await fillAndSubmit();
-    await waitFor(() =>
-      expect(screen.getByTestId("loc")).toHaveTextContent("/benchmarks/compare/saved/scNEW"),
-    );
+    await waitFor(() => expect(screen.getByTestId("loc")).toHaveTextContent("/reports/scNEW"));
     expect(screen.getByTestId("loc")).not.toHaveTextContent("generate=1");
   });
 
@@ -77,9 +75,7 @@ describe("SaveCompareDialog navigation", () => {
     renderDialog(true);
     await fillAndSubmit();
     await waitFor(() =>
-      expect(screen.getByTestId("loc")).toHaveTextContent(
-        "/benchmarks/compare/saved/scNEW?generate=1",
-      ),
+      expect(screen.getByTestId("loc")).toHaveTextContent("/reports/scNEW?generate=1"),
     );
   });
 });

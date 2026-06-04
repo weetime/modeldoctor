@@ -410,7 +410,12 @@
       "generateButton": "Generate AI analysis",
       "openPrint": "Open print view",
       "inlineHeading": "AI analysis",
-      "toc": "Contents"
+      "toc": "Contents",
+      "sourceTitle": "Data source · Associated benchmarks",
+      "sourceStage": "Stage",
+      "sourceName": "Benchmark",
+      "sourceTool": "Tool",
+      "sourceScenario": "Scenario"
     },
     "reportPage": {
       "loading": "Loading report…",
