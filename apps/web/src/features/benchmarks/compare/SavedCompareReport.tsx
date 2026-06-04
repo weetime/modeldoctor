@@ -205,7 +205,7 @@ export function SavedCompareReport({
                         {r.benchmark ? (
                           <Link to={`/benchmarks/${r.id}`}>{r.benchmark.name ?? r.id}</Link>
                         ) : (
-                          <span style={{ opacity: 0.6 }}>
+                          <span className="opacity-60">
                             {t("savedCompare.detail.missingBenchmark")}
                           </span>
                         )}

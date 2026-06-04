@@ -59,11 +59,15 @@ export function ReportPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const generateParam = searchParams.get("generate");
   const autoGenFired = useRef(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  const generate = useCallback(async () => {
-    const r = await synth.mutateAsync({ locale: "zh-CN" });
-    setNarrativeOverride(r.narrative);
-  }, [synth.mutateAsync]);
+  const generate = useCallback(() => {
+    synth.mutate({ locale: "zh-CN" }, { onSuccess: (r) => setNarrativeOverride(r.narrative) });
+  }, [synth.mutate]);
+
+  // NOTE: this component is remounted on `/reports/:id` param changes via a
+  // `key={id}` wrapper in the router, so per-report state (narrativeOverride,
+  // autoGenFired) resets naturally — no manual reset-on-id effect needed.
 
   // Depend on primitives, not the whole query.data / searchParams objects, so
   // background refetches and unrelated URL changes don't re-run this effect.
@@ -71,7 +75,9 @@ export function ReportPage() {
   const hasNarrative = !!query.data?.narrative;
 
   // Save-and-generate bridge: SaveCompareDialog navigates here with ?generate=1
-  // after a save-and-generate. Fire synthesize once, then strip the flag.
+  // after a save-and-generate. Fire synthesize once, then strip the flag. Always
+  // strip the flag once we've made a decision (even when there's nothing to
+  // generate) so it doesn't linger in the URL.
   useEffect(() => {
     if (autoGenFired.current) return;
     if (generateParam !== "1") return;
@@ -81,14 +87,21 @@ export function ReportPage() {
       setSearchParams({}, { replace: true });
       return;
     }
-    if (!provider.data?.enabled || synth.isPending) return;
+    if (provider.isLoading) return; // provider state unknown yet — wait
+    if (!provider.data?.enabled) {
+      autoGenFired.current = true;
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    if (synth.isPending) return;
     autoGenFired.current = true;
     setSearchParams({}, { replace: true });
-    void generate();
+    generate();
   }, [
     generateParam,
     scId,
     hasNarrative,
+    provider.isLoading,
     provider.data?.enabled,
     synth.isPending,
     setSearchParams,
@@ -139,14 +152,12 @@ export function ReportPage() {
     paramsSummary: extractParamsSummary(b.params),
   }));
 
-  async function onDelete() {
-    await del.mutateAsync(id);
-    navigate("/benchmarks/compare/saved");
+  function onDelete() {
+    del.mutate(id, { onSuccess: () => navigate("/benchmarks/compare/saved") });
   }
 
   function onExport() {
-    const root = document.querySelector("[data-report-root]") as HTMLElement | null;
-    if (root) void exportPageAsHtml(root, sc.name);
+    if (reportRef.current) void exportPageAsHtml(reportRef.current, sc.name);
   }
 
   function onPrint() {
@@ -176,12 +187,7 @@ export function ReportPage() {
           <div className="flex items-center gap-2">
             {narrative ? (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void generate()}
-                  disabled={!canGenerate}
-                >
+                <Button variant="outline" size="sm" onClick={generate} disabled={!canGenerate}>
                   <RefreshCw
                     className={`mr-1.5 h-4 w-4 ${synth.isPending ? "animate-spin" : ""}`}
                   />
@@ -217,7 +223,7 @@ export function ReportPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t("savedCompare.dialog.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete}>
+                  <AlertDialogAction onClick={onDelete} disabled={del.isPending}>
                     {t("savedCompare.detail.deleteTitle")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -233,11 +239,13 @@ export function ReportPage() {
       </header>
 
       {narrative ? (
-        <SavedCompareReport
-          narrative={narrative}
-          runs={reportRuns}
-          printHeader={`ModelDoctor · ${sc.name}`}
-        />
+        <div ref={reportRef}>
+          <SavedCompareReport
+            narrative={narrative}
+            runs={reportRuns}
+            printHeader={`ModelDoctor · ${sc.name}`}
+          />
+        </div>
       ) : (
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-8 py-24 text-center">
           <div className="flex items-center gap-2 text-base font-semibold">
@@ -252,7 +260,7 @@ export function ReportPage() {
             })}
           </p>
           {synth.error ? <p className="text-sm text-destructive">{synth.error.message}</p> : null}
-          <Button onClick={() => void generate()} disabled={!canGenerate}>
+          <Button onClick={generate} disabled={!canGenerate}>
             <Sparkles className="mr-1.5 h-4 w-4" />
             {synth.isPending
               ? t("savedCompare.report.generating", { defaultValue: "Generating…" })

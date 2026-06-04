@@ -53,6 +53,13 @@ function RedirectToInsights() {
   return <Navigate to={`/insights/${connectionId}${search}`} replace />;
 }
 
+// Key by `:id` so the report page remounts on report→report navigation,
+// resetting its per-report state instead of leaking it across reports.
+function ReportPageRoute() {
+  const { id } = useParams<{ id: string }>();
+  return <ReportPage key={id} />;
+}
+
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
   { path: "/register", element: <RegisterPage />, errorElement: <ErrorPage /> },
@@ -62,7 +69,7 @@ export const routes: RouteObject[] = [
     children: [
       // Standalone report viewer — no AppShell so the report takes full viewport.
       // Still under ProtectedRoute so it inherits the same auth gate.
-      { path: "/reports/:id", element: <ReportPage /> },
+      { path: "/reports/:id", element: <ReportPageRoute /> },
       {
         path: "/",
         element: <AppShell />,
