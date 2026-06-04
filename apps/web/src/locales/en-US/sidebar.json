@@ -17,6 +17,7 @@
     "benchmarkGateway": "Gateway Load Test",
     "benchmarkPrefixCache": "Prefix-cache Validation",
     "endpointReports": "Test Insights",
+    "compareReports": "Compare Reports",
     "benchmarkTemplates": "Test Templates",
     "qualityGateEvaluations": "Evaluations",
     "qualityGateRuns": "Runs",
