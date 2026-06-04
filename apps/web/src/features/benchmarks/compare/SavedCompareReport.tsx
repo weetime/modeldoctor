@@ -186,7 +186,7 @@ export function SavedCompareReport({
               columns only (no metrics); names deep-link to the benchmark detail.
               Sits before the footer so the footer truly closes the document. */}
           {runs.length > 0 ? (
-            <section className="pr-sec">
+            <section className="pr-sec pr-source">
               <h3>{t("savedCompare.report.sourceTitle")}</h3>
               <table>
                 <thead>
