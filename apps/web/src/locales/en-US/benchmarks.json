@@ -385,6 +385,7 @@
       "columnActions": "Actions"
     },
     "detail": {
+      "preview": "Preview",
       "regenerate": "Regenerate AI analysis",
       "export": "Export HTML",
       "editName": "Edit name",
