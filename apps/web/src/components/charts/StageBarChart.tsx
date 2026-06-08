@@ -176,8 +176,10 @@ export function StageBarChart({
         },
         yAxis: {
           type: "value",
-          // 20% headroom so the top value labels are not clipped.
-          max: (v: { max: number }) => (v.max > 0 ? Math.ceil(v.max * 1.2) : 1),
+          // 20% headroom so the top value labels are not clipped. Keep it
+          // fractional — `Math.ceil` would round sub-1 maxima (small error
+          // rates / throughputs) up to 1 and squash the bars flat.
+          max: (v: { max: number }) => (v.max > 0 ? v.max * 1.2 : 1),
           axisLabel: { color: lc.baseline },
           ...(yLabel ? { name: yLabel, nameLocation: "middle", nameGap: 40 } : {}),
         },
@@ -186,7 +188,18 @@ export function StageBarChart({
       },
       tokens,
     );
-  }, [data, series, yLabel, tokens, showValueLabels, baselineIndex, labelColors]);
+  }, [
+    data,
+    series,
+    yLabel,
+    tokens,
+    showValueLabels,
+    baselineIndex,
+    labelColors?.value,
+    labelColors?.up,
+    labelColors?.down,
+    labelColors?.baseline,
+  ]);
 
   return (
     <div className="rounded-md border border-border p-4">

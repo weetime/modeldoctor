@@ -1,4 +1,5 @@
 import type { FigureRefId } from "@modeldoctor/contracts";
+import { memo } from "react";
 import {
   StageBarChart,
   type StageBarDatum,
@@ -48,8 +49,14 @@ function baselineIndexOf(rows: { r: ReportRun }[], baselineId?: string | null): 
  * has no TTFT distribution), we render an inline "data unavailable" placeholder
  * instead of an empty chart. The server-side prompt also receives the same
  * availability set so the LLM can avoid picking the refId in the first place.
+ *
+ * `memo`-wrapped: the host report runs a scroll-spy that re-renders on every
+ * scroll. Its props (refId/runs/caption/figureNumber/baselineId) are stable
+ * across those re-renders, so memoization skips recomputing summaries and
+ * rebuilding chart options — and avoids re-rendering the ECharts canvases — on
+ * scroll.
  */
-export function FigureRenderer({
+export const FigureRenderer = memo(function FigureRenderer({
   refId,
   runs,
   caption,
@@ -170,7 +177,7 @@ export function FigureRenderer({
       </figcaption>
     </figure>
   );
-}
+});
 
 /** Compact 4-metric table for the compare-grid figure refId. */
 function FourMetricTable({ runs }: { runs: ReportRun[] }) {
