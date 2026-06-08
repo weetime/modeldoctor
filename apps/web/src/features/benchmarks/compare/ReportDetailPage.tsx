@@ -217,7 +217,7 @@ export function ReportDetailPage() {
             {/* Document-viewer: the light Primer "paper" sits inside a themed
                 bordered card on the (theme-following) page background. */}
             <div className="overflow-hidden rounded-lg border border-border">
-              <SavedCompareReport narrative={narrative} runs={reportRuns} embedded />
+              <SavedCompareReport narrative={narrative} runs={reportRuns} embedded showDataSource />
             </div>
           </>
         ) : (

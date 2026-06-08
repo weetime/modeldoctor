@@ -14,6 +14,12 @@ export interface SavedCompareReportProps {
   printHeader?: string;
   /** Inline on the compare page: no TOC, no scroll-spy, no data-report-root. */
   embedded?: boolean;
+  /**
+   * Render the "data source · associated benchmarks" table (with benchmark
+   * deep-links) before the footer. On-screen navigation aid for the in-app
+   * detail page only — the standalone print/export preview omits it.
+   */
+  showDataSource?: boolean;
 }
 
 /**
@@ -33,6 +39,7 @@ export function SavedCompareReport({
   runs,
   printHeader,
   embedded = false,
+  showDataSource = false,
 }: SavedCompareReportProps) {
   const { t } = useTranslation("benchmarks");
   const sections = narrative.sections;
@@ -184,8 +191,10 @@ export function SavedCompareReport({
 
           {/* Data source — which benchmarks this report is built from. Identity
               columns only (no metrics); names deep-link to the benchmark detail.
-              Sits before the footer so the footer truly closes the document. */}
-          {runs.length > 0 ? (
+              Detail page only (showDataSource): a print/export preview is a
+              finished artifact and shouldn't carry the in-app nav table. Sits
+              before the footer so the footer truly closes the document. */}
+          {showDataSource && runs.length > 0 ? (
             <section className="pr-sec pr-source">
               <h3>{t("savedCompare.report.sourceTitle")}</h3>
               <table>
