@@ -145,6 +145,7 @@ export function ReportPreviewPage() {
         <SavedCompareReport
           narrative={narrative}
           runs={reportRuns}
+          baselineId={sc.baselineId}
           printHeader={`ModelDoctor · ${sc.name}`}
         />
       </div>

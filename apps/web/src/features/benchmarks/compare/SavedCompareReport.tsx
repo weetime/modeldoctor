@@ -20,6 +20,8 @@ export interface SavedCompareReportProps {
    * detail page only — the standalone print/export preview omits it.
    */
   showDataSource?: boolean;
+  /** Baseline run id — drives per-bar ↑/↓ delta annotations in figures. */
+  baselineId?: string | null;
 }
 
 /**
@@ -40,6 +42,7 @@ export function SavedCompareReport({
   printHeader,
   embedded = false,
   showDataSource = false,
+  baselineId,
 }: SavedCompareReportProps) {
   const { t } = useTranslation("benchmarks");
   const sections = narrative.sections;
@@ -184,6 +187,7 @@ export function SavedCompareReport({
                   runs={runs}
                   caption={f.caption}
                   figureNumber={nextFigureNumber()}
+                  baselineId={baselineId}
                 />
               ))}
             </section>
