@@ -69,3 +69,46 @@ describe("aiperfReportSchema", () => {
     ).toThrow();
   });
 });
+
+describe("aiperf schema — prefix-cache extensions", () => {
+  it("defaults dataset to synthetic and leaves conversation fields optional", () => {
+    const r = aiperfParamsSchema.parse({});
+    expect(r.dataset).toBe("synthetic");
+    expect(r.conversationNum).toBeUndefined();
+  });
+
+  it("accepts multi-turn synthetic params", () => {
+    const r = aiperfParamsSchema.parse({
+      dataset: "synthetic",
+      conversationNum: 30,
+      conversationTurnMean: 10,
+      conversationType: "sticky-user-sessions",
+    });
+    expect(r.conversationNum).toBe(30);
+    expect(r.conversationTurnMean).toBe(10);
+  });
+
+  it("accepts mooncake-trace with a trace selection and block size", () => {
+    const r = aiperfParamsSchema.parse({
+      dataset: "mooncake-trace",
+      mooncakeTrace: "conversation",
+      islBlockSize: 512,
+    });
+    expect(r.dataset).toBe("mooncake-trace");
+    expect(r.mooncakeTrace).toBe("conversation");
+  });
+
+  it("rejects conversation params on mooncake-trace (open-loop replay)", () => {
+    expect(() =>
+      aiperfParamsSchema.parse({
+        dataset: "mooncake-trace",
+        mooncakeTrace: "conversation",
+        conversationNum: 30,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects mooncake-trace without a trace selection", () => {
+    expect(() => aiperfParamsSchema.parse({ dataset: "mooncake-trace" })).toThrow();
+  });
+});
