@@ -169,6 +169,21 @@ describe("aiperf.buildCommand", () => {
     expect(flat).not.toContain("--fixed-schedule");
   });
 
+  it("throws when mooncake-trace is missing a trace selection", () => {
+    expect(() =>
+      buildCommand({
+        runId: "r3",
+        params: {
+          concurrency: 20, requestCount: 300,
+          inputTokensMean: 200, inputTokensStddev: 0,
+          outputTokensMean: 800, outputTokensStddev: 0,
+          endpointType: "chat", streaming: true, dataset: "mooncake-trace",
+        },
+        connection: conn,
+      } as any),
+    ).toThrow(/mooncakeTrace/);
+  });
+
   it("mooncake-trace → open-loop fixed-schedule, no concurrency", () => {
     const r = buildCommand({
       runId: "r2",

@@ -38,6 +38,9 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
   if (params.dataset === "mooncake-trace") {
     // Open-loop trace replay. Concurrency is ignored; aiperf paces by the
     // trace's own timestamps via --fixed-schedule.
+    if (!params.mooncakeTrace) {
+      throw new Error("aiperf mooncake-trace requires mooncakeTrace (conversation | toolagent)");
+    }
     const file = `/app/.cache/aiperf/datasets/mooncake/${params.mooncakeTrace}_trace.jsonl`;
     argv.push("--input-file", file, "--custom-dataset-type", "mooncake_trace", "--fixed-schedule");
     if (params.islBlockSize !== undefined) {
