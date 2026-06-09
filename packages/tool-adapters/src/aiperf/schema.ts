@@ -48,7 +48,7 @@ export const aiperfParamsSchema = z
         code: z.ZodIssueCode.custom,
         message:
           "conversation params are closed-loop only; mooncake-trace replays open-loop (--fixed-schedule)",
-        path: ["conversationNum"],
+        path: [],
       });
     }
     if (isMooncake && v.mooncakeTrace === undefined) {

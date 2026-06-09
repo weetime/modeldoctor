@@ -71,9 +71,8 @@ describe("aiperfReportSchema", () => {
 });
 
 describe("aiperf schema — prefix-cache extensions", () => {
-  it("defaults dataset to synthetic and leaves conversation fields optional", () => {
+  it("leaves conversation fields undefined by default", () => {
     const r = aiperfParamsSchema.parse({});
-    expect(r.dataset).toBe("synthetic");
     expect(r.conversationNum).toBeUndefined();
   });
 
@@ -96,6 +95,7 @@ describe("aiperf schema — prefix-cache extensions", () => {
     });
     expect(r.dataset).toBe("mooncake-trace");
     expect(r.mooncakeTrace).toBe("conversation");
+    expect(r.islBlockSize).toBe(512);
   });
 
   it("rejects conversation params on mooncake-trace (open-loop replay)", () => {
