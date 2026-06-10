@@ -28,10 +28,9 @@ describe("PrefixCachePanel", () => {
 
   it("renders degrade note when serverMetrics is null", () => {
     r(<PrefixCachePanel serverMetrics={null} />);
-    // The noData key should render some text (not crash)
-    // We check it's in the document without crashing
-    const note = screen.queryByRole("paragraph") ?? document.querySelector("p");
-    expect(note).toBeTruthy();
+    // Resolve noData via the same i18n instance used by the component
+    const noDataText = i18n.t("reports.prefixCache.noData", { ns: "benchmarks" });
+    expect(screen.getByText(noDataText)).toBeInTheDocument();
   });
 
   it("renders degrade note when prefixCache field is absent", () => {
