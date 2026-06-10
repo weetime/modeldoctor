@@ -31,6 +31,7 @@ VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e413
 EVALSCOPE_VERSION=1.7.0
 AIPERF_VERSION=0.7.0
 SHAREGPT_URL="https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
+MOONCAKE_TRACE_BASEURL="https://raw.githubusercontent.com/kvcache-ai/Mooncake/main/FAST25-release/traces"
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -156,6 +157,21 @@ if contains aiperf "${TOOLS[@]}"; then
     echo "==> Downloading ShareGPT V3 corpus (~672 MB)"
     curl -fL --retry 3 --retry-delay 5 --output "$SHAREGPT_FILE" "$SHAREGPT_URL"
   fi
+
+  # Mooncake FAST25 traces (conversation ~3 MB, toolagent ~4 MB) for
+  # dataset=mooncake-trace. Same host-side pre-download as ShareGPT.
+  MOONCAKE_DIR="${CONTEXT}/images/.mooncake"
+  mkdir -p "$MOONCAKE_DIR"
+  CLEANUP_DIRS+=("$MOONCAKE_DIR")
+  for TRACE in conversation_trace toolagent_trace; do
+    MC_FILE="${MOONCAKE_DIR}/${TRACE}.jsonl"
+    if [[ -f "$MC_FILE" ]]; then
+      echo "==> Mooncake ${TRACE} already present, skipping download"
+    else
+      echo "==> Downloading Mooncake ${TRACE}"
+      curl -fsSL --retry 3 --retry-delay 5 --output "$MC_FILE" "${MOONCAKE_TRACE_BASEURL}/${TRACE}.jsonl"
+    fi
+  done
 fi
 
 # ---------------------------------------------------------------------------

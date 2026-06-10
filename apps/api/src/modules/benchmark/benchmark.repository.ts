@@ -5,7 +5,9 @@ import { IN_PROGRESS_STATES } from "./constants.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({
   include: {
-    connection: { select: { id: true, name: true, model: true, baseUrl: true } },
+    connection: {
+      select: { id: true, name: true, model: true, baseUrl: true, prometheusDatasourceId: true },
+    },
     baselineFor: { select: { id: true, name: true, createdAt: true } },
   },
 });
@@ -15,7 +17,7 @@ export type CreateBenchmarkInput = {
   userId?: string | null;
   connectionId?: string | null;
   scenario: string;
-  tool: "guidellm" | "vegeta" | "prefix-cache-probe" | "evalscope" | "aiperf";
+  tool: "guidellm" | "vegeta" | "evalscope" | "aiperf";
   params: Prisma.InputJsonValue;
   name: string;
   description?: string | null;
@@ -198,5 +200,32 @@ export class BenchmarkRepository {
       select: { id: true },
     });
     return row !== null;
+  }
+
+  /**
+   * Merge a patch into the `serverMetrics` JSON column without clobbering
+   * existing keys. Read-modify-write: reads the current value, shallow-merges
+   * the patch, and writes back. Silently no-ops if the row no longer exists.
+   *
+   * Used by the prefix-cache snapshot hook to store `{ prefixCache: … }` after
+   * completion without stomping other metrics that may already be present.
+   */
+  async mergeServerMetrics(id: string, patch: Record<string, unknown>): Promise<void> {
+    const row = await this.prisma.benchmark.findUnique({
+      where: { id },
+      select: { serverMetrics: true },
+    });
+    if (!row) return;
+    const existing =
+      row.serverMetrics &&
+      typeof row.serverMetrics === "object" &&
+      !Array.isArray(row.serverMetrics)
+        ? (row.serverMetrics as Record<string, unknown>)
+        : {};
+    const merged = { ...existing, ...patch };
+    await this.prisma.benchmark.update({
+      where: { id },
+      data: { serverMetrics: merged as Prisma.InputJsonValue },
+    });
   }
 }

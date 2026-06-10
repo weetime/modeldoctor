@@ -18,7 +18,6 @@ export {
   AIPERF_CATEGORY_DEFAULTS,
   EVALSCOPE_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
-  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";
 export type { ProgressEvent, ToolName, ToolReport } from "./core/interface.js";
@@ -53,14 +52,6 @@ export {
   guidellmRateTypes,
   guidellmReportSchema,
 } from "./guidellm/schema.js";
-export { prefixCacheProbeReadMetric } from "./prefix-cache-probe/read-metric.js";
-export {
-  type PrefixCacheProbeParams,
-  type PrefixCacheProbeReport,
-  prefixCacheProbeParamDefaults,
-  prefixCacheProbeParamsSchema,
-  prefixCacheProbeReportSchema,
-} from "./prefix-cache-probe/schema.js";
 export {
   SCENARIOS,
   type ScenarioConfig,

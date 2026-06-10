@@ -32,5 +32,13 @@ docker run --rm --network none --entrypoint /bin/sh "$AIPERF_IMAGE" \
   -c 'test -s /app/.cache/aiperf/datasets/ShareGPT_V3_unfiltered_cleaned_split.json' \
   >/dev/null && pass "ShareGPT baked" || fail "ShareGPT missing"
 
+docker run --rm --network none --entrypoint /bin/sh "$AIPERF_IMAGE" \
+  -c 'test -s /app/.cache/aiperf/datasets/mooncake/conversation_trace.jsonl' \
+  >/dev/null && pass "mooncake conversation trace baked" || fail "mooncake conversation trace missing"
+
+docker run --rm --network none --entrypoint /bin/sh "$AIPERF_IMAGE" \
+  -c 'test -s /app/.cache/aiperf/datasets/mooncake/toolagent_trace.jsonl' \
+  >/dev/null && pass "mooncake toolagent trace baked" || fail "mooncake toolagent trace missing"
+
 echo
 echo "==> all baked datasets present; air-gapped runs supported."

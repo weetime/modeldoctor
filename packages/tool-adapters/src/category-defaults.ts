@@ -34,21 +34,6 @@ export const GUIDELLM_CATEGORY_DEFAULTS = {
 >;
 
 /**
- * prefix-cache-probe targets any chat-compatible vLLM endpoint; the modality
- * category doesn't restrict which connections are compatible. All categories
- * are supported — the only actual gate is whether the Connection has a bound
- * `prometheusDatasource`; the form checks that separately and surfaces a
- * blocking alert when it's absent.
- */
-export const PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS = {
-  chat: {},
-  audio: {},
-  embeddings: {},
-  rerank: {},
-  image: {},
-} as const satisfies Record<ModalityCategory, Record<string, never>>;
-
-/**
  * evalscope perf supports chat/completions and completions; the schema's
  * `apiPath` enum gates the rest. Embedding / rerank / image / audio are out
  * of scope for the inference + kv-cache-stress scenarios where evalscope

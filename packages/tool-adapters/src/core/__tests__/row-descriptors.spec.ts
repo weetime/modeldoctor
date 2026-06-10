@@ -2,18 +2,16 @@ import { describe, expect, it } from "vitest";
 import { aiperfRowDescriptors } from "../../aiperf/row-descriptors.js";
 import { evalscopeRowDescriptors } from "../../evalscope/row-descriptors.js";
 import { guidellmRowDescriptors } from "../../guidellm/row-descriptors.js";
-import { prefixCacheProbeRowDescriptors } from "../../prefix-cache-probe/row-descriptors.js";
 import { vegetaRowDescriptors } from "../../vegeta/row-descriptors.js";
 import { SHARED_INFERENCE_ROWS } from "../row-descriptor.js";
 import { rowDescriptorsByTool } from "../row-descriptors.fe.js";
 
 describe("rowDescriptorsByTool", () => {
-  it("covers exactly the 5 known tools", () => {
+  it("covers exactly the 4 known tools", () => {
     expect(Object.keys(rowDescriptorsByTool).sort()).toEqual([
       "aiperf",
       "evalscope",
       "guidellm",
-      "prefix-cache-probe",
       "vegeta",
     ]);
   });
@@ -28,10 +26,6 @@ describe("rowDescriptorsByTool", () => {
     expect(vegetaRowDescriptors).not.toBe(SHARED_INFERENCE_ROWS);
     expect(vegetaRowDescriptors.find((r) => r.labelKey.startsWith("ttft"))).toBeUndefined();
     expect(vegetaRowDescriptors.find((r) => r.labelKey.startsWith("itl"))).toBeUndefined();
-  });
-
-  it("prefix-cache-probe contributes no compare-grid rows", () => {
-    expect(prefixCacheProbeRowDescriptors).toEqual([]);
   });
 
   it("every spec is well-formed (metric or raw branch)", () => {

@@ -38,12 +38,12 @@ TOOLS=()
 for arg in "$@"; do
   case "$arg" in
     --no-import) IMPORT=false ;;
-    guidellm|vegeta|prefix-cache-probe|evalscope|aiperf) TOOLS+=("$arg") ;;
+    guidellm|vegeta|evalscope|aiperf) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 if [[ ${#TOOLS[@]} -eq 0 ]]; then
-  TOOLS=(guidellm vegeta prefix-cache-probe evalscope aiperf)
+  TOOLS=(guidellm vegeta evalscope aiperf)
 fi
 
 echo "==> Runner images at tag :$TAG (tools: ${TOOLS[*]})"

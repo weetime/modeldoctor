@@ -29,8 +29,14 @@ function makeDeps() {
       name: "n",
       scenario: "inference",
       connectionId: null,
+      connection: null,
+      startedAt: new Date("2026-05-25T00:00:00.000Z"),
     })),
-    updateGuarded: vi.fn(async () => ({ id: "r1" })),
+    updateGuarded: vi.fn(async () => ({
+      id: "r1",
+      completedAt: new Date("2026-05-25T01:00:00.000Z"),
+    })),
+    mergeServerMetrics: vi.fn(async () => {}),
   };
   const notify = { emit: vi.fn(async () => {}) };
   const sse = { close: vi.fn() };
@@ -123,7 +129,7 @@ describe("ReportLoader", () => {
       name: "n",
       scenario: "inference",
       connectionId: null,
-    }));
+    })) as never;
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     expect(deps.storage.readJson).not.toHaveBeenCalled();
@@ -159,5 +165,254 @@ describe("ReportLoader", () => {
         statusMessage: expect.stringContaining("exceed"),
       }),
     );
+  });
+});
+
+// ── Prefix-cache snapshot hook (gating logic) ─────────────────────────────────
+
+function makePrefixCacheDeps() {
+  const base = makeDeps();
+  // Bench is a prefix-cache-validation scenario with a connection that has an
+  // explicit prometheusDatasourceId binding.
+  (base.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+    id,
+    status: "running",
+    tool: "aiperf",
+    userId: "u1",
+    name: "pcv",
+    scenario: "prefix-cache-validation",
+    connectionId: "conn-1",
+    connection: {
+      id: "conn-1",
+      name: "my-conn",
+      model: "meta-llama/Llama-3-8B",
+      baseUrl: "http://vllm",
+      prometheusDatasourceId: "ds-1",
+    },
+    startedAt: new Date("2026-05-25T00:00:00.000Z"),
+  }));
+  (base.repo.updateGuarded as ReturnType<typeof vi.fn>).mockImplementation(async () => ({
+    id: "r1",
+    completedAt: new Date("2026-05-25T01:00:00.000Z"),
+  }));
+
+  const fakeAnnotation = {
+    metricTag: "v1" as const,
+    hitRatePct: 75,
+    topPodSharePct: 100,
+    perPod: [{ pod: "p1", queries: 100, hits: 75 }],
+  };
+  const prefixCacheSnapshot = { snapshot: vi.fn(async () => fakeAnnotation) };
+  const promFetcher = {
+    resolveDatasourceByRef: vi.fn(async () => ({
+      id: "ds-1",
+      name: "prom",
+      baseUrl: "http://prom",
+    })),
+  };
+  return { ...base, prefixCacheSnapshot, promFetcher, fakeAnnotation };
+}
+
+function newPrefixCacheLoader(d: ReturnType<typeof makePrefixCacheDeps>): ReportLoader {
+  return new ReportLoader({
+    storage: d.storage,
+    repo: d.repo as never,
+    notify: d.notify as never,
+    sse: d.sse as never,
+    byTool: d.byTool as never,
+    prefixCacheSnapshot: d.prefixCacheSnapshot as never,
+    promFetcher: d.promFetcher as never,
+  });
+}
+
+describe("ReportLoader – prefix-cache snapshot hook", () => {
+  let deps: ReturnType<typeof makePrefixCacheDeps>;
+  beforeEach(() => {
+    deps = makePrefixCacheDeps();
+  });
+
+  it("snapshots and calls mergeServerMetrics when scenario=prefix-cache-validation and ds resolves", async () => {
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    // Must use the datasourceId path (not connectionId) so we never fall back
+    // to the workspace-default datasource.
+    expect(deps.promFetcher.resolveDatasourceByRef).toHaveBeenCalledWith({ datasourceId: "ds-1" });
+    expect(deps.prefixCacheSnapshot.snapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "meta-llama/Llama-3-8B", windowSec: expect.any(Number) }),
+    );
+    expect(deps.repo.mergeServerMetrics).toHaveBeenCalledWith(
+      "r1",
+      expect.objectContaining({ prefixCache: deps.fakeAnnotation }),
+    );
+    // Completion path is still correct — snapshot is additive, not blocking
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({ status: "completed" }),
+    );
+  });
+
+  it("skips snapshot when scenario != prefix-cache-validation (no promFetcher call)", async () => {
+    (deps.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+      id,
+      status: "running",
+      tool: "guidellm",
+      userId: "u1",
+      name: "n",
+      scenario: "inference",
+      connectionId: "conn-1",
+      connection: {
+        id: "conn-1",
+        name: "c",
+        model: "m",
+        baseUrl: "http://vllm",
+        prometheusDatasourceId: "ds-1",
+      },
+      startedAt: new Date(),
+    }));
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.promFetcher.resolveDatasourceByRef).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+    // Completion path unaffected
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({ status: "completed" }),
+    );
+  });
+
+  it("skips snapshot when connectionId is null", async () => {
+    (deps.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+      id,
+      status: "running",
+      tool: "aiperf",
+      userId: "u1",
+      name: "pcv",
+      scenario: "prefix-cache-validation",
+      connectionId: null,
+      connection: null,
+      startedAt: new Date(),
+    }));
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.promFetcher.resolveDatasourceByRef).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+  });
+
+  it("skips mergeServerMetrics when snapshot returns null (no Prom data)", async () => {
+    deps.prefixCacheSnapshot.snapshot = vi.fn(async () => null) as never;
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+    // Completion path still succeeds
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({ status: "completed" }),
+    );
+  });
+
+  it("snapshot error does NOT affect completion path (best-effort guarantee)", async () => {
+    deps.prefixCacheSnapshot.snapshot = vi.fn(async () => {
+      throw new Error("prom network error");
+    }) as never;
+    const loader = newPrefixCacheLoader(deps);
+    // Must not throw
+    await expect(loader.tryLoad("r1")).resolves.toBeUndefined();
+    // Completion was still recorded
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({ status: "completed" }),
+    );
+    expect(deps.notify.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "benchmark.completed" }),
+    );
+    // mergeServerMetrics was NOT called (snapshot failed before it)
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+  });
+
+  it("skips snapshot when connection has no prometheusDatasourceId binding (graceful degrade, no default fallback)", async () => {
+    // The connection exists but has no bound datasource — we must NOT fall
+    // back to the workspace default.
+    (deps.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+      id,
+      status: "running",
+      tool: "aiperf",
+      userId: "u1",
+      name: "pcv",
+      scenario: "prefix-cache-validation",
+      connectionId: "conn-1",
+      connection: {
+        id: "conn-1",
+        name: "my-conn",
+        model: "meta-llama/Llama-3-8B",
+        baseUrl: "http://vllm",
+        prometheusDatasourceId: null,
+      },
+      startedAt: new Date("2026-05-25T00:00:00.000Z"),
+    }));
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    // resolveDatasourceByRef must NOT be called — we skip before reaching it
+    expect(deps.promFetcher.resolveDatasourceByRef).not.toHaveBeenCalled();
+    expect(deps.prefixCacheSnapshot.snapshot).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+  });
+
+  it("skips snapshot when ds is not found by explicit id (deleted datasource)", async () => {
+    // prometheusDatasourceId is set but resolveDatasourceByRef returns null
+    // (datasource was deleted) — should still degrade gracefully.
+    deps.promFetcher.resolveDatasourceByRef = vi.fn(async () => null) as never;
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.prefixCacheSnapshot.snapshot).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+  });
+
+  it("skips snapshot when startedAt is null (benchmark never started)", async () => {
+    (deps.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+      id,
+      status: "running",
+      tool: "aiperf",
+      userId: "u1",
+      name: "pcv",
+      scenario: "prefix-cache-validation",
+      connectionId: "conn-1",
+      connection: {
+        id: "conn-1",
+        name: "my-conn",
+        model: "meta-llama/Llama-3-8B",
+        baseUrl: "http://vllm",
+        prometheusDatasourceId: "ds-1",
+      },
+      startedAt: null,
+    }));
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.promFetcher.resolveDatasourceByRef).not.toHaveBeenCalled();
+    expect(deps.prefixCacheSnapshot.snapshot).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+    // Completion path still succeeds
+    expect(deps.repo.updateGuarded).toHaveBeenCalledWith(
+      "r1",
+      expect.anything(),
+      expect.objectContaining({ status: "completed" }),
+    );
+  });
+
+  it("guard race: updateGuarded returns null → snapshot is NOT attempted", async () => {
+    // Another worker completed this benchmark first; updateGuarded returns null.
+    // trySnapshotPrefixCache must not be called — it would use a null completedAt
+    // window and double-trigger on a row someone else already owns.
+    deps.repo.updateGuarded = vi.fn(async () => null) as never;
+    const loader = newPrefixCacheLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.promFetcher.resolveDatasourceByRef).not.toHaveBeenCalled();
+    expect(deps.prefixCacheSnapshot.snapshot).not.toHaveBeenCalled();
+    expect(deps.repo.mergeServerMetrics).not.toHaveBeenCalled();
+    // Notify should also be suppressed (existing guard-race behavior)
+    expect(deps.notify.emit).not.toHaveBeenCalled();
   });
 });

@@ -34,7 +34,6 @@ import {
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
-  prefixCacheProbeParamsSchema,
   vegetaParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -225,7 +224,7 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "prefix-cache-probe";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta";
 type SeedScenario =
   | "inference"
   | "kv-cache-stress"
@@ -752,42 +751,119 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     categories: ["embeddings"],
   },
   // -------------------------------------------------------------------------
-  // Prefix-cache · 2 个官方 prefix-cache-probe 模板
+  // Prefix-cache · 官方 aiperf 多轮 / mooncake 模板
   //
-  // 路由粘性 / prefix-cache 命中率探针。promptSets 数量 = 共享 prefix 的
-  // 不同前缀组数; requestsPerSet = 每个前缀重复请求次数,用来判断是否始终
+  // 路由粘性 / prefix-cache 命中率验证。多轮会话(conversationNum ×
+  // conversationTurnMean)累积共享前缀,用来判断相同前缀的请求是否始终
   // 路由到同一 pod(命中 prefix cache)。
   // -------------------------------------------------------------------------
   {
-    id: "tpl_pc_quick_sanity",
-    name: "路由粘性 · 快速 sanity",
+    id: "tpl_pc_t1_article",
+    name: "路由粘性 · 文章同款 (t1)",
     description:
-      "2 个 prompt set × 每组 10 次请求 = 20 总请求。最低门槛的 prefix-cache 路由粘性自检,适合开发期快速验证 Higress / Envoy 路由策略是否生效。",
+      "Higress 文章同款多轮:60 会话 × 5 轮,in 200 / out 800,concurrency 20。关/开 ai-load-balancer 各跑一次,对比 TTFT 与 Prometheus 命中率 / 逐-pod 集中度。",
     scenario: "prefix-cache-validation",
-    tool: "prefix-cache-probe",
+    tool: "aiperf",
     config: {
-      promptSets: 2,
-      requestsPerSet: 10,
-      maxTokens: 5,
-      promBackoffSec: 18,
+      concurrency: 20,
+      requestCount: 300,
+      inputTokensMean: 200,
+      inputTokensStddev: 0,
+      outputTokensMean: 800,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "synthetic",
+      conversationNum: 60,
+      conversationTurnMean: 5,
+      conversationType: "sticky-user-sessions",
+      seed: 42,
     },
-    tags: ["prefix-cache", "probe", "sanity", "quick"],
+    tags: ["prefix-cache", "aiperf", "multi-turn", "article"],
     categories: ["chat"],
   },
   {
-    id: "tpl_pc_deeper_coverage",
-    name: "路由粘性 · 深度覆盖",
+    id: "tpl_pc_t2_deep",
+    name: "路由粘性 · 深会话 (t2)",
     description:
-      "3 个 prompt set × 每组 20 次请求 = 60 总请求,promBackoff 延长到 30s 等更稳态指标。生产前回归用,更高样本量下能看出路由抖动 / 局部失粘。",
+      "深会话:30 会话 × 10 轮,前缀累积最多,prefix-cache 路由收益最敏感。关/开对照的首选档。",
     scenario: "prefix-cache-validation",
-    tool: "prefix-cache-probe",
+    tool: "aiperf",
     config: {
-      promptSets: 3,
-      requestsPerSet: 20,
-      maxTokens: 5,
-      promBackoffSec: 30,
+      concurrency: 20,
+      requestCount: 300,
+      inputTokensMean: 200,
+      inputTokensStddev: 0,
+      outputTokensMean: 800,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "synthetic",
+      conversationNum: 30,
+      conversationTurnMean: 10,
+      conversationType: "sticky-user-sessions",
+      seed: 42,
     },
-    tags: ["prefix-cache", "probe", "regression"],
+    tags: ["prefix-cache", "aiperf", "multi-turn", "deep"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_t3_shallow",
+    name: "路由粘性 · 浅会话 (t3)",
+    description: "浅会话:120 会话 × 2 轮,对照锚点,前缀复用少、prefix-cache 收益最小。",
+    scenario: "prefix-cache-validation",
+    tool: "aiperf",
+    config: {
+      concurrency: 20,
+      requestCount: 240,
+      inputTokensMean: 200,
+      inputTokensStddev: 0,
+      outputTokensMean: 800,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "synthetic",
+      conversationNum: 120,
+      conversationTurnMean: 2,
+      conversationType: "sticky-user-sessions",
+      seed: 42,
+    },
+    tags: ["prefix-cache", "aiperf", "multi-turn", "shallow"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_mooncake_conv",
+    name: "缓存感知 · Mooncake 对话",
+    description:
+      "Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。block size 512 对齐 trace 元数据。",
+    scenario: "prefix-cache-validation",
+    tool: "aiperf",
+    config: {
+      endpointType: "chat",
+      streaming: true,
+      dataset: "mooncake-trace",
+      mooncakeTrace: "conversation",
+      islBlockSize: 512,
+      seed: 42,
+    },
+    tags: ["prefix-cache", "aiperf", "mooncake"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_mooncake_agent",
+    name: "缓存感知 · Mooncake Agent",
+    description: "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。",
+    scenario: "prefix-cache-validation",
+    tool: "aiperf",
+    config: {
+      endpointType: "chat",
+      streaming: true,
+      dataset: "mooncake-trace",
+      mooncakeTrace: "toolagent",
+      islBlockSize: 512,
+      seed: 42,
+    },
+    tags: ["prefix-cache", "aiperf", "mooncake"],
     categories: ["chat"],
   },
 ];
@@ -843,9 +919,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
           ? aiperfParamsSchema
           : t.tool === "vegeta"
             ? vegetaParamsSchema
-            : t.tool === "prefix-cache-probe"
-              ? prefixCacheProbeParamsSchema
-              : evalscopeParamsSchema;
+            : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (kv-cache-stress, evalscope) this is

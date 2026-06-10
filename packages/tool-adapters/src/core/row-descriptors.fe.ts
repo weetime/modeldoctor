@@ -1,7 +1,6 @@
 import { aiperfRowDescriptors } from "../aiperf/row-descriptors.js";
 import { evalscopeRowDescriptors } from "../evalscope/row-descriptors.js";
 import { guidellmRowDescriptors } from "../guidellm/row-descriptors.js";
-import { prefixCacheProbeRowDescriptors } from "../prefix-cache-probe/row-descriptors.js";
 import { vegetaRowDescriptors } from "../vegeta/row-descriptors.js";
 import type { ToolName } from "./interface.js";
 import type { MetricRowSpec } from "./row-descriptor.js";
@@ -13,7 +12,6 @@ import type { MetricRowSpec } from "./row-descriptor.js";
 export const rowDescriptorsByTool: Record<ToolName, readonly MetricRowSpec[]> = {
   guidellm: guidellmRowDescriptors,
   vegeta: vegetaRowDescriptors,
-  "prefix-cache-probe": prefixCacheProbeRowDescriptors,
   evalscope: evalscopeRowDescriptors,
   aiperf: aiperfRowDescriptors,
 };

@@ -1,8 +1,5 @@
 import type { Benchmark, ConnectionPublic, ScenarioId } from "@modeldoctor/contracts";
-import {
-  migrateVegetaParams,
-  prefixCacheProbeReportSchema,
-} from "@modeldoctor/tool-adapters/schemas";
+import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
@@ -47,7 +44,7 @@ import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
 import { KvCacheStressReport } from "./reports/KvCacheStressReport";
-import { PrefixCacheProbeReport } from "./reports/PrefixCacheProbeReport";
+import { PrefixCachePanel } from "./reports/PrefixCachePanel";
 import { UnknownReport } from "./reports/UnknownReport";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SetBaselineDialog } from "./SetBaselineDialog";
@@ -169,13 +166,13 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       return <CapacityReport benchmark={benchmark} />;
     case "gateway":
       return <GatewayReport benchmark={benchmark} />;
-    case "prefix-cache-validation": {
-      const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
-      const candidate = tagged && "data" in tagged ? tagged.data : tagged;
-      const parsed = prefixCacheProbeReportSchema.safeParse(candidate);
-      if (!parsed.success) return <UnknownReport benchmark={benchmark} />;
-      return <PrefixCacheProbeReport data={parsed.data} />;
-    }
+    case "prefix-cache-validation":
+      return (
+        <div className="space-y-6">
+          <InferenceReport benchmark={benchmark} />
+          <PrefixCachePanel serverMetrics={benchmark.serverMetrics} />
+        </div>
+      );
     case "kv-cache-stress":
       return <KvCacheStressReport benchmark={benchmark} />;
     default:
@@ -194,7 +191,7 @@ function BenchmarkDetailTabs({
 }) {
   const { t } = useTranslation("benchmarks");
   const isTerminal = isTerminalStatus(benchmark.status);
-  const showCharts = isTerminal && benchmark.tool !== "prefix-cache-probe";
+  const showCharts = isTerminal;
   // Engine Metrics is reachable when the connection is bound to a Prometheus
   // datasource and the benchmark has a definite time window.
   const showEngineMetrics = Boolean(

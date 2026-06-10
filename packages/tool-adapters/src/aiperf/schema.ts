@@ -6,20 +6,66 @@ import { z } from "zod";
 // (or /v1/completions) based on endpoint-type. Datasets default to a
 // synthetic generator; `--public-dataset sharegpt` (or `aimo`) opts into
 // a downloaded fixture set.
-export const aiperfParamsSchema = z.object({
-  concurrency: z.number().int().min(1).max(512).default(8),
-  requestCount: z.number().int().min(1).max(10000).default(100),
-  inputTokensMean: z.number().int().min(1).max(32000).default(1024),
-  inputTokensStddev: z.number().int().min(0).max(8192).default(128),
-  outputTokensMean: z.number().int().min(1).max(4096).default(256),
-  outputTokensStddev: z.number().int().min(0).max(2048).default(64),
-  endpointType: z.enum(["chat", "completions"]).default("chat"),
-  streaming: z.boolean().default(true),
-  // "synthetic" means we omit --public-dataset; AIPerf falls back to its
-  // internal synthetic generator parameterised by inputTokensMean/stddev.
-  dataset: z.enum(["synthetic", "sharegpt"]).default("synthetic"),
-  seed: z.number().int().optional(),
-});
+export const aiperfParamsSchema = z
+  .object({
+    concurrency: z.number().int().min(1).max(512).default(8),
+    requestCount: z.number().int().min(1).max(10000).default(100),
+    inputTokensMean: z.number().int().min(1).max(32000).default(1024),
+    inputTokensStddev: z.number().int().min(0).max(8192).default(128),
+    outputTokensMean: z.number().int().min(1).max(4096).default(256),
+    outputTokensStddev: z.number().int().min(0).max(2048).default(64),
+    endpointType: z.enum(["chat", "completions"]).default("chat"),
+    streaming: z.boolean().default(true),
+    // synthetic = AIPerf internal generator (closed-loop, --concurrency).
+    // sharegpt = baked ShareGPT corpus (closed-loop).
+    // mooncake-trace = baked Mooncake trace replayed open-loop (--fixed-schedule).
+    dataset: z.enum(["synthetic", "sharegpt", "mooncake-trace"]).default("synthetic"),
+    seed: z.number().int().optional(),
+
+    // Multi-turn (closed-loop only). Each conversation reuses its growing
+    // prefix turn-by-turn; this is what exercises prefix-cache routing.
+    conversationNum: z.number().int().min(1).max(10000).optional(),
+    conversationTurnMean: z.number().int().min(1).max(100).optional(),
+    conversationTurnStddev: z.number().int().min(0).max(50).optional(),
+    conversationType: z.enum(["pooled", "sticky-user-sessions"]).optional(),
+    conversationTurnDelayMeanMs: z.number().int().min(0).max(60000).optional(),
+
+    // Mooncake (open-loop only).
+    mooncakeTrace: z.enum(["conversation", "toolagent"]).optional(),
+    islBlockSize: z.number().int().min(1).max(4096).optional(),
+  })
+  .superRefine((v, ctx) => {
+    const isMooncake = v.dataset === "mooncake-trace";
+    const hasConversation =
+      v.conversationNum !== undefined ||
+      v.conversationTurnMean !== undefined ||
+      v.conversationTurnStddev !== undefined ||
+      v.conversationType !== undefined ||
+      v.conversationTurnDelayMeanMs !== undefined;
+
+    if (isMooncake && hasConversation) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "conversation params are closed-loop only; mooncake-trace replays open-loop (--fixed-schedule)",
+        path: [],
+      });
+    }
+    if (isMooncake && v.mooncakeTrace === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "dataset=mooncake-trace requires mooncakeTrace (conversation | toolagent)",
+        path: ["mooncakeTrace"],
+      });
+    }
+    if (!isMooncake && (v.mooncakeTrace !== undefined || v.islBlockSize !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "mooncakeTrace / islBlockSize are only valid when dataset=mooncake-trace",
+        path: ["mooncakeTrace"],
+      });
+    }
+  });
 
 export type AiperfParams = z.infer<typeof aiperfParamsSchema>;
 

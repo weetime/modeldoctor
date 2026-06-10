@@ -31,14 +31,12 @@
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
-      "prefix-cache-probe": "prefix-cache-probe",
       "evalscope": "evalscope",
       "aiperf": "aiperf"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
-      "prefix-cache-probe": "Validate Higress ai-load-balancer prefix stickiness; reports per-pod routing share + Prom hit rate",
       "evalscope": "Modelscope perf tool; chat / completions with prefix-cache hit-rate stats",
       "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark"
     },
@@ -268,11 +266,7 @@
         "numPrompts": "Number of prompts",
         "concurrency": "Concurrency",
         "inputTokensDist": "Input tokens (mean ± stddev)",
-        "outputTokensDist": "Output tokens (mean ± stddev)",
-        "promptSets": "Prompt sets",
-        "requestsPerSet": "Requests per set",
-        "maxTokens": "Max tokens per request",
-        "promBackoff": "Prometheus backoff"
+        "outputTokensDist": "Output tokens (mean ± stddev)"
       }
     },
     "charts": {
@@ -439,15 +433,6 @@
     }
   },
   "forms": {
-    "prefixCacheProbe": {
-      "promptSets": "Prompt sets",
-      "promptSetsHelp": "How many distinct long prefixes (~500 tokens each) to probe routing with",
-      "requestsPerSet": "Requests per set",
-      "maxTokens": "Max output tokens per request",
-      "promBackoffSec": "Prom scrape wait (s)",
-      "promBackoffSecHelp": "Prometheus default scrape is 15s; keep at least 18s of buffer",
-      "missingPromUrl": "This connection has no Prometheus URL — cannot run prefix-cache validation. Edit the connection to add one."
-    },
     "evalscope": {
       "section": "Evalscope parameters",
       "dataset": "Dataset",
@@ -474,7 +459,12 @@
       "endpointType": "Endpoint type",
       "streaming": "Streaming",
       "seed": "Seed",
-      "seedHint": "Leave blank for random; integer locks reproducibility"
+      "seedHint": "Leave blank for random; integer locks reproducibility",
+      "conversationNum": "Conversation count",
+      "conversationTurnMean": "Turn mean",
+      "conversationType": "Conversation type",
+      "mooncakeTrace": "Mooncake trace type",
+      "islBlockSize": "ISL block size"
     }
   },
   "reports": {
@@ -513,26 +503,17 @@
       "outputTokensPerSec": "Output tokens/s",
       "itlP50Ms": "ITL p50 (ms)"
     },
-    "prefixCacheProbe": {
-      "stickiness": "Stickiness",
-      "deterministic": "Deterministic",
-      "deterministicYes": "Yes",
-      "deterministicNo": "No",
-      "perPodTitle": "Per-Pod Counts",
+    "prefixCache": {
+      "title": "Prefix Cache Hit Analysis",
+      "hitRate": "Hit Rate",
+      "topPodShare": "Top Pod Share",
+      "perPodTitle": "Per-Pod Hit Details",
       "perPodCols": {
         "pod": "Pod",
         "queries": "Queries",
-        "hits": "Hits",
-        "hitRate": "Hit rate"
+        "hits": "Hits"
       },
-      "promptSetsTitle": "Routing per Prompt Set",
-      "promptSetsCols": {
-        "label": "Set",
-        "dominantPod": "Dominant Pod",
-        "dominantPct": "Dominant %",
-        "totalRequests": "Total Requests"
-      },
-      "noQueries": "No prefix cache queries observed — vLLM may not have prefix caching enabled"
+      "noData": "No prefix cache metrics available — ensure a Prometheus datasource is bound and vLLM has prefix caching enabled"
     },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",

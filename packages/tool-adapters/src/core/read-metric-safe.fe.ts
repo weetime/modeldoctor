@@ -6,7 +6,6 @@
 import { aiperfReadMetric } from "../aiperf/read-metric.js";
 import { evalscopeReadMetric } from "../evalscope/read-metric.js";
 import { guidellmReadMetric } from "../guidellm/read-metric.js";
-import { prefixCacheProbeReadMetric } from "../prefix-cache-probe/read-metric.js";
 import { vegetaReadMetric } from "../vegeta/read-metric.js";
 import type { MetricKind } from "./metric-extractor.js";
 import { type ReadMetricTable, readMetricSafeFromTable } from "./read-metric-safe.js";
@@ -14,7 +13,6 @@ import { type ReadMetricTable, readMetricSafeFromTable } from "./read-metric-saf
 const FE_TABLE: ReadMetricTable = {
   guidellm: guidellmReadMetric,
   vegeta: vegetaReadMetric,
-  "prefix-cache-probe": prefixCacheProbeReadMetric,
   evalscope: evalscopeReadMetric,
   aiperf: aiperfReadMetric,
 };

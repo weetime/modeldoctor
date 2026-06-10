@@ -186,6 +186,23 @@ const metrics: EngineMetricSpec[] = [
     ],
   },
   {
+    // Share of prefix-cache queries served by the single busiest pod — the
+    // aggregate stand-in for routing stickiness. 100% ⇒ all same-prefix
+    // traffic concentrated on one replica (ai-load-balancer prefix routing on).
+    key: "prefix_cache_top_pod_share",
+    unit: "%",
+    promql: [
+      {
+        tag: "v1",
+        expr: `100 * max(sum by (pod) (rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m]))) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+      {
+        tag: "v0",
+        expr: `100 * max(sum by (pod) (rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m]))) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="${M}"}[5m])), 1)`,
+      },
+    ],
+  },
+  {
     key: "scheduler_state",
     unit: "count",
     promql: [

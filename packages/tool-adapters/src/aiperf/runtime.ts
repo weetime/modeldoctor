@@ -29,33 +29,58 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
   // (e.g. gen-studio_*) that 401s against huggingface.co, so pass the
   // connection-level tokenizerHfId when set. Without it AIPerf aborts with
   // "Failed to load tokenizer '<model>'". Mirrors guidellm's --processor.
-  if (connection.tokenizerHfId) {
-    argv.push("--tokenizer", connection.tokenizerHfId);
-  }
+  if (connection.tokenizerHfId) argv.push("--tokenizer", connection.tokenizerHfId);
 
   // --streaming is a presence-only boolean toggle (no --no-streaming form).
   // Streaming off = simply omit the flag.
   if (params.streaming) argv.push("--streaming");
 
-  argv.push(
-    "--concurrency",
-    String(params.concurrency),
-    "--request-count",
-    String(params.requestCount),
-    "--synthetic-input-tokens-mean",
-    String(params.inputTokensMean),
-    "--synthetic-input-tokens-stddev",
-    String(params.inputTokensStddev),
-    "--output-tokens-mean",
-    String(params.outputTokensMean),
-    "--output-tokens-stddev",
-    String(params.outputTokensStddev),
-  );
+  if (params.dataset === "mooncake-trace") {
+    // Open-loop trace replay. Concurrency is ignored; aiperf paces by the
+    // trace's own timestamps via --fixed-schedule.
+    if (!params.mooncakeTrace) {
+      throw new Error("aiperf mooncake-trace requires mooncakeTrace (conversation | toolagent)");
+    }
+    const file = `/app/.cache/aiperf/datasets/mooncake/${params.mooncakeTrace}_trace.jsonl`;
+    argv.push("--input-file", file, "--custom-dataset-type", "mooncake_trace", "--fixed-schedule");
+    if (params.islBlockSize !== undefined) {
+      argv.push("--isl-block-size", String(params.islBlockSize));
+    }
+  } else {
+    // Closed-loop synthetic / sharegpt.
+    argv.push(
+      "--concurrency",
+      String(params.concurrency),
+      "--request-count",
+      String(params.requestCount),
+      "--synthetic-input-tokens-mean",
+      String(params.inputTokensMean),
+      "--synthetic-input-tokens-stddev",
+      String(params.inputTokensStddev),
+      "--output-tokens-mean",
+      String(params.outputTokensMean),
+      "--output-tokens-stddev",
+      String(params.outputTokensStddev),
+    );
+    // dataset=synthetic = AIPerf's default generator (no --public-dataset);
+    // dataset=sharegpt = opt into the downloaded ShareGPT corpus.
+    if (params.dataset === "sharegpt") argv.push("--public-dataset", "sharegpt");
 
-  // dataset=synthetic = AIPerf's default generator (no --public-dataset);
-  // dataset=sharegpt = opt into the downloaded ShareGPT corpus.
-  if (params.dataset === "sharegpt") {
-    argv.push("--public-dataset", "sharegpt");
+    if (params.conversationNum !== undefined) {
+      argv.push("--conversation-num", String(params.conversationNum));
+    }
+    if (params.conversationTurnMean !== undefined) {
+      argv.push("--conversation-turn-mean", String(params.conversationTurnMean));
+    }
+    if (params.conversationTurnStddev !== undefined) {
+      argv.push("--conversation-turn-stddev", String(params.conversationTurnStddev));
+    }
+    if (params.conversationType !== undefined) {
+      argv.push("--conversation-type", params.conversationType);
+    }
+    if (params.conversationTurnDelayMeanMs !== undefined) {
+      argv.push("--conversation-turn-delay-mean", String(params.conversationTurnDelayMeanMs));
+    }
   }
 
   if (params.seed !== undefined) argv.push("--random-seed", String(params.seed));

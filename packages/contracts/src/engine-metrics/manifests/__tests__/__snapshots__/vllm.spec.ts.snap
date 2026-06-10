@@ -103,6 +103,13 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
+      "100 * max(sum by (pod) (rate(vllm:prefix_cache_queries_total{model_name="test-model"}[5m]))) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+      "100 * max(sum by (pod) (rate(vllm:gpu_prefix_cache_queries_total{model_name="test-model"}[5m]))) / clamp_min(sum(rate(vllm:gpu_prefix_cache_queries_total{model_name="\${model}"}[5m])), 1)",
+    ],
+    "key": "prefix_cache_top_pod_share",
+  },
+  {
+    "exprs": [
       "label_replace(sum(vllm:num_requests_running{model_name="test-model"}), "series", "running", "", ".*") or label_replace(sum(vllm:num_requests_waiting{model_name="\${model}"}), "series", "waiting", "", ".*")",
     ],
     "key": "scheduler_state",

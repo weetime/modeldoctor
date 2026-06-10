@@ -10,10 +10,6 @@ export { readMetricSafe } from "./core/read-metric-safe.runtime.js";
 export * from "./core/registry.js";
 export { evalscopeAdapter, evalscopeReadMetric } from "./evalscope/index.js";
 export { guidellmAdapter, guidellmReadMetric } from "./guidellm/index.js";
-export {
-  prefixCacheProbeAdapter,
-  prefixCacheProbeReadMetric,
-} from "./prefix-cache-probe/index.js";
 export * from "./scenarios.js";
 // Re-export schemas + types for convenience (so `apps/api` doesn't need to
 // reach into subpaths to validate `req.params`).
@@ -42,12 +38,6 @@ export {
   guidellmRateTypes,
   guidellmReportSchema,
   migrateVegetaParams,
-  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  type PrefixCacheProbeParams,
-  type PrefixCacheProbeReport,
-  prefixCacheProbeParamDefaults,
-  prefixCacheProbeParamsSchema,
-  prefixCacheProbeReportSchema,
   progressEventSchema,
   SCENARIOS,
   type ScenarioConfig,

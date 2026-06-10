@@ -2,10 +2,35 @@ import { describe, expect, it } from "vitest";
 import {
   benchmarkSchema,
   listBenchmarksQuerySchema,
+  prefixCacheAnnotationSchema,
   reportMetaSchema,
   reportResultSchema,
   reportStorageKeys,
 } from "./benchmark.js";
+
+describe("prefixCacheAnnotationSchema", () => {
+  it("parses a prefix-cache annotation", () => {
+    const a = prefixCacheAnnotationSchema.parse({
+      hitRatePct: 96.6,
+      topPodSharePct: 100,
+      perPod: [{ pod: "infer-abc-0", queries: 300, hits: 290 }],
+      metricTag: "v1",
+    });
+    expect(a.hitRatePct).toBeCloseTo(96.6);
+    expect(a.perPod).toHaveLength(1);
+  });
+
+  it("rejects an out-of-range hit rate", () => {
+    expect(() =>
+      prefixCacheAnnotationSchema.parse({
+        hitRatePct: 120,
+        topPodSharePct: 100,
+        perPod: [],
+        metricTag: "v1",
+      }),
+    ).toThrow();
+  });
+});
 
 describe("benchmarkSchema (baselineFor wiring)", () => {
   it("accepts baselineFor as null", () => {
