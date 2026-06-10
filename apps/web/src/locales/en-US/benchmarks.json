@@ -534,6 +534,18 @@
       },
       "noQueries": "No prefix cache queries observed — vLLM may not have prefix caching enabled"
     },
+    "prefixCache": {
+      "title": "Prefix Cache Hit Analysis",
+      "hitRate": "Hit Rate",
+      "topPodShare": "Top Pod Share",
+      "perPodTitle": "Per-Pod Hit Details",
+      "perPodCols": {
+        "pod": "Pod",
+        "queries": "Queries",
+        "hits": "Hits"
+      },
+      "noData": "No prefix cache metrics available — ensure a Prometheus datasource is bound and vLLM has prefix caching enabled"
+    },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",

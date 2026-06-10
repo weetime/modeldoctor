@@ -534,6 +534,18 @@
       },
       "noQueries": "未观察到 prefix cache 查询；vLLM 可能未开启 prefix caching"
     },
+    "prefixCache": {
+      "title": "Prefix Cache 命中分析",
+      "hitRate": "命中率",
+      "topPodShare": "最高副本占比",
+      "perPodTitle": "每副本命中详情",
+      "perPodCols": {
+        "pod": "Pod",
+        "queries": "查询数",
+        "hits": "命中数"
+      },
+      "noData": "未获取到 Prefix Cache 指标；请确认已绑定 Prometheus 数据源且 vLLM 已开启 prefix caching"
+    },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
     "rangeLabel": "时间范围",
