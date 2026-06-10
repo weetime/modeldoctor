@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { vllmManifest } from "../vllm.js";
 
 describe("vllm manifest", () => {
-  it("declares 19 panels with unique keys", () => {
-    expect(vllmManifest.metrics).toHaveLength(19);
+  it("declares 20 panels with unique keys", () => {
+    expect(vllmManifest.metrics).toHaveLength(20);
     const keys = vllmManifest.metrics.map((m) => m.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
@@ -22,7 +22,11 @@ describe("vllm manifest", () => {
   });
 
   it("has V0/V1 dual variants for both prefix-cache metrics", () => {
-    for (const key of ["prefix_cache_hit_rate", "prefix_cache_savings"]) {
+    for (const key of [
+      "prefix_cache_hit_rate",
+      "prefix_cache_savings",
+      "prefix_cache_top_pod_share",
+    ]) {
       const m = vllmManifest.metrics.find((x) => x.key === key);
       expect(m).toBeDefined();
       const tags = (m?.promql ?? []).map((v) => v.tag);
