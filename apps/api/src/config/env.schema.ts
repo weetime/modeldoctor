@@ -77,7 +77,6 @@ export const EnvSchema = z.object({
   // Per-tool runner images (#53 Phase 2 / #78). K8s is the only execution mode.
   RUNNER_IMAGE_GUIDELLM: z.string().min(1),
   RUNNER_IMAGE_VEGETA: z.string().min(1),
-  RUNNER_IMAGE_PREFIX_CACHE_PROBE: z.string().min(1),
   RUNNER_IMAGE_EVALSCOPE: z.string().min(1),
   RUNNER_IMAGE_AIPERF: z.string().min(1),
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),

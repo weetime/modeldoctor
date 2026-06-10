@@ -191,7 +191,7 @@ function BenchmarkDetailTabs({
 }) {
   const { t } = useTranslation("benchmarks");
   const isTerminal = isTerminalStatus(benchmark.status);
-  const showCharts = isTerminal && benchmark.tool !== "prefix-cache-probe";
+  const showCharts = isTerminal;
   // Engine Metrics is reachable when the connection is bound to a Prometheus
   // datasource and the benchmark has a definite time window.
   const showEngineMetrics = Boolean(

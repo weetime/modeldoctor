@@ -14,7 +14,6 @@ const validEnv = () => ({
   ALERTMANAGER_WEBHOOK_SECRET: "z".repeat(48),
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-  RUNNER_IMAGE_PREFIX_CACHE_PROBE: "md-runner-prefix-cache-probe:test",
   RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
   RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
   // S3-compatible object storage (required since Phase 2).
@@ -66,7 +65,6 @@ describe("validateEnv", () => {
       "ALERTMANAGER_WEBHOOK_SECRET",
       "RUNNER_IMAGE_GUIDELLM",
       "RUNNER_IMAGE_VEGETA",
-      "RUNNER_IMAGE_PREFIX_CACHE_PROBE",
       "RUNNER_IMAGE_EVALSCOPE",
       "RUNNER_IMAGE_AIPERF",
       // S3 (required since Phase 2 — S3_REGION has a default so excluded)

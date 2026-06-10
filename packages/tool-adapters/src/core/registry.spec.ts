@@ -20,11 +20,11 @@ describe("registry", () => {
     expect(byTool("aiperf").name).toBe("aiperf");
   });
 
-  it("allAdapters returns five adapters", () => {
+  it("allAdapters returns four adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(5);
+    expect(all).toHaveLength(4);
     expect(all.map((a) => a.name).sort()).toEqual(
-      ["aiperf", "evalscope", "guidellm", "prefix-cache-probe", "vegeta"].sort(),
+      ["aiperf", "evalscope", "guidellm", "vegeta"].sort(),
     );
   });
 });

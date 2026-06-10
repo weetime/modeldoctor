@@ -43,7 +43,6 @@ Then in your API env (paste the tags printed by the script):
 export BENCHMARK_K8S_NAMESPACE=modeldoctor-benchmarks
 export RUNNER_IMAGE_GUIDELLM=md-runner-guidellm:<sha-from-script>
 export RUNNER_IMAGE_VEGETA=md-runner-vegeta:<sha-from-script>
-export RUNNER_IMAGE_PREFIX_CACHE_PROBE=md-runner-prefix-cache-probe:<sha-from-script>
 export RUNNER_IMAGE_EVALSCOPE=md-runner-evalscope:<sha-from-script>
 export RUNNER_IMAGE_AIPERF=md-runner-aiperf:<sha-from-script>
 pnpm -F @modeldoctor/api start:dev

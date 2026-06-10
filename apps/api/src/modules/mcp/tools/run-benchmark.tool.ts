@@ -27,7 +27,7 @@ export function registerRunBenchmark(server: McpServer, deps: McpToolDeps): void
         scenario: z
           .string()
           .describe("inference | capacity | gateway | prefix-cache-validation | kv-cache-stress"),
-        tool: z.string().describe("guidellm | vegeta | prefix-cache-probe | evalscope | aiperf"),
+        tool: z.string().describe("guidellm | vegeta | evalscope | aiperf"),
         connectionId: z.string().min(1).describe("Target connection id."),
         name: z.string().min(1).max(128).describe("Run name."),
         description: z.string().max(2048).optional().describe("Optional run description."),

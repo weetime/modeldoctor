@@ -34,7 +34,6 @@ import {
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
-  prefixCacheProbeParamsSchema,
   vegetaParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -225,7 +224,7 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "prefix-cache-probe";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta";
 type SeedScenario =
   | "inference"
   | "kv-cache-stress"
@@ -752,10 +751,10 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     categories: ["embeddings"],
   },
   // -------------------------------------------------------------------------
-  // Prefix-cache · 2 个官方 prefix-cache-probe 模板
+  // Prefix-cache · 官方 aiperf 多轮 / mooncake 模板
   //
-  // 路由粘性 / prefix-cache 命中率探针。promptSets 数量 = 共享 prefix 的
-  // 不同前缀组数; requestsPerSet = 每个前缀重复请求次数,用来判断是否始终
+  // 路由粘性 / prefix-cache 命中率验证。多轮会话(conversationNum ×
+  // conversationTurnMean)累积共享前缀,用来判断相同前缀的请求是否始终
   // 路由到同一 pod(命中 prefix cache)。
   // -------------------------------------------------------------------------
   {
@@ -921,9 +920,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
           ? aiperfParamsSchema
           : t.tool === "vegeta"
             ? vegetaParamsSchema
-            : t.tool === "prefix-cache-probe"
-              ? prefixCacheProbeParamsSchema
-              : evalscopeParamsSchema;
+            : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (kv-cache-stress, evalscope) this is

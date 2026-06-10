@@ -11,7 +11,7 @@ interface Props {
  * Cross-tool "what was sent" view.
  *
  * vegeta has a literal request body and reuses RequestDetailsSection (with
- * Copy-as-cURL replay). Wrapper-driven tools (guidellm / prefix-cache-probe)
+ * Copy-as-cURL replay). Wrapper-driven tools (guidellm / evalscope / aiperf)
  * synthesize requests at runtime from a config; for those we render the
  * endpoint + headers + the run config that drove generation, not a
  * fabricated example body.
@@ -41,8 +41,6 @@ function inferEndpoint(
         method: "POST",
         path: params.apiType === "chat" ? "/v1/chat/completions" : "/v1/completions",
       };
-    case "prefix-cache-probe":
-      return { method: "POST", path: "/v1/chat/completions" };
     case "evalscope": {
       const p = typeof params.apiPath === "string" ? params.apiPath : "/v1/chat/completions";
       return { method: "POST", path: p };
@@ -91,16 +89,6 @@ function buildParamRows(
       }
       return rows;
     }
-    case "prefix-cache-probe":
-      return [
-        { label: k("promptSets"), value: String(params.promptSets ?? "—") },
-        { label: k("requestsPerSet"), value: String(params.requestsPerSet ?? "—") },
-        { label: k("maxTokens"), value: String(params.maxTokens ?? "—") },
-        {
-          label: k("promBackoff"),
-          value: `${params.promBackoffSec ?? "—"}s`,
-        },
-      ];
     default:
       return [];
   }

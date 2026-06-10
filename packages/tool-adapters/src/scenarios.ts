@@ -26,7 +26,6 @@ export interface ScenarioConfig {
     | "InferenceReport"
     | "CapacityReport"
     | "GatewayReport"
-    | "PrefixCacheProbeReport"
     | "KvCacheStressReport"
     | "PrefixCachePanel";
 }
@@ -65,7 +64,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     label: "Prefix-cache 路由验证",
     description:
       "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本",
-    tools: ["prefix-cache-probe", "aiperf"],
+    tools: ["aiperf"],
     paramsConstraints: {},
     reportComponent: "InferenceReport",
   },

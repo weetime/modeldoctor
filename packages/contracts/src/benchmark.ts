@@ -12,13 +12,7 @@ export const scenarioIdSchema = z.enum([
 ]);
 export type ScenarioId = z.infer<typeof scenarioIdSchema>;
 
-export const benchmarkToolSchema = z.enum([
-  "guidellm",
-  "vegeta",
-  "prefix-cache-probe",
-  "evalscope",
-  "aiperf",
-]);
+export const benchmarkToolSchema = z.enum(["guidellm", "vegeta", "evalscope", "aiperf"]);
 export type BenchmarkTool = z.infer<typeof benchmarkToolSchema>;
 
 export const benchmarkStatusSchema = z.enum([

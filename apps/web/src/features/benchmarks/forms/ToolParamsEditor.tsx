@@ -7,8 +7,6 @@ import {
   evalscopeParamDefaults,
   GUIDELLM_CATEGORY_DEFAULTS,
   guidellmParamDefaults,
-  PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
-  prefixCacheProbeParamDefaults,
   VEGETA_CATEGORY_DEFAULTS,
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -30,7 +28,6 @@ import { SCENARIOS } from "../scenarios";
 const TOOL_CATEGORY_DEFAULTS = {
   vegeta: VEGETA_CATEGORY_DEFAULTS,
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
-  "prefix-cache-probe": PREFIX_CACHE_PROBE_CATEGORY_DEFAULTS,
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
 } as const;
@@ -38,14 +35,12 @@ const TOOL_CATEGORY_DEFAULTS = {
 import { AiperfParamsForm } from "./AiperfParamsForm";
 import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
-import { PrefixCacheProbeParamsForm } from "./PrefixCacheProbeParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
 
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
   vegeta: vegetaParamDefaults,
-  "prefix-cache-probe": prefixCacheProbeParamDefaults,
   evalscope: evalscopeParamDefaults,
   aiperf: aiperfParamDefaults,
 };
@@ -62,8 +57,6 @@ function pickParamsForm(tool: ToolName) {
       return GuidellmParamsForm;
     case "vegeta":
       return VegetaParamsForm;
-    case "prefix-cache-probe":
-      return PrefixCacheProbeParamsForm;
     case "evalscope":
       return EvalscopeParamsForm;
     case "aiperf":
