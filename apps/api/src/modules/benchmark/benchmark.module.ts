@@ -4,6 +4,8 @@ import { Module, type OnModuleInit } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+import { AlertsModule } from "../alerts/alerts.module.js";
+import { PrometheusFetcherService } from "../alerts/prometheus-fetcher.service.js";
 import { BaselineModule } from "../baseline/baseline.module.js";
 import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
@@ -24,6 +26,7 @@ import {
 } from "./k8s/pod-log-streamer-factory.js";
 import { PodLogStreamerPool } from "./k8s/pod-log-streamer-pool.js";
 import { DEFAULT_FATAL_WAITING_REASONS } from "./k8s/pod-state-reducer.js";
+import { PrefixCacheSnapshotService } from "./prefix-cache/prefix-cache-snapshot.service.js";
 import { SseHub } from "./sse/sse-hub.service.js";
 import { ReportLoader } from "./storage/report-loader.js";
 import { REPORT_STORAGE, type ReportStorage } from "./storage/report-storage.js";
@@ -45,6 +48,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     BenchmarkTemplateModule,
     BaselineModule,
     NotificationsModule,
+    AlertsModule,
   ],
   controllers: [BenchmarkController, BenchmarkFilesController],
   providers: [
@@ -53,6 +57,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     BenchmarkService,
     BenchmarkChartsService,
     SseHub,
+    PrefixCacheSnapshotService,
     {
       // K8sBenchmarkRunner — existing wiring (unchanged from before).
       provide: K8sBenchmarkRunner,
@@ -85,13 +90,15 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     },
     {
       provide: ReportLoader,
-      inject: [REPORT_STORAGE, BenchmarkRepository, NotifyService, SseHub],
+      inject: [REPORT_STORAGE, BenchmarkRepository, NotifyService, SseHub, PrefixCacheSnapshotService, PrometheusFetcherService],
       useFactory: (
         storage: ReportStorage,
         repo: BenchmarkRepository,
         notify: NotifyService,
         sse: SseHub,
-      ): ReportLoader => new ReportLoader({ storage, repo, notify, sse }),
+        prefixCacheSnapshot: PrefixCacheSnapshotService,
+        promFetcher: PrometheusFetcherService,
+      ): ReportLoader => new ReportLoader({ storage, repo, notify, sse, prefixCacheSnapshot, promFetcher }),
     },
     {
       provide: K8S_NAMESPACE,

@@ -2,9 +2,11 @@ import { type ReportMeta, type ReportResult, reportStorageKeys } from "@modeldoc
 import { byTool as defaultByTool, type ToolName } from "@modeldoctor/tool-adapters";
 import { Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import type { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
 import type { NotifyService } from "../../notifications/notify.service.js";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
+import type { PrefixCacheSnapshotService } from "../prefix-cache/prefix-cache-snapshot.service.js";
 import type { SseHub } from "../sse/sse-hub.service.js";
 import type { ReportStorage } from "./report-storage.js";
 
@@ -18,6 +20,10 @@ export interface ReportLoaderDeps {
   notify: NotifyService;
   sse: SseHub;
   byTool?: typeof defaultByTool;
+  /** Optional: when provided, a prefix-cache snapshot is taken after completion
+   *  for `prefix-cache-validation` benchmarks that have a Prometheus datasource. */
+  prefixCacheSnapshot?: PrefixCacheSnapshotService;
+  promFetcher?: PrometheusFetcherService;
 }
 
 @Injectable()
@@ -72,6 +78,17 @@ export class ReportLoader {
           },
         });
       }
+      // Best-effort: snapshot prefix-cache metrics after completion.
+      // Must NEVER throw or delay the completion path — the entire block is
+      // wrapped in try/catch and all skips are silent.
+      await this.trySnapshotPrefixCache({
+        runId,
+        scenario: bench.scenario,
+        connectionId: bench.connectionId ?? null,
+        connectionModel: bench.connection?.model ?? null,
+        completedAt: updated?.completedAt ?? null,
+        startedAt: bench.startedAt ?? null,
+      });
     } catch (e) {
       const msg = `report load: ${(e as Error).message}`.slice(0, STATUS_MESSAGE_MAX);
       const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
@@ -99,6 +116,47 @@ export class ReportLoader {
       this.log.warn(`tryLoad(${runId}) failed: ${(e as Error).message}`);
     } finally {
       this.deps.sse.close(runId);
+    }
+  }
+
+  /**
+   * Best-effort prefix-cache metric snapshot. Guards:
+   *   1. Both `prefixCacheSnapshot` and `promFetcher` must be injected.
+   *   2. scenario must be "prefix-cache-validation".
+   *   3. benchmark must have a connectionId.
+   *   4. The connection must have a bound Prometheus datasource.
+   *   5. startedAt must be present.
+   *
+   * All failures are caught and logged as warnings — this method NEVER throws.
+   */
+  private async trySnapshotPrefixCache(opts: {
+    runId: string;
+    scenario: string;
+    connectionId: string | null;
+    connectionModel: string | null;
+    completedAt: Date | null;
+    startedAt: Date | null;
+  }): Promise<void> {
+    const { runId, scenario, connectionId, connectionModel, completedAt, startedAt } = opts;
+    if (!this.deps.prefixCacheSnapshot || !this.deps.promFetcher) return;
+    try {
+      if (scenario !== "prefix-cache-validation") return;
+      if (!connectionId) return;
+      if (!startedAt) return;
+
+      const ds = await this.deps.promFetcher.resolveDatasourceByRef({ connectionId });
+      if (!ds) return;
+
+      const end = completedAt ?? new Date();
+      const windowSec = Math.max(60, Math.ceil((end.getTime() - startedAt.getTime()) / 1000));
+      const model = connectionModel ?? "";
+
+      const ann = await this.deps.prefixCacheSnapshot.snapshot({ ds, model, windowSec, at: end });
+      if (ann) {
+        await this.deps.repo.mergeServerMetrics(runId, { prefixCache: ann });
+      }
+    } catch (e) {
+      this.log.warn(`trySnapshotPrefixCache(${runId}) failed: ${(e as Error).message}`);
     }
   }
 
