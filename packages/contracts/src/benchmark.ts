@@ -219,3 +219,20 @@ export const reportResultSchema = z.object({
   files: z.record(z.string()), // alias → relative path under <runId>/
 });
 export type ReportResult = z.infer<typeof reportResultSchema>;
+
+// Prometheus-derived prefix-cache annotation, snapshotted at benchmark
+// completion and stored under `serverMetrics.prefixCache` (existing JSON
+// column — no dedicated Prisma column). Surfaced by the prefix-cache panel.
+export const prefixCacheAnnotationSchema = z.object({
+  hitRatePct: z.number().min(0).max(100),
+  topPodSharePct: z.number().min(0).max(100),
+  perPod: z.array(
+    z.object({
+      pod: z.string(),
+      queries: z.number().nonnegative(),
+      hits: z.number().nonnegative(),
+    }),
+  ),
+  metricTag: z.enum(["v1", "v0"]),
+});
+export type PrefixCacheAnnotation = z.infer<typeof prefixCacheAnnotationSchema>;
