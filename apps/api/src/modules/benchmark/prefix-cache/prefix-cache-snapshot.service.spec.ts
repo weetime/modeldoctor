@@ -170,15 +170,17 @@ describe("PrefixCacheSnapshotService", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Edge: null value in series is treated as 0
+  // Edge (Fix A): null-valued series are SKIPPED — not written to the map
   // -------------------------------------------------------------------------
-  it("treats null value (NaN/+Inf from Prometheus) as 0", async () => {
+  it("(d) skips null-valued series: null pod absent from perPod, real pod correct", async () => {
+    // pod-a: 100 queries, 60 hits (real)
+    // pod-b: null (stale/NaN) → must NOT appear in perPod
     const runQuery = vi
       .fn()
       .mockResolvedValueOnce(
         makeInstantResult([
           { labels: { pod: "pod-a" }, value: 100 },
-          { labels: { pod: "pod-b" }, value: null }, // NaN from Prom
+          { labels: { pod: "pod-b" }, value: null }, // stale/NaN from Prom
         ]),
       )
       .mockResolvedValueOnce(
@@ -191,14 +193,85 @@ describe("PrefixCacheSnapshotService", () => {
     const svc = new PrefixCacheSnapshotService({ runQuery } as never);
     const result = await svc.snapshot({ ds: DS, model: MODEL, windowSec: WINDOW, at: AT });
 
-    // pod-b null values treated as 0; pod-b queries=0 but still in perPod from queries map
-    // pod-a: 100q, 60h; pod-b: 0q (null→0), 0h
-    // totalQ = 100 (pod-b 0 doesn't count toward queries), hitRatePct = 60/100*100 = 60
     expect(result).not.toBeNull();
     expect(result!.metricTag).toBe("v1");
-    // pod-b has value null → treated as 0 → excluded from Map (size check) but
-    // the implementation may include it with value 0; either is acceptable.
-    // What matters: the aggregate math is correct for pod-a.
+    // Only pod-a produced a real sample — pod-b must be absent
+    expect(result!.perPod).toHaveLength(1);
+    expect(result!.perPod[0]).toEqual({ pod: "pod-a", queries: 100, hits: 60 });
+    // Aggregate math over pod-a only: hitRatePct = 60/100*100 = 60, topPodSharePct = 100
     expect(result!.hitRatePct).toBeCloseTo(60, 5);
+    expect(result!.topPodSharePct).toBeCloseTo(100, 5);
+  });
+
+  // -------------------------------------------------------------------------
+  // Edge (Fix A): all-null V1 result → empty map → falls back to V0
+  // -------------------------------------------------------------------------
+  it("(e) all-null V1 result falls back to V0 (not a misleading zero-query annotation)", async () => {
+    // V1 queries returns a series but ALL values are null → empty map → try V0
+    // V0 returns a real pod
+    const runQuery = vi
+      .fn()
+      .mockResolvedValueOnce(
+        // v1 queries — all null
+        makeInstantResult([
+          { labels: { pod: "pod-a" }, value: null },
+          { labels: { pod: "pod-b" }, value: null },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        // v0 queries — real value
+        makeInstantResult([{ labels: { pod: "pod-x" }, value: 50 }]),
+      )
+      .mockResolvedValueOnce(
+        // v0 hits
+        makeInstantResult([{ labels: { pod: "pod-x" }, value: 25 }]),
+      );
+
+    const svc = new PrefixCacheSnapshotService({ runQuery } as never);
+    const result = await svc.snapshot({ ds: DS, model: MODEL, windowSec: WINDOW, at: AT });
+
+    // Must fall through to v0, not stop at a misleading zero-query v1 result
+    expect(result).not.toBeNull();
+    expect(result!.metricTag).toBe("v0");
+    expect(result!.perPod).toEqual([{ pod: "pod-x", queries: 50, hits: 25 }]);
+    expect(result!.hitRatePct).toBeCloseTo(50, 5);
+    // V1 query call + V0 query call + V0 hits call
+    expect(runQuery).toHaveBeenCalledTimes(3);
+    expect(runQuery).toHaveBeenNthCalledWith(
+      2,
+      DS,
+      V0_Q_QUERY,
+      expect.objectContaining({ kind: "instant" }),
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Fix B: kubernetes_pod_name label fallback
+  // -------------------------------------------------------------------------
+  it("(f) uses kubernetes_pod_name label as pod identifier when pod label is absent", async () => {
+    // Some vLLM deployments emit kubernetes_pod_name instead of pod in the labels
+    const runQuery = vi
+      .fn()
+      .mockResolvedValueOnce(
+        makeInstantResult([
+          { labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 120 },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeInstantResult([
+          { labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 80 },
+        ]),
+      );
+
+    const svc = new PrefixCacheSnapshotService({ runQuery } as never);
+    const result = await svc.snapshot({ ds: DS, model: MODEL, windowSec: WINDOW, at: AT });
+
+    expect(result).not.toBeNull();
+    expect(result!.metricTag).toBe("v1");
+    // Pod identifier must come from kubernetes_pod_name
+    expect(result!.perPod).toHaveLength(1);
+    expect(result!.perPod[0]).toEqual({ pod: "vllm-pod-0", queries: 120, hits: 80 });
+    expect(result!.hitRatePct).toBeCloseTo((80 / 120) * 100, 5);
+    expect(result!.topPodSharePct).toBeCloseTo(100, 5);
   });
 });

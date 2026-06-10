@@ -26,8 +26,9 @@ export interface SnapshotInput {
  *
  * Real runQuery return shape (instant kind):
  *   { series: [{ labels: Record<string,string>, value: number | null }] }
- * `value` is `null` for Prometheus "NaN" / "+Inf" stale markers — we treat
- * those as 0 so they don't corrupt aggregate math.
+ * `value` is `null` for Prometheus "NaN" / "+Inf" / stale markers — we treat
+ * those as "no data" and skip the series entirely so they don't produce
+ * misleading zero-valued entries in the result map.
  */
 @Injectable()
 export class PrefixCacheSnapshotService {
@@ -46,10 +47,11 @@ export class PrefixCacheSnapshotService {
    *
    * The real runQuery shape for kind="instant" is:
    *   series[i].value: number | null
-   * (null = Prometheus NaN/+Inf — treated as 0).
+   * (null = Prometheus NaN/+Inf/stale marker — series is skipped entirely).
    *
-   * Pods whose value resolves to 0 are still included in the map so that
-   * hit lookups remain consistent (a pod with 0 queries is unusual but valid).
+   * Only series with a real numeric value are added to the map.  Skipping
+   * null-valued series ensures that an all-null V1 result produces an empty
+   * map (size === 0) so the V1→V0 fallback fires correctly.
    */
   private async byPod(ds: unknown, query: string, at: Date): Promise<Map<string, number>> {
     const result = await this.fetcher.runQuery(ds as Parameters<PrometheusFetcherService["runQuery"]>[0], query, {
@@ -60,8 +62,10 @@ export class PrefixCacheSnapshotService {
     for (const s of result.series) {
       const pod = s.labels["pod"] ?? s.labels["kubernetes_pod_name"] ?? "";
       if (!pod) continue;
-      // value is number | null; null = non-finite Prometheus value → treat as 0
-      map.set(pod, s.value ?? 0);
+      // Skip null/undefined values — null = Prometheus NaN/stale, meaning no
+      // real sample was produced for this pod in the window.
+      if (s.value == null) continue;
+      map.set(pod, s.value);
     }
     return map;
   }
@@ -80,6 +84,8 @@ export class PrefixCacheSnapshotService {
         tag === "v1" ? "prefix_cache_hits_total" : "gpu_prefix_cache_hits_total";
 
       const queries = await this.byPod(ds, this.q(qMetric, model, windowSec), at);
+      // size === 0 means no pod produced a real (non-null) sample this window;
+      // either the metric doesn't exist (try the other tag) or all series were stale.
       if (queries.size === 0) continue;
 
       const hits = await this.byPod(ds, this.q(hMetric, model, windowSec), at);
