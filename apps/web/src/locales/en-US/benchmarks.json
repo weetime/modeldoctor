@@ -474,7 +474,12 @@
       "endpointType": "Endpoint type",
       "streaming": "Streaming",
       "seed": "Seed",
-      "seedHint": "Leave blank for random; integer locks reproducibility"
+      "seedHint": "Leave blank for random; integer locks reproducibility",
+      "conversationNum": "Conversation count",
+      "conversationTurnMean": "Turn mean",
+      "conversationType": "Conversation type",
+      "mooncakeTrace": "Mooncake trace type",
+      "islBlockSize": "ISL block size"
     }
   },
   "reports": {

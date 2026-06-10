@@ -1,4 +1,5 @@
-import { useFormContext } from "react-hook-form";
+import { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { FormSection } from "@/components/common/form-section";
 import {
@@ -20,7 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { numberField } from "./_shared/numberField";
 
-const DATASETS = ["synthetic", "sharegpt"] as const;
+const DATASETS = ["synthetic", "sharegpt", "mooncake-trace"] as const;
 // NOTE: AIPerf's CLI takes `--endpoint-type chat|completions` (not a full path);
 // the underlying value is therefore "chat" / "completions" while we surface the
 // familiar /v1/... path strings as user-facing labels.
@@ -29,13 +30,34 @@ const ENDPOINT_TYPES = [
   { value: "completions", label: "/v1/completions" },
 ] as const;
 
+const CONVERSATION_TYPES = ["pooled", "sticky-user-sessions"] as const;
+const MOONCAKE_TRACES = ["conversation", "toolagent"] as const;
+
 interface AiperfParamsFormProps {
   fieldPrefix?: "params" | "config";
 }
 
 export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormProps = {}) {
-  const { control } = useFormContext();
+  const { control, setValue } = useFormContext();
   const { t } = useTranslation("benchmarks");
+
+  const dataset = useWatch({ control, name: `${fieldPrefix}.dataset` });
+  const isMooncake = dataset === "mooncake-trace";
+
+  // Clear the now-irrelevant branch's fields when dataset changes, so stale
+  // values never trigger the superRefine rejection for the opposing branch.
+  useEffect(() => {
+    if (isMooncake) {
+      // switched TO mooncake-trace: clear closed-loop conversation fields
+      setValue(`${fieldPrefix}.conversationNum`, undefined);
+      setValue(`${fieldPrefix}.conversationTurnMean`, undefined);
+      setValue(`${fieldPrefix}.conversationType`, undefined);
+    } else {
+      // switched AWAY from mooncake-trace: clear mooncake-only fields
+      setValue(`${fieldPrefix}.mooncakeTrace`, undefined);
+      setValue(`${fieldPrefix}.islBlockSize`, undefined);
+    }
+  }, [isMooncake, fieldPrefix, setValue]);
 
   return (
     <FormSection title={t("forms.aiperf.section")}>
@@ -207,6 +229,105 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
             )}
           />
         </div>
+
+        {/* Conditional: multi-turn fields (synthetic / sharegpt only) */}
+        {!isMooncake && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <FormField
+              control={control}
+              name={`${fieldPrefix}.conversationNum`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("forms.aiperf.conversationNum")}</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...numberField(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`${fieldPrefix}.conversationTurnMean`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("forms.aiperf.conversationTurnMean")}</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...numberField(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`${fieldPrefix}.conversationType`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("forms.aiperf.conversationType")}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CONVERSATION_TYPES.map((ct) => (
+                        <SelectItem key={ct} value={ct}>
+                          {ct}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {/* Conditional: mooncake fields (mooncake-trace only) */}
+        {isMooncake && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              control={control}
+              name={`${fieldPrefix}.mooncakeTrace`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("forms.aiperf.mooncakeTrace")}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {MOONCAKE_TRACES.map((mt) => (
+                        <SelectItem key={mt} value={mt}>
+                          {mt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`${fieldPrefix}.islBlockSize`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("forms.aiperf.islBlockSize")}</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...numberField(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
       </div>
     </FormSection>
   );

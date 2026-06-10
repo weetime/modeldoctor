@@ -474,7 +474,12 @@
       "endpointType": "端点类型",
       "streaming": "流式响应",
       "seed": "随机种子",
-      "seedHint": "留空则随机；填整数可复现实验"
+      "seedHint": "留空则随机；填整数可复现实验",
+      "conversationNum": "会话数",
+      "conversationTurnMean": "每轮对话均值",
+      "conversationType": "会话类型",
+      "mooncakeTrace": "Mooncake Trace 类型",
+      "islBlockSize": "ISL 块大小"
     }
   },
   "reports": {
