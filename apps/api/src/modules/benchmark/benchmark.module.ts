@@ -90,7 +90,14 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     },
     {
       provide: ReportLoader,
-      inject: [REPORT_STORAGE, BenchmarkRepository, NotifyService, SseHub, PrefixCacheSnapshotService, PrometheusFetcherService],
+      inject: [
+        REPORT_STORAGE,
+        BenchmarkRepository,
+        NotifyService,
+        SseHub,
+        PrefixCacheSnapshotService,
+        PrometheusFetcherService,
+      ],
       useFactory: (
         storage: ReportStorage,
         repo: BenchmarkRepository,
@@ -98,7 +105,8 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         sse: SseHub,
         prefixCacheSnapshot: PrefixCacheSnapshotService,
         promFetcher: PrometheusFetcherService,
-      ): ReportLoader => new ReportLoader({ storage, repo, notify, sse, prefixCacheSnapshot, promFetcher }),
+      ): ReportLoader =>
+        new ReportLoader({ storage, repo, notify, sse, prefixCacheSnapshot, promFetcher }),
     },
     {
       provide: K8S_NAMESPACE,

@@ -217,7 +217,9 @@ export class BenchmarkRepository {
     });
     if (!row) return;
     const existing =
-      row.serverMetrics && typeof row.serverMetrics === "object" && !Array.isArray(row.serverMetrics)
+      row.serverMetrics &&
+      typeof row.serverMetrics === "object" &&
+      !Array.isArray(row.serverMetrics)
         ? (row.serverMetrics as Record<string, unknown>)
         : {};
     const merged = { ...existing, ...patch };

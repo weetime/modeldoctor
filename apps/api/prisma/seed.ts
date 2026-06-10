@@ -852,8 +852,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_pc_mooncake_agent",
     name: "缓存感知 · Mooncake Agent",
-    description:
-      "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。",
+    description: "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。",
     scenario: "prefix-cache-validation",
     tool: "aiperf",
     config: {

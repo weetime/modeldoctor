@@ -253,14 +253,10 @@ describe("PrefixCacheSnapshotService", () => {
     const runQuery = vi
       .fn()
       .mockResolvedValueOnce(
-        makeInstantResult([
-          { labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 120 },
-        ]),
+        makeInstantResult([{ labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 120 }]),
       )
       .mockResolvedValueOnce(
-        makeInstantResult([
-          { labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 80 },
-        ]),
+        makeInstantResult([{ labels: { kubernetes_pod_name: "vllm-pod-0" }, value: 80 }]),
       );
 
     const svc = new PrefixCacheSnapshotService({ runQuery } as never);

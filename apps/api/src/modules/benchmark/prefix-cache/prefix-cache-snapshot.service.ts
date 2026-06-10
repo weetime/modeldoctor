@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import type { PrefixCacheAnnotation } from "@modeldoctor/contracts";
+import { Injectable } from "@nestjs/common";
 import type { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
 
 export interface SnapshotInput {
@@ -54,10 +54,14 @@ export class PrefixCacheSnapshotService {
    * map (size === 0) so the V1→V0 fallback fires correctly.
    */
   private async byPod(ds: unknown, query: string, at: Date): Promise<Map<string, number>> {
-    const result = await this.fetcher.runQuery(ds as Parameters<PrometheusFetcherService["runQuery"]>[0], query, {
-      kind: "instant",
-      at,
-    });
+    const result = await this.fetcher.runQuery(
+      ds as Parameters<PrometheusFetcherService["runQuery"]>[0],
+      query,
+      {
+        kind: "instant",
+        at,
+      },
+    );
     const map = new Map<string, number>();
     for (const s of result.series) {
       const pod = s.labels["pod"] ?? s.labels["kubernetes_pod_name"] ?? "";
@@ -76,12 +80,16 @@ export class PrefixCacheSnapshotService {
    * Returns `null` if neither V1 nor V0 metrics have any data (e.g. the
    * vLLM instance doesn't expose prefix-cache counters).
    */
-  async snapshot({ ds, model, windowSec, at }: SnapshotInput): Promise<PrefixCacheAnnotation | null> {
+  async snapshot({
+    ds,
+    model,
+    windowSec,
+    at,
+  }: SnapshotInput): Promise<PrefixCacheAnnotation | null> {
     for (const tag of ["v1", "v0"] as const) {
       const qMetric =
         tag === "v1" ? "prefix_cache_queries_total" : "gpu_prefix_cache_queries_total";
-      const hMetric =
-        tag === "v1" ? "prefix_cache_hits_total" : "gpu_prefix_cache_hits_total";
+      const hMetric = tag === "v1" ? "prefix_cache_hits_total" : "gpu_prefix_cache_hits_total";
 
       const queries = await this.byPod(ds, this.q(qMetric, model, windowSec), at);
       // size === 0 means no pod produced a real (non-null) sample this window;

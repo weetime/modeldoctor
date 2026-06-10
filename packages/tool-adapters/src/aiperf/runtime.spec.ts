@@ -153,11 +153,18 @@ describe("aiperf.buildCommand", () => {
     const r = buildCommand({
       runId: "r1",
       params: {
-        concurrency: 20, requestCount: 300,
-        inputTokensMean: 200, inputTokensStddev: 0,
-        outputTokensMean: 800, outputTokensStddev: 0,
-        endpointType: "chat", streaming: true, dataset: "synthetic",
-        conversationNum: 30, conversationTurnMean: 10, conversationType: "sticky-user-sessions",
+        concurrency: 20,
+        requestCount: 300,
+        inputTokensMean: 200,
+        inputTokensStddev: 0,
+        outputTokensMean: 800,
+        outputTokensStddev: 0,
+        endpointType: "chat",
+        streaming: true,
+        dataset: "synthetic",
+        conversationNum: 30,
+        conversationTurnMean: 10,
+        conversationType: "sticky-user-sessions",
       },
       connection: conn,
     } as any);
@@ -174,10 +181,15 @@ describe("aiperf.buildCommand", () => {
       buildCommand({
         runId: "r3",
         params: {
-          concurrency: 20, requestCount: 300,
-          inputTokensMean: 200, inputTokensStddev: 0,
-          outputTokensMean: 800, outputTokensStddev: 0,
-          endpointType: "chat", streaming: true, dataset: "mooncake-trace",
+          concurrency: 20,
+          requestCount: 300,
+          inputTokensMean: 200,
+          inputTokensStddev: 0,
+          outputTokensMean: 800,
+          outputTokensStddev: 0,
+          endpointType: "chat",
+          streaming: true,
+          dataset: "mooncake-trace",
         },
         connection: conn,
       } as any),
@@ -188,16 +200,24 @@ describe("aiperf.buildCommand", () => {
     const r = buildCommand({
       runId: "r2",
       params: {
-        concurrency: 20, requestCount: 300,
-        inputTokensMean: 200, inputTokensStddev: 0,
-        outputTokensMean: 800, outputTokensStddev: 0,
-        endpointType: "chat", streaming: true, dataset: "mooncake-trace",
-        mooncakeTrace: "conversation", islBlockSize: 512,
+        concurrency: 20,
+        requestCount: 300,
+        inputTokensMean: 200,
+        inputTokensStddev: 0,
+        outputTokensMean: 800,
+        outputTokensStddev: 0,
+        endpointType: "chat",
+        streaming: true,
+        dataset: "mooncake-trace",
+        mooncakeTrace: "conversation",
+        islBlockSize: 512,
       },
       connection: conn,
     } as any);
     const flat = r.argv.join(" ");
-    expect(flat).toContain("--input-file /app/.cache/aiperf/datasets/mooncake/conversation_trace.jsonl");
+    expect(flat).toContain(
+      "--input-file /app/.cache/aiperf/datasets/mooncake/conversation_trace.jsonl",
+    );
     expect(flat).toContain("--custom-dataset-type mooncake_trace");
     expect(flat).toContain("--isl-block-size 512");
     expect(flat).toContain("--fixed-schedule");

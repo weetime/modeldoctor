@@ -32,7 +32,10 @@ function makeDeps() {
       connection: null,
       startedAt: new Date("2026-05-25T00:00:00.000Z"),
     })),
-    updateGuarded: vi.fn(async () => ({ id: "r1", completedAt: new Date("2026-05-25T01:00:00.000Z") })),
+    updateGuarded: vi.fn(async () => ({
+      id: "r1",
+      completedAt: new Date("2026-05-25T01:00:00.000Z"),
+    })),
     mergeServerMetrics: vi.fn(async () => {}),
   };
   const notify = { emit: vi.fn(async () => {}) };
@@ -201,7 +204,11 @@ function makePrefixCacheDeps() {
   };
   const prefixCacheSnapshot = { snapshot: vi.fn(async () => fakeAnnotation) };
   const promFetcher = {
-    resolveDatasourceByRef: vi.fn(async () => ({ id: "ds-1", name: "prom", baseUrl: "http://prom" })),
+    resolveDatasourceByRef: vi.fn(async () => ({
+      id: "ds-1",
+      name: "prom",
+      baseUrl: "http://prom",
+    })),
   };
   return { ...base, prefixCacheSnapshot, promFetcher, fakeAnnotation };
 }
@@ -254,7 +261,13 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
       name: "n",
       scenario: "inference",
       connectionId: "conn-1",
-      connection: { id: "conn-1", name: "c", model: "m", baseUrl: "http://vllm", prometheusDatasourceId: "ds-1" },
+      connection: {
+        id: "conn-1",
+        name: "c",
+        model: "m",
+        baseUrl: "http://vllm",
+        prometheusDatasourceId: "ds-1",
+      },
       startedAt: new Date(),
     }));
     const loader = newPrefixCacheLoader(deps);
