@@ -5,7 +5,9 @@ import { IN_PROGRESS_STATES } from "./constants.js";
 
 const benchmarkWithRelations = Prisma.validator<Prisma.BenchmarkDefaultArgs>()({
   include: {
-    connection: { select: { id: true, name: true, model: true, baseUrl: true } },
+    connection: {
+      select: { id: true, name: true, model: true, baseUrl: true, prometheusDatasourceId: true },
+    },
     baselineFor: { select: { id: true, name: true, createdAt: true } },
   },
 });

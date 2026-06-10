@@ -21,7 +21,9 @@ export interface ReportLoaderDeps {
   sse: SseHub;
   byTool?: typeof defaultByTool;
   /** Optional: when provided, a prefix-cache snapshot is taken after completion
-   *  for `prefix-cache-validation` benchmarks that have a Prometheus datasource. */
+   *  for `prefix-cache-validation` benchmarks that have a Prometheus datasource.
+   *  Both `prefixCacheSnapshot` and `promFetcher` must be provided together —
+   *  the hook is silently skipped if either is absent. */
   prefixCacheSnapshot?: PrefixCacheSnapshotService;
   promFetcher?: PrometheusFetcherService;
 }
@@ -79,16 +81,19 @@ export class ReportLoader {
         });
       }
       // Best-effort: snapshot prefix-cache metrics after completion.
+      // Only runs when THIS worker won the guard race (updated != null).
       // Must NEVER throw or delay the completion path — the entire block is
       // wrapped in try/catch and all skips are silent.
-      await this.trySnapshotPrefixCache({
-        runId,
-        scenario: bench.scenario,
-        connectionId: bench.connectionId ?? null,
-        connectionModel: bench.connection?.model ?? null,
-        completedAt: updated?.completedAt ?? null,
-        startedAt: bench.startedAt ?? null,
-      });
+      if (updated) {
+        await this.trySnapshotPrefixCache({
+          runId,
+          scenario: bench.scenario,
+          prometheusDatasourceId: bench.connection?.prometheusDatasourceId ?? null,
+          connectionModel: bench.connection?.model ?? null,
+          completedAt: updated.completedAt ?? null,
+          startedAt: bench.startedAt ?? null,
+        });
+      }
     } catch (e) {
       const msg = `report load: ${(e as Error).message}`.slice(0, STATUS_MESSAGE_MAX);
       const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
@@ -123,28 +128,37 @@ export class ReportLoader {
    * Best-effort prefix-cache metric snapshot. Guards:
    *   1. Both `prefixCacheSnapshot` and `promFetcher` must be injected.
    *   2. scenario must be "prefix-cache-validation".
-   *   3. benchmark must have a connectionId.
-   *   4. The connection must have a bound Prometheus datasource.
-   *   5. startedAt must be present.
+   *   3. The connection must have an explicit `prometheusDatasourceId` binding.
+   *      If there is no binding we skip entirely — we must NOT fall back to the
+   *      workspace-default datasource (which would silently snapshot the wrong
+   *      Prometheus for an unrelated connection).
+   *   4. startedAt must be present.
    *
    * All failures are caught and logged as warnings — this method NEVER throws.
    */
   private async trySnapshotPrefixCache(opts: {
     runId: string;
     scenario: string;
-    connectionId: string | null;
+    prometheusDatasourceId: string | null;
     connectionModel: string | null;
     completedAt: Date | null;
     startedAt: Date | null;
   }): Promise<void> {
-    const { runId, scenario, connectionId, connectionModel, completedAt, startedAt } = opts;
+    const { runId, scenario, prometheusDatasourceId, connectionModel, completedAt, startedAt } =
+      opts;
     if (!this.deps.prefixCacheSnapshot || !this.deps.promFetcher) return;
     try {
       if (scenario !== "prefix-cache-validation") return;
-      if (!connectionId) return;
+      // Graceful degrade: no explicit datasource binding → skip (never fall
+      // back to the workspace default — that would be a wrong datasource).
+      if (!prometheusDatasourceId) return;
       if (!startedAt) return;
 
-      const ds = await this.deps.promFetcher.resolveDatasourceByRef({ connectionId });
+      // Use the datasourceId path, which returns exactly that datasource (or
+      // null if deleted) and does NOT fall back to the workspace default.
+      const ds = await this.deps.promFetcher.resolveDatasourceByRef({
+        datasourceId: prometheusDatasourceId,
+      });
       if (!ds) return;
 
       const end = completedAt ?? new Date();
