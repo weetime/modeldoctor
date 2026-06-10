@@ -270,4 +270,27 @@ describe("PrefixCacheSnapshotService", () => {
     expect(result!.hitRatePct).toBeCloseTo((80 / 120) * 100, 5);
     expect(result!.topPodSharePct).toBeCloseTo(100, 5);
   });
+
+  // -------------------------------------------------------------------------
+  // (g) Prometheus increase() extrapolation can make hits slightly exceed
+  // queries; percentages must clamp to 100 or the .max(100) annotation schema
+  // rejects the whole snapshot and the panel silently degrades.
+  // -------------------------------------------------------------------------
+  it("(g) clamps hitRatePct to 100 when extrapolated hits exceed queries", async () => {
+    const runQuery = vi
+      .fn()
+      .mockResolvedValueOnce(
+        makeInstantResult([{ labels: { pod: "pod-a" }, value: 100 }]), // queries
+      )
+      .mockResolvedValueOnce(
+        makeInstantResult([{ labels: { pod: "pod-a" }, value: 100.05 }]), // hits > queries
+      );
+    const svc = new PrefixCacheSnapshotService({ runQuery } as never);
+
+    const result = await svc.snapshot({ ds: DS, model: MODEL, windowSec: WINDOW, at: AT });
+
+    expect(result).not.toBeNull();
+    expect(result!.hitRatePct).toBe(100);
+    expect(result!.topPodSharePct).toBe(100);
+  });
 });

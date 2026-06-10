@@ -1,6 +1,6 @@
 import type { PrefixCacheAnnotation } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
-import type { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
+import { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
 
 export interface SnapshotInput {
   /** PrometheusDatasource row — opaque to this service; passed through to runQuery. */
@@ -32,10 +32,10 @@ export interface SnapshotInput {
  */
 @Injectable()
 export class PrefixCacheSnapshotService {
-  constructor(
-    // Accept the concrete type for NestJS DI; tests pass `{ runQuery } as never`.
-    private readonly fetcher: Pick<PrometheusFetcherService, "runQuery">,
-  ) {}
+  // Concrete class type (value import) — required for Nest's reflected DI
+  // metadata; a `Pick<…>`/interface type emits `Object` and breaks resolution
+  // in the real container. Tests still pass a fake via `{ runQuery } as never`.
+  constructor(private readonly fetcher: PrometheusFetcherService) {}
 
   /** Build the PromQL expression for a single counter metric. */
   private q(metric: string, model: string, windowSec: number): string {
@@ -108,10 +108,16 @@ export class PrefixCacheSnapshotService {
       const totalH = perPod.reduce((a, p) => a + p.hits, 0);
       const topQ = perPod.reduce((mx, p) => Math.max(mx, p.queries), 0);
 
+      // Clamp to [0, 100]: Prometheus increase()/rate() extrapolates from the
+      // first/last samples in the window, so hits can slightly exceed queries
+      // (e.g. 100.05%). The annotation schema enforces .max(100); an unclamped
+      // overshoot would fail validation and silently drop the whole panel.
+      const pct = (n: number) => Math.min(100, Math.max(0, n));
+
       return {
         metricTag: tag,
-        hitRatePct: totalQ > 0 ? (totalH / totalQ) * 100 : 0,
-        topPodSharePct: totalQ > 0 ? (topQ / totalQ) * 100 : 0,
+        hitRatePct: totalQ > 0 ? pct((totalH / totalQ) * 100) : 0,
+        topPodSharePct: totalQ > 0 ? pct((topQ / totalQ) * 100) : 0,
         perPod,
       };
     }
