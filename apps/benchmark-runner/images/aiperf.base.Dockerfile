@@ -26,3 +26,14 @@ WORKDIR /app
 RUN mkdir -p /app/.cache/aiperf/datasets
 COPY images/.sharegpt/ShareGPT_V3_unfiltered_cleaned_split.json \
      /app/.cache/aiperf/datasets/ShareGPT_V3_unfiltered_cleaned_split.json
+
+# Bake the two official Mooncake FAST25 traces so dataset=mooncake-trace works
+# air-gapped. aiperf reads them via --input-file with --custom-dataset-type
+# mooncake_trace; the path below matches buildCommand
+# (packages/tool-adapters/src/aiperf/runtime.ts). Pre-downloaded on the host by
+# build-base-images.sh (same TLS-workaround rationale as ShareGPT).
+RUN mkdir -p /app/.cache/aiperf/datasets/mooncake
+COPY images/.mooncake/conversation_trace.jsonl \
+     /app/.cache/aiperf/datasets/mooncake/conversation_trace.jsonl
+COPY images/.mooncake/toolagent_trace.jsonl \
+     /app/.cache/aiperf/datasets/mooncake/toolagent_trace.jsonl
