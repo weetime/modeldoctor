@@ -48,6 +48,10 @@ describe("aiperf.buildCommand", () => {
       "http://10.0.0.5:8000",
       "--endpoint-type",
       "chat",
+      "--api-key",
+      "__MD_OPENAI_API_KEY__",
+      "--workers-max",
+      "4",
       "--streaming",
       "--concurrency",
       "8",
@@ -67,6 +71,16 @@ describe("aiperf.buildCommand", () => {
       "out",
     ]);
     expect(r.secretEnv?.OPENAI_API_KEY).toBe("sk-test");
+    // The raw key must never appear in argv — only the runner-side sentinel.
+    expect(r.argv).not.toContain("sk-test");
+  });
+
+  it("omits --api-key when connection.apiKey is empty", () => {
+    const r = buildCommand({
+      ...plan,
+      connection: { ...plan.connection, apiKey: "" },
+    });
+    expect(r.argv).not.toContain("--api-key");
   });
 
   it("omits --streaming when streaming=false", () => {
@@ -172,7 +186,10 @@ describe("aiperf.buildCommand", () => {
     expect(flat).toContain("--concurrency 20");
     expect(flat).toContain("--conversation-num 30");
     expect(flat).toContain("--conversation-turn-mean 10");
-    expect(flat).toContain("--conversation-type sticky-user-sessions");
+    expect(flat).toContain("--connection-reuse-strategy sticky-user-sessions");
+    expect(flat).not.toContain("--conversation-type");
+    // aiperf forbids --request-count alongside --conversation-num.
+    expect(flat).not.toContain("--request-count");
     expect(flat).not.toContain("--fixed-schedule");
   });
 
