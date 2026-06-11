@@ -215,6 +215,15 @@ export function getMaxDurationSeconds(params: AiperfParams): number {
   // Worst case ~10s/request at concurrency 1 (long output + cold cache).
   // Apply the standard ~120s runner buffer.
   const perReqWorst = 10;
-  const wall = Math.ceil((params.requestCount * perReqWorst) / Math.max(1, params.concurrency));
+  // Multi-turn mode ignores requestCount (buildCommand omits --request-count);
+  // the effective workload is conversationNum × conversationTurnMean (aiperf
+  // defaults a missing turn mean to 1). Per-turn think-time delays are
+  // sequential within a conversation, so they add to per-request wall time.
+  const effectiveRequests =
+    params.conversationNum !== undefined
+      ? params.conversationNum * (params.conversationTurnMean ?? 1)
+      : params.requestCount;
+  const perReq = perReqWorst + (params.conversationTurnDelayMeanMs ?? 0) / 1000;
+  const wall = Math.ceil((effectiveRequests * perReq) / Math.max(1, params.concurrency));
   return Math.max(120, Math.min(3600, wall + 120));
 }

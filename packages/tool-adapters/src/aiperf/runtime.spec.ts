@@ -323,4 +323,32 @@ describe("aiperf.getMaxDurationSeconds", () => {
     const large = getMaxDurationSeconds({ ...baseParams, requestCount: 1000 });
     expect(large).toBeGreaterThan(small);
   });
+
+  it("multi-turn: sizes by conversationNum × turnMean, ignoring requestCount", () => {
+    // requestCount is omitted from argv in multi-turn mode; a low value must
+    // not shrink the wall-clock ceiling below the real workload.
+    const d = getMaxDurationSeconds({
+      ...baseParams,
+      requestCount: 10,
+      conversationNum: 60,
+      conversationTurnMean: 10,
+    });
+    // 600 effective requests × 10s / concurrency 8 + 120s buffer
+    expect(d).toBe(Math.min(3600, Math.ceil((600 * 10) / 8) + 120));
+  });
+
+  it("multi-turn: per-turn delays extend the ceiling", () => {
+    const noDelay = getMaxDurationSeconds({
+      ...baseParams,
+      conversationNum: 30,
+      conversationTurnMean: 5,
+    });
+    const withDelay = getMaxDurationSeconds({
+      ...baseParams,
+      conversationNum: 30,
+      conversationTurnMean: 5,
+      conversationTurnDelayMeanMs: 2000,
+    });
+    expect(withDelay).toBeGreaterThan(noDelay);
+  });
 });
