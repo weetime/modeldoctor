@@ -511,7 +511,8 @@
       "perPodCols": {
         "pod": "Pod",
         "queries": "Queries",
-        "hits": "Hits"
+        "hits": "Hits",
+        "hitRate": "Hit rate"
       },
       "noData": "No prefix cache metrics available — ensure a Prometheus datasource is bound and vLLM has prefix caching enabled"
     },

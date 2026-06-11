@@ -70,14 +70,22 @@ export function PrefixCachePanel({ serverMetrics }: Props) {
                 <TableHead className="text-right">
                   {t("reports.prefixCache.perPodCols.hits")}
                 </TableHead>
+                <TableHead className="text-right">
+                  {t("reports.prefixCache.perPodCols.hitRate")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.perPod.map((p) => (
                 <TableRow key={p.pod}>
                   <TableCell className="font-mono text-sm">{p.pod}</TableCell>
-                  <TableCell className="text-right">{p.queries}</TableCell>
-                  <TableCell className="text-right">{p.hits}</TableCell>
+                  {/* queries/hits are token counts from increase() — fractional
+                      by extrapolation; whole tokens read better. */}
+                  <TableCell className="text-right">{Math.round(p.queries)}</TableCell>
+                  <TableCell className="text-right">{Math.round(p.hits)}</TableCell>
+                  <TableCell className="text-right">
+                    {p.queries > 0 ? `${((p.hits / p.queries) * 100).toFixed(1)}%` : "—"}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

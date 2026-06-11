@@ -511,7 +511,8 @@
       "perPodCols": {
         "pod": "Pod",
         "queries": "查询数",
-        "hits": "命中数"
+        "hits": "命中数",
+        "hitRate": "命中率"
       },
       "noData": "未获取到 Prefix Cache 指标；请确认已绑定 Prometheus 数据源且 vLLM 已开启 prefix caching"
     },
