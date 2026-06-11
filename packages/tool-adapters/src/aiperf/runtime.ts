@@ -9,6 +9,14 @@ import { type AiperfParams, aiperfReportSchema } from "./schema.js";
 const OUTPUTS_DIR = "out";
 const SUMMARY_FILE = "profile_export_aiperf.json";
 
+// aiperf reads the endpoint API key ONLY from --api-key (no env-var channel;
+// OPENAI_API_KEY in secretEnv alone never reaches the requests — Higress-style
+// authed gateways then 401 every request). Same sentinel contract as
+// evalscope: the runner swaps it for OPENAI_API_KEY right before Popen and
+// masks the value after --api-key in logs.
+// Contract: apps/benchmark-runner/runner/main.py::OPENAI_API_KEY_SENTINEL.
+const OPENAI_API_KEY_SENTINEL = "__MD_OPENAI_API_KEY__";
+
 export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommandResult {
   const { params, connection } = plan;
   const trimmedBase = connection.baseUrl.replace(/\/+$/, "");
@@ -31,6 +39,16 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
   // "Failed to load tokenizer '<model>'". Mirrors guidellm's --processor.
   if (connection.tokenizerHfId) argv.push("--tokenizer", connection.tokenizerHfId);
 
+  // Sentinel — runner replaces with OPENAI_API_KEY at exec time (see above).
+  if (connection.apiKey) argv.push("--api-key", OPENAI_API_KEY_SENTINEL);
+
+  // aiperf sizes its worker pool from the HOST cpu count (cgroup-blind), so
+  // inside the 2-CPU runner limit it overspawns and the multiprocess service
+  // registration times out ("Service timing_manager failed to register").
+  // Cap workers to fit the runner cgroup; each worker is async and easily
+  // drives many concurrent streams.
+  argv.push("--workers-max", String(Math.min(params.concurrency, 4)));
+
   // --streaming is a presence-only boolean toggle (no --no-streaming form).
   // Streaming off = simply omit the flag.
   if (params.streaming) argv.push("--streaming");
@@ -48,11 +66,15 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
     }
   } else {
     // Closed-loop synthetic / sharegpt.
+    argv.push("--concurrency", String(params.concurrency));
+    // aiperf rejects --request-count combined with --conversation-num
+    // (UserConfig validation). In multi-turn mode the workload size is
+    // conversationNum × conversationTurnMean; requestCount only drives
+    // the single-turn path (and our wall-clock estimate).
+    if (params.conversationNum === undefined) {
+      argv.push("--request-count", String(params.requestCount));
+    }
     argv.push(
-      "--concurrency",
-      String(params.concurrency),
-      "--request-count",
-      String(params.requestCount),
       "--synthetic-input-tokens-mean",
       String(params.inputTokensMean),
       "--synthetic-input-tokens-stddev",
@@ -76,7 +98,10 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
       argv.push("--conversation-turn-stddev", String(params.conversationTurnStddev));
     }
     if (params.conversationType !== undefined) {
-      argv.push("--conversation-type", params.conversationType);
+      // aiperf has no --conversation-type; sticky routing is controlled by the
+      // transport-level --connection-reuse-strategy (pooled | never |
+      // sticky-user-sessions), which is what our conversationType maps to.
+      argv.push("--connection-reuse-strategy", params.conversationType);
     }
     if (params.conversationTurnDelayMeanMs !== undefined) {
       argv.push("--conversation-turn-delay-mean", String(params.conversationTurnDelayMeanMs));
