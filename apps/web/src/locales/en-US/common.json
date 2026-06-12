@@ -97,5 +97,10 @@
     "invalidCompareConfiguration": "Invalid compare configuration: every benchmark needs a stage label, and the baseline must be one of the selected benchmarks",
     "runDualVsBaselineExclusive": "Cannot enable dual-endpoint and baseline-run comparison at the same time",
     "endpointABMustDiffer": "Endpoint A and Endpoint B must be different connections"
+  },
+  "deleteConfirm": {
+    "hint": "This action cannot be undone. Type {{keyword}} to confirm.",
+    "keyword": "DELETE",
+    "placeholder": "DELETE"
   }
 }

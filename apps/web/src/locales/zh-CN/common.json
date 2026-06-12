@@ -97,5 +97,10 @@
     "invalidCompareConfiguration": "对比配置无效：每个基准都要有 stage label，baseline（若设置）必须在选中的基准里",
     "runDualVsBaselineExclusive": "双端点对比与历史 baseline 对比不能同时启用",
     "endpointABMustDiffer": "Endpoint A 和 Endpoint B 不能选择同一个连接"
+  },
+  "deleteConfirm": {
+    "hint": "此操作不可撤销。请输入 {{keyword}} 以确认。",
+    "keyword": "DELETE",
+    "placeholder": "DELETE"
   }
 }
