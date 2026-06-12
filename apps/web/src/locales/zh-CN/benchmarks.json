@@ -344,7 +344,8 @@
       "latencyMax": "延迟最大 (ms)",
       "errorRate": "错误率",
       "throughput": "吞吐 (req/s)"
-    }
+    },
+    "dragHandle": "拖拽调整顺序"
   },
   "savedCompare": {
     "savedListLink": "历史对比",
