@@ -56,9 +56,42 @@ export interface StageBarChartProps {
   baselineIndex?: number;
   /** Fixed label/trend colors (defaults to theme tokens + Primer green/red). */
   labelColors?: StageBarLabelColors;
+  /**
+   * Per-datum bar colors, index-aligned with `data`. Only applied to
+   * single-series charts (QPS / error-rate) where each bar IS a run and
+   * must carry that run's identity color across sibling charts.
+   */
+  barColors?: readonly (string | undefined)[];
+  /**
+   * Series-key of the baseline run for run-pivoted charts (series = runs,
+   * x = percentile categories). Mutually exclusive with `baselineIndex`.
+   * Non-baseline series annotate ↑/↓ % vs the baseline series' value at the
+   * same x category; the baseline series labels itself "baseline".
+   */
+  baselineSeriesKey?: string;
 }
 
 type LabelParam = { dataIndex: number; value: unknown };
+
+/**
+ * Delta annotation suffix vs a baseline value, shared by both baseline modes
+ * (stage-positional `baselineIndex` and series-keyed `baselineSeriesKey`).
+ * Returns the ECharts rich-text fragment to append after the value line, or
+ * "" when no annotation applies.
+ */
+export function deltaAnnotation(
+  value: number,
+  baseVal: number | null,
+  higherIsBetter: boolean,
+): string {
+  if (baseVal == null || baseVal === 0) return "";
+  const deltaPct = ((value - baseVal) / Math.abs(baseVal)) * 100;
+  if (Math.abs(deltaPct) < 0.5) return "\n{base|≈}";
+  const arrow = deltaPct > 0 ? "↑" : "↓";
+  const better = deltaPct > 0 === higherIsBetter;
+  const tone = better ? "up" : "down";
+  return `\n{${tone}|${arrow}${Math.abs(deltaPct).toFixed(0)}%}`;
+}
 
 function fmtValue(v: number, decimals?: number): string {
   return v.toLocaleString("en-US", {
@@ -91,6 +124,8 @@ export function StageBarChart({
   showValueLabels = true,
   baselineIndex,
   labelColors,
+  barColors,
+  baselineSeriesKey,
 }: StageBarChartProps): JSX.Element {
   const tokens = useChartTokens();
   const isEmpty = empty ?? data.length === 0;
@@ -105,6 +140,16 @@ export function StageBarChart({
     };
     const categories = data.map((d) => d.stage);
 
+    // Series-keyed baseline (run-pivoted charts): per-category values of the
+    // baseline run, compared against by every other series at the same index.
+    const baselineSeriesValues =
+      baselineSeriesKey != null
+        ? data.map((d) => {
+            const v = d[baselineSeriesKey];
+            return typeof v === "number" ? v : null;
+          })
+        : null;
+
     const ecSeries = series.map((s) => {
       const values = data.map((d) => {
         const v = d[s.key];
@@ -115,21 +160,29 @@ export function StageBarChart({
       const labelFor = (idx: number, value: number): string => {
         const valueStr = fmtValue(value, s.decimals);
         // No baseline context, or this series opts out of trend → value only.
-        if (baselineIndex == null || s.higherIsBetter == null) return valueStr;
+        if (s.higherIsBetter == null) return valueStr;
+        if (baselineSeriesValues != null) {
+          if (s.key === baselineSeriesKey) return `${valueStr}\n{base|baseline}`;
+          return valueStr + deltaAnnotation(value, baselineSeriesValues[idx], s.higherIsBetter);
+        }
+        if (baselineIndex == null) return valueStr;
         if (idx === baselineIndex) return `${valueStr}\n{base|baseline}`;
-        if (baseVal == null || baseVal === 0) return valueStr;
-        const deltaPct = ((value - baseVal) / Math.abs(baseVal)) * 100;
-        if (Math.abs(deltaPct) < 0.5) return `${valueStr}\n{base|≈}`;
-        const arrow = deltaPct > 0 ? "↑" : "↓";
-        const better = deltaPct > 0 === s.higherIsBetter;
-        const tone = better ? "up" : "down";
-        return `${valueStr}\n{${tone}|${arrow}${Math.abs(deltaPct).toFixed(0)}%}`;
+        return valueStr + deltaAnnotation(value, baseVal, s.higherIsBetter);
       };
+
+      // Single-series charts may carry per-bar identity colors (each bar = a
+      // run); itemStyle on the datum overrides the series-level color.
+      const seriesData =
+        series.length === 1 && barColors
+          ? values.map((v, i) =>
+              barColors[i] ? { value: v, itemStyle: { color: barColors[i] } } : v,
+            )
+          : values;
 
       return {
         name: s.label,
         type: "bar" as const,
-        data: values,
+        data: seriesData,
         itemStyle: { color: s.color },
         label: showValueLabels
           ? {
@@ -195,6 +248,8 @@ export function StageBarChart({
     tokens,
     showValueLabels,
     baselineIndex,
+    baselineSeriesKey,
+    barColors,
     labelColors?.value,
     labelColors?.up,
     labelColors?.down,
