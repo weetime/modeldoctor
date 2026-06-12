@@ -464,8 +464,7 @@
       "conversationNum": "Conversation count",
       "conversationTurnMean": "Turn mean",
       "conversationType": "Conversation type",
-      "mooncakeTrace": "Mooncake trace type",
-      "islBlockSize": "ISL block size"
+      "mooncakeTrace": "Mooncake trace type"
     }
   },
   "reports": {

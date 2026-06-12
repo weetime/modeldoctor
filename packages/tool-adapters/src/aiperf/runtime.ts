@@ -61,9 +61,8 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
     }
     const file = `/app/.cache/aiperf/datasets/mooncake/${params.mooncakeTrace}_trace.jsonl`;
     argv.push("--input-file", file, "--custom-dataset-type", "mooncake_trace", "--fixed-schedule");
-    if (params.islBlockSize !== undefined) {
-      argv.push("--isl-block-size", String(params.islBlockSize));
-    }
+    // --isl-block-size is synthetic-only in aiperf ≥0.10 — combining it with
+    // --input-file aborts startup. Trace prompt sizes come from the trace.
   } else {
     // Closed-loop synthetic / sharegpt.
     argv.push("--concurrency", String(params.concurrency));

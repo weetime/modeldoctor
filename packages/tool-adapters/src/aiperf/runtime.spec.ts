@@ -227,7 +227,6 @@ describe("aiperf.buildCommand", () => {
         streaming: true,
         dataset: "mooncake-trace",
         mooncakeTrace: "conversation",
-        islBlockSize: 512,
       },
       connection: conn,
     } as any);
@@ -236,7 +235,8 @@ describe("aiperf.buildCommand", () => {
       "--input-file /app/.cache/aiperf/datasets/mooncake/conversation_trace.jsonl",
     );
     expect(flat).toContain("--custom-dataset-type mooncake_trace");
-    expect(flat).toContain("--isl-block-size 512");
+    // synthetic-only flag must never leak into trace replay (aiperf ≥0.10 aborts)
+    expect(flat).not.toContain("--isl-block-size");
     expect(flat).toContain("--fixed-schedule");
     expect(flat).not.toContain("--concurrency");
     expect(flat).not.toContain("--synthetic-input-tokens-mean");

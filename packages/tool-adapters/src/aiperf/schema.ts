@@ -32,7 +32,6 @@ export const aiperfParamsSchema = z
 
     // Mooncake (open-loop only).
     mooncakeTrace: z.enum(["conversation", "toolagent"]).optional(),
-    islBlockSize: z.number().int().min(1).max(4096).optional(),
   })
   .superRefine((v, ctx) => {
     const isMooncake = v.dataset === "mooncake-trace";
@@ -58,10 +57,10 @@ export const aiperfParamsSchema = z
         path: ["mooncakeTrace"],
       });
     }
-    if (!isMooncake && (v.mooncakeTrace !== undefined || v.islBlockSize !== undefined)) {
+    if (!isMooncake && v.mooncakeTrace !== undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "mooncakeTrace / islBlockSize are only valid when dataset=mooncake-trace",
+        message: "mooncakeTrace is only valid when dataset=mooncake-trace",
         path: ["mooncakeTrace"],
       });
     }
