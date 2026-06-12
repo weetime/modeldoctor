@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -538,36 +539,28 @@ export function BenchmarkDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("detail.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("detail.delete.confirmBody")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("detail.baseline.dialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                deleteBenchmark.mutate(benchmark.id, {
-                  onSuccess: () => {
-                    setDeleteOpen(false);
-                    toast.success(t("detail.delete.success"));
-                    // Mirror "back to list" — keep the user in the same scenario
-                    // tab they came from, not the default inference list.
-                    navigate(`/benchmarks/${benchmark.scenario}`);
-                  },
-                  onError: () => {
-                    toast.error(t("detail.delete.errors.generic"));
-                  },
-                });
-              }}
-              disabled={deleteBenchmark.isPending}
-            >
-              {t("detail.delete.confirmAction")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t("detail.delete.confirmTitle")}
+        description={t("detail.delete.confirmBody")}
+        confirmLabel={t("detail.delete.confirmAction")}
+        pending={deleteBenchmark.isPending}
+        onConfirm={() => {
+          deleteBenchmark.mutate(benchmark.id, {
+            onSuccess: () => {
+              setDeleteOpen(false);
+              toast.success(t("detail.delete.success"));
+              // Mirror "back to list" — keep the user in the same scenario
+              // tab they came from, not the default inference list.
+              navigate(`/benchmarks/${benchmark.scenario}`);
+            },
+            onError: () => {
+              toast.error(t("detail.delete.errors.generic"));
+            },
+          });
+        }}
+      />
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
