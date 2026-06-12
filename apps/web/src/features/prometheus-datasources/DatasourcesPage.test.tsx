@@ -209,11 +209,13 @@ describe("DatasourcesPage", () => {
     await userEvent.click(overflowButtons[0]);
 
     // After opening the menu the Delete menuitem is rendered. Click it to
-    // open the AlertDialog confirm.
+    // open the confirm dialog.
     const deleteMenuItem = await screen.findByRole("menuitem", { name: /^删除$|^delete$/i });
     await userEvent.click(deleteMenuItem);
 
-    // AlertDialog opens; the confirm button uses t("delete.confirm") = "删除".
+    // The shared confirm dialog gates the destructive action on typing DELETE.
+    fireEvent.change(await screen.findByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+    // Confirm button uses t("delete.confirm") = "删除".
     const confirmBtn = await screen.findByRole("button", { name: /^删除$|^delete$/i });
     fireEvent.click(confirmBtn);
 

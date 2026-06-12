@@ -124,6 +124,7 @@ describe("SavedComparesListPage", () => {
     await user.click(deleteItem);
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
+    // The shared confirm dialog gates on typing DELETE.
+    expect(within(dialog).getByPlaceholderText("DELETE")).toBeInTheDocument();
   });
 });
