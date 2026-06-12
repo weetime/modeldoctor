@@ -1,21 +1,17 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import { format, formatDistanceStrict } from "date-fns";
+import { format } from "date-fns";
 import { Copy } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
+import { fmtDurationMs, runDurationMs } from "./duration";
 import { StatusBadge } from "./status-display";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return format(new Date(iso), "yyyy-MM-dd HH:mm:ss");
-}
-
-function fmtDuration(start: string | null, end: string | null): string {
-  if (!start || !end) return "—";
-  return formatDistanceStrict(new Date(end), new Date(start));
 }
 
 export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark }) {
@@ -43,7 +39,11 @@ export function BenchmarkDetailMetadata({ benchmark }: { benchmark: Benchmark })
       <Row label={t("detail.metadata.startedAt")}>{fmtDate(benchmark.startedAt)}</Row>
       <Row label={t("detail.metadata.completedAt")}>{fmtDate(benchmark.completedAt)}</Row>
       <Row label={t("detail.metadata.duration")}>
-        {fmtDuration(benchmark.startedAt, benchmark.completedAt)}
+        <span className="tabular-nums">
+          {fmtDurationMs(
+            runDurationMs(benchmark.startedAt, benchmark.completedAt, benchmark.status),
+          )}
+        </span>
       </Row>
       {benchmark.driverHandle && <JobRow handle={benchmark.driverHandle} />}
     </dl>

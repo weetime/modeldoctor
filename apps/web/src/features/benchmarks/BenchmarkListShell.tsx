@@ -5,7 +5,7 @@ import type {
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { enUS, zhCN } from "date-fns/locale";
 import {
   ArrowRight,
@@ -53,6 +53,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useLocaleStore } from "@/stores/locale-store";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
+import { fmtDurationMs, fmtTimeRange, runDurationMs } from "./duration";
 import { useBenchmarkList, useCreateBenchmark, useDeleteBenchmark } from "./queries";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
@@ -63,26 +64,6 @@ function fmtNum(n: number | null | undefined, digits = 1): string {
   const s = n.toFixed(digits);
   // All-zero strings like "0.0000" (and "-0.0") read better as plain "0".
   return Number(s) === 0 ? "0" : s;
-}
-
-function fmtDurationMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return "—";
-  const totalSec = Math.round(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
-function fmtTimeRange(startIso: string, endIso: string | null): string {
-  const start = new Date(startIso);
-  const startStr = format(start, "MM-dd HH:mm:ss");
-  if (!endIso) return `${startStr} →`;
-  const end = new Date(endIso);
-  const sameDay = format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd");
-  return `${startStr} → ${format(end, sameDay ? "HH:mm:ss" : "MM-dd HH:mm:ss")}`;
 }
 
 interface BenchmarkListShellProps {
@@ -354,9 +335,11 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         <div className="flex flex-col gap-0.5">
                           <span className="tabular-nums text-foreground">
                             {fmtDurationMs(
-                              (benchmark.completedAt
-                                ? new Date(benchmark.completedAt).getTime()
-                                : Date.now()) - new Date(benchmark.startedAt).getTime(),
+                              runDurationMs(
+                                benchmark.startedAt,
+                                benchmark.completedAt,
+                                benchmark.status,
+                              ),
                             )}
                           </span>
                           <span className="text-xs tabular-nums text-muted-foreground/70">
