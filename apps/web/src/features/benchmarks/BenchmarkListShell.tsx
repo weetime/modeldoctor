@@ -233,7 +233,18 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     disabled={compareDisabledReason !== null}
                     onClick={() => {
                       if (compareDisabledReason !== null) return;
-                      navigate(`/benchmarks/compare?ids=${[...selected].join(",")}`);
+                      // Stable, human-meaningful default order: natural-sort by
+                      // name so "L1 < L2 < L3" and "c20 < c40 < c160" — Set
+                      // insertion (click) order reads as random on the compare page.
+                      const sortedIds = [...selected].sort((a, b) => {
+                        const na = items.find((r) => r.id === a)?.name ?? a;
+                        const nb = items.find((r) => r.id === b)?.name ?? b;
+                        return na.localeCompare(nb, "zh-Hans-CN", {
+                          numeric: true,
+                          sensitivity: "base",
+                        });
+                      });
+                      navigate(`/benchmarks/compare?ids=${sortedIds.join(",")}`);
                     }}
                   >
                     {t("compareButton", { n: selected.size })}
