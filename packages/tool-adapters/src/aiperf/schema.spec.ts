@@ -99,6 +99,23 @@ describe("aiperf schema — prefix-cache extensions", () => {
     expect("islBlockSize" in r).toBe(false);
   });
 
+  it("accepts mooncake-trace with a replay window", () => {
+    const r = aiperfParamsSchema.parse({
+      dataset: "mooncake-trace",
+      mooncakeTrace: "conversation",
+      traceReplayWindowSec: 300,
+    });
+    expect(r.traceReplayWindowSec).toBe(300);
+  });
+
+  it("rejects traceReplayWindowSec when dataset is not mooncake-trace", () => {
+    const r = aiperfParamsSchema.safeParse({
+      dataset: "synthetic",
+      traceReplayWindowSec: 300,
+    });
+    expect(r.success).toBe(false);
+  });
+
   it("rejects conversation params on mooncake-trace (open-loop replay)", () => {
     expect(() =>
       aiperfParamsSchema.parse({

@@ -464,7 +464,8 @@
       "conversationNum": "会话数",
       "conversationTurnMean": "每轮对话均值",
       "conversationType": "会话类型",
-      "mooncakeTrace": "Mooncake Trace 类型"
+      "mooncakeTrace": "Mooncake Trace 类型",
+      "traceReplayWindowSec": "回放窗口(秒)"
     }
   },
   "reports": {

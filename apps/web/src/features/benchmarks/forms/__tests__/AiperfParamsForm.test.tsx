@@ -53,6 +53,8 @@ describe("AiperfParamsForm", () => {
   it("shows mooncake fields (not conversation) when dataset=mooncake-trace", () => {
     render(<Harness defaultDataset="mooncake-trace" />);
     expect(screen.getByText(/Mooncake trace type|Mooncake Trace 类型/)).toBeInTheDocument();
+    // bounded replay window replaces the retired islBlockSize input
+    expect(screen.getByText(/Replay window|回放窗口/)).toBeInTheDocument();
     // islBlockSize retired: synthetic-only flag in aiperf ≥0.10, never valid here
     expect(screen.queryByText(/ISL block size|ISL 块大小/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Conversation count|会话数/)).not.toBeInTheDocument();

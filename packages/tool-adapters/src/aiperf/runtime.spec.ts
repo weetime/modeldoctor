@@ -240,6 +240,29 @@ describe("aiperf.buildCommand", () => {
     expect(flat).toContain("--fixed-schedule");
     expect(flat).not.toContain("--concurrency");
     expect(flat).not.toContain("--synthetic-input-tokens-mean");
+    // unbounded by default — no end-offset unless a window is set
+    expect(flat).not.toContain("--fixed-schedule-end-offset");
+  });
+
+  it("mooncake-trace with a replay window → --fixed-schedule-end-offset in ms", () => {
+    const r = buildCommand({
+      runId: "r2b",
+      params: {
+        concurrency: 20,
+        requestCount: 300,
+        inputTokensMean: 200,
+        inputTokensStddev: 0,
+        outputTokensMean: 800,
+        outputTokensStddev: 0,
+        endpointType: "chat",
+        streaming: true,
+        dataset: "mooncake-trace",
+        mooncakeTrace: "conversation",
+        traceReplayWindowSec: 300,
+      },
+      connection: conn,
+    } as any);
+    expect(r.argv.join(" ")).toContain("--fixed-schedule-end-offset 300000");
   });
 });
 
@@ -350,5 +373,22 @@ describe("aiperf.getMaxDurationSeconds", () => {
       conversationTurnDelayMeanMs: 2000,
     });
     expect(withDelay).toBeGreaterThan(noDelay);
+  });
+
+  it("mooncake: sizes by replay window (send is timestamp-paced), not requestCount", () => {
+    const bounded = getMaxDurationSeconds({
+      ...baseParams,
+      dataset: "mooncake-trace",
+      mooncakeTrace: "conversation",
+      traceReplayWindowSec: 300,
+    } as never);
+    expect(bounded).toBe(300 + 600);
+    // unbounded full replay falls back to the ~59-min trace span + buffer
+    const full = getMaxDurationSeconds({
+      ...baseParams,
+      dataset: "mooncake-trace",
+      mooncakeTrace: "conversation",
+    } as never);
+    expect(full).toBe(Math.min(7200, 3600 + 600));
   });
 });

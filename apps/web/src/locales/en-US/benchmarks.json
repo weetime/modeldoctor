@@ -464,7 +464,8 @@
       "conversationNum": "Conversation count",
       "conversationTurnMean": "Turn mean",
       "conversationType": "Conversation type",
-      "mooncakeTrace": "Mooncake trace type"
+      "mooncakeTrace": "Mooncake trace type",
+      "traceReplayWindowSec": "Replay window (s)"
     }
   },
   "reports": {

@@ -32,6 +32,12 @@ export const aiperfParamsSchema = z
 
     // Mooncake (open-loop only).
     mooncakeTrace: z.enum(["conversation", "toolagent"]).optional(),
+    // Bounded replay window in seconds (→ --fixed-schedule-end-offset ms).
+    // The full FAST25 traces span ~59 min / 12k–23k requests; replaying all
+    // of them takes ~1h AND hangs aiperf 0.10's summary export at that record
+    // count. A few-minute slice from t=0 sends a representative open-loop
+    // workload and completes cleanly. Omit for an (unbounded) full replay.
+    traceReplayWindowSec: z.number().int().min(10).max(3600).optional(),
   })
   .superRefine((v, ctx) => {
     const isMooncake = v.dataset === "mooncake-trace";
@@ -62,6 +68,13 @@ export const aiperfParamsSchema = z
         code: z.ZodIssueCode.custom,
         message: "mooncakeTrace is only valid when dataset=mooncake-trace",
         path: ["mooncakeTrace"],
+      });
+    }
+    if (!isMooncake && v.traceReplayWindowSec !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "traceReplayWindowSec is only valid when dataset=mooncake-trace",
+        path: ["traceReplayWindowSec"],
       });
     }
   });
