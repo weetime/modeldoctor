@@ -118,7 +118,11 @@ export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOption
                 : {}),
               resources: {
                 requests: { cpu: "500m", memory: "512Mi" },
-                limits: { cpu: "2", memory: "2Gi" },
+                // 8Gi: aiperf trace replay materializes the whole dataset in
+                // memory before sending (mooncake conversation = 12k × ~7k-token
+                // synthetic prompts ≈ several GB of text + token-id arrays).
+                // 2Gi and 4Gi both OOMKilled the dataset_manager pre-send.
+                limits: { cpu: "2", memory: "8Gi" },
               },
             },
           ],
