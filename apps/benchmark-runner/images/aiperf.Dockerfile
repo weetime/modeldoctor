@@ -4,7 +4,7 @@
 # pulled from the registry cache.
 # To bump aiperf: run `./tools/build-base-images.sh aiperf`, then update the
 # tag below and AIPERF_VERSION in build-base-images.sh.
-FROM ghcr.io/weetime/md-base-aiperf:0.7.0
+FROM ghcr.io/weetime/md-base-aiperf:0.10.0
 
 WORKDIR /app
 

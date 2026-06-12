@@ -15,9 +15,16 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-ARG AIPERF_VERSION=0.7.0
+ARG AIPERF_VERSION=0.10.0
 
-RUN pip install --no-cache-dir "aiperf==${AIPERF_VERSION}"
+# crick (aiperf dep) ships no aarch64 wheel — needs a C toolchain to build
+# from sdist. Install/purge it in the same layer to keep the slim image slim.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && pip install --no-cache-dir "aiperf==${AIPERF_VERSION}" \
+    && apt-get purge -y build-essential \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Bake ShareGPT V3 corpus (~672 MB) so --public-dataset sharegpt works on
 # air-gapped clusters. aiperf's ShareGPTLoader resolves
