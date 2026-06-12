@@ -53,6 +53,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useLocaleStore } from "@/stores/locale-store";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
+import { fmtDurationMs, fmtTimeRange, runDurationMs } from "./duration";
 import { useBenchmarkList, useCreateBenchmark, useDeleteBenchmark } from "./queries";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
@@ -60,7 +61,9 @@ import { StatusBadge } from "./status-display";
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
   if (n == null) return "—";
-  return n.toFixed(digits);
+  const s = n.toFixed(digits);
+  // All-zero strings like "0.0000" (and "-0.0") read better as plain "0".
+  return Number(s) === 0 ? "0" : s;
 }
 
 interface BenchmarkListShellProps {
@@ -294,6 +297,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                   <TableHead className="w-10" />
                   <TableHead>{t("columns.name")}</TableHead>
                   <TableHead>{t("columns.createdAt")}</TableHead>
+                  <TableHead>{t("columns.duration")}</TableHead>
                   <TableHead>{t("columns.tool")}</TableHead>
                   <TableHead>{t("columns.connection")}</TableHead>
                   <TableHead>{t("columns.status")}</TableHead>
@@ -325,6 +329,26 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         addSuffix: true,
                         locale: dateFnsLocale,
                       })}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {benchmark.startedAt ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="tabular-nums text-foreground">
+                            {fmtDurationMs(
+                              runDurationMs(
+                                benchmark.startedAt,
+                                benchmark.completedAt,
+                                benchmark.status,
+                              ),
+                            )}
+                          </span>
+                          <span className="text-xs tabular-nums text-muted-foreground/70">
+                            {fmtTimeRange(benchmark.startedAt, benchmark.completedAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="default">{benchmark.tool}</Badge>

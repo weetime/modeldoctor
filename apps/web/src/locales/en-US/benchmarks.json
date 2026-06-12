@@ -99,6 +99,7 @@
   "columns": {
     "name": "Name",
     "createdAt": "Created",
+    "duration": "Duration",
     "tool": "Tool",
     "connection": "Connection",
     "status": "Status",

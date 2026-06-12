@@ -163,6 +163,36 @@ describe("BenchmarkListShell", () => {
     expect(cells[cells.length - 3].textContent).toBe("—");
   });
 
+  it("renders duration with start → end range from startedAt/completedAt", async () => {
+    vi.mocked(api.get).mockResolvedValue(ONE_BENCHMARK);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+    // startedAt 12:00:01Z → completedAt 12:00:30Z = 29s
+    expect(await screen.findByText("29s")).toBeInTheDocument();
+    // Clock values render in local time — assert the shape, not exact times.
+    expect(
+      screen.getByText(/\d{2}-\d{2} \d{2}:\d{2}:\d{2} → \d{2}:\d{2}:\d{2}/),
+    ).toBeInTheDocument();
+  });
+
+  it("renders an all-zero error rate as '0' instead of '0.0000'", async () => {
+    const zeroErrorMetrics = {
+      tool: "guidellm",
+      data: {
+        e2eLatency: { p95: 491.2 },
+        requests: { total: 10, success: 10, error: 0, incomplete: 0 },
+      },
+    };
+    vi.mocked(api.get).mockResolvedValue({
+      items: [makeBenchmark("r1", "guidellm", "completed", zeroErrorMetrics)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+    await screen.findByText("guidellm");
+    const cells = screen.getAllByRole("cell");
+    // last cell is actions; -2 = errorRate
+    expect(cells[cells.length - 2].textContent).toBe("0");
+  });
+
   it("compare button is disabled by default", async () => {
     vi.mocked(api.get).mockResolvedValue(ONE_BENCHMARK);
     render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });

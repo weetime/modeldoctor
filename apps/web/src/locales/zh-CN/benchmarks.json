@@ -99,6 +99,7 @@
   "columns": {
     "name": "名称",
     "createdAt": "创建时间",
+    "duration": "运行时长",
     "tool": "工具",
     "connection": "Connection",
     "status": "状态",
