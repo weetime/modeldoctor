@@ -61,8 +61,13 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
     }
     const file = `/app/.cache/aiperf/datasets/mooncake/${params.mooncakeTrace}_trace.jsonl`;
     argv.push("--input-file", file, "--custom-dataset-type", "mooncake_trace", "--fixed-schedule");
-    if (params.islBlockSize !== undefined) {
-      argv.push("--isl-block-size", String(params.islBlockSize));
+    // --isl-block-size is synthetic-only in aiperf ≥0.10 — combining it with
+    // --input-file aborts startup. Trace prompt sizes come from the trace.
+    // Bound the replay to the first N seconds of the trace (timestamps start
+    // at 0). end-offset is in ms. Without it, aiperf replays the whole ~59-min
+    // trace and hangs in summary export at 12k+ records.
+    if (params.traceReplayWindowSec !== undefined) {
+      argv.push("--fixed-schedule-end-offset", String(params.traceReplayWindowSec * 1000));
     }
   } else {
     // Closed-loop synthetic / sharegpt.
@@ -212,6 +217,14 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
 }
 
 export function getMaxDurationSeconds(params: AiperfParams): number {
+  // Open-loop trace replay is paced by the trace's own timestamps, so the
+  // send wall-clock ≈ the replay window (bounded by --fixed-schedule-end-offset)
+  // or the full ~59-min trace when unbounded. requestCount/concurrency don't
+  // apply. Add a generous post-processing + upload buffer on top.
+  if (params.dataset === "mooncake-trace") {
+    const sendSec = params.traceReplayWindowSec ?? 3600;
+    return Math.max(120, Math.min(7200, sendSec + 600));
+  }
   // Worst case ~10s/request at concurrency 1 (long output + cold cache).
   // Apply the standard ~120s runner buffer.
   const perReqWorst = 10;

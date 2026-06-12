@@ -55,7 +55,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
     } else {
       // switched AWAY from mooncake-trace: clear mooncake-only fields
       setValue(`${fieldPrefix}.mooncakeTrace`, undefined);
-      setValue(`${fieldPrefix}.islBlockSize`, undefined);
+      setValue(`${fieldPrefix}.traceReplayWindowSec`, undefined);
     }
   }, [isMooncake, fieldPrefix, setValue]);
 
@@ -315,10 +315,10 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
             />
             <FormField
               control={control}
-              name={`${fieldPrefix}.islBlockSize`}
+              name={`${fieldPrefix}.traceReplayWindowSec`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("forms.aiperf.islBlockSize")}</FormLabel>
+                  <FormLabel>{t("forms.aiperf.traceReplayWindowSec")}</FormLabel>
                   <FormControl>
                     <Input type="number" {...numberField(field)} />
                   </FormControl>

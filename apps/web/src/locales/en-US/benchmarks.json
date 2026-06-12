@@ -465,7 +465,7 @@
       "conversationTurnMean": "Turn mean",
       "conversationType": "Conversation type",
       "mooncakeTrace": "Mooncake trace type",
-      "islBlockSize": "ISL block size"
+      "traceReplayWindowSec": "Replay window (s)"
     }
   },
   "reports": {

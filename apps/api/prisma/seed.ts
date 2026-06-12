@@ -835,7 +835,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_mooncake_conv",
     name: "缓存感知 · Mooncake 对话",
     description:
-      "Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。block size 512 对齐 trace 元数据。",
+      "Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。回放前 5 分钟切片(约 1000 请求)按 trace 时间戳发压,既代表真实形态又能干净出报告(全量 ~59 分钟会压垮汇总导出)。",
     scenario: "prefix-cache-validation",
     tool: "aiperf",
     config: {
@@ -843,7 +843,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       streaming: true,
       dataset: "mooncake-trace",
       mooncakeTrace: "conversation",
-      islBlockSize: 512,
+      traceReplayWindowSec: 300,
       seed: 42,
     },
     tags: ["prefix-cache", "aiperf", "mooncake"],
@@ -852,7 +852,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_pc_mooncake_agent",
     name: "缓存感知 · Mooncake Agent",
-    description: "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。",
+    description:
+      "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。回放前 5 分钟切片(约 1000 请求),按 trace 时间戳发压,干净出报告。",
     scenario: "prefix-cache-validation",
     tool: "aiperf",
     config: {
@@ -860,7 +861,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       streaming: true,
       dataset: "mooncake-trace",
       mooncakeTrace: "toolagent",
-      islBlockSize: 512,
+      traceReplayWindowSec: 300,
       seed: 42,
     },
     tags: ["prefix-cache", "aiperf", "mooncake"],
