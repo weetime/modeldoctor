@@ -4,19 +4,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RelativeTime } from "@/components/common/relative-time";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,32 +155,20 @@ export function EvaluationsListPage() {
         )}
       </div>
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={pendingDelete !== null}
         onOpenChange={(o) => {
           if (!o) setPendingDelete(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("detail.delete.title", { name: pendingDelete?.name ?? "" })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>{t("detail.delete.description")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("detail.delete.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDelete) del.mutate(pendingDelete.id);
-                setPendingDelete(null);
-              }}
-            >
-              {t("detail.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("detail.delete.title", { name: pendingDelete?.name ?? "" })}
+        description={t("detail.delete.description")}
+        confirmLabel={t("detail.delete.confirm")}
+        pending={del.isPending}
+        onConfirm={() => {
+          if (pendingDelete) del.mutate(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+      />
     </>
   );
 }

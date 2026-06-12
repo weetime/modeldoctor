@@ -109,6 +109,7 @@
     "empty": "暂无历史",
     "untitled": "(空)",
     "delete": "删除这条记录",
+    "deleteConfirm": "删除后无法恢复。",
     "restoreTitle": "恢复会话",
     "restoreConfirm": "用这条记录覆盖当前会话？",
     "restoreAction": "恢复",
@@ -143,7 +144,10 @@
     "batchPlaceholder": "每行一条输入。",
     "send": "发送",
     "sending": "发送中…",
-    "tabs": { "chart": "图表", "json": "JSON" },
+    "tabs": {
+      "chart": "图表",
+      "json": "JSON"
+    },
     "chart": {
       "title": "PCA 散点",
       "minThree": "≥ 3 条输入才能可视化。",
@@ -157,7 +161,10 @@
       "encodingFormat": "编码格式",
       "dimensions": "维度"
     },
-    "demoInputs": ["敏捷的棕色狐狸跳过了那只懒狗。", "大语言模型可以把文本编码成稠密向量。"]
+    "demoInputs": [
+      "敏捷的棕色狐狸跳过了那只懒狗。",
+      "大语言模型可以把文本编码成稠密向量。"
+    ]
   },
   "image": {
     "title": "图像",
@@ -232,7 +239,10 @@
   "audio": {
     "title": "音频",
     "subtitle": "文本转语音 (TTS) 或语音转文本 (STT)。",
-    "tabs": { "tts": "TTS", "stt": "STT" },
+    "tabs": {
+      "tts": "TTS",
+      "stt": "STT"
+    },
     "tts": {
       "title": "文本转语音",
       "inputLabel": "文本",
@@ -242,7 +252,9 @@
       "sending": "生成中…",
       "autoPlay": "自动播放",
       "playHistoryEntry": "播放录音",
-      "errors": { "send": "TTS 失败：{{message}}" },
+      "errors": {
+        "send": "TTS 失败：{{message}}"
+      },
       "params": {
         "voice": "声音",
         "format": "格式",
@@ -268,7 +280,9 @@
       "copy": "复制",
       "copied": "已复制",
       "resultLabel": "转录结果",
-      "errors": { "transcribe": "转录失败：{{message}}" },
+      "errors": {
+        "transcribe": "转录失败：{{message}}"
+      },
       "recorder": {
         "start": "录音",
         "stop": "停止",

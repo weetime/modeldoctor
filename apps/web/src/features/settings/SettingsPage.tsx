@@ -2,17 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { PageHeader } from "@/components/common/page-header";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -33,7 +24,6 @@ import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./set
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
-  const { t: tc } = useTranslation("common");
   const { t: tPromDs } = useTranslation("prometheus-datasources");
   const theme = useThemeStore((s) => s.mode);
   const setTheme = useThemeStore((s) => s.setMode);
@@ -165,32 +155,22 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("data.clearTestData")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("data.clearTestDataWarning")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={onClearTestData}>
-              {t("data.clearTestDataConfirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("data.resetState")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("data.resetWarning")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={onResetAll}>{t("data.resetConfirm")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={clearOpen}
+        onOpenChange={setClearOpen}
+        title={t("data.clearTestData")}
+        description={t("data.clearTestDataWarning")}
+        confirmLabel={t("data.clearTestDataConfirm")}
+        onConfirm={onClearTestData}
+      />
+      <ConfirmDeleteDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title={t("data.resetState")}
+        description={t("data.resetWarning")}
+        confirmLabel={t("data.resetConfirm")}
+        onConfirm={onResetAll}
+      />
     </>
   );
 }
