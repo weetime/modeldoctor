@@ -3,18 +3,8 @@ import { Eye, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { PageHeader } from "@/components/common/page-header";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
@@ -56,6 +46,7 @@ export function ReportDetailPage() {
   const synth = useSynthesizeSavedCompare(id);
   const del = useDeleteSavedCompare();
   const [narrativeOverride, setNarrativeOverride] = useState<CompareNarrative | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const generateParam = searchParams.get("generate");
   const autoGenFired = useRef(false);
@@ -185,28 +176,23 @@ export function ReportDetailPage() {
                 </Button>
               </>
             ) : null}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" className="text-destructive hover:text-destructive">
-                  <Trash2 className="mr-1.5 h-4 w-4" />
-                  {t("savedCompare.detail.deleteTitle")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("savedCompare.detail.deleteTitle")}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("savedCompare.detail.deleteBody")}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("savedCompare.dialog.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete} disabled={del.isPending}>
-                    {t("savedCompare.detail.deleteTitle")}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              {t("savedCompare.detail.deleteTitle")}
+            </Button>
+            <ConfirmDeleteDialog
+              open={deleteOpen}
+              onOpenChange={setDeleteOpen}
+              title={t("savedCompare.detail.deleteTitle")}
+              description={t("savedCompare.detail.deleteBody")}
+              confirmLabel={t("savedCompare.detail.deleteTitle")}
+              pending={del.isPending}
+              onConfirm={onDelete}
+            />
           </div>
         }
       />

@@ -331,6 +331,8 @@ describe("BenchmarkDetailPage", () => {
     render(<BenchmarkDetailPage />, { wrapper: Wrapper });
     const deleteBtn = await screen.findByRole("button", { name: /^Delete$|^删除$/ });
     await user.click(deleteBtn);
+    // The shared confirm dialog requires typing DELETE before the action arms.
+    await user.type(await screen.findByPlaceholderText("DELETE"), "DELETE");
     const confirm = await screen.findByRole("button", { name: /^Delete$|^确认删除$/ });
     await user.click(confirm);
     await waitFor(() => expect(api.del).toHaveBeenCalledWith("/api/benchmarks/r1"));

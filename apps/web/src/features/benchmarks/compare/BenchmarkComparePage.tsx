@@ -244,6 +244,13 @@ export function BenchmarkComparePage() {
               narrative={null}
               context={null}
               environmentLines={environmentLines}
+              onReorder={(newIds) => {
+                // URL ids order is the single source of run order — tables,
+                // charts and SaveCompareDialog all follow it via useQueries.
+                const sp = new URLSearchParams(searchParams);
+                sp.set("ids", newIds.join(","));
+                setSearchParams(sp, { replace: true });
+              }}
             />
             <SaveCompareDialog
               open={saveOpen}

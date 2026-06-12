@@ -1,9 +1,11 @@
 import type { FigureRefId } from "@modeldoctor/contracts";
 import { memo } from "react";
+import { assignRunColors } from "@/components/charts/_shared";
 import {
   StageBarChart,
   type StageBarDatum,
   type StageBarLabelColors,
+  type StageBarSeries,
 } from "@/components/charts/StageBarChart";
 import { availableFigureRefIds, summarizeForPrompt } from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
@@ -26,6 +28,22 @@ const REPORT_LABEL_COLORS: StageBarLabelColors = {
   baseline: "#59636e",
 };
 
+/** Fixed light palette for the always-light report paper — mirrors
+ * FALLBACK_CHART_TOKENS.palette (theme.ts) so report figures match the
+ * in-app light theme regardless of the viewer's dark/light mode. */
+const REPORT_PALETTE = [
+  "hsl(98, 38%, 46%)",
+  "hsl(43, 81%, 47%)",
+  "hsl(190, 65%, 50%)",
+  "hsl(22, 85%, 48%)",
+  "hsl(4, 75%, 47%)",
+  "hsl(208, 73%, 44%)",
+  "hsl(308, 47%, 45%)",
+  "hsl(260, 28%, 42%)",
+] as const;
+
+const PERCENTILES = ["p50", "p90", "p99"] as const;
+
 /** Index of the baseline stage within `rows` (preserving their order). Falls
  * back to the first stage when no baseline is set or it was filtered out. */
 function baselineIndexOf(rows: { r: ReportRun }[], baselineId?: string | null): number | undefined {
@@ -35,6 +53,15 @@ function baselineIndexOf(rows: { r: ReportRun }[], baselineId?: string | null): 
     if (i >= 0) return i;
   }
   return 0;
+}
+
+/** Run id of the baseline series for run-pivoted figures. Same fallback
+ * semantics as {@link baselineIndexOf}: first run when unset/filtered out. */
+function baselineKeyOf(rows: { r: ReportRun }[], baselineId?: string | null): string | undefined {
+  const i = baselineIndexOf(rows, baselineId);
+  // `baselineIndexOf` already returns undefined for empty rows, but guard the
+  // index access explicitly so the safety is local and obvious.
+  return i !== undefined && rows[i] ? rows[i].r.id : undefined;
 }
 
 /**
@@ -66,6 +93,11 @@ export const FigureRenderer = memo(function FigureRenderer({
   const summaries = runs
     .filter((r) => r.benchmark !== null)
     .map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));
+  // One identity color per run, shared by every figure in the report.
+  const colorMap = assignRunColors(
+    summaries.map(({ r }) => r.id),
+    REPORT_PALETTE,
+  );
 
   const available = availableFigureRefIds(runs.map((r) => r.summaryMetrics));
   if (!available.has(refId)) {
@@ -95,6 +127,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         title="Throughput"
         data={data}
         series={[{ key: "qps", label: "QPS", color: "#2980b9", decimals: 2, higherIsBetter: true }]}
+        barColors={summaries.map(({ r }) => colorMap[r.id])}
         yLabel="req/s"
         baselineIndex={baselineIndexOf(summaries, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
@@ -110,58 +143,56 @@ export const FigureRenderer = memo(function FigureRenderer({
         title="Error rate"
         data={data}
         series={[{ key: "err", label: "%", color: "#c0392b", decimals: 1, higherIsBetter: false }]}
+        barColors={summaries.map(({ r }) => colorMap[r.id])}
         yLabel="%"
         baselineIndex={baselineIndexOf(summaries, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
     );
   } else if (refId === "stage-bars-ttft-p95") {
+    // Pivoted: x = percentile, series = run — run colors match every other figure.
     const rows = summaries.filter(({ s }) => s.ttft);
-    const data: StageBarDatum[] = rows.map(({ r, s }) => ({
-      stage: r.stageLabel,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p50: s.ttft!.p50 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p90: s.ttft!.p90 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p99: s.ttft!.p99 ?? 0,
+    const data: StageBarDatum[] = PERCENTILES.map((p) => ({
+      stage: p,
+      ...Object.fromEntries(rows.map(({ r, s }) => [r.id, s.ttft?.[p] ?? 0])),
+    }));
+    const series: StageBarSeries[] = rows.map(({ r }) => ({
+      key: r.id,
+      label: r.stageLabel,
+      color: colorMap[r.id],
+      decimals: 0,
+      higherIsBetter: false,
     }));
     chart = (
       <StageBarChart
         title="TTFT percentiles"
-        data={data}
-        series={[
-          { key: "p50", label: "p50", color: "#27ae60", decimals: 0, higherIsBetter: false },
-          { key: "p90", label: "p90", color: "#e67e22", decimals: 0, higherIsBetter: false },
-          { key: "p99", label: "p99", color: "#c0392b", decimals: 0, higherIsBetter: false },
-        ]}
+        data={rows.length > 0 ? data : []}
+        series={series}
         yLabel="ms"
-        baselineIndex={baselineIndexOf(rows, baselineId)}
+        baselineSeriesKey={baselineKeyOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
     );
   } else if (refId === "stage-bars-e2e-p95") {
     const rows = summaries.filter(({ s }) => s.e2e);
-    const data: StageBarDatum[] = rows.map(({ r, s }) => ({
-      stage: r.stageLabel,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p50: s.e2e!.p50 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p90: s.e2e!.p90 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p99: s.e2e!.p99 ?? 0,
+    const data: StageBarDatum[] = PERCENTILES.map((p) => ({
+      stage: p,
+      ...Object.fromEntries(rows.map(({ r, s }) => [r.id, s.e2e?.[p] ?? 0])),
+    }));
+    const series: StageBarSeries[] = rows.map(({ r }) => ({
+      key: r.id,
+      label: r.stageLabel,
+      color: colorMap[r.id],
+      decimals: 0,
+      higherIsBetter: false,
     }));
     chart = (
       <StageBarChart
         title="E2E latency percentiles"
-        data={data}
-        series={[
-          { key: "p50", label: "p50", color: "#27ae60", decimals: 0, higherIsBetter: false },
-          { key: "p90", label: "p90", color: "#e67e22", decimals: 0, higherIsBetter: false },
-          { key: "p99", label: "p99", color: "#c0392b", decimals: 0, higherIsBetter: false },
-        ]}
+        data={rows.length > 0 ? data : []}
+        series={series}
         yLabel="ms"
-        baselineIndex={baselineIndexOf(rows, baselineId)}
+        baselineSeriesKey={baselineKeyOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
     );

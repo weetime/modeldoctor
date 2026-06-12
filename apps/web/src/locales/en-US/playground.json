@@ -109,6 +109,7 @@
     "empty": "No history",
     "untitled": "(empty)",
     "delete": "Delete this entry",
+    "deleteConfirm": "This entry will be permanently removed.",
     "restoreTitle": "Restore session",
     "restoreConfirm": "Overwrite the current session with this entry?",
     "restoreAction": "Restore",
@@ -143,7 +144,10 @@
     "batchPlaceholder": "One input per line.",
     "send": "Send",
     "sending": "Sending…",
-    "tabs": { "chart": "Chart", "json": "JSON" },
+    "tabs": {
+      "chart": "Chart",
+      "json": "JSON"
+    },
     "chart": {
       "title": "PCA scatter",
       "minThree": "≥ 3 inputs required to visualise.",
@@ -235,7 +239,10 @@
   "audio": {
     "title": "Audio",
     "subtitle": "Synthesize speech (TTS) or transcribe audio (STT).",
-    "tabs": { "tts": "TTS", "stt": "STT" },
+    "tabs": {
+      "tts": "TTS",
+      "stt": "STT"
+    },
     "tts": {
       "title": "Text to speech",
       "inputLabel": "Text",
@@ -245,7 +252,9 @@
       "sending": "Generating…",
       "autoPlay": "Auto-play",
       "playHistoryEntry": "Play recorded audio",
-      "errors": { "send": "TTS failed: {{message}}" },
+      "errors": {
+        "send": "TTS failed: {{message}}"
+      },
       "params": {
         "voice": "Voice",
         "format": "Format",
@@ -271,7 +280,9 @@
       "copy": "Copy",
       "copied": "Copied to clipboard",
       "resultLabel": "Transcription",
-      "errors": { "transcribe": "Transcription failed: {{message}}" },
+      "errors": {
+        "transcribe": "Transcription failed: {{message}}"
+      },
       "recorder": {
         "start": "Record",
         "stop": "Stop",

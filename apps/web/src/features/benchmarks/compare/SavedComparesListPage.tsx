@@ -3,19 +3,10 @@ import { ArrowRight, FileText, ListChecks, MoreHorizontal, Search, Trash2 } from
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RelativeTime } from "@/components/common/relative-time";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -176,30 +167,20 @@ export function SavedComparesListPage() {
         )}
       </div>
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={pendingDeleteId !== null}
         onOpenChange={(o) => {
           if (!o) setPendingDeleteId(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("savedCompare.detail.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("savedCompare.detail.deleteBody")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("savedCompare.dialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDeleteId) del.mutate(pendingDeleteId);
-                setPendingDeleteId(null);
-              }}
-            >
-              {t("savedCompare.detail.deleteTitle")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("savedCompare.detail.deleteTitle")}
+        description={t("savedCompare.detail.deleteBody")}
+        confirmLabel={t("savedCompare.detail.deleteTitle")}
+        pending={del.isPending}
+        onConfirm={() => {
+          if (pendingDeleteId) del.mutate(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+      />
     </>
   );
 }

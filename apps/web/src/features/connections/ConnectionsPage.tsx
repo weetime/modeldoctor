@@ -3,19 +3,10 @@ import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { RelativeTime } from "@/components/common/relative-time";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -272,34 +263,22 @@ export function ConnectionsPage() {
         />
       ) : null}
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={pendingDelete !== null}
         onOpenChange={(o) => {
           if (!o) setPendingDelete(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("delete.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("delete.body", { name: pendingDelete?.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDelete) {
-                  deleteMut.mutate(pendingDelete.id);
-                }
-                setPendingDelete(null);
-              }}
-            >
-              {t("delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("delete.title")}
+        description={t("delete.body", { name: pendingDelete?.name })}
+        confirmLabel={t("delete.confirm")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (pendingDelete) {
+            deleteMut.mutate(pendingDelete.id);
+          }
+          setPendingDelete(null);
+        }}
+      />
     </>
   );
 }

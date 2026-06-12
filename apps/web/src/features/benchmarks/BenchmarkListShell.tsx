@@ -19,19 +19,10 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -233,7 +224,19 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     disabled={compareDisabledReason !== null}
                     onClick={() => {
                       if (compareDisabledReason !== null) return;
-                      navigate(`/benchmarks/compare?ids=${[...selected].join(",")}`);
+                      // Stable, human-meaningful default order: natural-sort by
+                      // name so "L1 < L2 < L3" and "c20 < c40 < c160" — Set
+                      // insertion (click) order reads as random on the compare page.
+                      const nameById = new Map(items.map((r) => [r.id, r.name]));
+                      const sortedIds = [...selected].sort((a, b) => {
+                        const na = nameById.get(a) ?? a;
+                        const nb = nameById.get(b) ?? b;
+                        return na.localeCompare(nb, "zh-Hans-CN", {
+                          numeric: true,
+                          sensitivity: "base",
+                        });
+                      });
+                      navigate(`/benchmarks/compare?ids=${sortedIds.join(",")}`);
                     }}
                   >
                     {t("compareButton", { n: selected.size })}
@@ -468,39 +471,28 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
         )}
       </div>
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={pendingDeleteId !== null}
         onOpenChange={(o) => {
           if (!o) setPendingDeleteId(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("detail.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("detail.delete.confirmBody")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("detail.baseline.dialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!pendingDeleteId) return;
-                deleteBenchmark.mutate(pendingDeleteId, {
-                  onSuccess: () => {
-                    setPendingDeleteId(null);
-                    toast.success(t("detail.delete.success"));
-                  },
-                  onError: () => {
-                    toast.error(t("detail.delete.errors.generic"));
-                  },
-                });
-              }}
-              disabled={deleteBenchmark.isPending}
-            >
-              {t("detail.delete.confirmAction")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("detail.delete.confirmTitle")}
+        description={t("detail.delete.confirmBody")}
+        confirmLabel={t("detail.delete.confirmAction")}
+        pending={deleteBenchmark.isPending}
+        onConfirm={() => {
+          if (!pendingDeleteId) return;
+          deleteBenchmark.mutate(pendingDeleteId, {
+            onSuccess: () => {
+              setPendingDeleteId(null);
+              toast.success(t("detail.delete.success"));
+            },
+            onError: () => {
+              toast.error(t("detail.delete.errors.generic"));
+            },
+          });
+        }}
+      />
 
       <SaveAsTemplateDialog
         benchmark={saveTplBenchmark}

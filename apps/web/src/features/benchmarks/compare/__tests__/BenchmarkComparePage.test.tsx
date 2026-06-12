@@ -143,6 +143,20 @@ describe("BenchmarkComparePage", () => {
     await waitFor(() => expect(screen.getAllByText("d").length).toBeGreaterThan(0));
   });
 
+  it("renders one drag handle per run in the test matrix (reorder wired)", async () => {
+    // Real pointer DnD is not reproducible in jsdom (zero-sized rects), so
+    // assert the sortable wiring instead: the ad-hoc compare page passes
+    // onReorder, which renders a grip handle per matrix row. The move math
+    // itself is @dnd-kit's arrayMove; URL write-back is a one-liner.
+    mockApiGet({ a: makeBenchmark("a"), b: makeBenchmark("b") });
+    renderPage("/benchmarks/compare?ids=a,b");
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /Drag to reorder|拖拽调整顺序/ })).toHaveLength(
+        2,
+      ),
+    );
+  });
+
   it("shows mixed-tools alert and no grid when tools differ", async () => {
     mockApiGet({ a: makeBenchmark("a", "guidellm"), b: makeBenchmark("b", "vegeta") });
     renderPage("/benchmarks/compare?ids=a,b");

@@ -3,16 +3,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,7 +19,6 @@ import { useChannels, useDeleteChannel, useTestChannel } from "@/features/notifi
 export function MeNotificationsPage(): JSX.Element {
   const { t: tMe } = useTranslation("me");
   const { t: tn } = useTranslation("notifications");
-  const { t: tc } = useTranslation("common");
   const { data = [] } = useChannels();
   const del = useDeleteChannel();
   const testCh = useTestChannel();
@@ -121,25 +111,18 @@ export function MeNotificationsPage(): JSX.Element {
         channel={editing ?? null}
       />
 
-      <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tn("delete.channelTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{tn("delete.channelDescription")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (toDelete) await del.mutateAsync(toDelete.id);
-                setToDelete(null);
-              }}
-            >
-              {tn("channel.deleteButton")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!toDelete}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title={tn("delete.channelTitle")}
+        description={tn("delete.channelDescription")}
+        confirmLabel={tn("channel.deleteButton")}
+        pending={del.isPending}
+        onConfirm={async () => {
+          if (toDelete) await del.mutateAsync(toDelete.id);
+          setToDelete(null);
+        }}
+      />
     </>
   );
 }

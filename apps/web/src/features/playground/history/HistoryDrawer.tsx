@@ -2,6 +2,7 @@ import { History, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { StoreApi, UseBoundStore } from "zustand";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,9 @@ export function HistoryDrawer<S>({
   // Pending restore target — when set, the AlertDialog is open. Confirm calls
   // restore(); cancel just clears the target.
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
+  // Pending delete target — the row trash button arms it; the shared
+  // type-DELETE dialog confirms before removeEntry() runs.
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   return (
     <>
@@ -99,7 +103,7 @@ export function HistoryDrawer<S>({
                   onClick={(ev) => {
                     ev.preventDefault();
                     ev.stopPropagation();
-                    removeEntry(e.id);
+                    setPendingDeleteId(e.id);
                   }}
                   // Radix DropdownMenuItem decides whether to fire onSelect on
                   // pointer-up by inspecting whether pointer-down's default was
@@ -153,6 +157,19 @@ export function HistoryDrawer<S>({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmDeleteDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title={t("history.delete")}
+        description={t("history.deleteConfirm")}
+        onConfirm={() => {
+          if (pendingDeleteId) removeEntry(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+      />
     </>
   );
 }

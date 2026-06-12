@@ -344,7 +344,8 @@
       "latencyMax": "Latency max (ms)",
       "errorRate": "Error rate",
       "throughput": "Throughput (req/s)"
-    }
+    },
+    "dragHandle": "Drag to reorder"
   },
   "savedCompare": {
     "savedListLink": "Saved comparisons",

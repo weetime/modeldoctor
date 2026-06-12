@@ -61,6 +61,9 @@ describe("HistoryDrawer", () => {
     await user.click(screen.getByRole("button", { name: /history|历史/i }));
     const delBtn = await screen.findByRole("button", { name: /delete this entry|删除这条记录/i });
     await user.click(delBtn);
+    // The shared confirm dialog gates the delete on typing DELETE.
+    await user.type(await screen.findByPlaceholderText("DELETE"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete$|^删除$/i }));
     // Old entry gone, current intact
     expect(useStore.getState().list).toHaveLength(1);
     expect(useStore.getState().list[0].snapshot.text).toBe("second");

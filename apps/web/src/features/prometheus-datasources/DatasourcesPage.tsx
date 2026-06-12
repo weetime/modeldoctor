@@ -3,18 +3,9 @@ import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -215,27 +206,17 @@ export function DatasourcesPage() {
         />
       ) : null}
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={pendingDelete !== null}
         onOpenChange={(o) => {
           if (!o) setPendingDelete(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("delete.title", { name: pendingDelete?.name ?? "" })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("delete.body", { count: pendingDelete?.consumersCount ?? 0 })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("actions.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmDelete}>{t("delete.confirm")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("delete.title", { name: pendingDelete?.name ?? "" })}
+        description={t("delete.body", { count: pendingDelete?.consumersCount ?? 0 })}
+        confirmLabel={t("delete.confirm")}
+        pending={deleteMut.isPending}
+        onConfirm={onConfirmDelete}
+      />
     </>
   );
 }

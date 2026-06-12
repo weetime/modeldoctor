@@ -1,15 +1,6 @@
 import type { BenchmarkTemplate } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 
 export interface DeleteTemplateDialogProps {
   template: BenchmarkTemplate | null;
@@ -29,25 +20,14 @@ export function DeleteTemplateDialog({
   const { t } = useTranslation("benchmark-templates");
   if (!template) return null;
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t("edit.deleteConfirm.title", { name: template.name })}
-          </AlertDialogTitle>
-          <AlertDialogDescription>{t("edit.deleteConfirm.body")}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t("edit.deleteConfirm.cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={pending}
-            onClick={onConfirm}
-            className="bg-destructive hover:bg-destructive/90"
-          >
-            {t("edit.deleteConfirm.confirm")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDeleteDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("edit.deleteConfirm.title", { name: template.name })}
+      description={t("edit.deleteConfirm.body")}
+      confirmLabel={t("edit.deleteConfirm.confirm")}
+      pending={pending}
+      onConfirm={onConfirm}
+    />
   );
 }
