@@ -35,7 +35,11 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
   const { t } = useTranslation("benchmarks");
   const tokens = useChartTokens();
   const colorMap = useMemo(
-    () => assignRunColors(runs.map((r) => r.id), tokens.palette),
+    () =>
+      assignRunColors(
+        runs.map((r) => r.id),
+        tokens.palette,
+      ),
     [runs, tokens],
   );
   const summaries = runs.map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));

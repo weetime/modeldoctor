@@ -165,7 +165,11 @@ export function ReportSections({
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionMatrix")}</h2>
         <div className="overflow-x-auto rounded-md border border-border">
           {sortable ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
               <SortableContext items={runs.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                 {matrixTable}
               </SortableContext>

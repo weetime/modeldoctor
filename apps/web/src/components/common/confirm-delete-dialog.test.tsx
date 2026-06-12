@@ -56,7 +56,9 @@ describe("<ConfirmDeleteDialog>", () => {
       <ConfirmDeleteDialog open onOpenChange={() => {}} title="T" onConfirm={() => {}} />,
     );
     fireEvent.change(getKeywordInput(), { target: { value: "DELETE" } });
-    rerender(<ConfirmDeleteDialog open={false} onOpenChange={() => {}} title="T" onConfirm={() => {}} />);
+    rerender(
+      <ConfirmDeleteDialog open={false} onOpenChange={() => {}} title="T" onConfirm={() => {}} />,
+    );
     rerender(<ConfirmDeleteDialog open onOpenChange={() => {}} title="T" onConfirm={() => {}} />);
     expect(getKeywordInput().value).toBe("");
     expect(getConfirmButton()).toBeDisabled();
