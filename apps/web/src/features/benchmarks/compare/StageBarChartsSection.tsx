@@ -1,5 +1,11 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { StageBarChart, type StageBarDatum } from "@/components/charts/StageBarChart";
+import { assignRunColors, useChartTokens } from "@/components/charts/_shared";
+import {
+  StageBarChart,
+  type StageBarDatum,
+  type StageBarSeries,
+} from "@/components/charts/StageBarChart";
 import { summarizeForPrompt } from "./client-metrics";
 
 export interface StageRun {
@@ -9,10 +15,17 @@ export interface StageRun {
   summaryMetrics: unknown;
 }
 
+const PERCENTILES = ["p50", "p90", "p99"] as const;
+
 /**
  * 4-panel chart row for the SavedCompare report. Derives QPS / err% / TTFT-percentiles
  * / e2e-percentiles from each run's `summaryMetrics` blob via the client-side mirror of
  * the server prompt summarizer.
+ *
+ * Every run carries one identity color (assignRunColors over the run order),
+ * shared by all four panels: QPS / error-rate bars are colored per run, and
+ * the percentile panels are pivoted to "x = percentile, series = run" so the
+ * same run is the same color everywhere.
  *
  * Layout note: each `<StageBarChart>` already wraps itself in `rounded-md border p-4`,
  * so the parent (`ReportSections`) MUST NOT add another wrapping border around this
@@ -20,6 +33,11 @@ export interface StageRun {
  */
 export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
   const { t } = useTranslation("benchmarks");
+  const tokens = useChartTokens();
+  const colorMap = useMemo(
+    () => assignRunColors(runs.map((r) => r.id), tokens.palette),
+    [runs, tokens],
+  );
   const summaries = runs.map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));
 
   const qpsErr: StageBarDatum[] = summaries.map(({ r, s }) => ({
@@ -27,63 +45,57 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
     qps: s.throughput ?? 0,
     err: (s.errorRate ?? 0) * 100,
   }));
+  const qpsErrBarColors = summaries.map(({ r }) => colorMap[r.id]);
 
-  const ttft: StageBarDatum[] = summaries
-    .filter(({ s }) => s.ttft)
-    .map(({ r, s }) => ({
-      stage: r.stageLabel,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p50: s.ttft!.p50 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p90: s.ttft!.p90 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p99: s.ttft!.p99 ?? 0,
-    }));
+  // Pivot: one datum per percentile, one series (= one color) per run.
+  const ttftRuns = summaries.filter(({ s }) => s.ttft);
+  const ttft: StageBarDatum[] = PERCENTILES.map((p) => ({
+    stage: p,
+    ...Object.fromEntries(ttftRuns.map(({ r, s }) => [r.id, s.ttft?.[p] ?? 0])),
+  }));
+  const ttftSeries: StageBarSeries[] = ttftRuns.map(({ r }) => ({
+    key: r.id,
+    label: r.stageLabel,
+    color: colorMap[r.id],
+  }));
 
-  const e2e: StageBarDatum[] = summaries
-    .filter(({ s }) => s.e2e)
-    .map(({ r, s }) => ({
-      stage: r.stageLabel,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p50: s.e2e!.p50 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p90: s.e2e!.p90 ?? 0,
-      // biome-ignore lint/style/noNonNullAssertion: filtered above
-      p99: s.e2e!.p99 ?? 0,
-    }));
+  const e2eRuns = summaries.filter(({ s }) => s.e2e);
+  const e2e: StageBarDatum[] = PERCENTILES.map((p) => ({
+    stage: p,
+    ...Object.fromEntries(e2eRuns.map(({ r, s }) => [r.id, s.e2e?.[p] ?? 0])),
+  }));
+  const e2eSeries: StageBarSeries[] = e2eRuns.map(({ r }) => ({
+    key: r.id,
+    label: r.stageLabel,
+    color: colorMap[r.id],
+  }));
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <StageBarChart
         title={t("savedCompare.report.chartQpsTitle")}
         data={qpsErr}
-        series={[{ key: "qps", label: "QPS", color: "#2980b9" }]}
+        series={[{ key: "qps", label: "QPS", color: tokens.palette[0] }]}
+        barColors={qpsErrBarColors}
         yLabel="req/s"
       />
       <StageBarChart
         title={t("savedCompare.report.chartErrTitle")}
         data={qpsErr}
-        series={[{ key: "err", label: "%", color: "#c0392b" }]}
+        series={[{ key: "err", label: "%", color: tokens.palette[0] }]}
+        barColors={qpsErrBarColors}
         yLabel="%"
       />
       <StageBarChart
         title={t("savedCompare.report.chartTtftTitle")}
-        data={ttft}
-        series={[
-          { key: "p50", label: "p50", color: "#27ae60" },
-          { key: "p90", label: "p90", color: "#e67e22" },
-          { key: "p99", label: "p99", color: "#c0392b" },
-        ]}
+        data={ttftRuns.length > 0 ? ttft : []}
+        series={ttftSeries}
         yLabel="ms"
       />
       <StageBarChart
         title={t("savedCompare.report.chartE2eTitle")}
-        data={e2e}
-        series={[
-          { key: "p50", label: "p50", color: "#27ae60" },
-          { key: "p90", label: "p90", color: "#e67e22" },
-          { key: "p99", label: "p99", color: "#c0392b" },
-        ]}
+        data={e2eRuns.length > 0 ? e2e : []}
+        series={e2eSeries}
         yLabel="ms"
       />
     </div>
