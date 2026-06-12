@@ -5,7 +5,7 @@ import type {
   ListBenchmarksQuery,
 } from "@modeldoctor/contracts";
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { enUS, zhCN } from "date-fns/locale";
 import {
   ArrowRight,
@@ -60,7 +60,29 @@ import { StatusBadge } from "./status-display";
 
 function fmtNum(n: number | null | undefined, digits = 1): string {
   if (n == null) return "—";
-  return n.toFixed(digits);
+  const s = n.toFixed(digits);
+  // All-zero strings like "0.0000" (and "-0.0") read better as plain "0".
+  return Number(s) === 0 ? "0" : s;
+}
+
+function fmtDurationMs(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function fmtTimeRange(startIso: string, endIso: string | null): string {
+  const start = new Date(startIso);
+  const startStr = format(start, "MM-dd HH:mm:ss");
+  if (!endIso) return `${startStr} →`;
+  const end = new Date(endIso);
+  const sameDay = format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd");
+  return `${startStr} → ${format(end, sameDay ? "HH:mm:ss" : "MM-dd HH:mm:ss")}`;
 }
 
 interface BenchmarkListShellProps {
@@ -294,6 +316,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                   <TableHead className="w-10" />
                   <TableHead>{t("columns.name")}</TableHead>
                   <TableHead>{t("columns.createdAt")}</TableHead>
+                  <TableHead>{t("columns.duration")}</TableHead>
                   <TableHead>{t("columns.tool")}</TableHead>
                   <TableHead>{t("columns.connection")}</TableHead>
                   <TableHead>{t("columns.status")}</TableHead>
@@ -325,6 +348,24 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                         addSuffix: true,
                         locale: dateFnsLocale,
                       })}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {benchmark.startedAt ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="tabular-nums text-foreground">
+                            {fmtDurationMs(
+                              (benchmark.completedAt
+                                ? new Date(benchmark.completedAt).getTime()
+                                : Date.now()) - new Date(benchmark.startedAt).getTime(),
+                            )}
+                          </span>
+                          <span className="text-xs tabular-nums text-muted-foreground/70">
+                            {fmtTimeRange(benchmark.startedAt, benchmark.completedAt)}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="default">{benchmark.tool}</Badge>
