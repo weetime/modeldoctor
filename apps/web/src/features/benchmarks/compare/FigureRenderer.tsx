@@ -59,7 +59,9 @@ function baselineIndexOf(rows: { r: ReportRun }[], baselineId?: string | null): 
  * semantics as {@link baselineIndexOf}: first run when unset/filtered out. */
 function baselineKeyOf(rows: { r: ReportRun }[], baselineId?: string | null): string | undefined {
   const i = baselineIndexOf(rows, baselineId);
-  return i === undefined ? undefined : rows[i].r.id;
+  // `baselineIndexOf` already returns undefined for empty rows, but guard the
+  // index access explicitly so the safety is local and obvious.
+  return i !== undefined && rows[i] ? rows[i].r.id : undefined;
 }
 
 /**

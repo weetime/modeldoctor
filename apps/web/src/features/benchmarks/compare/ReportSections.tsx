@@ -45,6 +45,13 @@ export interface ReportSectionsProps {
   onReorder?: (orderedIds: string[]) => void;
 }
 
+// Static sensor options hoisted to module scope: dnd-kit's `useSensor` depends
+// on the options object by reference, so inline literals would recreate the
+// sensors on every render (disruptive across the URL-driven re-render a drop
+// triggers). These never change, so a shared reference is correct.
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
+const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+
 function MatrixRowCells({ r, t }: { r: ReportRun; t: (key: string) => string }) {
   return (
     <>
@@ -118,8 +125,8 @@ export function ReportSections({
   const livingRuns = runs.filter((r) => r.benchmark !== null);
   const sortable = onReorder !== undefined;
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS),
   );
 
   function handleDragEnd(event: DragEndEvent) {

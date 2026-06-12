@@ -227,9 +227,10 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                       // Stable, human-meaningful default order: natural-sort by
                       // name so "L1 < L2 < L3" and "c20 < c40 < c160" — Set
                       // insertion (click) order reads as random on the compare page.
+                      const nameById = new Map(items.map((r) => [r.id, r.name]));
                       const sortedIds = [...selected].sort((a, b) => {
-                        const na = items.find((r) => r.id === a)?.name ?? a;
-                        const nb = items.find((r) => r.id === b)?.name ?? b;
+                        const na = nameById.get(a) ?? a;
+                        const nb = nameById.get(b) ?? b;
                         return na.localeCompare(nb, "zh-Hans-CN", {
                           numeric: true,
                           sensitivity: "base",

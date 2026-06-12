@@ -68,6 +68,7 @@ export function ConfirmDeleteDialog({
             autoComplete="off"
             spellCheck={false}
             aria-label={t("deleteConfirm.placeholder")}
+            disabled={pending}
           />
         </div>
         <AlertDialogFooter>
