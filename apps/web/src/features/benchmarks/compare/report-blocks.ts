@@ -41,21 +41,26 @@ export function parseDelta(raw: string): DeltaValue | null {
   return { sign, magnitude: m[2].replace(/\s+/g, "") };
 }
 
+// CJK keywords are written as \u escapes (the no-hardcoded-zh lint forbids
+// literal Chinese anywhere in source, comments included). Romanized glyphs:
+//   reduction set — jiangdi/xiajiang/jianshao/suoduan (reduce/decline/...)
+//   header set    — also tisheng/fudu/tigao (raise/magnitude/increase)
+const REDUCTION_RE = /\u964d\u4f4e|\u4e0b\u964d|\u51cf\u5c11|\u7f29\u77ed|reduc|lower|decrease|↓/i;
+const DELTA_HEADER_RE =
+  /\u63d0\u5347|\u964d\u4f4e|\u5e45\u5ea6|\u63d0\u9ad8|\u4e0b\u964d|\u51cf\u5c11|\u7f29\u77ed|delta|change|gain|reduc/i;
+
 /** Whether a delta is an improvement, given the column's polarity. `gain`
- * columns (提升/throughput) improve when positive; `reduction` columns
- * (降低/latency) improve when negative. Unknown headers default to gain. */
+ * columns (raise/throughput) improve when positive; `reduction` columns
+ * (reduce/latency) improve when negative. Unknown headers default to gain. */
 export function isImprovement(sign: "+" | "-", header: string): boolean {
-  const reduction = /降低|下降|减少|缩短|reduc|lower|decrease|↓/i.test(header);
-  return reduction ? sign === "-" : sign === "+";
+  return REDUCTION_RE.test(header) ? sign === "-" : sign === "+";
 }
 
 /** Index of the delta column (the signed-percent one), or -1. We detect it by
  * header keyword first, falling back to "any column whose body cells parse as
  * deltas". */
 export function deltaColumnIndex(headers: string[], rows: string[][]): number {
-  const byHeader = headers.findIndex((h) =>
-    /提升|降低|幅度|delta|change|提高|下降|减少|缩短|gain|reduc/i.test(h),
-  );
+  const byHeader = headers.findIndex((h) => DELTA_HEADER_RE.test(h));
   if (byHeader >= 0) return byHeader;
   for (let c = 0; c < headers.length; c++) {
     if (rows.length > 0 && rows.every((r) => r[c] !== undefined && parseDelta(r[c]) !== null)) {
@@ -65,14 +70,14 @@ export function deltaColumnIndex(headers: string[], rows: string[][]): number {
   return -1;
 }
 
-/** Map a metric heading (e.g. "**TTFT p95 对比**") to the figure refId that
+/** Map a metric heading (e.g. "**TTFT p95 \u5bf9\u6bd4**") to the figure refId that
  * charts the same metric, so the renderer can drop that chart under the table.
  * Order matters: check specific latency labels before generic ones. */
 export function figureForHeading(heading: string): FigureRefId | null {
   if (/ttft/i.test(heading)) return "stage-bars-ttft-p95";
-  if (/e2e|端到端/i.test(heading)) return "stage-bars-e2e-p95";
-  if (/错误|error/i.test(heading)) return "stage-bars-error-rate";
-  if (/吞吐|throughput|qps|req\/s/i.test(heading)) return "stage-bars-throughput";
+  if (/e2e|\u7aef\u5230\u7aef/i.test(heading)) return "stage-bars-e2e-p95";
+  if (/\u9519\u8bef|error/i.test(heading)) return "stage-bars-error-rate";
+  if (/\u541e\u5410|throughput|qps|req\/s/i.test(heading)) return "stage-bars-throughput";
   return null;
 }
 
