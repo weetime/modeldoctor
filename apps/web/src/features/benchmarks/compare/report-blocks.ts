@@ -49,10 +49,24 @@ const REDUCTION_RE = /\u964d\u4f4e|\u4e0b\u964d|\u51cf\u5c11|\u7f29\u77ed|reduc|
 const DELTA_HEADER_RE =
   /\u63d0\u5347|\u964d\u4f4e|\u5e45\u5ea6|\u63d0\u9ad8|\u4e0b\u964d|\u51cf\u5c11|\u7f29\u77ed|delta|change|gain|reduc/i;
 
-/** Whether a delta is an improvement, given the column's polarity. `gain`
- * columns (raise/throughput) improve when positive; `reduction` columns
- * (reduce/latency) improve when negative. Unknown headers default to gain. */
-export function isImprovement(sign: "+" | "-", header: string): boolean {
+/** Metrics where a lower value is better — latency + error rate. Mirrors the
+ * `higherIsBetter: false` flags the same charts carry in FigureRenderer. */
+const LOWER_IS_BETTER: ReadonlySet<FigureRefId> = new Set<FigureRefId>([
+  "stage-bars-ttft-p95",
+  "stage-bars-e2e-p95",
+  "stage-bars-error-rate",
+]);
+
+/** Whether a delta is an improvement. The table's `metric` is the primary
+ * polarity source (authoritative, same as the chart's higherIsBetter); a
+ * generic header like "Delta"/"magnitude" carries no direction, so without a metric
+ * we fall back to reduction-keyword detection, then default to gain. */
+export function isImprovement(
+  sign: "+" | "-",
+  header: string,
+  metric?: FigureRefId | null,
+): boolean {
+  if (metric) return LOWER_IS_BETTER.has(metric) ? sign === "-" : sign === "+";
   return REDUCTION_RE.test(header) ? sign === "-" : sign === "+";
 }
 

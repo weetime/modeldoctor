@@ -32,7 +32,7 @@ export function DeltaTable({ table }: { table: ParsedTable }) {
               if (ci === deltaCol) {
                 const d = parseDelta(cell);
                 if (d) {
-                  const good = isImprovement(d.sign, deltaHeader);
+                  const good = isImprovement(d.sign, deltaHeader, table.metric);
                   return (
                     // biome-ignore lint/suspicious/noArrayIndexKey: positional
                     <td key={ci} className="pr-delta-col">

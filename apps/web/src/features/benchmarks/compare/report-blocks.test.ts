@@ -38,6 +38,21 @@ describe("isImprovement", () => {
     expect(isImprovement("+", "Δ")).toBe(true);
     expect(isImprovement("-", "Δ")).toBe(false);
   });
+
+  it("uses the metric's polarity over a generic/ambiguous header", () => {
+    // Header carries no direction; metric decides. Latency/error = lower better.
+    expect(isImprovement("-", "幅度", "stage-bars-ttft-p95")).toBe(true);
+    expect(isImprovement("+", "Δ", "stage-bars-ttft-p95")).toBe(false);
+    expect(isImprovement("-", "Change", "stage-bars-error-rate")).toBe(true);
+    // Throughput = higher better.
+    expect(isImprovement("+", "幅度", "stage-bars-throughput")).toBe(true);
+    expect(isImprovement("-", "Δ", "stage-bars-throughput")).toBe(false);
+  });
+
+  it("metric overrides even a misleading header keyword", () => {
+    // header says 提升 (gain) but metric is latency → a drop is still good.
+    expect(isImprovement("-", "提升幅度", "stage-bars-ttft-p95")).toBe(true);
+  });
 });
 
 describe("deltaColumnIndex", () => {
