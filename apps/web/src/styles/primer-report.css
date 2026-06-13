@@ -339,6 +339,31 @@
   border-bottom: none;
 }
 
+/* ─── Delta cells (triangle + good/bad color) ───────────────────────────── */
+.primer-report .pr-sec td.pr-delta-col,
+.primer-report .pr-sec th.pr-delta-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.primer-report .pr-delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--pr-mono);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.primer-report .pr-delta-tri {
+  font-size: 0.78em;
+  line-height: 1;
+}
+.primer-report .pr-delta-good {
+  color: var(--pr-success-fg);
+}
+.primer-report .pr-delta-bad {
+  color: var(--pr-danger-fg);
+}
+
 /* ─── Figure embeds ─────────────────────────────────────────────────────── */
 .primer-report .pr-figure {
   margin: 16px 0;

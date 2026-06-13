@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { Link } from "react-router-dom";
 import remarkGfm from "remark-gfm";
+import { DeltaTable } from "./DeltaTable";
 import { FigureRenderer } from "./FigureRenderer";
 import type { ReportRun } from "./ReportSections";
+import { parseSectionBlocks } from "./report-blocks";
 
 export interface SavedCompareReportProps {
   narrative: CompareNarrative;
@@ -172,26 +174,65 @@ export function SavedCompareReport({
             </div>
           ) : null}
 
-          {/* Sections */}
-          {sections.map((s) => (
-            <section key={s.id} className="pr-sec" id={`pr-section-${s.id}`}>
-              <h2>
-                <span className="pr-num">{s.num}</span>
-                {s.title}
-              </h2>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{s.bodyMarkdown}</ReactMarkdown>
-              {(figuresBySection.get(s.id) ?? []).map((f) => (
-                <FigureRenderer
-                  key={f.id}
-                  refId={f.refId}
-                  runs={runs}
-                  caption={f.caption}
-                  figureNumber={nextFigureNumber()}
-                  baselineId={baselineId}
-                />
-              ))}
-            </section>
-          ))}
+          {/* Sections — each table renders next to the chart for the same
+              metric (paired via the table's heading), so TTFT table + TTFT
+              trend sit together rather than all-tables-then-all-charts. */}
+          {sections.map((s) => {
+            const figures = figuresBySection.get(s.id) ?? [];
+            const blocks = parseSectionBlocks(s.bodyMarkdown);
+            const usedFigureIds = new Set<string>();
+            return (
+              <section key={s.id} className="pr-sec" id={`pr-section-${s.id}`}>
+                <h2>
+                  <span className="pr-num">{s.num}</span>
+                  {s.title}
+                </h2>
+                {blocks.map((b, i) => {
+                  if (b.kind === "md") {
+                    return (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: blocks are positional
+                      <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+                        {b.text}
+                      </ReactMarkdown>
+                    );
+                  }
+                  // Table block: render it, then the matching metric chart inline.
+                  const fig = b.table.metric
+                    ? figures.find((f) => f.refId === b.table.metric && !usedFigureIds.has(f.id))
+                    : undefined;
+                  if (fig) usedFigureIds.add(fig.id);
+                  return (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: blocks are positional
+                    <div key={i}>
+                      <DeltaTable table={b.table} />
+                      {fig ? (
+                        <FigureRenderer
+                          refId={fig.refId}
+                          runs={runs}
+                          caption={fig.caption}
+                          figureNumber={nextFigureNumber()}
+                          baselineId={baselineId}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
+                {/* Any figures not paired to a table fall back to the section end. */}
+                {figures
+                  .filter((f) => !usedFigureIds.has(f.id))
+                  .map((f) => (
+                    <FigureRenderer
+                      key={f.id}
+                      refId={f.refId}
+                      runs={runs}
+                      caption={f.caption}
+                      figureNumber={nextFigureNumber()}
+                      baselineId={baselineId}
+                    />
+                  ))}
+              </section>
+            );
+          })}
 
           {/* Data source — which benchmarks this report is built from. Identity
               columns only (no metrics); names deep-link to the benchmark detail.
