@@ -92,6 +92,11 @@ export function figureForHeading(heading: string): FigureRefId | null {
   if (/e2e|\u7aef\u5230\u7aef/i.test(heading)) return "stage-bars-e2e-p95";
   if (/\u9519\u8bef|error/i.test(heading)) return "stage-bars-error-rate";
   if (/\u541e\u5410|throughput|qps|req\/s/i.test(heading)) return "stage-bars-throughput";
+  // Prefix-cache headings. \u547d\u4e2d=hit, \u526f\u672c=replica/pod,
+  // \u5360\u6bd4=share. Check top-pod before hit so "top pod share" doesn't
+  // get swallowed by a generic hit match.
+  if (/top.?pod|\u526f\u672c|\u5360\u6bd4/i.test(heading)) return "stage-bars-top-pod-share";
+  if (/\u547d\u4e2d|hit.?rate|cache.?hit/i.test(heading)) return "stage-bars-prefix-cache-hit";
   return null;
 }
 

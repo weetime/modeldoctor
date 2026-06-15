@@ -85,6 +85,9 @@ export interface HydratedBenchmarkRef {
   tool?: string;
   scenario?: string;
   summaryMetrics?: unknown;
+  /** serverMetrics blob — carries serverMetrics.prefixCache for prefix-cache
+   * figures (hit rate / top-pod share) in the compare report. */
+  serverMetrics?: unknown;
   params?: unknown;
   createdAt?: string;
 }

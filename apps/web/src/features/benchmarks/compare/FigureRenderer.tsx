@@ -7,7 +7,7 @@ import {
   type StageBarLabelColors,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
-import { availableFigureRefIds, summarizeForPrompt } from "./client-metrics";
+import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
 
 export interface FigureRendererProps {
@@ -99,7 +99,12 @@ export const FigureRenderer = memo(function FigureRenderer({
     REPORT_PALETTE,
   );
 
-  const available = availableFigureRefIds(runs.map((r) => r.summaryMetrics));
+  const available = availableFigureRefIds(
+    runs.map((r) => ({
+      summaryMetrics: r.summaryMetrics,
+      serverMetrics: r.benchmark?.serverMetrics,
+    })),
+  );
   if (!available.has(refId)) {
     return (
       <figure className="pr-figure">
@@ -193,6 +198,46 @@ export const FigureRenderer = memo(function FigureRenderer({
         series={series}
         yLabel="ms"
         baselineSeriesKey={baselineKeyOf(rows, baselineId)}
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "stage-bars-prefix-cache-hit") {
+    const rows = summaries
+      .map(({ r }) => ({ r, pc: readPrefixCache(r.benchmark?.serverMetrics) }))
+      .filter((x) => x.pc !== null);
+    const data: StageBarDatum[] = rows.map(({ r, pc }) => ({
+      stage: r.stageLabel,
+      hit: pc?.hitRatePct ?? 0,
+    }));
+    chart = (
+      <StageBarChart
+        title="Prefix cache hit rate"
+        data={data}
+        series={[{ key: "hit", label: "%", color: "#1a7f37", decimals: 1, higherIsBetter: true }]}
+        barColors={rows.map(({ r }) => colorMap[r.id])}
+        yLabel="%"
+        baselineIndex={baselineIndexOf(rows, baselineId)}
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "stage-bars-top-pod-share") {
+    const rows = summaries
+      .map(({ r }) => ({ r, pc: readPrefixCache(r.benchmark?.serverMetrics) }))
+      .filter((x) => x.pc !== null);
+    const data: StageBarDatum[] = rows.map(({ r, pc }) => ({
+      stage: r.stageLabel,
+      share: pc?.topPodSharePct ?? 0,
+    }));
+    chart = (
+      <StageBarChart
+        title="Top pod share"
+        data={data}
+        // No higherIsBetter: concentration isn't strictly good or bad — a flat
+        // share with rising hit rate = good locality without hot-spotting.
+        series={[{ key: "share", label: "%", color: "#8250df", decimals: 1 }]}
+        barColors={rows.map(({ r }) => colorMap[r.id])}
+        yLabel="%"
+        baselineIndex={baselineIndexOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
     );

@@ -10,7 +10,7 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 import { LruCache } from "../insights/cache.js";
 import { type ChatMessage, chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
-import { availableFigureRefIds, summarizeForPrompt } from "./metrics.js";
+import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./metrics.js";
 import { isBlockingWarning, lintNarrative } from "./narrative-lint.js";
 import { buildRetryFeedback, COMPARE_SYS_PROMPT_EN, COMPARE_SYS_PROMPT_ZH } from "./prompts.js";
 import { SavedComparesService } from "./saved-compares.service.js";
@@ -175,6 +175,8 @@ export class CompareSynthesizeService {
           if (v !== null) nums.push(v);
         }
       }
+      const pc = readPrefixCache(b.serverMetrics);
+      if (pc) nums.push(pc.hitRatePct, pc.topPodSharePct);
     }
     return nums;
   }
@@ -242,9 +244,13 @@ export class CompareSynthesizeService {
         m.e2e === null
           ? "e2e=—"
           : `e2e p50/p90/p99=${m.e2e.p50 ?? "—"}/${m.e2e.p90 ?? "—"}/${m.e2e.p99 ?? "—"}`;
+      const pc = readPrefixCache(b.serverMetrics);
+      const pcLine = pc
+        ? `  prefix_cache_hit%=${pc.hitRatePct.toFixed(1)}  top_pod_share%=${pc.topPodSharePct.toFixed(1)}`
+        : "";
       lines.push(
         `- [${b.stageLabel}] ${b.name ?? "(unnamed)"} · tool=${b.tool ?? "?"} scenario=${b.scenario ?? "?"}`,
-        `  qps=${m.throughput ?? "—"}  err=${m.errorRate ?? "—"}  ${ttftLine}  ${e2eLine}`,
+        `  qps=${m.throughput ?? "—"}  err=${m.errorRate ?? "—"}  ${ttftLine}  ${e2eLine}${pcLine}`,
       );
     }
     if (sc.baselineId) {
@@ -258,7 +264,9 @@ export class CompareSynthesizeService {
     // does not pick a refId for which the bar chart will render empty. Keys
     // outside this list MUST NOT appear in `figures[*].refId`.
     const available = availableFigureRefIds(
-      sc.benchmarks.filter((b) => !b.missing).map((b) => b.summaryMetrics),
+      sc.benchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics })),
     );
     lines.push(
       "",
