@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  connectionHealthResponseSchema,
+  connectionStatusFilterSchema,
   createConnectionSchema,
   discoverConnectionRequestSchema,
   discoverConnectionResponseSchema,
@@ -267,5 +269,22 @@ describe("discoverConnectionResponseSchema", () => {
       },
     };
     expect(() => discoverConnectionResponseSchema.parse(valid)).not.toThrow();
+  });
+});
+
+describe("connection enable/disable contract", () => {
+  it("updateConnectionSchema accepts enabled", () => {
+    expect(updateConnectionSchema.parse({ enabled: false })).toEqual({ enabled: false });
+  });
+
+  it("status filter rejects unknown values", () => {
+    expect(connectionStatusFilterSchema.safeParse("bogus").success).toBe(false);
+    expect(connectionStatusFilterSchema.parse("all")).toBe("all");
+  });
+
+  it("health response validates online + latency", () => {
+    expect(
+      connectionHealthResponseSchema.parse({ status: "online", latencyMs: 12, modelCount: 3 }),
+    ).toMatchObject({ status: "online" });
   });
 });

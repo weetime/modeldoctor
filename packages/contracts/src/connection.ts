@@ -37,6 +37,7 @@ export const connectionPublicSchema = z.object({
   queryParams: z.string(),
   category: ModalityCategorySchema.nullable(),
   tags: z.array(z.string()),
+  enabled: z.boolean(),
   prometheusDatasourceId: z.string().nullable(),
   prometheusDatasource: z
     .object({
@@ -97,13 +98,30 @@ export type CreateConnection = z.infer<typeof createConnectionSchema>;
 
 // PATCH semantics: every field is optional, but if the client sends apiKey /
 // model / category, the same shape rules apply (non-empty, trimmed apiKey, etc.).
-export const updateConnectionSchema = createConnectionSchema.partial();
+// `enabled` is update-only — a connection is always created enabled, then
+// archived/restored via PATCH.
+export const updateConnectionSchema = createConnectionSchema.partial().extend({
+  enabled: z.boolean().optional(),
+});
 export type UpdateConnection = z.infer<typeof updateConnectionSchema>;
 
 export const listConnectionsResponseSchema = z.object({
   items: z.array(connectionPublicSchema),
 });
 export type ListConnectionsResponse = z.infer<typeof listConnectionsResponseSchema>;
+
+/** Query filter for GET /api/connections. Defaults to `enabled` server-side. */
+export const connectionStatusFilterSchema = z.enum(["enabled", "disabled", "all"]);
+export type ConnectionStatusFilter = z.infer<typeof connectionStatusFilterSchema>;
+
+/** Response of POST /api/connections/:id/health (on-demand probe). */
+export const connectionHealthResponseSchema = z.object({
+  status: z.enum(["online", "offline"]),
+  latencyMs: z.number().int().nonnegative().optional(),
+  modelCount: z.number().int().nonnegative().optional(),
+  error: z.string().optional(),
+});
+export type ConnectionHealthResponse = z.infer<typeof connectionHealthResponseSchema>;
 
 /** Owner-only response from GET /api/connections/:id/reveal-key. */
 export const connectionRevealKeyResponseSchema = z.object({
