@@ -28,7 +28,8 @@ export interface RunsListFiltersProps {
 export function RunsListFilters({ query, onChange }: RunsListFiltersProps) {
   const { t } = useTranslation("quality-gate");
   const { data: evaluations } = useEvaluations();
-  const { data: connections } = useConnections();
+  // status:"all" so a run against a now-disabled endpoint stays filterable.
+  const { data: connections } = useConnections({ status: "all" });
 
   function patch(p: Partial<ListRunsQuery>) {
     onChange({ ...query, ...p });

@@ -44,7 +44,8 @@ export function BenchmarkListFilters({
   availableTools,
 }: BenchmarkListFiltersProps) {
   const { t } = useTranslation("benchmarks");
-  const connections = useConnections().data ?? [];
+  // status:"all" so a benchmark run by a now-disabled connection stays filterable.
+  const connections = useConnections({ status: "all" }).data ?? [];
   const selectedConnection = connections.find((c) => c.id === query.connectionId);
 
   function patch(p: Partial<ListBenchmarksQuery>) {
