@@ -51,10 +51,14 @@ const seedList: ConnectionPublic[] = [
 ];
 
 const deleteMutate = vi.fn();
+const setEnabledMutate = vi.fn();
+const testMutate = vi.fn();
 
 vi.mock("./queries", () => ({
   useConnections: () => ({ data: seedList, isLoading: false, error: null }),
   useDeleteConnection: () => ({ mutate: deleteMutate, isPending: false }),
+  useSetConnectionEnabled: () => ({ mutate: setEnabledMutate, isPending: false }),
+  useTestConnection: () => ({ mutate: testMutate, isPending: false }),
   // ConnectionSheet imports useCreateConnection/useUpdateConnection/useDiscoverConnection;
   // include stubs so the sheet renders if it ever opens.
   useCreateConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -80,6 +84,22 @@ import { ConnectionsPage } from "./ConnectionsPage";
 describe("ConnectionsPage (category + tags)", () => {
   beforeEach(() => {
     deleteMutate.mockClear();
+    setEnabledMutate.mockClear();
+    testMutate.mockClear();
+  });
+
+  it("disable menu action calls setEnabled with enabled:false", async () => {
+    render(
+      <MemoryRouter>
+        <ConnectionsPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getAllByRole("button", { name: /actions|操作/i })[0]);
+    await userEvent.click(await screen.findByText(/Disable|关闭/));
+    expect(setEnabledMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "c1", enabled: false }),
+      expect.anything(),
+    );
   });
 
   it("renders category badge and tag chips for each row", () => {

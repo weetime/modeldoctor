@@ -112,7 +112,20 @@
     "import": "导入",
     "export": "导出",
     "delete": "删除",
-    "edit": "编辑"
+    "edit": "编辑",
+    "test": "测试连接",
+    "enable": "启用",
+    "disable": "关闭"
+  },
+  "badges": { "disabled": "已关闭" },
+  "toggle": {
+    "enabled": "连接已启用",
+    "disabled": "连接已关闭",
+    "error": "状态切换失败"
+  },
+  "test": {
+    "online": "在线（{{ms}} ms）",
+    "offline": "离线 —— {{reason}}"
   },
   "delete": {
     "title": "删除连接",
@@ -140,6 +153,10 @@
   "filters": {
     "label": "筛选",
     "allCategories": "全部分类",
-    "allTags": "全部标签"
+    "allTags": "全部标签",
+    "status": "状态",
+    "statusEnabled": "已启用",
+    "statusDisabled": "已关闭",
+    "statusAll": "全部"
   }
 }
