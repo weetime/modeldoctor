@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ExtraArgsError } from "../core/extra-args.js";
 import { buildCommand, parseFinalReport, parseProgress } from "./runtime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -259,5 +260,26 @@ describe("guidellm.parseFinalReport", () => {
 
   it("throws on malformed fixture (missing report file)", () => {
     expect(() => parseFinalReport("", {})).toThrow();
+  });
+});
+
+describe("guidellm extraArgs escape hatch", () => {
+  const withExtra = (extraArgs: string) =>
+    buildCommand({ runId: "r1", params: { ...defaultParams, extraArgs }, connection: baseConn }).argv;
+
+  it("appends extra args", () => {
+    const argv = withExtra("--warmup-percent 0.1");
+    const i = argv.indexOf("--warmup-percent");
+    expect(i).toBeGreaterThan(0);
+    expect(argv[i + 1]).toBe("0.1");
+  });
+
+  it("rejects overriding a managed flag", () => {
+    expect(() => withExtra("--target http://evil")).toThrow(ExtraArgsError);
+  });
+
+  it("is a no-op when extraArgs is absent", () => {
+    const argv = buildCommand({ runId: "r1", params: defaultParams, connection: baseConn }).argv;
+    expect(argv).not.toContain("--warmup-percent");
   });
 });
