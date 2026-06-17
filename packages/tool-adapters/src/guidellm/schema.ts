@@ -25,6 +25,10 @@ export const guidellmParamsSchema = z
     maxConcurrency: z.number().int().positive().default(100),
     processor: z.string().min(1).optional(),
     validateBackend: z.boolean().default(false),
+
+    // Power-user escape hatch: raw extra CLI flags appended verbatim. Cannot
+    // override managed flags (validated in buildCommand). See core/extra-args.
+    extraArgs: z.string().max(4000).optional(),
   })
   .superRefine((d, ctx) => {
     if (d.datasetName === "random") {

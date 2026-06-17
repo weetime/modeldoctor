@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ExtraArgsError } from "../core/extra-args.js";
 import type { BuildCommandPlan } from "../core/interface.js";
 import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import type { EvalscopeParams } from "./schema.js";
@@ -249,5 +250,25 @@ describe("evalscope.getMaxDurationSeconds", () => {
     const small = getMaxDurationSeconds({ ...baseParams, number: 8, parallel: 8 });
     const large = getMaxDurationSeconds({ ...baseParams, number: 1000, parallel: 8 });
     expect(large).toBeGreaterThan(small);
+  });
+});
+
+describe("evalscope extraArgs escape hatch", () => {
+  const withExtra = (extraArgs: string) =>
+    buildCommand({ ...plan, params: { ...baseParams, extraArgs } }).argv;
+
+  it("appends extra args", () => {
+    const argv = withExtra("--debug --tokenizer-path /x");
+    expect(argv).toContain("--debug");
+    const i = argv.indexOf("--tokenizer-path");
+    expect(argv[i + 1]).toBe("/x");
+  });
+
+  it("rejects overriding a managed flag", () => {
+    expect(() => withExtra("--model evil")).toThrow(ExtraArgsError);
+  });
+
+  it("is a no-op when extraArgs is absent", () => {
+    expect(buildCommand(plan).argv).not.toContain("--debug");
   });
 });

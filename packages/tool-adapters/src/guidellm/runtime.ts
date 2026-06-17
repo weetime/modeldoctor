@@ -1,3 +1,4 @@
+import { appendExtraArgs } from "../core/extra-args.js";
 import type {
   BuildCommandPlan,
   BuildCommandResult,
@@ -5,6 +6,25 @@ import type {
   ToolReport,
 } from "../core/interface.js";
 import { type GuidellmParams, type GuidellmReport, guidellmReportSchema } from "./schema.js";
+
+// Every flag buildCommand emits — extraArgs may ADD flags but not override
+// any of these. See core/extra-args. (guidellm uses --flag=value form; the
+// locked set keys on the flag name without the =value.)
+const GUIDELLM_LOCKED_FLAGS: ReadonlySet<string> = new Set([
+  "--backend",
+  "--target",
+  "--model",
+  "--max-requests",
+  "--max-seconds",
+  "--output-path",
+  "--disable-console",
+  "--backend-kwargs",
+  "--rate-type",
+  "--rate",
+  "--data",
+  "--random-seed",
+  "--processor",
+]);
 
 export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildCommandResult {
   const { params, connection } = plan;
@@ -65,8 +85,10 @@ export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildComma
     argv.push(`--processor=${processor}`);
   }
 
+  const finalArgv = appendExtraArgs(argv, params.extraArgs, GUIDELLM_LOCKED_FLAGS);
+
   return {
-    argv,
+    argv: finalArgv,
     env: {},
     secretEnv: {
       // api_key is injected into --backend-kwargs by the runner wrapper at exec

@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ExtraArgsField } from "./_shared/ExtraArgsField";
 import { numberField } from "./_shared/numberField";
 
 const DATASETS = ["synthetic", "sharegpt", "mooncake-trace"] as const;
@@ -329,6 +330,7 @@ export function AiperfParamsForm({ fieldPrefix = "params" }: AiperfParamsFormPro
           </div>
         )}
       </div>
+      <ExtraArgsField fieldPrefix={fieldPrefix} />
     </FormSection>
   );
 }

@@ -1,3 +1,4 @@
+import { appendExtraArgs } from "../core/extra-args.js";
 import type {
   BuildCommandPlan,
   BuildCommandResult,
@@ -5,6 +6,29 @@ import type {
   ToolReport,
 } from "../core/interface.js";
 import { type EvalscopeParams, evalscopeReportSchema } from "./schema.js";
+
+// Every flag buildCommand emits — extraArgs may ADD flags but not override
+// any of these. See core/extra-args.
+const EVALSCOPE_LOCKED_FLAGS: ReadonlySet<string> = new Set([
+  "--model",
+  "--api",
+  "--url",
+  "--api-key",
+  "--dataset",
+  "--dataset-path",
+  "--name",
+  "--number",
+  "--parallel",
+  "--seed",
+  "--stream",
+  "--no-stream",
+  "--no-timestamp",
+  "--outputs-dir",
+  "--min-tokens",
+  "--max-tokens",
+  "--min-prompt-length",
+  "--max-prompt-length",
+]);
 
 // Datasets are baked into the runner image and read locally via --dataset-path
 // (the cluster can't reach modelscope.cn — pod TLS to it fails — so evalscope's
@@ -89,8 +113,10 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
 
   const runDir = `${OUTPUTS_DIR}/${RUN_NAME}/parallel_${params.parallel}_number_${params.number}`;
 
+  const finalArgv = appendExtraArgs(argv, params.extraArgs, EVALSCOPE_LOCKED_FLAGS);
+
   return {
-    argv,
+    argv: finalArgv,
     env: {},
     secretEnv: { OPENAI_API_KEY: connection.apiKey },
     outputFiles: {

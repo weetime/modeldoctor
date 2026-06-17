@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ExtraArgsField } from "./_shared/ExtraArgsField";
 import { numberField } from "./_shared/numberField";
 
 const DATASETS = ["longalpaca", "openqa", "random"] as const;
@@ -202,6 +203,7 @@ export function EvalscopeParamsForm({ fieldPrefix = "params" }: EvalscopeParamsF
           />
         </div>
       </div>
+      <ExtraArgsField fieldPrefix={fieldPrefix} />
     </FormSection>
   );
 }

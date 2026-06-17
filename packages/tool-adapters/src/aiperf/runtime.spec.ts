@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ExtraArgsError } from "../core/extra-args.js";
 import type { BuildCommandPlan } from "../core/interface.js";
 import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
 import type { AiperfParams } from "./schema.js";
@@ -390,5 +391,46 @@ describe("aiperf.getMaxDurationSeconds", () => {
       mooncakeTrace: "conversation",
     } as never);
     expect(full).toBe(Math.min(7200, 3600 + 600));
+  });
+});
+
+describe("aiperf extraArgs escape hatch", () => {
+  const withExtra = (extraArgs: string) =>
+    buildCommand({ ...plan, params: { ...baseParams, extraArgs } }).argv;
+
+  it("appends extra args after managed flags", () => {
+    const argv = withExtra(`--extra-inputs chat_template_kwargs:'{"enable_thinking":false}'`);
+    const i = argv.indexOf("--extra-inputs");
+    expect(i).toBeGreaterThan(0);
+    expect(argv[i + 1]).toBe(`chat_template_kwargs:{"enable_thinking":false}`);
+    // the extra args are the LAST two tokens, appended after --artifact-dir out
+    expect(argv.slice(-2)).toEqual([
+      "--extra-inputs",
+      `chat_template_kwargs:{"enable_thinking":false}`,
+    ]);
+    expect(argv[argv.length - 4]).toBe("--artifact-dir");
+  });
+
+  it("rejects overriding a managed flag", () => {
+    expect(() => withExtra("--model evil")).toThrow(ExtraArgsError);
+  });
+
+  it("rejects short/alt aliases that resolve to a managed flag", () => {
+    // aiperf 0.10 resolves these to model / url / artifact-dir / any-param.
+    expect(() => withExtra("-m evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--model-names evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("-u http://evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--output-artifact-dir /tmp/evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("-f cfg.yaml")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--config=cfg.yaml")).toThrow(ExtraArgsError);
+  });
+
+  it("still allows harmless short flags (verbose / batch-size)", () => {
+    expect(withExtra("-v")).toContain("-v");
+    expect(withExtra("-b 4")).toContain("-b");
+  });
+
+  it("is a no-op when extraArgs is absent", () => {
+    expect(buildCommand(plan).argv).not.toContain("--extra-inputs");
   });
 });

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useConnections } from "@/features/connections/queries";
+import { ExtraArgsField } from "./_shared/ExtraArgsField";
 
 const PROFILES: GuidellmParams["profile"][] = [
   "throughput",
@@ -401,6 +402,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
           </div>
         </div>
       </details>
+      <ExtraArgsField fieldPrefix={fieldPrefix} />
     </div>
   );
 }
