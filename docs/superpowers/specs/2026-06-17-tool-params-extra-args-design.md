@@ -113,9 +113,10 @@ the 3 supported tools:
 
 ### Reporting
 
-`extraArgs` rides along in params → persisted + shown on run detail params display.
-The compare method-section input includes it (when non-empty) labeled as unsupported /
-uncompared, so the AI narrative can note "this run passed extra CLI args: …".
+`extraArgs` rides along in params → **persisted automatically** (params/config are JSON
+columns, no migration) and shown on the run-detail params display for free. Surfacing it
+in the AI compare method-section narrative is a deliberate **follow-up, NOT this PR**
+(keeps the PR focused on the mechanism + templates).
 
 ## Testing
 
