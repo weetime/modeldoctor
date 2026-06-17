@@ -131,10 +131,31 @@ uncompared, so the AI narrative can note "this run passed extra CLI args: …".
 New keys under the templates/benchmark-create namespaces for the section label, helper
 text, example, and the locked-flag warning — zh-CN + en-US, no hard-coded CJK.
 
+## Seed template update (part of this PR)
+
+Update the official prefix-cache aiperf benchmark template(s) in `apps/api/prisma/seed.ts`
+to set `extraArgs` disabling thinking:
+
+```
+extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'"
+```
+
+**Scope: all 5 official prefix-cache aiperf templates** (`scenario: "prefix-cache-validation"`):
+`tpl_pc_t1_article`, `tpl_pc_t2_deep`, `tpl_pc_t3_shallow`, `tpl_pc_mooncake_conv`,
+`tpl_pc_mooncake_agent`.
+
+These templates exist to measure prefill / prefix-cache behaviour; a model's thinking
+output bloats the decode side and pollutes that signal, so thinking is OFF by default for
+all of them. Each row is re-validated through `aiperfParamsSchema` (now including
+`extraArgs`) before upsert. The flag is a no-op for non-thinking models (e.g.
+Qwen2.5-0.5B — the chat template ignores the unused kwarg), so the same template works for
+both 0.5B and Qwen3-8B (model/tokenizer come from the connection, not the template).
+Editing existing seed rows is an in-place UPDATE on next seed run (upsert) — no migration
+needed (seed.ts is the SSOT for built-in templates per CLAUDE.md).
+
 ## How 8B thinking-off uses this
 
-Set the Qwen3-8B mooncake template's `extraArgs` to
-`--extra-inputs chat_template_kwargs:'{"enable_thinking":false}'`, launch one smoke run,
-confirm the response carries no `<think>` block / `reasoning_content`, then run the real
-matrix. (Server-side default-off at deploy time remains an alternative that needs no
-extraArgs; either works.)
+Run the mooncake prefix-cache template (now carrying `extraArgs` thinking-off) against the
+Qwen3-8B connection, launch one smoke run, confirm the response carries no `<think>` block /
+`reasoning_content`, then run the real matrix. (Server-side default-off at deploy time
+remains an alternative; either works.)
