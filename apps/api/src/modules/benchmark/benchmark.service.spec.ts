@@ -342,6 +342,49 @@ describe("BenchmarkService.delete", () => {
   });
 });
 
+describe("BenchmarkService.bulkDelete", () => {
+  let repo: MockRepo;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("deletes every owned row and returns the count", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", userId: "u1" }));
+    repo.setup(makeBenchmarkRow({ id: "b2", status: "completed", userId: "u1" }));
+    const deleted = await svc.bulkDelete(["b1", "b2"], "u1");
+    expect(deleted).toBe(2);
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+    expect(repo.delete).toHaveBeenCalledWith("b2");
+  });
+
+  it("skips rows the caller does not own and only counts the rest", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", userId: "u1" }));
+    repo.setup(makeBenchmarkRow({ id: "b2", status: "completed", userId: "other" }));
+    const deleted = await svc.bulkDelete(["b1", "b2"], "u1");
+    expect(deleted).toBe(1);
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+    expect(repo.delete).not.toHaveBeenCalledWith("b2");
+  });
+
+  it("skips missing ids without aborting the batch", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", userId: "u1" }));
+    const deleted = await svc.bulkDelete(["missing", "b1"], "u1");
+    expect(deleted).toBe(1);
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+  });
+
+  it("admin (no userId) can delete across owners", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", userId: "u1" }));
+    repo.setup(makeBenchmarkRow({ id: "b2", status: "completed", userId: "other" }));
+    const deleted = await svc.bulkDelete(["b1", "b2"], undefined);
+    expect(deleted).toBe(2);
+  });
+});
+
 describe("BenchmarkService.create — failure paths", () => {
   let repo: MockRepo;
   let svc: BenchmarkService;

@@ -286,6 +286,33 @@ export class BenchmarkService {
   }
 
   /**
+   * Delete many benchmarks in one call. Each id goes through {@link delete}
+   * so ownership checks and best-effort driver cancellation behave exactly
+   * like the single-row path. Failures are non-fatal in a bulk op: a
+   * NotFound (already gone, or not owned by the caller) is silently skipped;
+   * any other error is logged and skipped so one bad row can't abort the
+   * whole batch. Returns the count of rows actually deleted.
+   *
+   * Sequential on purpose — parallel deletes would fan out driver.cancel
+   * calls against the K8s apiserver for non-terminal rows.
+   */
+  async bulkDelete(ids: string[], userId?: string): Promise<number> {
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        await this.delete(id, userId);
+        deleted++;
+      } catch (e) {
+        if (!(e instanceof NotFoundException)) {
+          const err = e as Error;
+          this.log.warn(`bulkDelete: failed to delete ${id}: ${err.message}`);
+        }
+      }
+    }
+    return deleted;
+  }
+
+  /**
    * Connection-anchored 7/30/90-day report. Pulls all of `userId`'s
    * benchmarks within the window, buckets by connectionId in JS, and
    * emits one summary per connection. Bounded data per user/window —

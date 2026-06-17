@@ -301,6 +301,40 @@ describe("BenchmarkController", () => {
     expect(after).toBeNull();
   });
 
+  it("bulkDelete removes only the caller's rows and reports the count", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "rc-bulk-owner@example.com", passwordHash: "x" },
+    });
+    const stranger = await prisma.user.create({
+      data: { email: "rc-bulk-stranger@example.com", passwordHash: "x" },
+    });
+    const mk = (userId: string) =>
+      prisma.benchmark.create({
+        data: {
+          userId,
+          scenario: "inference",
+          tool: "guidellm",
+          name: "b",
+          params: {},
+          status: "completed",
+        },
+      });
+    const a = await mk(owner.id);
+    const b = await mk(owner.id);
+    const theirs = await mk(stranger.id);
+
+    const ownerArg = { sub: owner.id, email: owner.email, roles: [] };
+    const result = await controller.bulkDelete(ownerArg as never, {
+      ids: [a.id, b.id, theirs.id, "nonexistent"],
+    });
+
+    expect(result.deleted).toBe(2);
+    expect(await prisma.benchmark.findUnique({ where: { id: a.id } })).toBeNull();
+    expect(await prisma.benchmark.findUnique({ where: { id: b.id } })).toBeNull();
+    // The stranger's row must survive a non-admin bulk delete.
+    expect(await prisma.benchmark.findUnique({ where: { id: theirs.id } })).not.toBeNull();
+  });
+
   describe("admin authz", () => {
     it("rejects scope=all from non-admin caller (403)", async () => {
       const user = { sub: "u1", email: "u1@x", roles: [] };

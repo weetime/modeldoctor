@@ -1,6 +1,7 @@
 import type {
   Benchmark,
   BenchmarkChartsResponse,
+  BulkDeleteBenchmarksResponse,
   CreateBenchmarkRequest,
   ListBenchmarksQuery,
   ListBenchmarksResponse,
@@ -32,5 +33,7 @@ export const benchmarkApi = {
   create: (body: CreateBenchmarkRequest) => api.post<Benchmark>("/api/benchmarks", body),
   cancel: (id: string) => api.post<Benchmark>(`/api/benchmarks/${id}/cancel`, {}),
   delete: (id: string) => api.del<void>(`/api/benchmarks/${id}`),
+  bulkDelete: (ids: string[]) =>
+    api.post<BulkDeleteBenchmarksResponse>("/api/benchmarks/bulk-delete", { ids }),
   getCharts: (id: string) => api.get<BenchmarkChartsResponse>(`/api/benchmarks/${id}/charts`),
 };
