@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ExtraArgsField } from "./_shared/ExtraArgsField";
 import {
   Select,
   SelectContent,
@@ -401,6 +402,7 @@ export function GuidellmParamsForm({ fieldPrefix = "params" }: GuidellmParamsFor
           </div>
         </div>
       </details>
+      <ExtraArgsField fieldPrefix={fieldPrefix} />
     </div>
   );
 }
