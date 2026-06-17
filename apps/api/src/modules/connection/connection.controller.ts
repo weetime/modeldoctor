@@ -1,6 +1,8 @@
 import {
   type ConnectionPublic,
   type ConnectionRevealKeyResponse,
+  type ConnectionStatusFilter,
+  connectionStatusFilterSchema,
   type ConnectionWithSecret,
   type CreateConnection,
   createConnectionSchema,
@@ -21,6 +23,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -44,8 +47,12 @@ export class ConnectionController {
 
   @ApiOperation({ summary: "List connections (model endpoints + gateways) owned by the user" })
   @Get()
-  list(@CurrentUser() user: JwtPayload): Promise<ListConnectionsResponse> {
-    return this.service.list(user.sub);
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query("status", new ZodValidationPipe(connectionStatusFilterSchema.optional()))
+    status: ConnectionStatusFilter | undefined,
+  ): Promise<ListConnectionsResponse> {
+    return this.service.list(user.sub, status ?? "enabled");
   }
 
   @ApiOperation({ summary: "Create a new connection (the response carries the api key once)" })

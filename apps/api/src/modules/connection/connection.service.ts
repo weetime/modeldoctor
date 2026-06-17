@@ -1,6 +1,7 @@
 import type {
   ConnectionPublic,
   ConnectionRevealKeyResponse,
+  ConnectionStatusFilter,
   ConnectionWithSecret,
   CreateConnection,
   ListConnectionsResponse,
@@ -116,9 +117,16 @@ export class ConnectionService {
     return this.toContractWithSecret(row, input.apiKey);
   }
 
-  async list(userId: string): Promise<ListConnectionsResponse> {
+  async list(
+    userId: string,
+    status: ConnectionStatusFilter = "enabled",
+  ): Promise<ListConnectionsResponse> {
+    const where: Prisma.ConnectionWhereInput = { userId };
+    if (status === "enabled") where.enabled = true;
+    else if (status === "disabled") where.enabled = false;
+    // "all" → no enabled clause.
     const rows = await this.prisma.connection.findMany({
-      where: { userId },
+      where,
       orderBy: { createdAt: "desc" },
       include: CONNECTION_INCLUDES,
     });
@@ -158,6 +166,7 @@ export class ConnectionService {
     if (input.queryParams !== undefined) data.queryParams = input.queryParams;
     if (input.category !== undefined) data.category = input.category;
     if (input.tags !== undefined) data.tags = input.tags;
+    if (input.enabled !== undefined) data.enabled = input.enabled;
     if (input.prometheusDatasourceId !== undefined) {
       // PATCH semantics: only resolve when the client explicitly sent the
       // field (null or string). Skip when undefined — leave existing binding
@@ -341,6 +350,7 @@ export class ConnectionService {
       queryParams: row.queryParams,
       category: row.category as ModalityCategory | null,
       tags: row.tags,
+      enabled: row.enabled,
       prometheusDatasourceId: row.prometheusDatasourceId,
       prometheusDatasource: row.prometheusDatasource
         ? {

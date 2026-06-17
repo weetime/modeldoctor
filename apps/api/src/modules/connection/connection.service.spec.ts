@@ -51,6 +51,7 @@ function makeRow(overrides: Partial<RowWithProfile> = {}): RowWithProfile {
     queryParams: "",
     category: "chat",
     tags: [],
+    enabled: true,
     prometheusDatasourceId: null,
     prometheusDatasource: null,
     serverKind: null,
@@ -312,6 +313,30 @@ describe("ConnectionService", () => {
       expect(item).not.toHaveProperty("apiKeyCipher");
       expect(item.apiKeyPreview).toBe("sk-...efgh");
     });
+
+    it("defaults to enabled-only", async () => {
+      prismaMock.connection.findMany.mockResolvedValue([]);
+      await service.list("u_1");
+      expect(prismaMock.connection.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: "u_1", enabled: true } }),
+      );
+    });
+
+    it("disabled-only sets enabled:false", async () => {
+      prismaMock.connection.findMany.mockResolvedValue([]);
+      await service.list("u_1", "disabled");
+      expect(prismaMock.connection.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: "u_1", enabled: false } }),
+      );
+    });
+
+    it("all omits the enabled clause", async () => {
+      prismaMock.connection.findMany.mockResolvedValue([]);
+      await service.list("u_1", "all");
+      expect(prismaMock.connection.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: "u_1" } }),
+      );
+    });
   });
 
   describe("findOwnedPublic", () => {
@@ -358,6 +383,16 @@ describe("ConnectionService", () => {
       const out = await service.update("u_1", "c_1", { name: "renamed" });
       expect("apiKey" in out).toBe(false);
       expect(out.name).toBe("renamed");
+    });
+
+    it("maps enabled into the prisma update data (archive toggle)", async () => {
+      const cipher = await encryptForTest("sk-keep-1234");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      prismaMock.connection.update.mockResolvedValue(makeRow({ apiKeyCipher: cipher, enabled: false }));
+      await service.update("u_1", "c_1", { enabled: false });
+      expect(prismaMock.connection.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ enabled: false }) }),
+      );
     });
 
     it("clears serverKind when caller passes null", async () => {
