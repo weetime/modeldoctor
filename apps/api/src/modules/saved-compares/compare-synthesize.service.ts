@@ -119,17 +119,19 @@ export class CompareSynthesizeService {
     if (!available.has("stage-bars-prefix-cache-hit")) return figures;
     if (figures.some((f) => f.refId === "stage-bars-prefix-cache-hit")) return figures;
     const zh = locale !== "en-US";
-    return [
-      ...figures,
-      {
-        id: "fig-prefix-cache-hit",
-        refId: "stage-bars-prefix-cache-hit" as const,
-        caption: zh
-          ? "各 stage 的 prefix cache 命中率（越高越好）"
-          : "Prefix cache hit rate by stage (higher is better)",
-        anchorSection: "results" as const,
-      },
-    ];
+    const figure = {
+      id: "fig-prefix-cache-hit",
+      refId: "stage-bars-prefix-cache-hit" as const,
+      caption: zh
+        ? "各 stage 的 prefix cache 命中率（越高越好）"
+        : "Prefix cache hit rate by stage (higher is better)",
+      anchorSection: "results" as const,
+    };
+    // compareNarrativeSchema caps figures at 8. Appending a 9th would fail the
+    // zod parse on setNarrative / read-back → 500. Reserve our slot by dropping
+    // the LLM's last figure when full, rather than slicing our own injected
+    // figure off the end (hit rate is the whole point of this comparison).
+    return [...figures.slice(0, 7), figure];
   }
 
   /**
