@@ -102,6 +102,7 @@ const EXISTING: ConnectionPublic = {
   name: "preexisting",
   baseUrl: "http://old.test",
   apiKeyPreview: "sk-...wxyz",
+  enabled: true,
   model: "old-model",
   customHeaders: "",
   queryParams: "",

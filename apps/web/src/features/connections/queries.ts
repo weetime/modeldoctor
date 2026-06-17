@@ -1,6 +1,8 @@
 import type {
+  ConnectionHealthResponse,
   ConnectionPublic,
   ConnectionRevealKeyResponse,
+  ConnectionStatusFilter,
   ConnectionWithSecret,
   CreateConnection,
   DiscoverConnectionRequest,
@@ -14,11 +16,33 @@ import { api } from "@/lib/api-client";
 const KEY = ["connections"] as const;
 const detailKey = (id: string) => [...KEY, id] as const;
 
-export function useConnections() {
+export function useConnections(params?: { status?: ConnectionStatusFilter }) {
+  const status = params?.status ?? "enabled";
   return useQuery({
-    queryKey: KEY,
-    queryFn: () => api.get<ListConnectionsResponse>("/api/connections"),
+    queryKey: [...KEY, { status }] as const,
+    queryFn: () => api.get<ListConnectionsResponse>(`/api/connections?status=${status}`),
     select: (r) => r.items,
+  });
+}
+
+/** Archive (disable) or restore (enable) a connection via PATCH. */
+export function useSetConnectionEnabled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      api.patch<ConnectionPublic>(`/api/connections/${id}`, { enabled }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: detailKey(vars.id) });
+    },
+  });
+}
+
+/** On-demand health probe. An action, not cached. */
+export function useTestConnection() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post<ConnectionHealthResponse>(`/api/connections/${id}/health`, {}),
   });
 }
 

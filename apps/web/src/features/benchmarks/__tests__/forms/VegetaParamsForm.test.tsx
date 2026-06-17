@@ -27,6 +27,7 @@ const baseConnection: ConnectionPublic = {
   name: "bge-by-mis-tei",
   baseUrl: "http://example/v1",
   apiKeyPreview: "sk-...bc8d",
+  enabled: true,
   model: "bge-m3-uZbs",
   customHeaders: "",
   queryParams: "",

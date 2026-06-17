@@ -16,6 +16,7 @@ const CONN_A: ConnectionPublic = {
   name: "A",
   baseUrl: "http://a",
   apiKeyPreview: "sk-...1234",
+  enabled: true,
   model: "m",
   customHeaders: "",
   queryParams: "",

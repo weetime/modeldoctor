@@ -25,6 +25,7 @@ const conn: ConnectionPublic = {
   name: "bge-by-mis-tei",
   baseUrl: "http://183.240.109.2:30888",
   apiKeyPreview: "sk-...bc8d",
+  enabled: true,
   model: "gen-studio_bge-m3-uZbs",
   customHeaders: "",
   queryParams: "",
