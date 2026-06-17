@@ -10,7 +10,7 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 import { LruCache } from "../insights/cache.js";
 import { type ChatMessage, chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
-import { availableFigureRefIds, summarizeForPrompt } from "./metrics.js";
+import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./metrics.js";
 import { isBlockingWarning, lintNarrative } from "./narrative-lint.js";
 import { buildRetryFeedback, COMPARE_SYS_PROMPT_EN, COMPARE_SYS_PROMPT_ZH } from "./prompts.js";
 import { SavedComparesService } from "./saved-compares.service.js";
@@ -86,6 +86,7 @@ export class CompareSynthesizeService {
     parsed = {
       ...parsed,
       hero: this.augmentHero(parsed.hero, sc),
+      figures: this.ensurePrefixCacheFigures(parsed.figures, sc, body.locale),
       lintWarnings: warnings,
     };
 
@@ -94,6 +95,43 @@ export class CompareSynthesizeService {
     this.cache.set(key, { generatedAt: generatedAt.toISOString(), narrative: parsed });
 
     return { narrative: parsed, generatedAt: generatedAt.toISOString(), fromCache: false };
+  }
+
+  /**
+   * Guarantee the prefix-cache hit-rate figure is present when the data
+   * supports it. Hit rate is the metric a prefix-cache-validation comparison
+   * exists to measure, but it isn't in the throughput/latency blob the LLM
+   * fixates on, so weaker models routinely omit it. When the refId is
+   * available and the LLM didn't include it, inject it (anchored to results)
+   * — same server-control pattern as augmentHero. Does nothing for
+   * non-prefix-cache comparisons (refId simply isn't available).
+   */
+  private ensurePrefixCacheFigures(
+    figures: CompareNarrative["figures"],
+    sc: HydratedSavedCompare,
+    locale: string,
+  ): CompareNarrative["figures"] {
+    const available = availableFigureRefIds(
+      sc.benchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics })),
+    );
+    if (!available.has("stage-bars-prefix-cache-hit")) return figures;
+    if (figures.some((f) => f.refId === "stage-bars-prefix-cache-hit")) return figures;
+    const zh = locale !== "en-US";
+    const figure = {
+      id: "fig-prefix-cache-hit",
+      refId: "stage-bars-prefix-cache-hit" as const,
+      caption: zh
+        ? "各 stage 的 prefix cache 命中率（越高越好）"
+        : "Prefix cache hit rate by stage (higher is better)",
+      anchorSection: "results" as const,
+    };
+    // compareNarrativeSchema caps figures at 8. Appending a 9th would fail the
+    // zod parse on setNarrative / read-back → 500. Reserve our slot by dropping
+    // the LLM's last figure when full, rather than slicing our own injected
+    // figure off the end (hit rate is the whole point of this comparison).
+    return [...figures.slice(0, 7), figure];
   }
 
   /**
@@ -175,6 +213,8 @@ export class CompareSynthesizeService {
           if (v !== null) nums.push(v);
         }
       }
+      const pc = readPrefixCache(b.serverMetrics);
+      if (pc) nums.push(pc.hitRatePct, pc.topPodSharePct);
     }
     return nums;
   }
@@ -242,9 +282,13 @@ export class CompareSynthesizeService {
         m.e2e === null
           ? "e2e=—"
           : `e2e p50/p90/p99=${m.e2e.p50 ?? "—"}/${m.e2e.p90 ?? "—"}/${m.e2e.p99 ?? "—"}`;
+      const pc = readPrefixCache(b.serverMetrics);
+      const pcLine = pc
+        ? `  prefix_cache_hit%=${pc.hitRatePct.toFixed(1)}  top_pod_share%=${pc.topPodSharePct.toFixed(1)}`
+        : "";
       lines.push(
         `- [${b.stageLabel}] ${b.name ?? "(unnamed)"} · tool=${b.tool ?? "?"} scenario=${b.scenario ?? "?"}`,
-        `  qps=${m.throughput ?? "—"}  err=${m.errorRate ?? "—"}  ${ttftLine}  ${e2eLine}`,
+        `  qps=${m.throughput ?? "—"}  err=${m.errorRate ?? "—"}  ${ttftLine}  ${e2eLine}${pcLine}`,
       );
     }
     if (sc.baselineId) {
@@ -258,7 +302,9 @@ export class CompareSynthesizeService {
     // does not pick a refId for which the bar chart will render empty. Keys
     // outside this list MUST NOT appear in `figures[*].refId`.
     const available = availableFigureRefIds(
-      sc.benchmarks.filter((b) => !b.missing).map((b) => b.summaryMetrics),
+      sc.benchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics })),
     );
     lines.push(
       "",

@@ -102,6 +102,7 @@ export class SavedComparesService {
         tool: b.tool,
         scenario: b.scenario,
         summaryMetrics: b.summaryMetrics,
+        serverMetrics: b.serverMetrics,
         params: b.params,
         createdAt: b.createdAt.toISOString(),
       };

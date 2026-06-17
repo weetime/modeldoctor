@@ -1,4 +1,4 @@
-import type { FigureRefId } from "@modeldoctor/contracts";
+import { type FigureRefId, prefixCacheAnnotationSchema } from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters";
 
 export function readP95Latency(m: unknown): number | null {
@@ -52,20 +52,47 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   };
 }
 
+export interface PrefixCacheSummary {
+  hitRatePct: number;
+  topPodSharePct: number;
+}
+
+/** Read serverMetrics.prefixCache (hit rate + top-pod share). Mirrors the
+ * client-side `client-metrics.ts#readPrefixCache`. Null when absent/malformed. */
+export function readPrefixCache(serverMetrics: unknown): PrefixCacheSummary | null {
+  const parsed = prefixCacheAnnotationSchema.safeParse(
+    (serverMetrics as { prefixCache?: unknown } | null)?.prefixCache,
+  );
+  if (!parsed.success) return null;
+  return { hitRatePct: parsed.data.hitRatePct, topPodSharePct: parsed.data.topPodSharePct };
+}
+
+/** One run's two metric blobs. summaryMetrics = tool report (throughput/latency);
+ * serverMetrics = prefix-cache annotation. */
+export interface RunMetricBlobs {
+  summaryMetrics: unknown;
+  serverMetrics?: unknown;
+}
+
 /**
  * Server-side mirror of `apps/web/src/features/benchmarks/compare/client-metrics.ts#availableFigureRefIds`.
- * Returns the figure `refId`s that can render against the given summaries.
+ * Returns the figure `refId`s that can render against the given runs.
  * The prompt sends this set to the LLM so it doesn't pick a refId for which
  * the data is not there (e.g. asking for ttft from vegeta gateway runs).
  */
-export function availableFigureRefIds(summaries: unknown[]): Set<FigureRefId> {
+export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> {
   const out = new Set<FigureRefId>();
-  if (summaries.length === 0) return out;
-  const perRun = summaries.map((m) => summarizeForPrompt(m));
+  if (runs.length === 0) return out;
+  const perRun = runs.map((r) => summarizeForPrompt(r.summaryMetrics));
   if (perRun.some((s) => s.throughput !== null)) out.add("stage-bars-throughput");
   if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
   if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
   if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
+  // Prefix-cache figures need EVERY run to carry the annotation (complete bars).
+  if (runs.map((r) => readPrefixCache(r.serverMetrics)).every((p) => p !== null)) {
+    out.add("stage-bars-prefix-cache-hit");
+    out.add("stage-bars-top-pod-share");
+  }
   out.add("compare-grid");
   return out;
 }

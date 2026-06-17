@@ -1,4 +1,4 @@
-import type { FigureRefId } from "@modeldoctor/contracts";
+import { type FigureRefId, prefixCacheAnnotationSchema } from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 
 export interface PromptMetricsSummary {
@@ -6,6 +6,32 @@ export interface PromptMetricsSummary {
   errorRate: number | null;
   ttft: { p50: number | null; p90: number | null; p99: number | null } | null;
   e2e: { p50: number | null; p90: number | null; p99: number | null } | null;
+}
+
+export interface PrefixCacheSummary {
+  hitRatePct: number;
+  topPodSharePct: number;
+}
+
+/** One run's two metric blobs — summaryMetrics (tool report) carries
+ * throughput/latency; serverMetrics carries the prefix-cache annotation. */
+export interface RunMetricBlobs {
+  summaryMetrics: unknown;
+  serverMetrics?: unknown;
+}
+
+/**
+ * Read the prefix-cache annotation from a run's `serverMetrics` blob (stored
+ * at `serverMetrics.prefixCache` on completion of a prefix-cache-validation
+ * run). Returns null when absent or malformed — non-prefix-cache runs and
+ * runs whose Prometheus snapshot found no data both degrade to null.
+ */
+export function readPrefixCache(serverMetrics: unknown): PrefixCacheSummary | null {
+  const parsed = prefixCacheAnnotationSchema.safeParse(
+    (serverMetrics as { prefixCache?: unknown } | null)?.prefixCache,
+  );
+  if (!parsed.success) return null;
+  return { hitRatePct: parsed.data.hitRatePct, topPodSharePct: parsed.data.topPodSharePct };
 }
 
 /**
@@ -53,14 +79,22 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
  * Keep this in sync with the server's mirror in
  * `apps/api/src/modules/saved-compares/metrics.ts#availableFigureRefIds`.
  */
-export function availableFigureRefIds(summaries: unknown[]): Set<FigureRefId> {
+export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> {
   const out = new Set<FigureRefId>();
-  if (summaries.length === 0) return out;
-  const perRun = summaries.map((m) => summarizeForPrompt(m));
+  if (runs.length === 0) return out;
+  const perRun = runs.map((r) => summarizeForPrompt(r.summaryMetrics));
   if (perRun.some((s) => s.throughput !== null)) out.add("stage-bars-throughput");
   if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
   if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
   if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
+  // Prefix-cache figures: require EVERY run to carry the annotation so the
+  // bar chart is complete across stages (mixing some-with / some-without
+  // would render misleading gaps).
+  const pc = runs.map((r) => readPrefixCache(r.serverMetrics));
+  if (pc.every((p) => p !== null)) {
+    out.add("stage-bars-prefix-cache-hit");
+    out.add("stage-bars-top-pod-share");
+  }
   // compare-grid only needs any of throughput/err/ttft/e2e — always available
   // when there's at least one summary; degrades cell-by-cell.
   out.add("compare-grid");

@@ -82,6 +82,13 @@ describe("figureForHeading", () => {
     expect(figureForHeading("错误率")).toBe("stage-bars-error-rate");
     expect(figureForHeading("选型建议")).toBeNull();
   });
+
+  it("maps prefix-cache headings, top-pod before hit", () => {
+    expect(figureForHeading("命中率对比")).toBe("stage-bars-prefix-cache-hit");
+    expect(figureForHeading("Prefix cache hit rate")).toBe("stage-bars-prefix-cache-hit");
+    expect(figureForHeading("最高副本占比")).toBe("stage-bars-top-pod-share");
+    expect(figureForHeading("Top Pod Share")).toBe("stage-bars-top-pod-share");
+  });
 });
 
 describe("parseSectionBlocks", () => {

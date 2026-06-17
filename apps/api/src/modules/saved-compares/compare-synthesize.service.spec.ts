@@ -200,4 +200,55 @@ describe("CompareSynthesizeService", () => {
     const r = await svc.synthesize(userId, savedCompareId, { locale: "zh-CN" });
     expect(r.fromCache).toBe(true);
   });
+
+  // ensurePrefixCacheFigures is a private server-control step; test it directly
+  // (no DB / LLM) so the figure-cap behavior is pinned regardless of the model.
+  describe("ensurePrefixCacheFigures", () => {
+    const pcRun = {
+      missing: false,
+      summaryMetrics: null,
+      serverMetrics: {
+        prefixCache: {
+          hitRatePct: 80,
+          topPodSharePct: 50,
+          perPod: [{ pod: "p1", queries: 100, hits: 80 }],
+          metricTag: "v1",
+        },
+      },
+    };
+    const scWithPrefixCache = { benchmarks: [pcRun, pcRun] };
+    const fig = (i: number) => ({ id: `f${i}`, refId: "compare-grid" as const, caption: `c${i}` });
+
+    it("injects the hit-rate figure when the LLM omitted it", () => {
+      const out = (
+        svc as never as {
+          ensurePrefixCacheFigures: (f: unknown, sc: unknown, l: string) => { refId: string }[];
+        }
+      ).ensurePrefixCacheFigures([fig(0)], scWithPrefixCache, "zh-CN");
+      expect(out).toHaveLength(2);
+      expect(out.at(-1)?.refId).toBe("stage-bars-prefix-cache-hit");
+    });
+
+    it("caps at the 8-figure schema limit, dropping the LLM's last figure (not ours)", () => {
+      const eight = Array.from({ length: 8 }, (_, i) => fig(i));
+      const out = (
+        svc as never as {
+          ensurePrefixCacheFigures: (f: unknown, sc: unknown, l: string) => { refId: string }[];
+        }
+      ).ensurePrefixCacheFigures(eight, scWithPrefixCache, "zh-CN");
+      expect(out).toHaveLength(8);
+      expect(out.at(-1)?.refId).toBe("stage-bars-prefix-cache-hit");
+    });
+
+    it("is a no-op when the runs carry no prefix-cache annotation", () => {
+      const plain = { benchmarks: [{ missing: false, summaryMetrics: null }] };
+      const input = [fig(0)];
+      const out = (
+        svc as never as {
+          ensurePrefixCacheFigures: (f: unknown, sc: unknown, l: string) => unknown[];
+        }
+      ).ensurePrefixCacheFigures(input, plain, "zh-CN");
+      expect(out).toBe(input);
+    });
+  });
 });
