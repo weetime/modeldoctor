@@ -1,4 +1,5 @@
 import type {
+  ConnectionHealthResponse,
   ConnectionPublic,
   ConnectionRevealKeyResponse,
   ConnectionStatusFilter,
@@ -24,8 +25,10 @@ import type {
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
+import { parseCustomHeaders } from "../../common/http/parse-custom-headers.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
+import { safeFetch } from "./discovery/safe-fetch.js";
 
 /**
  * Joined connection row carrying the relations that toContractPublic /
@@ -213,6 +216,41 @@ export class ConnectionService {
         });
       }
       throw e;
+    }
+  }
+
+  /**
+   * On-demand health probe. Hits the connection's `/v1/models` with its
+   * decrypted apiKey + custom headers (every OpenAI-compatible endpoint
+   * exposes it, so a 200 means the inference path is actually reachable).
+   * Never throws on a dead endpoint — returns `offline` with the reason.
+   */
+  async testHealth(userId: string, id: string): Promise<ConnectionHealthResponse> {
+    const conn = await this.getOwnedDecrypted(userId, id);
+    const start = Date.now();
+    try {
+      const res = await safeFetch(`${conn.baseUrl.replace(/\/+$/, "")}/v1/models`, {
+        apiKey: conn.apiKey || undefined,
+        extraHeaders: parseCustomHeaders(conn.customHeaders),
+      });
+      const latencyMs = Date.now() - start;
+      if (!res.ok) {
+        return { status: "offline", latencyMs, error: `HTTP ${res.status}` };
+      }
+      let modelCount: number | undefined;
+      try {
+        const json = (await res.json()) as { data?: unknown };
+        if (Array.isArray(json?.data)) modelCount = json.data.length;
+      } catch {
+        // 200 but unparseable body still counts as reachable.
+      }
+      return { status: "online", latencyMs, modelCount };
+    } catch (err) {
+      return {
+        status: "offline",
+        latencyMs: Date.now() - start,
+        error: err instanceof Error ? err.message : "unknown error",
+      };
     }
   }
 

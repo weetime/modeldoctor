@@ -1,10 +1,11 @@
 import {
+  type ConnectionHealthResponse,
   type ConnectionPublic,
   type ConnectionRevealKeyResponse,
   type ConnectionStatusFilter,
-  connectionStatusFilterSchema,
   type ConnectionWithSecret,
   type CreateConnection,
+  connectionStatusFilterSchema,
   createConnectionSchema,
   type DiscoverConnectionRequest,
   type DiscoverConnectionResponse,
@@ -104,5 +105,15 @@ export class ConnectionController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(user.sub, id);
+  }
+
+  @ApiOperation({ summary: "On-demand health probe of a connection's /v1/models" })
+  @Post(":id/health")
+  @HttpCode(HttpStatus.OK)
+  testHealth(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<ConnectionHealthResponse> {
+    return this.service.testHealth(user.sub, id);
   }
 }

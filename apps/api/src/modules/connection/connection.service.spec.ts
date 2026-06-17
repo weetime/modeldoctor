@@ -16,6 +16,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionService } from "./connection.service.js";
 
+vi.mock("./discovery/safe-fetch.js", () => ({ safeFetch: vi.fn() }));
+
+import { safeFetch } from "./discovery/safe-fetch.js";
+
 const KEY_B64 = Buffer.alloc(32, 7).toString("base64");
 
 function makePrismaMock() {
@@ -388,7 +392,9 @@ describe("ConnectionService", () => {
     it("maps enabled into the prisma update data (archive toggle)", async () => {
       const cipher = await encryptForTest("sk-keep-1234");
       prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
-      prismaMock.connection.update.mockResolvedValue(makeRow({ apiKeyCipher: cipher, enabled: false }));
+      prismaMock.connection.update.mockResolvedValue(
+        makeRow({ apiKeyCipher: cipher, enabled: false }),
+      );
       await service.update("u_1", "c_1", { enabled: false });
       expect(prismaMock.connection.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ enabled: false }) }),
@@ -622,6 +628,36 @@ describe("ConnectionService", () => {
       prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
       const out = await service.getOwnedDecrypted("u_1", "c_1");
       expect(out.tokenizerHfId).toBeNull();
+    });
+  });
+
+  describe("testHealth", () => {
+    it("returns online with modelCount on a 200 /v1/models", async () => {
+      const cipher = await encryptForTest("sk-x");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      vi.mocked(safeFetch).mockResolvedValue(
+        new Response(JSON.stringify({ data: [{ id: "m1" }, { id: "m2" }] }), { status: 200 }),
+      );
+      const r = await service.testHealth("u_1", "c_1");
+      expect(r.status).toBe("online");
+      expect(r.modelCount).toBe(2);
+    });
+
+    it("returns offline on a non-2xx", async () => {
+      const cipher = await encryptForTest("sk-x");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      vi.mocked(safeFetch).mockResolvedValue(new Response("", { status: 503 }));
+      const r = await service.testHealth("u_1", "c_1");
+      expect(r.status).toBe("offline");
+      expect(r.error).toContain("503");
+    });
+
+    it("returns offline when the fetch throws", async () => {
+      const cipher = await encryptForTest("sk-x");
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow({ apiKeyCipher: cipher }));
+      vi.mocked(safeFetch).mockRejectedValue(new Error("ECONNREFUSED"));
+      const r = await service.testHealth("u_1", "c_1");
+      expect(r.status).toBe("offline");
     });
   });
 });
