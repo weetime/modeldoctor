@@ -86,6 +86,7 @@ export class CompareSynthesizeService {
     parsed = {
       ...parsed,
       hero: this.augmentHero(parsed.hero, sc),
+      figures: this.ensurePrefixCacheFigures(parsed.figures, sc, body.locale),
       lintWarnings: warnings,
     };
 
@@ -94,6 +95,41 @@ export class CompareSynthesizeService {
     this.cache.set(key, { generatedAt: generatedAt.toISOString(), narrative: parsed });
 
     return { narrative: parsed, generatedAt: generatedAt.toISOString(), fromCache: false };
+  }
+
+  /**
+   * Guarantee the prefix-cache hit-rate figure is present when the data
+   * supports it. Hit rate is the metric a prefix-cache-validation comparison
+   * exists to measure, but it isn't in the throughput/latency blob the LLM
+   * fixates on, so weaker models routinely omit it. When the refId is
+   * available and the LLM didn't include it, inject it (anchored to results)
+   * — same server-control pattern as augmentHero. Does nothing for
+   * non-prefix-cache comparisons (refId simply isn't available).
+   */
+  private ensurePrefixCacheFigures(
+    figures: CompareNarrative["figures"],
+    sc: HydratedSavedCompare,
+    locale: string,
+  ): CompareNarrative["figures"] {
+    const available = availableFigureRefIds(
+      sc.benchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics })),
+    );
+    if (!available.has("stage-bars-prefix-cache-hit")) return figures;
+    if (figures.some((f) => f.refId === "stage-bars-prefix-cache-hit")) return figures;
+    const zh = locale !== "en-US";
+    return [
+      ...figures,
+      {
+        id: "fig-prefix-cache-hit",
+        refId: "stage-bars-prefix-cache-hit" as const,
+        caption: zh
+          ? "各 stage 的 prefix cache 命中率（越高越好）"
+          : "Prefix cache hit rate by stage (higher is better)",
+        anchorSection: "results" as const,
+      },
+    ];
   }
 
   /**
