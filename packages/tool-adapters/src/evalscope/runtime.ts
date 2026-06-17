@@ -1,19 +1,33 @@
+import { appendExtraArgs } from "../core/extra-args.js";
 import type {
   BuildCommandPlan,
   BuildCommandResult,
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
-import { appendExtraArgs } from "../core/extra-args.js";
 import { type EvalscopeParams, evalscopeReportSchema } from "./schema.js";
 
 // Every flag buildCommand emits — extraArgs may ADD flags but not override
 // any of these. See core/extra-args.
 const EVALSCOPE_LOCKED_FLAGS: ReadonlySet<string> = new Set([
-  "--model", "--api", "--url", "--api-key", "--dataset", "--dataset-path",
-  "--name", "--number", "--parallel", "--seed", "--stream", "--no-stream",
-  "--no-timestamp", "--outputs-dir", "--min-tokens", "--max-tokens",
-  "--min-prompt-length", "--max-prompt-length",
+  "--model",
+  "--api",
+  "--url",
+  "--api-key",
+  "--dataset",
+  "--dataset-path",
+  "--name",
+  "--number",
+  "--parallel",
+  "--seed",
+  "--stream",
+  "--no-stream",
+  "--no-timestamp",
+  "--outputs-dir",
+  "--min-tokens",
+  "--max-tokens",
+  "--min-prompt-length",
+  "--max-prompt-length",
 ]);
 
 // Datasets are baked into the runner image and read locally via --dataset-path

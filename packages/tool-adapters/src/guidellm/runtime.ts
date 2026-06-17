@@ -1,19 +1,29 @@
+import { appendExtraArgs } from "../core/extra-args.js";
 import type {
   BuildCommandPlan,
   BuildCommandResult,
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
-import { appendExtraArgs } from "../core/extra-args.js";
 import { type GuidellmParams, type GuidellmReport, guidellmReportSchema } from "./schema.js";
 
 // Every flag buildCommand emits — extraArgs may ADD flags but not override
 // any of these. See core/extra-args. (guidellm uses --flag=value form; the
 // locked set keys on the flag name without the =value.)
 const GUIDELLM_LOCKED_FLAGS: ReadonlySet<string> = new Set([
-  "--backend", "--target", "--model", "--max-requests", "--max-seconds",
-  "--output-path", "--disable-console", "--backend-kwargs", "--rate-type",
-  "--rate", "--data", "--random-seed", "--processor",
+  "--backend",
+  "--target",
+  "--model",
+  "--max-requests",
+  "--max-seconds",
+  "--output-path",
+  "--disable-console",
+  "--backend-kwargs",
+  "--rate-type",
+  "--rate",
+  "--data",
+  "--random-seed",
+  "--processor",
 ]);
 
 export function buildCommand(plan: BuildCommandPlan<GuidellmParams>): BuildCommandResult {

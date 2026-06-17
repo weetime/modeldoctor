@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ExtraArgsField } from "./_shared/ExtraArgsField";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useConnections } from "@/features/connections/queries";
+import { ExtraArgsField } from "./_shared/ExtraArgsField";
 
 const PROFILES: GuidellmParams["profile"][] = [
   "throughput",

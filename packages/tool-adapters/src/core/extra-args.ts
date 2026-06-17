@@ -88,9 +88,7 @@ export function appendExtraArgs(
     ...new Set(parsed.map(flagName).filter((f): f is string => f !== null && locked.has(f))),
   ];
   if (collisions.length > 0) {
-    throw new ExtraArgsError(
-      `extra args may not override managed flags: ${collisions.join(", ")}`,
-    );
+    throw new ExtraArgsError(`extra args may not override managed flags: ${collisions.join(", ")}`);
   }
   return [...argv, ...parsed];
 }

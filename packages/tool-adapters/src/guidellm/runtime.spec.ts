@@ -265,7 +265,8 @@ describe("guidellm.parseFinalReport", () => {
 
 describe("guidellm extraArgs escape hatch", () => {
   const withExtra = (extraArgs: string) =>
-    buildCommand({ runId: "r1", params: { ...defaultParams, extraArgs }, connection: baseConn }).argv;
+    buildCommand({ runId: "r1", params: { ...defaultParams, extraArgs }, connection: baseConn })
+      .argv;
 
   it("appends extra args", () => {
     const argv = withExtra("--warmup-percent 0.1");
