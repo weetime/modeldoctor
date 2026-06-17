@@ -435,6 +435,11 @@
     }
   },
   "forms": {
+    "extraArgs": {
+      "label": "Advanced (raw CLI)",
+      "placeholder": "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      "help": "Extra raw CLI args, space/newline separated. Cannot override managed flags (model / url / api-key / output paths) — the run errors if you try. Power-user; not guaranteed comparable across runs."
+    },
     "evalscope": {
       "section": "Evalscope parameters",
       "dataset": "Dataset",
