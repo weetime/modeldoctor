@@ -19,6 +19,10 @@ export const evalscopeParamsSchema = z
     apiPath: z.enum(["/v1/chat/completions", "/v1/completions"]).default("/v1/chat/completions"),
     stream: z.boolean().default(true),
     seed: z.number().int().optional(),
+
+    // Power-user escape hatch: raw extra CLI flags appended verbatim. Cannot
+    // override managed flags (validated in buildCommand). See core/extra-args.
+    extraArgs: z.string().max(4000).optional(),
   })
   .refine((p) => p.minPromptLength <= p.maxPromptLength, {
     message: "minPromptLength must be <= maxPromptLength",
