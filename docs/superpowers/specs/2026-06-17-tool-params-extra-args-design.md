@@ -99,6 +99,16 @@ Locked sets (derived from current `buildCommand`s):
 (The exact set is re-derived from each `buildCommand` at implementation time so it stays
 in sync.)
 
+**Short/alt aliases:** a long-flag lock (`--model`) is bypassable if the tool resolves a
+short/alt form to the same param. Verified against the runner-image `--help`: only
+**aiperf** has such aliases for managed flags — `-m` / `--model-names` (→ `--model`),
+`-u` (→ `--url`), `--output-artifact-dir` (→ `--artifact-dir`), and `--config` / `-f`
+(a YAML that can override ANY param). These are added to `AIPERF_LOCKED_FLAGS`.
+evalscope and guidellm expose no short aliases for their managed flags (only `-h`/`-c`
+for help/scenario), so they need none. Note: `--api-key` has no short form in any of the
+three, and extraArgs is configured by the authenticated user for their own run (no
+cross-user boundary) — so this is guardrail-integrity, not an exfiltration vector.
+
 ### UI (`apps/web`)
 
 In the shared tool-params editor used by `TemplateForm` (and the benchmark create page),

@@ -38,6 +38,15 @@ const AIPERF_LOCKED_FLAGS: ReadonlySet<string> = new Set([
   "--conversation-turn-delay-mean",
   "--random-seed",
   "--artifact-dir",
+  // Aliases of the above that aiperf resolves to the same param — block them too
+  // so extraArgs can't bypass a long-flag lock via a short/alt form (verified
+  // against the aiperf 0.10 runner image --help):
+  "-m", // --model
+  "--model-names", // alias of --model
+  "-u", // --url
+  "--output-artifact-dir", // alias of --artifact-dir (breaks result ingestion)
+  "--config", // a YAML config file can override ANY param — strongest bypass
+  "-f", // alias of --config
 ]);
 
 // aiperf reads the endpoint API key ONLY from --api-key (no env-var channel;

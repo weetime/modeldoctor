@@ -415,6 +415,21 @@ describe("aiperf extraArgs escape hatch", () => {
     expect(() => withExtra("--model evil")).toThrow(ExtraArgsError);
   });
 
+  it("rejects short/alt aliases that resolve to a managed flag", () => {
+    // aiperf 0.10 resolves these to model / url / artifact-dir / any-param.
+    expect(() => withExtra("-m evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--model-names evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("-u http://evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--output-artifact-dir /tmp/evil")).toThrow(ExtraArgsError);
+    expect(() => withExtra("-f cfg.yaml")).toThrow(ExtraArgsError);
+    expect(() => withExtra("--config=cfg.yaml")).toThrow(ExtraArgsError);
+  });
+
+  it("still allows harmless short flags (verbose / batch-size)", () => {
+    expect(withExtra("-v")).toContain("-v");
+    expect(withExtra("-b 4")).toContain("-b");
+  });
+
   it("is a no-op when extraArgs is absent", () => {
     expect(buildCommand(plan).argv).not.toContain("--extra-inputs");
   });
