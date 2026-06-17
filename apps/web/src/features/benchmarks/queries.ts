@@ -83,6 +83,17 @@ export function useDeleteBenchmark() {
   });
 }
 
+export function useBulkDeleteBenchmarks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => benchmarkApi.bulkDelete(ids),
+    onSuccess: (_v, ids) => {
+      for (const id of ids) qc.removeQueries({ queryKey: benchmarkKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });
+    },
+  });
+}
+
 export function useBenchmarkCharts(benchmarkId: string) {
   return useQuery({
     queryKey: benchmarkKeys.charts(benchmarkId),

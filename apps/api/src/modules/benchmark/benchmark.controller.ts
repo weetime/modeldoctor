@@ -1,6 +1,9 @@
 import {
   type Benchmark,
   type BenchmarkChartsResponse,
+  type BulkDeleteBenchmarksRequest,
+  type BulkDeleteBenchmarksResponse,
+  bulkDeleteBenchmarksRequestSchema,
   type CreateBenchmarkRequest,
   createBenchmarkRequestSchema,
   type EndpointReportRange,
@@ -101,6 +104,20 @@ export class BenchmarkController {
   @HttpCode(204)
   async delete(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
+  @ApiOperation({ summary: "Delete many benchmarks in one request (owner or admin)" })
+  @Post("bulk-delete")
+  async bulkDelete(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(bulkDeleteBenchmarksRequestSchema))
+    body: BulkDeleteBenchmarksRequest,
+  ): Promise<BulkDeleteBenchmarksResponse> {
+    const deleted = await this.service.bulkDelete(
+      body.ids,
+      user.roles.includes("admin") ? undefined : user.sub,
+    );
+    return { deleted };
   }
 
   /** Live log stream for an in-flight benchmark.

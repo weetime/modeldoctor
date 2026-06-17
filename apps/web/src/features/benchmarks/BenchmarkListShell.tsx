@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -45,7 +45,12 @@ import { useLocaleStore } from "@/stores/locale-store";
 import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { fmtDurationMs, fmtTimeRange, runDurationMs } from "./duration";
-import { useBenchmarkList, useCreateBenchmark, useDeleteBenchmark } from "./queries";
+import {
+  useBenchmarkList,
+  useBulkDeleteBenchmarks,
+  useCreateBenchmark,
+  useDeleteBenchmark,
+} from "./queries";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
 import { StatusBadge } from "./status-display";
@@ -124,10 +129,22 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [saveTplBenchmark, setSaveTplBenchmark] = useState<Benchmark | null>(null);
   const deleteBenchmark = useDeleteBenchmark();
+  const bulkDeleteBenchmarks = useBulkDeleteBenchmarks();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
+
+  // Drop the selection whenever the filters (URL params) or scenario change.
+  // `selected` is keyed by id and would otherwise retain now-hidden rows, so a
+  // later bulk delete could silently remove benchmarks the user can no longer
+  // see. Depend on the serialized params (primitive) so the effect only fires
+  // on an actual filter change, not on every render.
+  const searchParamsString = searchParams.toString();
+  useEffect(() => {
+    setSelected(new Set());
+  }, [searchParamsString, scenario]);
 
   async function handleRerunRow(b: Benchmark) {
     if (!b.connectionId) {
@@ -209,6 +226,27 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
     });
   }
 
+  // Select-all toggles only the currently-loaded rows (selection across
+  // unfetched pages would silently delete rows the user can't see).
+  const allLoadedSelected = items.length > 0 && items.every((b) => selected.has(b.id));
+  const someLoadedSelected = items.some((b) => selected.has(b.id));
+  const headerChecked: boolean | "indeterminate" = allLoadedSelected
+    ? true
+    : someLoadedSelected
+      ? "indeterminate"
+      : false;
+
+  function toggleAll(checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const b of items) {
+        if (checked) next.add(b.id);
+        else next.delete(b.id);
+      }
+      return next;
+    });
+  }
+
   return (
     <>
       <PageHeader
@@ -216,6 +254,17 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
         subtitle={t(`scenarioDescriptions.${scenario}`)}
         rightSlot={
           <div className="flex gap-2">
+            {selected.size > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 text-destructive hover:text-destructive"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t("bulkDelete.button", { n: selected.size })}
+              </Button>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -297,7 +346,13 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10" />
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={headerChecked}
+                      onCheckedChange={(c) => toggleAll(c === true)}
+                      aria-label={t("bulkDelete.selectAll")}
+                    />
+                  </TableHead>
                   <TableHead>{t("columns.name")}</TableHead>
                   <TableHead>{t("columns.createdAt")}</TableHead>
                   <TableHead>{t("columns.duration")}</TableHead>
@@ -489,6 +544,31 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
             },
             onError: () => {
               toast.error(t("detail.delete.errors.generic"));
+            },
+          });
+        }}
+      />
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(o) => {
+          if (!o) setBulkDeleteOpen(false);
+        }}
+        title={t("bulkDelete.confirmTitle", { n: selected.size })}
+        description={t("bulkDelete.confirmBody", { n: selected.size })}
+        confirmLabel={t("bulkDelete.confirmAction")}
+        pending={bulkDeleteBenchmarks.isPending}
+        onConfirm={() => {
+          const ids = [...selected];
+          if (ids.length === 0) return;
+          bulkDeleteBenchmarks.mutate(ids, {
+            onSuccess: ({ deleted }) => {
+              setBulkDeleteOpen(false);
+              setSelected(new Set());
+              toast.success(t("bulkDelete.success", { n: deleted }));
+            },
+            onError: () => {
+              toast.error(t("bulkDelete.errors.generic"));
             },
           });
         }}

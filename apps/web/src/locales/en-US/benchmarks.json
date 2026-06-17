@@ -86,6 +86,7 @@
   "filters": {
     "tool": "Tool",
     "status": "Status",
+    "connection": "Connection",
     "baseline": "Baseline",
     "baselineIs": "Is a baseline",
     "baselineRef": "References a baseline",
@@ -130,6 +131,17 @@
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
   "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
+  "bulkDelete": {
+    "button": "Delete ({{n}})",
+    "selectAll": "Toggle all rows on this page",
+    "confirmTitle": "Delete {{n}} benchmarks?",
+    "confirmBody": "{{n}} runs will be removed from history along with their raw output. This cannot be undone.",
+    "confirmAction": "Delete",
+    "success": "Deleted {{n}} benchmarks",
+    "errors": {
+      "generic": "Failed to delete the selected benchmarks"
+    }
+  },
   "empty": {
     "title": "No benchmarks yet",
     "filtered": "No benchmarks match these filters",

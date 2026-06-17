@@ -1,6 +1,6 @@
 import type { Benchmark, ListBenchmarksResponse } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -22,6 +22,15 @@ vi.mock("@/lib/api-client", () => {
 });
 
 import { api } from "@/lib/api-client";
+
+// The connection filter inside BenchmarkListFilters calls useConnections().
+// Stub it so it doesn't consume the list's `api.get` mockResolvedValueOnce
+// responses (which would starve the benchmark-list query of its fixtures).
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({
+    data: [{ id: "c1", name: "vLLM Local", model: "m", baseUrl: "http://x" }],
+  }),
+}));
 
 // Real adapter-emitted shapes. `summaryMetrics` is the discriminated union
 // `{ tool, data }` written by tool-adapter `parseFinalReport` — see
@@ -242,6 +251,57 @@ describe("BenchmarkListShell", () => {
     // verifying we landed there. Full happy-path is covered by
     // BenchmarkComparePage's own tests.
     await waitFor(() => expect(screen.getByText("compare-stub")).toBeInTheDocument());
+  });
+
+  it("bulk-deletes selected rows via POST /bulk-delete after confirm", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [
+        makeBenchmark("a", "guidellm", "completed", guidellmMetrics),
+        makeBenchmark("b", "guidellm", "completed", guidellmMetrics),
+      ],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    vi.mocked(api.post).mockResolvedValue({ deleted: 2 });
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: /select a/i }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /select b/i }));
+
+    // Bulk-delete button appears once a row is selected.
+    await userEvent.click(screen.getByRole("button", { name: /Delete \(2\)|删除 \(2\)/i }));
+
+    // ConfirmDeleteDialog is type-to-confirm: the destructive button stays
+    // disabled until "DELETE" is typed into the keyword input.
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.type(within(dialog).getByRole("textbox"), "DELETE");
+    const confirmBtn = within(dialog).getByRole("button", { name: /^Delete$|^确认删除$/ });
+    expect(confirmBtn).not.toBeDisabled();
+    await userEvent.click(confirmBtn);
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/api/benchmarks/bulk-delete", {
+        ids: ["a", "b"],
+      }),
+    );
+  });
+
+  it("clears the selection when a filter changes (no stale bulk delete of hidden rows)", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [makeBenchmark("a", "guidellm", "completed", guidellmMetrics)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: /select a/i }));
+    expect(screen.getByRole("button", { name: /Delete \(1\)|删除 \(1\)/i })).toBeInTheDocument();
+
+    // Change the Status filter → URL params change → selection must reset.
+    await userEvent.click(screen.getByRole("combobox", { name: /Status|状态/ }));
+    await userEvent.click(screen.getByRole("option", { name: /Completed|已完成/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Delete \(\d+\)|删除 \(\d+\)/i })).toBeNull(),
+    );
   });
 
   it("renders the benchmark name in the first content column", async () => {

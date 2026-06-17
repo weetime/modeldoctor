@@ -105,6 +105,21 @@ export const listBenchmarksResponseSchema = z.object({
 });
 export type ListBenchmarksResponse = z.infer<typeof listBenchmarksResponseSchema>;
 
+// ── Bulk delete ──────────────────────────────────────────────────────
+// POST /api/benchmarks/bulk-delete — delete many rows in one request.
+// Capped at 100 ids per call (mirrors the list page's max selection).
+export const bulkDeleteBenchmarksRequestSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+});
+export type BulkDeleteBenchmarksRequest = z.infer<typeof bulkDeleteBenchmarksRequestSchema>;
+
+export const bulkDeleteBenchmarksResponseSchema = z.object({
+  // Number of rows actually deleted — ids the caller didn't own or that
+  // were already gone are silently skipped, so this can be < ids.length.
+  deleted: z.number().int().nonnegative(),
+});
+export type BulkDeleteBenchmarksResponse = z.infer<typeof bulkDeleteBenchmarksResponseSchema>;
+
 // ── Create request ───────────────────────────────────────────────────
 export const createBenchmarkRequestSchema = z.object({
   scenario: scenarioIdSchema,

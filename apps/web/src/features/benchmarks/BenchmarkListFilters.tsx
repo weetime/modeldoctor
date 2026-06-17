@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useConnections } from "@/features/connections/queries";
 import { DateRangeFilter } from "./DateRangeFilter";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -43,6 +44,8 @@ export function BenchmarkListFilters({
   availableTools,
 }: BenchmarkListFiltersProps) {
   const { t } = useTranslation("benchmarks");
+  const connections = useConnections().data ?? [];
+  const selectedConnection = connections.find((c) => c.id === query.connectionId);
 
   function patch(p: Partial<ListBenchmarksQuery>) {
     onChange({ ...query, ...p });
@@ -120,6 +123,36 @@ export function BenchmarkListFilters({
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
               {t(`status.${s}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={query.connectionId ?? ALL}
+        onValueChange={(v) => patch({ connectionId: v === ALL ? undefined : v })}
+      >
+        <SelectTrigger className="w-[220px]" aria-label={t("filters.connection")}>
+          <SelectValue placeholder={t("filters.connection")}>
+            {selectedConnection ? (
+              <span className="truncate">{selectedConnection.model}</span>
+            ) : (
+              t("filters.connection")
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>{t("filters.any")}</SelectItem>
+          {connections.map((c) => (
+            <SelectItem key={c.id} value={c.id} className="py-2">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-baseline gap-2 text-sm">
+                  <span className="font-medium">{c.model}</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">{c.name}</span>
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/70">{c.baseUrl}</div>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>

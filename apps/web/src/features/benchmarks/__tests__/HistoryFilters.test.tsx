@@ -3,6 +3,18 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
+
+// The connection filter calls useConnections(); stub it so these tests don't
+// need a QueryClient / api-client mock.
+vi.mock("@/features/connections/queries", () => ({
+  useConnections: () => ({
+    data: [
+      { id: "conn-1", name: "vLLM Local", model: "Qwen2.5-0.5B", baseUrl: "http://x" },
+      { id: "conn-2", name: "vLLM Remote", model: "Qwen3-8B", baseUrl: "http://y" },
+    ],
+  }),
+}));
+
 import { BenchmarkListFilters } from "../BenchmarkListFilters";
 
 describe("BenchmarkListFilters baseline dropdown", () => {
@@ -44,5 +56,27 @@ describe("BenchmarkListFilters baseline dropdown", () => {
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ isBaseline: undefined, referencesBaseline: undefined }),
     );
+  });
+});
+
+describe("BenchmarkListFilters connection dropdown", () => {
+  it("emits connectionId when a connection is picked", async () => {
+    const onChange = vi.fn();
+    render(<BenchmarkListFilters query={{}} onChange={onChange} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: /Connection|连接/ }));
+    // Options render model name as the prominent label.
+    await user.click(screen.getByRole("option", { name: /Qwen3-8B/ }));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ connectionId: "conn-2" }));
+  });
+
+  it("clears connectionId when 'Any' is picked", async () => {
+    const onChange = vi.fn();
+    render(<BenchmarkListFilters query={{ connectionId: "conn-1" }} onChange={onChange} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: /Connection|连接/ }));
+    const anyOptions = screen.getAllByRole("option", { name: /^Any|^全部$/ });
+    await user.click(anyOptions[anyOptions.length - 1]);
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ connectionId: undefined }));
   });
 });
