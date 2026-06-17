@@ -3,6 +3,7 @@ import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
@@ -274,7 +275,15 @@ export function ConnectionsPage() {
         pending={deleteMut.isPending}
         onConfirm={() => {
           if (pendingDelete) {
-            deleteMut.mutate(pendingDelete.id);
+            deleteMut.mutate(pendingDelete.id, {
+              onSuccess: () => toast.success(t("delete.success")),
+              onError: (e) => {
+                // 409 = the connection is still referenced by an evaluation run
+                // (server blocks the delete to keep the A/B comparison intact).
+                const status = (e as { status?: number }).status;
+                toast.error(status === 409 ? t("delete.inUse") : t("delete.error"));
+              },
+            });
           }
           setPendingDelete(null);
         }}

@@ -11,16 +11,17 @@ import type {
 import { ErrorCodes } from "@modeldoctor/contracts";
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type {
-  Prisma,
   Connection as PrismaConnection,
   PrometheusDatasource as PrismaPrometheusDatasource,
 } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { decodeKey, decrypt, encrypt } from "../../common/crypto/aes-gcm.js";
 import type { Env } from "../../config/env.schema.js";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -187,7 +188,23 @@ export class ConnectionService {
 
   async delete(userId: string, id: string): Promise<void> {
     await this.findOwnedRow(userId, id);
-    await this.prisma.connection.delete({ where: { id } });
+    try {
+      await this.prisma.connection.delete({ where: { id } });
+    } catch (e) {
+      // P2003 = a Restrict FK still references this connection. The only
+      // Restrict references are EvaluationRun.endpointA / endpointB: a
+      // quality-gate run was executed against this endpoint, and its A/B
+      // comparison would lose meaning if the endpoint vanished. Surface a
+      // readable 409 instead of letting Prisma's error bubble up as a 500.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+        throw new ConflictException({
+          code: ErrorCodes.CONFLICT,
+          message:
+            "This connection is referenced by one or more evaluation runs. Delete those runs first.",
+        });
+      }
+      throw e;
+    }
   }
 
   /**
