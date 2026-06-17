@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -135,6 +135,16 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const bulkDeleteBenchmarks = useBulkDeleteBenchmarks();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
+
+  // Drop the selection whenever the filters (URL params) or scenario change.
+  // `selected` is keyed by id and would otherwise retain now-hidden rows, so a
+  // later bulk delete could silently remove benchmarks the user can no longer
+  // see. Depend on the serialized params (primitive) so the effect only fires
+  // on an actual filter change, not on every render.
+  const searchParamsString = searchParams.toString();
+  useEffect(() => {
+    setSelected(new Set());
+  }, [searchParamsString, scenario]);
 
   async function handleRerunRow(b: Benchmark) {
     if (!b.connectionId) {

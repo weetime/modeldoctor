@@ -285,6 +285,25 @@ describe("BenchmarkListShell", () => {
     );
   });
 
+  it("clears the selection when a filter changes (no stale bulk delete of hidden rows)", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      items: [makeBenchmark("a", "guidellm", "completed", guidellmMetrics)],
+      nextCursor: null,
+    } satisfies ListBenchmarksResponse);
+    render(<BenchmarkListShell scenario="inference" />, { wrapper: Wrapper });
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: /select a/i }));
+    expect(screen.getByRole("button", { name: /Delete \(1\)|删除 \(1\)/i })).toBeInTheDocument();
+
+    // Change the Status filter → URL params change → selection must reset.
+    await userEvent.click(screen.getByRole("combobox", { name: /Status|状态/ }));
+    await userEvent.click(screen.getByRole("option", { name: /Completed|已完成/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Delete \(\d+\)|删除 \(\d+\)/i })).toBeNull(),
+    );
+  });
+
   it("renders the benchmark name in the first content column", async () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       items: [makeBenchmark("r1", "guidellm", "completed", guidellmMetrics)],

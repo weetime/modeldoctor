@@ -298,7 +298,9 @@ export class BenchmarkService {
    */
   async bulkDelete(ids: string[], userId?: string): Promise<number> {
     let deleted = 0;
-    for (const id of ids) {
+    // Dedupe so a caller passing the same id twice doesn't trigger redundant
+    // lookups / driver.cancel calls for one row.
+    for (const id of new Set(ids)) {
       try {
         await this.delete(id, userId);
         deleted++;

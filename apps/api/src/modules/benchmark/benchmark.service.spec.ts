@@ -383,6 +383,13 @@ describe("BenchmarkService.bulkDelete", () => {
     const deleted = await svc.bulkDelete(["b1", "b2"], undefined);
     expect(deleted).toBe(2);
   });
+
+  it("dedupes ids so a repeated id is deleted (and counted) only once", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", userId: "u1" }));
+    const deleted = await svc.bulkDelete(["b1", "b1", "b1"], "u1");
+    expect(deleted).toBe(1);
+    expect(repo.delete).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("BenchmarkService.create — failure paths", () => {
