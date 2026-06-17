@@ -4,10 +4,24 @@ import type {
   ProgressEvent,
   ToolReport,
 } from "../core/interface.js";
+import { appendExtraArgs } from "../core/extra-args.js";
 import { type AiperfParams, aiperfReportSchema } from "./schema.js";
 
 const OUTPUTS_DIR = "out";
 const SUMMARY_FILE = "profile_export_aiperf.json";
+
+// Every flag buildCommand emits — the user's extraArgs may ADD flags but must
+// not override any of these (one source of truth per managed flag).
+const AIPERF_LOCKED_FLAGS: ReadonlySet<string> = new Set([
+  "--model", "--url", "--endpoint-type", "--tokenizer", "--api-key",
+  "--workers-max", "--streaming", "--input-file", "--custom-dataset-type",
+  "--fixed-schedule", "--fixed-schedule-end-offset", "--concurrency",
+  "--request-count", "--synthetic-input-tokens-mean", "--synthetic-input-tokens-stddev",
+  "--output-tokens-mean", "--output-tokens-stddev", "--public-dataset",
+  "--conversation-num", "--conversation-turn-mean", "--conversation-turn-stddev",
+  "--connection-reuse-strategy", "--conversation-turn-delay-mean", "--random-seed",
+  "--artifact-dir",
+]);
 
 // aiperf reads the endpoint API key ONLY from --api-key (no env-var channel;
 // OPENAI_API_KEY in secretEnv alone never reaches the requests — Higress-style
@@ -117,8 +131,10 @@ export function buildCommand(plan: BuildCommandPlan<AiperfParams>): BuildCommand
 
   argv.push("--artifact-dir", OUTPUTS_DIR);
 
+  const finalArgv = appendExtraArgs(argv, params.extraArgs, AIPERF_LOCKED_FLAGS);
+
   return {
-    argv,
+    argv: finalArgv,
     env: {},
     secretEnv: { OPENAI_API_KEY: connection.apiKey },
     // AIPerf writes <artifact-dir>/profile_export_aiperf.json for the

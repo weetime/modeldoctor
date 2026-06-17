@@ -38,6 +38,11 @@ export const aiperfParamsSchema = z
     // count. A few-minute slice from t=0 sends a representative open-loop
     // workload and completes cleanly. Omit for an (unbounded) full replay.
     traceReplayWindowSec: z.number().int().min(10).max(3600).optional(),
+
+    // Power-user escape hatch: raw extra CLI flags appended verbatim to the
+    // aiperf argv. Cannot override managed flags (validated in buildCommand via
+    // appendExtraArgs). See core/extra-args.
+    extraArgs: z.string().max(4000).optional(),
   })
   .superRefine((v, ctx) => {
     const isMooncake = v.dataset === "mooncake-trace";
