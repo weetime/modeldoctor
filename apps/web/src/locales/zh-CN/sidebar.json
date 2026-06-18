@@ -15,7 +15,7 @@
     "benchmarkInference": "推理性能基准",
     "benchmarkCapacity": "容量规划",
     "benchmarkGateway": "网关压测",
-    "benchmarkPrefixCache": "Prefix-cache 验证",
+    "benchmarkPrefixCache": "负载均衡策略验证",
     "endpointReports": "测试洞察",
     "compareReports": "对比报告",
     "benchmarkTemplates": "测试模板",
@@ -30,6 +30,6 @@
     "logout": "退出登录",
     "devCharts": "图表调试",
     "deploymentRecipes": "部署示例",
-    "benchmarkKvCacheStress": "KV cache 压测"
+    "benchmarkKvCacheStress": "引擎 KV / 前缀缓存"
   }
 }
