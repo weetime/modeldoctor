@@ -216,8 +216,8 @@ export function BenchmarkCreatePage() {
     inference: "benchmarkInference",
     capacity: "benchmarkCapacity",
     gateway: "benchmarkGateway",
-    "prefix-cache-validation": "benchmarkPrefixCache",
-    "kv-cache-stress": "benchmarkKvCacheStress",
+    "lb-strategy": "benchmarkPrefixCache",
+    "engine-kv-cache": "benchmarkKvCacheStress",
   };
   const breadcrumbs = [
     { label: tSidebar("groups.benchmarks") },

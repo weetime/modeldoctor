@@ -58,12 +58,12 @@ export const sidebarGroups: SidebarGroup[] = [
       { to: "/benchmarks/capacity", icon: Activity, labelKey: "items.benchmarkCapacity" },
       { to: "/benchmarks/gateway", icon: Network, labelKey: "items.benchmarkGateway" },
       {
-        to: "/benchmarks/prefix-cache-validation",
+        to: "/benchmarks/lb-strategy",
         icon: Layers,
         labelKey: "items.benchmarkPrefixCache",
       },
       {
-        to: "/benchmarks/kv-cache-stress",
+        to: "/benchmarks/engine-kv-cache",
         icon: Database,
         labelKey: "items.benchmarkKvCacheStress",
       },

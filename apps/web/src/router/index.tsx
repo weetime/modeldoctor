@@ -86,11 +86,11 @@ export const routes: RouteObject[] = [
           { path: "benchmarks/capacity", element: <BenchmarkCapacityPage /> },
           { path: "benchmarks/gateway", element: <BenchmarkGatewayPage /> },
           {
-            path: "benchmarks/prefix-cache-validation",
+            path: "benchmarks/lb-strategy",
             element: <BenchmarkPrefixCachePage />,
           },
           {
-            path: "benchmarks/kv-cache-stress",
+            path: "benchmarks/engine-kv-cache",
             element: <BenchmarkKvCacheStressPage />,
           },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },

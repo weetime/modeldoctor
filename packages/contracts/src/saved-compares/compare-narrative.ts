@@ -71,7 +71,7 @@ export const figureRefIdSchema = z.enum([
   "stage-bars-ttft-p95",
   "stage-bars-e2e-p95",
   // Prefix-cache figures — populated from serverMetrics.prefixCache, only
-  // available for prefix-cache-validation runs. hit = cache hit-rate %,
+  // available for lb-strategy runs. hit = cache hit-rate %,
   // top-pod = the busiest pod's share of queries (routing concentration).
   "stage-bars-prefix-cache-hit",
   "stage-bars-top-pod-share",

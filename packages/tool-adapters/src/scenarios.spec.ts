@@ -14,13 +14,13 @@ describe("SCENARIOS constant", () => {
       "capacity",
       "gateway",
       "inference",
-      "kv-cache-stress",
-      "prefix-cache-validation",
+      "engine-kv-cache",
+      "lb-strategy",
     ]);
   });
 
-  it("kv-cache-stress scenario lists evalscope only (legacy tool retired)", () => {
-    expect([...SCENARIOS["kv-cache-stress"].tools]).toEqual(["evalscope"]);
+  it("engine-kv-cache scenario lists evalscope only (legacy tool retired)", () => {
+    expect([...SCENARIOS["engine-kv-cache"].tools]).toEqual(["evalscope"]);
   });
 
   it("inference scenario lists guidellm, evalscope, and aiperf", () => {

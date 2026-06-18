@@ -227,10 +227,10 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta";
 type SeedScenario =
   | "inference"
-  | "kv-cache-stress"
+  | "engine-kv-cache"
   | "capacity"
   | "gateway"
-  | "prefix-cache-validation";
+  | "lb-strategy";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
@@ -460,7 +460,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 1 · 8K prompt · parallel 8",
     description:
       "evalscope perf · 8000-9000 token prompts · parallel 8 · 64 次请求 · 160-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -481,7 +481,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 2 · 8K prompt · parallel 16",
     description:
       "evalscope perf · 8000-9000 token prompts · parallel 16 · 128 次请求 · 160-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -502,7 +502,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 3 · 11K prompt · parallel 8",
     description:
       "evalscope perf · 11000-13000 token prompts · parallel 8 · 64 次请求 · 300-400 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -523,7 +523,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 4 · 11K prompt · parallel 16",
     description:
       "evalscope perf · 11000-13000 token prompts · parallel 16 · 128 次请求 · 300-400 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -544,7 +544,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 5 · 14K prompt · parallel 8",
     description:
       "evalscope perf · 14000-16000 token prompts · parallel 8 · 64 次请求 · 100-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -565,7 +565,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "KV Cache · Task 6 · 14K prompt · parallel 16",
     description:
       "evalscope perf · 14000-16000 token prompts · parallel 16 · 128 次请求 · 100-200 输出 token，seed=42 复现锁定。配 `<run>(rerun)` 子 benchmark 触发 KvCacheStressReport 的 cold/warm 对比。",
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     tool: "evalscope",
     config: {
       dataset: "longalpaca",
@@ -762,7 +762,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "路由粘性 · 文章同款 (t1)",
     description:
       "Higress 文章同款多轮:60 会话 × 5 轮,in 200 / out 800,concurrency 20。关/开 ai-load-balancer 各跑一次,对比 TTFT 与 Prometheus 命中率 / 逐-pod 集中度。",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     tool: "aiperf",
     config: {
       concurrency: 20,
@@ -794,7 +794,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "路由粘性 · 深会话 (t2)",
     description:
       "深会话:30 会话 × 10 轮,前缀累积最多,prefix-cache 路由收益最敏感。关/开对照的首选档。",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     tool: "aiperf",
     config: {
       concurrency: 20,
@@ -819,7 +819,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_t3_shallow",
     name: "路由粘性 · 浅会话 (t3)",
     description: "浅会话:120 会话 × 2 轮,对照锚点,前缀复用少、prefix-cache 收益最小。",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     tool: "aiperf",
     config: {
       concurrency: 20,
@@ -845,7 +845,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "缓存感知 · Mooncake 对话",
     description:
       "Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。回放前 5 分钟切片(约 1000 请求)按 trace 时间戳发压,既代表真实形态又能干净出报告(全量 ~59 分钟会压垮汇总导出)。",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     tool: "aiperf",
     config: {
       endpointType: "chat",
@@ -864,7 +864,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "缓存感知 · Mooncake Agent",
     description:
       "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。回放前 5 分钟切片(约 1000 请求),按 trace 时间戳发压,干净出报告。",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     tool: "aiperf",
     config: {
       endpointType: "chat",
@@ -934,7 +934,7 @@ async function seedBenchmarkTemplates(): Promise<void> {
             : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
-    // (inference, evalscope) and (kv-cache-stress, evalscope) this is
+    // (inference, evalscope) and (engine-kv-cache, evalscope) this is
     // a no-op — those scenarios' paramsConstraints maps have no entry
     // for evalscope, so applyScenarioConstraints returns the bare
     // adapter schema and re-parses the same shape. We still call it

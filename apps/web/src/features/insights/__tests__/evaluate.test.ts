@@ -88,8 +88,8 @@ describe("compositeScore", () => {
         inference: null,
         capacity: null,
         gateway: null,
-        "prefix-cache-validation": null,
-        "kv-cache-stress": null,
+        "lb-strategy": null,
+        "engine-kv-cache": null,
       }),
     ).toBeNull();
   });
@@ -100,8 +100,8 @@ describe("compositeScore", () => {
         inference: 90,
         capacity: 70,
         gateway: 80,
-        "prefix-cache-validation": null,
-        "kv-cache-stress": null,
+        "lb-strategy": null,
+        "engine-kv-cache": null,
       }),
     ).toBe(80);
   });
@@ -112,8 +112,8 @@ describe("compositeScore", () => {
         inference: 90,
         capacity: null,
         gateway: 70,
-        "prefix-cache-validation": null,
-        "kv-cache-stress": null,
+        "lb-strategy": null,
+        "engine-kv-cache": null,
       }),
     ).toBe(80);
   });

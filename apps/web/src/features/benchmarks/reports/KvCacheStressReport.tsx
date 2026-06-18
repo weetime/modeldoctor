@@ -26,8 +26,8 @@ function fmt(n: number, digits = 1): string {
 const RERUN_SUFFIX = " (rerun)";
 
 /**
- * The "kv-cache-stress" scenario now renders evalscope's report shape (the
- * legacy kv-cache-stress tool is being retired in Phase 9). When a sibling
+ * The "engine-kv-cache" scenario now renders evalscope's report shape (the
+ * legacy engine-kv-cache tool is being retired in Phase 9). When a sibling
  * benchmark named `<name> (rerun)` exists in the same scope, we render a
  * cold-vs-warm delta table comparing the cold first run (R1) against the
  * warm rerun (R2). Otherwise the rerun panel is omitted.
@@ -90,7 +90,7 @@ function ColdWarmPairPanel({ benchmark, cold }: ColdWarmPairPanelProps) {
 
   const list = useBenchmarkList({
     connectionId: benchmark.connectionId ?? undefined,
-    scenario: "kv-cache-stress",
+    scenario: "engine-kv-cache",
     search: sourceName,
     // Restrict to terminal-success benchmarks so an in-flight rerun doesn't
     // accidentally match as the sibling pair (its summaryMetrics is null and

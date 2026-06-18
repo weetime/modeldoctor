@@ -36,7 +36,7 @@ export const GUIDELLM_CATEGORY_DEFAULTS = {
 /**
  * evalscope perf supports chat/completions and completions; the schema's
  * `apiPath` enum gates the rest. Embedding / rerank / image / audio are out
- * of scope for the inference + kv-cache-stress scenarios where evalscope
+ * of scope for the inference + engine-kv-cache scenarios where evalscope
  * is offered, so they get `unsupported` markers like guidellm.
  */
 export const EVALSCOPE_CATEGORY_DEFAULTS = {

@@ -6,15 +6,15 @@ export type ScenarioId =
   | "inference"
   | "capacity"
   | "gateway"
-  | "prefix-cache-validation"
-  | "kv-cache-stress";
+  | "lb-strategy"
+  | "engine-kv-cache";
 
 export const scenarioIdSchema = z.enum([
   "inference",
   "capacity",
   "gateway",
-  "prefix-cache-validation",
-  "kv-cache-stress",
+  "lb-strategy",
+  "engine-kv-cache",
 ]);
 
 export interface ScenarioConfig {
@@ -60,7 +60,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     paramsConstraints: {},
     reportComponent: "GatewayReport",
   },
-  "prefix-cache-validation": {
+  "lb-strategy": {
     label: "Prefix-cache 路由验证",
     description:
       "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本",
@@ -68,7 +68,7 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     paramsConstraints: {},
     reportComponent: "InferenceReport",
   },
-  "kv-cache-stress": {
+  "engine-kv-cache": {
     label: "KV cache 后端压测",
     description:
       "长 prompt 冷/暖双轮 evalscope perf,对比不同 KV 卸载后端 (vanilla / LMCache / YRCache) 的 TTFT / 吞吐 / prefix-cache 命中率",

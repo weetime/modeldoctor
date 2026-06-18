@@ -22,7 +22,7 @@ export interface RunMetricBlobs {
 
 /**
  * Read the prefix-cache annotation from a run's `serverMetrics` blob (stored
- * at `serverMetrics.prefixCache` on completion of a prefix-cache-validation
+ * at `serverMetrics.prefixCache` on completion of a lb-strategy
  * run). Returns null when absent or malformed — non-prefix-cache runs and
  * runs whose Prometheus snapshot found no data both degrade to null.
  */

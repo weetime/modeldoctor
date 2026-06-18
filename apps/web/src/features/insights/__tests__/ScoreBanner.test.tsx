@@ -17,8 +17,8 @@ describe("ScoreBanner", () => {
           inference: 92,
           capacity: 75,
           gateway: 82,
-          "prefix-cache-validation": null,
-          "kv-cache-stress": null,
+          "lb-strategy": null,
+          "engine-kv-cache": null,
         }}
         totalChecks={18}
         totalRuns={25}
@@ -39,8 +39,8 @@ describe("ScoreBanner", () => {
           inference: null,
           capacity: null,
           gateway: null,
-          "prefix-cache-validation": null,
-          "kv-cache-stress": null,
+          "lb-strategy": null,
+          "engine-kv-cache": null,
         }}
         totalChecks={0}
         totalRuns={0}
@@ -58,8 +58,8 @@ describe("ScoreBanner", () => {
           inference: 92,
           capacity: null,
           gateway: null,
-          "prefix-cache-validation": null,
-          "kv-cache-stress": null,
+          "lb-strategy": null,
+          "engine-kv-cache": null,
         }}
         totalChecks={7}
         totalRuns={5}
