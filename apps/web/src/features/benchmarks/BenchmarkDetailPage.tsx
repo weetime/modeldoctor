@@ -175,7 +175,15 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
         </div>
       );
     case "engine-kv-cache":
-      return <KvCacheStressReport benchmark={benchmark} />;
+      // evalscope = KV-backend view; aiperf mooncake = prefix-cache view.
+      return benchmark.tool === "aiperf" ? (
+        <div className="space-y-6">
+          <InferenceReport benchmark={benchmark} />
+          <PrefixCachePanel serverMetrics={benchmark.serverMetrics} />
+        </div>
+      ) : (
+        <KvCacheStressReport benchmark={benchmark} />
+      );
     default:
       return <UnknownReport benchmark={benchmark} />;
   }

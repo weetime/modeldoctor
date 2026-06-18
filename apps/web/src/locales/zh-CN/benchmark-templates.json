@@ -14,7 +14,7 @@
       "inference": "推理性能基准",
       "capacity": "容量规划",
       "gateway": "网关压测",
-      "lb-strategy": "Prefix-cache 验证"
+      "lb-strategy": "负载均衡策略"
     },
     "filters": {
       "search": "按名称或描述搜索…",

@@ -14,7 +14,7 @@
       "inference": "Inference benchmark",
       "capacity": "Capacity planning",
       "gateway": "Gateway load test",
-      "lb-strategy": "Prefix-cache validation"
+      "lb-strategy": "LB strategy"
     },
     "filters": {
       "search": "Search name or description…",
