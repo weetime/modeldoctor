@@ -15,7 +15,7 @@
     "benchmarkInference": "Inference Performance",
     "benchmarkCapacity": "Capacity Planning",
     "benchmarkGateway": "Gateway Load Test",
-    "benchmarkPrefixCache": "Prefix-cache Validation",
+    "benchmarkPrefixCache": "LB-strategy Validation",
     "endpointReports": "Test Insights",
     "compareReports": "Compare Reports",
     "benchmarkTemplates": "Test Templates",
@@ -30,6 +30,6 @@
     "logout": "Logout",
     "devCharts": "Dev Charts",
     "deploymentRecipes": "Deployment Recipes",
-    "benchmarkKvCacheStress": "KV Cache Stress"
+    "benchmarkKvCacheStress": "Engine KV / Prefix Cache"
   }
 }
