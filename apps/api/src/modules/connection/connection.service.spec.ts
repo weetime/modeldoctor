@@ -1,11 +1,17 @@
 import type { ConnectionPublic } from "@modeldoctor/contracts";
-import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import type {
   Connection as PrismaConnection,
   PrometheusDatasource as PrismaPrometheusDatasource,
 } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { ConnectionService } from "./connection.service.js";
@@ -449,6 +455,27 @@ describe("ConnectionService", () => {
       prismaMock.connection.delete.mockResolvedValue(makeRow());
       await service.delete("u_1", "c_1");
       expect(prismaMock.connection.delete).toHaveBeenCalledWith({ where: { id: "c_1" } });
+    });
+
+    it("maps a P2003 FK violation to a 409 ConflictException, not a 500", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow());
+      prismaMock.connection.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("FK constraint failed", {
+          code: "P2003",
+          clientVersion: "test",
+        }),
+      );
+      await expect(service.delete("u_1", "c_1")).rejects.toThrow(ConflictException);
+    });
+
+    it("rethrows non-P2003 prisma errors unchanged", async () => {
+      prismaMock.connection.findUnique.mockResolvedValue(makeRow());
+      const other = new Prisma.PrismaClientKnownRequestError("nope", {
+        code: "P2025",
+        clientVersion: "test",
+      });
+      prismaMock.connection.delete.mockRejectedValue(other);
+      await expect(service.delete("u_1", "c_1")).rejects.toBe(other);
     });
   });
 

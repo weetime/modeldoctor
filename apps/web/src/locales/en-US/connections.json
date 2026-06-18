@@ -117,7 +117,10 @@
   "delete": {
     "title": "Delete connection",
     "body": "Delete \"{{name}}\"? This cannot be undone.",
-    "confirm": "Delete"
+    "confirm": "Delete",
+    "success": "Connection deleted",
+    "inUse": "This connection is referenced by an evaluation run and can't be deleted. Delete those runs first.",
+    "error": "Failed to delete connection"
   },
   "import": {
     "title": "Import connections",
