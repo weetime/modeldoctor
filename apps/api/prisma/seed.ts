@@ -780,7 +780,11 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       seed: 42,
       // Disable Qwen3 thinking so it doesn't bloat decode + pollute the
       // prefill / prefix-cache signal. No-op for non-thinking models.
-      extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      // NOTE: aiperf --extra-inputs needs the FULL JSON-object string form.
+      // The key:value form (chat_template_kwargs:'{...}') sends a STRING and
+      // vLLM rejects it ("chat_template_kwargs must be a dict" -> 400 on every
+      // request). Verified against Qwen3-8B (2026-06-18).
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "multi-turn", "article"],
     categories: ["chat"],
@@ -806,7 +810,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       conversationTurnMean: 10,
       conversationType: "sticky-user-sessions",
       seed: 42,
-      extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "multi-turn", "deep"],
     categories: ["chat"],
@@ -831,7 +835,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       conversationTurnMean: 2,
       conversationType: "sticky-user-sessions",
       seed: 42,
-      extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "multi-turn", "shallow"],
     categories: ["chat"],
@@ -850,7 +854,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       mooncakeTrace: "conversation",
       traceReplayWindowSec: 300,
       seed: 42,
-      extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "mooncake"],
     categories: ["chat"],
@@ -869,7 +873,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       mooncakeTrace: "toolagent",
       traceReplayWindowSec: 300,
       seed: 42,
-      extraArgs: "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "mooncake"],
     categories: ["chat"],

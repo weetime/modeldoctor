@@ -449,7 +449,7 @@
   "forms": {
     "extraArgs": {
       "label": "高级参数 (raw CLI)",
-      "placeholder": "--extra-inputs chat_template_kwargs:'{\"enable_thinking\":false}'",
+      "placeholder": "--extra-inputs '{\"chat_template_kwargs\":{\"enable_thinking\":false}}'",
       "help": "追加原始 CLI 参数,空格或换行分隔。不可覆盖受管参数(model / url / api-key / 输出路径 等),否则运行会报错。高级用法,不保证跨 run 可比。"
     },
     "evalscope": {
