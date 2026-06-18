@@ -73,6 +73,7 @@ function makeConn(over: Partial<ConnectionPublic> = {}): ConnectionPublic {
     name: "primary-vllm",
     baseUrl: "https://vllm.example.com",
     apiKeyPreview: "sk-...abc",
+    enabled: true,
     model: "Qwen3-32B",
     category: "chat",
     serverKind: "vllm",

@@ -135,6 +135,7 @@ const defaultConnectionData = {
   name: "test-conn",
   baseUrl: "http://x",
   apiKeyPreview: "sk-...test",
+  enabled: true,
   model: "test-model",
   customHeaders: "",
   queryParams: "",

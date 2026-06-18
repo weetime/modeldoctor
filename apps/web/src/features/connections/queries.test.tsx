@@ -8,6 +8,8 @@ import {
   useCreateConnection,
   useDeleteConnection,
   useDiscoverConnection,
+  useSetConnectionEnabled,
+  useTestConnection,
   useUpdateConnection,
 } from "./queries";
 
@@ -33,7 +35,13 @@ describe("useConnections", () => {
     const { result } = renderHook(() => useConnections(), { wrapper: wrap() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([{ id: "c1", name: "n", apiKeyPreview: "sk-...1234" }]);
-    expect(api.get).toHaveBeenCalledWith("/api/connections");
+    expect(api.get).toHaveBeenCalledWith("/api/connections?status=enabled");
+  });
+  it("requests status=all when asked (history filters)", async () => {
+    (api.get as any).mockResolvedValue({ items: [] });
+    const { result } = renderHook(() => useConnections({ status: "all" }), { wrapper: wrap() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.get).toHaveBeenCalledWith("/api/connections?status=all");
   });
 });
 
@@ -138,5 +146,30 @@ describe("useDiscoverConnection", () => {
     const { result } = renderHook(() => useDiscoverConnection(), { wrapper: wrap() });
     await result.current.mutateAsync({ baseUrl: "http://x" });
     expect(api.post).toHaveBeenCalledWith("/api/connections/discover", { baseUrl: "http://x" });
+  });
+});
+
+describe("useSetConnectionEnabled", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("patches enabled by id", async () => {
+    (api.patch as any).mockResolvedValue({ id: "c1", enabled: false });
+    const { result } = renderHook(() => useSetConnectionEnabled(), { wrapper: wrap() });
+    await result.current.mutateAsync({ id: "c1", enabled: false });
+    expect(api.patch).toHaveBeenCalledWith("/api/connections/c1", { enabled: false });
+  });
+});
+
+describe("useTestConnection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("posts to the health endpoint and returns the result", async () => {
+    (api.post as any).mockResolvedValue({ status: "online", latencyMs: 12 });
+    const { result } = renderHook(() => useTestConnection(), { wrapper: wrap() });
+    const r = await result.current.mutateAsync("c1");
+    expect(api.post).toHaveBeenCalledWith("/api/connections/c1/health", {});
+    expect(r.status).toBe("online");
   });
 });

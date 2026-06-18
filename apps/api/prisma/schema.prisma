@@ -83,6 +83,11 @@ model Connection {
   category      String? // ModalityCategory: 'chat' | 'embeddings' | 'rerank' | 'images' | 'audio' | ...
   tags          String[] @default([])
 
+  // Archive flag. Disabled connections are hidden from the list (by default)
+  // and from every endpoint picker, but their history + referencing evaluation
+  // runs stay intact — lets users get rid of connections they can't delete.
+  enabled       Boolean  @default(true)
+
   serverKind String? @map("server_kind") // see serverKindSchema in @modeldoctor/contracts
 
   // HuggingFace tokenizer repo id used by benchmarks (guidellm/genai-perf)

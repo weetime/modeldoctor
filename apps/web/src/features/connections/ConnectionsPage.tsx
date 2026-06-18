@@ -1,5 +1,9 @@
-import type { ConnectionPublic, ModalityCategory } from "@modeldoctor/contracts";
-import { Database, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import type {
+  ConnectionPublic,
+  ConnectionStatusFilter,
+  ModalityCategory,
+} from "@modeldoctor/contracts";
+import { Activity, Database, MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -32,13 +36,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConnectionSheet, type ConnectionSheetMode } from "./ConnectionSheet";
-import { useConnections, useDeleteConnection } from "./queries";
+import {
+  useConnections,
+  useDeleteConnection,
+  useSetConnectionEnabled,
+  useTestConnection,
+} from "./queries";
 
 export function ConnectionsPage() {
   const { t } = useTranslation("connections");
   const { t: tc } = useTranslation("common");
-  const listQuery = useConnections();
+  const [filterStatus, setFilterStatus] = useState<ConnectionStatusFilter>("enabled");
+  const listQuery = useConnections({ status: filterStatus });
   const deleteMut = useDeleteConnection();
+  const setEnabled = useSetConnectionEnabled();
+  const testConn = useTestConnection();
   const list: ConnectionPublic[] = listQuery.data ?? [];
 
   const [filterCategory, setFilterCategory] = useState<ModalityCategory | "all">("all");
@@ -105,6 +117,19 @@ export function ConnectionsPage() {
             <div className="mb-3 flex items-center gap-2">
               <span className="text-xs text-muted-foreground">{t("filters.label")}:</span>
               <Select
+                value={filterStatus}
+                onValueChange={(v) => setFilterStatus(v as ConnectionStatusFilter)}
+              >
+                <SelectTrigger className="h-8 w-32 text-xs" aria-label={t("filters.status")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="enabled">{t("filters.statusEnabled")}</SelectItem>
+                  <SelectItem value="disabled">{t("filters.statusDisabled")}</SelectItem>
+                  <SelectItem value="all">{t("filters.statusAll")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
                 value={filterCategory}
                 onValueChange={(v) => setFilterCategory(v as ModalityCategory | "all")}
               >
@@ -158,7 +183,7 @@ export function ConnectionsPage() {
                 <TableBody>
                   {filtered.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className={`font-medium ${c.enabled ? "" : "opacity-50"}`}>
                         <button
                           type="button"
                           className="text-left hover:text-primary hover:underline"
@@ -166,6 +191,11 @@ export function ConnectionsPage() {
                         >
                           {c.name}
                         </button>
+                        {!c.enabled && (
+                          <Badge variant="outline" className="ml-2 text-xs text-muted-foreground">
+                            {t("badges.disabled")}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{c.model || "—"}</TableCell>
                       <TableCell className="font-mono text-xs">{c.baseUrl}</TableCell>
@@ -234,6 +264,44 @@ export function ConnectionsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                className="gap-2"
+                                disabled={testConn.isPending}
+                                onClick={() =>
+                                  testConn.mutate(c.id, {
+                                    onSuccess: (h) =>
+                                      h.status === "online"
+                                        ? toast.success(t("test.online", { ms: h.latencyMs ?? 0 }))
+                                        : toast.error(t("test.offline", { reason: h.error ?? "" })),
+                                  })
+                                }
+                              >
+                                <Activity className="h-4 w-4" />
+                                {t("actions.test")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="gap-2"
+                                disabled={setEnabled.isPending}
+                                onClick={() =>
+                                  setEnabled.mutate(
+                                    { id: c.id, enabled: !c.enabled },
+                                    {
+                                      onSuccess: () =>
+                                        toast.success(
+                                          c.enabled ? t("toggle.disabled") : t("toggle.enabled"),
+                                        ),
+                                      onError: () => toast.error(t("toggle.error")),
+                                    },
+                                  )
+                                }
+                              >
+                                {c.enabled ? (
+                                  <PowerOff className="h-4 w-4" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
+                                {c.enabled ? t("actions.disable") : t("actions.enable")}
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setPendingDelete(c)}
                                 className="gap-2 text-destructive focus:text-destructive"

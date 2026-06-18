@@ -26,6 +26,7 @@ const SAMPLE = {
   name: "vllm-prod",
   baseUrl: "http://example.com",
   apiKeyPreview: "sk-...abcd",
+  enabled: true,
   model: "qwen2.5",
   customHeaders: "X-Foo: bar",
   queryParams: "key=val",

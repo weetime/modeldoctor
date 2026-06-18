@@ -112,7 +112,20 @@
     "import": "Import",
     "export": "Export",
     "delete": "Delete",
-    "edit": "Edit"
+    "edit": "Edit",
+    "test": "Test connection",
+    "enable": "Enable",
+    "disable": "Disable"
+  },
+  "badges": { "disabled": "Disabled" },
+  "toggle": {
+    "enabled": "Connection enabled",
+    "disabled": "Connection disabled",
+    "error": "Failed to change status"
+  },
+  "test": {
+    "online": "Online ({{ms}} ms)",
+    "offline": "Offline — {{reason}}"
   },
   "delete": {
     "title": "Delete connection",
@@ -140,6 +153,10 @@
   "filters": {
     "label": "Filter",
     "allCategories": "All categories",
-    "allTags": "All tags"
+    "allTags": "All tags",
+    "status": "Status",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "statusAll": "All"
   }
 }

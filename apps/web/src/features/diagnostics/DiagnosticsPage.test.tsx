@@ -24,6 +24,7 @@ const SAMPLE_CONN: ConnectionPublic = {
   name: "smoke-1",
   baseUrl: "http://host",
   apiKeyPreview: "sk-...test",
+  enabled: true,
   model: "test-model",
   customHeaders: "",
   queryParams: "",

@@ -1,8 +1,11 @@
 import {
+  type ConnectionHealthResponse,
   type ConnectionPublic,
   type ConnectionRevealKeyResponse,
+  type ConnectionStatusFilter,
   type ConnectionWithSecret,
   type CreateConnection,
+  connectionStatusFilterSchema,
   createConnectionSchema,
   type DiscoverConnectionRequest,
   type DiscoverConnectionResponse,
@@ -21,6 +24,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -44,8 +48,12 @@ export class ConnectionController {
 
   @ApiOperation({ summary: "List connections (model endpoints + gateways) owned by the user" })
   @Get()
-  list(@CurrentUser() user: JwtPayload): Promise<ListConnectionsResponse> {
-    return this.service.list(user.sub);
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query("status", new ZodValidationPipe(connectionStatusFilterSchema.optional()))
+    status: ConnectionStatusFilter | undefined,
+  ): Promise<ListConnectionsResponse> {
+    return this.service.list(user.sub, status ?? "enabled");
   }
 
   @ApiOperation({ summary: "Create a new connection (the response carries the api key once)" })
@@ -97,5 +105,15 @@ export class ConnectionController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(user.sub, id);
+  }
+
+  @ApiOperation({ summary: "On-demand health probe of a connection's /v1/models" })
+  @Post(":id/health")
+  @HttpCode(HttpStatus.OK)
+  testHealth(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<ConnectionHealthResponse> {
+    return this.service.testHealth(user.sub, id);
   }
 }

@@ -29,6 +29,7 @@ const PUBLIC_FIXTURE: ConnectionPublic = {
   queryParams: "",
   category: "chat",
   tags: [],
+  enabled: true,
   prometheusDatasourceId: null,
   prometheusDatasource: null,
   serverKind: null,
@@ -93,8 +94,8 @@ describe("ConnectionController", () => {
   describe("list", () => {
     it("calls service.list(userId) and returns the result", async () => {
       svc.list.mockResolvedValue(LIST_FIXTURE);
-      const result = await controller.list(USER);
-      expect(svc.list).toHaveBeenCalledWith("u_1");
+      const result = await controller.list(USER, undefined);
+      expect(svc.list).toHaveBeenCalledWith("u_1", "enabled");
       expect(result).toBe(LIST_FIXTURE);
     });
   });

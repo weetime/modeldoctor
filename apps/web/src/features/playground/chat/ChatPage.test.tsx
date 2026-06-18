@@ -25,6 +25,7 @@ const SAMPLE_CONN: ConnectionPublic = {
   name: "chat-1",
   baseUrl: "http://x",
   apiKeyPreview: "sk-...1234",
+  enabled: true,
   model: "m",
   customHeaders: "",
   queryParams: "",
