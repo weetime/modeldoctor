@@ -761,7 +761,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_t1_article",
     name: "路由粘性 · 文章同款 (t1)",
     description:
-      "Higress 文章同款多轮:60 会话 × 5 轮,in 200 / out 800,concurrency 20。关/开 ai-load-balancer 各跑一次,对比 TTFT 与 Prometheus 命中率 / 逐-pod 集中度。",
+      "【LB prefix_cache 策略路由验证 · 多轮粘性】Higress 文章同款多轮:60 会话 × 5 轮,in 200 / out 800,concurrency 20。关/开 ai-load-balancer 各跑一次,对比 TTFT 与 Prometheus 命中率 / 逐-pod 集中度。",
     scenario: "lb-strategy",
     tool: "aiperf",
     config: {
@@ -793,7 +793,7 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_t2_deep",
     name: "路由粘性 · 深会话 (t2)",
     description:
-      "深会话:30 会话 × 10 轮,前缀累积最多,prefix-cache 路由收益最敏感。关/开对照的首选档。",
+      "【LB prefix_cache 策略路由验证 · 多轮粘性】深会话:30 会话 × 10 轮,前缀累积最多,prefix-cache 路由收益最敏感。关/开对照的首选档。",
     scenario: "lb-strategy",
     tool: "aiperf",
     config: {
@@ -818,7 +818,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_pc_t3_shallow",
     name: "路由粘性 · 浅会话 (t3)",
-    description: "浅会话:120 会话 × 2 轮,对照锚点,前缀复用少、prefix-cache 收益最小。",
+    description:
+      "【LB prefix_cache 策略路由验证 · 多轮粘性】浅会话:120 会话 × 2 轮,对照锚点,前缀复用少、prefix-cache 收益最小。",
     scenario: "lb-strategy",
     tool: "aiperf",
     config: {
@@ -844,8 +845,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_mooncake_conv",
     name: "缓存感知 · Mooncake 对话",
     description:
-      "Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。回放前 5 分钟切片(约 1000 请求)按 trace 时间戳发压,既代表真实形态又能干净出报告(全量 ~59 分钟会压垮汇总导出)。",
-    scenario: "lb-strategy",
+      "【引擎块级前缀缓存 · 真实 Kimi 流量;多副本 LB 路由验证见 lb-strategy】Mooncake conversation trace(~40% 前缀复用)开环回放,业界标准缓存感知负载。回放前 5 分钟切片(约 1000 请求)按 trace 时间戳发压,既代表真实形态又能干净出报告(全量 ~59 分钟会压垮汇总导出)。",
+    scenario: "engine-kv-cache",
     tool: "aiperf",
     config: {
       endpointType: "chat",
@@ -863,8 +864,8 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     id: "tpl_pc_mooncake_agent",
     name: "缓存感知 · Mooncake Agent",
     description:
-      "Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。回放前 5 分钟切片(约 1000 请求),按 trace 时间戳发压,干净出报告。",
-    scenario: "lb-strategy",
+      "【引擎块级前缀缓存 · 真实 Kimi 流量;多副本 LB 路由验证见 lb-strategy】Mooncake toolagent trace(~59% 前缀复用)开环回放,长 system prompt + 工具形态。回放前 5 分钟切片(约 1000 请求),按 trace 时间戳发压,干净出报告。",
+    scenario: "engine-kv-cache",
     tool: "aiperf",
     config: {
       endpointType: "chat",
