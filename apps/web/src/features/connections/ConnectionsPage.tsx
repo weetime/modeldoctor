@@ -266,6 +266,7 @@ export function ConnectionsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 className="gap-2"
+                                disabled={testConn.isPending}
                                 onClick={() =>
                                   testConn.mutate(c.id, {
                                     onSuccess: (h) =>
@@ -280,6 +281,7 @@ export function ConnectionsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="gap-2"
+                                disabled={setEnabled.isPending}
                                 onClick={() =>
                                   setEnabled.mutate(
                                     { id: c.id, enabled: !c.enabled },

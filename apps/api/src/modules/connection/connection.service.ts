@@ -229,7 +229,11 @@ export class ConnectionService {
     const conn = await this.getOwnedDecrypted(userId, id);
     const start = Date.now();
     try {
-      const res = await safeFetch(`${conn.baseUrl.replace(/\/+$/, "")}/v1/models`, {
+      // baseUrl is meant to be an origin, but tolerate a stray `/v1` suffix so
+      // we don't probe `/v1/v1/models` (404) when the user pasted a full path.
+      const base = conn.baseUrl.replace(/\/+$/, "");
+      const modelsUrl = base.endsWith("/v1") ? `${base}/models` : `${base}/v1/models`;
+      const res = await safeFetch(modelsUrl, {
         apiKey: conn.apiKey || undefined,
         extraHeaders: parseCustomHeaders(conn.customHeaders),
       });

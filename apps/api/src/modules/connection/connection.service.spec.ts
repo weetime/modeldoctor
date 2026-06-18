@@ -659,6 +659,18 @@ describe("ConnectionService", () => {
       const r = await service.testHealth("u_1", "c_1");
       expect(r.status).toBe("offline");
     });
+
+    it("does not double the /v1 segment when baseUrl already ends with /v1", async () => {
+      const cipher = await encryptForTest("sk-x");
+      prismaMock.connection.findUnique.mockResolvedValue(
+        makeRow({ apiKeyCipher: cipher, baseUrl: "http://x/v1" }),
+      );
+      vi.mocked(safeFetch).mockResolvedValue(
+        new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
+      await service.testHealth("u_1", "c_1");
+      expect(safeFetch).toHaveBeenCalledWith("http://x/v1/models", expect.anything());
+    });
   });
 });
 
