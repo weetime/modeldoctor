@@ -7,7 +7,7 @@ export { evalscopeReadMetric } from "./read-metric.js";
 
 export const evalscopeAdapter: ToolAdapter = {
   name: "evalscope",
-  scenarios: ["inference", "kv-cache-stress"] as const,
+  scenarios: ["inference", "engine-kv-cache"] as const,
   paramsSchema: evalscopeParamsSchema,
   reportSchema: evalscopeReportSchema,
   paramDefaults: evalscopeParamDefaults,

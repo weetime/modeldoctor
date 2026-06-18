@@ -167,15 +167,23 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       return <CapacityReport benchmark={benchmark} />;
     case "gateway":
       return <GatewayReport benchmark={benchmark} />;
-    case "prefix-cache-validation":
+    case "lb-strategy":
       return (
         <div className="space-y-6">
           <InferenceReport benchmark={benchmark} />
           <PrefixCachePanel serverMetrics={benchmark.serverMetrics} />
         </div>
       );
-    case "kv-cache-stress":
-      return <KvCacheStressReport benchmark={benchmark} />;
+    case "engine-kv-cache":
+      // evalscope = KV-backend view; aiperf mooncake = prefix-cache view.
+      return benchmark.tool === "aiperf" ? (
+        <div className="space-y-6">
+          <InferenceReport benchmark={benchmark} />
+          <PrefixCachePanel serverMetrics={benchmark.serverMetrics} />
+        </div>
+      ) : (
+        <KvCacheStressReport benchmark={benchmark} />
+      );
     default:
       return <UnknownReport benchmark={benchmark} />;
   }
@@ -274,8 +282,8 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   inference: "benchmarkInference",
   capacity: "benchmarkCapacity",
   gateway: "benchmarkGateway",
-  "prefix-cache-validation": "benchmarkPrefixCache",
-  "kv-cache-stress": "benchmarkKvCacheStress",
+  "lb-strategy": "benchmarkPrefixCache",
+  "engine-kv-cache": "benchmarkKvCacheStress",
 };
 
 export function BenchmarkDetailPage() {

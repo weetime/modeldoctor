@@ -99,7 +99,7 @@ export class CompareSynthesizeService {
 
   /**
    * Guarantee the prefix-cache hit-rate figure is present when the data
-   * supports it. Hit rate is the metric a prefix-cache-validation comparison
+   * supports it. Hit rate is the metric a lb-strategy comparison
    * exists to measure, but it isn't in the throughput/latency blob the LLM
    * fixates on, so weaker models routinely omit it. When the refId is
    * available and the LLM didn't include it, inject it (anchored to results)

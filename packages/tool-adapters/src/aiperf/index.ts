@@ -7,7 +7,7 @@ export { aiperfReadMetric } from "./read-metric.js";
 
 export const aiperfAdapter: ToolAdapter = {
   name: "aiperf",
-  scenarios: ["inference", "prefix-cache-validation"] as const,
+  scenarios: ["inference", "lb-strategy", "engine-kv-cache"] as const,
   paramsSchema: aiperfParamsSchema,
   reportSchema: aiperfReportSchema,
   paramDefaults: aiperfParamDefaults,

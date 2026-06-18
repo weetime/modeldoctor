@@ -9,8 +9,8 @@ export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
   inference: Gauge,
   capacity: Activity,
   gateway: Network,
-  "prefix-cache-validation": Layers,
-  "kv-cache-stress": Database,
+  "lb-strategy": Layers,
+  "engine-kv-cache": Database,
 };
 
 export { SCENARIOS, type ScenarioId };

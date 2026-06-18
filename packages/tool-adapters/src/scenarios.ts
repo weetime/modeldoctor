@@ -2,19 +2,14 @@ import { z } from "zod";
 import type { ToolName } from "./core/interface.js";
 import { allAdapters, byTool } from "./core/registry.js";
 
-export type ScenarioId =
-  | "inference"
-  | "capacity"
-  | "gateway"
-  | "prefix-cache-validation"
-  | "kv-cache-stress";
+export type ScenarioId = "inference" | "capacity" | "gateway" | "lb-strategy" | "engine-kv-cache";
 
 export const scenarioIdSchema = z.enum([
   "inference",
   "capacity",
   "gateway",
-  "prefix-cache-validation",
-  "kv-cache-stress",
+  "lb-strategy",
+  "engine-kv-cache",
 ]);
 
 export interface ScenarioConfig {
@@ -60,19 +55,19 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     paramsConstraints: {},
     reportComponent: "GatewayReport",
   },
-  "prefix-cache-validation": {
-    label: "Prefix-cache 路由验证",
+  "lb-strategy": {
+    label: "负载均衡策略验证",
     description:
-      "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本",
+      "验证不同负载均衡策略对路由 / 缓存复用 / 延迟的影响,跨 LB 配置对照。当前:Higress ai-load-balancer prefix_cache(同前缀粘到同副本);后续可扩展 least-request / GPU-aware / 多集群等策略。",
     tools: ["aiperf"],
     paramsConstraints: {},
     reportComponent: "InferenceReport",
   },
-  "kv-cache-stress": {
-    label: "KV cache 后端压测",
+  "engine-kv-cache": {
+    label: "引擎 KV / 前缀缓存",
     description:
-      "长 prompt 冷/暖双轮 evalscope perf,对比不同 KV 卸载后端 (vanilla / LMCache / YRCache) 的 TTFT / 吞吐 / prefix-cache 命中率",
-    tools: ["evalscope"],
+      "单实例 / 引擎级缓存有效性:evalscope 对比不同 KV 卸载后端 (vanilla / LMCache / YRCache),aiperf 用 mooncake 真实生产 trace 测块级前缀复用。注:块级共享对应引擎 APC,多副本下的 LB 路由验证请用 lb-strategy。",
+    tools: ["evalscope", "aiperf"],
     paramsConstraints: {},
     reportComponent: "KvCacheStressReport",
   },

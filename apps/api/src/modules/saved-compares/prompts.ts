@@ -69,7 +69,7 @@ Section size targets:
 - 06 advice:  ≤ half page, scenario → config + 0-5 caveats
 
 Prefix-cache runs: when the per-stage data carries prefix_cache_hit% / top_pod_share%
-(prefix-cache-validation, e.g. routing OFF vs ON), the HEADLINE conclusion and the
+(lb-strategy, e.g. routing OFF vs ON), the HEADLINE conclusion and the
 first summary card MUST be the cache hit-rate change — that is the metric the
 experiment exists to measure. Use the stage-bars-prefix-cache-hit figure for it and
 stage-bars-top-pod-share to show routing concentration. Treat throughput/TTFT as

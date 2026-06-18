@@ -158,7 +158,7 @@ export const MODELS: ModelEntry[] = [
   // -------- KV cache offload 实战配方 ----------------------------------------
   // 这两行是同一个底层模型(Qwen3-32B)+ 同一引擎(vllm-ascend)+ 不同 KV
   // cache 后端的对比配方。源自 theriseunion/repots 2026-05-10/05-11 在
-  // Atlas 800I A2 / 8×910B4 实测得出的两套生产可用方案,作 `kv-cache-stress`
+  // Atlas 800I A2 / 8×910B4 实测得出的两套生产可用方案,作 `engine-kv-cache`
   // benchmark scenario 的目标参考。两条 recipe 都是 `community` 状态:镜像内部
   // 构建 + vLLM 0.18 / yrcache 1.5.0 兼容性 hot-patch,不在上游 release。
   {

@@ -7,8 +7,8 @@ export const scenarioIdSchema = z.enum([
   "inference",
   "capacity",
   "gateway",
-  "prefix-cache-validation",
-  "kv-cache-stress",
+  "lb-strategy",
+  "engine-kv-cache",
 ]);
 export type ScenarioId = z.infer<typeof scenarioIdSchema>;
 

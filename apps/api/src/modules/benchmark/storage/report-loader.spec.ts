@@ -172,7 +172,7 @@ describe("ReportLoader", () => {
 
 function makePrefixCacheDeps() {
   const base = makeDeps();
-  // Bench is a prefix-cache-validation scenario with a connection that has an
+  // Bench is a lb-strategy scenario with a connection that has an
   // explicit prometheusDatasourceId binding.
   (base.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
     id,
@@ -180,7 +180,7 @@ function makePrefixCacheDeps() {
     tool: "aiperf",
     userId: "u1",
     name: "pcv",
-    scenario: "prefix-cache-validation",
+    scenario: "lb-strategy",
     connectionId: "conn-1",
     connection: {
       id: "conn-1",
@@ -231,7 +231,7 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
     deps = makePrefixCacheDeps();
   });
 
-  it("snapshots and calls mergeServerMetrics when scenario=prefix-cache-validation and ds resolves", async () => {
+  it("snapshots and calls mergeServerMetrics when scenario=lb-strategy and ds resolves", async () => {
     const loader = newPrefixCacheLoader(deps);
     await loader.tryLoad("r1");
     // Must use the datasourceId path (not connectionId) so we never fall back
@@ -252,7 +252,7 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
     );
   });
 
-  it("skips snapshot when scenario != prefix-cache-validation (no promFetcher call)", async () => {
+  it("skips snapshot when scenario != lb-strategy (no promFetcher call)", async () => {
     (deps.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
       id,
       status: "running",
@@ -289,7 +289,7 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
       tool: "aiperf",
       userId: "u1",
       name: "pcv",
-      scenario: "prefix-cache-validation",
+      scenario: "lb-strategy",
       connectionId: null,
       connection: null,
       startedAt: new Date(),
@@ -342,7 +342,7 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
       tool: "aiperf",
       userId: "u1",
       name: "pcv",
-      scenario: "prefix-cache-validation",
+      scenario: "lb-strategy",
       connectionId: "conn-1",
       connection: {
         id: "conn-1",
@@ -378,7 +378,7 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
       tool: "aiperf",
       userId: "u1",
       name: "pcv",
-      scenario: "prefix-cache-validation",
+      scenario: "lb-strategy",
       connectionId: "conn-1",
       connection: {
         id: "conn-1",

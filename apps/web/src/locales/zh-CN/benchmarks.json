@@ -12,7 +12,7 @@
       "inference": "新建推理性能基准",
       "capacity": "新建容量规划",
       "gateway": "新建网关压测",
-      "prefix-cache-validation": "新建 Prefix-cache 验证"
+      "lb-strategy": "新建 负载均衡策略验证"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -126,7 +126,7 @@
     "inference": "TTFT / TPOT / 单次吞吐基线",
     "capacity": "SLO 驱动的负载阶梯扫描",
     "gateway": "Higress / API 链路 HTTP 性能",
-    "prefix-cache-validation": "验证 Higress ai-load-balancer prefix-cache 策略下相同前缀请求是否粘到同一 vLLM 副本"
+    "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本"
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",

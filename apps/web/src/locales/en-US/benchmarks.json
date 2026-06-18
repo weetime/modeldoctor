@@ -12,7 +12,7 @@
       "inference": "New Inference Benchmark",
       "capacity": "New Capacity Plan",
       "gateway": "New Gateway Test",
-      "prefix-cache-validation": "New Prefix-cache Validation"
+      "lb-strategy": "New LB-strategy Validation"
     },
     "subtitle": "Configure parameters, then submit",
     "sections": {
@@ -126,7 +126,7 @@
     "inference": "TTFT / TPOT / single-run throughput baseline",
     "capacity": "SLO-driven load step sweep",
     "gateway": "Higress / API path HTTP performance",
-    "prefix-cache-validation": "Verify Higress ai-load-balancer prefix-cache pins same-prefix requests to one vLLM replica"
+    "lb-strategy": "Validate LB routing strategies (currently ai-load-balancer prefix_cache) pin same-prefix requests to one replica"
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",

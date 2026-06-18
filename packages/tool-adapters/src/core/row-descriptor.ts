@@ -36,7 +36,7 @@ export type MetricRowSpec =
 // adapter-side "what columns does my tool contribute" knowledge stays
 // single-sourced; one update fans out to all three without drift.
 //
-// Tool-specific extras (evalscope's prefix-cache hit rate, kv-cache-stress
+// Tool-specific extras (evalscope's prefix-cache hit rate, engine-kv-cache
 // cold/warm panel, etc.) live in their own report components, not here.
 export const SHARED_INFERENCE_ROWS: readonly MetricRowSpec[] = [
   { source: "raw", labelKey: "ttftMean", section: "ttft", field: "mean", unitSuffix: "ms" },

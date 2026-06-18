@@ -32,8 +32,8 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   inference: "benchmarkInference",
   capacity: "benchmarkCapacity",
   gateway: "benchmarkGateway",
-  "prefix-cache-validation": "benchmarkPrefixCache",
-  "kv-cache-stress": "benchmarkKvCacheStress",
+  "lb-strategy": "benchmarkPrefixCache",
+  "engine-kv-cache": "benchmarkKvCacheStress",
 };
 
 function parseIds(searchParams: URLSearchParams): string[] {

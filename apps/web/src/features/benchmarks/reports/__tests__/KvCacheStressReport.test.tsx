@@ -58,7 +58,7 @@ const baseBenchmark = {
   id: "b1",
   name: "KV Cache · Task 1",
   tool: "evalscope",
-  scenario: "kv-cache-stress",
+  scenario: "engine-kv-cache",
   status: "completed",
   summaryMetrics: { tool: "evalscope", data: baseData },
 } as unknown as Benchmark;

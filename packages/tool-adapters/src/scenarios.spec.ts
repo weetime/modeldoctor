@@ -12,15 +12,19 @@ describe("SCENARIOS constant", () => {
   it("declares all known scenarios", () => {
     expect(Object.keys(SCENARIOS).sort()).toEqual([
       "capacity",
+      "engine-kv-cache",
       "gateway",
       "inference",
-      "kv-cache-stress",
-      "prefix-cache-validation",
+      "lb-strategy",
     ]);
   });
 
-  it("kv-cache-stress scenario lists evalscope only (legacy tool retired)", () => {
-    expect([...SCENARIOS["kv-cache-stress"].tools]).toEqual(["evalscope"]);
+  it("engine-kv-cache scenario lists evalscope + aiperf (mooncake home)", () => {
+    expect([...SCENARIOS["engine-kv-cache"].tools].sort()).toEqual(["aiperf", "evalscope"]);
+  });
+
+  it("lb-strategy scenario lists aiperf only", () => {
+    expect([...SCENARIOS["lb-strategy"].tools]).toEqual(["aiperf"]);
   });
 
   it("inference scenario lists guidellm, evalscope, and aiperf", () => {

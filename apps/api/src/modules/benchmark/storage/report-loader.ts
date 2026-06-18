@@ -21,7 +21,7 @@ export interface ReportLoaderDeps {
   sse: SseHub;
   byTool?: typeof defaultByTool;
   /** Optional: when provided, a prefix-cache snapshot is taken after completion
-   *  for `prefix-cache-validation` benchmarks that have a Prometheus datasource.
+   *  for `lb-strategy` benchmarks that have a Prometheus datasource.
    *  Both `prefixCacheSnapshot` and `promFetcher` must be provided together —
    *  the hook is silently skipped if either is absent. */
   prefixCacheSnapshot?: PrefixCacheSnapshotService;
@@ -127,7 +127,7 @@ export class ReportLoader {
   /**
    * Best-effort prefix-cache metric snapshot. Guards:
    *   1. Both `prefixCacheSnapshot` and `promFetcher` must be injected.
-   *   2. scenario must be "prefix-cache-validation".
+   *   2. scenario must be "lb-strategy".
    *   3. The connection must have an explicit `prometheusDatasourceId` binding.
    *      If there is no binding we skip entirely — we must NOT fall back to the
    *      workspace-default datasource (which would silently snapshot the wrong
@@ -148,7 +148,7 @@ export class ReportLoader {
       opts;
     if (!this.deps.prefixCacheSnapshot || !this.deps.promFetcher) return;
     try {
-      if (scenario !== "prefix-cache-validation") return;
+      if (scenario !== "lb-strategy") return;
       // Graceful degrade: no explicit datasource binding → skip (never fall
       // back to the workspace default — that would be a wrong datasource).
       if (!prometheusDatasourceId) return;
