@@ -146,7 +146,7 @@ export function ReportDetailPage() {
           // prefix-cache-hit / top-pod-share figures (FigureRenderer reads it
           // from r.benchmark.serverMetrics). Without it those figures render
           // "data unavailable" even though the API returns it on the ref.
-          serverMetrics: b.serverMetrics,
+          serverMetrics: b.serverMetrics ?? null,
           params: b.params,
         } as Benchmark),
     paramsSummary: extractParamsSummary(b.params),
