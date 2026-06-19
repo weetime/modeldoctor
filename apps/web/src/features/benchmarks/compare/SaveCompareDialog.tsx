@@ -17,7 +17,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { Classification } from "@modeldoctor/contracts";
 import { GripVertical } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -134,15 +134,24 @@ export function SaveCompareDialog({
   const [classification, setClassification] = useState<Classification>("internal");
   const [clientName, setClientName] = useState("");
 
-  // Re-seed order + labels from the latest matrix order/labels whenever the
-  // dialog opens. The component stays mounted across open/close, so without this
-  // the first-mount snapshot would go stale after a Test-matrix reorder/rename.
-  useEffect(() => {
-    if (!open) return;
-    setOrder(runs.map((r) => r.id));
-    setLabels(Object.fromEntries(runs.map((r) => [r.id, r.label ?? ""])));
-    setCtx(context);
-  }, [open, runs, context]);
+  // Re-seed order + labels from the latest matrix order/labels on the
+  // closed→open transition only. The component stays mounted across open/close,
+  // so a first-mount snapshot would go stale after a Test-matrix reorder/rename
+  // — but keying an effect off `runs` would re-seed on every parent re-render
+  // (the inline `.map()` hands us a fresh `runs` ref each render, e.g. a
+  // background refetch), wiping the user's in-dialog drag/rename. Deriving from
+  // an open-transition sentinel re-seeds exactly once per open.
+  // Init to false (not `open`) so seeding fires on the first render that sees
+  // `open=true`, whether the dialog mounts already-open or opens later.
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setOrder(runs.map((r) => r.id));
+      setLabels(Object.fromEntries(runs.map((r) => [r.id, r.label ?? ""])));
+      setCtx(context);
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
@@ -170,7 +179,7 @@ export function SaveCompareDialog({
     const sc = await create.mutateAsync({
       name: name.trim(),
       benchmarkIds: orderedRuns.map((r) => r.id),
-      stageLabels: Object.fromEntries(orderedRuns.map((r) => [r.id, labels[r.id].trim()])),
+      stageLabels: Object.fromEntries(orderedRuns.map((r) => [r.id, (labels[r.id] ?? "").trim()])),
       baselineId: baselineId ?? undefined,
       context: ctx.trim() || undefined,
       classification,
