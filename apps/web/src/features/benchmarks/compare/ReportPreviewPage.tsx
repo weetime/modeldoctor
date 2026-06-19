@@ -13,9 +13,7 @@ function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
   if (!params || typeof params !== "object") return {};
   const p = params as Record<string, unknown>;
   return {
-    workload: typeof p.workload === "string" ? p.workload : undefined,
     concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-    duration: typeof p.duration === "number" ? p.duration : undefined,
   };
 }
 

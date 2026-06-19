@@ -2,6 +2,7 @@ import type { Benchmark } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatLatencyMs, formatPct, formatPercentFromFraction, formatThroughput } from "./format";
 import { deltaText, type MetricRowDescriptor } from "./metrics";
 import { VerdictBadge } from "./VerdictBadge";
 import { verdictFor } from "./verdict";
@@ -12,14 +13,28 @@ export interface MetricRowProps {
   baselineId: string | null;
 }
 
-function fmtNum(n: number | null, digits: number, suffix?: string): string {
-  if (n == null) return "—";
-  return `${n.toFixed(digits)}${suffix ? ` ${suffix}` : ""}`;
+/** Cell value text. A named `format` wins; otherwise fall back to the legacy
+ * fixed-digits + suffix path (vegeta raw rows that opt out of named formats). */
+function fmtCell(n: number | null, descriptor: MetricRowDescriptor): string {
+  switch (descriptor.format) {
+    case "latencyMs":
+      return formatLatencyMs(n);
+    case "percent":
+      return formatPercentFromFraction(n);
+    case "throughput":
+      return formatThroughput(n);
+    case "pct":
+      return formatPct(n);
+    default: {
+      if (n == null) return "—";
+      const digits = descriptor.digits ?? 1;
+      return `${n.toFixed(digits)}${descriptor.unitSuffix ? ` ${descriptor.unitSuffix}` : ""}`;
+    }
+  }
 }
 
 export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
   const { t } = useTranslation("benchmarks");
-  const digits = descriptor.digits ?? 1;
   const baseline = baselineId ? runs.find((r) => r.id === baselineId) : null;
   const baselineValue = baseline ? descriptor.read(baseline.summaryMetrics) : null;
   const verdictKind = descriptor.verdictKind;
@@ -42,7 +57,7 @@ export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
             )}
           >
             <div className="flex flex-col items-end gap-0.5">
-              <span>{fmtNum(v, digits, descriptor.unitSuffix)}</span>
+              <span>{fmtCell(v, descriptor)}</span>
               {/* Inline predicate so TS narrows verdictKind / baselineValue / v
                   through the && chain — see PR review on Task 5. */}
               {verdictKind !== undefined && !isBaseline && baselineValue !== null && v !== null && (

@@ -69,6 +69,19 @@ export interface StageBarChartProps {
    * same x category; the baseline series labels itself "baseline".
    */
   baselineSeriesKey?: string;
+  /**
+   * Render as grouped bars (default) or multi-line. Lines read better for
+   * percentile distributions (p50→p95→p99 across runs) where grouped bars get
+   * crowded; bars stay the default for single-scalar-per-run charts.
+   */
+  variant?: "bar" | "line";
+  /**
+   * Formats values for the tooltip AND the static point/bar labels. Pass a
+   * unit-aware formatter (e.g. formatLatencyMs / formatPct) so both surfaces
+   * agree and the tooltip never shows raw full-precision floats. When omitted,
+   * falls back to a thousands-separated, up-to-2-decimal default.
+   */
+  valueFormatter?: (v: number) => string;
 }
 
 type LabelParam = { dataIndex: number; value: unknown };
@@ -126,6 +139,8 @@ export function StageBarChart({
   labelColors,
   barColors,
   baselineSeriesKey,
+  variant = "bar",
+  valueFormatter,
 }: StageBarChartProps): JSX.Element {
   const tokens = useChartTokens();
   const isEmpty = empty ?? data.length === 0;
@@ -158,7 +173,7 @@ export function StageBarChart({
       const baseVal = baselineIndex != null && baselineIndex >= 0 ? values[baselineIndex] : null;
 
       const labelFor = (idx: number, value: number): string => {
-        const valueStr = fmtValue(value, s.decimals);
+        const valueStr = valueFormatter ? valueFormatter(value) : fmtValue(value, s.decimals);
         // No baseline context, or this series opts out of trend → value only.
         if (s.higherIsBetter == null) return valueStr;
         if (baselineSeriesValues != null) {
@@ -181,7 +196,10 @@ export function StageBarChart({
 
       return {
         name: s.label,
-        type: "bar" as const,
+        type: variant,
+        ...(variant === "line"
+          ? { symbol: "circle" as const, symbolSize: 6, lineStyle: { width: 2 } }
+          : {}),
         data: seriesData,
         itemStyle: { color: s.color },
         label: showValueLabels
@@ -218,7 +236,17 @@ export function StageBarChart({
 
     return themed(
       {
-        tooltip: { trigger: "axis" },
+        tooltip: {
+          trigger: "axis",
+          // Format tooltip values with the same unit-aware formatter as the
+          // labels — without this ECharts prints raw full-precision floats.
+          valueFormatter: (val: unknown) =>
+            typeof val === "number"
+              ? valueFormatter
+                ? valueFormatter(val)
+                : fmtValue(val)
+              : String(val ?? ""),
+        },
         legend: series.length > 1 ? { type: "scroll", top: 0 } : undefined,
         xAxis: {
           type: "category",
@@ -250,6 +278,8 @@ export function StageBarChart({
     baselineIndex,
     baselineSeriesKey,
     barColors,
+    variant,
+    valueFormatter,
     labelColors?.value,
     labelColors?.up,
     labelColors?.down,
