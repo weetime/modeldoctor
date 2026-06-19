@@ -23,9 +23,39 @@ import { readPrefixCache } from "./client-metrics";
 import { formatPct } from "./format";
 import { StageBarChartsSection, type StageRun } from "./StageBarChartsSection";
 
+/**
+ * The slice of a benchmark the report actually reads off `ReportRun.benchmark`
+ * (verified consumer set via grep of `r.benchmark.*` across `compare/*.tsx`:
+ * `name` + `tool` here, plus id / name / tool / summaryMetrics that `CompareGrid`
+ * reads off the runs it's handed).
+ *
+ * Spelled out explicitly rather than `Pick<Benchmark, …>` on purpose: the two
+ * producers feed values *looser* than `Benchmark`'s — `BenchmarkComparePage`
+ * passes a full `Benchmark` (assignable here), but `toReportRuns()` synthesises
+ * this from `HydratedBenchmarkRef`, whose `name` is nullable and whose `tool` /
+ * `summaryMetrics` / `serverMetrics` are `string` / `unknown` rather than
+ * `Benchmark`'s enum + `Record`. A `Pick<Benchmark>` would reject those without a
+ * cast on every field — exactly the `as Benchmark` we're removing here. (These
+ * field types match `StageRun.summaryMetrics: unknown` already used in this path.)
+ *
+ * Dropping the blanket `as Benchmark` cast in `toReportRuns()` is the point: that
+ * cast silenced every missing-field error and let `serverMetrics` ship absent
+ * (#302). A figure that now reaches for a field outside this set fails to compile
+ * instead of silently reading `undefined`.
+ */
+export interface ReportBenchmarkSnapshot {
+  id: string;
+  name: string | null;
+  tool: string;
+  scenario: string;
+  summaryMetrics: unknown;
+  serverMetrics: unknown;
+}
+
 export interface ReportRun extends StageRun {
-  /** Full benchmark snapshot, or null if the underlying benchmark was deleted. */
-  benchmark: Benchmark | null;
+  /** Benchmark snapshot (see `ReportBenchmarkSnapshot`), or null if the
+   *  underlying benchmark was deleted. */
+  benchmark: ReportBenchmarkSnapshot | null;
   paramsSummary: { concurrency?: number };
 }
 

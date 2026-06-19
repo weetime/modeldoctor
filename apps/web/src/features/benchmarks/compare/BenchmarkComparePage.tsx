@@ -14,14 +14,7 @@ import { CompareToolbar } from "./CompareToolbar";
 import { type ReportRun, ReportSections } from "./ReportSections";
 import { shortRunLabels } from "./run-label";
 import { SaveCompareDialog } from "./SaveCompareDialog";
-
-function extractParamsSummary(params: unknown): { concurrency?: number } {
-  if (!params || typeof params !== "object") return {};
-  const p = params as Record<string, unknown>;
-  return {
-    concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-  };
-}
+import { extractParamsSummary } from "./to-report-runs";
 
 const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   inference: "benchmarkInference",

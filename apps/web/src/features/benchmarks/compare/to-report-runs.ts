@@ -1,10 +1,12 @@
-import type { Benchmark, HydratedBenchmarkRef } from "@modeldoctor/contracts";
+import type { HydratedBenchmarkRef } from "@modeldoctor/contracts";
 import type { ReportRun } from "./ReportSections";
 
 /** Params blob → the compact summary the matrix renders (concurrency only;
  * workload/duration are not meaningful across these tools — see the scenario
- * redesign that dropped those matrix columns). */
-function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
+ * redesign that dropped those matrix columns). Shared with `BenchmarkComparePage`,
+ * which builds its own `ReportRun[]` from live `Benchmark` rows but derives
+ * `paramsSummary` identically. */
+export function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
   if (!params || typeof params !== "object") return {};
   const p = params as Record<string, unknown>;
   return {
@@ -23,9 +25,10 @@ function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
  * prefix-cache-hit / top-pod-share figures from one surface.)
  *
  * `serverMetrics` carries `serverMetrics.prefixCache`, required by the
- * prefix-cache figures; `?? null` matches the `Benchmark.serverMetrics`
- * nullable type. The synthetic snapshot only fills the fields the report
- * actually reads off `ReportRun.benchmark`.
+ * prefix-cache figures; `?? null` normalises "absent" to null. The snapshot is
+ * typed as `ReportBenchmarkSnapshot` (not `Benchmark`) — exactly the fields the
+ * report reads — so it needs no `as Benchmark` cast, and the next missing field
+ * is a compile error rather than a silent `undefined` (the #302 footgun).
  */
 export function toReportRuns(benchmarks: HydratedBenchmarkRef[]): ReportRun[] {
   return benchmarks.map((b) => ({
@@ -36,15 +39,14 @@ export function toReportRuns(benchmarks: HydratedBenchmarkRef[]): ReportRun[] {
     summaryMetrics: b.summaryMetrics,
     benchmark: b.missing
       ? null
-      : ({
+      : {
           id: b.id,
           name: b.name ?? null,
           tool: b.tool ?? "",
           scenario: b.scenario ?? "",
           summaryMetrics: b.summaryMetrics,
           serverMetrics: b.serverMetrics ?? null,
-          params: b.params,
-        } as Benchmark),
+        },
     paramsSummary: extractParamsSummary(b.params),
   }));
 }
