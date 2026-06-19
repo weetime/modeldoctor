@@ -142,6 +142,11 @@ export function ReportDetailPage() {
           tool: b.tool ?? "",
           scenario: b.scenario ?? "",
           summaryMetrics: b.summaryMetrics,
+          // serverMetrics carries serverMetrics.prefixCache — required by the
+          // prefix-cache-hit / top-pod-share figures (FigureRenderer reads it
+          // from r.benchmark.serverMetrics). Without it those figures render
+          // "data unavailable" even though the API returns it on the ref.
+          serverMetrics: b.serverMetrics,
           params: b.params,
         } as Benchmark),
     paramsSummary: extractParamsSummary(b.params),
