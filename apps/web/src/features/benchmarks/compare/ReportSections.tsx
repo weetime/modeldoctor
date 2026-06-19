@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
+import type { CompareNarrative } from "@modeldoctor/contracts";
 import { GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CompareGrid } from "./CompareGrid";
@@ -170,7 +170,12 @@ export function ReportSections({
   onReorder,
 }: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
-  const livingRuns = runs.filter((r) => r.benchmark !== null);
+  // Type-guard predicate (not just `!== null`) so `r.benchmark` narrows to
+  // non-null below — lets `CompareGrid` receive `ReportBenchmarkSnapshot[]`
+  // without an `as` cast.
+  const livingRuns = runs.filter(
+    (r): r is ReportRun & { benchmark: ReportBenchmarkSnapshot } => r.benchmark !== null,
+  );
   // lb-strategy matrix gains Hit Rate / Top Pod Share columns, but only when
   // every living run carries the prefix-cache annotation (matches the chart
   // gate — partial data would render misleading blanks).
@@ -255,10 +260,7 @@ export function ReportSections({
       {/* 2. CompareGrid */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionGrid")}</h2>
-        <CompareGrid
-          runs={livingRuns.map((r) => r.benchmark) as Benchmark[]}
-          baselineId={baselineId}
-        />
+        <CompareGrid runs={livingRuns.map((r) => r.benchmark)} baselineId={baselineId} />
       </section>
 
       {/* 3. Charts */}
