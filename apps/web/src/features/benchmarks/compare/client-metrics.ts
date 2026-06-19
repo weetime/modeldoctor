@@ -67,6 +67,31 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   };
 }
 
+type MetricKindArg = Parameters<typeof readMetricSafe>[0];
+
+/**
+ * Read a latency distribution's percentiles directly from a run's
+ * `summaryMetrics`, for the in-app live charts (which pick their own
+ * percentiles independent of the AI-prompt `summarizeForPrompt` shape).
+ * Returns null when the family carries no data for any requested percentile
+ * (e.g. vegeta has no ttft/itl), so the caller can drop the chart.
+ */
+export function readLatencyPercentiles(
+  summaryMetrics: unknown,
+  family: "ttft" | "itl" | "e2e",
+  percentiles: readonly string[],
+): Record<string, number | null> | null {
+  const summary = summaryMetrics as { tool?: unknown; data?: unknown } | null;
+  const byP: Record<string, number | null> = {};
+  let any = false;
+  for (const p of percentiles) {
+    const v = readMetricSafe(`${family}.${p}` as MetricKindArg, summary);
+    byP[p] = v;
+    if (v !== null) any = true;
+  }
+  return any ? byP : null;
+}
+
 /**
  * Given a set of per-run `summaryMetrics` blobs, return the set of figure
  * `refId`s that have enough data to render. The LLM and the React renderer

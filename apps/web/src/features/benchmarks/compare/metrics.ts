@@ -1,5 +1,6 @@
 import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
 import {
+  type MetricFormat,
   type MetricRowSpec,
   readMetricSafe,
   rowDescriptorsByTool,
@@ -34,7 +35,7 @@ export function readThroughput(metrics: SummaryMetrics): number | null {
 
 // ─── Grid row descriptors ────────────────────────────────────────────────────
 
-export type { VerdictKind };
+export type { MetricFormat, VerdictKind };
 
 export interface MetricRowDescriptor {
   labelKey: string; // "compare.metricRowLabel.<key>"
@@ -42,6 +43,7 @@ export interface MetricRowDescriptor {
   verdictKind?: VerdictKind;
   digits?: number; // default 1
   unitSuffix?: string; // for the cell display (e.g. "ms", "%")
+  format?: MetricFormat; // named formatter; takes precedence over digits/unitSuffix
 }
 
 function readRawField(metrics: SummaryMetrics, section: string, field: string): number | null {
@@ -54,20 +56,22 @@ function readRawField(metrics: SummaryMetrics, section: string, field: string): 
 
 function materialize(spec: MetricRowSpec): MetricRowDescriptor {
   if (spec.source === "metric") {
-    const { labelKey, metric, verdictKind, digits, unitSuffix } = spec;
+    const { labelKey, metric, verdictKind, digits, unitSuffix, format } = spec;
     return {
       labelKey,
       read: (m) => readMetricSafe(metric, m as { tool?: unknown; data?: unknown } | null),
       verdictKind,
       digits,
       unitSuffix,
+      format,
     };
   }
-  const { labelKey, section, field, unitSuffix } = spec;
+  const { labelKey, section, field, unitSuffix, format } = spec;
   return {
     labelKey,
     read: (m) => readRawField(m, section, field),
     unitSuffix,
+    format,
   };
 }
 

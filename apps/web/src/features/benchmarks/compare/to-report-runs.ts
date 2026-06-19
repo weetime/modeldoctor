@@ -1,14 +1,14 @@
 import type { Benchmark, HydratedBenchmarkRef } from "@modeldoctor/contracts";
 import type { ReportRun } from "./ReportSections";
 
-/** Params blob → the compact summary the report header renders. */
+/** Params blob → the compact summary the matrix renders (concurrency only;
+ * workload/duration are not meaningful across these tools — see the scenario
+ * redesign that dropped those matrix columns). */
 function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
   if (!params || typeof params !== "object") return {};
   const p = params as Record<string, unknown>;
   return {
-    workload: typeof p.workload === "string" ? p.workload : undefined,
     concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-    duration: typeof p.duration === "number" ? p.duration : undefined,
   };
 }
 

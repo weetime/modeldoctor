@@ -357,7 +357,16 @@
       "errorRate": "Error rate",
       "throughput": "Throughput (req/s)"
     },
-    "dragHandle": "Drag to reorder"
+    "dragHandle": "Drag to reorder",
+    "matrixCol": {
+      "label": "label",
+      "name": "name",
+      "tool": "tool",
+      "scenario": "scenario",
+      "concurrency": "concurrency",
+      "hitRate": "Hit Rate",
+      "topPodShare": "Top Pod Share"
+    }
   },
   "savedCompare": {
     "savedListLink": "Saved comparisons",
@@ -424,7 +433,10 @@
       "sourceStage": "Stage",
       "sourceName": "Benchmark",
       "sourceTool": "Tool",
-      "sourceScenario": "Scenario"
+      "sourceScenario": "Scenario",
+      "chartItlTitle": "ITL p95 (ms)",
+      "chartHitRateTitle": "Prefix cache hit rate (%)",
+      "chartTopPodShareTitle": "Top pod share (%)"
     },
     "reportPage": {
       "loading": "Loading report…",

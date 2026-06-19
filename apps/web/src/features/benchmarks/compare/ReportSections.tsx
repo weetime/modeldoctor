@@ -19,13 +19,14 @@ import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
 import { GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CompareGrid } from "./CompareGrid";
+import { readPrefixCache } from "./client-metrics";
+import { formatPct } from "./format";
 import { StageBarChartsSection, type StageRun } from "./StageBarChartsSection";
 
 export interface ReportRun extends StageRun {
   /** Full benchmark snapshot, or null if the underlying benchmark was deleted. */
   benchmark: Benchmark | null;
-  paramsSummary: { workload?: string; concurrency?: number; duration?: number };
-  scenario: string;
+  paramsSummary: { concurrency?: number };
 }
 
 export interface ReportSectionsProps {
@@ -52,7 +53,16 @@ export interface ReportSectionsProps {
 const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
 const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
 
-function MatrixRowCells({ r, t }: { r: ReportRun; t: (key: string) => string }) {
+function MatrixRowCells({
+  r,
+  t,
+  showPrefixCache,
+}: {
+  r: ReportRun;
+  t: (key: string) => string;
+  showPrefixCache: boolean;
+}) {
+  const pc = showPrefixCache ? readPrefixCache(r.serverMetrics) : null;
   return (
     <>
       <td className="px-3 py-2 font-medium">{r.stageLabel}</td>
@@ -61,9 +71,15 @@ function MatrixRowCells({ r, t }: { r: ReportRun; t: (key: string) => string }) 
       </td>
       <td className="px-3 py-2">{r.benchmark?.tool ?? "—"}</td>
       <td className="px-3 py-2">{r.scenario}</td>
-      <td className="px-3 py-2">{r.paramsSummary.workload ?? "—"}</td>
       <td className="px-3 py-2">{r.paramsSummary.concurrency ?? "—"}</td>
-      <td className="px-3 py-2">{r.paramsSummary.duration ?? "—"}</td>
+      {showPrefixCache ? (
+        <>
+          <td className="px-3 py-2 text-right tabular-nums">{formatPct(pc?.hitRatePct ?? null)}</td>
+          <td className="px-3 py-2 text-right tabular-nums">
+            {formatPct(pc?.topPodSharePct ?? null)}
+          </td>
+        </>
+      ) : null}
     </>
   );
 }
@@ -74,10 +90,12 @@ function SortableMatrixRow({
   r,
   t,
   handleLabel,
+  showPrefixCache,
 }: {
   r: ReportRun;
   t: (key: string) => string;
   handleLabel: string;
+  showPrefixCache: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: r.id,
@@ -99,7 +117,7 @@ function SortableMatrixRow({
           <GripVertical className="h-4 w-4" />
         </button>
       </td>
-      <MatrixRowCells r={r} t={t} />
+      <MatrixRowCells r={r} t={t} showPrefixCache={showPrefixCache} />
     </tr>
   );
 }
@@ -123,6 +141,13 @@ export function ReportSections({
 }: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
   const livingRuns = runs.filter((r) => r.benchmark !== null);
+  // lb-strategy matrix gains Hit Rate / Top Pod Share columns, but only when
+  // every living run carries the prefix-cache annotation (matches the chart
+  // gate — partial data would render misleading blanks).
+  const showPrefixCache =
+    runs[0]?.scenario === "lb-strategy" &&
+    livingRuns.length > 0 &&
+    livingRuns.every((r) => readPrefixCache(r.serverMetrics) !== null);
   const sortable = onReorder !== undefined;
   const sensors = useSensors(
     useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
@@ -142,23 +167,33 @@ export function ReportSections({
       <thead className="bg-muted/30 text-left text-xs text-muted-foreground">
         <tr>
           {sortable ? <th className="w-8 px-2 py-2" aria-hidden /> : null}
-          <th className="px-3 py-2">stage</th>
-          <th className="px-3 py-2">name</th>
-          <th className="px-3 py-2">tool</th>
-          <th className="px-3 py-2">scenario</th>
-          <th className="px-3 py-2">workload</th>
-          <th className="px-3 py-2">concurrency</th>
-          <th className="px-3 py-2">duration</th>
+          <th className="px-3 py-2">{t("compare.matrixCol.label")}</th>
+          <th className="px-3 py-2">{t("compare.matrixCol.name")}</th>
+          <th className="px-3 py-2">{t("compare.matrixCol.tool")}</th>
+          <th className="px-3 py-2">{t("compare.matrixCol.scenario")}</th>
+          <th className="px-3 py-2">{t("compare.matrixCol.concurrency")}</th>
+          {showPrefixCache ? (
+            <>
+              <th className="px-3 py-2 text-right">{t("compare.matrixCol.hitRate")}</th>
+              <th className="px-3 py-2 text-right">{t("compare.matrixCol.topPodShare")}</th>
+            </>
+          ) : null}
         </tr>
       </thead>
       <tbody>
         {sortable
           ? runs.map((r) => (
-              <SortableMatrixRow key={r.id} r={r} t={t} handleLabel={t("compare.dragHandle")} />
+              <SortableMatrixRow
+                key={r.id}
+                r={r}
+                t={t}
+                handleLabel={t("compare.dragHandle")}
+                showPrefixCache={showPrefixCache}
+              />
             ))
           : runs.map((r) => (
               <tr key={r.id} className="border-border border-t">
-                <MatrixRowCells r={r} t={t} />
+                <MatrixRowCells r={r} t={t} showPrefixCache={showPrefixCache} />
               </tr>
             ))}
       </tbody>

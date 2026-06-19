@@ -13,6 +13,14 @@ import type { MetricKind } from "./metric-extractor.js";
 
 export type VerdictKind = "latency" | "errorRate" | "throughput";
 
+// Named display formats resolved on the FE (apps/web compare/format.ts):
+//   latencyMs   — ms, 0 decimals when ≥100 else 1, " ms" suffix
+//   percent     — 0-1 fraction → percentage, 1 decimal, "%"
+//   throughput  — req/s, 1 decimal
+//   pct         — value already on a 0-100 scale, 1 decimal, "%"
+// When set, `format` takes precedence over `digits` / `unitSuffix`.
+export type MetricFormat = "latencyMs" | "percent" | "throughput" | "pct";
+
 export type MetricRowSpec =
   | {
       source: "metric";
@@ -21,6 +29,7 @@ export type MetricRowSpec =
       verdictKind?: VerdictKind;
       digits?: number;
       unitSuffix?: string;
+      format?: MetricFormat;
     }
   | {
       source: "raw";
@@ -28,6 +37,7 @@ export type MetricRowSpec =
       section: string;
       field: string;
       unitSuffix?: string;
+      format?: MetricFormat;
     };
 
 // Inference-shape tools (guidellm + evalscope + aiperf) all surface the
@@ -39,33 +49,33 @@ export type MetricRowSpec =
 // Tool-specific extras (evalscope's prefix-cache hit rate, engine-kv-cache
 // cold/warm panel, etc.) live in their own report components, not here.
 export const SHARED_INFERENCE_ROWS: readonly MetricRowSpec[] = [
-  { source: "raw", labelKey: "ttftMean", section: "ttft", field: "mean", unitSuffix: "ms" },
-  { source: "metric", labelKey: "ttftP50", metric: "ttft.p50", unitSuffix: "ms" },
-  { source: "metric", labelKey: "ttftP95", metric: "ttft.p95", unitSuffix: "ms" },
-  { source: "metric", labelKey: "ttftP99", metric: "ttft.p99", unitSuffix: "ms" },
-  { source: "raw", labelKey: "itlMean", section: "itl", field: "mean", unitSuffix: "ms" },
-  { source: "metric", labelKey: "itlP95", metric: "itl.p95", unitSuffix: "ms" },
-  { source: "metric", labelKey: "e2eLatencyP50", metric: "e2e.p50", unitSuffix: "ms" },
+  { source: "raw", labelKey: "ttftMean", section: "ttft", field: "mean", format: "latencyMs" },
+  { source: "metric", labelKey: "ttftP50", metric: "ttft.p50", format: "latencyMs" },
+  { source: "metric", labelKey: "ttftP95", metric: "ttft.p95", format: "latencyMs" },
+  { source: "metric", labelKey: "ttftP99", metric: "ttft.p99", format: "latencyMs" },
+  { source: "raw", labelKey: "itlMean", section: "itl", field: "mean", format: "latencyMs" },
+  { source: "metric", labelKey: "itlP95", metric: "itl.p95", format: "latencyMs" },
+  { source: "metric", labelKey: "e2eLatencyP50", metric: "e2e.p50", format: "latencyMs" },
   {
     source: "metric",
     labelKey: "latencyP95",
     metric: "e2e.p95",
-    unitSuffix: "ms",
+    format: "latencyMs",
     verdictKind: "latency",
   },
-  { source: "metric", labelKey: "e2eLatencyP99", metric: "e2e.p99", unitSuffix: "ms" },
+  { source: "metric", labelKey: "e2eLatencyP99", metric: "e2e.p99", format: "latencyMs" },
   {
     source: "metric",
     labelKey: "errorRate",
     metric: "errorRate",
-    digits: 4,
+    format: "percent",
     verdictKind: "errorRate",
   },
   {
     source: "metric",
     labelKey: "throughput",
     metric: "requestsPerSec",
-    unitSuffix: "req/s",
+    format: "throughput",
     verdictKind: "throughput",
   },
 ];

@@ -357,7 +357,16 @@
       "errorRate": "错误率",
       "throughput": "吞吐 (req/s)"
     },
-    "dragHandle": "拖拽调整顺序"
+    "dragHandle": "拖拽调整顺序",
+    "matrixCol": {
+      "label": "标签",
+      "name": "名称",
+      "tool": "工具",
+      "scenario": "场景",
+      "concurrency": "并发",
+      "hitRate": "命中率",
+      "topPodShare": "最热 Pod 占比"
+    }
   },
   "savedCompare": {
     "savedListLink": "历史对比",
@@ -424,7 +433,10 @@
       "sourceStage": "阶段",
       "sourceName": "Benchmark",
       "sourceTool": "工具",
-      "sourceScenario": "场景"
+      "sourceScenario": "场景",
+      "chartItlTitle": "ITL p95（ms）",
+      "chartHitRateTitle": "前缀缓存命中率（%）",
+      "chartTopPodShareTitle": "最热 Pod 占比（%）"
     },
     "reportPage": {
       "loading": "正在加载报告…",

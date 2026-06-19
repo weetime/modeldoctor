@@ -12,19 +12,14 @@ import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
 import { CompareToolbar } from "./CompareToolbar";
 import { type ReportRun, ReportSections } from "./ReportSections";
+import { shortRunLabels } from "./run-label";
 import { SaveCompareDialog } from "./SaveCompareDialog";
 
-function extractParamsSummary(params: unknown): {
-  workload?: string;
-  concurrency?: number;
-  duration?: number;
-} {
+function extractParamsSummary(params: unknown): { concurrency?: number } {
   if (!params || typeof params !== "object") return {};
   const p = params as Record<string, unknown>;
   return {
-    workload: typeof p.workload === "string" ? p.workload : undefined,
     concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-    duration: typeof p.duration === "number" ? p.duration : undefined,
   };
 }
 
@@ -162,12 +157,18 @@ export function BenchmarkComparePage() {
         })
       : "";
 
+  // Short, distinguishing labels for charts/legends/matrix: strip the long
+  // prefix all runs share (e.g. "deep-chat-t2 · Qwen3-8B · "), keeping only what
+  // differs ("MX-OFF-r1-a1"). Falls back to the full name when nothing is shared.
+  const runNames = successfulBenchmarks.map((b, i) => b.name ?? `R${i + 1}`);
+  const shortLabels = shortRunLabels(runNames);
   const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
     id: b.id,
-    stageLabel: b.name ?? `R${i + 1}`,
+    stageLabel: shortLabels[i],
     tool: b.tool,
     scenario: b.scenario,
     summaryMetrics: b.summaryMetrics,
+    serverMetrics: b.serverMetrics,
     benchmark: b,
     paramsSummary: extractParamsSummary(b.params),
   }));

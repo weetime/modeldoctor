@@ -6,30 +6,39 @@ import {
   type StageBarDatum,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
-import { summarizeForPrompt } from "./client-metrics";
+import { readLatencyPercentiles, readPrefixCache, summarizeForPrompt } from "./client-metrics";
+import { formatLatencyMs, formatPct, formatThroughput } from "./format";
 
 export interface StageRun {
   id: string;
   stageLabel: string;
   tool: string;
+  scenario: string;
   summaryMetrics: unknown;
+  /** `serverMetrics` blob — carries the lb-strategy prefix-cache annotation. */
+  serverMetrics?: unknown;
 }
 
-const PERCENTILES = ["p50", "p90", "p99"] as const;
+const TTFT_PS = ["p50", "p95", "p99"] as const;
+const E2E_PS = ["p50", "p95", "p99"] as const;
 
 /**
- * 4-panel chart row for the SavedCompare report. Derives QPS / err% / TTFT-percentiles
- * / e2e-percentiles from each run's `summaryMetrics` blob via the client-side mirror of
- * the server prompt summarizer.
+ * Scenario-aware chart row for the live Compare page. Derives every panel from
+ * each run's `summaryMetrics` (+ `serverMetrics` for lb-strategy) and follows
+ * the app theme (the AI-report path renders the same metrics on fixed "paper"
+ * via FigureRenderer — kept separate on purpose).
  *
- * Every run carries one identity color (assignRunColors over the run order),
- * shared by all four panels: QPS / error-rate bars are colored per run, and
- * the percentile panels are pivoted to "x = percentile, series = run" so the
- * same run is the same color everywhere.
+ * Chart-type choice: single-scalar-per-run metrics (QPS / error rate / ITL p95
+ * / cache hit / pod share) are bars; latency percentile distributions
+ * (p50→p95→p99 pivoted to x=percentile, series=run) are lines, which stay
+ * readable across many runs where grouped bars crowd.
  *
- * Layout note: each `<StageBarChart>` already wraps itself in `rounded-md border p-4`,
- * so the parent (`ReportSections`) MUST NOT add another wrapping border around this
- * component — that would double-border. A bare grid is the correct chrome here.
+ * lb-strategy adds prefix-cache hit-rate + top-pod-share bars, but only when
+ * EVERY run carries the annotation (mirrors availableFigureRefIds — partial
+ * data would render misleading gaps).
+ *
+ * Layout note: each `<StageBarChart>` already wraps itself in `rounded-md border
+ * p-4`, so the parent (`ReportSections`) MUST NOT add another wrapping border.
  */
 export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
   const { t } = useTranslation("benchmarks");
@@ -43,35 +52,59 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
     [runs, tokens],
   );
   const summaries = runs.map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));
+  const barColors = runs.map((r) => colorMap[r.id]);
 
+  // Scalar-per-run bars: throughput + error rate (err scaled to 0-100).
   const qpsErr: StageBarDatum[] = summaries.map(({ r, s }) => ({
     stage: r.stageLabel,
     qps: s.throughput ?? 0,
     err: (s.errorRate ?? 0) * 100,
   }));
-  const qpsErrBarColors = summaries.map(({ r }) => colorMap[r.id]);
 
-  // Pivot: one datum per percentile, one series (= one color) per run.
-  const ttftRuns = summaries.filter(({ s }) => s.ttft);
-  const ttft: StageBarDatum[] = PERCENTILES.map((p) => ({
-    stage: p,
-    ...Object.fromEntries(ttftRuns.map(({ r, s }) => [r.id, s.ttft?.[p] ?? 0])),
+  // ITL p95 per run (data carries ITL mean + p95 only — a percentile line would
+  // be a single point, so render the SLA-relevant tail as a scalar bar).
+  const itlRows = runs.map((r) => ({
+    r,
+    v: readLatencyPercentiles(r.summaryMetrics, "itl", ["p95"])?.p95 ?? null,
   }));
-  const ttftSeries: StageBarSeries[] = ttftRuns.map(({ r }) => ({
-    key: r.id,
-    label: r.stageLabel,
-    color: colorMap[r.id],
+  const showItl = itlRows.some((x) => x.v !== null);
+  const itlData: StageBarDatum[] = itlRows.map(({ r, v }) => ({
+    stage: r.stageLabel,
+    itl: v ?? 0,
   }));
 
-  const e2eRuns = summaries.filter(({ s }) => s.e2e);
-  const e2e: StageBarDatum[] = PERCENTILES.map((p) => ({
-    stage: p,
-    ...Object.fromEntries(e2eRuns.map(({ r, s }) => [r.id, s.e2e?.[p] ?? 0])),
+  // Percentile lines: x = percentile category, series = run.
+  function percentilePanel(family: "ttft" | "e2e", ps: readonly string[]) {
+    const rows = runs
+      .map((r) => ({ r, byP: readLatencyPercentiles(r.summaryMetrics, family, ps) }))
+      .filter((x): x is { r: StageRun; byP: Record<string, number | null> } => x.byP !== null);
+    const data: StageBarDatum[] = ps.map((p) => ({
+      stage: p,
+      ...Object.fromEntries(rows.map(({ r, byP }) => [r.id, byP[p] ?? null])),
+    }));
+    const series: StageBarSeries[] = rows.map(({ r }) => ({
+      key: r.id,
+      label: r.stageLabel,
+      color: colorMap[r.id],
+    }));
+    return { data: rows.length > 0 ? data : [], series };
+  }
+
+  const ttft = percentilePanel("ttft", TTFT_PS);
+  const e2e = percentilePanel("e2e", E2E_PS);
+
+  // lb-strategy prefix-cache figures, gated on every run carrying the annotation.
+  const scenario = runs[0]?.scenario;
+  const pcRows = runs.map((r) => ({ r, pc: readPrefixCache(r.serverMetrics) }));
+  const showPrefixCache =
+    scenario === "lb-strategy" && pcRows.length > 0 && pcRows.every((x) => x.pc !== null);
+  const hitData: StageBarDatum[] = pcRows.map(({ r, pc }) => ({
+    stage: r.stageLabel,
+    hit: pc?.hitRatePct ?? 0,
   }));
-  const e2eSeries: StageBarSeries[] = e2eRuns.map(({ r }) => ({
-    key: r.id,
-    label: r.stageLabel,
-    color: colorMap[r.id],
+  const shareData: StageBarDatum[] = pcRows.map(({ r, pc }) => ({
+    stage: r.stageLabel,
+    share: pc?.topPodSharePct ?? 0,
   }));
 
   return (
@@ -80,28 +113,64 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
         title={t("savedCompare.report.chartQpsTitle")}
         data={qpsErr}
         series={[{ key: "qps", label: "QPS", color: tokens.palette[0] }]}
-        barColors={qpsErrBarColors}
+        barColors={barColors}
         yLabel="req/s"
+        valueFormatter={formatThroughput}
       />
       <StageBarChart
         title={t("savedCompare.report.chartErrTitle")}
         data={qpsErr}
         series={[{ key: "err", label: "%", color: tokens.palette[0] }]}
-        barColors={qpsErrBarColors}
+        barColors={barColors}
         yLabel="%"
+        valueFormatter={formatPct}
       />
       <StageBarChart
         title={t("savedCompare.report.chartTtftTitle")}
-        data={ttftRuns.length > 0 ? ttft : []}
-        series={ttftSeries}
+        data={ttft.data}
+        series={ttft.series}
+        variant="line"
         yLabel="ms"
+        valueFormatter={formatLatencyMs}
       />
       <StageBarChart
         title={t("savedCompare.report.chartE2eTitle")}
-        data={e2eRuns.length > 0 ? e2e : []}
-        series={e2eSeries}
+        data={e2e.data}
+        series={e2e.series}
+        variant="line"
         yLabel="ms"
+        valueFormatter={formatLatencyMs}
       />
+      {showItl && (
+        <StageBarChart
+          title={t("savedCompare.report.chartItlTitle")}
+          data={itlData}
+          series={[{ key: "itl", label: "ITL", color: tokens.palette[0] }]}
+          barColors={barColors}
+          yLabel="ms"
+          valueFormatter={formatLatencyMs}
+        />
+      )}
+      {showPrefixCache && (
+        <>
+          <StageBarChart
+            title={t("savedCompare.report.chartHitRateTitle")}
+            data={hitData}
+            series={[{ key: "hit", label: "%", color: tokens.palette[0] }]}
+            barColors={barColors}
+            yLabel="%"
+            valueFormatter={formatPct}
+          />
+          <StageBarChart
+            title={t("savedCompare.report.chartTopPodShareTitle")}
+            data={shareData}
+            series={[{ key: "share", label: "%", color: tokens.palette[0] }]}
+            barColors={barColors}
+            yLabel="%"
+            valueFormatter={formatPct}
+          />
+        </>
+      )}
     </div>
   );
 }

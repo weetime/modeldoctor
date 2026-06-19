@@ -33,7 +33,7 @@ export { readMetricSafe } from "./core/read-metric-safe.fe.js";
 // `<adapter>/row-descriptors.ts`; the aggregated `Record<ToolName, …>`
 // gives FE a single import + compile-time exhaustiveness when a new tool
 // joins `ToolName`.
-export type { MetricRowSpec, VerdictKind } from "./core/row-descriptor.js";
+export type { MetricFormat, MetricRowSpec, VerdictKind } from "./core/row-descriptor.js";
 export { rowDescriptorsByTool } from "./core/row-descriptors.fe.js";
 export { evalscopeReadMetric } from "./evalscope/read-metric.js";
 export {
