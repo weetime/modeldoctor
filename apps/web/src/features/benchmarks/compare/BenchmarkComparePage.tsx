@@ -249,7 +249,12 @@ export function BenchmarkComparePage() {
             <SaveCompareDialog
               open={saveOpen}
               onOpenChange={setSaveOpen}
-              runs={successfulBenchmarks.map((r) => ({ id: r.id, name: r.name, tool: r.tool }))}
+              runs={reportRuns.map((r) => ({
+                id: r.id,
+                name: r.benchmark?.name ?? null,
+                tool: r.tool,
+                label: r.stageLabel,
+              }))}
               baselineId={defaultBaseline}
               context=""
               generateAfterSave={generateAfterSave}

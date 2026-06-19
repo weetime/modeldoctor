@@ -9,9 +9,13 @@ import type { ReportBenchmarkSnapshot } from "./ReportSections";
 export interface CompareGridProps {
   runs: ReportBenchmarkSnapshot[];
   baselineId: string | null;
+  /** Short distinguishing label per run id (Test-matrix `label` column). When a
+   *  run has an entry, its column header shows the label instead of the long
+   *  benchmark name, keeping the grid aligned with the matrix. */
+  labels?: Record<string, string>;
 }
 
-export function CompareGrid({ runs, baselineId }: CompareGridProps) {
+export function CompareGrid({ runs, baselineId, labels }: CompareGridProps) {
   const { t } = useTranslation("benchmarks");
 
   // All runs share one tool by the time CompareGrid mounts (validated upstream).
@@ -37,7 +41,7 @@ export function CompareGrid({ runs, baselineId }: CompareGridProps) {
                   run.id === baselineId && "bg-amber-50 dark:bg-amber-950/30",
                 )}
               >
-                {run.name}
+                {labels?.[run.id] ?? run.name}
               </TableHead>
             ))}
           </TableRow>

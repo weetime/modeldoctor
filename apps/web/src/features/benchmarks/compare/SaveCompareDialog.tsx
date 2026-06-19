@@ -1,5 +1,23 @@
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Classification } from "@modeldoctor/contracts";
-import { useState } from "react";
+import { GripVertical } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,6 +44,10 @@ export interface SaveCompareDialogRun {
   id: string;
   name: string | null;
   tool: string;
+  /** Pre-derived short label (Test-matrix `label` column). Seeds the editable
+   *  per-run label input so the dialog mirrors the matrix and "rename" is just
+   *  editing a pre-filled value. */
+  label?: string;
 }
 
 export interface SaveCompareDialogProps {
@@ -36,6 +58,59 @@ export interface SaveCompareDialogProps {
   context: string;
   /** When true, navigate to the saved page with ?generate=1 so it auto-synthesizes. */
   generateAfterSave?: boolean;
+}
+
+// Static sensor options hoisted to module scope (see ReportSections.tsx): keeps
+// dnd-kit sensors stable across re-renders so a drop doesn't recreate them.
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
+const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+
+/** One sortable row: grip handle + run name + editable label input. Drag is
+ *  initiated from the handle only so the label text stays editable. */
+function SortableLabelRow({
+  run,
+  value,
+  onChange,
+  handleLabel,
+}: {
+  run: SaveCompareDialogRun;
+  value: string;
+  onChange: (next: string) => void;
+  handleLabel: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: run.id,
+  });
+  const name = run.name ?? run.id;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-sm ${
+        isDragging ? "relative z-10 bg-muted/40" : ""
+      }`}
+    >
+      <button
+        type="button"
+        aria-label={handleLabel}
+        className="cursor-grab rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <Label htmlFor={`label-${run.id}`} className="truncate text-sm font-normal">
+        {name}
+      </Label>
+      <Input
+        id={`label-${run.id}`}
+        aria-label={name}
+        className="w-32"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
 }
 
 export function SaveCompareDialog({
@@ -50,20 +125,52 @@ export function SaveCompareDialog({
   const navigate = useNavigate();
   const create = useCreateSavedCompare();
   const [name, setName] = useState("");
+  // Local run order — seeded from the incoming (Test-matrix) order each time the
+  // dialog opens; in-dialog drag reorders this copy only and drives the saved
+  // benchmarkIds order. It never writes back to the matrix / URL.
+  const [order, setOrder] = useState<string[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [ctx, setCtx] = useState(context);
   const [classification, setClassification] = useState<Classification>("internal");
   const [clientName, setClientName] = useState("");
 
-  const allLabelled = runs.every((r) => labels[r.id]?.trim());
+  // Re-seed order + labels from the latest matrix order/labels whenever the
+  // dialog opens. The component stays mounted across open/close, so without this
+  // the first-mount snapshot would go stale after a Test-matrix reorder/rename.
+  useEffect(() => {
+    if (!open) return;
+    setOrder(runs.map((r) => r.id));
+    setLabels(Object.fromEntries(runs.map((r) => [r.id, r.label ?? ""])));
+    setCtx(context);
+  }, [open, runs, context]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over === null || active.id === over.id) return;
+    setOrder((prev) =>
+      arrayMove(prev, prev.indexOf(String(active.id)), prev.indexOf(String(over.id))),
+    );
+  }
+
+  const runById = new Map(runs.map((r) => [r.id, r]));
+  const orderedRuns = order
+    .map((id) => runById.get(id))
+    .filter((r): r is SaveCompareDialogRun => !!r);
+
+  const allLabelled = orderedRuns.every((r) => labels[r.id]?.trim());
   const canSubmit = name.trim().length > 0 && allLabelled && !create.isPending;
 
   async function submit() {
     if (!canSubmit) return;
     const sc = await create.mutateAsync({
       name: name.trim(),
-      benchmarkIds: runs.map((r) => r.id),
-      stageLabels: Object.fromEntries(runs.map((r) => [r.id, labels[r.id].trim()])),
+      benchmarkIds: orderedRuns.map((r) => r.id),
+      stageLabels: Object.fromEntries(orderedRuns.map((r) => [r.id, labels[r.id].trim()])),
       baselineId: baselineId ?? undefined,
       context: ctx.trim() || undefined,
       classification,
@@ -97,22 +204,25 @@ export function SaveCompareDialog({
             <div className="text-xs text-muted-foreground mb-2">
               {t("savedCompare.dialog.stageLabelsHint")}
             </div>
-            <div className="space-y-2">
-              {runs.map((r) => (
-                <div key={r.id} className="grid grid-cols-[1fr_auto] items-center gap-2">
-                  <Label htmlFor={`label-${r.id}`} className="text-sm font-normal">
-                    {r.name ?? r.id}
-                  </Label>
-                  <Input
-                    id={`label-${r.id}`}
-                    aria-label={r.name ?? r.id}
-                    className="w-32"
-                    value={labels[r.id] ?? ""}
-                    onChange={(e) => setLabels((p) => ({ ...p, [r.id]: e.target.value }))}
-                  />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={order} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {orderedRuns.map((r) => (
+                    <SortableLabelRow
+                      key={r.id}
+                      run={r}
+                      value={labels[r.id] ?? ""}
+                      onChange={(next) => setLabels((p) => ({ ...p, [r.id]: next }))}
+                      handleLabel={t("compare.dragHandle")}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
           <div>
             <Label htmlFor="sc-ctx">{t("savedCompare.dialog.contextLabel")}</Label>
