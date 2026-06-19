@@ -1,4 +1,4 @@
-import type { Benchmark, BenchmarkTool } from "@modeldoctor/contracts";
+import type { Benchmark } from "@modeldoctor/contracts";
 import {
   type MetricFormat,
   type MetricRowSpec,
@@ -39,14 +39,18 @@ export type { MetricFormat, VerdictKind };
 
 export interface MetricRowDescriptor {
   labelKey: string; // "compare.metricRowLabel.<key>"
-  read: (m: SummaryMetrics) => number | null;
+  // `unknown`, not `SummaryMetrics`: the grid feeds these from
+  // `ReportBenchmarkSnapshot.summaryMetrics` (typed `unknown`, since the
+  // SavedCompare hydration path under-types it). Every `read` impl already casts
+  // its arg internally via `readMetricSafe` / `readRawField`, so this is honest.
+  read: (m: unknown) => number | null;
   verdictKind?: VerdictKind;
   digits?: number; // default 1
   unitSuffix?: string; // for the cell display (e.g. "ms", "%")
   format?: MetricFormat; // named formatter; takes precedence over digits/unitSuffix
 }
 
-function readRawField(metrics: SummaryMetrics, section: string, field: string): number | null {
+function readRawField(metrics: unknown, section: string, field: string): number | null {
   const t = metrics as { tool?: unknown; data?: Record<string, unknown> } | null;
   if (!t?.data) return null;
   const dist = t.data[section] as Record<string, unknown> | undefined;
@@ -97,7 +101,7 @@ export function deltaText(kind: VerdictKind, baseline: number, current: number):
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
-export function rowDescriptorsForTool(tool: BenchmarkTool): MetricRowDescriptor[] {
+export function rowDescriptorsForTool(tool: string): MetricRowDescriptor[] {
   const specs = rowDescriptorsByTool[tool as keyof typeof rowDescriptorsByTool] as
     | readonly MetricRowSpec[]
     | undefined;

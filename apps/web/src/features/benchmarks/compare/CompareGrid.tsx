@@ -1,13 +1,13 @@
-import type { Benchmark } from "@modeldoctor/contracts";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { MetricRow } from "./MetricRow";
 import { rowDescriptorsForTool } from "./metrics";
+import type { ReportBenchmarkSnapshot } from "./ReportSections";
 
 export interface CompareGridProps {
-  runs: Benchmark[];
+  runs: ReportBenchmarkSnapshot[];
   baselineId: string | null;
 }
 

@@ -1,15 +1,15 @@
-import type { Benchmark } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatLatencyMs, formatPct, formatPercentFromFraction, formatThroughput } from "./format";
 import { deltaText, type MetricRowDescriptor } from "./metrics";
+import type { ReportBenchmarkSnapshot } from "./ReportSections";
 import { VerdictBadge } from "./VerdictBadge";
 import { verdictFor } from "./verdict";
 
 export interface MetricRowProps {
   descriptor: MetricRowDescriptor;
-  runs: Benchmark[];
+  runs: ReportBenchmarkSnapshot[];
   baselineId: string | null;
 }
 
