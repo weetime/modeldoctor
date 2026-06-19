@@ -1,4 +1,4 @@
-import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
+import type { CompareNarrative } from "@modeldoctor/contracts";
 import { Eye, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,18 +9,8 @@ import { Button } from "@/components/ui/button";
 import { useLlmJudgeProvider } from "@/features/settings/queries";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 import { ReportProgress } from "./ReportProgress";
-import type { ReportRun } from "./ReportSections";
 import { SavedCompareReport } from "./SavedCompareReport";
-
-function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
-  if (!params || typeof params !== "object") return {};
-  const p = params as Record<string, unknown>;
-  return {
-    workload: typeof p.workload === "string" ? p.workload : undefined,
-    concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-    duration: typeof p.duration === "number" ? p.duration : undefined,
-  };
-}
+import { toReportRuns } from "./to-report-runs";
 
 /**
  * In-app saved-comparison detail: `/reports/:id` (inside `<AppShell>`).
@@ -128,24 +118,7 @@ export function ReportDetailPage() {
   const sc = query.data;
   const narrative = narrativeOverride ?? (sc.narrative as CompareNarrative | null);
 
-  const reportRuns: ReportRun[] = sc.benchmarks.map((b) => ({
-    id: b.id,
-    stageLabel: b.stageLabel,
-    tool: b.tool ?? "",
-    scenario: b.scenario ?? "",
-    summaryMetrics: b.summaryMetrics,
-    benchmark: b.missing
-      ? null
-      : ({
-          id: b.id,
-          name: b.name ?? null,
-          tool: b.tool ?? "",
-          scenario: b.scenario ?? "",
-          summaryMetrics: b.summaryMetrics,
-          params: b.params,
-        } as Benchmark),
-    paramsSummary: extractParamsSummary(b.params),
-  }));
+  const reportRuns = toReportRuns(sc.benchmarks);
 
   function onDelete() {
     del.mutate(id, { onSuccess: () => navigate("/benchmarks/compare/saved") });

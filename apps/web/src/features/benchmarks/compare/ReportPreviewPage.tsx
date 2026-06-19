@@ -1,4 +1,4 @@
-import type { Benchmark, CompareNarrative } from "@modeldoctor/contracts";
+import type { CompareNarrative } from "@modeldoctor/contracts";
 import { ArrowLeft, Download, Printer } from "lucide-react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,18 +6,8 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { exportPageAsHtml } from "./exportHtml";
 import { useSavedCompare } from "./queries";
-import type { ReportRun } from "./ReportSections";
 import { SavedCompareReport } from "./SavedCompareReport";
-
-function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
-  if (!params || typeof params !== "object") return {};
-  const p = params as Record<string, unknown>;
-  return {
-    workload: typeof p.workload === "string" ? p.workload : undefined,
-    concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
-    duration: typeof p.duration === "number" ? p.duration : undefined,
-  };
-}
+import { toReportRuns } from "./to-report-runs";
 
 /**
  * Standalone report preview: `/reports/:id/preview`.
@@ -83,24 +73,7 @@ export function ReportPreviewPage() {
     );
   }
 
-  const reportRuns: ReportRun[] = sc.benchmarks.map((b) => ({
-    id: b.id,
-    stageLabel: b.stageLabel,
-    tool: b.tool ?? "",
-    scenario: b.scenario ?? "",
-    summaryMetrics: b.summaryMetrics,
-    benchmark: b.missing
-      ? null
-      : ({
-          id: b.id,
-          name: b.name ?? null,
-          tool: b.tool ?? "",
-          scenario: b.scenario ?? "",
-          summaryMetrics: b.summaryMetrics,
-          params: b.params,
-        } as Benchmark),
-    paramsSummary: extractParamsSummary(b.params),
-  }));
+  const reportRuns = toReportRuns(sc.benchmarks);
 
   function onExport() {
     if (reportRef.current) void exportPageAsHtml(reportRef.current, sc.name);
