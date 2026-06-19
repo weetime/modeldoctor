@@ -165,8 +165,8 @@ export function StageBarChart({
     // Unit-aware value formatter shared by the tooltip, y-axis ticks, and bar
     // labels. `unit` (shared PanelUnit) wins, then the escape-hatch
     // `valueFormatter`, then a plain thousands-separated number.
-    const fmt = (v: number): string =>
-      unit ? formatPanelValue(v, unit) : valueFormatter ? valueFormatter(v) : fmtValue(v);
+    const fmt = (v: number, decimals?: number): string =>
+      unit ? formatPanelValue(v, unit) : valueFormatter ? valueFormatter(v) : fmtValue(v, decimals);
     const lc = {
       value: labelColors?.value ?? tokens.textColor,
       up: labelColors?.up ?? "#1a7f37",
@@ -193,11 +193,7 @@ export function StageBarChart({
       const baseVal = baselineIndex != null && baselineIndex >= 0 ? values[baselineIndex] : null;
 
       const labelFor = (idx: number, value: number): string => {
-        const valueStr = unit
-          ? formatPanelValue(value, unit)
-          : valueFormatter
-            ? valueFormatter(value)
-            : fmtValue(value, s.decimals);
+        const valueStr = fmt(value, s.decimals);
         // No baseline context, or this series opts out of trend → value only.
         if (s.higherIsBetter == null) return valueStr;
         if (baselineSeriesValues != null) {
