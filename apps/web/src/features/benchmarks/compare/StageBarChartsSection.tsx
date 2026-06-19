@@ -68,9 +68,11 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
     v: readLatencyPercentiles(r.summaryMetrics, "itl", ["p95"])?.p95 ?? null,
   }));
   const showItl = itlRows.some((x) => x.v !== null);
+  // Keep missing ITL as null (not 0) — ECharts skips the bar, so a run/tool
+  // without ITL reads as "no data" rather than a misleading 0 ms.
   const itlData: StageBarDatum[] = itlRows.map(({ r, v }) => ({
     stage: r.stageLabel,
-    itl: v ?? 0,
+    itl: v,
   }));
 
   // Percentile lines: x = percentile category, series = run.
