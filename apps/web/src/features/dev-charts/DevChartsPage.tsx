@@ -9,6 +9,8 @@ import {
   PercentileTimeseries,
   PieChartPanel,
   QPSTimeseries,
+  StageBarChart,
+  type StageBarDatum,
   Stat,
   TTFTHistogram,
   useChartTokens,
@@ -100,6 +102,23 @@ export function DevChartsPage() {
     { name: "abort", value: 4 },
     { name: "error", value: 1 },
   ];
+
+  // Categorical (non-time) chart — used by the benchmark Compare page. One bar
+  // per run (scalar) or pivoted lines (x = percentile, series = run).
+  const stageBarColors = useMemo(() => RUN_ID_LIST.map((id) => colorMap[id]), [colorMap]);
+  const stageScalar: StageBarDatum[] = RUN_ID_LIST.map((id, i) => ({
+    stage: id,
+    qps: 1.2 + i * 0.1,
+  }));
+  const stagePercentile: StageBarDatum[] = ["p50", "p95", "p99"].map((p, pi) => ({
+    stage: p,
+    ...Object.fromEntries(RUN_ID_LIST.map((id, i) => [id, 400 + pi * (900 + i * 120)])),
+  }));
+  const stagePercentileSeries = RUN_ID_LIST.map((id) => ({
+    key: id,
+    label: id,
+    color: colorMap[id],
+  }));
 
   return (
     <div className="space-y-6 p-6">
@@ -222,6 +241,27 @@ export function DevChartsPage() {
         </Card>
         <Card title="Grouped">
           <BarChartPanel ariaLabel="grouped bars" series={barSeries} unit="count" />
+        </Card>
+      </Section>
+
+      <Section title="StageBarChart (categorical)">
+        <Card title="Bar — one bar per run (unit=rps)">
+          <StageBarChart
+            ariaLabel="stage scalar bars"
+            data={stageScalar}
+            series={[{ key: "qps", label: "QPS", color: tokens.palette[0] }]}
+            barColors={stageBarColors}
+            unit="rps"
+          />
+        </Card>
+        <Card title="Line — percentile distribution (x=pct, series=run, unit=ms)">
+          <StageBarChart
+            ariaLabel="stage percentile lines"
+            data={stagePercentile}
+            series={stagePercentileSeries}
+            variant="line"
+            unit="ms"
+          />
         </Card>
       </Section>
 

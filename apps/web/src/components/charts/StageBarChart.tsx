@@ -1,7 +1,9 @@
+import type { PanelUnit } from "@modeldoctor/contracts";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo } from "react";
 import { ChartFrame, themed, useChartTokens } from "./_shared";
+import { formatPanelValue } from "./format-unit";
 
 export interface StageBarSeries {
   key: string;
@@ -76,10 +78,17 @@ export interface StageBarChartProps {
    */
   variant?: "bar" | "line";
   /**
-   * Formats values for the tooltip AND the static point/bar labels. Pass a
-   * unit-aware formatter (e.g. formatLatencyMs / formatPct) so both surfaces
-   * agree and the tooltip never shows raw full-precision floats. When omitted,
-   * falls back to a thousands-separated, up-to-2-decimal default.
+   * Shared `PanelUnit` (ms / % / rps / …). When set, the y-axis ticks, tooltip,
+   * and bar labels all format through `formatPanelValue` — the same system the
+   * time-series charts use — so units and precision stay consistent app-wide
+   * and the y-axis never shows raw full-precision floats. Takes precedence over
+   * `valueFormatter`.
+   */
+  unit?: PanelUnit;
+  /**
+   * Escape-hatch value formatter for the tooltip + static labels when `unit`
+   * doesn't fit. When omitted (and no `unit`), falls back to a
+   * thousands-separated, up-to-2-decimal default.
    */
   valueFormatter?: (v: number) => string;
 }
@@ -140,13 +149,23 @@ export function StageBarChart({
   barColors,
   baselineSeriesKey,
   variant = "bar",
+  unit,
   valueFormatter,
 }: StageBarChartProps): JSX.Element {
   const tokens = useChartTokens();
   const isEmpty = empty ?? data.length === 0;
   const label = ariaLabel ?? title ?? "stage-bar";
+  // Lines hide static per-point labels (multiple near-equal series collide) —
+  // values come from the tooltip, matching LineTimeseries / LatencyCDF. Bars
+  // keep labels (well-spaced, and PDF/print-safe).
+  const showLabels = showValueLabels && variant !== "line";
 
   const option = useMemo<EChartsOption>(() => {
+    // Unit-aware value formatter shared by the tooltip, y-axis ticks, and bar
+    // labels. `unit` (shared PanelUnit) wins, then the escape-hatch
+    // `valueFormatter`, then a plain thousands-separated number.
+    const fmt = (v: number): string =>
+      unit ? formatPanelValue(v, unit) : valueFormatter ? valueFormatter(v) : fmtValue(v);
     const lc = {
       value: labelColors?.value ?? tokens.textColor,
       up: labelColors?.up ?? "#1a7f37",
@@ -173,7 +192,11 @@ export function StageBarChart({
       const baseVal = baselineIndex != null && baselineIndex >= 0 ? values[baselineIndex] : null;
 
       const labelFor = (idx: number, value: number): string => {
-        const valueStr = valueFormatter ? valueFormatter(value) : fmtValue(value, s.decimals);
+        const valueStr = unit
+          ? formatPanelValue(value, unit)
+          : valueFormatter
+            ? valueFormatter(value)
+            : fmtValue(value, s.decimals);
         // No baseline context, or this series opts out of trend → value only.
         if (s.higherIsBetter == null) return valueStr;
         if (baselineSeriesValues != null) {
@@ -202,7 +225,7 @@ export function StageBarChart({
           : {}),
         data: seriesData,
         itemStyle: { color: s.color },
-        label: showValueLabels
+        label: showLabels
           ? {
               show: true,
               position: "top" as const,
@@ -241,13 +264,12 @@ export function StageBarChart({
           // Format tooltip values with the same unit-aware formatter as the
           // labels — without this ECharts prints raw full-precision floats.
           valueFormatter: (val: unknown) =>
-            typeof val === "number"
-              ? valueFormatter
-                ? valueFormatter(val)
-                : fmtValue(val)
-              : String(val ?? ""),
+            typeof val === "number" ? fmt(val) : String(val ?? ""),
         },
-        legend: series.length > 1 ? { type: "scroll", top: 0 } : undefined,
+        legend:
+          series.length > 1
+            ? { type: "scroll", top: 0, textStyle: { color: tokens.textColor } }
+            : undefined,
         xAxis: {
           type: "category",
           data: categories,
@@ -261,7 +283,9 @@ export function StageBarChart({
           // fractional — `Math.ceil` would round sub-1 maxima (small error
           // rates / throughputs) up to 1 and squash the bars flat.
           max: (v: { max: number }) => (v.max > 0 ? v.max * 1.2 : 1),
-          axisLabel: { color: lc.baseline },
+          // Format ticks through the same unit-aware formatter so the headroom
+          // max never renders as a raw float (e.g. "1.6612971606561588").
+          axisLabel: { color: lc.baseline, formatter: (v: number) => fmt(v) },
           ...(yLabel ? { name: yLabel, nameLocation: "middle", nameGap: 40 } : {}),
         },
         grid: { left: 56, right: 24, top: series.length > 1 ? 56 : 24, bottom: 32 },
@@ -274,11 +298,12 @@ export function StageBarChart({
     series,
     yLabel,
     tokens,
-    showValueLabels,
+    showLabels,
     baselineIndex,
     baselineSeriesKey,
     barColors,
     variant,
+    unit,
     valueFormatter,
     labelColors?.value,
     labelColors?.up,
