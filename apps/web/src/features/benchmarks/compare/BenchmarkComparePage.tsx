@@ -158,7 +158,7 @@ export function BenchmarkComparePage() {
       : "";
 
   // Short, distinguishing labels for charts/legends/matrix: strip the long
-  // prefix all runs share (e.g. "深会话t2 · Qwen3-8B · "), keeping only what
+  // prefix all runs share (e.g. "deep-chat-t2 · Qwen3-8B · "), keeping only what
   // differs ("MX-OFF-r1-a1"). Falls back to the full name when nothing is shared.
   const runNames = successfulBenchmarks.map((b, i) => b.name ?? `R${i + 1}`);
   const shortLabels = shortRunLabels(runNames);

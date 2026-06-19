@@ -1,6 +1,6 @@
 // Derives short, distinguishing labels for the runs in a comparison. Run names
-// in a matrix typically share a long prefix (e.g. "深会话t2 · Qwen3-8B · ") that
-// is noise in chart legends and axes — only the trailing differentiator
+// in a matrix typically share a long prefix (e.g. "deep-chat-t2 · Qwen3-8B · ")
+// that is noise in chart legends and axes — only the trailing differentiator
 // ("MX-OFF-r1-a1") matters. We strip the leading " · "-delimited tokens that
 // EVERY run shares, leaving just what distinguishes them.
 
