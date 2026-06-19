@@ -260,7 +260,11 @@ export function ReportSections({
       {/* 2. CompareGrid */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionGrid")}</h2>
-        <CompareGrid runs={livingRuns.map((r) => r.benchmark)} baselineId={baselineId} />
+        <CompareGrid
+          runs={livingRuns.map((r) => r.benchmark)}
+          baselineId={baselineId}
+          labels={Object.fromEntries(livingRuns.map((r) => [r.id, r.stageLabel]))}
+        />
       </section>
 
       {/* 3. Charts */}

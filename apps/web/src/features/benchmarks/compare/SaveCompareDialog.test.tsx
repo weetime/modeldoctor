@@ -101,3 +101,56 @@ describe("SaveCompareDialog validation", () => {
     expect(submitButton()).not.toBeDisabled();
   });
 });
+
+describe("SaveCompareDialog state seeding", () => {
+  function Harness() {
+    // New `runs` array reference on every render — mirrors BenchmarkComparePage's
+    // inline `.map()`, which a background React Query refetch re-creates.
+    const runs = [
+      { id: "b1", name: "r1", tool: "guidellm", label: "A" },
+      { id: "b2", name: "r2", tool: "guidellm", label: "B" },
+    ];
+    return (
+      <SaveCompareDialog open onOpenChange={() => {}} runs={runs} baselineId="b1" context="" />
+    );
+  }
+
+  it("seeds label inputs from the derived `label` on open", () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <Harness />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByLabelText("r1")).toHaveValue("A");
+    expect(screen.getByLabelText("r2")).toHaveValue("B");
+  });
+
+  it("keeps user edits across a parent re-render while open (fresh runs ref)", async () => {
+    const u = userEvent.setup();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <Harness />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    const input = screen.getByLabelText("r1");
+    await u.clear(input);
+    await u.type(input, "Edited");
+    expect(input).toHaveValue("Edited");
+
+    // Parent re-render with a brand-new `runs` reference must NOT re-seed.
+    rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <Harness />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByLabelText("r1")).toHaveValue("Edited");
+  });
+});
