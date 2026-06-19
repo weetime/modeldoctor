@@ -115,6 +115,53 @@ describe("<StageBarChart>", () => {
     expect(opt.series?.every((s) => s.markLine === undefined)).toBe(true);
   });
 
+  it("keeps static labels on lines but de-collides them for PDF export", () => {
+    render(
+      <StageBarChart
+        title="TTFT percentiles"
+        data={[
+          { stage: "p50", a: 100, b: 120 },
+          { stage: "p99", a: 500, b: 450 },
+        ]}
+        series={[
+          { key: "a", label: "Run A", color: "#111111" },
+          { key: "b", label: "Run B", color: "#222222" },
+        ]}
+        variant="line"
+        unit="ms"
+        height={200}
+      />,
+    );
+    const opt = JSON.parse(screen.getByTestId("echart").dataset.option ?? "{}") as {
+      series?: Array<{
+        type?: string;
+        label?: { show?: boolean };
+        labelLayout?: { moveOverlap?: string };
+      }>;
+    };
+    expect(opt.series?.every((s) => s.type === "line")).toBe(true);
+    // Labels stay visible (PDF has no hover) but overlapping ones shift apart.
+    expect(opt.series?.every((s) => s.label?.show === true)).toBe(true);
+    expect(opt.series?.every((s) => s.labelLayout?.moveOverlap === "shiftY")).toBe(true);
+  });
+
+  it("keeps static labels on bar variant", () => {
+    render(
+      <StageBarChart
+        title="QPS"
+        data={[{ stage: "A", qps: 3 }]}
+        series={[{ key: "qps", label: "QPS", color: "#3498db" }]}
+        unit="rps"
+        height={200}
+      />,
+    );
+    const opt = JSON.parse(screen.getByTestId("echart").dataset.option ?? "{}") as {
+      series?: Array<{ type?: string; label?: { show?: boolean } }>;
+    };
+    expect(opt.series?.[0]?.type).toBe("bar");
+    expect(opt.series?.[0]?.label?.show).toBe(true);
+  });
+
   it("renders empty placeholder when data is empty", () => {
     render(
       <StageBarChart

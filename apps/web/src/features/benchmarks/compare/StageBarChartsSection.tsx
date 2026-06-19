@@ -7,7 +7,6 @@ import {
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
 import { readLatencyPercentiles, readPrefixCache, summarizeForPrompt } from "./client-metrics";
-import { formatLatencyMs, formatPct, formatThroughput } from "./format";
 
 export interface StageRun {
   id: string;
@@ -116,32 +115,28 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
         data={qpsErr}
         series={[{ key: "qps", label: "QPS", color: tokens.palette[0] }]}
         barColors={barColors}
-        yLabel="req/s"
-        valueFormatter={formatThroughput}
+        unit="rps"
       />
       <StageBarChart
         title={t("savedCompare.report.chartErrTitle")}
         data={qpsErr}
         series={[{ key: "err", label: "%", color: tokens.palette[0] }]}
         barColors={barColors}
-        yLabel="%"
-        valueFormatter={formatPct}
+        unit="%"
       />
       <StageBarChart
         title={t("savedCompare.report.chartTtftTitle")}
         data={ttft.data}
         series={ttft.series}
         variant="line"
-        yLabel="ms"
-        valueFormatter={formatLatencyMs}
+        unit="ms"
       />
       <StageBarChart
         title={t("savedCompare.report.chartE2eTitle")}
         data={e2e.data}
         series={e2e.series}
         variant="line"
-        yLabel="ms"
-        valueFormatter={formatLatencyMs}
+        unit="ms"
       />
       {showItl && (
         <StageBarChart
@@ -149,8 +144,7 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
           data={itlData}
           series={[{ key: "itl", label: "ITL", color: tokens.palette[0] }]}
           barColors={barColors}
-          yLabel="ms"
-          valueFormatter={formatLatencyMs}
+          unit="ms"
         />
       )}
       {showPrefixCache && (
@@ -160,16 +154,14 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
             data={hitData}
             series={[{ key: "hit", label: "%", color: tokens.palette[0] }]}
             barColors={barColors}
-            yLabel="%"
-            valueFormatter={formatPct}
+            unit="%"
           />
           <StageBarChart
             title={t("savedCompare.report.chartTopPodShareTitle")}
             data={shareData}
             series={[{ key: "share", label: "%", color: tokens.palette[0] }]}
             barColors={barColors}
-            yLabel="%"
-            valueFormatter={formatPct}
+            unit="%"
           />
         </>
       )}
