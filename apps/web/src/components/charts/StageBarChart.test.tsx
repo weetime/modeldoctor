@@ -115,7 +115,7 @@ describe("<StageBarChart>", () => {
     expect(opt.series?.every((s) => s.markLine === undefined)).toBe(true);
   });
 
-  it("renders line series and omits static point labels in line variant", () => {
+  it("keeps static labels on lines but de-collides them for PDF export", () => {
     render(
       <StageBarChart
         title="TTFT percentiles"
@@ -133,11 +133,16 @@ describe("<StageBarChart>", () => {
       />,
     );
     const opt = JSON.parse(screen.getByTestId("echart").dataset.option ?? "{}") as {
-      series?: Array<{ type?: string; label?: { show?: boolean } }>;
+      series?: Array<{
+        type?: string;
+        label?: { show?: boolean };
+        labelLayout?: { moveOverlap?: string };
+      }>;
     };
     expect(opt.series?.every((s) => s.type === "line")).toBe(true);
-    // Line points must not carry static labels (they collide); tooltip only.
-    expect(opt.series?.every((s) => s.label === undefined)).toBe(true);
+    // Labels stay visible (PDF has no hover) but overlapping ones shift apart.
+    expect(opt.series?.every((s) => s.label?.show === true)).toBe(true);
+    expect(opt.series?.every((s) => s.labelLayout?.moveOverlap === "shiftY")).toBe(true);
   });
 
   it("keeps static labels on bar variant", () => {
