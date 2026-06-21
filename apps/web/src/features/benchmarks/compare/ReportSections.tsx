@@ -15,9 +15,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { CompareNarrative } from "@modeldoctor/contracts";
 import { GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { CompareGrid } from "./CompareGrid";
 import { readPrefixCache } from "./client-metrics";
 import { formatPct } from "./format";
@@ -62,12 +62,6 @@ export interface ReportRun extends StageRun {
 export interface ReportSectionsProps {
   runs: ReportRun[];
   baselineId: string | null;
-  /** Kept for backward compatibility with BenchmarkComparePage callers — narrative
-   *  rendering itself now lives in `<SavedCompareReport>`. */
-  narrative: CompareNarrative | null;
-  context: string | null;
-  /** Pre-derived per-run "connection / model / tool / version" lines. */
-  environmentLines: string[];
   /**
    * When provided, Test-matrix rows become drag-sortable and the new full id
    * order is reported here after a drop. The caller owns the order (URL ids);
@@ -97,7 +91,13 @@ function MatrixRowCells({
     <>
       <td className="px-3 py-2 font-medium">{r.stageLabel}</td>
       <td className="px-3 py-2">
-        {r.benchmark === null ? t("savedCompare.detail.missingBenchmark") : r.benchmark.name}
+        {r.benchmark === null ? (
+          <span className="opacity-60">{t("savedCompare.detail.missingBenchmark")}</span>
+        ) : (
+          <Link to={`/benchmarks/${r.id}`} className="hover:text-primary hover:underline">
+            {r.benchmark.name}
+          </Link>
+        )}
       </td>
       <td className="px-3 py-2">{r.benchmark?.tool ?? "—"}</td>
       <td className="px-3 py-2">{r.scenario}</td>
@@ -162,13 +162,7 @@ function SortableMatrixRow({
  *
  * `data-report-root` is exposed for the export-as-HTML utility.
  */
-export function ReportSections({
-  runs,
-  baselineId,
-  context,
-  environmentLines,
-  onReorder,
-}: ReportSectionsProps) {
+export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
   // Type-guard predicate (not just `!== null`) so `r.benchmark` narrows to
   // non-null below — lets `CompareGrid` receive `ReportBenchmarkSnapshot[]`
@@ -272,21 +266,9 @@ export function ReportSections({
         <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionCharts")}</h2>
         <StageBarChartsSection runs={livingRuns} />
       </section>
-
-      {/* 4. Test environment */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionEnv")}</h2>
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          {environmentLines.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-        {context ? (
-          <div className="mt-3 whitespace-pre-wrap rounded-md border border-border bg-muted/20 p-3 text-sm">
-            {context}
-          </div>
-        ) : null}
-      </section>
+      {/* The former "Test environment" section was dropped: it merely restated
+          the Test-matrix rows. The matrix `name` column now links to each run's
+          benchmark detail page, which carries the full environment context. */}
     </div>
   );
 }

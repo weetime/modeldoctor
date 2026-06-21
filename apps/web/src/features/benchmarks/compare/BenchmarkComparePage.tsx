@@ -165,9 +165,6 @@ export function BenchmarkComparePage() {
     benchmark: b,
     paramsSummary: extractParamsSummary(b.params),
   }));
-  const environmentLines = successfulBenchmarks.map(
-    (b) => `${b.name ?? b.id} · ${b.tool} · ${b.scenario}`,
-  );
 
   return (
     <>
@@ -235,9 +232,6 @@ export function BenchmarkComparePage() {
             <ReportSections
               runs={reportRuns}
               baselineId={defaultBaseline}
-              narrative={null}
-              context={null}
-              environmentLines={environmentLines}
               onReorder={(newIds) => {
                 // URL ids order is the single source of run order — tables,
                 // charts and SaveCompareDialog all follow it via useQueries.

@@ -418,7 +418,6 @@
       "sectionCharts": "图表",
       "sectionAnalysis": "分析",
       "sectionConclusion": "结论与选型建议",
-      "sectionEnv": "测试环境",
       "chartQpsTitle": "QPS",
       "chartErrTitle": "错误率",
       "chartTtftTitle": "TTFT 分位（ms）",
