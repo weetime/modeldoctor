@@ -115,7 +115,7 @@ describe("<StageBarChart>", () => {
     expect(opt.series?.every((s) => s.markLine === undefined)).toBe(true);
   });
 
-  it("keeps static labels on lines but de-collides them for PDF export", () => {
+  it("keeps static labels on lines and hides overlapping ones", () => {
     render(
       <StageBarChart
         title="TTFT percentiles"
@@ -136,13 +136,14 @@ describe("<StageBarChart>", () => {
       series?: Array<{
         type?: string;
         label?: { show?: boolean };
-        labelLayout?: { moveOverlap?: string };
+        labelLayout?: { hideOverlap?: boolean };
       }>;
     };
     expect(opt.series?.every((s) => s.type === "line")).toBe(true);
-    // Labels stay visible (PDF has no hover) but overlapping ones shift apart.
+    // Labels stay enabled (PDF has no hover); ECharts hides the ones that would
+    // collide so clustered percentile points don't pile into an unreadable heap.
     expect(opt.series?.every((s) => s.label?.show === true)).toBe(true);
-    expect(opt.series?.every((s) => s.labelLayout?.moveOverlap === "shiftY")).toBe(true);
+    expect(opt.series?.every((s) => s.labelLayout?.hideOverlap === true)).toBe(true);
   });
 
   it("keeps static labels on bar variant", () => {

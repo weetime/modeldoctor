@@ -156,9 +156,10 @@ export function StageBarChart({
   const isEmpty = empty ?? data.length === 0;
   const label = ariaLabel ?? title ?? "stage-bar";
   // Static value labels stay on for BOTH bars and lines — the report is
-  // exported to PDF/HTML, which has no hover tooltip, so every point must carry
-  // its value. Line points that would collide are nudged apart via the
-  // per-series `labelLayout.moveOverlap` below rather than hidden.
+  // exported to PDF/HTML, which has no hover tooltip. Bars never collide; line
+  // points that pile up at a shared x (all runs at p50) drop the overlapping
+  // labels via `labelLayout.hideOverlap` below — outlier points keep theirs,
+  // and the Key metrics table carries every exact value regardless.
   const showLabels = showValueLabels;
 
   const option = useMemo<EChartsOption>(() => {
@@ -240,12 +241,11 @@ export function StageBarChart({
             }
           : undefined,
         // Line series stack multiple near-equal points at one x (e.g. all runs
-        // at p50), so their labels collide. Nudge overlapping labels apart
-        // vertically instead of hiding them — keeps every value for PDF export.
-        labelLayout:
-          showLabels && variant === "line"
-            ? { moveOverlap: "shiftY" as const, hideOverlap: false }
-            : undefined,
+        // at p50), piling their labels into an unreadable heap. Hide the
+        // overlapping ones: a lone outlier (e.g. a p99 spike) sits clear of the
+        // pack and keeps its label, while clustered values fall back to the axis
+        // tooltip and the Key metrics table rendered alongside the charts.
+        labelLayout: showLabels && variant === "line" ? { hideOverlap: true } : undefined,
         // Dashed reference line at the baseline value — only meaningful for a
         // single series (multiple series have different baselines).
         markLine:
