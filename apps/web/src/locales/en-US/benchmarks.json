@@ -418,7 +418,6 @@
       "sectionCharts": "Charts",
       "sectionAnalysis": "Analysis",
       "sectionConclusion": "Conclusion & recommendation",
-      "sectionEnv": "Test environment",
       "chartQpsTitle": "QPS",
       "chartErrTitle": "Error rate",
       "chartTtftTitle": "TTFT percentiles (ms)",

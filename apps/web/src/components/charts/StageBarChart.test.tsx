@@ -115,7 +115,7 @@ describe("<StageBarChart>", () => {
     expect(opt.series?.every((s) => s.markLine === undefined)).toBe(true);
   });
 
-  it("keeps static labels on lines but de-collides them for PDF export", () => {
+  it("drops static point labels on multi-run lines, reads values off the shared tooltip", () => {
     render(
       <StageBarChart
         title="TTFT percentiles"
@@ -133,16 +133,18 @@ describe("<StageBarChart>", () => {
       />,
     );
     const opt = JSON.parse(screen.getByTestId("echart").dataset.option ?? "{}") as {
-      series?: Array<{
-        type?: string;
-        label?: { show?: boolean };
-        labelLayout?: { moveOverlap?: string };
-      }>;
+      series?: Array<{ type?: string; label?: { show?: boolean } }>;
+      tooltip?: { trigger?: string };
     };
+    // Assert the length so the `.every()` checks below can't pass vacuously on
+    // an empty series array.
+    expect(opt.series).toHaveLength(2);
     expect(opt.series?.every((s) => s.type === "line")).toBe(true);
-    // Labels stay visible (PDF has no hover) but overlapping ones shift apart.
-    expect(opt.series?.every((s) => s.label?.show === true)).toBe(true);
-    expect(opt.series?.every((s) => s.labelLayout?.moveOverlap === "shiftY")).toBe(true);
+    // Grafana-style: no per-point labels to avoid stacking N near-equal values
+    // at one x. Values are read from the shared axis (crosshair) tooltip and the
+    // Key metrics table rendered alongside.
+    expect(opt.series?.every((s) => s.label?.show !== true)).toBe(true);
+    expect(opt.tooltip?.trigger).toBe("axis");
   });
 
   it("keeps static labels on bar variant", () => {
