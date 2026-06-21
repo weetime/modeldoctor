@@ -136,6 +136,9 @@ describe("<StageBarChart>", () => {
       series?: Array<{ type?: string; label?: { show?: boolean } }>;
       tooltip?: { trigger?: string };
     };
+    // Assert the length so the `.every()` checks below can't pass vacuously on
+    // an empty series array.
+    expect(opt.series).toHaveLength(2);
     expect(opt.series?.every((s) => s.type === "line")).toBe(true);
     // Grafana-style: no per-point labels to avoid stacking N near-equal values
     // at one x. Values are read from the shared axis (crosshair) tooltip and the
