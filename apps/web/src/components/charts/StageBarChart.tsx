@@ -155,12 +155,15 @@ export function StageBarChart({
   const tokens = useChartTokens();
   const isEmpty = empty ?? data.length === 0;
   const label = ariaLabel ?? title ?? "stage-bar";
-  // Static value labels stay on for BOTH bars and lines — the report is
-  // exported to PDF/HTML, which has no hover tooltip. Bars never collide; line
-  // points that pile up at a shared x (all runs at p50) drop the overlapping
-  // labels via `labelLayout.hideOverlap` below — outlier points keep theirs,
-  // and the Key metrics table carries every exact value regardless.
+  // Static value labels are a BAR-only affordance: one value per bar, never
+  // colliding, and useful in the tooltip-less PDF/HTML export. Multi-run LINE
+  // charts (p50/p95/p99 × N runs) would stack many near-equal labels at one x
+  // into an unreadable heap, so — following the mainstream approach (Grafana
+  // time-series panels print no per-point labels) — lines carry NO static
+  // labels and read their values off the shared axis tooltip + the Key metrics
+  // table rendered alongside the charts.
   const showLabels = showValueLabels;
+  const showStaticLabels = showLabels && variant !== "line";
 
   const option = useMemo<EChartsOption>(() => {
     // Unit-aware value formatter shared by the tooltip, y-axis ticks, and bar
@@ -223,7 +226,7 @@ export function StageBarChart({
           : {}),
         data: seriesData,
         itemStyle: { color: s.color },
-        label: showLabels
+        label: showStaticLabels
           ? {
               show: true,
               position: "top" as const,
@@ -240,12 +243,6 @@ export function StageBarChart({
               },
             }
           : undefined,
-        // Line series stack multiple near-equal points at one x (e.g. all runs
-        // at p50), piling their labels into an unreadable heap. Hide the
-        // overlapping ones: a lone outlier (e.g. a p99 spike) sits clear of the
-        // pack and keeps its label, while clustered values fall back to the axis
-        // tooltip and the Key metrics table rendered alongside the charts.
-        labelLayout: showLabels && variant === "line" ? { hideOverlap: true } : undefined,
         // Dashed reference line at the baseline value — only meaningful for a
         // single series (multiple series have different baselines).
         markLine:
@@ -302,7 +299,7 @@ export function StageBarChart({
     series,
     yLabel,
     tokens,
-    showLabels,
+    showStaticLabels,
     baselineIndex,
     baselineSeriesKey,
     barColors,
