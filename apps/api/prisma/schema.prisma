@@ -367,6 +367,8 @@ model SavedCompare {
   classification   String    @default("internal")
   /// Free-text client / customer name surfaced in the report Hero meta.
   clientName       String?   @map("client_name")
+  scenario         String?   // derived: shared scenario of all member benchmarks
+  tool             String?   // derived: shared tool of all member benchmarks
   /// Monotonically increasing version stamp, bumped by the UI when the
   /// user regenerates or edits the report. Surfaced in Hero meta.
   version          Int       @default(1)
