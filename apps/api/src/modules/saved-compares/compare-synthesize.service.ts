@@ -182,7 +182,9 @@ export class CompareSynthesizeService {
           apiStyle: provider.apiStyle,
         },
         messages,
-        { jsonMode: true, timeoutMs: LLM_TIMEOUT_MS },
+        // maxTokens only applies on the Anthropic path (required there); the
+        // deep report can run long, so give it headroom above the 16k default.
+        { jsonMode: true, timeoutMs: LLM_TIMEOUT_MS, maxTokens: 32_000 },
       );
       raw = out.content;
     } catch (e) {
