@@ -36,7 +36,7 @@
 **后端约束**（`apps/api/src/modules/saved-compares/saved-compares.service.ts` + contract）：
 
 - 创建 SavedCompare 时，hydrate 所有 benchmark 后校验：全部 `scenario` 相同、全部 `tool` 相同，否则 400。
-- 在 `SavedCompare` 上持久化派生字段 `scenario: ScenarioId` 与 `tool: BenchmarkTool`（Prisma migration 用 `prisma migrate dev --create-only` 生成；回填存量行用其成员 benchmark 的共同值）。
+- 在 `SavedCompare` 上持久化派生字段 `scenario: String?` 与 `tool: String?`（Prisma migration 用 `prisma migrate dev --create-only`，**纯加列，schema-only，无数据 DML**）。新建时写入；**读取时若为 null 则从 hydrated benchmarks 现场派生**（compute-on-read 兜底），因此**无需存量回填迁移**——避免业务数据 DML（CLAUDE.md 限制）。
 - 前端现有的「混选时隐藏保存按钮」软拦保留（更好的即时反馈），但不再是唯一防线。
 
 **报告意图判定**（`scenario` → reportIntent）：
@@ -77,14 +77,15 @@ export interface ReportScenarioProfile {
 
 所有 figure 仍是 **React 组件 + refId，数据驱动渲染，服务端不出图**（保持确定性、可缓存、品牌内交互式）。新增 `FigureRefId` 到 `compare-narrative.ts` 枚举，对应组件加进 `FigureRenderer.tsx`。
 
-**Phase 1 新增（现有数据即可画）：**
+**Phase 1 新增（compare 已 hydrate 的数据即可画）：**
 
 | refId | 场景 | 数据来源 | 说明 |
 |---|---|---|---|
 | `pod-traffic-distribution` | lb-strategy | `serverMetrics.prefixCache.perPod[].queries` | 每 pod 流量占比，看集中度 |
 | `pod-hit-rate` | lb-strategy | `perPod[].hits / .queries` | 每 pod 命中率 |
-| `latency-distribution` | inference / gateway | `rawOutput.files`（guidellm/vegeta，经 `benchmark-charts.service.ts` 解析） | CDF / 直方图 |
 | `cold-warm-delta` | engine-kv-cache | `(rerun)` 配对的两行 summaryMetrics | 冷热 Δ% |
+
+> **设计期修正**：`latency-distribution`（CDF/直方图）原列 Phase 1，但 compare 报告的 figure 只从已 hydrate 的 `summaryMetrics`/`serverMetrics` 渲染，原始样本在 `rawOutput`（MinIO/DB blob，compare 流程不加载）→ 需额外 rawOutput 拉取 wiring，**改到 Phase 2**。
 
 **Phase 1 + 本期追加（需补数据管线）：**
 
@@ -126,7 +127,7 @@ export interface ReportScenarioProfile {
 
 **本期（Phase 1 + capacity 曲线）：**
 
-1. 选择层：后端约束 same-scenario+same-tool + `SavedCompare.scenario/tool` 持久化（含 migration + 存量回填）。
+1. 选择层：后端约束 same-scenario+same-tool + `SavedCompare.scenario/tool` 持久化（nullable 加列 migration + compute-on-read 兜底，无回填）。
 2. Report Scenario Profile 注册表骨架 + types。
 3. **全 5 场景的 `promptFragment`**（zh/en）。
 4. Phase 1 figure 组件 + refId：`pod-traffic-distribution`、`pod-hit-rate`、`latency-distribution`、`cold-warm-delta`。
@@ -149,7 +150,7 @@ export interface ReportScenarioProfile {
 
 | 风险 | 缓解 |
 |---|---|
-| 存量 SavedCompare 回填 scenario/tool 时遇到历史混合数据 | 回填脚本对混合行标 `mixed`，报告回退通用模板，不报错 |
+| 存量 SavedCompare 无 scenario/tool（旧行）| compute-on-read 现场派生；若成员 benchmark 已删/混合则视为未知，报告回退通用模板，不报错 |
 | capacity sweep JSON 结构跨 guidellm 版本变化 | 解析做防御性校验，缺字段则降级为「仅最终百分位」（现状），不 throw |
 | 新 figure 在某 benchmark 缺对应数据 | `figureManifest` 按 `dataAssembly` 实际产出动态裁剪，缺数据则不列该 figure |
 | Prisma migration | 用 `prisma migrate dev --create-only`，不手写 SQL（[[feedback_prisma_migrations]]）；built-in 数据走 seed.ts（[[feedback_prisma_seed_for_builtins]]） |
