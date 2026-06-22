@@ -84,6 +84,20 @@ export function readPodDistribution(serverMetrics: unknown): PodDatum[] | null {
   return Array.isArray(pods) ? pods : [];
 }
 
+export interface CapacityPoint {
+  concurrency: number;
+  rps: number;
+  e2eP95Ms: number;
+}
+
+/** Read guidellm capacityCurve from a run's summaryMetrics ({tool,data}).
+ * Mirrors the client-side `client-metrics.ts#readCapacityCurve`. */
+export function readCapacityCurve(summaryMetrics: unknown): CapacityPoint[] | null {
+  const m = summaryMetrics as { data?: { capacityCurve?: CapacityPoint[] } } | null;
+  const c = m?.data?.capacityCurve;
+  return Array.isArray(c) && c.length > 0 ? c : null;
+}
+
 /** One run's two metric blobs. summaryMetrics = tool report (throughput/latency);
  * serverMetrics = prefix-cache annotation. */
 export interface RunMetricBlobs {
@@ -121,6 +135,9 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
       out.add("pod-traffic-distribution");
       out.add("pod-hit-rate");
     }
+  }
+  if (runs.some((r) => readCapacityCurve(r.summaryMetrics) !== null)) {
+    out.add("throughput-vs-concurrency");
   }
   out.add("compare-grid");
   return out;

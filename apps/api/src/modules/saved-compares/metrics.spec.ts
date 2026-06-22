@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   availableFigureRefIds,
+  readCapacityCurve,
   readErrorRate,
   readP95Latency,
   readPodDistribution,
@@ -31,6 +32,33 @@ it("offers pod figures when data supports", () => {
   ]);
   expect(set.has("pod-traffic-distribution")).toBe(true);
   expect(set.has("pod-hit-rate")).toBe(true);
+});
+
+it("offers throughput-vs-concurrency when a run carries a capacity curve", () => {
+  const withCurve = { data: { capacityCurve: [{ concurrency: 8, rps: 50, e2eP95Ms: 700 }] } };
+  const set = availableFigureRefIds([{ summaryMetrics: withCurve, serverMetrics: null }]);
+  expect(set.has("throughput-vs-concurrency")).toBe(true);
+});
+
+it("does not offer it without a curve", () => {
+  const set = availableFigureRefIds([{ summaryMetrics: { data: {} }, serverMetrics: null }]);
+  expect(set.has("throughput-vs-concurrency")).toBe(false);
+});
+
+describe("readCapacityCurve", () => {
+  it("returns the curve when present and non-empty", () => {
+    const m = { data: { capacityCurve: [{ concurrency: 4, rps: 30, e2eP95Ms: 500 }] } };
+    expect(readCapacityCurve(m)).toHaveLength(1);
+  });
+
+  it("returns null for empty array", () => {
+    expect(readCapacityCurve({ data: { capacityCurve: [] } })).toBeNull();
+  });
+
+  it("returns null when capacityCurve is absent", () => {
+    expect(readCapacityCurve({ data: {} })).toBeNull();
+    expect(readCapacityCurve(null)).toBeNull();
+  });
 });
 
 describe("metrics readers", () => {

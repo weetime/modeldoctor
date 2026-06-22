@@ -81,6 +81,9 @@ export const figureRefIdSchema = z.enum([
   "pod-traffic-distribution",
   "pod-hit-rate",
   "cold-warm-delta",
+  // Capacity-planning figure — rendered from summaryMetrics.data.capacityCurve
+  // (guidellm sweep runs only). Available when any run carries a capacity curve.
+  "throughput-vs-concurrency",
 ]);
 export type FigureRefId = z.infer<typeof figureRefIdSchema>;
 

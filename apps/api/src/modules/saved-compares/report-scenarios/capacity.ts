@@ -1,4 +1,4 @@
-import type { FigureRefId, HydratedSavedCompare } from "@modeldoctor/contracts";
+import type { HydratedSavedCompare } from "@modeldoctor/contracts";
 import type { Locale, ReportScenarioProfile, ScenarioData } from "./types.js";
 
 const ZH = `本报告是容量规划(capacity),工具按并发/负载做了 sweep。
@@ -9,7 +9,7 @@ const EN = `This is a capacity-planning report (capacity); the tool swept concur
 - Headline with the knee's concurrency level and its throughput; if the curve is missing (legacy data) fall back to final aggregate percentiles and note "no sweep curve" in caveats.`;
 
 function assemble(_sc: HydratedSavedCompare): ScenarioData {
-  return { promptBlock: "", preferredFigures: ["throughput-vs-concurrency" as FigureRefId, "compare-grid"] };
+  return { promptBlock: "", preferredFigures: ["throughput-vs-concurrency", "compare-grid"] };
 }
 export const capacityProfile: ReportScenarioProfile = {
   intent: "capacity",

@@ -13,6 +13,20 @@ export interface PrefixCacheSummary {
   topPodSharePct: number;
 }
 
+export interface CapacityPoint {
+  concurrency: number;
+  rps: number;
+  e2eP95Ms: number;
+}
+
+/** Read guidellm capacityCurve from a run's summaryMetrics ({tool,data}).
+ * Keep in sync with server mirror `apps/api/src/modules/saved-compares/metrics.ts#readCapacityCurve`. */
+export function readCapacityCurve(summaryMetrics: unknown): CapacityPoint[] | null {
+  const m = summaryMetrics as { data?: { capacityCurve?: CapacityPoint[] } } | null;
+  const c = m?.data?.capacityCurve;
+  return Array.isArray(c) && c.length > 0 ? c : null;
+}
+
 /** One run's two metric blobs — summaryMetrics (tool report) carries
  * throughput/latency; serverMetrics carries the prefix-cache annotation. */
 export interface RunMetricBlobs {
@@ -147,6 +161,11 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
       out.add("pod-traffic-distribution");
       out.add("pod-hit-rate");
     }
+  }
+  // Capacity-curve figure — keep in sync with server mirror
+  // `apps/api/src/modules/saved-compares/metrics.ts#availableFigureRefIds`.
+  if (runs.some((r) => readCapacityCurve(r.summaryMetrics) !== null)) {
+    out.add("throughput-vs-concurrency");
   }
   // compare-grid only needs any of throughput/err/ttft/e2e — always available
   // when there's at least one summary; degrades cell-by-cell.
