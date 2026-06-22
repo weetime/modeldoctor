@@ -46,6 +46,7 @@ export function toReportRuns(benchmarks: HydratedBenchmarkRef[]): ReportRun[] {
           scenario: b.scenario ?? "",
           summaryMetrics: b.summaryMetrics,
           serverMetrics: b.serverMetrics ?? null,
+          latencyCdf: b.latencyCdf ?? null,
         },
     paramsSummary: extractParamsSummary(b.params),
   }));

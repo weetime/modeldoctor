@@ -50,6 +50,7 @@ export interface ReportBenchmarkSnapshot {
   scenario: string;
   summaryMetrics: unknown;
   serverMetrics: unknown;
+  latencyCdf?: { samples: number[] } | null;
 }
 
 export interface ReportRun extends StageRun {

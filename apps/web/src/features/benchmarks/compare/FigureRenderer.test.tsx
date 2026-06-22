@@ -51,6 +51,27 @@ function makeRun(id: string, stageLabel: string, withPods = false): ReportRun {
   };
 }
 
+function makeRunWithCdf(id: string, stageLabel: string, samples: number[]): ReportRun {
+  return {
+    id,
+    stageLabel,
+    tool: "guidellm",
+    scenario: "t2-deep",
+    summaryMetrics: guidellmMetrics(),
+    serverMetrics: null,
+    benchmark: {
+      id,
+      name: `Benchmark ${stageLabel}`,
+      tool: "guidellm",
+      scenario: "t2-deep",
+      summaryMetrics: guidellmMetrics(),
+      serverMetrics: null,
+      latencyCdf: { samples },
+    },
+    paramsSummary: { concurrency: 4 },
+  };
+}
+
 const runs: ReportRun[] = [makeRun("run-a", "OFF", true), makeRun("run-b", "ON", true)];
 
 describe("FigureRenderer", () => {
@@ -147,6 +168,25 @@ describe("FigureRenderer", () => {
     // The placeholder text must be absent — the run carries a valid capacityCurve.
     expect(screen.queryByText(/data unavailable/i)).not.toBeInTheDocument();
     // The figure body should contain the chart (rendered as the echart stub).
+    expect(screen.getByTestId("echart")).toBeInTheDocument();
+  });
+
+  it("renders latency-distribution CDF overlay WITHOUT the data-unavailable placeholder", () => {
+    const runsWithCdf: ReportRun[] = [
+      makeRunWithCdf("cdf-run-a", "OFF", [10, 20, 30, 40]),
+      makeRunWithCdf("cdf-run-b", "ON", [15, 25, 35, 45]),
+    ];
+    render(
+      <FigureRenderer
+        refId="latency-distribution"
+        runs={runsWithCdf}
+        caption="Latency CDF by stage"
+        figureNumber={6}
+      />,
+    );
+    // The placeholder text must be absent — both runs carry latencyCdf.
+    expect(screen.queryByText(/data unavailable/i)).not.toBeInTheDocument();
+    // The LatencyCDF component renders an ECharts canvas (stubbed as data-testid="echart").
     expect(screen.getByTestId("echart")).toBeInTheDocument();
   });
 });
