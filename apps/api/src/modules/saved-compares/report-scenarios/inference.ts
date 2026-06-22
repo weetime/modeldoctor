@@ -23,7 +23,12 @@ function makeProfile(multi: boolean): ReportScenarioProfile {
       promptBlock: "",
       preferredFigures: multi
         ? ["compare-grid", "stage-bars-throughput", "stage-bars-ttft-p95", "latency-distribution"]
-        : ["stage-bars-ttft-p95", "stage-bars-e2e-p95", "stage-bars-throughput", "latency-distribution"],
+        : [
+            "stage-bars-ttft-p95",
+            "stage-bars-e2e-p95",
+            "stage-bars-throughput",
+            "latency-distribution",
+          ],
     }),
   };
 }

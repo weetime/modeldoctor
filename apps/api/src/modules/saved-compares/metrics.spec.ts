@@ -60,7 +60,9 @@ it("does not offer latency-distribution if any run lacks a CDF", () => {
   expect(set.has("latency-distribution")).toBe(false);
 });
 it("does not offer latency-distribution for a single run", () => {
-  const set = availableFigureRefIds([{ summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true }]);
+  const set = availableFigureRefIds([
+    { summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true },
+  ]);
   expect(set.has("latency-distribution")).toBe(false);
 });
 

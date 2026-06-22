@@ -4,7 +4,11 @@ import { Test } from "@nestjs/testing";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
 import { BenchmarkChartsService } from "../benchmark/benchmark-charts.service.js";
-import { deriveCompareDims, downsampleSamples, SavedComparesService } from "./saved-compares.service.js";
+import {
+  deriveCompareDims,
+  downsampleSamples,
+  SavedComparesService,
+} from "./saved-compares.service.js";
 
 describe("downsampleSamples", () => {
   it("returns the same length when at or below cap", () => {

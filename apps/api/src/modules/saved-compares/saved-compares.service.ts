@@ -144,7 +144,9 @@ export class SavedComparesService {
             status: b.status,
             rawOutput: b.rawOutput as Record<string, unknown> | null,
           });
-          return charts.latencyCdf ? { samples: downsampleSamples(charts.latencyCdf.samples) } : null;
+          return charts.latencyCdf
+            ? { samples: downsampleSamples(charts.latencyCdf.samples) }
+            : null;
         })(),
       };
     });

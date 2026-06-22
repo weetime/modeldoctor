@@ -299,10 +299,12 @@ export const FigureRenderer = memo(function FigureRenderer({
       }));
     chart = <ThroughputConcurrencyChart title="Throughput vs concurrency" series={series} />;
   } else if (refId === "latency-distribution") {
-    const series = summaries
-      .map(({ r }) => ({ r, cdf: r.benchmark?.latencyCdf ?? null }))
-      .filter((x) => x.cdf && x.cdf.samples.length > 0)
-      .map(({ r, cdf }) => ({ runId: r.id, runLabel: r.stageLabel, samples: cdf!.samples }));
+    const series = summaries.flatMap(({ r }) => {
+      const samples = r.benchmark?.latencyCdf?.samples;
+      return samples && samples.length > 0
+        ? [{ runId: r.id, runLabel: r.stageLabel, samples }]
+        : [];
+    });
     chart = <LatencyCDF ariaLabel="Latency CDF by stage" series={series} colorMap={colorMap} />;
   } else if (refId === "cold-warm-delta") {
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
