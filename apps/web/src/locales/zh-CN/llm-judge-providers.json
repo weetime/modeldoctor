@@ -36,6 +36,12 @@
       "name": { "label": "名称", "placeholder": "例如 deepseek-primary" },
       "baseUrl": { "label": "Base URL", "placeholder": "https://api.deepseek.com" },
       "model": { "label": "模型", "placeholder": "deepseek-chat" },
+      "apiStyle": {
+        "label": "API 风格",
+        "openai": "OpenAI 兼容 (/chat/completions)",
+        "anthropic": "Anthropic (/v1/messages)",
+        "help": "OpenAI 兼容适用于 vLLM / SGLang / MindIE / OpenAI 及大多数网关；仅当 Base URL 指向 https://api.anthropic.com 时选 Anthropic。"
+      },
       "apiKey": { "label": "API Key", "placeholder": "sk-..." },
       "enabled": {
         "label": "启用",

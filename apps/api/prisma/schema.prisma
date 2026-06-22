@@ -283,6 +283,7 @@ model LlmJudgeProvider {
   baseUrl      String  @map("base_url")
   apiKeyCipher String  @map("api_key_cipher")
   model        String
+  apiStyle     String  @default("openai") @map("api_style")
   enabled      Boolean @default(true)
   isDefault    Boolean @default(false) @map("is_default")
 

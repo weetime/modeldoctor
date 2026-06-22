@@ -168,14 +168,19 @@ export class CompareSynthesizeService {
   }
 
   private async callAndParse(
-    provider: { baseUrl: string; apiKey: string; model: string },
+    provider: { baseUrl: string; apiKey: string; model: string; apiStyle?: "openai" | "anthropic" },
     _locale: "zh-CN" | "en-US",
     messages: ChatMessage[],
   ): Promise<CompareNarrative> {
     let raw: string;
     try {
       const out = await chatCompletion(
-        { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: provider.model },
+        {
+          baseUrl: provider.baseUrl,
+          apiKey: provider.apiKey,
+          model: provider.model,
+          apiStyle: provider.apiStyle,
+        },
         messages,
         { jsonMode: true, timeoutMs: LLM_TIMEOUT_MS },
       );

@@ -6,6 +6,16 @@ const modelSchema = z.string().min(1).max(200);
 const apiKeySchema = z.string().min(1).max(500);
 
 /**
+ * Wire protocol the provider speaks. `openai` (default) → OpenAI-compatible
+ * `POST {baseUrl}/chat/completions` with a Bearer key — covers vLLM / SGLang /
+ * MindIE / OpenAI / most gateways. `anthropic` → native Messages API
+ * `POST {baseUrl}/v1/messages` with `x-api-key` + `anthropic-version` headers
+ * (point baseUrl at `https://api.anthropic.com`).
+ */
+export const llmApiStyleSchema = z.enum(["openai", "anthropic"]);
+export type LlmApiStyle = z.infer<typeof llmApiStyleSchema>;
+
+/**
  * Public view of a workspace-wide LLM-judge provider (apiKey omitted, replaced
  * by a masked preview). Multiple providers may exist; at most one is the
  * default. The service guarantees `isDefault === true` implies `enabled === true`.
@@ -15,6 +25,7 @@ export const llmJudgeProviderPublicSchema = z.object({
   name: nameSchema,
   baseUrl: z.string(),
   model: z.string(),
+  apiStyle: llmApiStyleSchema,
   enabled: z.boolean(),
   isDefault: z.boolean(),
   /** Masked key, e.g. "sk-...abcd". Empty string when no key is stored. */
@@ -30,6 +41,8 @@ export const createLlmJudgeProviderSchema = z.object({
   /** Required on create. */
   apiKey: apiKeySchema,
   model: modelSchema,
+  /** Defaults to OpenAI-compatible so existing callers/rows are unaffected. */
+  apiStyle: llmApiStyleSchema.default("openai"),
   enabled: z.boolean().default(true),
   isDefault: z.boolean().default(false),
 });
@@ -53,6 +66,7 @@ export const testLlmJudgeRequestSchema = z.object({
   /** Omit to test using a saved key. When omitted, `id` resolves which row's key to use. */
   apiKey: apiKeySchema.optional(),
   model: z.string().min(1),
+  apiStyle: llmApiStyleSchema.default("openai"),
   /** Existing provider id whose saved key should be used when `apiKey` is omitted. */
   id: z.string().optional(),
 });

@@ -36,6 +36,12 @@
       "name": { "label": "Name", "placeholder": "e.g. deepseek-primary" },
       "baseUrl": { "label": "Base URL", "placeholder": "https://api.deepseek.com" },
       "model": { "label": "Model", "placeholder": "deepseek-chat" },
+      "apiStyle": {
+        "label": "API style",
+        "openai": "OpenAI-compatible (/chat/completions)",
+        "anthropic": "Anthropic (/v1/messages)",
+        "help": "OpenAI-compatible covers vLLM / SGLang / MindIE / OpenAI / most gateways. Pick Anthropic only when Base URL points at https://api.anthropic.com."
+      },
       "apiKey": { "label": "API Key", "placeholder": "sk-..." },
       "enabled": {
         "label": "Enabled",
