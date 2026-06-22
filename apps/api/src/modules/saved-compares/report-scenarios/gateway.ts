@@ -11,7 +11,7 @@ const EN = `This is a gateway / HTTP-layer load test (gateway, vegeta).
 function assemble(_sc: HydratedSavedCompare): ScenarioData {
   return {
     promptBlock: "",
-    preferredFigures: ["stage-bars-throughput", "stage-bars-e2e-p95", "stage-bars-error-rate"],
+    preferredFigures: ["stage-bars-throughput", "stage-bars-e2e-p95", "latency-distribution", "stage-bars-error-rate"],
   };
 }
 export const gatewayProfile: ReportScenarioProfile = {
