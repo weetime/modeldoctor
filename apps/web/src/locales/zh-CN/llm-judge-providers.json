@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "AI 智能诊断提供商",
+    "subtitle": "本实例所有用户共享的 LLM 评判提供商，用于 AI 辅助洞察；API Key 会加密存储。",
+    "breadcrumb": "AI 智能诊断提供商",
+    "actions": {
+      "new": "+ 新建提供商"
+    },
+    "empty": {
+      "title": "尚未配置 AI 智能诊断提供商",
+      "subtitle": "新建第一个并设为默认，即可启用 AI 辅助功能"
+    }
+  },
+  "table": {
+    "columns": {
+      "name": "名称",
+      "baseUrl": "Base URL",
+      "model": "模型",
+      "status": "状态",
+      "isDefault": "默认",
+      "actions": "操作"
+    },
+    "statusEnabled": "已启用",
+    "statusDisabled": "已停用",
+    "defaultBadge": "默认"
+  },
+  "actions": {
+    "setDefault": "设为默认",
+    "enable": "启用",
+    "disable": "停用"
+  },
+  "sheet": {
+    "createTitle": "新建 AI 智能诊断提供商",
+    "editTitle": "编辑 AI 智能诊断提供商",
+    "fields": {
+      "name": { "label": "名称", "placeholder": "例如 deepseek-primary" },
+      "baseUrl": { "label": "Base URL", "placeholder": "https://api.deepseek.com" },
+      "model": { "label": "模型", "placeholder": "deepseek-chat" },
+      "apiKey": { "label": "API Key", "placeholder": "sk-..." },
+      "enabled": {
+        "label": "启用",
+        "help": "停用的提供商会保留但不会被使用。",
+        "lockedHelp": "默认提供商始终保持启用。"
+      },
+      "isDefault": {
+        "label": "设为默认",
+        "help": "AI 辅助功能使用默认提供商。只能有一个默认；设为默认会取消之前的默认。"
+      }
+    },
+    "rotateKey": "更换",
+    "rotateKeyHint": "替换已保存的 API Key；不勾选则沿用原 Key。",
+    "actions": {
+      "test": "测试连接",
+      "testing": "测试中…"
+    }
+  },
+  "delete": {
+    "title": "删除提供商 {{name}}？",
+    "body": "该提供商配置将被移除。若它是默认提供商，AI 辅助功能将停用，直到你设置另一个默认。",
+    "confirm": "删除"
+  },
+  "toast": {
+    "createSuccess": "已创建",
+    "updateSuccess": "已保存",
+    "deleteSuccess": "已删除",
+    "setDefaultSuccess": "已设为默认",
+    "enabledSuccess": "已启用",
+    "disabledSuccess": "已停用",
+    "test": {
+      "ok": "连接正常（{{ms}} ms）",
+      "fail": "连接失败：{{error}}",
+      "fillFirst": "请先填写 Base URL 和模型；新建提供商还需填写 API Key"
+    },
+    "errors": {
+      "nameTaken": "提供商名称已被占用，请换一个",
+      "generic": "失败：{{message}}"
+    }
+  },
+  "settings": {
+    "title": "AI 智能诊断（全局）",
+    "desc": "管理本实例共享的 LLM 评判提供商，用于 AI 辅助洞察；AI 功能运行时使用默认提供商。",
+    "manage": "管理提供商"
+  }
+}

@@ -10,13 +10,21 @@ import { AiDiagnosisCard } from "../AiDiagnosisCard";
 let postCallCount = 0;
 vi.mock("@/lib/api-client", () => ({
   api: {
+    // useLlmJudgeProvider() lists providers and picks the default.
     get: vi.fn(async () => ({
-      id: "p1",
-      baseUrl: "https://x",
-      model: "m",
-      enabled: true,
-      createdAt: "2026-05-01T00:00:00Z",
-      updatedAt: "2026-05-01T00:00:00Z",
+      items: [
+        {
+          id: "p1",
+          name: "default",
+          baseUrl: "https://x",
+          model: "m",
+          enabled: true,
+          isDefault: true,
+          apiKeyPreview: "sk-...abcd",
+          createdAt: "2026-05-01T00:00:00Z",
+          updatedAt: "2026-05-01T00:00:00Z",
+        },
+      ],
     })),
     post: vi.fn(async () => {
       postCallCount += 1;

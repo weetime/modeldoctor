@@ -19,12 +19,12 @@ import { useDebugStore } from "@/features/request-debug/store";
 import { type Locale, useLocaleStore } from "@/stores/locale-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { type ThemeMode, useThemeStore } from "@/stores/theme-store";
-import { AiDiagnosisSection } from "./AiDiagnosisSection";
 import { DangerZoneCard, DangerZoneRow, SettingRow, SettingSection } from "./settings-primitives";
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
   const { t: tPromDs } = useTranslation("prometheus-datasources");
+  const { t: tLlmJudge } = useTranslation("llm-judge-providers");
   const theme = useThemeStore((s) => s.mode);
   const setTheme = useThemeStore((s) => s.setMode);
   const locale = useLocaleStore((s) => s.locale);
@@ -94,8 +94,18 @@ export function SettingsPage() {
             />
           </SettingSection>
 
-          <SettingSection title={t("ai.title")} description={t("ai.description")}>
-            <AiDiagnosisSection />
+          <SettingSection
+            title={tLlmJudge("settings.title")}
+            description={tLlmJudge("settings.desc")}
+          >
+            <SettingRow
+              label={tLlmJudge("settings.title")}
+              control={
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/settings/llm-judge-providers">{tLlmJudge("settings.manage")} →</Link>
+                </Button>
+              }
+            />
           </SettingSection>
 
           <SettingSection title={tPromDs("settings.title")} description={tPromDs("settings.desc")}>

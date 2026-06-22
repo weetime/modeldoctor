@@ -13,6 +13,7 @@ import enDeploymentRecipes from "@/locales/en-US/deployment-recipes.json";
 import enDiagnostics from "@/locales/en-US/diagnostics.json";
 import enEngineMetrics from "@/locales/en-US/engine-metrics.json";
 import enInsights from "@/locales/en-US/insights.json";
+import enLlmJudgeProviders from "@/locales/en-US/llm-judge-providers.json";
 import enMe from "@/locales/en-US/me.json";
 import enNotifications from "@/locales/en-US/notifications.json";
 import enPlayground from "@/locales/en-US/playground.json";
@@ -31,6 +32,7 @@ import zhDeploymentRecipes from "@/locales/zh-CN/deployment-recipes.json";
 import zhDiagnostics from "@/locales/zh-CN/diagnostics.json";
 import zhEngineMetrics from "@/locales/zh-CN/engine-metrics.json";
 import zhInsights from "@/locales/zh-CN/insights.json";
+import zhLlmJudgeProviders from "@/locales/zh-CN/llm-judge-providers.json";
 import zhMe from "@/locales/zh-CN/me.json";
 import zhNotifications from "@/locales/zh-CN/notifications.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
@@ -60,6 +62,7 @@ void i18n.use(initReactI18next).init({
       me: enMe,
       "quality-gate": enQualityGate,
       "prometheus-datasources": enPrometheusDatasources,
+      "llm-judge-providers": enLlmJudgeProviders,
     },
     "zh-CN": {
       common: zhCommon,
@@ -80,6 +83,7 @@ void i18n.use(initReactI18next).init({
       me: zhMe,
       "quality-gate": zhQualityGate,
       "prometheus-datasources": zhPrometheusDatasources,
+      "llm-judge-providers": zhLlmJudgeProviders,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -104,6 +108,7 @@ void i18n.use(initReactI18next).init({
     "me",
     "quality-gate",
     "prometheus-datasources",
+    "llm-judge-providers",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

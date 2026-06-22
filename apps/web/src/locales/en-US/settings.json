@@ -15,29 +15,6 @@
     "version": "Server version",
     "buildMode": "Build mode"
   },
-  "ai": {
-    "title": "AI Diagnostics (Global)",
-    "description": "Workspace-wide LLM judge provider used by AI-assisted insights. Shared across every user in this installation. API keys are stored encrypted.",
-    "enabled": "Enabled",
-    "baseUrl": "Base URL",
-    "model": "Model",
-    "apiKey": "API Key",
-    "keyPlaceholderExisting": "sk-*** (leave blank to keep saved key)",
-    "showKey": "Show key",
-    "hideKey": "Hide key",
-    "savedKeyNotRevealable": "Saved keys cannot be revealed. Type a new key to preview it here.",
-    "keyEmpty": "No key entered",
-    "test": "Test connection",
-    "testing": "Testing…",
-    "saving": "Saving…",
-    "saveSuccess": "AI diagnostics settings saved",
-    "testSuccess": "Connection OK ({{ms}} ms)",
-    "testFailed": "Connection failed: {{error}}",
-    "error": {
-      "keyRequired": "API Key is required for first-time setup",
-      "fillBeforeTest": "Fill Base URL and Model first; the first test also requires an API Key"
-    }
-  },
   "data": {
     "title": "Danger zone",
     "description": "Irreversible actions. Proceed with care.",

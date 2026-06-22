@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
-import { useLlmJudgeProvider } from "@/features/settings/queries";
+import { useLlmJudgeProvider } from "@/features/llm-judge-providers/queries";
 import { useDeleteSavedCompare, useSavedCompare, useSynthesizeSavedCompare } from "./queries";
 import { ReportProgress } from "./ReportProgress";
 import { SavedCompareReport } from "./SavedCompareReport";

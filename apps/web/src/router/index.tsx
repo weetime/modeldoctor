@@ -24,6 +24,7 @@ import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
+import { LlmJudgeProvidersPage } from "@/features/llm-judge-providers/LlmJudgeProvidersPage";
 import { MeLayout } from "@/features/me/MeLayout";
 import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
 import { ProfilePage } from "@/features/me/ProfilePage";
@@ -131,6 +132,7 @@ export const routes: RouteObject[] = [
           { path: "settings", element: <SettingsPage /> },
           { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
           { path: "settings/prometheus-datasources", element: <DatasourcesPage /> },
+          { path: "settings/llm-judge-providers", element: <LlmJudgeProvidersPage /> },
           { path: "playground", element: <Navigate to="/playground/chat" replace /> },
           { path: "playground/chat", element: <ChatPage /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },

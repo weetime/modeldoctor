@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useLlmJudgeProvider } from "@/features/settings/queries";
+import { useLlmJudgeProvider } from "@/features/llm-judge-providers/queries";
 import { useSynthesize } from "./queries";
 
 interface Props {

@@ -15,29 +15,6 @@
     "version": "服务版本",
     "buildMode": "构建模式"
   },
-  "ai": {
-    "title": "AI 智能诊断（全局）",
-    "description": "本实例所有用户共享的 LLM 评判提供商，用于 AI 辅助洞察；API Key 会加密存储。",
-    "enabled": "启用",
-    "baseUrl": "Base URL",
-    "model": "模型",
-    "apiKey": "API Key",
-    "keyPlaceholderExisting": "sk-*** （留空使用已保存的 Key）",
-    "showKey": "显示 Key",
-    "hideKey": "隐藏 Key",
-    "savedKeyNotRevealable": "已保存的 Key 不可还原；输入新 Key 可用此按钮预览",
-    "keyEmpty": "尚未输入 Key",
-    "test": "测试连接",
-    "testing": "测试中…",
-    "saving": "保存中…",
-    "saveSuccess": "AI 诊断配置已保存",
-    "testSuccess": "连接正常（{{ms}} ms）",
-    "testFailed": "连接失败：{{error}}",
-    "error": {
-      "keyRequired": "首次配置需要填写 API Key",
-      "fillBeforeTest": "请先填写 Base URL 和模型；首次测试还需填写 API Key"
-    }
-  },
   "data": {
     "title": "危险区",
     "description": "不可逆操作，请谨慎。",
