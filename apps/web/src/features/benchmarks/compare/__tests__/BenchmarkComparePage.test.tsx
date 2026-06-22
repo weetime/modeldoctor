@@ -33,7 +33,7 @@ function mockApiGet(
   errors: Record<string, Error & { status?: number }> = {},
 ) {
   vi.mocked(api.get).mockImplementation(async (url: string) => {
-    if (url === "/api/llm-judge/provider") return null as never;
+    if (url === "/api/llm-judge/providers") return { items: [] } as never;
     const m = url.match(/\/api\/benchmarks\/([^/]+)$/);
     if (m) {
       const id = m[1];

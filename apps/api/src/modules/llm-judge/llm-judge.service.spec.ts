@@ -1,183 +1,209 @@
 // apps/api/src/modules/llm-judge/llm-judge.service.spec.ts
+
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Test } from "@nestjs/testing";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
+import type { LlmJudgeActor } from "./llm-judge.service.js";
 import { LlmJudgeService } from "./llm-judge.service.js";
 
-// 32-byte base64 key for AES-256-GCM
-const TEST_KEY_B64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+// 32-byte base64 key for AES-256-GCM (same shape as env validator requires).
+const TEST_KEY_B64 = Buffer.alloc(32, 7).toString("base64");
 
-// Helper to build a realistic DB row
-function makeRow(
-  overrides: Partial<{
-    id: string;
-    baseUrl: string;
-    apiKeyCipher: string;
-    model: string;
-    enabled: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> = {},
-) {
-  return {
-    id: "row-1",
-    baseUrl: "https://x",
-    apiKeyCipher: "CIPHER",
-    model: "gpt-x",
-    enabled: true,
-    createdAt: new Date("2024-01-01T00:00:00Z"),
-    updatedAt: new Date("2024-01-01T00:00:00Z"),
-    ...overrides,
-  };
-}
+const ADMIN: LlmJudgeActor = { sub: "u_admin", isAdmin: true };
+const USER: LlmJudgeActor = { sub: "u_normal", isAdmin: false };
+
+const base = (name: string, over: Partial<{ enabled: boolean; isDefault: boolean }> = {}) => ({
+  name,
+  baseUrl: "https://api.example.com",
+  apiKey: "sk-secret-key",
+  model: "gpt-x",
+  enabled: true,
+  isDefault: false,
+  ...over,
+});
 
 describe("LlmJudgeService", () => {
-  let svc: LlmJudgeService;
   let prisma: PrismaService;
+  let svc: LlmJudgeService;
 
   beforeEach(async () => {
-    const mod = await Test.createTestingModule({
-      providers: [
-        LlmJudgeService,
-        PrismaService,
-        { provide: ConfigService, useValue: { get: () => TEST_KEY_B64 } },
-      ],
-    }).compile();
-    svc = mod.get(LlmJudgeService);
-    prisma = mod.get(PrismaService);
-
-    // Stub out all prisma methods used by LlmJudgeService
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(null);
-    vi.spyOn(prisma.llmJudgeProvider, "create").mockResolvedValue(makeRow());
-    vi.spyOn(prisma.llmJudgeProvider, "update").mockResolvedValue(makeRow());
-    vi.spyOn(prisma.llmJudgeProvider, "deleteMany").mockResolvedValue({ count: 0 });
+    const fakeConfig = {
+      get: (key: string) =>
+        key === "CONNECTION_API_KEY_ENCRYPTION_KEY" ? TEST_KEY_B64 : process.env[key],
+    } as unknown as ConfigService<never, true>;
+    prisma = new PrismaService({
+      get: (k: string) => process.env[k],
+    } as unknown as ConstructorParameters<typeof PrismaService>[0]);
+    await prisma.$connect();
+    await prisma.llmJudgeProvider.deleteMany();
+    svc = new LlmJudgeService(prisma, fakeConfig);
   });
 
-  // -------------------------------------------------------------------------
-  // getPublic / getDecrypted — no row
-  // -------------------------------------------------------------------------
-  it("returns null when no provider configured", async () => {
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(null);
-
-    expect(await svc.getPublic()).toBeNull();
-    expect(await svc.getDecrypted()).toBeNull();
+  afterAll(async () => {
+    // Other service specs (synthesize/judges/explainer/compare) share this DB
+    // and assume "no provider configured", so leave no rows behind.
+    await prisma.llmJudgeProvider.deleteMany();
+    await prisma.$disconnect();
   });
 
-  // -------------------------------------------------------------------------
-  // upsert — create path (table empty)
-  // -------------------------------------------------------------------------
-  it("upsert encrypts and round-trips (create path)", async () => {
-    // findFirst returns null → create branch
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(null);
-
-    // We need a placeholder row to return from create; the real cipher will be
-    // captured from the create spy's call args so we can decrypt it in getDecrypted.
-    vi.spyOn(prisma.llmJudgeProvider, "create").mockResolvedValue(
-      makeRow({ baseUrl: "https://x", model: "gpt-x", enabled: true }),
-    );
-
-    const pub = await svc.upsert({
-      baseUrl: "https://x",
-      apiKey: "sk-secret",
-      model: "gpt-x",
-      enabled: true,
-    });
-    expect(pub.baseUrl).toBe("https://x");
-
-    // Capture the real cipher that encrypt() produced and pass it to findFirst
-    const createSpy = vi.mocked(prisma.llmJudgeProvider.create);
-    const savedCipher = (createSpy.mock.calls[0][0].data as { apiKeyCipher: string }).apiKeyCipher;
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(
-      makeRow({ apiKeyCipher: savedCipher }),
-    );
-
-    const dec = await svc.getDecrypted();
-    expect(dec?.apiKey).toBe("sk-secret");
-  });
-
-  // -------------------------------------------------------------------------
-  // upsert — update path (existing row)
-  // -------------------------------------------------------------------------
-  it("upsert idempotent — second call updates existing row", async () => {
-    // First upsert: table empty → create
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(null);
-    vi.spyOn(prisma.llmJudgeProvider, "create").mockResolvedValue(
-      makeRow({ id: "row-1", baseUrl: "https://a", model: "m1", enabled: true }),
-    );
-    await svc.upsert({ baseUrl: "https://a", apiKey: "k1", model: "m1", enabled: true });
-
-    // Second upsert: existing row present → update
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(
-      makeRow({ id: "row-1", baseUrl: "https://a", model: "m1", enabled: true }),
-    );
-    vi.spyOn(prisma.llmJudgeProvider, "update").mockResolvedValue(
-      makeRow({ id: "row-1", baseUrl: "https://b", model: "m2", enabled: false }),
-    );
-    await svc.upsert({ baseUrl: "https://b", apiKey: "k2", model: "m2", enabled: false });
-
-    // Capture cipher from update call so we can decrypt it
-    const updateSpy = vi.mocked(prisma.llmJudgeProvider.update);
-    const savedCipher = (updateSpy.mock.calls[0][0].data as { apiKeyCipher: string }).apiKeyCipher;
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(
-      makeRow({
-        id: "row-1",
-        baseUrl: "https://b",
-        model: "m2",
-        enabled: false,
-        apiKeyCipher: savedCipher,
-      }),
-    );
-
-    const dec = await svc.getDecrypted();
-    expect(dec?.baseUrl).toBe("https://b");
-    expect(dec?.enabled).toBe(false);
-    expect(dec?.apiKey).toBe("k2");
-
-    // update must have been called with the matching row id
-    expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "row-1" } }));
-  });
-
-  // -------------------------------------------------------------------------
-  // delete
-  // -------------------------------------------------------------------------
-  it("delete removes all rows", async () => {
-    vi.spyOn(prisma.llmJudgeProvider, "deleteMany").mockResolvedValue({ count: 1 });
-    await svc.delete();
-
-    expect(prisma.llmJudgeProvider.deleteMany).toHaveBeenCalledWith({});
-  });
-
-  it("delete throws NotFoundException when no row exists", async () => {
-    vi.spyOn(prisma.llmJudgeProvider, "deleteMany").mockResolvedValue({ count: 0 });
-    await expect(svc.delete()).rejects.toThrow();
-  });
-
-  // -------------------------------------------------------------------------
-  // "latest wins" semantics
-  // -------------------------------------------------------------------------
-  it("getPublic returns the most-recently-updated row when multiple exist", async () => {
-    const newerRow = makeRow({
-      id: "row-newer",
-      baseUrl: "https://newer",
-      model: "newer-model",
-      enabled: true,
-      updatedAt: new Date("2024-06-01T12:00:00Z"),
+  describe("list / getOne", () => {
+    it("lists rows default-first (any auth user can read)", async () => {
+      await svc.create(ADMIN, base("p1"));
+      await svc.create(ADMIN, base("p2", { isDefault: true }));
+      const r = await svc.list(USER);
+      expect(r.items).toHaveLength(2);
+      expect(r.items[0]?.name).toBe("p2"); // default first
+      // apiKey never leaks; preview is masked.
+      expect((r.items[0] as Record<string, unknown>).apiKey).toBeUndefined();
+      expect(r.items[0]?.apiKeyPreview).toMatch(/\.\.\./);
     });
 
-    // findFirst({ orderBy: { updatedAt: "desc" } }) is supposed to return the newest row
-    vi.spyOn(prisma.llmJudgeProvider, "findFirst").mockResolvedValue(newerRow);
+    it("getOne not found", async () => {
+      await expect(svc.getOne(USER, "nope")).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 
-    const pub = await svc.getPublic();
+  describe("create", () => {
+    it("non-admin is rejected", async () => {
+      await expect(svc.create(USER, base("p1"))).rejects.toBeInstanceOf(ForbiddenException);
+    });
 
-    expect(pub).not.toBeNull();
-    expect(pub?.id).toBe("row-newer");
-    expect(pub?.baseUrl).toBe("https://newer");
-    expect(pub?.model).toBe("newer-model");
+    it("rejects duplicate name", async () => {
+      await svc.create(ADMIN, base("dup"));
+      await expect(svc.create(ADMIN, base("dup"))).rejects.toBeInstanceOf(ConflictException);
+    });
 
-    // Confirm the spy was called with the correct orderBy
-    expect(prisma.llmJudgeProvider.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { updatedAt: "desc" } }),
-    );
+    it("encrypts apiKey (cipher does not contain plaintext)", async () => {
+      const r = await svc.create(ADMIN, base("p1"));
+      const row = await prisma.llmJudgeProvider.findUnique({ where: { id: r.id } });
+      expect(row?.apiKeyCipher).not.toContain("sk-secret");
+    });
+
+    it("setting isDefault unsets any previous default", async () => {
+      const first = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      await svc.create(ADMIN, base("p2", { isDefault: true }));
+      const reloaded = await prisma.llmJudgeProvider.findUnique({ where: { id: first.id } });
+      expect(reloaded?.isDefault).toBe(false);
+    });
+
+    it("creating as default is enabled and default", async () => {
+      const r = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      expect(r.isDefault).toBe(true);
+      expect(r.enabled).toBe(true);
+    });
+
+    it("rejects isDefault=true with enabled=false", async () => {
+      await expect(
+        svc.create(ADMIN, base("p1", { isDefault: true, enabled: false })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe("update", () => {
+    it("partial update keeps untouched fields", async () => {
+      const r = await svc.create(ADMIN, base("p1"));
+      const updated = await svc.update(ADMIN, r.id, { name: "renamed" });
+      expect(updated.name).toBe("renamed");
+      expect(updated.baseUrl).toBe("https://api.example.com");
+    });
+
+    it("rotating apiKey re-encrypts and decrypts back", async () => {
+      const r = await svc.create(ADMIN, base("p1"));
+      await svc.update(ADMIN, r.id, { apiKey: "sk-rotated-key" });
+      const dec = await svc.getDecrypted({ id: r.id });
+      expect(dec?.apiKey).toBe("sk-rotated-key");
+    });
+
+    it("omitting apiKey keeps the saved key", async () => {
+      const r = await svc.create(ADMIN, base("p1"));
+      await svc.update(ADMIN, r.id, { model: "gpt-y" });
+      const dec = await svc.getDecrypted({ id: r.id });
+      expect(dec?.apiKey).toBe("sk-secret-key");
+    });
+
+    it("not found", async () => {
+      await expect(svc.update(ADMIN, "nope", { name: "x" })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it("rejects disabling the default provider", async () => {
+      const r = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      await expect(svc.update(ADMIN, r.id, { enabled: false })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it("explicit isDefault=false demotes (zero-default state allowed)", async () => {
+      const r = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      const updated = await svc.update(ADMIN, r.id, { isDefault: false });
+      expect(updated.isDefault).toBe(false);
+    });
+
+    it("demoting then disabling is allowed in one call", async () => {
+      const r = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      const updated = await svc.update(ADMIN, r.id, { isDefault: false, enabled: false });
+      expect(updated.isDefault).toBe(false);
+      expect(updated.enabled).toBe(false);
+    });
+  });
+
+  describe("setDefault", () => {
+    it("flips default and enables the promoted (even if it was disabled)", async () => {
+      const a = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      const b = await svc.create(ADMIN, base("p2", { enabled: false }));
+      const r = await svc.setDefault(ADMIN, b.id);
+      expect(r.isDefault).toBe(true);
+      expect(r.enabled).toBe(true); // promotion enables
+      const reA = await prisma.llmJudgeProvider.findUnique({ where: { id: a.id } });
+      expect(reA?.isDefault).toBe(false);
+    });
+
+    it("non-admin rejected", async () => {
+      const a = await svc.create(ADMIN, base("p1"));
+      await expect(svc.setDefault(USER, a.id)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe("remove", () => {
+    it("deletes the row", async () => {
+      const r = await svc.create(ADMIN, base("p1"));
+      await svc.remove(ADMIN, r.id);
+      expect(await prisma.llmJudgeProvider.findUnique({ where: { id: r.id } })).toBeNull();
+    });
+
+    it("not found", async () => {
+      await expect(svc.remove(ADMIN, "nope")).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe("getDecrypted", () => {
+    it("returns null when no default exists", async () => {
+      await svc.create(ADMIN, base("p1")); // not default
+      expect(await svc.getDecrypted()).toBeNull();
+    });
+
+    it("returns the default provider with no selector", async () => {
+      await svc.create(ADMIN, base("p1"));
+      const def = await svc.create(ADMIN, base("p2", { isDefault: true }));
+      const dec = await svc.getDecrypted();
+      expect(dec?.id).toBe(def.id);
+      expect(dec?.apiKey).toBe("sk-secret-key");
+      expect(dec?.enabled).toBe(true);
+    });
+
+    it("returns a specific provider by id", async () => {
+      const a = await svc.create(ADMIN, base("p1", { isDefault: true }));
+      const b = await svc.create(ADMIN, base("p2"));
+      const dec = await svc.getDecrypted({ id: b.id });
+      expect(dec?.id).toBe(b.id);
+      expect(dec?.id).not.toBe(a.id);
+    });
   });
 });

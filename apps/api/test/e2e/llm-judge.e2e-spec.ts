@@ -1,116 +1,140 @@
 // apps/api/test/e2e/llm-judge.e2e-spec.ts
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { bootE2E, type E2EContext } from "../helpers/app.js";
+import { bootE2E, type E2EContext, registerUser } from "../helpers/app.js";
 
-describe("/api/llm-judge (e2e)", () => {
+describe("/api/llm-judge providers (e2e)", () => {
   let ctx: E2EContext;
-  let token: string;
+  let adminToken: string;
+  let userToken: string;
 
   beforeAll(async () => {
     ctx = await bootE2E();
-    const reg = await request(ctx.app.getHttpServer())
-      .post("/api/auth/register")
-      .send({ email: "llm-judge-e2e@example.com", password: "Password1!" })
-      .expect(201);
-    token = reg.body.accessToken as string;
+    // First registered user becomes admin (auth.service convention).
+    const admin = await registerUser(ctx.app, "llm-judge-admin@example.com");
+    const normal = await registerUser(ctx.app, "llm-judge-user@example.com");
+    adminToken = admin.token;
+    userToken = normal.token;
   }, 120_000);
 
   afterAll(async () => {
     await ctx.teardown();
   });
 
-  it("PUT then GET round-trips public payload (apiKey redacted)", async () => {
-    await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ baseUrl: "https://x.example/v1", apiKey: "sk-test", model: "gpt-x", enabled: true })
-      .expect(200);
+  const server = () => ctx.app.getHttpServer();
 
-    const r = await request(ctx.app.getHttpServer())
-      .get("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
+  it("GET list is empty for fresh DB", async () => {
+    const res = await request(server())
+      .get("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
-    expect(r.body.baseUrl).toBe("https://x.example/v1");
-    expect(r.body).not.toHaveProperty("apiKey");
+    expect(res.body.items).toEqual([]);
   });
 
-  it("DELETE removes provider", async () => {
-    await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ baseUrl: "https://x.example/v1", apiKey: "sk-test", model: "m", enabled: true })
-      .expect(200);
+  it("POST requires admin", async () => {
+    await request(server())
+      .post("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ name: "p1", baseUrl: "https://x.example.com/v1", apiKey: "sk-test", model: "gpt-x" })
+      .expect(403);
+  });
 
-    await request(ctx.app.getHttpServer())
-      .delete("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
+  it("POST :id/set-default requires admin", async () => {
+    await request(server())
+      .post("/api/llm-judge/providers/nope/set-default")
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(403);
+  });
+
+  it("admin can create + list (apiKey redacted) + set-default + delete", async () => {
+    const created = await request(server())
+      .post("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "primary",
+        baseUrl: "https://api.example.com/v1",
+        apiKey: "sk-secret-key-long",
+        model: "gpt-x",
+        isDefault: true,
+      })
+      .expect(201);
+    expect(created.body.id).toBeTruthy();
+    expect(created.body.isDefault).toBe(true);
+    expect(created.body.enabled).toBe(true);
+    expect(created.body).not.toHaveProperty("apiKey");
+    expect(created.body.apiKeyPreview).toContain("...");
+    const id = created.body.id as string;
+
+    // Global: a normal user sees it too.
+    const list = await request(server())
+      .get("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(200);
+    expect(list.body.items).toHaveLength(1);
+    expect(list.body.items[0].apiKey).toBeUndefined();
+
+    // Second provider, then promote it.
+    const second = await request(server())
+      .post("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: "secondary",
+        baseUrl: "https://api2.example.com/v1",
+        apiKey: "sk-second-key-long",
+        model: "gpt-y",
+      })
+      .expect(201);
+    const secondId = second.body.id as string;
+
+    await request(server())
+      .post(`/api/llm-judge/providers/${secondId}/set-default`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(201);
+
+    const afterPromote = await request(server())
+      .get(`/api/llm-judge/providers/${id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+    expect(afterPromote.body.isDefault).toBe(false);
+
+    await request(server())
+      .delete(`/api/llm-judge/providers/${secondId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
       .expect(204);
 
-    const r = await request(ctx.app.getHttpServer())
-      .get("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
+    const finalList = await request(server())
+      .get("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
-    // NestJS serialises a null return as an empty body; check text is empty.
-    expect(r.text).toBe("");
+    expect(finalList.body.items).toHaveLength(1);
+    expect(finalList.body.items[0].id).toBe(id);
   });
 
-  it("provider config is global — visible across users", async () => {
-    // user B registers separately
-    const regB = await request(ctx.app.getHttpServer())
-      .post("/api/auth/register")
-      .send({ email: `llm-judge-b-${Date.now()}@example.com`, password: "Password1!" })
-      .expect(201);
-    const tokenB = regB.body.accessToken as string;
-
-    // user A (existing `token`) writes
-    await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        baseUrl: "https://api.example.com/v1",
-        apiKey: "sk-A",
-        model: "shared",
-        enabled: true,
-      })
-      .expect(200);
-
-    // user B reads — sees A's config
-    const r = await request(ctx.app.getHttpServer())
-      .get("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${tokenB}`)
-      .expect(200);
-    expect(r.body.baseUrl).toBe("https://api.example.com/v1");
-    expect(r.body.model).toBe("shared");
+  it("rejects duplicate name with 409", async () => {
+    await request(server())
+      .post("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "primary", baseUrl: "https://dup.example.com/v1", apiKey: "sk-x", model: "m" })
+      .expect(409);
   });
 
-  it("a second user updating overwrites the global config for everyone", async () => {
-    const regB = await request(ctx.app.getHttpServer())
-      .post("/api/auth/register")
-      .send({ email: `llm-judge-c-${Date.now()}@example.com`, password: "Password1!" })
+  it("rejects disabling the default provider with 400", async () => {
+    // Self-contained: promote a provider to default first (prior tests may have
+    // left the workspace with zero defaults), then assert disabling it is denied.
+    const list = await request(server())
+      .get("/api/llm-judge/providers")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+    const target = list.body.items[0];
+    expect(target).toBeTruthy();
+    await request(server())
+      .post(`/api/llm-judge/providers/${target.id}/set-default`)
+      .set("Authorization", `Bearer ${adminToken}`)
       .expect(201);
-    const tokenB = regB.body.accessToken as string;
-
-    // user A seeds
-    await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ baseUrl: "https://api.example.com/v1", apiKey: "sk-A", model: "m1", enabled: true })
-      .expect(200);
-
-    // user B overwrites (re-uses saved key by omitting apiKey)
-    await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${tokenB}`)
-      .send({ baseUrl: "https://api.example.com/v2", model: "m2", enabled: true })
-      .expect(200);
-
-    // user A re-reads — sees B's overwrite
-    const r = await request(ctx.app.getHttpServer())
-      .get("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
-    expect(r.body.baseUrl).toBe("https://api.example.com/v2");
-    expect(r.body.model).toBe("m2");
+    await request(server())
+      .patch(`/api/llm-judge/providers/${target.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ enabled: false })
+      .expect(400);
   });
 });

@@ -272,12 +272,19 @@ model EvaluationProfile {
   @@map("evaluation_profiles")
 }
 
+// Workspace-wide LLM-judge provider used by AI-assisted insights, quality-gate
+// judges and alert explanation. Multiple may be registered; at most one is the
+// default (consumed when no explicit provider is selected). Invariant enforced
+// by the service: isDefault=true implies enabled=true. Admin-managed via
+// /api/llm-judge/providers.
 model LlmJudgeProvider {
   id           String  @id @default(cuid())
+  name         String  @unique
   baseUrl      String  @map("base_url")
   apiKeyCipher String  @map("api_key_cipher")
   model        String
   enabled      Boolean @default(true)
+  isDefault    Boolean @default(false) @map("is_default")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

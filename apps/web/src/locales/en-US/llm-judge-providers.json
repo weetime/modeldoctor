@@ -1,0 +1,85 @@
+{
+  "page": {
+    "title": "AI Diagnostics providers",
+    "subtitle": "Workspace-wide LLM judge providers used by AI-assisted insights. Shared across every user; API keys are stored encrypted.",
+    "breadcrumb": "AI Diagnostics providers",
+    "actions": {
+      "new": "+ New provider"
+    },
+    "empty": {
+      "title": "No AI Diagnostics provider configured yet",
+      "subtitle": "Add the first one and set it as default to enable AI-assisted features"
+    }
+  },
+  "table": {
+    "columns": {
+      "name": "Name",
+      "baseUrl": "Base URL",
+      "model": "Model",
+      "status": "Status",
+      "isDefault": "Default",
+      "actions": "Actions"
+    },
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "defaultBadge": "Default"
+  },
+  "actions": {
+    "setDefault": "Set as default",
+    "enable": "Enable",
+    "disable": "Disable"
+  },
+  "sheet": {
+    "createTitle": "New AI Diagnostics provider",
+    "editTitle": "Edit AI Diagnostics provider",
+    "fields": {
+      "name": { "label": "Name", "placeholder": "e.g. deepseek-primary" },
+      "baseUrl": { "label": "Base URL", "placeholder": "https://api.deepseek.com" },
+      "model": { "label": "Model", "placeholder": "deepseek-chat" },
+      "apiKey": { "label": "API Key", "placeholder": "sk-..." },
+      "enabled": {
+        "label": "Enabled",
+        "help": "Disabled providers are kept but never used.",
+        "lockedHelp": "The default provider is always enabled."
+      },
+      "isDefault": {
+        "label": "Set as default",
+        "help": "AI-assisted features use the default provider. Only one default is allowed; promoting this one unsets the previous default."
+      }
+    },
+    "rotateKey": "Rotate",
+    "rotateKeyHint": "Replace the stored API key. Leave off to keep the saved key.",
+    "rotateKeyRequired": "Enter a new API key, or uncheck Rotate to keep the saved one",
+    "actions": {
+      "test": "Test connection",
+      "testing": "Testing…"
+    }
+  },
+  "delete": {
+    "title": "Delete provider {{name}}?",
+    "body": "This provider configuration will be removed. If it was the default, AI-assisted features will be disabled until you set another default.",
+    "confirm": "Delete"
+  },
+  "toast": {
+    "createSuccess": "Created",
+    "updateSuccess": "Saved",
+    "deleteSuccess": "Deleted",
+    "setDefaultSuccess": "Set as default",
+    "enabledSuccess": "Enabled",
+    "disabledSuccess": "Disabled",
+    "test": {
+      "ok": "Connection OK ({{ms}} ms)",
+      "fail": "Connection failed: {{error}}",
+      "fillFirst": "Fill Base URL and Model first; a new provider also requires an API Key"
+    },
+    "errors": {
+      "nameTaken": "Provider name already taken, try another",
+      "generic": "Failed: {{message}}"
+    }
+  },
+  "settings": {
+    "title": "AI Diagnostics (Global)",
+    "desc": "Manage the workspace-wide LLM judge providers used by AI-assisted insights. The default provider is used when AI features run.",
+    "manage": "Manage providers"
+  }
+}

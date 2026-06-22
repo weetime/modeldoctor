@@ -1,19 +1,38 @@
 // apps/api/src/modules/llm-judge/llm-judge.controller.ts
 import {
-  llmJudgeProviderPublicSchema,
+  type CreateLlmJudgeProvider,
+  createLlmJudgeProviderSchema,
+  type ListLlmJudgeProvidersResponse,
+  type LlmJudgeProviderPublic,
   type TestLlmJudgeRequest,
   type TestLlmJudgeResponse,
   testLlmJudgeRequestSchema,
   testLlmJudgeResponseSchema,
-  type UpsertLlmJudgeProvider,
-  upsertLlmJudgeProviderSchema,
+  type UpdateLlmJudgeProvider,
+  updateLlmJudgeProviderSchema,
 } from "@modeldoctor/contracts";
-import { Body, Controller, Delete, Get, HttpCode, Post, Put, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { chatCompletion } from "../insights/llm-client.js";
-import { LlmJudgeService } from "./llm-judge.service.js";
+import { type LlmJudgeActor, LlmJudgeService } from "./llm-judge.service.js";
+
+function actorFrom(user: JwtPayload): LlmJudgeActor {
+  return { sub: user.sub, isAdmin: user.roles.includes("admin") };
+}
 
 @ApiTags("llm-judge")
 @ApiBearerAuth()
@@ -22,36 +41,65 @@ import { LlmJudgeService } from "./llm-judge.service.js";
 export class LlmJudgeController {
   constructor(private readonly svc: LlmJudgeService) {}
 
-  @ApiOperation({ summary: "Return the LLM-judge provider config (api key omitted)" })
-  @Get("provider")
-  async get() {
-    const p = await this.svc.getPublic();
-    return p ? llmJudgeProviderPublicSchema.parse(p) : null;
+  @ApiOperation({ summary: "List configured LLM-judge providers (api keys omitted)" })
+  @Get("providers")
+  list(@CurrentUser() user: JwtPayload): Promise<ListLlmJudgeProvidersResponse> {
+    return this.svc.list(actorFrom(user));
   }
 
-  @ApiOperation({ summary: "Create or replace the LLM-judge provider config" })
-  @Put("provider")
-  async put(
-    @Body(new ZodValidationPipe(upsertLlmJudgeProviderSchema)) body: UpsertLlmJudgeProvider,
-  ) {
-    return this.svc.upsert(body);
+  @ApiOperation({ summary: "Get an LLM-judge provider by ID" })
+  @Get("providers/:id")
+  getOne(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<LlmJudgeProviderPublic> {
+    return this.svc.getOne(actorFrom(user), id);
   }
 
-  @ApiOperation({ summary: "Clear the LLM-judge provider config" })
-  @Delete("provider")
+  @ApiOperation({ summary: "Create an LLM-judge provider (admin-only)" })
+  @Post("providers")
+  create(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(createLlmJudgeProviderSchema)) body: CreateLlmJudgeProvider,
+  ): Promise<LlmJudgeProviderPublic> {
+    return this.svc.create(actorFrom(user), body);
+  }
+
+  @ApiOperation({ summary: "Patch an LLM-judge provider (admin-only)" })
+  @Patch("providers/:id")
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateLlmJudgeProviderSchema)) body: UpdateLlmJudgeProvider,
+  ): Promise<LlmJudgeProviderPublic> {
+    return this.svc.update(actorFrom(user), id, body);
+  }
+
+  @ApiOperation({ summary: "Delete an LLM-judge provider (admin-only)" })
+  @Delete("providers/:id")
   @HttpCode(204)
-  async del() {
-    await this.svc.delete();
+  async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
+    await this.svc.remove(actorFrom(user), id);
   }
 
-  @ApiOperation({ summary: "Send a one-shot ping to verify the provider config works" })
+  @ApiOperation({ summary: "Promote an LLM-judge provider to the default (admin-only)" })
+  @Post("providers/:id/set-default")
+  setDefault(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<LlmJudgeProviderPublic> {
+    return this.svc.setDefault(actorFrom(user), id);
+  }
+
+  @ApiOperation({ summary: "Send a one-shot ping to verify a provider config works" })
   @Post("test")
   async test(
     @Body(new ZodValidationPipe(testLlmJudgeRequestSchema)) body: TestLlmJudgeRequest,
   ): Promise<TestLlmJudgeResponse> {
     let apiKey = body.apiKey;
     if (!apiKey) {
-      const saved = await this.svc.getDecrypted();
+      // No key supplied: reuse the saved key of the referenced provider.
+      const saved = body.id ? await this.svc.getDecrypted({ id: body.id }) : null;
       if (!saved) {
         return testLlmJudgeResponseSchema.parse({
           ok: false,

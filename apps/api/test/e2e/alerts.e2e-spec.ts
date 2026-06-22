@@ -244,10 +244,13 @@ describe("AlertExplainer with PromFetcher (Task 5)", () => {
     await prisma.llmJudgeProvider.deleteMany();
     await prisma.llmJudgeProvider.create({
       data: {
+        name: "default",
         baseUrl: "http://fake-llm.invalid",
         apiKeyCipher: encrypt("sk-fake-not-used", judgeKey),
         model: "gpt-test",
         enabled: true,
+        // The explainer resolves the *default* provider via getDecrypted().
+        isDefault: true,
       },
     });
   }, 120_000);
