@@ -1,4 +1,5 @@
 import { defaultProfile } from "./default.js";
+import { lbStrategyProfile } from "./lb-strategy.js";
 import type { ReportIntent, ReportScenarioProfile } from "./types.js";
 
 export function resolveReportIntent(
@@ -24,7 +25,7 @@ export function resolveReportIntent(
 const REGISTRY: Record<ReportIntent, ReportScenarioProfile> = {
   default: defaultProfile,
   // filled in by later tasks (B3/B4):
-  "lb-strategy": defaultProfile,
+  "lb-strategy": lbStrategyProfile,
   "engine-kv-cache": defaultProfile,
   capacity: defaultProfile,
   gateway: defaultProfile,
