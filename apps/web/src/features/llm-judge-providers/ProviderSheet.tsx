@@ -100,7 +100,10 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
     setRotateKey(false);
     // `mode` is read inside intentionally; its identity is unstable so it is
     // deliberately omitted from deps — the open false→true transition reseeds.
-  }, [open, existing, form]);
+    // Depend on `existing?.id` (not the object) so background refetches that
+    // swap the object identity don't reset the form mid-edit; `mode` is read
+    // inside intentionally and omitted for the same reason.
+  }, [open, existing?.id, form]);
 
   const baseUrlValue = form.watch("baseUrl");
   const modelValue = form.watch("model");
@@ -125,8 +128,15 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
           enabled: values.enabled,
           isDefault: values.isDefault,
         };
-        if (rotateKey && values.apiKey.trim()) {
-          body.apiKey = values.apiKey.trim();
+        if (rotateKey) {
+          // Rotate was requested, so a fresh key is mandatory — silently keeping
+          // the old key would be confusing.
+          const trimmedKey = values.apiKey.trim();
+          if (!trimmedKey) {
+            setSubmitError(t("sheet.rotateKeyRequired"));
+            return;
+          }
+          body.apiKey = trimmedKey;
         }
         await updateMut.mutateAsync({ id: existing.id, body });
         toast.success(t("toast.updateSuccess"));

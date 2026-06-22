@@ -49,6 +49,7 @@
     },
     "rotateKey": "更换",
     "rotateKeyHint": "替换已保存的 API Key；不勾选则沿用原 Key。",
+    "rotateKeyRequired": "请输入新的 API Key，或取消勾选「更换」以沿用已保存的 Key",
     "actions": {
       "test": "测试连接",
       "testing": "测试中…"

@@ -49,6 +49,7 @@
     },
     "rotateKey": "Rotate",
     "rotateKeyHint": "Replace the stored API key. Leave off to keep the saved key.",
+    "rotateKeyRequired": "Enter a new API key, or uncheck Rotate to keep the saved one",
     "actions": {
       "test": "Test connection",
       "testing": "Testing…"

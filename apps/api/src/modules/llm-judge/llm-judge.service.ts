@@ -37,7 +37,8 @@ export interface LlmJudgeActor {
 
 function makePreview(plain: string): string {
   if (!plain) return "";
-  if (plain.length <= 7) return plain;
+  // Never echo a short key verbatim — mask it to avoid exposing mock/custom keys.
+  if (plain.length <= 7) return "...";
   return `${plain.slice(0, 3)}...${plain.slice(-4)}`;
 }
 
