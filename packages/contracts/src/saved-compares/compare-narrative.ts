@@ -76,6 +76,11 @@ export const figureRefIdSchema = z.enum([
   "stage-bars-prefix-cache-hit",
   "stage-bars-top-pod-share",
   "compare-grid",
+  // Phase-1 figures — rendered from serverMetrics.prefixCache.perPod and
+  // cold/warm delta computations.
+  "pod-traffic-distribution",
+  "pod-hit-rate",
+  "cold-warm-delta",
 ]);
 export type FigureRefId = z.infer<typeof figureRefIdSchema>;
 
