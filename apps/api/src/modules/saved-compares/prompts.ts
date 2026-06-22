@@ -92,6 +92,13 @@ Emit raw JSON only — no \`\`\`json fence, no preamble.`;
 export const COMPARE_SYS_PROMPT_ZH = ZH_SCHEMA_INSTRUCTIONS;
 export const COMPARE_SYS_PROMPT_EN = EN_SCHEMA_INSTRUCTIONS;
 
+export function buildSystemPrompt(locale: "zh-CN" | "en-US", scenarioFragment: string): string {
+  const base = locale === "en-US" ? EN_SCHEMA_INSTRUCTIONS : ZH_SCHEMA_INSTRUCTIONS;
+  if (!scenarioFragment.trim()) return base;
+  const header = locale === "en-US" ? "\n\n## Scenario guidance\n" : "\n\n## 场景专项要求\n";
+  return `${base}${header}${scenarioFragment}`;
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // Retry prompt — used when lint pass on the first response flagged blocking
 // warnings. Lists the violations and asks the model to regenerate.
