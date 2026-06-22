@@ -60,6 +60,18 @@ describe("chatCompletion", () => {
     expect(body.temperature).toBeUndefined();
   });
 
+  it("anthropic style returns empty string when content is not an array", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ content: "oops-not-an-array" }),
+    } as any);
+    const r = await chatCompletion(
+      { baseUrl: "https://api.anthropic.com", apiKey: "k", model: "m", apiStyle: "anthropic" },
+      [{ role: "user", content: "x" }],
+    );
+    expect(r.content).toBe("");
+  });
+
   it("anthropic style concatenates only text blocks", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

@@ -88,8 +88,10 @@ export async function chatCompletion(
   if (anthropic) {
     const data = (await res.json()) as { content?: Array<{ type?: string; text?: string }> };
     // Concatenate text blocks; non-text blocks (thinking, tool_use) carry no text.
-    const content = (data.content ?? [])
-      .filter((b) => b.type === "text" && typeof b.text === "string")
+    // Guard the shape — a misconfigured gateway could return a non-array body.
+    const blocks = Array.isArray(data.content) ? data.content : [];
+    const content = blocks
+      .filter((b) => b && b.type === "text" && typeof b.text === "string")
       .map((b) => b.text)
       .join("");
     return { content, latencyMs };
