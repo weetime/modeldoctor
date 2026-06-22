@@ -129,6 +129,39 @@ describe("/api/saved-compares (e2e)", () => {
     runIds = [b1.id, b2.id];
   });
 
+  it("POST rejects mixed-scenario benchmarks with 400", async () => {
+    // Seed a third benchmark with a different scenario
+    const bOther = await prisma.benchmark.create({
+      data: {
+        userId,
+        scenario: "lb-strategy",
+        tool: "guidellm",
+        name: "r-lb",
+        params: {},
+        summaryMetrics: {
+          tool: "guidellm",
+          data: {
+            ttft: { p50: 90, p90: 180, p99: 450 },
+            e2eLatency: { p50: 750, p90: 1400, p99: 2800 },
+            requestsPerSecond: { mean: 3.5 },
+            requests: { total: 1000, error: 5 },
+          },
+        },
+      },
+    });
+
+    // runIds[0] is scenario="inference", bOther is scenario="lb-strategy"
+    await request(ctx.app.getHttpServer())
+      .post("/api/saved-compares")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "mixed-scenario-compare",
+        benchmarkIds: [runIds[0], bOther.id],
+        stageLabels: { [runIds[0]]: "A", [bOther.id]: "B" },
+      })
+      .expect(400);
+  });
+
   it("POST creates, GET hydrates with benchmarks", async () => {
     const created = await request(ctx.app.getHttpServer())
       .post("/api/saved-compares")
@@ -165,7 +198,13 @@ describe("/api/saved-compares (e2e)", () => {
     await request(ctx.app.getHttpServer())
       .post("/api/llm-judge/providers")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "default", baseUrl: "http://llm", apiKey: "sk-test", model: "gpt-4", isDefault: true })
+      .send({
+        name: "default",
+        baseUrl: "http://llm",
+        apiKey: "sk-test",
+        model: "gpt-4",
+        isDefault: true,
+      })
       .expect(201);
 
     const r1 = await request(ctx.app.getHttpServer())

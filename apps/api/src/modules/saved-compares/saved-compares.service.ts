@@ -25,6 +25,8 @@ export class SavedComparesService {
     classification: string;
     clientName: string | null;
     version: number;
+    scenario: string | null;
+    tool: string | null;
     narrative: unknown;
     narrativeAt: Date | null;
     createdAt: Date;
@@ -41,6 +43,8 @@ export class SavedComparesService {
       classification: row.classification as Classification,
       clientName: row.clientName,
       version: row.version,
+      scenario: row.scenario,
+      tool: row.tool,
       narrative: row.narrative,
       narrativeAt: row.narrativeAt ? row.narrativeAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
@@ -52,6 +56,18 @@ export class SavedComparesService {
     if (new Set(body.benchmarkIds).size !== body.benchmarkIds.length) {
       throw new BadRequestException("benchmarkIds must be unique");
     }
+    const members = await this.prisma.benchmark.findMany({
+      where: { id: { in: body.benchmarkIds } },
+      select: { scenario: true, tool: true },
+    });
+    const scenarios = new Set(members.map((m) => m.scenario));
+    const tools = new Set(members.map((m) => m.tool));
+    if (scenarios.size > 1) {
+      throw new BadRequestException("compare requires a single scenario across all benchmarks");
+    }
+    if (tools.size > 1) {
+      throw new BadRequestException("compare requires a single tool across all benchmarks");
+    }
     const row = await this.prisma.savedCompare.create({
       data: {
         userId,
@@ -62,6 +78,8 @@ export class SavedComparesService {
         context: body.context ?? null,
         classification: body.classification ?? "internal",
         clientName: body.clientName ?? null,
+        scenario: members.length > 0 ? ([...scenarios][0] ?? null) : null,
+        tool: members.length > 0 ? ([...tools][0] ?? null) : null,
       },
     });
     return this.serialize(row);
@@ -108,7 +126,17 @@ export class SavedComparesService {
       };
     });
 
-    return { ...sc, benchmarks: hydratedBenchmarks };
+    const dims = deriveCompareDims(
+      hydratedBenchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ scenario: b.scenario, tool: b.tool })),
+    );
+    return {
+      ...sc,
+      scenario: sc.scenario ?? dims.scenario,
+      tool: sc.tool ?? dims.tool,
+      benchmarks: hydratedBenchmarks,
+    };
   }
 
   async update(userId: string, id: string, body: UpdateSavedCompareRequest): Promise<SavedCompare> {
@@ -147,4 +175,17 @@ export class SavedComparesService {
       },
     });
   }
+}
+
+/** Derive the shared scenario/tool of a compare's member benchmarks.
+ * Returns nulls when the set is empty or heterogeneous (mixed). */
+export function deriveCompareDims(
+  members: Array<{ scenario?: string | null; tool?: string | null }>,
+): { scenario: string | null; tool: string | null } {
+  const scenarios = new Set(members.map((m) => m.scenario ?? null));
+  const tools = new Set(members.map((m) => m.tool ?? null));
+  return {
+    scenario: scenarios.size === 1 ? ([...scenarios][0] ?? null) : null,
+    tool: tools.size === 1 ? ([...tools][0] ?? null) : null,
+  };
 }

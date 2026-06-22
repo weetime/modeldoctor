@@ -82,7 +82,16 @@ vi.mock("../insights/llm-client.js", () => ({
 import { PrismaService } from "../../database/prisma.service.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { CompareSynthesizeService } from "./compare-synthesize.service.js";
+import { buildSystemPrompt } from "./prompts.js";
+import { getReportProfile, resolveReportIntent } from "./report-scenarios/index.js";
 import { SavedComparesService } from "./saved-compares.service.js";
+
+it("lb compare yields a hit-rate-led system prompt", () => {
+  const intent = resolveReportIntent("lb-strategy", 2);
+  const sys = buildSystemPrompt("zh-CN", getReportProfile(intent).promptFragment("zh-CN"));
+  expect(sys).toContain("命中率");
+  expect(sys).toContain("场景专项要求");
+});
 
 describe("CompareSynthesizeService", () => {
   let svc: CompareSynthesizeService;

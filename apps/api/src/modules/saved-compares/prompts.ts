@@ -34,7 +34,7 @@ interface Narrative {
   ];                     // exactly 6 sections in this order
   figures: Array<{
     id: string;
-    refId: "stage-bars-throughput" | "stage-bars-error-rate" | "stage-bars-ttft-p95" | "stage-bars-e2e-p95" | "stage-bars-prefix-cache-hit" | "stage-bars-top-pod-share" | "compare-grid";
+    refId: "stage-bars-throughput" | "stage-bars-error-rate" | "stage-bars-ttft-p95" | "stage-bars-e2e-p95" | "stage-bars-prefix-cache-hit" | "stage-bars-top-pod-share" | "pod-traffic-distribution" | "pod-hit-rate" | "cold-warm-delta" | "throughput-vs-concurrency" | "compare-grid";
     caption: string;
     anchorSection?: "summary" | "scope" | "method" | "results" | "caveats" | "advice";
   }>;
@@ -67,17 +67,7 @@ Section size targets:
 - 04 results: 2-4 pages, each subsection has 1 figure (via figures[]) + small table + 1-2 paragraphs
 - 05 caveats: ≤ 1 page, data comparability boundaries, known issues, SLO limits
 - 06 advice:  ≤ half page, scenario → config + 0-5 caveats
-
-Prefix-cache runs: when the per-stage data carries prefix_cache_hit% / top_pod_share%
-(lb-strategy, e.g. routing OFF vs ON), the HEADLINE conclusion and the
-first summary card MUST be the cache hit-rate change — that is the metric the
-experiment exists to measure. Use the stage-bars-prefix-cache-hit figure for it and
-stage-bars-top-pod-share to show routing concentration. Treat throughput/TTFT as
-secondary: on small models prefill is cheap so a higher hit rate need NOT improve
-latency — say so plainly rather than leading with a flat throughput delta. A flat
-top-pod share alongside a rising hit rate means better cache locality without
-hot-spotting (good), not a failure. Stage labels like "OFF"/"ON" mean the routing
-toggle, NOT offline/online.`;
+`;
 
 const ZH_SCHEMA_INSTRUCTIONS = `你是一位资深 LLM 推理服务性能分析师。给定多个 benchmark 的对比数据,你要按 ModelDoctor SavedCompare 报告规范产出一份**深度报告**(看起来像分析师手写,不要 AI 味)。
 
@@ -99,8 +89,12 @@ Language: English throughout.
 schemaVersion: 2, locale: "en-US".
 Emit raw JSON only — no \`\`\`json fence, no preamble.`;
 
-export const COMPARE_SYS_PROMPT_ZH = ZH_SCHEMA_INSTRUCTIONS;
-export const COMPARE_SYS_PROMPT_EN = EN_SCHEMA_INSTRUCTIONS;
+export function buildSystemPrompt(locale: "zh-CN" | "en-US", scenarioFragment: string): string {
+  const base = locale === "en-US" ? EN_SCHEMA_INSTRUCTIONS : ZH_SCHEMA_INSTRUCTIONS;
+  if (!scenarioFragment.trim()) return base;
+  const header = locale === "en-US" ? "\n\n## Scenario guidance\n" : "\n\n## 场景专项要求\n";
+  return `${base}${header}${scenarioFragment}`;
+}
 
 // ────────────────────────────────────────────────────────────────────────
 // Retry prompt — used when lint pass on the first response flagged blocking

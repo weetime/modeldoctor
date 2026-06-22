@@ -3,7 +3,37 @@ import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
-import { SavedComparesService } from "./saved-compares.service.js";
+import { deriveCompareDims, SavedComparesService } from "./saved-compares.service.js";
+
+describe("deriveCompareDims", () => {
+  it("returns the shared dims when homogeneous", () => {
+    expect(
+      deriveCompareDims([
+        { scenario: "lb-strategy", tool: "aiperf" },
+        { scenario: "lb-strategy", tool: "aiperf" },
+      ]),
+    ).toEqual({ scenario: "lb-strategy", tool: "aiperf" });
+  });
+  it("returns nulls when scenarios differ", () => {
+    expect(
+      deriveCompareDims([
+        { scenario: "lb-strategy", tool: "aiperf" },
+        { scenario: "inference", tool: "aiperf" },
+      ]),
+    ).toEqual({ scenario: null, tool: "aiperf" });
+  });
+  it("returns nulls for an empty set", () => {
+    expect(deriveCompareDims([])).toEqual({ scenario: null, tool: null });
+  });
+  it("returns nulls when both dims differ", () => {
+    expect(
+      deriveCompareDims([
+        { scenario: "lb-strategy", tool: "aiperf" },
+        { scenario: "inference", tool: "guidellm" },
+      ]),
+    ).toEqual({ scenario: null, tool: null });
+  });
+});
 
 describe("SavedComparesService", () => {
   let mod: TestingModule;

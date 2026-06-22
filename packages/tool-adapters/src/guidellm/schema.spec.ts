@@ -151,6 +151,25 @@ describe("guidellmReportSchema", () => {
     expect(r.success).toBe(true);
   });
 
+  it("accepts an optional capacityCurve", () => {
+    const dist = { mean: 1, p50: 1, p90: 1, p95: 1, p99: 1 };
+    const base = {
+      ttft: dist,
+      itl: dist,
+      e2eLatency: dist,
+      requestsPerSecond: { mean: 1 },
+      outputTokensPerSecond: { mean: 1 },
+      inputTokensPerSecond: { mean: 1 },
+      totalTokensPerSecond: { mean: 1 },
+      concurrency: { mean: 1, max: 1 },
+      requests: { total: 1, success: 1, error: 0, incomplete: 0 },
+    };
+    const withCurve = { ...base, capacityCurve: [{ concurrency: 16, rps: 120, e2eP95Ms: 900 }] };
+    expect(guidellmReportSchema.parse(withCurve).capacityCurve?.[0].concurrency).toBe(16);
+    // without curve still parses (field is optional)
+    expect(guidellmReportSchema.parse(base).capacityCurve).toBeUndefined();
+  });
+
   // gemini Item 1: requests counts nonnegative
   it("rejects requests.total = -1", () => {
     const dist = { mean: 1, p50: 1, p90: 1, p95: 1, p99: 1 };

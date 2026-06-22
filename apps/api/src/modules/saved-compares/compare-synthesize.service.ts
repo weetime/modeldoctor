@@ -12,7 +12,9 @@ import { type ChatMessage, chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./metrics.js";
 import { isBlockingWarning, lintNarrative } from "./narrative-lint.js";
-import { buildRetryFeedback, COMPARE_SYS_PROMPT_EN, COMPARE_SYS_PROMPT_ZH } from "./prompts.js";
+import { buildRetryFeedback, buildSystemPrompt } from "./prompts.js";
+import { getReportProfile, resolveReportIntent } from "./report-scenarios/index.js";
+import type { ScenarioData } from "./report-scenarios/types.js";
 import { SavedComparesService } from "./saved-compares.service.js";
 
 interface CacheEntry {
@@ -55,8 +57,12 @@ export class CompareSynthesizeService {
       return { narrative: hit.narrative, generatedAt: hit.generatedAt, fromCache: true };
     }
 
-    const sys = body.locale === "en-US" ? COMPARE_SYS_PROMPT_EN : COMPARE_SYS_PROMPT_ZH;
-    const userPrompt = this.buildUserPrompt(sc, body.locale);
+    const runCount = sc.benchmarks.filter((b) => !b.missing).length;
+    const intent = resolveReportIntent(sc.scenario, runCount);
+    const profile = getReportProfile(intent);
+    const scenarioData = profile.dataAssembly(sc);
+    const sys = buildSystemPrompt(body.locale, profile.promptFragment(body.locale));
+    const userPrompt = this.buildUserPrompt(sc, body.locale, scenarioData);
 
     // First attempt
     let parsed = await this.callAndParse(provider, body.locale, [
@@ -248,7 +254,11 @@ export class CompareSynthesizeService {
       .digest("hex");
   }
 
-  private buildUserPrompt(sc: HydratedSavedCompare, locale: string): string {
+  private buildUserPrompt(
+    sc: HydratedSavedCompare,
+    locale: string,
+    scenarioData: ScenarioData,
+  ): string {
     const zh = locale !== "en-US";
     const L = {
       contextHeader: zh ? "## 背景" : "## Context",
@@ -298,21 +308,29 @@ export class CompareSynthesizeService {
       }
     }
 
+    if (scenarioData.promptBlock.trim()) {
+      lines.push("", scenarioData.promptBlock);
+    }
+
     // Tell the LLM which figure refIds actually have data behind them, so it
     // does not pick a refId for which the bar chart will render empty. Keys
-    // outside this list MUST NOT appear in `figures[*].refId`.
+    // outside this list MUST NOT appear in `figures[*].refId`. When the scenario
+    // profile expresses a preference, narrow the offered set to its preferred
+    // figures (intersected with availability); otherwise offer all available.
     const available = availableFigureRefIds(
       sc.benchmarks
         .filter((b) => !b.missing)
         .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics })),
     );
+    const preferred = scenarioData.preferredFigures.filter((r) => available.has(r));
+    const offered = preferred.length > 0 ? preferred : [...available];
     lines.push(
       "",
       zh ? "## 可用图表 refId" : "## Available figure refIds",
       zh
         ? "本次数据集仅支持以下 refId,figures[].refId 不得使用此清单外的值:"
         : "Only these refIds may appear in `figures[].refId` — others will render empty:",
-      ...[...available].map((r) => `- ${r}`),
+      ...offered.map((r) => `- ${r}`),
     );
 
     lines.push("", L.reminder);

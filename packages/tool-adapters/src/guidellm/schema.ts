@@ -79,6 +79,9 @@ export const guidellmReportSchema = z.object({
     error: z.number().int().nonnegative(),
     incomplete: z.number().int().nonnegative(),
   }),
+  capacityCurve: z
+    .array(z.object({ concurrency: z.number(), rps: z.number(), e2eP95Ms: z.number() }))
+    .optional(),
 });
 export type GuidellmReport = z.infer<typeof guidellmReportSchema>;
 
