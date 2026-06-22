@@ -218,32 +218,45 @@ describe("baseline (comparison run) flow", () => {
 });
 
 describe("LLM judge guard at run creation", () => {
-  // The LLM judge provider is a singleton row in llm_judge_providers.
-  // Each test below sets the desired state explicitly via the /api/llm-judge/provider
-  // endpoint, then exercises POST /api/quality-gate/runs to assert the guard.
+  // LLM judge providers are rows in llm_judge_providers. The run-creation guard
+  // keys off getDecrypted() — the *default* provider — so "enabled" here means
+  // "an enabled default exists" and "disabled" means "no enabled default"
+  // (a provider may exist but not be the default). Each test sets the desired
+  // state via the /api/llm-judge/providers REST endpoints.
 
   afterEach(() => deleteProvider());
 
   async function deleteProvider() {
-    // Tolerate 404 (no row to delete) so tests are independent of file ordering.
-    await request(ctx.app.getHttpServer())
-      .delete("/api/llm-judge/provider")
-      .set("Authorization", `Bearer ${token}`)
-      .then(() => undefined)
-      .catch(() => undefined);
+    // Wipe every provider so tests are independent of ordering. Tolerate errors.
+    try {
+      const list = await request(ctx.app.getHttpServer())
+        .get("/api/llm-judge/providers")
+        .set("Authorization", `Bearer ${token}`);
+      for (const p of (list.body.items ?? []) as Array<{ id: string }>) {
+        await request(ctx.app.getHttpServer())
+          .delete(`/api/llm-judge/providers/${p.id}`)
+          .set("Authorization", `Bearer ${token}`);
+      }
+    } catch {
+      // ignore
+    }
   }
 
   async function upsertProvider(opts: { enabled: boolean }) {
+    // enabled → register as the default (default is always enabled).
+    // disabled → register a non-default provider so no enabled default exists.
     await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
+      .post("/api/llm-judge/providers")
       .set("Authorization", `Bearer ${token}`)
       .send({
+        name: `judge-guard-${opts.enabled ? "on" : "off"}`,
         baseUrl: "https://judge.example/v1",
         apiKey: "sk-test",
         model: "judge-model",
         enabled: opts.enabled,
+        isDefault: opts.enabled,
       })
-      .expect(200);
+      .expect(201);
   }
 
   async function createLlmJudgeEval(name: string) {

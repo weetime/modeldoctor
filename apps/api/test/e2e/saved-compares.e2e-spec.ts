@@ -161,12 +161,12 @@ describe("/api/saved-compares (e2e)", () => {
       })
       .expect(201);
 
-    // Use the API to create the provider so the apiKey is properly encrypted
+    // Use the API to create the default provider so the apiKey is encrypted.
     await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
+      .post("/api/llm-judge/providers")
       .set("Authorization", `Bearer ${token}`)
-      .send({ baseUrl: "http://llm", apiKey: "sk-test", model: "gpt-4", enabled: true })
-      .expect(200);
+      .send({ name: "default", baseUrl: "http://llm", apiKey: "sk-test", model: "gpt-4", isDefault: true })
+      .expect(201);
 
     const r1 = await request(ctx.app.getHttpServer())
       .post(`/api/saved-compares/${sc.body.id}/synthesize`)

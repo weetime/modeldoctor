@@ -80,12 +80,12 @@ describe("/api/insights comparison endpoints (e2e)", () => {
 
   it("POST /api/insights/:id/synthesize returns NarrativeFinding[] (mocked LLM)", async () => {
     const conn = await makeConn("ai");
-    // Use the API to create the provider so the apiKey is properly encrypted
+    // Use the API to create the default provider so the apiKey is encrypted.
     await request(ctx.app.getHttpServer())
-      .put("/api/llm-judge/provider")
+      .post("/api/llm-judge/providers")
       .set("Authorization", `Bearer ${token}`)
-      .send({ baseUrl: "http://llm", apiKey: "sk-test", model: "m", enabled: true })
-      .expect(200);
+      .send({ name: "default", baseUrl: "http://llm", apiKey: "sk-test", model: "m", isDefault: true })
+      .expect(201);
     const r = await request(ctx.app.getHttpServer())
       .post(`/api/insights/${conn.id}/synthesize`)
       .set("Authorization", `Bearer ${token}`)
