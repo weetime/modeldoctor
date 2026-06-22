@@ -93,12 +93,15 @@ export interface ReportScenarioProfile {
 |---|---|---|
 | `throughput-vs-concurrency` | capacity | 解析 `rawOutput.files.report` 的 guidellm sweep → 新增 `summaryMetrics.capacityCurve[]`（`mapGuidellmRawToReport` 扩展）→ 前端折线图 |
 
-**明确推迟到 Phase 2（不在本期）：**
+**Phase 2 裁决（2026-06-22 复盘后更新）：**
 
-- lb 的 `traffic-topology`（路由拓扑/sticky 验证）——需 request→pod 路由日志，现无。
-- lb 的 `hit-rate-timeseries`——需定时快照，现只存单点。
-- evalscope/aiperf 样本级直方图——需持久化原始样本。
-- aiperf 的 KV cache 字段缺失。
+逐项重新评估「价值」而非仅「可行性」，结论如下：
+
+- ✅ **`latency-distribution`（e2e 延迟 CDF 叠加）—— 已做**（分支 `feat/latency-distribution-figure`）。复用现成的纯函数 `BenchmarkChartsService.extract()`：`getHydrated` 已加载 `rawOutput`，服务端同步解析出 CDF 样本（降采样至 ≤1500 点）挂到每个 hydrated run，前端复用 `LatencyCDF` 多 run 叠加组件渲染（`FigureRenderer` 是纯 memo 组件、不能 fetch，故走服务端预算路线）。接入 inference / gateway profile。
+- ⛔ **lb 的 `traffic-topology`（逐请求路由拓扑/sticky 验证）—— 不做。** Phase 1 的 per-pod 流量分布 + per-pod 命中率已覆盖「流量拓扑感知」的可执行结论（哪些 pod、占比、有无热点）；逐请求 sankey 只是豪华版、不改变判断。且逐请求 pod 归属采集对私有化自托管是侵入式负担，与「易自托管」定位冲突（同否决 C 路线的理由）。除非有客户点名。
+- ⛔ **lb 的 `hit-rate-timeseries`（命中率时序）—— 对对比报告不做。** 它本质是「单次跑测的预热诊断曲线」，属于单 run 监控，不是「对比报告」的一张图；对比报告头条是 OFF vs ON 的稳态命中率差（Phase 1 已有）。将来若做单 run 实时监控，它在那边才有家。
+- 🔵 **evalscope/aiperf 样本级直方图 —— 有条件的跟随项。** 依赖：(a) 这俩工具确实能吐逐请求样本（待确认），(b) latency-distribution 证明有用。条件满足再立项；现不预投入。
+- 🔵 **aiperf 的 KV cache 字段 —— 零成本备忘。** 等 aiperf 版本输出该指标，加一行解析即可；只挂 issue，不立项。
 
 > 按 [[feedback_temp_followups]]：以上每项在对应 GitHub issue 留 follow-up 评论。
 

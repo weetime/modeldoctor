@@ -6,3 +6,7 @@ it("accepts the new phase-1 refIds", () => {
     expect(figureRefIdSchema.parse(r)).toBe(r);
   }
 });
+
+it("accepts the latency-distribution refId", () => {
+  expect(figureRefIdSchema.parse("latency-distribution")).toBe("latency-distribution");
+});

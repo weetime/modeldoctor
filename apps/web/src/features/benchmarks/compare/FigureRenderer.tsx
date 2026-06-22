@@ -1,6 +1,7 @@
 import type { FigureRefId } from "@modeldoctor/contracts";
 import { memo } from "react";
 import { assignRunColors } from "@/components/charts/_shared";
+import { LatencyCDF } from "@/components/charts/LatencyCDF";
 import { PodDistributionChart } from "@/components/charts/PodDistributionChart";
 import {
   StageBarChart,
@@ -111,6 +112,7 @@ export const FigureRenderer = memo(function FigureRenderer({
     runs.map((r) => ({
       summaryMetrics: r.summaryMetrics,
       serverMetrics: r.benchmark?.serverMetrics,
+      hasLatencyCdf: !!r.benchmark?.latencyCdf?.samples?.length,
     })),
   );
   if (!available.has(refId)) {
@@ -296,6 +298,14 @@ export const FigureRenderer = memo(function FigureRenderer({
         points: (curve ?? []).map((p) => ({ concurrency: p.concurrency, rps: p.rps })),
       }));
     chart = <ThroughputConcurrencyChart title="Throughput vs concurrency" series={series} />;
+  } else if (refId === "latency-distribution") {
+    const series = summaries.flatMap(({ r }) => {
+      const samples = r.benchmark?.latencyCdf?.samples;
+      return samples && samples.length > 0
+        ? [{ runId: r.id, runLabel: r.stageLabel, samples }]
+        : [];
+    });
+    chart = <LatencyCDF ariaLabel="Latency CDF by stage" series={series} colorMap={colorMap} />;
   } else if (refId === "cold-warm-delta") {
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {
