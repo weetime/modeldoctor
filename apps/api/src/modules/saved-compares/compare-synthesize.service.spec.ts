@@ -80,6 +80,7 @@ vi.mock("../insights/llm-client.js", () => ({
 }));
 
 import { PrismaService } from "../../database/prisma.service.js";
+import { BenchmarkChartsService } from "../benchmark/benchmark-charts.service.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { CompareSynthesizeService } from "./compare-synthesize.service.js";
 import { buildSystemPrompt } from "./prompts.js";
@@ -104,6 +105,7 @@ describe("CompareSynthesizeService", () => {
       providers: [
         CompareSynthesizeService,
         SavedComparesService,
+        BenchmarkChartsService,
         PrismaService,
         {
           provide: ConfigService,
