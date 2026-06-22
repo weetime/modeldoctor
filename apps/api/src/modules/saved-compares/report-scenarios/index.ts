@@ -1,4 +1,8 @@
 import { defaultProfile } from "./default.js";
+import { capacityProfile } from "./capacity.js";
+import { engineKvCacheProfile } from "./engine-kv-cache.js";
+import { gatewayProfile } from "./gateway.js";
+import { inferenceMultiProfile, inferenceSingleProfile } from "./inference.js";
 import { lbStrategyProfile } from "./lb-strategy.js";
 import type { ReportIntent, ReportScenarioProfile } from "./types.js";
 
@@ -24,13 +28,12 @@ export function resolveReportIntent(
 
 const REGISTRY: Record<ReportIntent, ReportScenarioProfile> = {
   default: defaultProfile,
-  // filled in by later tasks (B3/B4):
   "lb-strategy": lbStrategyProfile,
-  "engine-kv-cache": defaultProfile,
-  capacity: defaultProfile,
-  gateway: defaultProfile,
-  "inference-single": defaultProfile,
-  "inference-multi": defaultProfile,
+  "engine-kv-cache": engineKvCacheProfile,
+  capacity: capacityProfile,
+  gateway: gatewayProfile,
+  "inference-single": inferenceSingleProfile,
+  "inference-multi": inferenceMultiProfile,
 };
 
 export function getReportProfile(intent: ReportIntent): ReportScenarioProfile {
