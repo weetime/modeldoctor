@@ -46,6 +46,9 @@ describe("LlmJudgeService", () => {
   });
 
   afterAll(async () => {
+    // Other service specs (synthesize/judges/explainer/compare) share this DB
+    // and assume "no provider configured", so leave no rows behind.
+    await prisma.llmJudgeProvider.deleteMany();
     await prisma.$disconnect();
   });
 
