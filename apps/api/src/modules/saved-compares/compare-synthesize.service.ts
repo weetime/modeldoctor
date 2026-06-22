@@ -120,7 +120,7 @@ export class CompareSynthesizeService {
     const available = availableFigureRefIds(
       sc.benchmarks
         .filter((b) => !b.missing)
-        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics, hasLatencyCdf: !!b.latencyCdf })),
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics, hasLatencyCdf: !!b.latencyCdf?.samples?.length })),
     );
     if (!available.has("stage-bars-prefix-cache-hit")) return figures;
     if (figures.some((f) => f.refId === "stage-bars-prefix-cache-hit")) return figures;
@@ -320,7 +320,7 @@ export class CompareSynthesizeService {
     const available = availableFigureRefIds(
       sc.benchmarks
         .filter((b) => !b.missing)
-        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics, hasLatencyCdf: !!b.latencyCdf })),
+        .map((b) => ({ summaryMetrics: b.summaryMetrics, serverMetrics: b.serverMetrics, hasLatencyCdf: !!b.latencyCdf?.samples?.length })),
     );
     const preferred = scenarioData.preferredFigures.filter((r) => available.has(r));
     const offered = preferred.length > 0 ? preferred : [...available];

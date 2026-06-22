@@ -112,7 +112,7 @@ export const FigureRenderer = memo(function FigureRenderer({
     runs.map((r) => ({
       summaryMetrics: r.summaryMetrics,
       serverMetrics: r.benchmark?.serverMetrics,
-      hasLatencyCdf: !!r.benchmark?.latencyCdf,
+      hasLatencyCdf: !!r.benchmark?.latencyCdf?.samples?.length,
     })),
   );
   if (!available.has(refId)) {
