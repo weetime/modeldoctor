@@ -112,4 +112,46 @@ describe("FigureRenderer", () => {
     expect(screen.getByText(/data unavailable/i)).toBeInTheDocument();
     expect(screen.queryByTestId("echart")).not.toBeInTheDocument();
   });
+
+  it("renders throughput-vs-concurrency chart WITHOUT the data-unavailable placeholder", () => {
+    // Build a run whose summaryMetrics carries a capacityCurve.
+    const capacityCurveMetrics = {
+      tool: "guidellm",
+      data: {
+        capacityCurve: [
+          { concurrency: 4, rps: 30, e2eP95Ms: 500 },
+          { concurrency: 16, rps: 80, e2eP95Ms: 700 },
+        ],
+      },
+    };
+    const runWithCurve: ReportRun = {
+      id: "curve-run-a",
+      stageLabel: "A",
+      tool: "guidellm",
+      scenario: "capacity",
+      summaryMetrics: capacityCurveMetrics,
+      serverMetrics: null,
+      benchmark: {
+        id: "curve-run-a",
+        name: "Benchmark A",
+        tool: "guidellm",
+        scenario: "capacity",
+        summaryMetrics: capacityCurveMetrics,
+        serverMetrics: null,
+      },
+      paramsSummary: { concurrency: 4 },
+    };
+    render(
+      <FigureRenderer
+        refId="throughput-vs-concurrency"
+        runs={[runWithCurve]}
+        caption="Throughput vs concurrency"
+        figureNumber={5}
+      />,
+    );
+    // The placeholder text must be absent — the run carries a valid capacityCurve.
+    expect(screen.queryByText(/data unavailable/i)).not.toBeInTheDocument();
+    // The figure body should contain the chart (rendered as the echart stub).
+    expect(screen.getByTestId("echart")).toBeInTheDocument();
+  });
 });

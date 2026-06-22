@@ -8,8 +8,10 @@ import {
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
 import { PodDistributionChart } from "@/components/charts/PodDistributionChart";
+import { ThroughputConcurrencyChart } from "@/components/charts/ThroughputConcurrencyChart";
 import {
   availableFigureRefIds,
+  readCapacityCurve,
   readPodDistribution,
   readPrefixCache,
   summarizeForPrompt,
@@ -285,6 +287,15 @@ export const FigureRenderer = memo(function FigureRenderer({
         labelColors={REPORT_LABEL_COLORS}
       />
     );
+  } else if (refId === "throughput-vs-concurrency") {
+    const series = summaries
+      .map(({ r }) => ({ r, curve: readCapacityCurve(r.summaryMetrics) }))
+      .filter((x) => x.curve)
+      .map(({ r, curve }) => ({
+        stage: r.stageLabel,
+        points: (curve ?? []).map((p) => ({ concurrency: p.concurrency, rps: p.rps })),
+      }));
+    chart = <ThroughputConcurrencyChart title="Throughput vs concurrency" series={series} />;
   } else if (refId === "cold-warm-delta") {
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {
