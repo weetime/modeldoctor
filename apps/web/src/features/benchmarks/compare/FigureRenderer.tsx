@@ -7,7 +7,13 @@ import {
   type StageBarLabelColors,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
-import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./client-metrics";
+import { PodDistributionChart } from "@/components/charts/PodDistributionChart";
+import {
+  availableFigureRefIds,
+  readPodDistribution,
+  readPrefixCache,
+  summarizeForPrompt,
+} from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
 
 export interface FigureRendererProps {
@@ -241,6 +247,46 @@ export const FigureRenderer = memo(function FigureRenderer({
         labelColors={REPORT_LABEL_COLORS}
       />
     );
+  } else if (refId === "pod-traffic-distribution") {
+    const data = summaries
+      .map(({ r }) => ({ r, pods: readPodDistribution(r.benchmark?.serverMetrics) }))
+      .filter((x) => x.pods && x.pods.length > 0)
+      .map(({ r, pods }) => {
+        const total = (pods ?? []).reduce((s, p) => s + p.queries, 0) || 1;
+        return {
+          stage: r.stageLabel,
+          pods: (pods ?? []).map((p) => ({ pod: p.pod, value: (p.queries / total) * 100 })),
+        };
+      });
+    chart = (
+      <PodDistributionChart
+        title="Per-pod traffic share"
+        data={data}
+        unit="%"
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "pod-hit-rate") {
+    const data = summaries
+      .map(({ r }) => ({ r, pods: readPodDistribution(r.benchmark?.serverMetrics) }))
+      .filter((x) => x.pods && x.pods.length > 0)
+      .map(({ r, pods }) => ({
+        stage: r.stageLabel,
+        pods: (pods ?? []).map((p) => ({
+          pod: p.pod,
+          value: p.queries > 0 ? (p.hits / p.queries) * 100 : 0,
+        })),
+      }));
+    chart = (
+      <PodDistributionChart
+        title="Per-pod hit rate"
+        data={data}
+        unit="%"
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "cold-warm-delta") {
+    chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {
     chart = <FourMetricTable runs={runs} />;
   }
@@ -288,6 +334,71 @@ function FourMetricTable({ runs }: { runs: ReportRun[] }) {
             </td>
             <td style={{ textAlign: "right", fontFamily: "var(--pr-mono)" }}>
               {s.e2e?.p90?.toFixed(0) ?? "—"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Compact cold-warm delta table: one row per stage, QPS / TTFT p90 / E2E p90
+ * columns, plus a Δ% column vs the baseline stage. Models FourMetricTable's
+ * markup — static text, mono font for numbers, no hover dependency. */
+function ColdWarmDeltaTable({
+  runs,
+  baselineId,
+}: {
+  runs: ReportRun[];
+  baselineId?: string | null;
+}) {
+  const rows = runs
+    .filter((r) => r.benchmark !== null)
+    .map((r) => ({ r, s: summarizeForPrompt(r.summaryMetrics) }));
+
+  const baseIdx = baselineIndexOf(rows, baselineId) ?? 0;
+  const baseRow = rows[baseIdx];
+  const baseS = baseRow?.s;
+
+  function deltaPct(value: number | null | undefined, base: number | null | undefined): string {
+    if (value == null || base == null || base === 0) return "—";
+    const d = ((value - base) / Math.abs(base)) * 100;
+    return `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`;
+  }
+
+  // Δ% is compared against QPS (higher-is-better) — we surface all three
+  // metrics' raw values and a single Δ% on QPS as the headline delta.
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th style={{ textAlign: "right" }}>QPS</th>
+          <th style={{ textAlign: "right" }}>TTFT p90 (ms)</th>
+          <th style={{ textAlign: "right" }}>E2E p90 (ms)</th>
+          <th style={{ textAlign: "right" }}>Δ QPS vs baseline</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ r, s }, idx) => (
+          <tr key={r.id}>
+            <td>
+              <strong>{r.stageLabel}</strong>
+              {idx === baseIdx ? (
+                <span style={{ fontFamily: "var(--pr-mono)", color: "#59636e" }}> baseline</span>
+              ) : null}
+            </td>
+            <td style={{ textAlign: "right", fontFamily: "var(--pr-mono)" }}>
+              {s.throughput?.toFixed(2) ?? "—"}
+            </td>
+            <td style={{ textAlign: "right", fontFamily: "var(--pr-mono)" }}>
+              {s.ttft?.p90?.toFixed(0) ?? "—"}
+            </td>
+            <td style={{ textAlign: "right", fontFamily: "var(--pr-mono)" }}>
+              {s.e2e?.p90?.toFixed(0) ?? "—"}
+            </td>
+            <td style={{ textAlign: "right", fontFamily: "var(--pr-mono)" }}>
+              {idx === baseIdx ? "—" : deltaPct(s.throughput, baseS?.throughput)}
             </td>
           </tr>
         ))}
