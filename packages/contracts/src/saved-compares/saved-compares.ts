@@ -90,6 +90,10 @@ export interface HydratedBenchmarkRef {
   /** serverMetrics blob — carries serverMetrics.prefixCache for prefix-cache
    * figures (hit rate / top-pod share) in the compare report. */
   serverMetrics?: unknown;
+  /** Pre-computed latency distribution (e2e CDF samples, ms) for guidellm/vegeta
+   * runs — server attaches via BenchmarkChartsService so the pure FigureRenderer
+   * can draw it without fetching. Null/absent when the tool carries no samples. */
+  latencyCdf?: { samples: number[] } | null;
   params?: unknown;
   createdAt?: string;
 }

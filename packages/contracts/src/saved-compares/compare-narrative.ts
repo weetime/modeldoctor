@@ -84,6 +84,9 @@ export const figureRefIdSchema = z.enum([
   // Capacity-planning figure — rendered from summaryMetrics.data.capacityCurve
   // (guidellm sweep runs only). Available when any run carries a capacity curve.
   "throughput-vs-concurrency",
+  // Phase-2 figure — rendered from HydratedBenchmarkRef.latencyCdf.samples;
+  // shows the e2e latency CDF across runs for guidellm/vegeta tools.
+  "latency-distribution",
 ]);
 export type FigureRefId = z.infer<typeof figureRefIdSchema>;
 
