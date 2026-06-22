@@ -22,6 +22,17 @@ describe("deriveCompareDims", () => {
       ]),
     ).toEqual({ scenario: null, tool: "aiperf" });
   });
+  it("returns nulls for an empty set", () => {
+    expect(deriveCompareDims([])).toEqual({ scenario: null, tool: null });
+  });
+  it("returns nulls when both dims differ", () => {
+    expect(
+      deriveCompareDims([
+        { scenario: "lb-strategy", tool: "aiperf" },
+        { scenario: "inference", tool: "guidellm" },
+      ]),
+    ).toEqual({ scenario: null, tool: null });
+  });
 });
 
 describe("SavedComparesService", () => {
