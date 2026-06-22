@@ -2,6 +2,7 @@
 import type {
   CreateLlmJudgeProvider,
   ListLlmJudgeProvidersResponse,
+  LlmApiStyle,
   LlmJudgeProviderPublic,
   UpdateLlmJudgeProvider,
 } from "@modeldoctor/contracts";
@@ -24,6 +25,7 @@ export interface DecryptedLlmJudgeProvider {
   baseUrl: string;
   apiKey: string;
   model: string;
+  apiStyle: LlmApiStyle;
   enabled: boolean;
   isDefault: boolean;
 }
@@ -103,6 +105,7 @@ export class LlmJudgeService {
             baseUrl: input.baseUrl,
             apiKeyCipher,
             model: input.model,
+            apiStyle: input.apiStyle ?? "openai",
             enabled,
             isDefault: input.isDefault ?? false,
           },
@@ -128,6 +131,7 @@ export class LlmJudgeService {
     if (input.name !== undefined) data.name = input.name;
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl;
     if (input.model !== undefined) data.model = input.model;
+    if (input.apiStyle !== undefined) data.apiStyle = input.apiStyle;
     if (input.apiKey !== undefined) data.apiKeyCipher = encrypt(input.apiKey, this.key);
 
     // Resolve the post-update (isDefault, enabled) pair so we can enforce the
@@ -207,6 +211,7 @@ export class LlmJudgeService {
       baseUrl: row.baseUrl,
       apiKey: decrypt(row.apiKeyCipher, this.key),
       model: row.model,
+      apiStyle: (row.apiStyle as LlmApiStyle) ?? "openai",
       enabled: row.enabled,
       isDefault: row.isDefault,
     };
@@ -222,6 +227,7 @@ export class LlmJudgeService {
       name: row.name,
       baseUrl: row.baseUrl,
       model: row.model,
+      apiStyle: (row.apiStyle as LlmApiStyle) ?? "openai",
       enabled: row.enabled,
       isDefault: row.isDefault,
       apiKeyPreview: row.apiKeyCipher ? makePreview(decrypt(row.apiKeyCipher, this.key)) : "",

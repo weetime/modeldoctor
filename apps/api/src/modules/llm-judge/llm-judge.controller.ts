@@ -111,7 +111,7 @@ export class LlmJudgeController {
     }
     try {
       const r = await chatCompletion(
-        { baseUrl: body.baseUrl, apiKey, model: body.model },
+        { baseUrl: body.baseUrl, apiKey, model: body.model, apiStyle: body.apiStyle },
         [{ role: "user", content: "ping" }],
         { timeoutMs: 10_000 },
       );

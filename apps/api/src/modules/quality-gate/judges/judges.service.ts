@@ -25,7 +25,12 @@ export class JudgesService {
           );
         }
         const result = await chatCompletion(
-          { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: provider.model },
+          {
+            baseUrl: provider.baseUrl,
+            apiKey: provider.apiKey,
+            model: provider.model,
+            apiStyle: provider.apiStyle,
+          },
           [
             { role: "system", content: input.systemPrompt },
             { role: "user", content: input.userPrompt },

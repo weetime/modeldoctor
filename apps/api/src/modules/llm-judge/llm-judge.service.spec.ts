@@ -18,11 +18,15 @@ const TEST_KEY_B64 = Buffer.alloc(32, 7).toString("base64");
 const ADMIN: LlmJudgeActor = { sub: "u_admin", isAdmin: true };
 const USER: LlmJudgeActor = { sub: "u_normal", isAdmin: false };
 
-const base = (name: string, over: Partial<{ enabled: boolean; isDefault: boolean }> = {}) => ({
+const base = (
+  name: string,
+  over: Partial<{ enabled: boolean; isDefault: boolean; apiStyle: "openai" | "anthropic" }> = {},
+) => ({
   name,
   baseUrl: "https://api.example.com",
   apiKey: "sk-secret-key",
   model: "gpt-x",
+  apiStyle: "openai" as const,
   enabled: true,
   isDefault: false,
   ...over,

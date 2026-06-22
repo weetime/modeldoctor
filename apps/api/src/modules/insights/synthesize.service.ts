@@ -142,7 +142,12 @@ export class SynthesizeService {
     let raw: string;
     try {
       const r = await chatCompletion(
-        { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: provider.model },
+        {
+          baseUrl: provider.baseUrl,
+          apiKey: provider.apiKey,
+          model: provider.model,
+          apiStyle: provider.apiStyle,
+        },
         [
           { role: "system", content: systemPrompt(body.locale) },
           { role: "user", content: userPrompt },

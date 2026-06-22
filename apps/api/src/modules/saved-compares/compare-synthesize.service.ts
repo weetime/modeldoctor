@@ -168,16 +168,23 @@ export class CompareSynthesizeService {
   }
 
   private async callAndParse(
-    provider: { baseUrl: string; apiKey: string; model: string },
+    provider: { baseUrl: string; apiKey: string; model: string; apiStyle?: "openai" | "anthropic" },
     _locale: "zh-CN" | "en-US",
     messages: ChatMessage[],
   ): Promise<CompareNarrative> {
     let raw: string;
     try {
       const out = await chatCompletion(
-        { baseUrl: provider.baseUrl, apiKey: provider.apiKey, model: provider.model },
+        {
+          baseUrl: provider.baseUrl,
+          apiKey: provider.apiKey,
+          model: provider.model,
+          apiStyle: provider.apiStyle,
+        },
         messages,
-        { jsonMode: true, timeoutMs: LLM_TIMEOUT_MS },
+        // maxTokens only applies on the Anthropic path (required there); the
+        // deep report can run long, so give it headroom above the 16k default.
+        { jsonMode: true, timeoutMs: LLM_TIMEOUT_MS, maxTokens: 32_000 },
       );
       raw = out.content;
     } catch (e) {

@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   CreateLlmJudgeProvider,
+  LlmApiStyle,
   LlmJudgeProviderPublic,
   UpdateLlmJudgeProvider,
 } from "@modeldoctor/contracts";
@@ -10,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 import { FormActions } from "@/components/common/form-actions";
 import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ApiError } from "@/lib/api-client";
 import { toastLlmJudgeError } from "./errors";
@@ -32,10 +41,17 @@ interface ProviderInput {
   name: string;
   baseUrl: string;
   model: string;
+  apiStyle: LlmApiStyle;
   apiKey: string;
   enabled: boolean;
   isDefault: boolean;
 }
+
+// Edit-mode resolver: a blank API Key means "keep the saved key", so unlike the
+// create schema (which requires a key) the form must accept an empty string.
+const editFormSchema = updateLlmJudgeProviderSchema.extend({
+  apiKey: z.string().max(500).optional(),
+});
 
 export type ProviderSheetMode =
   | { kind: "create"; initial?: Partial<ProviderInput> }
@@ -51,6 +67,7 @@ const empty: ProviderInput = {
   name: "",
   baseUrl: "",
   model: "",
+  apiStyle: "openai",
   apiKey: "",
   enabled: true,
   isDefault: false,
@@ -61,6 +78,7 @@ function existingToFormValues(p: LlmJudgeProviderPublic): ProviderInput {
     name: p.name,
     baseUrl: p.baseUrl,
     model: p.model,
+    apiStyle: p.apiStyle,
     apiKey: "", // never sent on PATCH unless rotate toggle is on
     enabled: p.enabled,
     isDefault: p.isDefault,
@@ -81,9 +99,7 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<ProviderInput>({
-    resolver: zodResolver(
-      isEdit ? updateLlmJudgeProviderSchema : createLlmJudgeProviderSchema,
-    ) as never,
+    resolver: zodResolver(isEdit ? editFormSchema : createLlmJudgeProviderSchema) as never,
     mode: "onTouched",
     defaultValues: existing
       ? existingToFormValues(existing)
@@ -125,6 +141,7 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
           name: values.name,
           baseUrl,
           model: values.model,
+          apiStyle: values.apiStyle,
           enabled: values.enabled,
           isDefault: values.isDefault,
         };
@@ -145,6 +162,7 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
           name: values.name,
           baseUrl,
           model: values.model,
+          apiStyle: values.apiStyle,
           apiKey: values.apiKey.trim(),
           enabled: values.enabled,
           isDefault: values.isDefault,
@@ -167,6 +185,7 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
     const baseUrl = baseUrlValue?.trim();
     const model = modelValue?.trim();
     const key = apiKeyValue?.trim();
+    const apiStyle = form.getValues("apiStyle");
     // Need baseUrl + model always. apiKey may be omitted only when editing an
     // existing provider (the saved key is resolved server-side by id).
     if (!baseUrl || !model || (!key && !existing)) {
@@ -177,6 +196,7 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
       const r = await testMut.mutateAsync({
         baseUrl,
         model,
+        apiStyle,
         ...(key ? { apiKey: key } : {}),
         ...(existing && !key ? { id: existing.id } : {}),
       });
@@ -244,6 +264,35 @@ export function ProviderSheet({ open, onOpenChange, mode }: ProviderSheetProps) 
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="apiStyle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>{t("sheet.fields.apiStyle.label")}</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="openai">
+                            {t("sheet.fields.apiStyle.openai")}
+                          </SelectItem>
+                          <SelectItem value="anthropic">
+                            {t("sheet.fields.apiStyle.anthropic")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("sheet.fields.apiStyle.help")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}

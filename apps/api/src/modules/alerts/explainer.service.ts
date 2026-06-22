@@ -84,7 +84,12 @@ export class AlertExplainerService {
     let parsed: z.infer<typeof explanationResponseSchema>;
     try {
       const res = await chatCompletion(
-        { baseUrl: judge.baseUrl, apiKey: judge.apiKey, model: judge.model },
+        {
+          baseUrl: judge.baseUrl,
+          apiKey: judge.apiKey,
+          model: judge.model,
+          apiStyle: judge.apiStyle,
+        },
         [
           { role: "system", content: SYS_PROMPT_ZH },
           { role: "user", content: prompt },
