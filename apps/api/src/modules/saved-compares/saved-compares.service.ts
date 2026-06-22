@@ -9,10 +9,24 @@ import type {
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
+import { BenchmarkChartsService } from "../benchmark/benchmark-charts.service.js";
+
+const CDF_SAMPLE_CAP = 1500;
+/** Evenly downsample to at most `cap` points — preserves CDF shape, caps payload. */
+export function downsampleSamples(samples: number[], cap = CDF_SAMPLE_CAP): number[] {
+  if (samples.length <= cap) return samples;
+  const step = samples.length / cap;
+  const out: number[] = [];
+  for (let i = 0; i < cap; i++) out.push(samples[Math.floor(i * step)]);
+  return out;
+}
 
 @Injectable()
 export class SavedComparesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly charts: BenchmarkChartsService,
+  ) {}
 
   private serialize(row: {
     id: string;
@@ -123,6 +137,15 @@ export class SavedComparesService {
         serverMetrics: b.serverMetrics,
         params: b.params,
         createdAt: b.createdAt.toISOString(),
+        latencyCdf: (() => {
+          const charts = this.charts.extract({
+            id: b.id,
+            tool: b.tool,
+            status: b.status,
+            rawOutput: b.rawOutput as Record<string, unknown> | null,
+          });
+          return charts.latencyCdf ? { samples: downsampleSamples(charts.latencyCdf.samples) } : null;
+        })(),
       };
     });
 

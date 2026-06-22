@@ -3,7 +3,36 @@ import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../../database/prisma.service.js";
-import { deriveCompareDims, SavedComparesService } from "./saved-compares.service.js";
+import { BenchmarkChartsService } from "../benchmark/benchmark-charts.service.js";
+import { deriveCompareDims, downsampleSamples, SavedComparesService } from "./saved-compares.service.js";
+
+describe("downsampleSamples", () => {
+  it("returns the same length when at or below cap", () => {
+    const arr = Array.from({ length: 10 }, (_, i) => i);
+    const result = downsampleSamples(arr, 1500);
+    expect(result).toHaveLength(10);
+  });
+
+  it("returns exactly cap elements when above cap", () => {
+    const arr = Array.from({ length: 5000 }, (_, i) => i);
+    const result = downsampleSamples(arr, 1500);
+    expect(result).toHaveLength(1500);
+  });
+
+  it("first element matches original first", () => {
+    const arr = Array.from({ length: 5000 }, (_, i) => i);
+    const result = downsampleSamples(arr, 1500);
+    expect(result[0]).toBe(arr[0]);
+  });
+
+  it("result is monotonic non-decreasing", () => {
+    const arr = Array.from({ length: 5000 }, (_, i) => i);
+    const result = downsampleSamples(arr, 1500);
+    for (let i = 1; i < result.length; i++) {
+      expect(result[i]).toBeGreaterThanOrEqual(result[i - 1]);
+    }
+  });
+});
 
 describe("deriveCompareDims", () => {
   it("returns the shared dims when homogeneous", () => {
@@ -47,6 +76,7 @@ describe("SavedComparesService", () => {
     mod = await Test.createTestingModule({
       providers: [
         SavedComparesService,
+        BenchmarkChartsService,
         PrismaService,
         {
           provide: ConfigService,
