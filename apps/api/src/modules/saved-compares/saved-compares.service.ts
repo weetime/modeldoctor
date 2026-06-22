@@ -12,12 +12,17 @@ import { PrismaService } from "../../database/prisma.service.js";
 import { BenchmarkChartsService } from "../benchmark/benchmark-charts.service.js";
 
 const CDF_SAMPLE_CAP = 1500;
-/** Evenly downsample to at most `cap` points — preserves CDF shape, caps payload. */
+/** Evenly downsample to at most `cap` points — preserves CDF shape, caps payload.
+ * Uses an endpoint-inclusive step so both the first (min) and last (max/p100)
+ * samples survive: tail latency is the whole point of a latency CDF. */
 export function downsampleSamples(samples: number[], cap = CDF_SAMPLE_CAP): number[] {
   if (samples.length <= cap) return samples;
-  const step = samples.length / cap;
+  if (cap <= 1) return samples.slice(0, cap);
+  const step = (samples.length - 1) / (cap - 1);
   const out: number[] = [];
-  for (let i = 0; i < cap; i++) out.push(samples[Math.floor(i * step)]);
+  for (let i = 0; i < cap; i++) {
+    out.push(samples[Math.min(Math.floor(i * step), samples.length - 1)]);
+  }
   return out;
 }
 

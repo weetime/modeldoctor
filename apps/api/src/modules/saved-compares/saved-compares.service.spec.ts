@@ -29,6 +29,12 @@ describe("downsampleSamples", () => {
     expect(result[0]).toBe(arr[0]);
   });
 
+  it("last element matches original last (preserves tail latency)", () => {
+    const arr = Array.from({ length: 5000 }, (_, i) => i);
+    const result = downsampleSamples(arr, 1500);
+    expect(result[result.length - 1]).toBe(arr[arr.length - 1]);
+  });
+
   it("result is monotonic non-decreasing", () => {
     const arr = Array.from({ length: 5000 }, (_, i) => i);
     const result = downsampleSamples(arr, 1500);
