@@ -263,6 +263,78 @@ describe("guidellm.parseFinalReport", () => {
   });
 });
 
+describe("guidellm.parseFinalReport capacityCurve", () => {
+  function makeBench(concurrency: number, rps: number, e2eLatencySeconds: number) {
+    return {
+      metrics: {
+        request_concurrency: {
+          successful: { mean: concurrency, max: concurrency, percentiles: { p50: concurrency, p90: concurrency, p95: concurrency, p99: concurrency } },
+        },
+        requests_per_second: {
+          successful: { mean: rps, max: rps, percentiles: { p50: rps, p90: rps, p95: rps, p99: rps } },
+        },
+        request_latency: {
+          successful: {
+            mean: e2eLatencySeconds,
+            max: e2eLatencySeconds,
+            percentiles: { p50: e2eLatencySeconds, p90: e2eLatencySeconds, p95: e2eLatencySeconds, p99: e2eLatencySeconds },
+          },
+        },
+        time_to_first_token_ms: {
+          successful: { mean: 0, max: 0, percentiles: { p50: 0, p90: 0, p95: 0, p99: 0 } },
+        },
+        inter_token_latency_ms: {
+          successful: { mean: 0, max: 0, percentiles: { p50: 0, p90: 0, p95: 0, p99: 0 } },
+        },
+        output_tokens_per_second: {
+          successful: { mean: 0, max: 0, percentiles: { p50: 0, p90: 0, p95: 0, p99: 0 } },
+        },
+        prompt_tokens_per_second: {
+          successful: { mean: 0, max: 0, percentiles: { p50: 0, p90: 0, p95: 0, p99: 0 } },
+        },
+        tokens_per_second: {
+          successful: { mean: 0, max: 0, percentiles: { p50: 0, p90: 0, p95: 0, p99: 0 } },
+        },
+        request_totals: { total: 10, successful: 10, errored: 0, incomplete: 0 },
+      },
+    };
+  }
+
+  it("extracts capacityCurve sorted ascending by concurrency from 3 sweep benches", () => {
+    // Input: non-sorted concurrency order (64, 4, 16) to verify sort
+    const raw = {
+      benchmarks: [
+        makeBench(64, 30, 2.5),  // concurrency=64, e2eP95Ms=2500
+        makeBench(4, 5, 0.1),    // concurrency=4,  e2eP95Ms=100
+        makeBench(16, 15, 0.8),  // concurrency=16, e2eP95Ms=800
+      ],
+    };
+    const buf = Buffer.from(JSON.stringify(raw), "utf8");
+    const result = parseFinalReport("", { report: buf });
+    if (result.tool !== "guidellm") throw new Error(`expected guidellm, got ${result.tool}`);
+
+    const curve = result.data.capacityCurve;
+    expect(curve).toBeDefined();
+    expect(curve).toHaveLength(3);
+
+    // Sorted ascending by concurrency
+    expect(curve![0].concurrency).toBe(4);
+    expect(curve![1].concurrency).toBe(16);
+    expect(curve![2].concurrency).toBe(64);
+
+    // First point: e2eP95Ms = 0.1 seconds × 1000 = 100 ms
+    expect(curve![0].e2eP95Ms).toBeCloseTo(100);
+  });
+
+  it("returns undefined capacityCurve for single-bench (non-sweep) runs", () => {
+    const raw = { benchmarks: [makeBench(8, 10, 0.5)] };
+    const buf = Buffer.from(JSON.stringify(raw), "utf8");
+    const result = parseFinalReport("", { report: buf });
+    if (result.tool !== "guidellm") throw new Error(`expected guidellm, got ${result.tool}`);
+    expect(result.data.capacityCurve).toBeUndefined();
+  });
+});
+
 describe("guidellm extraArgs escape hatch", () => {
   const withExtra = (extraArgs: string) =>
     buildCommand({ runId: "r1", params: { ...defaultParams, extraArgs }, connection: baseConn })

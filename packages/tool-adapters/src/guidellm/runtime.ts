@@ -166,6 +166,20 @@ function mapGuidellmRawToReport(raw: Record<string, unknown>): GuidellmReport {
     p99: e2e.p99 * 1000,
   };
 
+  const capacityCurve =
+    benches.length > 1
+      ? benches
+          .map((bn) => {
+            const mx = (bn.metrics as Record<string, unknown> | undefined) ?? {};
+            return {
+              concurrency: Number(successful(mx, "request_concurrency").mean ?? 0),
+              rps: Number(successful(mx, "requests_per_second").mean ?? 0),
+              e2eP95Ms: latency(mx, "request_latency").p95 * 1000,
+            };
+          })
+          .sort((a, z) => a.concurrency - z.concurrency)
+      : undefined;
+
   return {
     ttft: latency(metrics, "time_to_first_token_ms"),
     itl: latency(metrics, "inter_token_latency_ms"),
@@ -184,6 +198,7 @@ function mapGuidellmRawToReport(raw: Record<string, unknown>): GuidellmReport {
       mean: Number(concurrencySrc.mean ?? 0),
       max: Number(concurrencySrc.max ?? 0),
     },
+    capacityCurve,
   };
 }
 
