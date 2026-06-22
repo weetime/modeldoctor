@@ -45,6 +45,25 @@ it("does not offer it without a curve", () => {
   expect(set.has("throughput-vs-concurrency")).toBe(false);
 });
 
+it("offers latency-distribution when >=2 runs each carry a CDF", () => {
+  const set = availableFigureRefIds([
+    { summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true },
+    { summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true },
+  ]);
+  expect(set.has("latency-distribution")).toBe(true);
+});
+it("does not offer latency-distribution if any run lacks a CDF", () => {
+  const set = availableFigureRefIds([
+    { summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true },
+    { summaryMetrics: null, serverMetrics: null, hasLatencyCdf: false },
+  ]);
+  expect(set.has("latency-distribution")).toBe(false);
+});
+it("does not offer latency-distribution for a single run", () => {
+  const set = availableFigureRefIds([{ summaryMetrics: null, serverMetrics: null, hasLatencyCdf: true }]);
+  expect(set.has("latency-distribution")).toBe(false);
+});
+
 describe("readCapacityCurve", () => {
   it("returns the curve when present and non-empty", () => {
     const m = { data: { capacityCurve: [{ concurrency: 4, rps: 30, e2eP95Ms: 500 }] } };

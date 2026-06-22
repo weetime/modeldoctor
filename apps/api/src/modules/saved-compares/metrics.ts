@@ -103,6 +103,8 @@ export function readCapacityCurve(summaryMetrics: unknown): CapacityPoint[] | nu
 export interface RunMetricBlobs {
   summaryMetrics: unknown;
   serverMetrics?: unknown;
+  /** True when the run carries pre-computed latency CDF samples (guidellm/vegeta). */
+  hasLatencyCdf?: boolean;
 }
 
 /**
@@ -138,6 +140,9 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
   }
   if (runs.some((r) => readCapacityCurve(r.summaryMetrics) !== null)) {
     out.add("throughput-vs-concurrency");
+  }
+  if (runs.length >= 2 && runs.every((r) => r.hasLatencyCdf)) {
+    out.add("latency-distribution");
   }
   out.add("compare-grid");
   return out;

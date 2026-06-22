@@ -32,6 +32,8 @@ export function readCapacityCurve(summaryMetrics: unknown): CapacityPoint[] | nu
 export interface RunMetricBlobs {
   summaryMetrics: unknown;
   serverMetrics?: unknown;
+  /** True when the run carries pre-computed latency CDF samples (guidellm/vegeta). */
+  hasLatencyCdf?: boolean;
 }
 
 /**
@@ -166,6 +168,9 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
   // `apps/api/src/modules/saved-compares/metrics.ts#availableFigureRefIds`.
   if (runs.some((r) => readCapacityCurve(r.summaryMetrics) !== null)) {
     out.add("throughput-vs-concurrency");
+  }
+  if (runs.length >= 2 && runs.every((r) => r.hasLatencyCdf)) {
+    out.add("latency-distribution");
   }
   // compare-grid only needs any of throughput/err/ttft/e2e — always available
   // when there's at least one summary; degrades cell-by-cell.
