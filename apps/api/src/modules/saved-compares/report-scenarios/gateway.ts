@@ -9,7 +9,10 @@ const EN = `This is a gateway / HTTP-layer load test (gateway, vegeta).
 - Headline with throughput (req/s) or e2e p95; error rate and status-code mix support the stability story.`;
 
 function assemble(_sc: HydratedSavedCompare): ScenarioData {
-  return { promptBlock: "", preferredFigures: ["stage-bars-throughput", "stage-bars-e2e-p95", "stage-bars-error-rate"] };
+  return {
+    promptBlock: "",
+    preferredFigures: ["stage-bars-throughput", "stage-bars-e2e-p95", "stage-bars-error-rate"],
+  };
 }
 export const gatewayProfile: ReportScenarioProfile = {
   intent: "gateway",

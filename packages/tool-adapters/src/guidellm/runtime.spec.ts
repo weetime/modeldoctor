@@ -268,16 +268,29 @@ describe("guidellm.parseFinalReport capacityCurve", () => {
     return {
       metrics: {
         request_concurrency: {
-          successful: { mean: concurrency, max: concurrency, percentiles: { p50: concurrency, p90: concurrency, p95: concurrency, p99: concurrency } },
+          successful: {
+            mean: concurrency,
+            max: concurrency,
+            percentiles: { p50: concurrency, p90: concurrency, p95: concurrency, p99: concurrency },
+          },
         },
         requests_per_second: {
-          successful: { mean: rps, max: rps, percentiles: { p50: rps, p90: rps, p95: rps, p99: rps } },
+          successful: {
+            mean: rps,
+            max: rps,
+            percentiles: { p50: rps, p90: rps, p95: rps, p99: rps },
+          },
         },
         request_latency: {
           successful: {
             mean: e2eLatencySeconds,
             max: e2eLatencySeconds,
-            percentiles: { p50: e2eLatencySeconds, p90: e2eLatencySeconds, p95: e2eLatencySeconds, p99: e2eLatencySeconds },
+            percentiles: {
+              p50: e2eLatencySeconds,
+              p90: e2eLatencySeconds,
+              p95: e2eLatencySeconds,
+              p99: e2eLatencySeconds,
+            },
           },
         },
         time_to_first_token_ms: {
@@ -304,9 +317,9 @@ describe("guidellm.parseFinalReport capacityCurve", () => {
     // Input: non-sorted concurrency order (64, 4, 16) to verify sort
     const raw = {
       benchmarks: [
-        makeBench(64, 30, 2.5),  // concurrency=64, e2eP95Ms=2500
-        makeBench(4, 5, 0.1),    // concurrency=4,  e2eP95Ms=100
-        makeBench(16, 15, 0.8),  // concurrency=16, e2eP95Ms=800
+        makeBench(64, 30, 2.5), // concurrency=64, e2eP95Ms=2500
+        makeBench(4, 5, 0.1), // concurrency=4,  e2eP95Ms=100
+        makeBench(16, 15, 0.8), // concurrency=16, e2eP95Ms=800
       ],
     };
     const buf = Buffer.from(JSON.stringify(raw), "utf8");

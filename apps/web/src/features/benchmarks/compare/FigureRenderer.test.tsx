@@ -1,8 +1,8 @@
 import "@/lib/i18n";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { ReportRun } from "./ReportSections";
 import { FigureRenderer } from "./FigureRenderer";
+import type { ReportRun } from "./ReportSections";
 
 // Minimal guidellm summary metrics fixture — provides throughput + ttft + e2e.
 const guidellmMetrics = () => ({
@@ -71,12 +71,7 @@ describe("FigureRenderer", () => {
 
   it("renders pod-hit-rate chart WITHOUT the data-unavailable placeholder", () => {
     render(
-      <FigureRenderer
-        refId="pod-hit-rate"
-        runs={runs}
-        caption="Pod hit rate"
-        figureNumber={2}
-      />,
+      <FigureRenderer refId="pod-hit-rate" runs={runs} caption="Pod hit rate" figureNumber={2} />,
     );
     expect(screen.queryByText(/data unavailable/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("echart")).toBeInTheDocument();

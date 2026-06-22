@@ -198,7 +198,13 @@ describe("/api/saved-compares (e2e)", () => {
     await request(ctx.app.getHttpServer())
       .post("/api/llm-judge/providers")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "default", baseUrl: "http://llm", apiKey: "sk-test", model: "gpt-4", isDefault: true })
+      .send({
+        name: "default",
+        baseUrl: "http://llm",
+        apiKey: "sk-test",
+        model: "gpt-4",
+        isDefault: true,
+      })
       .expect(201);
 
     const r1 = await request(ctx.app.getHttpServer())

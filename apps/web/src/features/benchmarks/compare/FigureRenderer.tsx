@@ -1,13 +1,13 @@
 import type { FigureRefId } from "@modeldoctor/contracts";
 import { memo } from "react";
 import { assignRunColors } from "@/components/charts/_shared";
+import { PodDistributionChart } from "@/components/charts/PodDistributionChart";
 import {
   StageBarChart,
   type StageBarDatum,
   type StageBarLabelColors,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
-import { PodDistributionChart } from "@/components/charts/PodDistributionChart";
 import { ThroughputConcurrencyChart } from "@/components/charts/ThroughputConcurrencyChart";
 import {
   availableFigureRefIds,

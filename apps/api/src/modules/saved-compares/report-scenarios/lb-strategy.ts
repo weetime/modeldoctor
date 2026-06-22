@@ -24,14 +24,19 @@ function assemble(sc: HydratedSavedCompare): ScenarioData {
     if (!pods || pods.length === 0) continue;
     const total = pods.reduce((s, p) => s + p.queries, 0) || 1;
     const top = pods
-      .map((p) => ({ pod: p.pod, sharePct: (p.queries / total) * 100, hitPct: p.queries > 0 ? (p.hits / p.queries) * 100 : 0 }))
+      .map((p) => ({
+        pod: p.pod,
+        sharePct: (p.queries / total) * 100,
+        hitPct: p.queries > 0 ? (p.hits / p.queries) * 100 : 0,
+      }))
       .sort((a, z) => z.sharePct - a.sharePct)
       .slice(0, 6)
       .map((p) => `    ${p.pod}: share=${p.sharePct.toFixed(0)}% hit=${p.hitPct.toFixed(0)}%`)
       .join("\n");
     lines.push(`  [${b.stageLabel}] per-pod (top by share):\n${top}`);
   }
-  const promptBlock = lines.length > 0 ? `## Per-pod traffic distribution\n${lines.join("\n")}` : "";
+  const promptBlock =
+    lines.length > 0 ? `## Per-pod traffic distribution\n${lines.join("\n")}` : "";
   return {
     promptBlock,
     preferredFigures: [

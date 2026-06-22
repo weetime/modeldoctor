@@ -1,5 +1,5 @@
-import { defaultProfile } from "./default.js";
 import { capacityProfile } from "./capacity.js";
+import { defaultProfile } from "./default.js";
 import { engineKvCacheProfile } from "./engine-kv-cache.js";
 import { gatewayProfile } from "./gateway.js";
 import { inferenceMultiProfile, inferenceSingleProfile } from "./inference.js";
@@ -40,5 +40,5 @@ export function getReportProfile(intent: ReportIntent): ReportScenarioProfile {
   return REGISTRY[intent] ?? defaultProfile;
 }
 
-export { REGISTRY as reportScenarioRegistry };
 export type { ReportScenarioProfile } from "./types.js";
+export { REGISTRY as reportScenarioRegistry };

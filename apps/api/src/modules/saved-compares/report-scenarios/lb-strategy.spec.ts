@@ -4,10 +4,14 @@ import { lbStrategyProfile } from "./lb-strategy.js";
 const sc = {
   benchmarks: [
     {
-      missing: false, stageLabel: "ON", name: "on",
+      missing: false,
+      stageLabel: "ON",
+      name: "on",
       serverMetrics: {
         prefixCache: {
-          hitRatePct: 57.2, topPodSharePct: 41, metricTag: "v1",
+          hitRatePct: 57.2,
+          topPodSharePct: 41,
+          metricTag: "v1",
           perPod: [
             { pod: "p1", queries: 800, hits: 500 },
             { pod: "p2", queries: 200, hits: 60 },

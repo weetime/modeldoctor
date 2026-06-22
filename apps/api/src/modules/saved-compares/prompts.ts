@@ -89,9 +89,6 @@ Language: English throughout.
 schemaVersion: 2, locale: "en-US".
 Emit raw JSON only — no \`\`\`json fence, no preamble.`;
 
-export const COMPARE_SYS_PROMPT_ZH = ZH_SCHEMA_INSTRUCTIONS;
-export const COMPARE_SYS_PROMPT_EN = EN_SCHEMA_INSTRUCTIONS;
-
 export function buildSystemPrompt(locale: "zh-CN" | "en-US", scenarioFragment: string): string {
   const base = locale === "en-US" ? EN_SCHEMA_INSTRUCTIONS : ZH_SCHEMA_INSTRUCTIONS;
   if (!scenarioFragment.trim()) return base;

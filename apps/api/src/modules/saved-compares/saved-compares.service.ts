@@ -127,7 +127,9 @@ export class SavedComparesService {
     });
 
     const dims = deriveCompareDims(
-      hydratedBenchmarks.filter((b) => !b.missing).map((b) => ({ scenario: b.scenario, tool: b.tool })),
+      hydratedBenchmarks
+        .filter((b) => !b.missing)
+        .map((b) => ({ scenario: b.scenario, tool: b.tool })),
     );
     return {
       ...sc,

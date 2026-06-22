@@ -11,7 +11,10 @@ const EN = `This is an engine KV / prefix-cache cold-vs-warm comparison (engine-
 - Cold/warm pair by the "(rerun)" name suffix; with a single round, degrade to a single-point description — do not invent a cold/warm delta.`;
 
 function assemble(_sc: HydratedSavedCompare): ScenarioData {
-  return { promptBlock: "", preferredFigures: ["cold-warm-delta", "stage-bars-ttft-p95", "stage-bars-throughput"] };
+  return {
+    promptBlock: "",
+    preferredFigures: ["cold-warm-delta", "stage-bars-ttft-p95", "stage-bars-throughput"],
+  };
 }
 export const engineKvCacheProfile: ReportScenarioProfile = {
   intent: "engine-kv-cache",
