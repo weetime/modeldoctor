@@ -67,6 +67,23 @@ export function readPrefixCache(serverMetrics: unknown): PrefixCacheSummary | nu
   return { hitRatePct: parsed.data.hitRatePct, topPodSharePct: parsed.data.topPodSharePct };
 }
 
+export interface PodDatum {
+  pod: string;
+  queries: number;
+  hits: number;
+}
+
+/** Read serverMetrics.prefixCache.perPod (per-pod query/hit counts). Null when
+ * the annotation is absent/malformed; [] when present but empty. */
+export function readPodDistribution(serverMetrics: unknown): PodDatum[] | null {
+  const parsed = prefixCacheAnnotationSchema.safeParse(
+    (serverMetrics as { prefixCache?: unknown } | null)?.prefixCache,
+  );
+  if (!parsed.success) return null;
+  const pods = (parsed.data as { perPod?: PodDatum[] }).perPod;
+  return Array.isArray(pods) ? pods : [];
+}
+
 /** One run's two metric blobs. summaryMetrics = tool report (throughput/latency);
  * serverMetrics = prefix-cache annotation. */
 export interface RunMetricBlobs {
@@ -88,10 +105,22 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
   if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
   if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
   if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
+  // cold-warm-delta: available whenever ≥2 runs carry throughput or ttft data.
+  if (perRun.filter((s) => s.throughput !== null || s.ttft !== null).length >= 2) {
+    out.add("cold-warm-delta");
+  }
   // Prefix-cache figures need EVERY run to carry the annotation (complete bars).
-  if (runs.map((r) => readPrefixCache(r.serverMetrics)).every((p) => p !== null)) {
+  const pc = runs.map((r) => readPrefixCache(r.serverMetrics));
+  if (pc.every((p) => p !== null)) {
     out.add("stage-bars-prefix-cache-hit");
     out.add("stage-bars-top-pod-share");
+    // Pod-distribution figures: additionally require every run to carry a
+    // non-empty perPod array (lb-strategy runs only).
+    const pods = runs.map((r) => readPodDistribution(r.serverMetrics));
+    if (pods.every((p) => p !== null && p.length > 0)) {
+      out.add("pod-traffic-distribution");
+      out.add("pod-hit-rate");
+    }
   }
   out.add("compare-grid");
   return out;

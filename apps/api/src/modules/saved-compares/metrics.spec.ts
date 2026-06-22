@@ -1,5 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { readErrorRate, readP95Latency, readThroughput, summarizeForPrompt } from "./metrics.js";
+import {
+  availableFigureRefIds,
+  readErrorRate,
+  readP95Latency,
+  readPodDistribution,
+  readThroughput,
+  summarizeForPrompt,
+} from "./metrics.js";
+
+const withPods = {
+  prefixCache: {
+    hitRatePct: 50,
+    topPodSharePct: 60,
+    perPod: [
+      { pod: "p1", queries: 600, hits: 300 },
+      { pod: "p2", queries: 400, hits: 100 },
+    ],
+    metricTag: "v1",
+  },
+};
+
+it("reads per-pod distribution", () => {
+  expect(readPodDistribution(withPods)).toHaveLength(2);
+});
+
+it("offers pod figures when data supports", () => {
+  const set = availableFigureRefIds([
+    { summaryMetrics: null, serverMetrics: withPods },
+    { summaryMetrics: null, serverMetrics: withPods },
+  ]);
+  expect(set.has("pod-traffic-distribution")).toBe(true);
+  expect(set.has("pod-hit-rate")).toBe(true);
+});
 
 describe("metrics readers", () => {
   it("reads guidellm p95 latency from e2eLatency dist", () => {
