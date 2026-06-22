@@ -32,6 +32,8 @@ export const savedCompareSchema = z
     classification: classificationSchema.default("internal"),
     clientName: z.string().max(120).nullable(),
     version: z.number().int().positive().default(1),
+    scenario: z.string().nullable().optional(),
+    tool: z.string().nullable().optional(),
     narrative: z.unknown().nullable(), // shape lives in compare-narrative.ts; kept loose here
     narrativeAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),

@@ -25,6 +25,8 @@ export class SavedComparesService {
     classification: string;
     clientName: string | null;
     version: number;
+    scenario: string | null;
+    tool: string | null;
     narrative: unknown;
     narrativeAt: Date | null;
     createdAt: Date;
@@ -41,6 +43,8 @@ export class SavedComparesService {
       classification: row.classification as Classification,
       clientName: row.clientName,
       version: row.version,
+      scenario: row.scenario,
+      tool: row.tool,
       narrative: row.narrative,
       narrativeAt: row.narrativeAt ? row.narrativeAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
