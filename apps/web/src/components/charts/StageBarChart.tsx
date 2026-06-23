@@ -269,7 +269,10 @@ export function StageBarChart({
         },
         legend:
           series.length > 1
-            ? { type: "scroll", top: 0, textStyle: { color: tokens.textColor } }
+            ? // Use the fixed report label color (same as the axis labels), not
+              // the app-theme token — the report paper is always light, so a
+              // dark-theme token would render the legend faint/illegible.
+              { type: "scroll", top: 0, textStyle: { color: lc.value } }
             : undefined,
         xAxis: {
           type: "category",

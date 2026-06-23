@@ -52,6 +52,8 @@ const REPORT_PALETTE = [
 ] as const;
 
 const PERCENTILES = ["p50", "p90", "p99"] as const;
+// ITL (TPOT) only carries p50/p95 across tools — see MetricKind.
+const ITL_PERCENTILES = ["p50", "p95"] as const;
 
 /** Index of the baseline stage within `rows` (preserving their order). Falls
  * back to the first stage when no baseline is set or it was filtered out. */
@@ -188,6 +190,30 @@ export const FigureRenderer = memo(function FigureRenderer({
         labelColors={REPORT_LABEL_COLORS}
       />
     );
+  } else if (refId === "stage-bars-tpot-p95") {
+    // ITL carries only p50/p95 (see MetricKind), so this figure shows two bars.
+    const rows = summaries.filter(({ s }) => s.itl);
+    const data: StageBarDatum[] = ITL_PERCENTILES.map((p) => ({
+      stage: p,
+      ...Object.fromEntries(rows.map(({ r, s }) => [r.id, s.itl?.[p] ?? 0])),
+    }));
+    const series: StageBarSeries[] = rows.map(({ r }) => ({
+      key: r.id,
+      label: r.stageLabel,
+      color: colorMap[r.id],
+      decimals: 0,
+      higherIsBetter: false,
+    }));
+    chart = (
+      <StageBarChart
+        title="TPOT (inter-token) percentiles"
+        data={rows.length > 0 ? data : []}
+        series={series}
+        yLabel="ms"
+        baselineSeriesKey={baselineKeyOf(rows, baselineId)}
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
   } else if (refId === "stage-bars-e2e-p95") {
     const rows = summaries.filter(({ s }) => s.e2e);
     const data: StageBarDatum[] = PERCENTILES.map((p) => ({
@@ -307,7 +333,16 @@ export const FigureRenderer = memo(function FigureRenderer({
         ? [{ runId: r.id, runLabel: r.stageLabel, samples }]
         : [];
     });
-    chart = <LatencyCDF ariaLabel="Latency CDF by stage" series={series} colorMap={colorMap} />;
+    // Report paper is always light — force the light theme so the CDF's axis /
+    // legend text stays dark and legible regardless of the app theme.
+    chart = (
+      <LatencyCDF
+        ariaLabel="Latency CDF by stage"
+        series={series}
+        colorMap={colorMap}
+        theme="light"
+      />
+    );
   } else if (refId === "cold-warm-delta") {
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {

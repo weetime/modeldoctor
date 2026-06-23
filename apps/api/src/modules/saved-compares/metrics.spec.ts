@@ -66,6 +66,29 @@ it("does not offer latency-distribution for a single run", () => {
   expect(set.has("latency-distribution")).toBe(false);
 });
 
+it("offers stage-bars-tpot-p95 only when every run carries ITL", () => {
+  const withItl = { tool: "guidellm", data: { itl: { p50: 20, p95: 60 } } };
+  const noItl = { tool: "guidellm", data: {} };
+  expect(
+    availableFigureRefIds([
+      { summaryMetrics: withItl, serverMetrics: null },
+      { summaryMetrics: withItl, serverMetrics: null },
+    ]).has("stage-bars-tpot-p95"),
+  ).toBe(true);
+  expect(
+    availableFigureRefIds([
+      { summaryMetrics: withItl, serverMetrics: null },
+      { summaryMetrics: noItl, serverMetrics: null },
+    ]).has("stage-bars-tpot-p95"),
+  ).toBe(false);
+});
+
+it("summarizeForPrompt reads ITL p50/p95", () => {
+  const out = summarizeForPrompt({ tool: "guidellm", data: { itl: { p50: 20, p95: 60 } } });
+  expect(out.itl).toEqual({ p50: 20, p95: 60 });
+  expect(summarizeForPrompt({ tool: "guidellm", data: {} }).itl).toBeNull();
+});
+
 describe("readCapacityCurve", () => {
   it("returns the curve when present and non-empty", () => {
     const m = { data: { capacityCurve: [{ concurrency: 4, rps: 30, e2eP95Ms: 500 }] } };

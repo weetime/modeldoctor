@@ -27,6 +27,11 @@ it("emits a per-pod distribution block citing pod shares", () => {
   expect(data.promptBlock).toContain("ON");
   expect(data.promptBlock).toContain("80"); // p1 share% = 800/1000
   expect(data.preferredFigures).toContain("stage-bars-prefix-cache-hit");
+  // Latency figures included as supporting evidence (headline stays hit-rate).
+  expect(data.preferredFigures).toContain("stage-bars-ttft-p95");
+  expect(data.preferredFigures).toContain("stage-bars-tpot-p95");
+  expect(data.preferredFigures).toContain("stage-bars-e2e-p95");
+  expect(data.preferredFigures).toContain("latency-distribution");
 });
 it("fragment leads with hit-rate", () => {
   expect(lbStrategyProfile.promptFragment("zh-CN")).toContain("命中率");

@@ -69,6 +69,9 @@ export const figureRefIdSchema = z.enum([
   "stage-bars-throughput",
   "stage-bars-error-rate",
   "stage-bars-ttft-p95",
+  // Inter-token latency (TPOT). ITL only carries p50/p95 (not p90/p99), so
+  // this figure renders those two percentiles.
+  "stage-bars-tpot-p95",
   "stage-bars-e2e-p95",
   // Prefix-cache figures — populated from serverMetrics.prefixCache, only
   // available for lb-strategy runs. hit = cache hit-rate %,
