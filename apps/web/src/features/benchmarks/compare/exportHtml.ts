@@ -49,13 +49,19 @@ function inlineCanvasSnapshots(live: HTMLElement, clone: HTMLElement): void {
     if (!dataUrl || dataUrl === "data:,") continue;
     const img = document.createElement("img");
     img.src = dataUrl;
+    img.className = cloneCanvas.className;
+    // ECharts positions its canvas with inline styles (position/left/top);
+    // carry them over so the image sits where the canvas did.
+    img.style.cssText = cloneCanvas.style.cssText;
     // Display at the on-screen size; cap to the container so it still fits a
-    // narrower page (mirrors the print canvas rule).
-    const displayWidth = liveCanvas.getBoundingClientRect().width || liveCanvas.width;
+    // narrower page (mirrors the print canvas rule). The rect is 0 when the
+    // element is hidden at export time — fall back to the backing-store width
+    // divided by DPR (canvas.width is in device pixels, ~2x on Retina).
+    const displayWidth =
+      liveCanvas.getBoundingClientRect().width || liveCanvas.width / (window.devicePixelRatio || 1);
     img.style.width = `${displayWidth}px`;
     img.style.maxWidth = "100%";
     img.style.height = "auto";
-    img.className = cloneCanvas.className;
     cloneCanvas.replaceWith(img);
   }
 }
