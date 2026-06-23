@@ -333,7 +333,16 @@ export const FigureRenderer = memo(function FigureRenderer({
         ? [{ runId: r.id, runLabel: r.stageLabel, samples }]
         : [];
     });
-    chart = <LatencyCDF ariaLabel="Latency CDF by stage" series={series} colorMap={colorMap} />;
+    // Report paper is always light — force the light theme so the CDF's axis /
+    // legend text stays dark and legible regardless of the app theme.
+    chart = (
+      <LatencyCDF
+        ariaLabel="Latency CDF by stage"
+        series={series}
+        colorMap={colorMap}
+        theme="light"
+      />
+    );
   } else if (refId === "cold-warm-delta") {
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {
