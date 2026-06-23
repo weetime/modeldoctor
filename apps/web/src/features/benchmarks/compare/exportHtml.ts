@@ -23,8 +23,47 @@ function collectStylesheets(): string {
   return parts.join("\n");
 }
 
+/**
+ * Replace every `<canvas>` in `clone` with a static `<img>` rasterized from the
+ * matching live canvas in `live` (same document order). ECharts draws charts to
+ * a canvas, and a canvas's pixels are NOT part of the DOM — `cloneNode` /
+ * `outerHTML` produce a blank canvas, so a plain serialization loses every
+ * chart. Snapshotting each canvas to an inline PNG data URL keeps the exported
+ * file self-contained (no external JS / CDN, works offline).
+ */
+function inlineCanvasSnapshots(live: HTMLElement, clone: HTMLElement): void {
+  const liveCanvases = live.querySelectorAll("canvas");
+  const cloneCanvases = clone.querySelectorAll("canvas");
+  for (let i = 0; i < cloneCanvases.length; i++) {
+    const cloneCanvas = cloneCanvases[i];
+    const liveCanvas = liveCanvases[i];
+    if (!liveCanvas) continue;
+    let dataUrl: string;
+    try {
+      dataUrl = liveCanvas.toDataURL("image/png");
+    } catch {
+      // Tainted canvas or unsupported env — leave the (blank) canvas rather
+      // than aborting the whole export.
+      continue;
+    }
+    if (!dataUrl || dataUrl === "data:,") continue;
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    // Display at the on-screen size; cap to the container so it still fits a
+    // narrower page (mirrors the print canvas rule).
+    const displayWidth = liveCanvas.getBoundingClientRect().width || liveCanvas.width;
+    img.style.width = `${displayWidth}px`;
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    img.className = cloneCanvas.className;
+    cloneCanvas.replaceWith(img);
+  }
+}
+
 export function buildExportHtml(root: HTMLElement, title: string, css: string): string {
   const clone = root.cloneNode(true) as HTMLElement;
+  // Charts are <canvas>; snapshot them to inline images before serializing.
+  inlineCanvasSnapshots(root, clone);
   // Strip interactive controls — static document, no React.
   clone.querySelectorAll("button").forEach((btn) => {
     const span = document.createElement("span");
