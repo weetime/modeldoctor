@@ -569,12 +569,25 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  /* Figures can be tall; let an oversized one flow across a page break instead
-     of jumping whole to the next page and leaving a big gap behind it. */
+  /* Keep a figure whole — a chart canvas split across a page boundary loses its
+     axis labels / legend on the orphaned half. */
   .primer-report .pr-figure {
-    break-inside: auto;
-    page-break-inside: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
     margin: 8px 0;
+  }
+  /* ECharts draws each figure to a fixed-pixel canvas sized to the on-screen
+     container, which is wider than the printable page → the right-most
+     column/bar would clip off the page edge. Cap the echarts wrapper + canvas
+     to the page width; the canvas height follows intrinsically so the chart
+     scales down in proportion instead of being cropped. */
+  .primer-report .pr-figure .echarts-for-react,
+  .primer-report .pr-figure .echarts-for-react > div {
+    max-width: 100% !important;
+  }
+  .primer-report .pr-figure canvas {
+    max-width: 100% !important;
+    height: auto !important;
   }
   .primer-report .pr-sec h2,
   .primer-report .pr-sec h3 {
