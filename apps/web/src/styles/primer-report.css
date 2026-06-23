@@ -562,13 +562,19 @@
   .primer-report .pr-sec td {
     padding: 5px 8px;
   }
-  .primer-report .pr-figure,
   .primer-report .pr-card,
   .primer-report .pr-callout,
   .primer-report .pr-sec table,
   .primer-report pre {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  /* Figures can be tall; let an oversized one flow across a page break instead
+     of jumping whole to the next page and leaving a big gap behind it. */
+  .primer-report .pr-figure {
+    break-inside: auto;
+    page-break-inside: auto;
+    margin: 8px 0;
   }
   .primer-report .pr-sec h2,
   .primer-report .pr-sec h3 {

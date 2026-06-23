@@ -267,6 +267,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         title="Per-pod traffic share"
         data={data}
         unit="%"
+        scheme="neutral"
         labelColors={REPORT_LABEL_COLORS}
       />
     );
@@ -286,6 +287,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         title="Per-pod hit rate"
         data={data}
         unit="%"
+        scheme="positive"
         labelColors={REPORT_LABEL_COLORS}
       />
     );

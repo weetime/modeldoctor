@@ -9,126 +9,163 @@ export interface PodDistributionDatum {
   pods: { pod: string; value: number }[];
 }
 
+export interface PodHeatmap {
+  stages: string[];
+  pods: string[];
+  /** [stageIndex, podIndex, value] tuples for an ECharts heatmap. */
+  cells: [number, number, number][];
+  min: number;
+  max: number;
+}
+
+/**
+ * Pivot per-stage pod values into a stage×pod matrix for a heatmap. Pods are
+ * collected across all stages (first-seen order); a pod missing from a stage
+ * simply yields no cell (renders blank). Empty input → empty cells, [0,1] range.
+ */
+export function buildPodHeatmap(data: PodDistributionDatum[]): PodHeatmap {
+  const pods: string[] = [];
+  for (const d of data) {
+    for (const p of d.pods) {
+      if (!pods.includes(p.pod)) pods.push(p.pod);
+    }
+  }
+  const stages = data.map((d) => d.stage);
+  const cells: [number, number, number][] = [];
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  data.forEach((d, xi) => {
+    for (const p of d.pods) {
+      const yi = pods.indexOf(p.pod);
+      if (yi < 0) continue;
+      cells.push([xi, yi, p.value]);
+      if (p.value < min) min = p.value;
+      if (p.value > max) max = p.value;
+    }
+  });
+  if (!Number.isFinite(min)) min = 0;
+  if (!Number.isFinite(max)) max = 1;
+  return { stages, pods, cells, min, max };
+}
+
+/** Long pod names are UUID-ish; keep the trailing, distinguishing part. */
+function shortPod(name: string): string {
+  return name.length <= 14 ? name : `…${name.slice(-10)}`;
+}
+
 export interface PodDistributionChartProps {
   title: string;
   data: PodDistributionDatum[];
-  /** Unit suffix appended to static value labels, e.g. "%" */
+  /** Unit suffix appended to cell labels, e.g. "%" */
   unit: string;
   /** Fixed report light palette — pass REPORT_LABEL_COLORS so labels stay
    * readable on the always-light "paper" regardless of app theme. */
   labelColors: StageBarLabelColors;
+  /** Color ramp: "positive" (higher=better, green) or "neutral" (blue). */
+  scheme?: "positive" | "neutral";
   height?: number;
 }
 
+const RAMP = {
+  positive: ["#e9f5ec", "#3fa45b"],
+  neutral: ["#eaf2fb", "#4a8fd1"],
+} as const;
+
 /**
- * Grouped bar chart: x-axis = stage (compare bucket), one bar per pod within
- * each stage group. Static value labels (suffixed with `unit`) are rendered on
- * every bar so the chart reads correctly in print / PDF / HTML export without
- * hover. Uses the fixed report light palette — not the app's theme tokens —
- * so it stays consistent with StageBarChart in the same "paper".
+ * Heatmap: y-axis = pod, x-axis = stage, cell color = value with the exact
+ * value printed in each cell. Replaces the old per-pod grouped bar chart, which
+ * paginated its legend and overlapped labels once there were several pods.
+ * Static cell labels keep it readable in print / PDF without hover; full pod
+ * name shows on hover. Uses the fixed report light palette, not app theme.
  */
 export function PodDistributionChart({
   title,
   data,
   unit,
   labelColors,
-  height = 300,
+  scheme = "neutral",
+  height,
 }: PodDistributionChartProps): JSX.Element {
   const tokens = useChartTokens();
-  const isEmpty = data.length === 0;
+  const hm = useMemo(() => buildPodHeatmap(data), [data]);
+  const isEmpty = hm.cells.length === 0;
+  const computedHeight = Math.max(220, hm.pods.length * 34 + 120);
 
   const option = useMemo<EChartsOption>(() => {
-    const lc = {
-      value: labelColors.value ?? "#1f2328",
-      baseline: labelColors.baseline ?? "#59636e",
-    };
-
-    // Collect all pod names across all stages (preserving first-seen order).
-    const podNamesSet = new Set<string>();
-    for (const datum of data) {
-      for (const p of datum.pods) podNamesSet.add(p.pod);
-    }
-    const podNames = Array.from(podNamesSet);
-
-    // Fixed report palette — 8 colors, cycling for pods beyond 8.
-    const POD_PALETTE = [
-      "hsl(98, 38%, 46%)",
-      "hsl(43, 81%, 47%)",
-      "hsl(190, 65%, 50%)",
-      "hsl(22, 85%, 48%)",
-      "hsl(4, 75%, 47%)",
-      "hsl(208, 73%, 44%)",
-      "hsl(308, 47%, 45%)",
-      "hsl(260, 28%, 42%)",
-    ] as const;
-
-    const categories = data.map((d) => d.stage);
-
-    // One ECharts series per pod; each series has one value per stage (x-category).
-    const ecSeries = podNames.map((pod, podIdx) => {
-      const values = data.map((datum) => {
-        const entry = datum.pods.find((p) => p.pod === pod);
-        return entry !== undefined ? entry.value : null;
-      });
-      const color = POD_PALETTE[podIdx % POD_PALETTE.length];
-      return {
-        name: pod,
-        type: "bar" as const,
-        data: values,
-        itemStyle: { color },
-        label: {
-          show: true,
-          position: "top" as const,
-          color: lc.value,
-          fontSize: 11,
-          fontWeight: 500 as const,
-          lineHeight: 14,
-          formatter: (p: { value: unknown }) =>
-            typeof p.value === "number" ? `${p.value.toFixed(1)}${unit}` : "",
-        },
-      };
-    });
+    const value = labelColors.value ?? "#1f2328";
+    const baseline = labelColors.baseline ?? "#59636e";
+    const ramp = RAMP[scheme];
 
     return themed(
       {
         tooltip: {
-          trigger: "axis",
-          valueFormatter: (val: unknown) =>
-            typeof val === "number" ? `${val.toFixed(1)}${unit}` : String(val ?? ""),
-        },
-        legend:
-          podNames.length > 1
-            ? { type: "scroll", top: 0, textStyle: { color: lc.value } }
-            : undefined,
+          // Full (untruncated) pod name + stage + value; the y-axis label is
+          // shortened, so the tooltip is where the whole pod id shows.
+          formatter: (p: { value?: unknown }) => {
+            const v = (p.value ?? []) as number[];
+            const pod = hm.pods[v[1]] ?? "";
+            const stage = hm.stages[v[0]] ?? "";
+            return `${pod} @ ${stage}: ${(v[2] ?? 0).toFixed(1)}${unit}`;
+          },
+        } as EChartsOption["tooltip"],
+        grid: { left: 96, right: 16, top: 12, bottom: 44 },
         xAxis: {
           type: "category",
-          data: categories,
-          axisLabel: { color: lc.value, fontWeight: 600, fontSize: 12 },
-        },
-        yAxis: {
-          type: "value",
-          max: (v: { max: number }) => (v.max > 0 ? v.max * 1.2 : 1),
+          data: hm.stages,
+          splitArea: { show: true },
           axisLabel: {
-            color: lc.baseline,
-            formatter: (v: number) => `${v.toFixed(0)}${unit}`,
+            color: value,
+            fontWeight: 600,
+            fontSize: 11,
+            interval: 0,
+            rotate: hm.stages.length > 4 ? 30 : 0,
           },
         },
-        grid: {
-          left: 56,
-          right: 24,
-          top: podNames.length > 1 ? 56 : 24,
-          bottom: 32,
+        yAxis: {
+          type: "category",
+          data: hm.pods.map(shortPod),
+          splitArea: { show: true },
+          axisLabel: { color: value, fontSize: 11 },
         },
-        series: ecSeries,
+        visualMap: {
+          min: hm.min,
+          max: hm.max,
+          calculable: false,
+          orient: "horizontal",
+          left: "center",
+          bottom: 4,
+          itemWidth: 12,
+          itemHeight: 120,
+          inRange: { color: [ramp[0], ramp[1]] },
+          text: [`${hm.max.toFixed(0)}${unit}`, `${hm.min.toFixed(0)}${unit}`],
+          textStyle: { color: baseline, fontSize: 10 },
+        },
+        series: [
+          {
+            type: "heatmap",
+            data: hm.cells,
+            label: {
+              show: true,
+              color: value,
+              fontSize: 11,
+              formatter: (p: { value?: unknown }) => {
+                const v = (p.value ?? []) as number[];
+                return typeof v[2] === "number" ? `${v[2].toFixed(0)}${unit}` : "";
+              },
+            },
+            itemStyle: { borderColor: "#ffffff", borderWidth: 1 },
+            emphasis: { itemStyle: { borderColor: value, borderWidth: 1.5 } },
+          },
+        ],
       },
       tokens,
     );
-  }, [data, unit, labelColors.value, labelColors.baseline, tokens]);
+  }, [hm, unit, labelColors.value, labelColors.baseline, scheme, tokens]);
 
   return (
     <div className="rounded-md border border-border p-4">
       {title ? <div className="mb-2 text-sm font-medium">{title}</div> : null}
-      <ChartFrame ariaLabel={title} height={height} empty={isEmpty}>
+      <ChartFrame ariaLabel={title} height={height ?? computedHeight} empty={isEmpty}>
         <ReactECharts
           option={option}
           style={{ height: "100%", width: "100%" }}
