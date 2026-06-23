@@ -10,3 +10,7 @@ it("accepts the new phase-1 refIds", () => {
 it("accepts the latency-distribution refId", () => {
   expect(figureRefIdSchema.parse("latency-distribution")).toBe("latency-distribution");
 });
+
+it("accepts the TPOT (inter-token) refId", () => {
+  expect(figureRefIdSchema.parse("stage-bars-tpot-p95")).toBe("stage-bars-tpot-p95");
+});

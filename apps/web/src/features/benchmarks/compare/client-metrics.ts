@@ -5,6 +5,8 @@ export interface PromptMetricsSummary {
   throughput: number | null;
   errorRate: number | null;
   ttft: { p50: number | null; p90: number | null; p99: number | null } | null;
+  // Inter-token latency (TPOT). ITL only exposes p50/p95 across tools.
+  itl: { p50: number | null; p95: number | null } | null;
   e2e: { p50: number | null; p90: number | null; p99: number | null } | null;
 }
 
@@ -85,6 +87,8 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
   const e2eP50 = readMetricSafe("e2e.p50", summary);
   const e2eP90 = readMetricSafe("e2e.p90", summary);
   const e2eP99 = readMetricSafe("e2e.p99", summary);
+  const itlP50 = readMetricSafe("itl.p50", summary);
+  const itlP95 = readMetricSafe("itl.p95", summary);
 
   return {
     throughput: readMetricSafe("requestsPerSec", summary),
@@ -93,6 +97,7 @@ export function summarizeForPrompt(m: unknown): PromptMetricsSummary {
       ttftP50 === null && ttftP90 === null && ttftP99 === null
         ? null
         : { p50: ttftP50, p90: ttftP90, p99: ttftP99 },
+    itl: itlP50 === null && itlP95 === null ? null : { p50: itlP50, p95: itlP95 },
     e2e:
       e2eP50 === null && e2eP90 === null && e2eP99 === null
         ? null
@@ -144,6 +149,7 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
   if (perRun.some((s) => s.throughput !== null)) out.add("stage-bars-throughput");
   if (perRun.some((s) => s.errorRate !== null)) out.add("stage-bars-error-rate");
   if (perRun.every((s) => s.ttft !== null)) out.add("stage-bars-ttft-p95");
+  if (perRun.every((s) => s.itl !== null)) out.add("stage-bars-tpot-p95");
   if (perRun.every((s) => s.e2e !== null)) out.add("stage-bars-e2e-p95");
   // cold-warm-delta: available whenever ≥2 runs carry throughput or ttft data.
   if (perRun.filter((s) => s.throughput !== null || s.ttft !== null).length >= 2) {

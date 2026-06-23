@@ -52,6 +52,8 @@ const REPORT_PALETTE = [
 ] as const;
 
 const PERCENTILES = ["p50", "p90", "p99"] as const;
+// ITL (TPOT) only carries p50/p95 across tools — see MetricKind.
+const ITL_PERCENTILES = ["p50", "p95"] as const;
 
 /** Index of the baseline stage within `rows` (preserving their order). Falls
  * back to the first stage when no baseline is set or it was filtered out. */
@@ -181,6 +183,30 @@ export const FigureRenderer = memo(function FigureRenderer({
     chart = (
       <StageBarChart
         title="TTFT percentiles"
+        data={rows.length > 0 ? data : []}
+        series={series}
+        yLabel="ms"
+        baselineSeriesKey={baselineKeyOf(rows, baselineId)}
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "stage-bars-tpot-p95") {
+    // ITL carries only p50/p95 (see MetricKind), so this figure shows two bars.
+    const rows = summaries.filter(({ s }) => s.itl);
+    const data: StageBarDatum[] = ITL_PERCENTILES.map((p) => ({
+      stage: p,
+      ...Object.fromEntries(rows.map(({ r, s }) => [r.id, s.itl?.[p] ?? 0])),
+    }));
+    const series: StageBarSeries[] = rows.map(({ r }) => ({
+      key: r.id,
+      label: r.stageLabel,
+      color: colorMap[r.id],
+      decimals: 0,
+      higherIsBetter: false,
+    }));
+    chart = (
+      <StageBarChart
+        title="TPOT (inter-token) percentiles"
         data={rows.length > 0 ? data : []}
         series={series}
         yLabel="ms"
