@@ -1,20 +1,13 @@
 import type { EngineId } from "../../engine.js";
 import type { EngineManifest } from "../../engine-metrics.js";
-import { mindieManifest } from "./mindie.js";
-import { sglangManifest } from "./sglang.js";
-import { teiManifest } from "./tei.js";
-import { tgiManifest } from "./tgi.js";
-import { vllmManifest } from "./vllm.js";
+import { inferManifest } from "./infer.js";
 
-const REGISTRY = {
-  vllm: vllmManifest,
-  sglang: sglangManifest,
-  tgi: tgiManifest,
-  mindie: mindieManifest,
-  tei: teiManifest,
-} as const satisfies Partial<Record<EngineId, EngineManifest>>;
-
-export const ENGINE_MANIFEST_IDS = Object.keys(REGISTRY) as Array<keyof typeof REGISTRY>;
+// Engines ModelDoctor can normalize into the `infer:*` Prometheus namespace
+// via the deployed recording rules (deploy/k8s/prometheus-rules). The metric
+// SET is now identical across them — one `inferManifest` serves all — so this
+// list only drives connection-discovery fingerprinting + the supported-engine
+// enum, NOT per-engine PromQL.
+export const ENGINE_MANIFEST_IDS = ["vllm", "sglang", "tgi", "tei", "mindie"] as const;
 export type SupportedEngineId = (typeof ENGINE_MANIFEST_IDS)[number];
 
 /**
@@ -33,8 +26,13 @@ export const ENGINE_METRIC_NAMESPACE: Record<SupportedEngineId, string> = {
   mindie: "mindie:",
 };
 
+/**
+ * All supported engines share the normalized `infer:*` manifest — the
+ * Prometheus recording rules absorb every engine/version difference, so the
+ * app no longer needs per-engine PromQL. Returns null for unsupported ids.
+ */
 export function getEngineManifest(id: EngineId): EngineManifest | null {
-  return (REGISTRY as Record<string, EngineManifest>)[id] ?? null;
+  return (ENGINE_MANIFEST_IDS as readonly string[]).includes(id) ? inferManifest : null;
 }
 
-export { mindieManifest, sglangManifest, teiManifest, tgiManifest, vllmManifest };
+export { inferManifest };

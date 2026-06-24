@@ -103,43 +103,11 @@ describe("EngineMetricsService", () => {
     expect(modelScopedSeen).toBeGreaterThan(0);
   });
 
-  it("falls through to second variant when first returns no_data", async () => {
-    connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn());
-
-    // Default behavior: every panel returns one usable series.
-    // For the prefix_cache_savings panel specifically (which has 2 variants —
-    // v1 prefix_cache_*, v0 gpu_prefix_cache_*), simulate v1 having no data so
-    // we fall through to v0.
-    promClient.queryRange.mockImplementation(async (args: { query: string }) => {
-      if (
-        args.query.includes("vllm:prefix_cache_") &&
-        !args.query.includes("vllm:gpu_prefix_cache_")
-      ) {
-        // v1 variant — pretend no data, force fallthrough
-        return { unavailable: true, reason: "no_data", series: [] };
-      }
-      if (args.query.includes("vllm:gpu_prefix_cache_")) {
-        // v0 variant — has data
-        return {
-          unavailable: false,
-          series: [{ samples: [[1715212800, 0.85]] }],
-        };
-      }
-      // All other panels: arbitrary success.
-      return {
-        unavailable: false,
-        series: [{ samples: [[1715212800, 1]] }],
-      };
-    });
-
-    const r = await svc.fetchSnapshot("u1", "c1", {
-      from: "2026-05-09T00:00:00.000Z",
-      to: "2026-05-09T00:01:00.000Z",
-    });
-    const prefix = r.panels.find((p) => p.key === "prefix_cache_savings");
-    expect(prefix?.unavailable).toBe(false);
-    expect(prefix?.series[0].samples[0][1]).toBe(0.85);
-  });
+  // NOTE: per-engine V0/V1 PromQL-variant fallthrough was removed — version /
+  // engine differences are now absorbed by the `infer:*` Prometheus recording
+  // rules, so the normalized inferManifest uses a single variant per metric.
+  // The service's variant loop is retained (defensive) but no manifest exercises
+  // multi-variant fallthrough anymore.
 
   it("marks panel unavailable when all variants return prom_error", async () => {
     connections.getOwnedDecrypted.mockResolvedValueOnce(makeConn());
