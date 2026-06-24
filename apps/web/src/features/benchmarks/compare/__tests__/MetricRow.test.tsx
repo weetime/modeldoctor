@@ -95,6 +95,41 @@ describe("MetricRow", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
+  it("no-baseline: tints a worse-direction outlier red and shows a trend arrow", () => {
+    // Mirrors the screenshot TTFT-p99 row: one huge value, rest clustered.
+    const vals = [4571, 1973, 442, 413, 1448, 317, 318, 463];
+    const runs = vals.map((v, i) => makeBenchmark(`r${i}`, v));
+    render(
+      <table>
+        <tbody>
+          <MetricRow descriptor={p95Descriptor} runs={runs} baselineId={null} />
+        </tbody>
+      </table>,
+    );
+    const outlierCell = screen.getByText("4571 ms").closest("td");
+    expect(outlierCell).not.toBeNull();
+    // latency above mean = worse → red tint + a direction arrow icon.
+    expect(outlierCell?.className).toMatch(/bg-red-50/);
+    expect(outlierCell?.querySelector("svg")).not.toBeNull();
+    // A clustered (non-outlier) value is not tinted.
+    const normalCell = screen.getByText("442 ms").closest("td");
+    expect(normalCell?.className).not.toMatch(/bg-red-50|bg-green-50/);
+  });
+
+  it("no-baseline: does not tint when all values are within band", () => {
+    // Tight cluster — high z but <25% relative dev, so no outliers.
+    const vals = [29.9, 27.1, 24.9, 25.1, 25.3, 25.0, 24.8, 24.9];
+    const runs = vals.map((v, i) => makeBenchmark(`r${i}`, v));
+    const { container } = render(
+      <table>
+        <tbody>
+          <MetricRow descriptor={p95Descriptor} runs={runs} baselineId={null} />
+        </tbody>
+      </table>,
+    );
+    expect(container.querySelector("td.bg-red-50, td.bg-green-50")).toBeNull();
+  });
+
   it("renders em dash when reader returns null", () => {
     const baseline = makeBenchmark("b", 200);
     const current = {

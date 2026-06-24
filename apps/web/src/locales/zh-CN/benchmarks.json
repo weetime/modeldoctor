@@ -366,7 +366,16 @@
       "concurrency": "并发",
       "hitRate": "命中率",
       "topPodShare": "最热 Pod 占比"
-    }
+    },
+    "matrix": {
+      "add": "添加 benchmark",
+      "addPlaceholder": "搜索 benchmark…",
+      "addEmpty": "没有可添加的同类 benchmark",
+      "addLoading": "加载中…",
+      "remove": "从对比中移除",
+      "removeDisabled": "对比至少需要 2 个 benchmark"
+    },
+    "outlierTitle": "{{delta}}（相对本行均值）"
   },
   "savedCompare": {
     "savedListLink": "历史对比",
