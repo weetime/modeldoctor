@@ -228,11 +228,17 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
   }
   const raw = JSON.parse(buf.toString("utf8")) as AiperfRawReport;
 
-  // Request counts: aiperf reports them as JsonMetricResult shapes too
-  // (avg = total count). error_request_count.avg holds the failure count.
-  const total = Math.round(raw.request_count?.avg ?? 0);
+  // Request counts: aiperf reports them as JsonMetricResult shapes (avg = count).
+  // IMPORTANT: aiperf's `request_count` counts only SUCCESSFUL requests, and
+  // `error_request_count` counts failures — they are disjoint, NOT total-vs-subset.
+  // So total attempts = success + failed. Treating request_count as the total
+  // (the old bug) made `success = total - failed` go negative and `errorRate =
+  // failed / request_count` exceed 1 under heavy errors (e.g. 419 failed / 61
+  // success → 6.87), which then failed the `errorRate ≤ 1` schema and discarded
+  // the whole run. Computing total as success+failed keeps errorRate in [0,1].
+  const success = Math.round(raw.request_count?.avg ?? 0);
   const failed = Math.round(raw.error_request_count?.avg ?? 0);
-  const success = Math.max(0, total - failed);
+  const total = success + failed;
   const errorRate = total === 0 ? 0 : failed / total;
 
   const outputTps = raw.output_token_throughput?.avg ?? 0;
