@@ -460,6 +460,7 @@
      `.primer-report` (e.g. the app shell sidebar that may still be in the DOM
      on the embedded-report path). */
   .pr-app-bar,
+  /* biome-ignore lint/style/noDescendingSpecificity: intentional print-hide override of an earlier higher-specificity .pr-toc rule */
   .pr-toc {
     display: none !important;
   }
