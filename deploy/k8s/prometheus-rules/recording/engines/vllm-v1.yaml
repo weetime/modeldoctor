@@ -9,7 +9,7 @@
 # V1-specific raw names (vs V0):
 # - vllm:kv_cache_usage_perc          (V0: vllm:gpu_cache_usage_perc)
 # - vllm:inter_token_latency_seconds  (V0: vllm:time_per_output_token_seconds)
-# - vllm:prefix_cache_hits / _queries (V0: vllm:gpu_prefix_cache_hit_rate)
+# - vllm:prefix_cache_hits_total / _queries_total (V0: vllm:gpu_prefix_cache_hit_rate)
 #
 # Apply alongside vllm-common.yaml whenever V1 is present.
 
@@ -53,8 +53,8 @@ spec:
         # Guard against divide-by-zero with a clamp_min fallback when idle.
         - record: infer:cache:prefix_hit_ratio
           expr: |
-            sum by (model_name, instance) (rate(vllm:prefix_cache_hits[5m]))
+            sum by (model_name, instance) (rate(vllm:prefix_cache_hits_total[5m]))
             /
-            clamp_min(sum by (model_name, instance) (rate(vllm:prefix_cache_queries[5m])), 1)
+            clamp_min(sum by (model_name, instance) (rate(vllm:prefix_cache_queries_total[5m])), 1)
           labels:
             engine: vllm-v1
