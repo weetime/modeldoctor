@@ -9,7 +9,7 @@ describe("inferManifest (normalized infer:* manifest)", () => {
 
   it("every metric queries the normalized infer:* namespace and is model-scoped", () => {
     for (const metric of inferManifest.metrics) {
-      expect(metric.promql.length).toBeGreaterThan(0);
+      expect(metric.promql).toHaveLength(1);
       for (const variant of metric.promql) {
         // Normalization lives in the recording rules — the manifest must only
         // reference infer:* series, never raw vllm:/sglang:/tgi_ metrics.

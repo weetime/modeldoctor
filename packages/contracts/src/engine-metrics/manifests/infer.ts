@@ -85,11 +85,13 @@ const metrics: EngineMetricSpec[] = [
     promql: [{ expr: `sum(infer:throughput:generation_rate_tps{model_name="${M}"})` }],
   },
   {
+    // 5m window (vs system_efficiency's 1m) — a steadier output/input token
+    // ratio, matching the original vllm manifest's intent.
     key: "token_io_ratio",
     unit: "ratio",
     promql: [
       {
-        expr: `sum(infer:throughput:generation_rate_tps{model_name="${M}"}) / clamp_min(sum(rate(infer:throughput:prompt_tokens_total{model_name="${M}"}[1m])), 1)`,
+        expr: `sum(rate(infer:throughput:generation_tokens_total{model_name="${M}"}[5m])) / clamp_min(sum(rate(infer:throughput:prompt_tokens_total{model_name="${M}"}[5m])), 1)`,
       },
     ],
   },
