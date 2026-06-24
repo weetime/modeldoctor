@@ -225,12 +225,7 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 // ---------------------------------------------------------------------------
 
 type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta";
-type SeedScenario =
-  | "inference"
-  | "engine-kv-cache"
-  | "capacity"
-  | "gateway"
-  | "lb-strategy";
+type SeedScenario = "inference" | "engine-kv-cache" | "capacity" | "gateway" | "lb-strategy";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
@@ -839,6 +834,57 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
     },
     tags: ["prefix-cache", "aiperf", "multi-turn", "shallow"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_t5_sharegpt",
+    name: "路由粘性 · 真实对话 ShareGPT (t5)",
+    description:
+      "【LB prefix_cache 策略路由验证 · 真实数据】aiperf 内置 ShareGPT 真实人机多轮语料 + 粘性会话路由,业界多轮服务压测事实标准。相比合成 t2_deep,用真实对话分布给客户背书;聊天回答天然较长(decode-bound),收益主要体现在 TTFT 与命中率,e2e 受 decode 主导变化小(物理预期)。",
+    scenario: "lb-strategy",
+    tool: "aiperf",
+    config: {
+      concurrency: 20,
+      requestCount: 300,
+      inputTokensMean: 200,
+      inputTokensStddev: 0,
+      outputTokensMean: 800,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "sharegpt",
+      conversationNum: 30,
+      conversationType: "sticky-user-sessions",
+      seed: 42,
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
+    },
+    tags: ["prefix-cache", "aiperf", "multi-turn", "sharegpt", "real-data"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_pc_t6_prefill",
+    name: "高并发长前缀 · RAG/Agent 形态 (t6)",
+    description:
+      "【LB prefix_cache 策略路由验证 · prefill-bound】模拟 RAG/Agent:大上下文(in 3000)+ 短回答(out 64)+ 高并发(100,逼近 4×max-num-seqs)。粘性会话把大前缀钉在同一 pod,4 轮复用。与 chat 形态(t2/t5,decode-bound)相反——此处 prefill 占 e2e 大头,争抢下 OFF 反复重算大前缀会排队,ON 命中后 TTFT/e2e/吞吐全面显性受益。注:in3000×4 轮累积约 12k token,需 max-model-len ≥ 16384。",
+    scenario: "lb-strategy",
+    tool: "aiperf",
+    config: {
+      concurrency: 100,
+      requestCount: 480,
+      inputTokensMean: 3000,
+      inputTokensStddev: 0,
+      outputTokensMean: 64,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "synthetic",
+      conversationNum: 120,
+      conversationTurnMean: 4,
+      conversationType: "sticky-user-sessions",
+      seed: 42,
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
+    },
+    tags: ["prefix-cache", "aiperf", "prefill-bound", "rag", "high-concurrency"],
     categories: ["chat"],
   },
   {

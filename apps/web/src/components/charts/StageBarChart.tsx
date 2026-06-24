@@ -78,6 +78,13 @@ export interface StageBarChartProps {
    */
   variant?: "bar" | "line";
   /**
+   * Logarithmic y-axis. Use for wide-range percentile figures (TTFT/TPOT/E2E
+   * p50→p99 can span an order of magnitude) where a linear axis squashes the
+   * p50 band flat and hides ON/OFF differences. Mainstream for latency
+   * percentile panels (Grafana). Leave off for bounded metrics (%, hit-rate).
+   */
+  logScale?: boolean;
+  /**
    * Shared `PanelUnit` (ms / % / rps / …). When set, the y-axis ticks, tooltip,
    * and bar labels all format through `formatPanelValue` — the same system the
    * time-series charts use — so units and precision stay consistent app-wide
@@ -149,6 +156,7 @@ export function StageBarChart({
   barColors,
   baselineSeriesKey,
   variant = "bar",
+  logScale = false,
   unit,
   valueFormatter,
 }: StageBarChartProps): JSX.Element {
@@ -282,11 +290,17 @@ export function StageBarChart({
           axisLabel: { color: lc.value, fontWeight: 600, fontSize: 12 },
         },
         yAxis: {
-          type: "value",
-          // 20% headroom so the top value labels are not clipped. Keep it
-          // fractional — `Math.ceil` would round sub-1 maxima (small error
-          // rates / throughputs) up to 1 and squash the bars flat.
-          max: (v: { max: number }) => (v.max > 0 ? v.max * 1.2 : 1),
+          // Log axis decompresses the p50 band on wide-range percentile figures
+          // so ON/OFF differences are visible; echarts auto-picks the log min
+          // (power of 10 below the data) and adds its own headroom, so the
+          // linear 20% `max` headroom is skipped in that mode.
+          type: logScale ? "log" : "value",
+          ...(logScale
+            ? {}
+            : // 20% headroom so the top value labels are not clipped. Keep it
+              // fractional — `Math.ceil` would round sub-1 maxima (small error
+              // rates / throughputs) up to 1 and squash the bars flat.
+              { max: (v: { max: number }) => (v.max > 0 ? v.max * 1.2 : 1) }),
           // Format ticks through the same unit-aware formatter so the headroom
           // max never renders as a raw float (e.g. "1.6612971606561588").
           axisLabel: { color: lc.baseline, formatter: (v: number) => fmt(v) },
@@ -307,6 +321,7 @@ export function StageBarChart({
     baselineSeriesKey,
     barColors,
     variant,
+    logScale,
     unit,
     valueFormatter,
     labelColors?.value,

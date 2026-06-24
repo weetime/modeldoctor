@@ -319,10 +319,38 @@ describe("aiperf.parseFinalReport", () => {
     );
     const report = parseFinalReport("", { report: buf });
     if (report.tool !== "aiperf") throw new Error(`expected aiperf, got ${report.tool}`);
-    expect(report.data.requests.total).toBe(100);
+    // aiperf request_count = successes (100), error_request_count = failures (5),
+    // so total attempts = 105 and errorRate = 5/105.
+    expect(report.data.requests.total).toBe(105);
     expect(report.data.requests.error).toBe(5);
-    expect(report.data.requests.success).toBe(95);
-    expect(report.data.requests.errorRate).toBeCloseTo(0.05);
+    expect(report.data.requests.success).toBe(100);
+    expect(report.data.requests.errorRate).toBeCloseTo(5 / 105);
+  });
+
+  it("keeps errorRate in [0,1] when failures exceed successes (regression)", () => {
+    // Real t6 high-load run: 61 successful, 419 failed. The old code computed
+    // errorRate = 419/61 = 6.87 (> 1), which the schema rejected and discarded
+    // the whole run. Correct: total = 61 + 419 = 480, errorRate = 419/480.
+    const buf = Buffer.from(
+      JSON.stringify({
+        request_throughput: { unit: "requests/sec", avg: 2.7 },
+        request_latency: { unit: "ms", avg: 1700, p50: 1600, p90: 2200, p95: 2400, p99: 2800 },
+        time_to_first_token: { unit: "ms", avg: 300, p50: 280, p90: 400, p95: 450, p99: 550 },
+        inter_token_latency: { unit: "ms", avg: 28, p50: 26, p90: 33, p95: 36, p99: 40 },
+        output_token_throughput: { unit: "tokens/sec", avg: 1150 },
+        output_sequence_length: { unit: "tokens", avg: 256 },
+        input_sequence_length: { unit: "tokens", avg: 1020 },
+        request_count: { unit: "requests", avg: 61 },
+        error_request_count: { unit: "requests", avg: 419 },
+      }),
+    );
+    const report = parseFinalReport("", { report: buf });
+    if (report.tool !== "aiperf") throw new Error(`expected aiperf, got ${report.tool}`);
+    expect(report.data.requests.total).toBe(480);
+    expect(report.data.requests.success).toBe(61);
+    expect(report.data.requests.error).toBe(419);
+    expect(report.data.requests.errorRate).toBeCloseTo(419 / 480);
+    expect(report.data.requests.errorRate).toBeLessThanOrEqual(1);
   });
 
   it("throws when the report file is missing", () => {
