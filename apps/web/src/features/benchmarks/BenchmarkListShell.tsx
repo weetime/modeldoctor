@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS, zhCN } from "date-fns/locale";
 import {
   ArrowRight,
+  Ban,
   Copy as CopyIcon,
   History as HistoryIcon,
   MoreHorizontal,
@@ -23,6 +24,16 @@ import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,8 +57,10 @@ import { BenchmarkListFilters } from "./BenchmarkListFilters";
 import { readErrorRate, readP95Latency } from "./compare/metrics";
 import { fmtDurationMs, fmtTimeRange, runDurationMs } from "./duration";
 import {
+  isTerminalStatus,
   useBenchmarkList,
   useBulkDeleteBenchmarks,
+  useCancelBenchmark,
   useCreateBenchmark,
   useDeleteBenchmark,
 } from "./queries";
@@ -129,10 +142,12 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [saveTplBenchmark, setSaveTplBenchmark] = useState<Benchmark | null>(null);
   const deleteBenchmark = useDeleteBenchmark();
   const bulkDeleteBenchmarks = useBulkDeleteBenchmarks();
+  const cancelBenchmark = useCancelBenchmark();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
 
@@ -201,8 +216,22 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
     return tools;
   }, [selected, items]);
 
-  const compareDisabledReason: "needTwo" | "mixedTools" | null =
-    selected.size < 2 ? "needTwo" : selectedTools.size > 1 ? "mixedTools" : null;
+  // Compare is only meaningful for runs that produced metrics, so it's gated to
+  // `completed` runs only — failed/canceled runs are selectable (for delete) but
+  // have no summary to plot. Surface that as its own disabled reason.
+  const hasNonCompletedSelected = useMemo(
+    () => [...selected].some((id) => items.find((r) => r.id === id)?.status !== "completed"),
+    [selected, items],
+  );
+
+  const compareDisabledReason: "needTwo" | "notCompleted" | "mixedTools" | null =
+    selected.size < 2
+      ? "needTwo"
+      : hasNonCompletedSelected
+        ? "notCompleted"
+        : selectedTools.size > 1
+          ? "mixedTools"
+          : null;
 
   const isFiltered = useMemo(
     () =>
@@ -217,7 +246,11 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
     [query],
   );
 
+  // Only terminal runs are selectable: in-progress runs (pending/submitted/
+  // running) can't be deleted (only canceled) or compared (no metrics yet), so
+  // their checkbox is disabled. Guard the toggle defensively too.
   function toggleRow(id: string, checked: boolean) {
+    if (checked && !isTerminalStatus(items.find((r) => r.id === id)?.status)) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (checked) next.add(id);
@@ -226,10 +259,13 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
     });
   }
 
-  // Select-all toggles only the currently-loaded rows (selection across
-  // unfetched pages would silently delete rows the user can't see).
-  const allLoadedSelected = items.length > 0 && items.every((b) => selected.has(b.id));
-  const someLoadedSelected = items.some((b) => selected.has(b.id));
+  // Select-all toggles only the currently-loaded, selectable (terminal) rows —
+  // selection across unfetched pages would silently delete rows the user can't
+  // see, and non-terminal rows aren't eligible for any batch action.
+  const selectableItems = useMemo(() => items.filter((b) => isTerminalStatus(b.status)), [items]);
+  const allLoadedSelected =
+    selectableItems.length > 0 && selectableItems.every((b) => selected.has(b.id));
+  const someLoadedSelected = selectableItems.some((b) => selected.has(b.id));
   const headerChecked: boolean | "indeterminate" = allLoadedSelected
     ? true
     : someLoadedSelected
@@ -239,7 +275,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   function toggleAll(checked: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const b of items) {
+      for (const b of selectableItems) {
         if (checked) next.add(b.id);
         else next.delete(b.id);
       }
@@ -296,11 +332,13 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                 <TooltipContent>
                   {compareDisabledReason === "needTwo"
                     ? t("compareDisabledNeedTwo")
-                    : t("compareDisabledMixedTools", {
-                        summary: [...selectedTools.entries()]
-                          .map(([tool, n]) => `${tool} × ${n}`)
-                          .join(" + "),
-                      })}
+                    : compareDisabledReason === "notCompleted"
+                      ? t("compareDisabledNotCompleted")
+                      : t("compareDisabledMixedTools", {
+                          summary: [...selectedTools.entries()]
+                            .map(([tool, n]) => `${tool} × ${n}`)
+                            .join(" + "),
+                        })}
                 </TooltipContent>
               )}
             </Tooltip>
@@ -349,6 +387,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                   <TableHead className="w-10">
                     <Checkbox
                       checked={headerChecked}
+                      disabled={selectableItems.length === 0}
                       onCheckedChange={(c) => toggleAll(c === true)}
                       aria-label={t("bulkDelete.selectAll")}
                     />
@@ -370,6 +409,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     <TableCell>
                       <Checkbox
                         checked={selected.has(benchmark.id)}
+                        disabled={!isTerminalStatus(benchmark.status)}
                         onCheckedChange={(c) => toggleRow(benchmark.id, c === true)}
                         aria-label={`select ${benchmark.id}`}
                       />
@@ -494,13 +534,23 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                                 </TooltipContent>
                               )}
                             </Tooltip>
-                            <DropdownMenuItem
-                              onClick={() => setPendingDeleteId(benchmark.id)}
-                              className="gap-2 text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              {t("rowActions.delete")}
-                            </DropdownMenuItem>
+                            {isTerminalStatus(benchmark.status) ? (
+                              <DropdownMenuItem
+                                onClick={() => setPendingDeleteId(benchmark.id)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                {t("rowActions.delete")}
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => setPendingCancelId(benchmark.id)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <Ban className="h-4 w-4" />
+                                {t("rowActions.cancel")}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -573,6 +623,43 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
           });
         }}
       />
+
+      <AlertDialog
+        open={pendingCancelId !== null}
+        onOpenChange={(o) => {
+          if (!o && !cancelBenchmark.isPending) setPendingCancelId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("detail.cancel.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("detail.cancel.confirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelBenchmark.isPending}>
+              {t("detail.cancel.dismiss")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelBenchmark.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!pendingCancelId) return;
+                cancelBenchmark.mutate(pendingCancelId, {
+                  onSuccess: () => {
+                    setPendingCancelId(null);
+                    toast.success(t("detail.cancel.success"));
+                  },
+                  onError: () => {
+                    toast.error(t("detail.cancel.errors.generic"));
+                  },
+                });
+              }}
+            >
+              {t("detail.cancel.confirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SaveAsTemplateDialog
         benchmark={saveTplBenchmark}

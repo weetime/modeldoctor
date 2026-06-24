@@ -113,6 +113,7 @@
     "rerun": "重跑",
     "more": "更多",
     "delete": "删除",
+    "cancel": "取消任务",
     "saveAsTemplate": {
       "label": "保存为模板",
       "success": "已保存为模板「{{name}}」",
@@ -130,6 +131,7 @@
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
+  "compareDisabledNotCompleted": "仅已完成的基准测试可参与对比",
   "compareDisabledMixedTools": "对比需要相同 tool（{{summary}}）",
   "bulkDelete": {
     "button": "删除 ({{n}})",
