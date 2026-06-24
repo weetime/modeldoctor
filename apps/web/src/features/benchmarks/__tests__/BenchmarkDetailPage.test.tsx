@@ -724,6 +724,32 @@ describe("BenchmarkDetailPage", () => {
     expect(await screen.findByTestId("engine-metrics-section")).toBeInTheDocument();
   });
 
+  it("exposes the Engine Metrics tab while the run is still RUNNING (live metrics)", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(
+      makeBenchmark({
+        status: "running",
+        startedAt: "2026-04-30T12:00:01.000Z",
+        completedAt: null,
+        summaryMetrics: null,
+        rawOutput: null,
+      }),
+    );
+    mockUseConnection.mockReturnValue({
+      data: {
+        ...defaultConnectionData,
+        prometheusDatasourceId: "ds1",
+        prometheusDatasource: { id: "ds1", name: "default", baseUrl: "http://prom:9090" },
+        serverKind: "vllm",
+      },
+    });
+    const user = userEvent.setup();
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await screen.findByText(/Running…|运行中…/);
+    const engineTab = await screen.findByRole("tab", { name: /Engine Metrics|推理引擎指标/i });
+    await user.click(engineTab);
+    expect(await screen.findByTestId("engine-metrics-section")).toBeInTheDocument();
+  });
+
   it("does not render <EngineMetricsSection> when prometheusDatasource is missing", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({

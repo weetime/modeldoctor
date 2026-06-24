@@ -2,6 +2,7 @@
   "section": {
     "title": "推理引擎指标",
     "subtitle": "{{engineName}} · 实时来自 Prometheus · {{from}} ~ {{to}}",
+    "liveBadge": "运行中 · 每 15 秒自动刷新",
     "notConfigured": "此连接未配置 Prometheus URL — 前往连接设置补齐",
     "missingServerKind": "请在连接设置中选择推理引擎类型",
     "promError": "无法访问 Prometheus，请检查连接配置或网络可达性"

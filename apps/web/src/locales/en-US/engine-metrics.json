@@ -2,6 +2,7 @@
   "section": {
     "title": "Engine Metrics",
     "subtitle": "{{engineName}} · live from Prometheus · {{from}} ~ {{to}}",
+    "liveBadge": "Running · auto-refresh every 15s",
     "notConfigured": "This connection has no Prometheus URL — set it in Connection settings.",
     "missingServerKind": "Pick an inference engine in Connection settings.",
     "promError": "Cannot reach Prometheus — check connection config or network."

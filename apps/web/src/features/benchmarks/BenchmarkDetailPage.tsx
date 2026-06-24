@@ -201,14 +201,13 @@ function BenchmarkDetailTabs({
   const { t } = useTranslation("benchmarks");
   const isTerminal = isTerminalStatus(benchmark.status);
   const showCharts = isTerminal;
-  // Engine Metrics is reachable when the connection is bound to a Prometheus
-  // datasource and the benchmark has a definite time window.
+  // Engine Metrics is reachable whenever the connection is bound to a
+  // Prometheus datasource and the run has actually started. It's live data
+  // scraped from the engine — not the benchmark tool's own result — so it's
+  // useful DURING a run too: a non-terminal run passes finishedAt=null to
+  // EngineMetricsSection, which then tracks "now" and auto-refreshes.
   const showEngineMetrics = Boolean(
-    isTerminal &&
-      connection?.prometheusDatasource &&
-      connection.serverKind &&
-      benchmark.startedAt &&
-      benchmark.completedAt,
+    connection?.prometheusDatasource && connection.serverKind && benchmark.startedAt,
   );
   const [active, setActive] = useState<string>("overview");
 
@@ -250,11 +249,13 @@ function BenchmarkDetailTabs({
         </TabsContent>
       )}
 
-      {showEngineMetrics && benchmark.startedAt && benchmark.completedAt && connection && (
+      {showEngineMetrics && benchmark.startedAt && connection && (
         <TabsContent value="engine" className="space-y-6">
           <EngineMetricsSection
             connectionId={connection.id}
             startedAt={benchmark.startedAt}
+            // null while the run is in flight → EngineMetricsSection renders a
+            // live, auto-refreshing window up to "now".
             finishedAt={benchmark.completedAt}
           />
         </TabsContent>

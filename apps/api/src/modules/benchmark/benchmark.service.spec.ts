@@ -310,8 +310,17 @@ describe("BenchmarkService.delete", () => {
     vi.clearAllMocks();
   });
 
-  it("deletes a terminal benchmark without calling driver.cancel", async () => {
-    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed" }));
+  it("deletes a terminal benchmark and still deletes the lingering K8s Job", async () => {
+    // A completed/failed run's Job lingers inside its ttlSecondsAfterFinished
+    // window (1h). Deleting the row must delete that Job too, not orphan it.
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", driverHandle: "k8s:job-0" }));
+    await svc.delete("b1", "u1");
+    expect(mockRunner.cancel).toHaveBeenCalledWith("k8s:job-0");
+    expect(repo.delete).toHaveBeenCalledWith("b1");
+  });
+
+  it("deletes a terminal benchmark without a handle without calling driver.cancel", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", status: "completed", driverHandle: null }));
     await svc.delete("b1", "u1");
     expect(repo.delete).toHaveBeenCalledWith("b1");
     expect(mockRunner.cancel).not.toHaveBeenCalled();

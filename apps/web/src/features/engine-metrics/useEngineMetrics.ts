@@ -1,5 +1,5 @@
 import type { EngineMetricsSnapshotResponse } from "@modeldoctor/contracts";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 
 export interface EngineMetricsRange {
@@ -29,5 +29,10 @@ export function useEngineMetrics(
       );
     },
     staleTime: 30 * 1000,
+    // During a live (in-flight) run the caller advances `range.to` on a fixed
+    // cadence, which changes the query key each tick. keepPreviousData holds
+    // the prior snapshot on screen while the new window loads, so the panels
+    // refresh in place instead of flashing the "Loading…" placeholder.
+    placeholderData: keepPreviousData,
   });
 }
