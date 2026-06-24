@@ -1,6 +1,6 @@
 import type { CompareNarrative } from "@modeldoctor/contracts";
 import { ArrowLeft, Download, Printer } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,20 @@ export function ReportPreviewPage() {
   const { t } = useTranslation("benchmarks");
   const query = useSavedCompare(id);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Drive the document title from the report name so Print-to-PDF defaults the
+  // saved-file name to the report title (browsers seed the PDF filename from
+  // document.title), and the browser tab reflects which report this is. Restore
+  // on unmount so other pages aren't left with this title.
+  const reportName = query.data?.name;
+  useEffect(() => {
+    if (!reportName) return;
+    const prev = document.title;
+    document.title = reportName;
+    return () => {
+      document.title = prev;
+    };
+  }, [reportName]);
 
   if (query.isLoading) {
     return (

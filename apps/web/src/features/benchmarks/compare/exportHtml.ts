@@ -95,7 +95,10 @@ export async function exportPageAsHtml(root: HTMLElement, name: string): Promise
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${name.replace(/[^a-zA-Z0-9-_]+/g, "_")}.html`;
+  // Preserve the report title (incl. CJK) in the filename; only collapse
+  // filesystem-unsafe chars + whitespace to "_", trim, and fall back if empty.
+  const safe = name.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "") || "report";
+  a.download = `${safe}.html`;
   document.body.appendChild(a);
   a.click();
   a.remove();
