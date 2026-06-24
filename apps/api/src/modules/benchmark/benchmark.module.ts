@@ -9,6 +9,8 @@ import { PrometheusFetcherService } from "../alerts/prometheus-fetcher.service.j
 import { BaselineModule } from "../baseline/baseline.module.js";
 import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-template.module.js";
 import { ConnectionModule } from "../connection/connection.module.js";
+import { EngineMetricsModule } from "../engine-metrics/engine-metrics.module.js";
+import { EngineMetricsService } from "../engine-metrics/engine-metrics.service.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
@@ -49,6 +51,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     BaselineModule,
     NotificationsModule,
     AlertsModule,
+    EngineMetricsModule,
   ],
   controllers: [BenchmarkController, BenchmarkFilesController],
   providers: [
@@ -97,6 +100,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         SseHub,
         PrefixCacheSnapshotService,
         PrometheusFetcherService,
+        EngineMetricsService,
       ],
       useFactory: (
         storage: ReportStorage,
@@ -105,8 +109,17 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         sse: SseHub,
         prefixCacheSnapshot: PrefixCacheSnapshotService,
         promFetcher: PrometheusFetcherService,
+        engineMetrics: EngineMetricsService,
       ): ReportLoader =>
-        new ReportLoader({ storage, repo, notify, sse, prefixCacheSnapshot, promFetcher }),
+        new ReportLoader({
+          storage,
+          repo,
+          notify,
+          sse,
+          prefixCacheSnapshot,
+          promFetcher,
+          engineMetrics,
+        }),
     },
     {
       provide: K8S_NAMESPACE,
