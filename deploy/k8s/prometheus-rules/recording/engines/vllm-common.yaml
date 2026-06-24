@@ -112,6 +112,31 @@ spec:
           expr: |
             histogram_quantile(0.95, sum by (le, model_name, instance) (rate(vllm:request_queue_time_seconds_bucket[5m])))
             * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        # success ratio: fraction of finished requests that did NOT abort/error.
+        # clamp_min(denom,1) keeps it 0 (not NaN) under no traffic.
+        - record: infer:request:success_ratio
+          expr: |
+            (
+              sum by (instance, model_name) (rate(vllm:request_success_total{finished_reason!~"abort|error"}[5m]))
+              / clamp_min(sum by (instance, model_name) (rate(vllm:request_success_total[5m])), 1)
+            )
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        # prefill / decode mean seconds (stage breakdown) from the *_sum/*_count
+        # histogram aggregates.
+        - record: infer:request:prefill_seconds:avg
+          expr: |
+            (
+              sum by (instance, model_name) (rate(vllm:request_prefill_time_seconds_sum[5m]))
+              / clamp_min(sum by (instance, model_name) (rate(vllm:request_prefill_time_seconds_count[5m])), 1)
+            )
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
+        - record: infer:request:decode_seconds:avg
+          expr: |
+            (
+              sum by (instance, model_name) (rate(vllm:request_decode_time_seconds_sum[5m]))
+              / clamp_min(sum by (instance, model_name) (rate(vllm:request_decode_time_seconds_count[5m])), 1)
+            )
+            * on (instance, model_name) group_left (engine) infer:meta:engine_id
 
         # --- throughput (shared raw names) ---
         - record: infer:throughput:prompt_tokens_total
