@@ -1,4 +1,8 @@
-import { type FigureRefId, prefixCacheAnnotationSchema } from "@modeldoctor/contracts";
+import {
+  engineMetricsAnnotationSchema,
+  type FigureRefId,
+  prefixCacheAnnotationSchema,
+} from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 
 export interface PromptMetricsSummary {
@@ -68,6 +72,36 @@ export function readPodDistribution(serverMetrics: unknown): PodDatum[] | null {
   const pods = (parsed.data as { perPod?: PodDatum[] }).perPod;
   return Array.isArray(pods) ? pods : [];
 }
+
+export interface EngineMetricValue {
+  avg: number | null;
+  peak: number | null;
+  unit: string;
+}
+
+/** Read one durable engine-metric scalar (avg + peak) from a run's
+ * `serverMetrics.engineMetrics` snapshot. Null when absent/malformed or the
+ * key wasn't captured. Mirrors the server's `metrics.ts#readEngineMetric`. */
+export function readEngineMetric(serverMetrics: unknown, key: string): EngineMetricValue | null {
+  const parsed = engineMetricsAnnotationSchema.safeParse(
+    (serverMetrics as { engineMetrics?: unknown } | null)?.engineMetrics,
+  );
+  if (!parsed.success) return null;
+  const m = parsed.data.metrics.find((x) => x.key === key);
+  return m ? { avg: m.avg, peak: m.peak, unit: m.unit } : null;
+}
+
+/** The three engine-only cross-run bar figures: refId → which manifest metric +
+ * which scalar to plot (peak for saturation gauges, avg for rates). ttft /
+ * prefix-cache already have dedicated figures, so they are NOT duplicated here. */
+export const ENGINE_BAR_FIGURES: Record<
+  "stage-bars-kv-cache" | "stage-bars-preemption" | "stage-bars-queue",
+  { metricKey: string; pick: "avg" | "peak" }
+> = {
+  "stage-bars-kv-cache": { metricKey: "kv_cache_usage", pick: "peak" },
+  "stage-bars-preemption": { metricKey: "preemption_rate", pick: "avg" },
+  "stage-bars-queue": { metricKey: "request_queue_time", pick: "peak" },
+};
 
 /**
  * Client-side mirror of `apps/api/src/modules/saved-compares/metrics.ts#summarizeForPrompt`.
@@ -169,6 +203,16 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
       out.add("pod-traffic-distribution");
       out.add("pod-hit-rate");
     }
+  }
+  // Engine-metrics figures (durable serverMetrics.engineMetrics snapshot) —
+  // each available only when EVERY run carries that scalar (mixed gaps would
+  // render misleading bars). Mirror in the server's availableFigureRefIds.
+  for (const [refId, spec] of Object.entries(ENGINE_BAR_FIGURES)) {
+    const present = runs.every((r) => {
+      const m = readEngineMetric(r.serverMetrics, spec.metricKey);
+      return m !== null && m[spec.pick] !== null;
+    });
+    if (present) out.add(refId as FigureRefId);
   }
   // Capacity-curve figure — keep in sync with server mirror
   // `apps/api/src/modules/saved-compares/metrics.ts#availableFigureRefIds`.

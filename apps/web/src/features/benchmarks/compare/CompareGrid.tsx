@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { MetricRow } from "./MetricRow";
-import { rowDescriptorsForTool } from "./metrics";
+import { engineRowDescriptors, rowDescriptorsForTool } from "./metrics";
 import type { ReportBenchmarkSnapshot } from "./ReportSections";
 
 export interface CompareGridProps {
@@ -21,7 +21,10 @@ export function CompareGrid({ runs, baselineId, labels }: CompareGridProps) {
   // All runs share one tool by the time CompareGrid mounts (validated upstream).
   // If the array is empty just render nothing — BenchmarkComparePage shows EmptyState.
   const tool = runs[0]?.tool;
-  const descriptors = useMemo(() => (tool ? rowDescriptorsForTool(tool) : []), [tool]);
+  const descriptors = useMemo(
+    () => [...(tool ? rowDescriptorsForTool(tool) : []), ...engineRowDescriptors(runs)],
+    [tool, runs],
+  );
 
   if (descriptors.length === 0) return null;
 
