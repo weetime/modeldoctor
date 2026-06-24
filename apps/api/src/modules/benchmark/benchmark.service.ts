@@ -266,13 +266,16 @@ export class BenchmarkService {
     if (userId !== undefined && row.userId !== userId) {
       throw new NotFoundException(`Benchmark ${id} not found`);
     }
-    // Non-terminal rows may have a backing driver job (K8s Job, subprocess,
-    // …). Best-effort cancel before DB delete so we don't orphan resources.
-    // The K8sBenchmarkRunner already treats 404 on the Job as idempotent; any
-    // other error is logged and swallowed so a flaky apiserver doesn't
-    // block the user from clearing a stuck row.
-    const isTerminal = (TERMINAL_STATES as readonly string[]).includes(row.status);
-    if (!isTerminal && row.driverHandle) {
+    // Any row with a driver handle may still have a backing K8s Job —
+    // a non-terminal run that's mid-flight, OR a terminal run whose Job
+    // is lingering inside its `ttlSecondsAfterFinished` window (1h). Deleting
+    // the DB row before the TTL fires would orphan that Job (and its pods)
+    // for up to an hour, so we delete the Job on EVERY path, terminal or not.
+    // `runner.cancel()` deletes the Job with Background propagation (cascades
+    // to the owned Secret + pods) and treats a 404 as idempotent; any other
+    // error is logged and swallowed so a flaky apiserver doesn't block the
+    // user from clearing a row.
+    if (row.driverHandle) {
       try {
         await this.runner.cancel(row.driverHandle);
       } catch (e) {
