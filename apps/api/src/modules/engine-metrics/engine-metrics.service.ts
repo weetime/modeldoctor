@@ -77,9 +77,13 @@ export class EngineMetricsService {
       };
     });
 
+    // The manifest is now the shared normalized `inferManifest`; report the
+    // REAL engine identity from the connection's serverKind (not the manifest's
+    // placeholder engineId) so the response still reflects vllm/sglang/tgi/….
+    const engineId = conn.serverKind as keyof typeof ENGINE_CAPABILITY;
     return {
-      engineId: manifest.engineId,
-      capability: ENGINE_CAPABILITY[manifest.engineId],
+      engineId,
+      capability: ENGINE_CAPABILITY[engineId],
       window: { from: q.from, to: q.to, step },
       panels,
     };
