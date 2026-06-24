@@ -65,7 +65,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `clamp_max(100, 100 * sglang:token_usage{model_name="${M}"})`,
+        expr: `clamp_max(100 * sglang:token_usage{model_name="${M}"}, 100)`,
       },
     ],
   },

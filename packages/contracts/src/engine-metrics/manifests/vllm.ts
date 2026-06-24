@@ -163,11 +163,11 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `clamp_max(100, 100 * vllm:kv_cache_usage_perc{model_name="${M}"})`,
+        expr: `clamp_max(100 * vllm:kv_cache_usage_perc{model_name="${M}"}, 100)`,
       },
       {
         tag: "v0",
-        expr: `clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="${M}"})`,
+        expr: `clamp_max(100 * vllm:gpu_cache_usage_perc{model_name="${M}"}, 100)`,
       },
     ],
   },

@@ -47,7 +47,7 @@ const metrics: EngineMetricSpec[] = [
     promql: [
       {
         tag: "v1",
-        expr: `clamp_max(100, 100 * mindie_kv_cache_usage_ratio{model_name="${M}"})`,
+        expr: `clamp_max(100 * mindie_kv_cache_usage_ratio{model_name="${M}"}, 100)`,
       },
     ],
   },
