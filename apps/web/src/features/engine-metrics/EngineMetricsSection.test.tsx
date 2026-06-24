@@ -77,27 +77,37 @@ describe("<EngineMetricsSection>", () => {
   });
 
   it("shows the live badge and queries a now-bounded window when finishedAt is null", async () => {
-    const { api } = await import("@/lib/api-client");
-    const getSpy = vi.mocked(api.get);
-    getSpy.mockClear();
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <EngineMetricsSection
-        connectionId="c1"
-        startedAt="2026-05-09T00:00:00.000Z"
-        finishedAt={null}
-      />,
-      { wrapper: wrap(qc) },
-    );
-    // Live indicator is present. (This test's i18n returns raw keys, so we
-    // assert on the liveBadge key rather than the translated phrase.)
-    await waitFor(() => expect(screen.getByText(/section\.liveBadge/)).toBeInTheDocument());
-    // The window's upper bound tracks "now", not the fixed startedAt+1min.
-    const url = getSpy.mock.calls.at(-1)?.[0] as string;
-    const to = new URLSearchParams(url.split("?")[1]).get("to");
-    expect(to).toBeTruthy();
-    expect(new Date(to as string).getTime()).toBeGreaterThan(
-      new Date("2026-05-09T00:01:00.000Z").getTime(),
-    );
+    // Pin the clock to just after startedAt so live mode is deterministic
+    // regardless of the host's real date. shouldAdvanceTime keeps waitFor +
+    // react-query timers ticking. setSystemTime fixes Date.now()/new Date().
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-05-09T00:05:00.000Z"));
+    try {
+      const { api } = await import("@/lib/api-client");
+      const getSpy = vi.mocked(api.get);
+      getSpy.mockClear();
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <EngineMetricsSection
+          connectionId="c1"
+          startedAt="2026-05-09T00:00:00.000Z"
+          finishedAt={null}
+        />,
+        { wrapper: wrap(qc) },
+      );
+      // Live indicator is present. (This test's i18n returns raw keys, so we
+      // assert on the liveBadge key rather than the translated phrase.)
+      await waitFor(() => expect(screen.getByText(/section\.liveBadge/)).toBeInTheDocument());
+      // The window's upper bound tracks "now" (00:05), not the fixed
+      // startedAt+1min the non-live window would use.
+      const url = getSpy.mock.calls.at(-1)?.[0] as string;
+      const to = new URLSearchParams(url.split("?")[1]).get("to");
+      expect(to).toBeTruthy();
+      expect(new Date(to as string).getTime()).toBeGreaterThan(
+        new Date("2026-05-09T00:01:00.000Z").getTime(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
