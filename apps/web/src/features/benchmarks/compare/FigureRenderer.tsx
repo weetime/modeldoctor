@@ -186,6 +186,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         data={rows.length > 0 ? data : []}
         series={series}
         yLabel="ms"
+        logScale
         baselineSeriesKey={baselineKeyOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
@@ -210,6 +211,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         data={rows.length > 0 ? data : []}
         series={series}
         yLabel="ms"
+        logScale
         baselineSeriesKey={baselineKeyOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
@@ -233,6 +235,7 @@ export const FigureRenderer = memo(function FigureRenderer({
         data={rows.length > 0 ? data : []}
         series={series}
         yLabel="ms"
+        logScale
         baselineSeriesKey={baselineKeyOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />
