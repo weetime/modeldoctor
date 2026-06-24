@@ -53,6 +53,20 @@ describe("isImprovement", () => {
     // header says 提升 (gain) but metric is latency → a drop is still good.
     expect(isImprovement("-", "提升幅度", "stage-bars-ttft-p95")).toBe(true);
   });
+
+  it("row label wins over the table heading in a combined multi-metric table", () => {
+    // A combined table sits under one "命中率" heading (metric = hit, higher
+    // better), but its TTFT/E2E/queue rows are lower-is-better — the row label
+    // decides, so a latency drop reads as an improvement (green), not a regression.
+    const hit = "stage-bars-prefix-cache-hit";
+    expect(isImprovement("-", "变化", hit, "TTFT p95 (ms)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "E2E latency p95 (ms)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "排队时间 (peak)")).toBe(true);
+    // hit / throughput rows in the same table stay higher-is-better.
+    expect(isImprovement("+", "变化", hit, "命中率")).toBe(true);
+    expect(isImprovement("+", "变化", hit, "吞吐 (req/s)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "吞吐 (req/s)")).toBe(false);
+  });
 });
 
 describe("deltaColumnIndex", () => {
