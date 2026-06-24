@@ -1,7 +1,7 @@
 import type { EngineMetricsPanelResult, EngineMetricsSeries } from "@modeldoctor/contracts";
 import { ENGINE_DISPLAY_NAME } from "@modeldoctor/contracts";
 import { format } from "date-fns";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BarChartPanel,
@@ -14,12 +14,18 @@ import {
 import { type Group, vizFor } from "./metric-viz.js";
 import { useEngineMetrics } from "./useEngineMetrics.js";
 
+/** How often the live (in-flight) window advances + refetches, in ms. */
+const LIVE_REFRESH_MS = 15_000;
+
 export interface EngineMetricsSectionProps {
   connectionId: string;
   /** ISO datetime — benchmark startedAt */
   startedAt: string;
-  /** ISO datetime — benchmark finishedAt */
-  finishedAt: string;
+  /**
+   * ISO datetime — benchmark finishedAt. Pass `null` for an in-flight run:
+   * the window then tracks "now" and refreshes every {@link LIVE_REFRESH_MS}.
+   */
+  finishedAt: string | null;
 }
 
 // Grafana-style 3-section layout:
@@ -65,21 +71,40 @@ export function EngineMetricsSection({
   finishedAt,
 }: EngineMetricsSectionProps) {
   const { t } = useTranslation("engine-metrics");
+  const isLive = finishedAt == null;
+
+  // In live mode the upper bound tracks wall-clock "now"; otherwise it's the
+  // fixed benchmark end. `nowMs` ticks on the refresh cadence so the derived
+  // window (and the query key) only advance once per interval.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isLive) return;
+    const id = setInterval(() => setNowMs(Date.now()), LIVE_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [isLive]);
+
+  const effectiveFinish = useMemo(() => {
+    if (finishedAt != null) return finishedAt;
+    // Quantize to the refresh cadence so unrelated re-renders don't churn the
+    // window — it only steps forward once per LIVE_REFRESH_MS tick.
+    const quantized = Math.floor(nowMs / LIVE_REFRESH_MS) * LIVE_REFRESH_MS;
+    return new Date(quantized).toISOString();
+  }, [finishedAt, nowMs]);
 
   const range = useMemo(() => {
     const from = shiftIso(startedAt, -30);
-    const to = shiftIso(finishedAt, +30);
+    const to = shiftIso(effectiveFinish, +30);
     const span = (new Date(to).getTime() - new Date(from).getTime()) / 1000;
     const step = Math.max(15, Math.floor(span / 200));
     return { from, to, step };
-  }, [startedAt, finishedAt]);
+  }, [startedAt, effectiveFinish]);
 
   const benchmarkWindow = useMemo(
     () => ({
       from: Math.floor(new Date(startedAt).getTime() / 1000),
-      to: Math.floor(new Date(finishedAt).getTime() / 1000),
+      to: Math.floor(new Date(effectiveFinish).getTime() / 1000),
     }),
-    [startedAt, finishedAt],
+    [startedAt, effectiveFinish],
   );
 
   const { data, isLoading, isError } = useEngineMetrics(connectionId, range);
@@ -118,12 +143,23 @@ export function EngineMetricsSection({
 
   return (
     <div className="space-y-6">
-      <div className="text-xs text-muted-foreground">
-        {t("section.subtitle", {
-          engineName: ENGINE_DISPLAY_NAME[data.engineId],
-          from: format(new Date(data.window.from), "yyyy-MM-dd HH:mm:ss"),
-          to: format(new Date(data.window.to), "yyyy-MM-dd HH:mm:ss"),
-        })}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>
+          {t("section.subtitle", {
+            engineName: ENGINE_DISPLAY_NAME[data.engineId],
+            from: format(new Date(data.window.from), "yyyy-MM-dd HH:mm:ss"),
+            to: format(new Date(data.window.to), "yyyy-MM-dd HH:mm:ss"),
+          })}
+        </span>
+        {isLive && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-500">
+            <span className="relative inline-flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            {t("section.liveBadge")}
+          </span>
+        )}
       </div>
 
       {stats.length > 0 && (
