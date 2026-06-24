@@ -28,7 +28,7 @@ exports[`mindie manifest > snapshot is stable 1`] = `
   },
   {
     "exprs": [
-      "clamp_max(100, 100 * mindie_kv_cache_usage_ratio{model_name="test-model"})",
+      "clamp_max(100 * mindie_kv_cache_usage_ratio{model_name="test-model"}, 100)",
     ],
     "key": "kv_cache_usage",
   },

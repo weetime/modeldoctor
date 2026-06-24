@@ -89,8 +89,8 @@ exports[`vllm manifest > snapshot of all rendered PromQL strings is stable 1`] =
   },
   {
     "exprs": [
-      "clamp_max(100, 100 * vllm:kv_cache_usage_perc{model_name="test-model"})",
-      "clamp_max(100, 100 * vllm:gpu_cache_usage_perc{model_name="test-model"})",
+      "clamp_max(100 * vllm:kv_cache_usage_perc{model_name="test-model"}, 100)",
+      "clamp_max(100 * vllm:gpu_cache_usage_perc{model_name="test-model"}, 100)",
     ],
     "key": "kv_cache_usage",
   },

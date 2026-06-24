@@ -40,7 +40,7 @@ exports[`sglang manifest > snapshot of rendered PromQL is stable 1`] = `
   },
   {
     "exprs": [
-      "clamp_max(100, 100 * sglang:token_usage{model_name="test-model"})",
+      "clamp_max(100 * sglang:token_usage{model_name="test-model"}, 100)",
     ],
     "key": "kv_cache_usage",
   },
