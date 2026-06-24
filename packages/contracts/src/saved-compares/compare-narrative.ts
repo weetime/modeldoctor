@@ -78,6 +78,13 @@ export const figureRefIdSchema = z.enum([
   // top-pod = the busiest pod's share of queries (routing concentration).
   "stage-bars-prefix-cache-hit",
   "stage-bars-top-pod-share",
+  // Engine-metrics figures — populated from the durable serverMetrics.engineMetrics
+  // snapshot (Prometheus, reduced to avg/peak scalars). kv-cache = KV cache
+  // utilization peak %, preemption = preemption rate, queue = request queue-time
+  // peak. Cross-run bars; available when every run carries that engine scalar.
+  "stage-bars-kv-cache",
+  "stage-bars-preemption",
+  "stage-bars-queue",
   "compare-grid",
   // Phase-1 figures — rendered from serverMetrics.prefixCache.perPod and
   // cold/warm delta computations.

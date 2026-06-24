@@ -1,4 +1,8 @@
-import { type FigureRefId, prefixCacheAnnotationSchema } from "@modeldoctor/contracts";
+import {
+  engineMetricsAnnotationSchema,
+  type FigureRefId,
+  prefixCacheAnnotationSchema,
+} from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters";
 
 export function readP95Latency(m: unknown): number | null {
@@ -97,6 +101,33 @@ export interface CapacityPoint {
 
 /** Read guidellm capacityCurve from a run's summaryMetrics ({tool,data}).
  * Mirrors the client-side `client-metrics.ts#readCapacityCurve`. */
+export interface EngineMetricValue {
+  avg: number | null;
+  peak: number | null;
+  unit: string;
+}
+
+/** Read one durable engine-metric scalar from serverMetrics.engineMetrics.
+ * Mirrors the client's `client-metrics.ts#readEngineMetric`. */
+export function readEngineMetric(serverMetrics: unknown, key: string): EngineMetricValue | null {
+  const parsed = engineMetricsAnnotationSchema.safeParse(
+    (serverMetrics as { engineMetrics?: unknown } | null)?.engineMetrics,
+  );
+  if (!parsed.success) return null;
+  const m = parsed.data.metrics.find((x) => x.key === key);
+  return m ? { avg: m.avg, peak: m.peak, unit: m.unit } : null;
+}
+
+/** refId → which engine metric + scalar to plot. Mirrors the client constant. */
+export const ENGINE_BAR_FIGURES: Record<
+  "stage-bars-kv-cache" | "stage-bars-preemption" | "stage-bars-queue",
+  { metricKey: string; pick: "avg" | "peak" }
+> = {
+  "stage-bars-kv-cache": { metricKey: "kv_cache_usage", pick: "peak" },
+  "stage-bars-preemption": { metricKey: "preemption_rate", pick: "avg" },
+  "stage-bars-queue": { metricKey: "request_queue_time", pick: "peak" },
+};
+
 export function readCapacityCurve(summaryMetrics: unknown): CapacityPoint[] | null {
   const m = summaryMetrics as { data?: { capacityCurve?: CapacityPoint[] } } | null;
   const c = m?.data?.capacityCurve;
@@ -143,6 +174,14 @@ export function availableFigureRefIds(runs: RunMetricBlobs[]): Set<FigureRefId> 
       out.add("pod-traffic-distribution");
       out.add("pod-hit-rate");
     }
+  }
+  // Engine-metrics figures need EVERY run to carry that durable scalar.
+  for (const [refId, spec] of Object.entries(ENGINE_BAR_FIGURES)) {
+    const present = runs.every((r) => {
+      const m = readEngineMetric(r.serverMetrics, spec.metricKey);
+      return m !== null && m[spec.pick] !== null;
+    });
+    if (present) out.add(refId as FigureRefId);
   }
   if (runs.some((r) => readCapacityCurve(r.summaryMetrics) !== null)) {
     out.add("throughput-vs-concurrency");

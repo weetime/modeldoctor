@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { baselineSummarySchema } from "./baseline.js";
+import { panelUnitSchema } from "./engine-metrics.js";
 import { ModalityCategorySchema } from "./modality.js";
 
 // ── Discriminators ───────────────────────────────────────────────────
@@ -245,3 +246,23 @@ export const prefixCacheAnnotationSchema = z.object({
   metricTag: z.enum(["v1", "v0"]),
 });
 export type PrefixCacheAnnotation = z.infer<typeof prefixCacheAnnotationSchema>;
+
+// Prometheus-derived engine-metrics annotation, snapshotted at benchmark
+// completion (reusing the live EngineMetricsService.fetchSnapshot manifest)
+// and stored under `serverMetrics.engineMetrics`. Each manifest metric is
+// reduced to scalar `avg` + `peak` over the run window so historical compares
+// survive Prometheus retention (the detail-page Engine Metrics tab stays live;
+// compare/reports read this durable snapshot). `key` is the manifest's stable
+// cross-engine key (e.g. "kv_cache_usage", "preemption_rate").
+export const engineMetricScalarSchema = z.object({
+  key: z.string(),
+  unit: panelUnitSchema,
+  avg: z.number().nullable(),
+  peak: z.number().nullable(),
+});
+export const engineMetricsAnnotationSchema = z.object({
+  capturedAt: z.string(),
+  metrics: z.array(engineMetricScalarSchema),
+});
+export type EngineMetricScalar = z.infer<typeof engineMetricScalarSchema>;
+export type EngineMetricsAnnotation = z.infer<typeof engineMetricsAnnotationSchema>;

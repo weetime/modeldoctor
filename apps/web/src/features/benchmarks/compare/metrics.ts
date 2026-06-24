@@ -6,6 +6,8 @@ import {
   rowDescriptorsByTool,
   type VerdictKind,
 } from "@modeldoctor/tool-adapters/schemas";
+import { readEngineMetric } from "./client-metrics";
+import type { ReportBenchmarkSnapshot } from "./ReportSections";
 
 // summaryMetrics is the discriminated union written by tool-adapter
 // parseFinalReport: { tool, data } (see
@@ -44,10 +46,71 @@ export interface MetricRowDescriptor {
   // SavedCompare hydration path under-types it). Every `read` impl already casts
   // its arg internally via `readMetricSafe` / `readRawField`, so this is honest.
   read: (m: unknown) => number | null;
+  /** When set, takes precedence over `read` and receives the whole run so the
+   *  value can come from `serverMetrics` (engine-metric rows), not just
+   *  `summaryMetrics`. */
+  readRun?: (run: ReportBenchmarkSnapshot) => number | null;
+  /** Literal label (engine rows) — bypasses the `compare.metricRowLabel.*`
+   *  i18n lookup when present. */
+  label?: string;
   verdictKind?: VerdictKind;
   digits?: number; // default 1
   unitSuffix?: string; // for the cell display (e.g. "ms", "%")
   format?: MetricFormat; // named formatter; takes precedence over digits/unitSuffix
+}
+
+/** Durable engine-metric rows (serverMetrics.engineMetrics) appended to the
+ * compare key-metrics grid. `scale` normalises 0-1 ratios to percent. Lower is
+ * better for the pressure metrics (kv-cache / preemption / queue). */
+const ENGINE_TABLE_ROWS: ReadonlyArray<{
+  key: string;
+  label: string;
+  pick: "avg" | "peak";
+  scale: number;
+  unitSuffix: string;
+  digits: number;
+}> = [
+  {
+    key: "success_rate",
+    label: "Success rate",
+    pick: "avg",
+    scale: 100,
+    unitSuffix: "%",
+    digits: 1,
+  },
+  // biome-ignore format: keep one row per line for readability
+  { key: "system_efficiency", label: "System efficiency", pick: "avg", scale: 100, unitSuffix: "%", digits: 1 },
+  { key: "ttft_p99", label: "TTFT P99", pick: "avg", scale: 1, unitSuffix: "ms", digits: 0 },
+  // biome-ignore format: keep one row per line for readability
+  { key: "preemption_rate", label: "Preemption rate", pick: "avg", scale: 1, unitSuffix: "rps", digits: 2 },
+  // biome-ignore format: keep one row per line for readability
+  { key: "kv_cache_usage", label: "KV cache util (peak)", pick: "peak", scale: 1, unitSuffix: "%", digits: 1 },
+  // biome-ignore format: keep one row per line for readability
+  { key: "prefix_cache_hit_rate", label: "Prefix hit rate", pick: "avg", scale: 1, unitSuffix: "%", digits: 1 },
+  // biome-ignore format: keep one row per line for readability
+  { key: "request_queue_time", label: "Queue time (peak)", pick: "peak", scale: 1, unitSuffix: "ms", digits: 0 },
+];
+
+/** Engine-metric descriptors for the runs that carry the durable snapshot —
+ * only rows whose metric is present in EVERY run are returned (complete rows). */
+export function engineRowDescriptors(runs: ReportBenchmarkSnapshot[]): MetricRowDescriptor[] {
+  if (runs.length === 0) return [];
+  return ENGINE_TABLE_ROWS.filter((row) =>
+    runs.every((run) => {
+      const m = readEngineMetric(run.serverMetrics, row.key);
+      return m !== null && m[row.pick] !== null;
+    }),
+  ).map((row) => ({
+    labelKey: `engine.${row.key}`,
+    label: row.label,
+    read: () => null,
+    readRun: (run) => {
+      const v = readEngineMetric(run.serverMetrics, row.key)?.[row.pick];
+      return v == null ? null : v * row.scale;
+    },
+    digits: row.digits,
+    unitSuffix: row.unitSuffix,
+  }));
 }
 
 function readRawField(metrics: unknown, section: string, field: string): number | null {

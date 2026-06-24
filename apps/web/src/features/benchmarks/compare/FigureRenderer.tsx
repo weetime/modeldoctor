@@ -12,7 +12,9 @@ import {
 import { ThroughputConcurrencyChart } from "@/components/charts/ThroughputConcurrencyChart";
 import {
   availableFigureRefIds,
+  ENGINE_BAR_FIGURES,
   readCapacityCurve,
+  readEngineMetric,
   readPodDistribution,
   readPrefixCache,
   summarizeForPrompt,
@@ -255,6 +257,39 @@ export const FigureRenderer = memo(function FigureRenderer({
         series={[{ key: "hit", label: "%", color: "#1a7f37", decimals: 1, higherIsBetter: true }]}
         barColors={rows.map(({ r }) => colorMap[r.id])}
         yLabel="%"
+        baselineIndex={baselineIndexOf(rows, baselineId)}
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (
+    refId === "stage-bars-kv-cache" ||
+    refId === "stage-bars-preemption" ||
+    refId === "stage-bars-queue"
+  ) {
+    // Engine-metric cross-run bar from the durable serverMetrics.engineMetrics
+    // snapshot. Lower is better (less KV pressure / preemption / queueing).
+    const spec = ENGINE_BAR_FIGURES[refId];
+    const title =
+      refId === "stage-bars-kv-cache"
+        ? "KV cache utilization (peak)"
+        : refId === "stage-bars-preemption"
+          ? "Preemption rate"
+          : "Request queue time (peak)";
+    const rows = summaries
+      .map(({ r }) => ({ r, v: readEngineMetric(r.benchmark?.serverMetrics, spec.metricKey) }))
+      .filter((x) => x.v !== null && x.v[spec.pick] !== null);
+    const unit = rows[0]?.v?.unit ?? "";
+    const data: StageBarDatum[] = rows.map(({ r, v }) => ({
+      stage: r.stageLabel,
+      val: v?.[spec.pick] ?? 0,
+    }));
+    chart = (
+      <StageBarChart
+        title={title}
+        data={data}
+        series={[{ key: "val", label: unit, color: "#bf8700", decimals: 1, higherIsBetter: false }]}
+        barColors={rows.map(({ r }) => colorMap[r.id])}
+        yLabel={unit}
         baselineIndex={baselineIndexOf(rows, baselineId)}
         labelColors={REPORT_LABEL_COLORS}
       />

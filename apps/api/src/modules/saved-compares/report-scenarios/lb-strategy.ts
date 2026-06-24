@@ -50,6 +50,11 @@ function assemble(sc: HydratedSavedCompare): ScenarioData {
       "stage-bars-tpot-p95",
       "stage-bars-e2e-p95",
       "latency-distribution",
+      // Engine-metric mechanism evidence (durable serverMetrics.engineMetrics
+      // snapshot): why latency moved — KV-cache pressure / preemption / queueing.
+      "stage-bars-kv-cache",
+      "stage-bars-preemption",
+      "stage-bars-queue",
     ],
   };
 }

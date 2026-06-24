@@ -3,6 +3,8 @@ import { byTool as defaultByTool, type ToolName } from "@modeldoctor/tool-adapte
 import { Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import type { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
+import type { EngineMetricsService } from "../../engine-metrics/engine-metrics.service.js";
+import { reduceEngineSnapshot } from "../../engine-metrics/engine-metrics-snapshot.reduce.js";
 import type { NotifyService } from "../../notifications/notify.service.js";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
@@ -26,6 +28,10 @@ export interface ReportLoaderDeps {
    *  the hook is silently skipped if either is absent. */
   prefixCacheSnapshot?: PrefixCacheSnapshotService;
   promFetcher?: PrometheusFetcherService;
+  /** Optional: when provided, an engine-metrics snapshot (live manifest reduced
+   *  to durable scalars) is taken after completion for the same lb-strategy +
+   *  Prometheus-datasource runs, stored under `serverMetrics.engineMetrics`. */
+  engineMetrics?: EngineMetricsService;
 }
 
 @Injectable()
@@ -88,6 +94,8 @@ export class ReportLoader {
         await this.trySnapshotPrefixCache({
           runId,
           scenario: bench.scenario,
+          userId: bench.userId ?? null,
+          connectionId: bench.connectionId ?? null,
           prometheusDatasourceId: bench.connection?.prometheusDatasourceId ?? null,
           connectionModel: bench.connection?.model ?? null,
           completedAt: updated.completedAt ?? null,
@@ -139,13 +147,23 @@ export class ReportLoader {
   private async trySnapshotPrefixCache(opts: {
     runId: string;
     scenario: string;
+    userId: string | null;
+    connectionId: string | null;
     prometheusDatasourceId: string | null;
     connectionModel: string | null;
     completedAt: Date | null;
     startedAt: Date | null;
   }): Promise<void> {
-    const { runId, scenario, prometheusDatasourceId, connectionModel, completedAt, startedAt } =
-      opts;
+    const {
+      runId,
+      scenario,
+      userId,
+      connectionId,
+      prometheusDatasourceId,
+      connectionModel,
+      completedAt,
+      startedAt,
+    } = opts;
     if (!this.deps.prefixCacheSnapshot || !this.deps.promFetcher) return;
     try {
       if (scenario !== "lb-strategy") return;
@@ -168,6 +186,26 @@ export class ReportLoader {
       const ann = await this.deps.prefixCacheSnapshot.snapshot({ ds, model, windowSec, at: end });
       if (ann) {
         await this.deps.repo.mergeServerMetrics(runId, { prefixCache: ann });
+      }
+
+      // Engine metrics: reuse the live snapshot manifest (fetchSnapshot resolves
+      // connection → datasource → all manifest queries) and reduce to durable
+      // scalars so historical compares survive Prometheus retention. Isolated
+      // try/catch — an engine-metrics failure must not undo the prefix-cache
+      // snapshot already merged above.
+      if (this.deps.engineMetrics && userId && connectionId) {
+        try {
+          const snap = await this.deps.engineMetrics.fetchSnapshot(userId, connectionId, {
+            from: startedAt.toISOString(),
+            to: end.toISOString(),
+          });
+          const engineAnn = reduceEngineSnapshot(snap);
+          if (engineAnn.metrics.length > 0) {
+            await this.deps.repo.mergeServerMetrics(runId, { engineMetrics: engineAnn });
+          }
+        } catch (e) {
+          this.log.warn(`engine-metrics snapshot(${runId}) failed: ${(e as Error).message}`);
+        }
       }
     } catch (e) {
       this.log.warn(`trySnapshotPrefixCache(${runId}) failed: ${(e as Error).message}`);
