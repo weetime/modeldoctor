@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { benchmarkApi } from "../api";
 import { benchmarkKeys } from "../queries";
+import { AddBenchmarkButton } from "./AddBenchmarkButton";
 import { CompareToolbar } from "./CompareToolbar";
 import { type ReportRun, ReportSections } from "./ReportSections";
 import { shortRunLabels } from "./run-label";
@@ -111,6 +112,21 @@ export function BenchmarkComparePage() {
     // re-renders. "none" is the sentinel for explicit None selection.
     sp.set("baseline", next ?? "none");
     setSearchParams(sp);
+  }
+
+  // Add / remove rewrite the URL ids — the single source of run membership +
+  // order, exactly like onReorder. `replace` keeps the back button sane.
+  function setIds(next: string[]) {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("ids", next.join(","));
+    setSearchParams(sp, { replace: true });
+  }
+  function handleRemove(id: string) {
+    setIds(ids.filter((x) => x !== id));
+  }
+  function handleAdd(id: string) {
+    if (ids.includes(id)) return;
+    setIds([...ids, id]);
   }
 
   // Unreachable path: BenchmarkCompareGate routes empty `ids` to
@@ -235,10 +251,17 @@ export function BenchmarkComparePage() {
               onReorder={(newIds) => {
                 // URL ids order is the single source of run order — tables,
                 // charts and SaveCompareDialog all follow it via useQueries.
-                const sp = new URLSearchParams(searchParams);
-                sp.set("ids", newIds.join(","));
-                setSearchParams(sp, { replace: true });
+                setIds(newIds);
               }}
+              onRemove={handleRemove}
+              matrixActions={
+                <AddBenchmarkButton
+                  scenario={successfulBenchmarks[0].scenario}
+                  tool={successfulBenchmarks[0].tool}
+                  existingIds={ids}
+                  onAdd={handleAdd}
+                />
+              }
             />
             <SaveCompareDialog
               open={saveOpen}

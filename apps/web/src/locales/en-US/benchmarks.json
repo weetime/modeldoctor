@@ -366,7 +366,16 @@
       "concurrency": "concurrency",
       "hitRate": "Hit Rate",
       "topPodShare": "Top Pod Share"
-    }
+    },
+    "matrix": {
+      "add": "Add benchmark",
+      "addPlaceholder": "Search benchmarks…",
+      "addEmpty": "No comparable benchmarks to add",
+      "addLoading": "Loading…",
+      "remove": "Remove from comparison",
+      "removeDisabled": "A comparison needs at least 2 benchmarks"
+    },
+    "outlierTitle": "{{delta}} vs row mean"
   },
   "savedCompare": {
     "savedListLink": "Saved comparisons",

@@ -15,7 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { CompareGrid } from "./CompareGrid";
@@ -69,6 +70,14 @@ export interface ReportSectionsProps {
    * this component never keeps a local copy.
    */
   onReorder?: (orderedIds: string[]) => void;
+  /**
+   * When provided, each Test-matrix row gets a remove button. Disabled once
+   * only two runs remain (a comparison needs ≥2). The caller drops the id from
+   * the URL ids.
+   */
+  onRemove?: (id: string) => void;
+  /** Rendered at the top-right of the Test-matrix section (e.g. an Add button). */
+  matrixActions?: ReactNode;
 }
 
 // Static sensor options hoisted to module scope: dnd-kit's `useSensor` depends
@@ -82,10 +91,14 @@ function MatrixRowCells({
   r,
   t,
   showPrefixCache,
+  onRemove,
+  removeDisabled,
 }: {
   r: ReportRun;
   t: (key: string) => string;
   showPrefixCache: boolean;
+  onRemove?: (id: string) => void;
+  removeDisabled?: boolean;
 }) {
   const pc = showPrefixCache ? readPrefixCache(r.serverMetrics) : null;
   return (
@@ -111,6 +124,20 @@ function MatrixRowCells({
           </td>
         </>
       ) : null}
+      {onRemove ? (
+        <td className="w-8 px-2 py-2 text-right">
+          <button
+            type="button"
+            aria-label={t("compare.matrix.remove")}
+            title={removeDisabled ? t("compare.matrix.removeDisabled") : t("compare.matrix.remove")}
+            disabled={removeDisabled}
+            onClick={() => onRemove(r.id)}
+            className="rounded-sm p-1 text-muted-foreground hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </td>
+      ) : null}
     </>
   );
 }
@@ -122,11 +149,15 @@ function SortableMatrixRow({
   t,
   handleLabel,
   showPrefixCache,
+  onRemove,
+  removeDisabled,
 }: {
   r: ReportRun;
   t: (key: string) => string;
   handleLabel: string;
   showPrefixCache: boolean;
+  onRemove?: (id: string) => void;
+  removeDisabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: r.id,
@@ -148,7 +179,13 @@ function SortableMatrixRow({
           <GripVertical className="h-4 w-4" />
         </button>
       </td>
-      <MatrixRowCells r={r} t={t} showPrefixCache={showPrefixCache} />
+      <MatrixRowCells
+        r={r}
+        t={t}
+        showPrefixCache={showPrefixCache}
+        onRemove={onRemove}
+        removeDisabled={removeDisabled}
+      />
     </tr>
   );
 }
@@ -163,7 +200,13 @@ function SortableMatrixRow({
  *
  * `data-report-root` is exposed for the export-as-HTML utility.
  */
-export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsProps) {
+export function ReportSections({
+  runs,
+  baselineId,
+  onReorder,
+  onRemove,
+  matrixActions,
+}: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
   // Type-guard predicate (not just `!== null`) so `r.benchmark` narrows to
   // non-null below — lets `CompareGrid` receive `ReportBenchmarkSnapshot[]`
@@ -179,6 +222,8 @@ export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsPr
     livingRuns.length > 0 &&
     livingRuns.every((r) => readPrefixCache(r.serverMetrics) !== null);
   const sortable = onReorder !== undefined;
+  // A comparison needs ≥2 runs; block removing the second-to-last.
+  const removeDisabled = runs.length <= 2;
   const sensors = useSensors(
     useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
     useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS),
@@ -208,6 +253,7 @@ export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsPr
               <th className="px-3 py-2 text-right">{t("compare.matrixCol.topPodShare")}</th>
             </>
           ) : null}
+          {onRemove ? <th className="w-8 px-2 py-2" aria-hidden /> : null}
         </tr>
       </thead>
       <tbody>
@@ -219,11 +265,19 @@ export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsPr
                 t={t}
                 handleLabel={t("compare.dragHandle")}
                 showPrefixCache={showPrefixCache}
+                onRemove={onRemove}
+                removeDisabled={removeDisabled}
               />
             ))
           : runs.map((r) => (
               <tr key={r.id} className="border-border border-t">
-                <MatrixRowCells r={r} t={t} showPrefixCache={showPrefixCache} />
+                <MatrixRowCells
+                  r={r}
+                  t={t}
+                  showPrefixCache={showPrefixCache}
+                  onRemove={onRemove}
+                  removeDisabled={removeDisabled}
+                />
               </tr>
             ))}
       </tbody>
@@ -234,7 +288,10 @@ export function ReportSections({ runs, baselineId, onReorder }: ReportSectionsPr
     <div data-report-root className="space-y-8">
       {/* 1. Test matrix */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold">{t("savedCompare.report.sectionMatrix")}</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{t("savedCompare.report.sectionMatrix")}</h2>
+          {matrixActions}
+        </div>
         <div className="overflow-x-auto rounded-md border border-border">
           {sortable ? (
             <DndContext
