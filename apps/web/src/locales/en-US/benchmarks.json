@@ -113,6 +113,7 @@
     "rerun": "Rerun",
     "more": "More",
     "delete": "Delete",
+    "cancel": "Cancel run",
     "saveAsTemplate": {
       "label": "Save as template",
       "success": "Saved as template \"{{name}}\"",
@@ -130,6 +131,7 @@
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
+  "compareDisabledNotCompleted": "Only completed benchmarks can be compared",
   "compareDisabledMixedTools": "Compare requires the same tool ({{summary}})",
   "bulkDelete": {
     "button": "Delete ({{n}})",
