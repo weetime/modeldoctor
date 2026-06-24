@@ -49,13 +49,13 @@ export function MetricRow({ descriptor, runs, baselineId }: MetricRowProps) {
   const { t } = useTranslation("benchmarks");
   // Engine-metric rows read the whole run (serverMetrics); tool-metric rows read
   // summaryMetrics. `readRun` wins when present.
-  const valueOf = (run: (typeof runs)[number]): number | null =>
+  const readValue = (run: (typeof runs)[number]): number | null =>
     descriptor.readRun ? descriptor.readRun(run) : descriptor.read(run.summaryMetrics);
   const baseline = baselineId ? runs.find((r) => r.id === baselineId) : null;
-  const baselineValue = baseline ? valueOf(baseline) : null;
+  const baselineValue = baseline ? readValue(baseline) : null;
   const verdictKind = descriptor.verdictKind;
 
-  const values = runs.map((run) => valueOf(run));
+  const values = runs.map((run) => readValue(run));
   // Mean-relative orientation (arrows + outlier heatmap) only kicks in when no
   // baseline is chosen — with a baseline the vs-baseline VerdictBadge owns the
   // good/bad story, and mixing two reference frames would be confusing.
