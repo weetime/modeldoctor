@@ -97,8 +97,12 @@
     "any": "Any",
     "clear": "Clear filters"
   },
+  "editNameAria": "Edit name",
+  "editLabelAria": "Edit label (Compare X axis; empty = auto)",
+  "labelPlaceholder": "—",
   "columns": {
     "name": "Name",
+    "label": "Label",
     "createdAt": "Created",
     "duration": "Duration",
     "tool": "Tool",

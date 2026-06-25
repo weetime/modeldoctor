@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Ban,
   Copy as CopyIcon,
+  ExternalLink,
   History as HistoryIcon,
   MoreHorizontal,
   RefreshCw,
@@ -20,6 +21,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ClickToEditCell } from "@/components/common/click-to-edit-cell";
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
@@ -63,6 +65,7 @@ import {
   useCancelBenchmark,
   useCreateBenchmark,
   useDeleteBenchmark,
+  useUpdateBenchmark,
 } from "./queries";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SCENARIOS, type ScenarioId } from "./scenarios";
@@ -149,6 +152,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
   const bulkDeleteBenchmarks = useBulkDeleteBenchmarks();
   const cancelBenchmark = useCancelBenchmark();
   const createBenchmark = useCreateBenchmark();
+  const updateBenchmark = useUpdateBenchmark();
   const navigate = useNavigate();
 
   // Drop the selection whenever the filters (URL params) or scenario change.
@@ -393,6 +397,7 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                     />
                   </TableHead>
                   <TableHead>{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.label")}</TableHead>
                   <TableHead>{t("columns.createdAt")}</TableHead>
                   <TableHead>{t("columns.duration")}</TableHead>
                   <TableHead>{t("columns.tool")}</TableHead>
@@ -415,12 +420,32 @@ export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      <Link
-                        to={`/benchmarks/${benchmark.id}`}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {benchmark.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/benchmarks/${benchmark.id}`}
+                          className="text-muted-foreground hover:text-primary"
+                          aria-label={`open ${benchmark.name}`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                        <ClickToEditCell
+                          value={benchmark.name}
+                          ariaLabel={t("editNameAria")}
+                          onCommit={(name) =>
+                            updateBenchmark.mutate({ id: benchmark.id, body: { name } })
+                          }
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <ClickToEditCell
+                        value={benchmark.label ?? ""}
+                        ariaLabel={t("editLabelAria")}
+                        placeholder={t("labelPlaceholder")}
+                        onCommit={(label) =>
+                          updateBenchmark.mutate({ id: benchmark.id, body: { label } })
+                        }
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDistanceToNow(new Date(benchmark.createdAt), {
