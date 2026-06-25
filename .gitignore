@@ -75,3 +75,7 @@ e2e/.cache/
 apps/benchmark-runner/images/.vegeta-binaries/
 apps/benchmark-runner/images/.sharegpt/
 apps/benchmark-runner/images/.mooncake/
+
+# local benchmark/experiment scratch scripts — not part of the repo (hardcoded
+# cluster/host paths, one-off runs). Kept locally under each worktree.
+.experiments/
