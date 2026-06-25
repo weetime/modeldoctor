@@ -19,8 +19,18 @@ describe("buildExportHtml", () => {
   it("escapes the title", () => {
     const root = document.createElement("div");
     const html = buildExportHtml(root, "evil <script>", "");
-    expect(html).not.toContain("<script>");
+    // The export injects its own runtime <script>, so assert the TITLE
+    // specifically is escaped (not broken out as raw markup) rather than that no
+    // <script> exists at all.
+    expect(html).not.toContain("evil <script>");
     expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("injects the TOC scroll-spy + full-screen runtime", () => {
+    const root = document.createElement("div");
+    const html = buildExportHtml(root, "r", "");
+    expect(html).toContain("IntersectionObserver");
+    expect(html).toContain("pr-fullscreen");
   });
 
   it("replaces each chart canvas with an inline <img> PNG snapshot", () => {

@@ -455,7 +455,9 @@
       "notGenerated": "该对比尚未生成 AI 报告。",
       "openDetailToGenerate": "打开详情页生成",
       "backToDetail": "返回详情",
-      "printPdf": "打印 / 导出 PDF"
+      "printPdf": "打印 / 导出 PDF",
+      "fullscreen": "全宽阅读",
+      "exitFullscreen": "显示目录"
     },
     "classification": {
       "internal": "内部",

@@ -132,6 +132,17 @@
   background: var(--pr-accent-subtle);
 }
 
+/* Full-screen reading mode — the preview page's toolbar button and the
+   exported HTML's floating button both toggle `body.pr-fullscreen`; this single
+   rule (shared via the bundled stylesheet) hides the sticky TOC and lets the
+   content span the full width in BOTH surfaces. */
+body.pr-fullscreen .primer-report .pr-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+body.pr-fullscreen .primer-report .pr-toc {
+  display: none;
+}
+
 /* ─── Canvas ────────────────────────────────────────────────────────────── */
 .primer-report .pr-canvas {
   background: var(--pr-bg-canvas);

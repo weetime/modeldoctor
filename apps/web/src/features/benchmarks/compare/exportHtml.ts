@@ -77,6 +77,28 @@ export function buildExportHtml(root: HTMLElement, title: string, css: string): 
     span.className = btn.className;
     btn.replaceWith(span);
   });
+  // Static export carries no React, so re-add the two interactive behaviours as
+  // plain JS: (1) TOC scroll-spy highlighting; (2) a floating button that
+  // toggles full-screen (TOC-hidden) reading via `body.pr-fullscreen` — the same
+  // class + CSS (bundled from primer-report.css) the live preview page uses, so
+  // the interaction is identical in both surfaces. ⛶ = fullscreen glyph.
+  const runtime = `<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.pr-toc a[href^="#pr-section-"]'));
+  function setActive(id){links.forEach(function(a){a.classList.toggle("active",a.getAttribute("href")==="#"+id);});}
+  var secs=links.map(function(a){return document.getElementById(a.getAttribute("href").slice(1));}).filter(Boolean);
+  if(window.IntersectionObserver&&secs.length){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)setActive(e.target.id);});},{rootMargin:"0px 0px -70% 0px"});
+    secs.forEach(function(s){io.observe(s);});
+  }
+  var b=document.createElement("button");
+  b.textContent="⛶";
+  b.title="Toggle contents / full-width";
+  b.setAttribute("style","position:fixed;top:16px;right:16px;z-index:1000;width:36px;height:36px;border-radius:8px;border:1px solid #d0d7de;background:#fff;cursor:pointer;font-size:16px;line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.12)");
+  b.onclick=function(){document.body.classList.toggle("pr-fullscreen");};
+  document.body.appendChild(b);
+})();
+</script>`;
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -84,7 +106,7 @@ export function buildExportHtml(root: HTMLElement, title: string, css: string): 
 <title>${escapeHtml(title)}</title>
 <style>${css}</style>
 </head>
-<body class="bg-background text-foreground">${clone.outerHTML}</body>
+<body class="bg-background text-foreground">${clone.outerHTML}${runtime}</body>
 </html>`;
 }
 
@@ -95,7 +117,10 @@ export async function exportPageAsHtml(root: HTMLElement, name: string): Promise
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${name.replace(/[^a-zA-Z0-9-_]+/g, "_")}.html`;
+  // Preserve the report title (incl. CJK) in the filename; only collapse
+  // filesystem-unsafe chars + whitespace to "_", trim, and fall back if empty.
+  const safe = name.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "") || "report";
+  a.download = `${safe}.html`;
   document.body.appendChild(a);
   a.click();
   a.remove();

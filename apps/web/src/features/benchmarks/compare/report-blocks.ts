@@ -57,15 +57,34 @@ const LOWER_IS_BETTER: ReadonlySet<FigureRefId> = new Set<FigureRefId>([
   "stage-bars-error-rate",
 ]);
 
-/** Whether a delta is an improvement. The table's `metric` is the primary
- * polarity source (authoritative, same as the chart's higherIsBetter); a
- * generic header like "Delta"/"magnitude" carries no direction, so without a metric
- * we fall back to reduction-keyword detection, then default to gain. */
+// Per-ROW polarity from the row's own label (first cell). The table `metric`
+// (from the heading) describes only ONE metric, but the AI often emits a
+// COMBINED table (hit + throughput + TTFT + E2E rows under one heading) — there
+// the heading's polarity is wrong for the latency/error rows. A row whose label
+// names a latency/error/pressure metric is lower-is-better regardless of the
+// heading. CJK as \u escapes (no-hardcoded-zh lint): yanchi/duanduanduan(e2e)/
+// paidui(queue)/cuowu(error)/qiangzhan(preempt).
+const ROW_LOWER_IS_BETTER_RE =
+  /overhead|duration|latency|preempt|memory|queue|error|ttft|tpot|vram|cost|time|e2e|\bitl\b|\u7aef\u5230\u7aef|\u5ef6\u8fdf|\u6392\u961f|\u9519\u8bef|\u62a2\u5360|\u8017\u65f6|\u65f6\u95f4|\u663e\u5b58|\u5185\u5b58|\u6210\u672c|\u5f00\u9500/i;
+// hit/mingzhong, throughput/tuntu, qps, success/chenggong, efficiency/xiaolv.
+const ROW_HIGHER_IS_BETTER_RE =
+  /hit|throughput|qps|req\/s|success|efficiency|\u547d\u4e2d|\u541e\u5410|\u6210\u529f|\u6548\u7387/i;
+
+/** Whether a delta is an improvement. Polarity sources, most-specific first:
+ * (1) the ROW's own label — handles combined multi-metric tables where one
+ * heading can't describe every row; (2) the table's `metric` (from the heading,
+ * authoritative for single-metric tables, same as the chart's higherIsBetter);
+ * (3) reduction-keyword detection on the delta header; else default to gain. */
 export function isImprovement(
   sign: "+" | "-",
   header: string,
   metric?: FigureRefId | null,
+  rowLabel?: string,
 ): boolean {
+  if (rowLabel) {
+    if (ROW_LOWER_IS_BETTER_RE.test(rowLabel)) return sign === "-";
+    if (ROW_HIGHER_IS_BETTER_RE.test(rowLabel)) return sign === "+";
+  }
   if (metric) return LOWER_IS_BETTER.has(metric) ? sign === "-" : sign === "+";
   return REDUCTION_RE.test(header) ? sign === "-" : sign === "+";
 }

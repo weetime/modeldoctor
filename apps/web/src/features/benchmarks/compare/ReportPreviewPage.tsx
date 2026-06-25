@@ -1,6 +1,6 @@
 import type { CompareNarrative } from "@modeldoctor/contracts";
-import { ArrowLeft, Download, Printer } from "lucide-react";
-import { useRef } from "react";
+import { ArrowLeft, Download, Maximize2, Minimize2, Printer } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,29 @@ export function ReportPreviewPage() {
   const { t } = useTranslation("benchmarks");
   const query = useSavedCompare(id);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Drive the document title from the report name so Print-to-PDF defaults the
+  // saved-file name to the report title (browsers seed the PDF filename from
+  // document.title), and the browser tab reflects which report this is. Restore
+  // on unmount so other pages aren't left with this title.
+  const reportName = query.data?.name;
+  useEffect(() => {
+    if (!reportName) return;
+    const prev = document.title;
+    document.title = reportName;
+    return () => {
+      document.title = prev;
+    };
+  }, [reportName]);
+
+  // Full-screen reading: toggle `body.pr-fullscreen` (same class + CSS the
+  // exported HTML's button uses, so the interaction is identical). Cleared on
+  // unmount so other routes aren't left full-screen.
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    document.body.classList.toggle("pr-fullscreen", fullscreen);
+    return () => document.body.classList.remove("pr-fullscreen");
+  }, [fullscreen]);
 
   if (query.isLoading) {
     return (
@@ -102,6 +125,16 @@ export function ReportPreviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setFullscreen((v) => !v)}>
+              {fullscreen ? (
+                <Minimize2 className="mr-1.5 h-4 w-4" />
+              ) : (
+                <Maximize2 className="mr-1.5 h-4 w-4" />
+              )}
+              {fullscreen
+                ? t("savedCompare.reportPage.exitFullscreen", { defaultValue: "Show contents" })
+                : t("savedCompare.reportPage.fullscreen", { defaultValue: "Full width" })}
+            </Button>
             <Button variant="outline" size="sm" onClick={onExport}>
               <Download className="mr-1.5 h-4 w-4" />
               {t("savedCompare.detail.export")}
