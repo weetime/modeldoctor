@@ -455,7 +455,9 @@
       "notGenerated": "This comparison does not have an AI report yet.",
       "openDetailToGenerate": "Open detail page to generate",
       "backToDetail": "Back to detail",
-      "printPdf": "Print / PDF"
+      "printPdf": "Print / PDF",
+      "fullscreen": "Full width",
+      "exitFullscreen": "Show contents"
     },
     "classification": {
       "internal": "Internal",
