@@ -487,6 +487,7 @@ function toContract(row: BenchmarkWithRelations): Benchmark {
     tool: row.tool as Benchmark["tool"],
     toolVersion: row.toolVersion,
     name: row.name,
+    label: row.label,
     description: row.description,
     status: row.status as Benchmark["status"],
     statusMessage: row.statusMessage,

@@ -133,6 +133,7 @@ model Benchmark {
   toolVersion String? @map("tool_version")
 
   name        String
+  label       String?
   description String? @db.Text
 
   status        String  @default("pending")
