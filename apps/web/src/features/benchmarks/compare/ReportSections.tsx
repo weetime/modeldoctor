@@ -114,14 +114,22 @@ function MatrixRowCells({
     <>
       <td className="px-3 py-2 font-medium">
         {onRelabel ? (
-          // Always-on inline input (mirrors the SaveCompareDialog's Stage-labels
-          // editor) — type to rename; the value flows through reportRuns.stageLabel
-          // → every chart + the grid + the SaveCompareDialog seed, so the page
-          // relabels live without opening the save flow (#326).
+          // Always-on inline input that PERSISTS to benchmark.label on commit
+          // (blur / Enter), not per keystroke — same store as the list edit, no
+          // separate per-compare state. `key`+`defaultValue` re-seed the field
+          // after the mutation refetches the run (empty commit clears the label
+          // → falls back to the auto short label). Uncontrolled so typing
+          // doesn't fire a PATCH on every keystroke.
           <Input
-            value={r.stageLabel}
+            key={r.stageLabel}
+            defaultValue={r.stageLabel}
             aria-label={t("compare.matrix.editLabel")}
-            onChange={(e) => onRelabel(r.id, e.target.value)}
+            onBlur={(e) => {
+              if (e.target.value !== r.stageLabel) onRelabel(r.id, e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
             className="h-8 max-w-[14rem]"
           />
         ) : (

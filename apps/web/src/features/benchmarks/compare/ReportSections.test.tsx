@@ -65,19 +65,39 @@ describe("ReportSections inline stage-label editing (#326)", () => {
     expect((inputs[1] as HTMLInputElement).value).toBe("ON");
   });
 
-  it("reports the raw value on every keystroke", () => {
+  it("does not commit on keystroke — only on blur (avoids a PATCH per char)", () => {
     const onRelabel = vi.fn();
     renderMatrix(onRelabel);
     const input = screen.getByDisplayValue("OFF");
     fireEvent.change(input, { target: { value: "Baseline" } });
+    expect(onRelabel).not.toHaveBeenCalled();
+    fireEvent.blur(input);
     expect(onRelabel).toHaveBeenCalledWith("a", "Baseline");
   });
 
-  it("reports an empty value as-is (clearable, not reverted)", () => {
+  it("commits on Enter", () => {
+    const onRelabel = vi.fn();
+    renderMatrix(onRelabel);
+    const input = screen.getByDisplayValue("OFF");
+    input.focus();
+    fireEvent.change(input, { target: { value: "X" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onRelabel).toHaveBeenCalledWith("a", "X");
+  });
+
+  it("commits an empty value on blur (clears the persistent label)", () => {
     const onRelabel = vi.fn();
     renderMatrix(onRelabel);
     const input = screen.getByDisplayValue("ON");
     fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
     expect(onRelabel).toHaveBeenCalledWith("b", "");
+  });
+
+  it("does not commit when the value is unchanged", () => {
+    const onRelabel = vi.fn();
+    renderMatrix(onRelabel);
+    fireEvent.blur(screen.getByDisplayValue("OFF"));
+    expect(onRelabel).not.toHaveBeenCalled();
   });
 });
