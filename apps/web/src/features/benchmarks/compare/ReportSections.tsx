@@ -15,8 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { GripVertical, Pencil, X } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { CompareGrid } from "./CompareGrid";
@@ -76,6 +76,12 @@ export interface ReportSectionsProps {
    * the URL ids.
    */
   onRemove?: (id: string) => void;
+  /**
+   * When provided, each Test-matrix Label cell becomes click-to-edit. The new
+   * label (or empty string to revert to the auto label) is reported here; the
+   * caller owns the override map and re-derives `runs[].stageLabel` from it.
+   */
+  onRelabel?: (id: string, value: string) => void;
   /** Rendered at the top-right of the Test-matrix section (e.g. an Add button). */
   matrixActions?: ReactNode;
 }
@@ -87,23 +93,98 @@ export interface ReportSectionsProps {
 const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 4 } };
 const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
 
+/**
+ * Click-to-edit stage label for the Test-matrix Label cell (#326). Renders the
+ * label as a button (pencil affordance on hover); clicking swaps in an input.
+ * Enter / blur commits, Escape cancels, an empty commit reverts to the auto
+ * label (the parent's `onRelabel` deletes the override). The committed value
+ * flows through `reportRuns.stageLabel` → every chart + the SaveCompareDialog
+ * seed, so the whole page relabels live without opening the save flow.
+ */
+function EditableLabel({
+  value,
+  onCommit,
+  editLabel,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  editLabel: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (editing) {
+    const commit = () => {
+      setEditing(false);
+      if (draft !== value) onCommit(draft);
+    };
+    return (
+      <input
+        // Focus via callback ref (not autoFocus) so the field the user just
+        // clicked to edit gets focus without tripping the a11y lint rule.
+        ref={(el) => el?.focus()}
+        value={draft}
+        aria-label={editLabel}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setEditing(false);
+          }
+        }}
+        className="w-full max-w-[12rem] rounded-sm border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      title={editLabel}
+      onClick={() => {
+        setDraft(value);
+        setEditing(true);
+      }}
+      className="group inline-flex items-center gap-1 rounded-sm text-left hover:text-primary"
+    >
+      <span>{value}</span>
+      <Pencil className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" />
+    </button>
+  );
+}
+
 function MatrixRowCells({
   r,
   t,
   showPrefixCache,
   onRemove,
+  onRelabel,
   removeDisabled,
 }: {
   r: ReportRun;
   t: (key: string) => string;
   showPrefixCache: boolean;
   onRemove?: (id: string) => void;
+  onRelabel?: (id: string, value: string) => void;
   removeDisabled?: boolean;
 }) {
   const pc = showPrefixCache ? readPrefixCache(r.serverMetrics) : null;
   return (
     <>
-      <td className="px-3 py-2 font-medium">{r.stageLabel}</td>
+      <td className="px-3 py-2 font-medium">
+        {onRelabel ? (
+          <EditableLabel
+            value={r.stageLabel}
+            onCommit={(v) => onRelabel(r.id, v)}
+            editLabel={t("compare.matrix.editLabel")}
+          />
+        ) : (
+          r.stageLabel
+        )}
+      </td>
       <td className="px-3 py-2">
         {r.benchmark === null ? (
           <span className="opacity-60">{t("savedCompare.detail.missingBenchmark")}</span>
@@ -150,6 +231,7 @@ function SortableMatrixRow({
   handleLabel,
   showPrefixCache,
   onRemove,
+  onRelabel,
   removeDisabled,
 }: {
   r: ReportRun;
@@ -157,6 +239,7 @@ function SortableMatrixRow({
   handleLabel: string;
   showPrefixCache: boolean;
   onRemove?: (id: string) => void;
+  onRelabel?: (id: string, value: string) => void;
   removeDisabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -184,6 +267,7 @@ function SortableMatrixRow({
         t={t}
         showPrefixCache={showPrefixCache}
         onRemove={onRemove}
+        onRelabel={onRelabel}
         removeDisabled={removeDisabled}
       />
     </tr>
@@ -205,6 +289,7 @@ export function ReportSections({
   baselineId,
   onReorder,
   onRemove,
+  onRelabel,
   matrixActions,
 }: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
@@ -266,6 +351,7 @@ export function ReportSections({
                 handleLabel={t("compare.dragHandle")}
                 showPrefixCache={showPrefixCache}
                 onRemove={onRemove}
+                onRelabel={onRelabel}
                 removeDisabled={removeDisabled}
               />
             ))
@@ -276,6 +362,7 @@ export function ReportSections({
                   t={t}
                   showPrefixCache={showPrefixCache}
                   onRemove={onRemove}
+                  onRelabel={onRelabel}
                   removeDisabled={removeDisabled}
                 />
               </tr>

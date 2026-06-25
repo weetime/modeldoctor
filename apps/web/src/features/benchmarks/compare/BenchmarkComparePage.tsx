@@ -39,6 +39,20 @@ export function BenchmarkComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [saveOpen, setSaveOpen] = useState(false);
   const [generateAfterSave, setGenerateAfterSave] = useState(false);
+  // Per-run stage-label overrides, edited inline in the Test-matrix Label cell.
+  // Kept in component state (not the URL) so typing doesn't spam history; an
+  // empty value reverts to the auto-derived short label. Flows into reportRuns →
+  // every chart / the metric grid / the SaveCompareDialog seed, so a rename
+  // updates the whole page live without entering the save flow (#326).
+  const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>({});
+  function handleRelabel(id: string, value: string) {
+    setLabelOverrides((prev) => {
+      const next = { ...prev };
+      if (value.trim() === "") delete next[id];
+      else next[id] = value.trim();
+      return next;
+    });
+  }
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
   //   - missing            → "user hasn't chosen yet, fall back to inferred default"
@@ -173,7 +187,7 @@ export function BenchmarkComparePage() {
   const shortLabels = shortRunLabels(runNames);
   const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
     id: b.id,
-    stageLabel: shortLabels[i],
+    stageLabel: labelOverrides[b.id] ?? shortLabels[i],
     tool: b.tool,
     scenario: b.scenario,
     summaryMetrics: b.summaryMetrics,
@@ -254,6 +268,7 @@ export function BenchmarkComparePage() {
                 setIds(newIds);
               }}
               onRemove={handleRemove}
+              onRelabel={handleRelabel}
               matrixActions={
                 <AddBenchmarkButton
                   scenario={successfulBenchmarks[0].scenario}

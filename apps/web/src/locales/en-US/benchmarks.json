@@ -375,7 +375,8 @@
       "addEmpty": "No comparable benchmarks to add",
       "addLoading": "Loading…",
       "remove": "Remove from comparison",
-      "removeDisabled": "A comparison needs at least 2 benchmarks"
+      "removeDisabled": "A comparison needs at least 2 benchmarks",
+      "editLabel": "Edit stage label (charts update live; empty reverts to auto)"
     },
     "outlierTitle": "{{delta}} vs row mean"
   },
