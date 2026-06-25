@@ -1,5 +1,5 @@
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 
 /**
@@ -22,6 +22,7 @@ export function ClickToEditCell({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const skipBlur = useRef(false);
 
   if (editing) {
     const commit = () => {
@@ -34,13 +35,21 @@ export function ClickToEditCell({
         value={draft}
         aria-label={ariaLabel}
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
+        onBlur={() => {
+          if (skipBlur.current) {
+            skipBlur.current = false;
+            return;
+          }
+          commit();
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
+            skipBlur.current = true;
             commit();
           } else if (e.key === "Escape") {
             e.preventDefault();
+            skipBlur.current = true;
             setEditing(false);
           }
         }}
