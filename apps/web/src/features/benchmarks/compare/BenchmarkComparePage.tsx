@@ -173,7 +173,7 @@ export function BenchmarkComparePage() {
   const shortLabels = shortRunLabels(runNames);
   const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
     id: b.id,
-    stageLabel: shortLabels[i],
+    stageLabel: b.label ?? shortLabels[i],
     tool: b.tool,
     scenario: b.scenario,
     summaryMetrics: b.summaryMetrics,
