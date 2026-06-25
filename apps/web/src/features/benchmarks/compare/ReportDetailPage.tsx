@@ -28,7 +28,7 @@ import { toReportRuns } from "./to-report-runs";
  */
 export function ReportDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
-  const { t } = useTranslation("benchmarks");
+  const { t, i18n } = useTranslation("benchmarks");
   const { t: tSidebar } = useTranslation("sidebar");
   const navigate = useNavigate();
   const query = useSavedCompare(id);
@@ -42,8 +42,12 @@ export function ReportDetailPage() {
   const autoGenFired = useRef(false);
 
   const generate = useCallback(() => {
-    synth.mutate({ locale: "zh-CN" }, { onSuccess: (r) => setNarrativeOverride(r.narrative) });
-  }, [synth.mutate]);
+    // Report language follows the app's UI language (Settings → Language); the
+    // synthesize endpoint already supports both locales. Fall back to zh-CN for
+    // any unmapped i18n language so the enum stays valid.
+    const locale = i18n.language === "en-US" ? "en-US" : "zh-CN";
+    synth.mutate({ locale }, { onSuccess: (r) => setNarrativeOverride(r.narrative) });
+  }, [synth.mutate, i18n.language]);
 
   // Depend on primitives, not the whole query.data / searchParams objects, so
   // background refetches and unrelated URL changes don't re-run this effect.
