@@ -52,9 +52,13 @@ export class CompareSynthesizeService {
     }
 
     const key = this.cacheKey(sc, body.locale);
-    const hit = this.cache.get(key);
-    if (hit) {
-      return { narrative: hit.narrative, generatedAt: hit.generatedAt, fromCache: true };
+    // `force` (manual Regenerate) skips the read so a re-click always re-runs
+    // the model; the fresh result is still written back below.
+    if (!body.force) {
+      const hit = this.cache.get(key);
+      if (hit) {
+        return { narrative: hit.narrative, generatedAt: hit.generatedAt, fromCache: true };
+      }
     }
 
     const runCount = sc.benchmarks.filter((b) => !b.missing).length;
@@ -276,9 +280,15 @@ export class CompareSynthesizeService {
       runsHeader: zh ? "## 各 stage 数据" : "## Per-stage data",
       deleted: zh ? "(数据已删除)" : "(data deleted)",
       baselineHeader: zh ? "## 基线" : "## Baseline",
+      // The language directive is repeated here as the FINAL instruction (the
+      // last thing the model reads before generating): the per-stage data above
+      // carries Chinese benchmark names / scenario / user context, and without
+      // a closing reminder the model mirrors that input language regardless of
+      // the system prompt's locale — producing a Chinese body under an en-US
+      // narrative.locale. Stating it last (recency) keeps output in `locale`.
       reminder: zh
-        ? "## 任务\n请按 system prompt 描述的 JSON schema 与风格规则输出深度报告。"
-        : "## Task\nProduce the deep report following the JSON schema and style rules from the system prompt.",
+        ? '## 任务\n请按 system prompt 描述的 JSON schema 与风格规则输出深度报告。\n\n重要:全文(hero 的 kicker/headline/subhead、每个 metaItem 的 label 与 value、章节标题与正文、表格、图注)一律用简体中文输出,即使上方输入的 benchmark 名称 / 场景 / 背景是别的语言也不要照搬;仅保留 vLLM / TTFT / p95 / req/s 等技术术语原文。narrative.locale 必须为 "zh-CN"。'
+        : '## Task\nProduce the deep report following the JSON schema and style rules from the system prompt.\n\nIMPORTANT: Write ALL prose in English — the hero kicker/headline/subhead, every metaItem label and value, section titles and bodies, table cells, and figure captions. The per-stage data above may carry Chinese benchmark names / scenario / context; do NOT mirror that language. Keep only proper nouns and established technical terms (vLLM, TTFT, p95, req/s) as-is. narrative.locale MUST be "en-US".',
       metricsLegend: zh
         ? "metric 单位:qps=req/s, err=fraction, ttft/e2e=ms"
         : "metric units: qps=req/s, err=fraction, ttft/e2e=ms",

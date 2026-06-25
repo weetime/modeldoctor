@@ -19,6 +19,7 @@ import { GripVertical, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import { CompareGrid } from "./CompareGrid";
 import { readPrefixCache } from "./client-metrics";
 import { formatPct } from "./format";
@@ -76,6 +77,12 @@ export interface ReportSectionsProps {
    * the URL ids.
    */
   onRemove?: (id: string) => void;
+  /**
+   * When provided, each Test-matrix Label cell becomes click-to-edit. The new
+   * label (or empty string to revert to the auto label) is reported here; the
+   * caller owns the override map and re-derives `runs[].stageLabel` from it.
+   */
+  onRelabel?: (id: string, value: string) => void;
   /** Rendered at the top-right of the Test-matrix section (e.g. an Add button). */
   matrixActions?: ReactNode;
 }
@@ -92,18 +99,35 @@ function MatrixRowCells({
   t,
   showPrefixCache,
   onRemove,
+  onRelabel,
   removeDisabled,
 }: {
   r: ReportRun;
   t: (key: string) => string;
   showPrefixCache: boolean;
   onRemove?: (id: string) => void;
+  onRelabel?: (id: string, value: string) => void;
   removeDisabled?: boolean;
 }) {
   const pc = showPrefixCache ? readPrefixCache(r.serverMetrics) : null;
   return (
     <>
-      <td className="px-3 py-2 font-medium">{r.stageLabel}</td>
+      <td className="px-3 py-2 font-medium">
+        {onRelabel ? (
+          // Always-on inline input (mirrors the SaveCompareDialog's Stage-labels
+          // editor) — type to rename; the value flows through reportRuns.stageLabel
+          // → every chart + the grid + the SaveCompareDialog seed, so the page
+          // relabels live without opening the save flow (#326).
+          <Input
+            value={r.stageLabel}
+            aria-label={t("compare.matrix.editLabel")}
+            onChange={(e) => onRelabel(r.id, e.target.value)}
+            className="h-8 max-w-[14rem]"
+          />
+        ) : (
+          r.stageLabel
+        )}
+      </td>
       <td className="px-3 py-2">
         {r.benchmark === null ? (
           <span className="opacity-60">{t("savedCompare.detail.missingBenchmark")}</span>
@@ -150,6 +174,7 @@ function SortableMatrixRow({
   handleLabel,
   showPrefixCache,
   onRemove,
+  onRelabel,
   removeDisabled,
 }: {
   r: ReportRun;
@@ -157,6 +182,7 @@ function SortableMatrixRow({
   handleLabel: string;
   showPrefixCache: boolean;
   onRemove?: (id: string) => void;
+  onRelabel?: (id: string, value: string) => void;
   removeDisabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -184,6 +210,7 @@ function SortableMatrixRow({
         t={t}
         showPrefixCache={showPrefixCache}
         onRemove={onRemove}
+        onRelabel={onRelabel}
         removeDisabled={removeDisabled}
       />
     </tr>
@@ -205,6 +232,7 @@ export function ReportSections({
   baselineId,
   onReorder,
   onRemove,
+  onRelabel,
   matrixActions,
 }: ReportSectionsProps) {
   const { t } = useTranslation("benchmarks");
@@ -266,6 +294,7 @@ export function ReportSections({
                 handleLabel={t("compare.dragHandle")}
                 showPrefixCache={showPrefixCache}
                 onRemove={onRemove}
+                onRelabel={onRelabel}
                 removeDisabled={removeDisabled}
               />
             ))
@@ -276,6 +305,7 @@ export function ReportSections({
                   t={t}
                   showPrefixCache={showPrefixCache}
                   onRemove={onRemove}
+                  onRelabel={onRelabel}
                   removeDisabled={removeDisabled}
                 />
               </tr>

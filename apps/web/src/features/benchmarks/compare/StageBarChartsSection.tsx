@@ -6,7 +6,13 @@ import {
   type StageBarDatum,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
-import { readLatencyPercentiles, readPrefixCache, summarizeForPrompt } from "./client-metrics";
+import {
+  ENGINE_BAR_FIGURES,
+  readEngineMetric,
+  readLatencyPercentiles,
+  readPrefixCache,
+  summarizeForPrompt,
+} from "./client-metrics";
 
 export interface StageRun {
   id: string;
@@ -20,6 +26,17 @@ export interface StageRun {
 
 const TTFT_PS = ["p50", "p95", "p99"] as const;
 const E2E_PS = ["p50", "p95", "p99"] as const;
+
+// Engine-metric bars (durable serverMetrics.engineMetrics snapshot) → live chart
+// title key. Mirrors FigureRenderer's report-side engine bars so the live Charts
+// stay symmetric with the table + the saved report. Lower is better for all
+// three (less KV pressure / preemption / queueing), but the live charts don't
+// colour by polarity, so only the title key is mapped here.
+const ENGINE_BAR_TITLE_KEYS: Record<keyof typeof ENGINE_BAR_FIGURES, string> = {
+  "stage-bars-kv-cache": "savedCompare.report.chartKvCacheTitle",
+  "stage-bars-preemption": "savedCompare.report.chartPreemptionTitle",
+  "stage-bars-queue": "savedCompare.report.chartQueueTitle",
+};
 
 /**
  * Scenario-aware chart row for the live Compare page. Derives every panel from
@@ -108,6 +125,29 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
     share: pc?.topPodSharePct ?? 0,
   }));
 
+  // Engine-metric bars from the durable serverMetrics.engineMetrics snapshot.
+  // Each figure renders only when EVERY run carries that scalar (mirrors
+  // availableFigureRefIds' per-figure gate — mixed gaps would read as a
+  // misleading 0). unit/yLabel come from the metric's own captured unit.
+  const engineBars = (Object.keys(ENGINE_BAR_FIGURES) as Array<keyof typeof ENGINE_BAR_FIGURES>)
+    .map((refId) => {
+      const spec = ENGINE_BAR_FIGURES[refId];
+      const valRows = runs.map((r) => ({
+        r,
+        v: readEngineMetric(r.serverMetrics, spec.metricKey),
+      }));
+      const present =
+        valRows.length > 0 && valRows.every((x) => x.v !== null && x.v[spec.pick] !== null);
+      if (!present) return null;
+      const unit = valRows[0].v?.unit ?? "";
+      const data: StageBarDatum[] = valRows.map(({ r, v }) => ({
+        stage: r.stageLabel,
+        val: v?.[spec.pick] ?? 0,
+      }));
+      return { refId, title: t(ENGINE_BAR_TITLE_KEYS[refId]), data, unit };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <StageBarChart
@@ -165,6 +205,19 @@ export function StageBarChartsSection({ runs }: { runs: StageRun[] }) {
           />
         </>
       )}
+      {engineBars.map((bar) => (
+        <StageBarChart
+          key={bar.refId}
+          title={bar.title}
+          data={bar.data}
+          series={[{ key: "val", label: bar.unit, color: tokens.palette[0] }]}
+          barColors={barColors}
+          // The captured unit is a free-form string (engine manifests), not the
+          // PanelUnit enum the `unit` prop demands — pass it as `yLabel` instead,
+          // mirroring FigureRenderer's report-side engine bars.
+          yLabel={bar.unit}
+        />
+      ))}
     </div>
   );
 }

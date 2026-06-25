@@ -212,6 +212,12 @@ describe("CompareSynthesizeService", () => {
     expect(r.fromCache).toBe(true);
   });
 
+  it("force bypasses the cache and re-runs the model", async () => {
+    await svc.synthesize(userId, savedCompareId, { locale: "zh-CN" });
+    const r = await svc.synthesize(userId, savedCompareId, { locale: "zh-CN", force: true });
+    expect(r.fromCache).toBe(false);
+  });
+
   // ensurePrefixCacheFigures is a private server-control step; test it directly
   // (no DB / LLM) so the figure-cap behavior is pinned regardless of the model.
   describe("ensurePrefixCacheFigures", () => {

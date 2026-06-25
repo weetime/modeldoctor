@@ -136,14 +136,12 @@ describe("BenchmarkComparePage", () => {
     const b = makeBenchmark("b");
     mockApiGet({ a, b });
     renderPage("/benchmarks/compare?ids=a,b");
-    // The test matrix renders each run's stageLabel as a plain <td> cell (font-medium).
-    // "OFF-X" may also appear in <th> (column header for the run). Use getAllByText and
-    // assert at least one occurrence is a <td> to prove stageLabel drove the cell value.
-    // makeBenchmark sets name: "a" so the auto short-label would be "a", never "OFF-X".
+    // The Test-matrix Label cell is an always-on inline input (#326) seeded from
+    // each run's stageLabel, so the label surfaces as the input's value (not td
+    // text). makeBenchmark sets name "a", whose auto short-label is "a" — so
+    // finding "OFF-X" proves benchmark.label drove the stage label.
     await waitFor(() => {
-      const nodes = screen.getAllByText("OFF-X");
-      const hasTd = nodes.some((n) => n.tagName.toLowerCase() === "td");
-      expect(hasTd).toBe(true);
+      expect(screen.getByDisplayValue("OFF-X")).toBeInTheDocument();
     });
   });
 

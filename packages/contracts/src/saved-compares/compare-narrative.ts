@@ -171,6 +171,12 @@ export type CompareNarrative = z.infer<typeof compareNarrativeSchema>;
 
 export const compareSynthesizeRequestSchema = z.object({
   locale: z.enum(["zh-CN", "en-US"]).default("zh-CN"),
+  // Bypass the in-memory synthesis cache and force a fresh LLM generation. Set
+  // by the manual "Regenerate" button so a re-click always re-runs the model
+  // (otherwise an identical cache key — same data/labels/context/locale —
+  // returns the stale narrative and the button looks broken). The auto-generate
+  // bridge omits it (the cache is empty on first generation anyway).
+  force: z.boolean().optional(),
 });
 export type CompareSynthesizeRequest = z.infer<typeof compareSynthesizeRequestSchema>;
 

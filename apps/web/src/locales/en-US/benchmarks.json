@@ -379,7 +379,8 @@
       "addEmpty": "No comparable benchmarks to add",
       "addLoading": "Loading…",
       "remove": "Remove from comparison",
-      "removeDisabled": "A comparison needs at least 2 benchmarks"
+      "removeDisabled": "A comparison needs at least 2 benchmarks",
+      "editLabel": "Stage label (X axis on charts; updates live)"
     },
     "outlierTitle": "{{delta}} vs row mean"
   },
@@ -450,7 +451,10 @@
       "sourceScenario": "Scenario",
       "chartItlTitle": "ITL p95 (ms)",
       "chartHitRateTitle": "Prefix cache hit rate (%)",
-      "chartTopPodShareTitle": "Top pod share (%)"
+      "chartTopPodShareTitle": "Top pod share (%)",
+      "chartKvCacheTitle": "KV cache utilization (peak)",
+      "chartPreemptionTitle": "Preemption rate",
+      "chartQueueTitle": "Request queue time (peak)"
     },
     "reportPage": {
       "loading": "Loading report…",
