@@ -59,6 +59,7 @@ function makeBenchmark(
     tool,
     toolVersion: null,
     name: id,
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,
@@ -128,6 +129,20 @@ describe("BenchmarkComparePage", () => {
     // to handle multiple occurrences. Same for "b".
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
     expect(screen.getAllByText("b").length).toBeGreaterThan(0);
+  });
+
+  it("renders benchmark.label as stageLabel when set (label precedence)", async () => {
+    const a = { ...makeBenchmark("a"), label: "OFF-X" };
+    const b = makeBenchmark("b");
+    mockApiGet({ a, b });
+    renderPage("/benchmarks/compare?ids=a,b");
+    // The Test-matrix Label cell is an always-on inline input (#326) seeded from
+    // each run's stageLabel, so the label surfaces as the input's value (not td
+    // text). makeBenchmark sets name "a", whose auto short-label is "a" — so
+    // finding "OFF-X" proves benchmark.label drove the stage label.
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("OFF-X")).toBeInTheDocument();
+    });
   });
 
   it("happy path: renders grid for 4 same-tool benchmarks", async () => {

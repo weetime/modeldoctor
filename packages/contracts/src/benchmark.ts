@@ -48,6 +48,9 @@ export const benchmarkSchema = z.object({
   toolVersion: z.string().nullable(),
 
   name: z.string(),
+  // Optional short display label for the Compare stage axis. null = derive
+  // from `name` via shortRunLabels. Set/cleared from the benchmark list.
+  label: z.string().nullable(),
   description: z.string().nullable(),
 
   status: benchmarkStatusSchema,
@@ -136,6 +139,13 @@ export const createBenchmarkRequestSchema = z.object({
   baselineId: z.string().optional(),
 });
 export type CreateBenchmarkRequest = z.infer<typeof createBenchmarkRequestSchema>;
+
+export const benchmarkUpdateSchema = z.object({
+  name: z.string().min(1).max(128).optional(),
+  // Empty string is allowed on the wire; the service normalizes "" → null.
+  label: z.string().max(48).nullable().optional(),
+});
+export type BenchmarkUpdateRequest = z.infer<typeof benchmarkUpdateSchema>;
 
 // ── Charts response (GET /api/benchmarks/:id/charts) ─────────────────
 // Server derives these from rawOutput.files.* on demand; not persisted.

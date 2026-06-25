@@ -184,7 +184,9 @@ export function BenchmarkComparePage() {
   const shortLabels = shortRunLabels(runNames);
   const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
     id: b.id,
-    stageLabel: labelOverrides[b.id] ?? shortLabels[i],
+    // Three-tier precedence: per-compare inline override (#326) > the
+    // benchmark's persistent label (#336) > the auto-derived short label.
+    stageLabel: labelOverrides[b.id] ?? b.label ?? shortLabels[i],
     tool: b.tool,
     scenario: b.scenario,
     summaryMetrics: b.summaryMetrics,

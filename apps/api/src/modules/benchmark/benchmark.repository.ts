@@ -27,6 +27,8 @@ export type CreateBenchmarkInput = {
 };
 
 export type UpdateBenchmarkInput = Partial<{
+  name: string;
+  label: string | null;
   status: string;
   statusMessage: string | null;
   progress: number | null;

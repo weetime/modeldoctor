@@ -351,6 +351,33 @@ describe("BenchmarkService.delete", () => {
   });
 });
 
+describe("BenchmarkService.update", () => {
+  let repo: MockRepo;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+  });
+
+  it("updates name and label, normalizing empty label to null", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1" }));
+    const renamed = await svc.update("b1", "u1", { name: "OFF-1", label: "OFF" });
+    expect(renamed.name).toBe("OFF-1");
+    expect(renamed.label).toBe("OFF");
+    const cleared = await svc.update("b1", "u1", { label: "" });
+    expect(cleared.label).toBeNull();
+  });
+
+  it("throws NotFound when the benchmark is not owned by the user", async () => {
+    repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1" }));
+    await expect(svc.update("b1", "someone-else", { name: "x" })).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+});
+
 describe("BenchmarkService.bulkDelete", () => {
   let repo: MockRepo;
   let svc: BenchmarkService;
