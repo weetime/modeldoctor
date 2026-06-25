@@ -15,6 +15,7 @@ function makeBenchmark(id: string, p95: number, errors = 0, total = 100): Benchm
     tool: "guidellm",
     toolVersion: null,
     name: id,
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

@@ -48,6 +48,7 @@ function makeBenchmark(): Benchmark {
     tool: "vegeta",
     toolVersion: "12.11.0",
     name: "weetime-02",
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

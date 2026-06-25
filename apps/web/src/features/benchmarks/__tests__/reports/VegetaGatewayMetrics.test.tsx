@@ -27,6 +27,7 @@ function makeBenchmark(
     tool: "vegeta",
     toolVersion: null,
     name: "smoke",
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

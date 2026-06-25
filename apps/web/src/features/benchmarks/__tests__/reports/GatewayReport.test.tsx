@@ -24,6 +24,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     tool: "vegeta",
     toolVersion: null,
     name: "smoke",
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

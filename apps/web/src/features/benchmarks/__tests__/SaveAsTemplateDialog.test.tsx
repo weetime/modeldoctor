@@ -32,6 +32,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     tool: "guidellm",
     toolVersion: null,
     name: "my run",
+    label: null,
     description: "desc text",
     status: "completed",
     statusMessage: null,
