@@ -27,7 +27,11 @@ import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
-import { BenchmarkRepository, type BenchmarkWithRelations, type UpdateBenchmarkInput } from "./benchmark.repository.js";
+import {
+  BenchmarkRepository,
+  type BenchmarkWithRelations,
+  type UpdateBenchmarkInput,
+} from "./benchmark.repository.js";
 import { IN_PROGRESS_STATES, isInProgressStatus, TERMINAL_STATES } from "./constants.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";

@@ -1,10 +1,10 @@
 import {
   type Benchmark,
-  benchmarkUpdateSchema,
   type BenchmarkChartsResponse,
   type BenchmarkUpdateRequest,
   type BulkDeleteBenchmarksRequest,
   type BulkDeleteBenchmarksResponse,
+  benchmarkUpdateSchema,
   bulkDeleteBenchmarksRequestSchema,
   type CreateBenchmarkRequest,
   createBenchmarkRequestSchema,
