@@ -1,5 +1,20 @@
+import { figureRefIdSchema } from "@modeldoctor/contracts";
 import { describe, expect, it } from "vitest";
 import { buildSystemPrompt } from "./prompts.js";
+
+// Drift guard: the `figures[].refId` union baked into the schema block the LLM
+// fills MUST list every refId the zod schema accepts. When they diverge the
+// model is told a refId is invalid and silently omits that figure — exactly how
+// the engine bars (kv-cache / preemption / queue) went missing from generated
+// reports despite being wired into FigureRenderer + preferredFigures (#330).
+describe("prompt figure-refId union stays in sync with figureRefIdSchema", () => {
+  it("mentions every schema refId in the system prompt", () => {
+    const prompt = buildSystemPrompt("zh-CN", "");
+    for (const refId of figureRefIdSchema.options) {
+      expect(prompt, `prompt is missing refId "${refId}"`).toContain(refId);
+    }
+  });
+});
 
 it("returns base unchanged for empty fragment", () => {
   const empty = buildSystemPrompt("zh-CN", "");
