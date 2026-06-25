@@ -60,7 +60,7 @@ Built-in `evaluation_profiles` and official `benchmark_templates` are seeded via
 - `evaluation_profiles` is read-only via API; built-ins live in seed.ts (see above section).
 - `llm_judge_providers` reuses `CONNECTION_API_KEY_ENCRYPTION_KEY` (no separate env var).
 - `POST /api/insights/:connectionId/synthesize` is synchronous (5-30s); cache is in-memory LRU on the API process. Do not rely on consistency across multi-replica deploys.
-- AI narrative is zh-CN only for V1.
+- AI narrative supports both `zh-CN` and `en-US`. The synthesize endpoint takes a `locale` (request schema `compareSynthesizeRequestSchema`, default `zh-CN`); the report's language follows the app UI language (Settings → Language) — the frontend passes `i18n.language` (`en-US` → `en-US`, else `zh-CN`). Prompts have per-locale instructions (`EN_SCHEMA_INSTRUCTIONS` / `ZH_SCHEMA_INSTRUCTIONS` in `prompts.ts`).
 
 ## Testing layers
 
