@@ -1,5 +1,6 @@
 import type {
   Benchmark,
+  BenchmarkUpdateRequest,
   CreateBenchmarkRequest,
   EndpointReportRange,
   EndpointReportsResponse,
@@ -66,6 +67,18 @@ export function useCancelBenchmark() {
   return useMutation({
     mutationFn: (id: string) => benchmarkApi.cancel(id),
     onSuccess: (_b, id) => {
+      qc.invalidateQueries({ queryKey: benchmarkKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });
+    },
+  });
+}
+
+export function useUpdateBenchmark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: BenchmarkUpdateRequest }) =>
+      benchmarkApi.update(id, body),
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: benchmarkKeys.detail(id) });
       qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });
     },
