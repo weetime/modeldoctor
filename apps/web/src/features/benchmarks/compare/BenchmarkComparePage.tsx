@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { benchmarkApi } from "../api";
-import { benchmarkKeys } from "../queries";
+import { benchmarkKeys, useUpdateBenchmark } from "../queries";
 import { AddBenchmarkButton } from "./AddBenchmarkButton";
 import { CompareToolbar } from "./CompareToolbar";
 import { type ReportRun, ReportSections } from "./ReportSections";
@@ -39,17 +39,12 @@ export function BenchmarkComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [saveOpen, setSaveOpen] = useState(false);
   const [generateAfterSave, setGenerateAfterSave] = useState(false);
-  // Per-run stage-label overrides, edited via the always-on inline inputs in the
-  // Test-matrix Label cells (mirrors the SaveCompareDialog editor). Kept in
-  // component state (not the URL) so typing doesn't spam history. The raw value
-  // is stored as-is (empty included, so the field can be cleared and retyped);
-  // it flows into reportRuns → every chart / the metric grid / the
-  // SaveCompareDialog seed, so a rename updates the whole page live without
-  // entering the save flow (#326).
-  const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>({});
-  function handleRelabel(id: string, value: string) {
-    setLabelOverrides((prev) => ({ ...prev, [id]: value }));
-  }
+  // Editing a Test-matrix stage label writes straight to the benchmark's
+  // persistent `label` (same store as the list edit) — no per-compare ephemeral
+  // state. The mutation invalidates the run query, so the new label flows back
+  // through reportRuns into every chart / grid / SaveCompareDialog seed. Empty
+  // → the service clears the label and it falls back to the auto short label.
+  const updateBenchmark = useUpdateBenchmark();
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:
   //   - missing            → "user hasn't chosen yet, fall back to inferred default"
@@ -184,9 +179,8 @@ export function BenchmarkComparePage() {
   const shortLabels = shortRunLabels(runNames);
   const reportRuns: ReportRun[] = successfulBenchmarks.map((b, i) => ({
     id: b.id,
-    // Three-tier precedence: per-compare inline override (#326) > the
-    // benchmark's persistent label (#336) > the auto-derived short label.
-    stageLabel: labelOverrides[b.id] ?? b.label ?? shortLabels[i],
+    // The benchmark's persistent label (#336) wins; otherwise the auto short label.
+    stageLabel: b.label ?? shortLabels[i],
     tool: b.tool,
     scenario: b.scenario,
     summaryMetrics: b.summaryMetrics,
@@ -267,7 +261,7 @@ export function BenchmarkComparePage() {
                 setIds(newIds);
               }}
               onRemove={handleRemove}
-              onRelabel={handleRelabel}
+              onRelabel={(id, label) => updateBenchmark.mutate({ id, body: { label } })}
               matrixActions={
                 <AddBenchmarkButton
                   scenario={successfulBenchmarks[0].scenario}
