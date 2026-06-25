@@ -13,6 +13,7 @@ function run(p: Partial<Benchmark> & { id: string; summaryMetrics: any }): Bench
     tool: p.tool ?? "guidellm",
     toolVersion: null,
     name: p.id,
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

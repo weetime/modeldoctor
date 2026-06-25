@@ -372,7 +372,9 @@ describe("BenchmarkService.update", () => {
 
   it("throws NotFound when the benchmark is not owned by the user", async () => {
     repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1" }));
-    await expect(svc.update("b1", "someone-else", { name: "x" })).rejects.toThrow();
+    await expect(svc.update("b1", "someone-else", { name: "x" })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
 

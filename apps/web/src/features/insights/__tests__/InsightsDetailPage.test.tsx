@@ -94,6 +94,7 @@ function makeBenchmark(over: Partial<Benchmark> = {}): Benchmark {
   return {
     id: "b1",
     name: "run-1",
+    label: null,
     scenario: "inference",
     tool: "guidellm",
     status: "completed",
