@@ -75,6 +75,7 @@ function makeBenchmark(
     tool,
     toolVersion: null,
     name: id,
+    label: null,
     description: null,
     status,
     statusMessage: null,

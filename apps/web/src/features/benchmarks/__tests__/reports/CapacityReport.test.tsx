@@ -26,6 +26,7 @@ function makeBenchmark(overrides: Partial<Benchmark> = {}): Benchmark {
     tool: "guidellm",
     toolVersion: null,
     name: "sweep",
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,

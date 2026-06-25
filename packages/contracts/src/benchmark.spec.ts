@@ -120,6 +120,7 @@ function minimalBenchmark() {
     toolVersion: null,
     driverKind: "local" as const,
     name: "test-benchmark",
+    label: null,
     description: null,
     status: "completed" as const,
     statusMessage: null,

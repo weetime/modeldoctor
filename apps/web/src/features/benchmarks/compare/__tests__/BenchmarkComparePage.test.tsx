@@ -59,6 +59,7 @@ function makeBenchmark(
     tool,
     toolVersion: null,
     name: id,
+    label: null,
     description: null,
     status: "completed",
     statusMessage: null,
@@ -128,6 +129,22 @@ describe("BenchmarkComparePage", () => {
     // to handle multiple occurrences. Same for "b".
     await waitFor(() => expect(screen.getAllByText("a").length).toBeGreaterThan(0));
     expect(screen.getAllByText("b").length).toBeGreaterThan(0);
+  });
+
+  it("renders benchmark.label as stageLabel when set (label precedence)", async () => {
+    const a = { ...makeBenchmark("a"), label: "OFF-X" };
+    const b = makeBenchmark("b");
+    mockApiGet({ a, b });
+    renderPage("/benchmarks/compare?ids=a,b");
+    // The test matrix renders each run's stageLabel as a plain <td> cell (font-medium).
+    // "OFF-X" may also appear in <th> (column header for the run). Use getAllByText and
+    // assert at least one occurrence is a <td> to prove stageLabel drove the cell value.
+    // makeBenchmark sets name: "a" so the auto short-label would be "a", never "OFF-X".
+    await waitFor(() => {
+      const nodes = screen.getAllByText("OFF-X");
+      const hasTd = nodes.some((n) => n.tagName.toLowerCase() === "td");
+      expect(hasTd).toBe(true);
+    });
   });
 
   it("happy path: renders grid for 4 same-tool benchmarks", async () => {

@@ -1,6 +1,7 @@
 import {
   type Benchmark,
   type BenchmarkStatus,
+  type BenchmarkUpdateRequest,
   type CreateBenchmarkRequest,
   type EndpointReport,
   type EndpointReportRange,
@@ -26,7 +27,11 @@ import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
-import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
+import {
+  BenchmarkRepository,
+  type BenchmarkWithRelations,
+  type UpdateBenchmarkInput,
+} from "./benchmark.repository.js";
 import { IN_PROGRESS_STATES, isInProgressStatus, TERMINAL_STATES } from "./constants.js";
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
@@ -68,6 +73,21 @@ export class BenchmarkService {
       throw new NotFoundException(`Benchmark ${id} not found`);
     }
     return toContract(row);
+  }
+
+  async update(
+    id: string,
+    userId: string | undefined,
+    req: BenchmarkUpdateRequest,
+  ): Promise<Benchmark> {
+    // Ownership gate (throws NotFound if missing / not owned).
+    await this.findByIdOrFail(id, userId);
+    const data: UpdateBenchmarkInput = {};
+    if (req.name !== undefined) data.name = req.name;
+    // "" → null reverts to the auto-derived compare label.
+    if (req.label !== undefined) data.label = req.label === "" ? null : req.label;
+    await this.repo.update(id, data);
+    return this.findByIdOrFail(id, userId);
   }
 
   async list(query: ListBenchmarksQuery, userId?: string): Promise<ListBenchmarksResponse> {
@@ -487,6 +507,7 @@ function toContract(row: BenchmarkWithRelations): Benchmark {
     tool: row.tool as Benchmark["tool"],
     toolVersion: row.toolVersion,
     name: row.name,
+    label: row.label,
     description: row.description,
     status: row.status as Benchmark["status"],
     statusMessage: row.statusMessage,

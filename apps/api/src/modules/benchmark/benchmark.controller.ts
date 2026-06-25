@@ -1,8 +1,10 @@
 import {
   type Benchmark,
   type BenchmarkChartsResponse,
+  type BenchmarkUpdateRequest,
   type BulkDeleteBenchmarksRequest,
   type BulkDeleteBenchmarksResponse,
+  benchmarkUpdateSchema,
   bulkDeleteBenchmarksRequestSchema,
   type CreateBenchmarkRequest,
   createBenchmarkRequestSchema,
@@ -23,6 +25,7 @@ import {
   HttpCode,
   type MessageEvent,
   Param,
+  Patch,
   Post,
   Query,
   Sse,
@@ -82,6 +85,16 @@ export class BenchmarkController {
   @Get(":id")
   detail(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
     return this.service.findByIdOrFail(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
+  @ApiOperation({ summary: "Update a benchmark's name / label" })
+  @Patch(":id")
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(benchmarkUpdateSchema)) body: BenchmarkUpdateRequest,
+  ): Promise<Benchmark> {
+    return this.service.update(id, user.roles.includes("admin") ? undefined : user.sub, body);
   }
 
   @ApiOperation({ summary: "Submit a new benchmark run" })
