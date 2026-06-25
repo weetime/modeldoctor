@@ -1,6 +1,32 @@
 import { figureRefIdSchema } from "@modeldoctor/contracts";
 import { describe, expect, it } from "vitest";
 import { buildSystemPrompt } from "./prompts.js";
+import { reportScenarioRegistry } from "./report-scenarios/index.js";
+
+const CJK = /[一-鿿]/;
+
+// Language-leak guard: weaker judge models (e.g. deepseek-chat) mirror the
+// language of the PROMPT, not just the locale instruction. A single Chinese
+// example string (the hero eyebrow example was "MODELDOCTOR · 推理引擎对比")
+// made en-US reports come out in Chinese. The en-US prompt — system block +
+// every scenario fragment — must contain zero CJK so the model has nothing
+// Chinese to copy.
+describe("en-US report prompt contains no Chinese", () => {
+  it("the en-US system prompt base is CJK-free", () => {
+    expect(CJK.test(buildSystemPrompt("en-US", ""))).toBe(false);
+  });
+
+  it("every scenario's en-US fragment is CJK-free", () => {
+    for (const profile of Object.values(reportScenarioRegistry)) {
+      const fragment = profile.promptFragment("en-US");
+      expect(CJK.test(fragment), `${profile.intent} en-US fragment has CJK`).toBe(false);
+    }
+  });
+
+  it("the zh-CN system prompt still localizes to Chinese (sanity)", () => {
+    expect(CJK.test(buildSystemPrompt("zh-CN", ""))).toBe(true);
+  });
+});
 
 // Drift guard: the `figures[].refId` union baked into the schema block the LLM
 // fills MUST list every refId the zod schema accepts. When they diverge the
