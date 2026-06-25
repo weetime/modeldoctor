@@ -39,19 +39,16 @@ export function BenchmarkComparePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [saveOpen, setSaveOpen] = useState(false);
   const [generateAfterSave, setGenerateAfterSave] = useState(false);
-  // Per-run stage-label overrides, edited inline in the Test-matrix Label cell.
-  // Kept in component state (not the URL) so typing doesn't spam history; an
-  // empty value reverts to the auto-derived short label. Flows into reportRuns →
-  // every chart / the metric grid / the SaveCompareDialog seed, so a rename
-  // updates the whole page live without entering the save flow (#326).
+  // Per-run stage-label overrides, edited via the always-on inline inputs in the
+  // Test-matrix Label cells (mirrors the SaveCompareDialog editor). Kept in
+  // component state (not the URL) so typing doesn't spam history. The raw value
+  // is stored as-is (empty included, so the field can be cleared and retyped);
+  // it flows into reportRuns → every chart / the metric grid / the
+  // SaveCompareDialog seed, so a rename updates the whole page live without
+  // entering the save flow (#326).
   const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>({});
   function handleRelabel(id: string, value: string) {
-    setLabelOverrides((prev) => {
-      const next = { ...prev };
-      if (value.trim() === "") delete next[id];
-      else next[id] = value.trim();
-      return next;
-    });
+    setLabelOverrides((prev) => ({ ...prev, [id]: value }));
   }
   const ids = useMemo(() => parseIds(searchParams), [searchParams]);
   // URL baseline param has three possible meanings:

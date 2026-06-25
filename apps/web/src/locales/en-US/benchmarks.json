@@ -376,7 +376,7 @@
       "addLoading": "Loading…",
       "remove": "Remove from comparison",
       "removeDisabled": "A comparison needs at least 2 benchmarks",
-      "editLabel": "Edit stage label (charts update live; empty reverts to auto)"
+      "editLabel": "Stage label (X axis on charts; updates live)"
     },
     "outlierTitle": "{{delta}} vs row mean"
   },

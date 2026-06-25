@@ -376,7 +376,7 @@
       "addLoading": "加载中…",
       "remove": "从对比中移除",
       "removeDisabled": "对比至少需要 2 个 benchmark",
-      "editLabel": "编辑 stage 标签（图表实时更新；留空恢复自动）"
+      "editLabel": "stage 标签（图表 X 轴；实时更新）"
     },
     "outlierTitle": "{{delta}}（相对本行均值）"
   },

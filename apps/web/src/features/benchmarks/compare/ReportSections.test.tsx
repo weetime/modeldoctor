@@ -47,53 +47,37 @@ function renderMatrix(onRelabel?: (id: string, value: string) => void) {
 }
 
 describe("ReportSections inline stage-label editing (#326)", () => {
-  it("renders labels as plain text when onRelabel is absent", () => {
+  it("renders labels as plain text (no inputs) when onRelabel is absent", () => {
     render(
       <MemoryRouter>
         <ReportSections runs={[run("a", "OFF"), run("b", "ON")]} baselineId={null} />
       </MemoryRouter>,
     );
-    // No edit buttons — labels are inert.
-    expect(screen.queryByTitle(/Edit stage label/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Stage label/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("OFF").length).toBeGreaterThan(0);
   });
 
-  it("commits a renamed label on Enter", () => {
+  it("renders one always-on input per run, seeded from the current label", () => {
+    renderMatrix(vi.fn());
+    const inputs = screen.getAllByLabelText(/Stage label/i);
+    expect(inputs).toHaveLength(2);
+    expect((inputs[0] as HTMLInputElement).value).toBe("OFF");
+    expect((inputs[1] as HTMLInputElement).value).toBe("ON");
+  });
+
+  it("reports the raw value on every keystroke", () => {
     const onRelabel = vi.fn();
     renderMatrix(onRelabel);
-    fireEvent.click(screen.getAllByTitle(/Edit stage label/i)[0]);
-    const input = screen.getByLabelText(/Edit stage label/i);
+    const input = screen.getByDisplayValue("OFF");
     fireEvent.change(input, { target: { value: "Baseline" } });
-    fireEvent.keyDown(input, { key: "Enter" });
     expect(onRelabel).toHaveBeenCalledWith("a", "Baseline");
   });
 
-  it("reverts to auto label on an empty commit", () => {
+  it("reports an empty value as-is (clearable, not reverted)", () => {
     const onRelabel = vi.fn();
     renderMatrix(onRelabel);
-    fireEvent.click(screen.getAllByTitle(/Edit stage label/i)[0]);
-    const input = screen.getByLabelText(/Edit stage label/i);
+    const input = screen.getByDisplayValue("ON");
     fireEvent.change(input, { target: { value: "" } });
-    fireEvent.keyDown(input, { key: "Enter" });
-    expect(onRelabel).toHaveBeenCalledWith("a", "");
-  });
-
-  it("cancels on Escape without committing", () => {
-    const onRelabel = vi.fn();
-    renderMatrix(onRelabel);
-    fireEvent.click(screen.getAllByTitle(/Edit stage label/i)[0]);
-    const input = screen.getByLabelText(/Edit stage label/i);
-    fireEvent.change(input, { target: { value: "Nope" } });
-    fireEvent.keyDown(input, { key: "Escape" });
-    expect(onRelabel).not.toHaveBeenCalled();
-  });
-
-  it("does not fire onRelabel when the value is unchanged", () => {
-    const onRelabel = vi.fn();
-    renderMatrix(onRelabel);
-    fireEvent.click(screen.getAllByTitle(/Edit stage label/i)[0]);
-    const input = screen.getByLabelText(/Edit stage label/i);
-    fireEvent.keyDown(input, { key: "Enter" });
-    expect(onRelabel).not.toHaveBeenCalled();
+    expect(onRelabel).toHaveBeenCalledWith("b", "");
   });
 });
