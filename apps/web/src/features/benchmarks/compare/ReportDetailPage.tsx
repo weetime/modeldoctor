@@ -41,13 +41,18 @@ export function ReportDetailPage() {
   const generateParam = searchParams.get("generate");
   const autoGenFired = useRef(false);
 
-  const generate = useCallback(() => {
-    // Report language follows the app's UI language (Settings → Language); the
-    // synthesize endpoint already supports both locales. Fall back to zh-CN for
-    // any unmapped i18n language so the enum stays valid.
-    const locale = i18n.language === "en-US" ? "en-US" : "zh-CN";
-    synth.mutate({ locale }, { onSuccess: (r) => setNarrativeOverride(r.narrative) });
-  }, [synth.mutate, i18n.language]);
+  const generate = useCallback(
+    // `force` (manual Regenerate) bypasses the server-side synthesis cache so a
+    // re-click always re-runs the model; the auto-gen bridge omits it.
+    (force = false) => {
+      // Report language follows the app's UI language (Settings → Language); the
+      // synthesize endpoint already supports both locales. Fall back to zh-CN for
+      // any unmapped i18n language so the enum stays valid.
+      const locale = i18n.language === "en-US" ? "en-US" : "zh-CN";
+      synth.mutate({ locale, force }, { onSuccess: (r) => setNarrativeOverride(r.narrative) });
+    },
+    [synth.mutate, i18n.language],
+  );
 
   // Depend on primitives, not the whole query.data / searchParams objects, so
   // background refetches and unrelated URL changes don't re-run this effect.
@@ -145,7 +150,7 @@ export function ReportDetailPage() {
                     {t("savedCompare.detail.preview", { defaultValue: "Preview" })}
                   </Link>
                 </Button>
-                <Button variant="outline" onClick={generate} disabled={!canGenerate}>
+                <Button variant="outline" onClick={() => generate(true)} disabled={!canGenerate}>
                   <RefreshCw
                     className={`mr-1.5 h-4 w-4 ${synth.isPending ? "animate-spin" : ""}`}
                   />
@@ -214,7 +219,7 @@ export function ReportDetailPage() {
               ) : null}
               <ReportProgress active={synth.isPending} />
             </div>
-            <Button onClick={generate} disabled={!canGenerate}>
+            <Button onClick={() => generate()} disabled={!canGenerate}>
               <Sparkles className="mr-1.5 h-4 w-4" />
               {synth.isPending
                 ? t("savedCompare.report.generating", { defaultValue: "Generating…" })
