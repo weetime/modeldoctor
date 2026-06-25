@@ -446,7 +446,10 @@
       "sourceScenario": "场景",
       "chartItlTitle": "ITL p95（ms）",
       "chartHitRateTitle": "前缀缓存命中率（%）",
-      "chartTopPodShareTitle": "最热 Pod 占比（%）"
+      "chartTopPodShareTitle": "最热 Pod 占比（%）",
+      "chartKvCacheTitle": "KV 缓存利用率（峰值）",
+      "chartPreemptionTitle": "抢占率",
+      "chartQueueTitle": "请求排队时间（峰值）"
     },
     "reportPage": {
       "loading": "正在加载报告…",

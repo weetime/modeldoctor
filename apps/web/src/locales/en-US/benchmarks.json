@@ -446,7 +446,10 @@
       "sourceScenario": "Scenario",
       "chartItlTitle": "ITL p95 (ms)",
       "chartHitRateTitle": "Prefix cache hit rate (%)",
-      "chartTopPodShareTitle": "Top pod share (%)"
+      "chartTopPodShareTitle": "Top pod share (%)",
+      "chartKvCacheTitle": "KV cache utilization (peak)",
+      "chartPreemptionTitle": "Preemption rate",
+      "chartQueueTitle": "Request queue time (peak)"
     },
     "reportPage": {
       "loading": "Loading report…",

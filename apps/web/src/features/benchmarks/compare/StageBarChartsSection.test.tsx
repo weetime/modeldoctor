@@ -23,6 +23,19 @@ const prefixCache = (hit: number, share: number) => ({
   },
 });
 
+// serverMetrics.engineMetrics snapshot fixture — kv (peak), preemption (avg),
+// queue (peak) are the three live engine bars (#330). `pick` per ENGINE_BAR_FIGURES.
+const engineMetrics = (kvPeak: number, preemptAvg: number, queuePeak: number) => ({
+  engineMetrics: {
+    capturedAt: "2026-01-01T00:00:00Z",
+    metrics: [
+      { key: "kv_cache_usage", unit: "%" as const, avg: kvPeak / 2, peak: kvPeak },
+      { key: "preemption_rate", unit: "count" as const, avg: preemptAvg, peak: preemptAvg * 2 },
+      { key: "request_queue_time", unit: "ms" as const, avg: queuePeak / 2, peak: queuePeak },
+    ],
+  },
+});
+
 type Opt = {
   xAxis?: { data?: string[] };
   series?: Array<{
@@ -160,4 +173,80 @@ describe("StageBarChartsSection", () => {
     expect(readOpts()).toHaveLength(5);
     expect(screen.queryByText(/hit rate/i)).not.toBeInTheDocument();
   });
+
+  it("adds KV / preemption / queue engine bars when every run carries engineMetrics", () => {
+    const runs: StageRun[] = [
+      {
+        id: "a",
+        stageLabel: "OFF",
+        tool: "aiperf",
+        scenario: "lb-strategy",
+        summaryMetrics: guidellmMetrics(3, 0),
+        serverMetrics: { ...prefixCache(34.5, 60), ...engineMetrics(80, 2, 376) },
+      },
+      {
+        id: "b",
+        stageLabel: "ON",
+        tool: "aiperf",
+        scenario: "lb-strategy",
+        summaryMetrics: guidellmMetrics(3.5, 0),
+        serverMetrics: { ...prefixCache(57.2, 65), ...engineMetrics(55, 0, 202) },
+      },
+    ];
+    render(<StageBarChartsSection runs={runs} />);
+    // 5 base + 2 prefix-cache + 3 engine bars = 10.
+    expect(readOpts()).toHaveLength(10);
+    expect(screen.getByText(/KV cache utilization/i)).toBeInTheDocument();
+    expect(screen.getByText(/preemption/i)).toBeInTheDocument();
+    expect(screen.getByText(/queue/i)).toBeInTheDocument();
+
+    // KV bar plots the peak scalar (80 / 55), per-run identity colors.
+    const kvOpt = readOpts().find(
+      (o) => o.xAxis?.data?.join() === "OFF,ON" && hasValues(o, [80, 55]),
+    );
+    expect(kvOpt).toBeTruthy();
+  });
+
+  it("gates each engine bar independently — drops only the metric a run lacks", () => {
+    const runs: StageRun[] = [
+      {
+        id: "a",
+        stageLabel: "OFF",
+        tool: "aiperf",
+        scenario: "lb-strategy",
+        summaryMetrics: guidellmMetrics(3, 0),
+        serverMetrics: { ...prefixCache(34.5, 60), ...engineMetrics(80, 2, 376) },
+      },
+      {
+        id: "b",
+        stageLabel: "ON",
+        tool: "aiperf",
+        scenario: "lb-strategy",
+        summaryMetrics: guidellmMetrics(3.5, 0),
+        // Missing request_queue_time → only kv + preemption bars survive.
+        serverMetrics: {
+          ...prefixCache(57.2, 65),
+          engineMetrics: {
+            capturedAt: "2026-01-01T00:00:00Z",
+            metrics: [
+              { key: "kv_cache_usage", unit: "%", avg: 27, peak: 55 },
+              { key: "preemption_rate", unit: "count", avg: 0, peak: 0 },
+            ],
+          },
+        },
+      },
+    ];
+    render(<StageBarChartsSection runs={runs} />);
+    // 5 base + 2 prefix-cache + 2 engine bars (queue dropped) = 9.
+    expect(readOpts()).toHaveLength(9);
+    expect(screen.getByText(/KV cache utilization/i)).toBeInTheDocument();
+    expect(screen.queryByText(/queue/i)).not.toBeInTheDocument();
+  });
 });
+
+function hasValues(opt: Opt, values: number[]): boolean {
+  const data = opt.series?.[0]?.data;
+  if (!data) return false;
+  const nums = data.map((d) => (typeof d === "number" ? d : (d as { value?: number })?.value));
+  return values.every((v) => nums.includes(v));
+}
