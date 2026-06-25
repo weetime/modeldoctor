@@ -65,7 +65,7 @@ const LOWER_IS_BETTER: ReadonlySet<FigureRefId> = new Set<FigureRefId>([
 // heading. CJK as \u escapes (no-hardcoded-zh lint): yanchi/duanduanduan(e2e)/
 // paidui(queue)/cuowu(error)/qiangzhan(preempt).
 const ROW_LOWER_IS_BETTER_RE =
-  /ttft|tpot|\bitl\b|latency|e2e|queue|error|preempt|\u5ef6\u8fdf|\u7aef\u5230\u7aef|\u6392\u961f|\u9519\u8bef|\u62a2\u5360/i;
+  /overhead|duration|latency|preempt|memory|queue|error|ttft|tpot|vram|cost|time|e2e|\bitl\b|\u7aef\u5230\u7aef|\u5ef6\u8fdf|\u6392\u961f|\u9519\u8bef|\u62a2\u5360|\u8017\u65f6|\u65f6\u95f4|\u663e\u5b58|\u5185\u5b58|\u6210\u672c|\u5f00\u9500/i;
 // hit/mingzhong, throughput/tuntu, qps, success/chenggong, efficiency/xiaolv.
 const ROW_HIGHER_IS_BETTER_RE =
   /hit|throughput|qps|req\/s|success|efficiency|\u547d\u4e2d|\u541e\u5410|\u6210\u529f|\u6548\u7387/i;

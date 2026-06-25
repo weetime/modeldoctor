@@ -62,6 +62,11 @@ describe("isImprovement", () => {
     expect(isImprovement("-", "变化", hit, "TTFT p95 (ms)")).toBe(true);
     expect(isImprovement("-", "变化", hit, "E2E latency p95 (ms)")).toBe(true);
     expect(isImprovement("-", "变化", hit, "排队时间 (peak)")).toBe(true);
+    // Other lower-is-better metrics (VRAM/memory/cost/time) — also green on drop.
+    expect(isImprovement("-", "变化", hit, "显存占用 (GB)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "VRAM (MB)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "成本 (USD)")).toBe(true);
+    expect(isImprovement("-", "变化", hit, "生成时间 (s)")).toBe(true);
     // hit / throughput rows in the same table stay higher-is-better.
     expect(isImprovement("+", "变化", hit, "命中率")).toBe(true);
     expect(isImprovement("+", "变化", hit, "吞吐 (req/s)")).toBe(true);
