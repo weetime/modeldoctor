@@ -69,12 +69,19 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
         const ns =
           (config.get("BENCHMARK_K8S_NAMESPACE", { infer: true }) as string | undefined) ??
           "modeldoctor-benchmarks";
+        // Global HF tokenizer-source settings injected into every runner Job (#339).
+        const hf = {
+          endpoint: config.get("RUNNER_HF_ENDPOINT", { infer: true }) as string | undefined,
+          token: config.get("RUNNER_HF_TOKEN", { infer: true }) as string | undefined,
+          offline: (config.get("RUNNER_HF_OFFLINE", { infer: true }) as string | undefined) === "1",
+        };
         const k8s = await import("@kubernetes/client-node");
         const kc = await loadKubeConfig(config);
         return new K8sBenchmarkRunner(
           ns,
           kc.makeApiClient(k8s.BatchV1Api),
           kc.makeApiClient(k8s.CoreV1Api),
+          hf,
         );
       },
     },

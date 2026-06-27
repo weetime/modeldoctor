@@ -77,6 +77,39 @@ describe("buildJobManifest", () => {
   });
 });
 
+describe("buildJobManifest HF tokenizer env (#339)", () => {
+  function hfEnv(hf: { endpoint?: string; token?: string; offline?: boolean } | undefined) {
+    const j = buildJobManifest(ctx, { namespace: "ns", hf });
+    const env = j.spec?.template.spec?.containers[0].env ?? [];
+    return (name: string) => env.find((e) => e.name === name);
+  }
+
+  it("injects no HF_* env when hf is absent", () => {
+    const get = hfEnv(undefined);
+    expect(get("HF_ENDPOINT")).toBeUndefined();
+    expect(get("HF_TOKEN")).toBeUndefined();
+    expect(get("HF_HUB_OFFLINE")).toBeUndefined();
+  });
+
+  it("injects HF_ENDPOINT with the trailing slash stripped", () => {
+    const get = hfEnv({ endpoint: "https://hf-mirror.com/" });
+    expect(get("HF_ENDPOINT")).toEqual({ name: "HF_ENDPOINT", value: "https://hf-mirror.com" });
+  });
+
+  it("injects HF_TOKEN when set", () => {
+    const get = hfEnv({ token: "hf_secret" });
+    expect(get("HF_TOKEN")).toEqual({ name: "HF_TOKEN", value: "hf_secret" });
+  });
+
+  it("injects HF_HUB_OFFLINE=1 only when offline is true", () => {
+    expect(hfEnv({ offline: true })("HF_HUB_OFFLINE")).toEqual({
+      name: "HF_HUB_OFFLINE",
+      value: "1",
+    });
+    expect(hfEnv({ offline: false })("HF_HUB_OFFLINE")).toBeUndefined();
+  });
+});
+
 describe("naming helpers", () => {
   it("jobName is run-<id>", () => {
     expect(jobName("xyz")).toBe("run-xyz");
