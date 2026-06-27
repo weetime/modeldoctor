@@ -87,7 +87,7 @@ export const EnvSchema = z.object({
   RUNNER_HF_ENDPOINT: z.string().url().optional(),
   // Optional HF_TOKEN for the runner (rate limits / gated tokenizers).
   RUNNER_HF_TOKEN: z.string().optional(),
-  // Set to "1" to inject HF_HUB_OFFLINE=1 (use only locally-cached files).
+  // Set to "1" or "true" to inject HF_HUB_OFFLINE=1 (use only locally-cached files).
   RUNNER_HF_OFFLINE: z.string().optional(),
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
   // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
