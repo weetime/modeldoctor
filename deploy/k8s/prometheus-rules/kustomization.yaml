@@ -33,6 +33,15 @@ resources:
   # define version-exclusive raw names, so applying BOTH is safe (no overlap).
   - recording/engines/vllm-v0.yaml
   - recording/engines/vllm-v1.yaml
+  # SGLang ≥ 0.5.4 (sglang_ prefix). The Ascend image (main-cann8.5.0) tracks
+  # recent main, so the underscore-prefix file applies. For a ≤0.5.3 deployment
+  # swap in recording/engines/sglang-legacy.yaml instead (mutually exclusive —
+  # different raw-metric prefix).
+  - recording/engines/sglang-v0.5.4plus.yaml
+  # MindIE (Ascend). Requires MIES_SERVICE_MONITOR_MODE=1 on the engine and its
+  # /metrics scraped into this Prometheus. See the file header for the two
+  # values to verify on a real 800I-A2 pod before relying on cache panels.
+  - recording/engines/mindie.yaml
   # DCGM is scraped; NVIDIA branch populates. NPU branch stays empty until
   # npu-exporter is scraped into this Prometheus.
   - recording/accelerator/accelerator.yaml
