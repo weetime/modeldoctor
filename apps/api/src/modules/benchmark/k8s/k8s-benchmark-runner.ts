@@ -43,6 +43,8 @@ export class K8sBenchmarkRunner {
     private readonly namespace: string,
     private readonly batch: BatchV1Api,
     private readonly core: CoreV1Api,
+    /** Global HF tokenizer-source settings injected into every runner Job (#339). */
+    private readonly hf?: { endpoint?: string; token?: string; offline?: boolean },
   ) {}
 
   async start(ctx: BenchmarkRunInput): Promise<{ handle: BenchmarkRunHandle }> {
@@ -52,7 +54,7 @@ export class K8sBenchmarkRunner {
 
     let jobUid: string | undefined;
     try {
-      const job = buildJobManifest(ctx, { namespace: ns });
+      const job = buildJobManifest(ctx, { namespace: ns, hf: this.hf });
       const created = await this.batch.createNamespacedJob(ns, job);
       jobUid = (created as { body?: { metadata?: { uid?: string } } }).body?.metadata?.uid;
     } catch (e) {

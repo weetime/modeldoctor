@@ -56,6 +56,10 @@ export function buildSecretManifest(ctx: BenchmarkRunInput, namespace: string): 
 
 export interface JobManifestOptions {
   namespace: string;
+  /** Optional HuggingFace settings injected into the runner Job env so
+   *  HF-based tools (aiperf/guidellm) fetch tokenizers from a reachable
+   *  mirror / internal proxy instead of huggingface.co (#339). */
+  hf?: { endpoint?: string; token?: string; offline?: boolean };
 }
 
 export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOptions): V1Job {
@@ -74,6 +78,18 @@ export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOption
   }
   for (const [k, v] of Object.entries(ctx.buildResult.env)) {
     env.push({ name: k, value: v });
+  }
+  // HF tokenizer source (#339): point HF-based tools at a reachable mirror so
+  // they don't hit huggingface.co. Set globally via RUNNER_HF_* env on the API.
+  if (opts.hf?.endpoint) {
+    // huggingface_hub rejects a trailing slash on HF_ENDPOINT.
+    env.push({ name: "HF_ENDPOINT", value: opts.hf.endpoint.replace(/\/+$/, "") });
+  }
+  if (opts.hf?.token) {
+    env.push({ name: "HF_TOKEN", value: opts.hf.token });
+  }
+  if (opts.hf?.offline) {
+    env.push({ name: "HF_HUB_OFFLINE", value: "1" });
   }
 
   const hasInputFiles = Object.keys(ctx.buildResult.inputFiles ?? {}).length > 0;

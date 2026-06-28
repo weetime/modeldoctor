@@ -79,6 +79,16 @@ export const EnvSchema = z.object({
   RUNNER_IMAGE_VEGETA: z.string().min(1),
   RUNNER_IMAGE_EVALSCOPE: z.string().min(1),
   RUNNER_IMAGE_AIPERF: z.string().min(1),
+  // Optional HuggingFace endpoint injected as HF_ENDPOINT into every runner
+  // Job. Point it at a reachable mirror / internal HF proxy (e.g.
+  // https://hf-mirror.com) so aiperf/guidellm load tokenizers from there
+  // instead of huggingface.co — fixes per-run fetch flakes + air-gapped
+  // clusters (#339). Trailing slash is stripped (huggingface_hub rejects it).
+  RUNNER_HF_ENDPOINT: z.string().url().optional(),
+  // Optional HF_TOKEN for the runner (rate limits / gated tokenizers).
+  RUNNER_HF_TOKEN: z.string().optional(),
+  // Set to "1" or "true" to inject HF_HUB_OFFLINE=1 (use only locally-cached files).
+  RUNNER_HF_OFFLINE: z.string().optional(),
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: z.coerce.number().int().positive().default(1800),
   // Optional HuggingFace tokenizer id for guidellm synthetic prompt token
   // counting (passed as --processor). Set this when the target gateway
