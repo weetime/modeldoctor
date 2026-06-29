@@ -53,7 +53,11 @@ export const EnvSchema = z.object({
   // K8s watcher mode.
   //   off:     informer 不启动（开发本机 / 单元测试）—— 没有 pod 状态机驱动
   //   primary: informer 启动，作为状态机主驱动（生产 + e2e）
-  K8S_WATCHER_MODE: z.enum(["off", "primary"]).default("primary"),
+  //   poll:    informer 不启动，只跑周期 reconcile（短 list 调用，可重试）。
+  //            用于到 apiserver 的链路不可靠、长 watch 流频繁断线的场景
+  //            （如跨网/VPN）。靠 BENCHMARK_RECONCILE_INTERVAL_SEC 推进状态；
+  //            放弃实时日志流，但终态/报告照常落地。
+  K8S_WATCHER_MODE: z.enum(["off", "primary", "poll"]).default("primary"),
   // S3-compatible object storage — used by S3ReportStorage to persist run
   // artifacts (stdout, files) so the watcher can read them after pod exit.
   // S3_REGION defaults to us-east-1: MinIO ignores it but AWS SDK requires a
@@ -63,6 +67,11 @@ export const EnvSchema = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1),
   S3_REGION: z.string().default("us-east-1"),
+  // Path-style (endpoint/bucket/key) vs virtual-hosted (bucket.endpoint/key)
+  // addressing. MinIO needs path-style (default true). Aliyun OSS (and AWS S3
+  // proper) REQUIRE virtual-hosted — set this false. When false the runner's
+  // boto3 client must match (S3_FORCE_PATH_STYLE is also read in s3_writer.py).
+  S3_FORCE_PATH_STYLE: envBoolean.default(true),
   // 等待状态进 ImagePullBackOff/CrashLoopBackOff 等 FATAL waiting 多久后翻 failed。
   // K8s 社区惯例 60s；registry 限速 / 短暂网络抖动通常 < 30s。
   WAITING_FATAL_GRACE_SEC: z.coerce.number().int().positive().default(60),

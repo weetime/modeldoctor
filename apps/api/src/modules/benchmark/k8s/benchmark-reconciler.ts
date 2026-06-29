@@ -5,9 +5,26 @@ import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import type { ReportLoader } from "../storage/report-loader.js";
 import type { ReportStorage } from "../storage/report-storage.js";
+import { getRunnerStatus } from "./runner-container.js";
 
 const RUN_ID_LABEL = "modeldoctor.ai/run-id";
 const MAX_RECONCILE_ROWS = 500;
+
+/** Phases where the pod is still doing work — a later reconcile will resolve it. */
+const NON_TERMINAL_PHASES = new Set(["Pending", "Running", "Unknown"]);
+
+/** Short failure message from the runner container's terminated state. */
+function podFailureMessage(pod: V1Pod): string {
+  const term = getRunnerStatus(pod)?.state?.terminated;
+  if (term) {
+    const parts: string[] = [];
+    if (term.reason) parts.push(term.reason);
+    if (typeof term.exitCode === "number") parts.push(`exit ${term.exitCode}`);
+    if (term.message) parts.push(term.message);
+    return `pod failed: ${parts.join(" ") || "unknown"}`;
+  }
+  return `pod failed (phase=${pod.status?.phase ?? "unknown"})`;
+}
 
 export interface ReconcilerDeps {
   repo: BenchmarkRepository;
@@ -69,16 +86,16 @@ export class BenchmarkReconciler {
     // the K8s API is never queried at all.
     // We can't match by exact pod name because K8s appends a random suffix to
     // Job-spawned pods (run-<id>-<5-char-suffix>); filter by run-id label instead.
-    let liveRunIds: Set<string> | null = null;
-    const getLiveRunIds = async (): Promise<Set<string>> => {
-      if (liveRunIds === null) {
-        liveRunIds = new Set<string>();
+    let podsByRun: Map<string, V1Pod> | null = null;
+    const getPodsByRun = async (): Promise<Map<string, V1Pod>> => {
+      if (podsByRun === null) {
+        podsByRun = new Map<string, V1Pod>();
         for (const pod of await this.deps.listLivePods()) {
           const runId = pod.metadata?.labels?.[RUN_ID_LABEL];
-          if (runId) liveRunIds.add(runId);
+          if (runId) podsByRun.set(runId, pod);
         }
       }
-      return liveRunIds;
+      return podsByRun;
     };
 
     const now = Date.now();
@@ -109,11 +126,34 @@ export class BenchmarkReconciler {
         continue;
       }
 
-      // 2. No result yet — is a pod still live for this run? This call is OUTSIDE
-      //    the per-benchmark try/catch on purpose: if the K8s API is unreachable
-      //    we must abort the whole sweep rather than orphan-fail running jobs.
-      if ((await getLiveRunIds()).has(b.id)) {
-        // Pod is running; informer (or a later reconcile) will resolve it.
+      // 2. No result yet — inspect the pod's phase. This call is OUTSIDE the
+      //    per-benchmark try/catch on purpose: if the K8s API is unreachable we
+      //    must abort the whole sweep rather than orphan-fail running jobs.
+      //    In poll mode there's no informer, so the reconciler must drive
+      //    terminal-pod transitions itself (a Failed pod lingers until its TTL,
+      //    so "pod present" alone must NOT be read as "still running").
+      const pod = (await getPodsByRun()).get(b.id);
+      if (pod) {
+        const phase = pod.status?.phase;
+        if (!phase || NON_TERMINAL_PHASES.has(phase)) {
+          // Still in flight; informer (or a later reconcile) will resolve it.
+          continue;
+        }
+        // Terminal pod but no result.json: drive to failed. (Succeeded-without-
+        // result means the runner exited 0 without writing a report — also a
+        // failure for our purposes.)
+        try {
+          const msg =
+            phase === "Succeeded" ? "pod succeeded but no result.json written" : podFailureMessage(pod);
+          const updated = await this.deps.repo.updateGuarded(b.id, IN_PROGRESS_STATES, {
+            status: "failed",
+            statusMessage: msg,
+            completedAt: new Date(),
+          });
+          if (updated) this.log.log(`reconcile: marked ${b.id} failed (pod ${phase}): ${msg}`);
+        } catch (e) {
+          this.log.warn(`reconcile: updateGuarded(${b.id}) threw: ${(e as Error).message}`);
+        }
         continue;
       }
 

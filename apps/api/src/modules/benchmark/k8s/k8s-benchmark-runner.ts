@@ -47,19 +47,69 @@ export class K8sBenchmarkRunner {
     private readonly hf?: { endpoint?: string; token?: string; offline?: boolean },
   ) {}
 
+  /**
+   * Retry a control-plane call over a flaky apiserver link. The Mac↔ascend
+   * path drops a sizeable fraction of requests (TLS ECONNRESET); a single
+   * attempt routinely fails. Retries on network errors / 5xx / 429 (transient);
+   * 4xx are deterministic and rethrow immediately. With `idempotent`, a 409
+   * AlreadyExists (a lost-ack retry that re-created the resource) is treated as
+   * success and resolves to null.
+   */
+  private async withRetry<T>(
+    label: string,
+    fn: () => Promise<T>,
+    opts: { attempts?: number; idempotent?: boolean } = {},
+  ): Promise<T | null> {
+    const attempts = opts.attempts ?? 5;
+    let lastErr: unknown;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        return await fn();
+      } catch (e) {
+        const status =
+          (e as { statusCode?: number; response?: { statusCode?: number } }).response?.statusCode ??
+          (e as { statusCode?: number }).statusCode;
+        if (opts.idempotent && status === 409) {
+          this.log.log(`${label}: already exists (409) — treating as success`);
+          return null;
+        }
+        const transient = status === undefined || status >= 500 || status === 429;
+        if (!transient) throw e;
+        lastErr = e;
+        if (i === attempts) break;
+        const delay = Math.min(8000, 300 * 2 ** (i - 1));
+        this.log.warn(
+          `${label}: attempt ${i}/${attempts} failed (${(e as Error).message}); retry in ${delay}ms`,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+    throw lastErr;
+  }
+
   async start(ctx: BenchmarkRunInput): Promise<{ handle: BenchmarkRunHandle }> {
     const ns = this.namespace;
     const secret = buildSecretManifest(ctx, ns);
-    await this.core.createNamespacedSecret(ns, secret);
+    await this.withRetry(
+      "createNamespacedSecret",
+      () => this.core.createNamespacedSecret(ns, secret),
+      { idempotent: true },
+    );
 
     let jobUid: string | undefined;
     try {
       const job = buildJobManifest(ctx, { namespace: ns, hf: this.hf });
-      const created = await this.batch.createNamespacedJob(ns, job);
-      jobUid = (created as { body?: { metadata?: { uid?: string } } }).body?.metadata?.uid;
+      const created = await this.withRetry(
+        "createNamespacedJob",
+        () => this.batch.createNamespacedJob(ns, job),
+        { idempotent: true },
+      );
+      jobUid = (created as { body?: { metadata?: { uid?: string } } } | null)?.body?.metadata?.uid;
     } catch (e) {
       try {
-        await this.core.deleteNamespacedSecret(secretName(ctx.runId), ns);
+        await this.withRetry("rollback deleteNamespacedSecret", () =>
+          this.core.deleteNamespacedSecret(secretName(ctx.runId), ns),
+        );
       } catch (rbErr) {
         this.log.warn(
           `Failed to roll back Secret after Job-create failure: ${(rbErr as Error).message}`,
@@ -70,29 +120,31 @@ export class K8sBenchmarkRunner {
 
     if (jobUid) {
       try {
-        await this.core.patchNamespacedSecret(
-          secretName(ctx.runId),
-          ns,
-          {
-            metadata: {
-              ownerReferences: [
-                {
-                  apiVersion: "batch/v1",
-                  kind: "Job",
-                  name: jobName(ctx.runId),
-                  uid: jobUid,
-                  controller: true,
-                  blockOwnerDeletion: true,
-                },
-              ],
+        await this.withRetry("patchNamespacedSecret ownerRefs", () =>
+          this.core.patchNamespacedSecret(
+            secretName(ctx.runId),
+            ns,
+            {
+              metadata: {
+                ownerReferences: [
+                  {
+                    apiVersion: "batch/v1",
+                    kind: "Job",
+                    name: jobName(ctx.runId),
+                    uid: jobUid,
+                    controller: true,
+                    blockOwnerDeletion: true,
+                  },
+                ],
+              },
             },
-          },
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          { headers: { "Content-Type": "application/strategic-merge-patch+json" } },
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            { headers: { "Content-Type": "application/strategic-merge-patch+json" } },
+          ),
         );
       } catch (e) {
         this.log.warn(`Failed to patch Secret ownerReferences: ${(e as Error).message}`);
