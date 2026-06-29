@@ -78,7 +78,7 @@
     "pino-pretty": "^11",
     "supertest": "^7",
     "testcontainers": "^11.14.0",
-    "tsx": "^4.20.0",
+    "tsx": "^4.22.4",
     "unplugin-swc": "^1",
     "vite-tsconfig-paths": "^5",
     "vitest": "^2"
