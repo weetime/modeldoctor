@@ -105,6 +105,9 @@ export interface EngineMetricValue {
   avg: number | null;
   peak: number | null;
   unit: string;
+  /** Fraction (0..1) of the window at/above the saturation threshold, when the
+   * metric defines one (e.g. KV cache ≥ 90%). Null/absent otherwise. */
+  satFrac?: number | null;
 }
 
 /** Read one durable engine-metric scalar from serverMetrics.engineMetrics.
@@ -115,7 +118,7 @@ export function readEngineMetric(serverMetrics: unknown, key: string): EngineMet
   );
   if (!parsed.success) return null;
   const m = parsed.data.metrics.find((x) => x.key === key);
-  return m ? { avg: m.avg, peak: m.peak, unit: m.unit } : null;
+  return m ? { avg: m.avg, peak: m.peak, unit: m.unit, satFrac: m.satFrac ?? null } : null;
 }
 
 /** refId → which engine metric + scalar to plot. Mirrors the client constant. */

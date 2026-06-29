@@ -269,6 +269,11 @@ export const engineMetricScalarSchema = z.object({
   unit: panelUnitSchema,
   avg: z.number().nullable(),
   peak: z.number().nullable(),
+  // Optional saturation-duration stat: fraction (0..1) of window samples at or
+  // above the metric's saturation threshold — e.g. KV cache ≥ 90%. Lets the
+  // report distinguish a transient peak from a sustained saturation. Only
+  // present for metrics with a defined threshold; absent on older snapshots.
+  satFrac: z.number().nullable().optional(),
 });
 export const engineMetricsAnnotationSchema = z.object({
   capturedAt: z.string(),
