@@ -10,7 +10,12 @@ import { Injectable, Logger, NotFoundException, ServiceUnavailableException } fr
 import { LruCache } from "../insights/cache.js";
 import { type ChatMessage, chatCompletion } from "../insights/llm-client.js";
 import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
-import { availableFigureRefIds, readPrefixCache, summarizeForPrompt } from "./metrics.js";
+import {
+  availableFigureRefIds,
+  readEngineMetric,
+  readPrefixCache,
+  summarizeForPrompt,
+} from "./metrics.js";
 import { isBlockingWarning, lintNarrative } from "./narrative-lint.js";
 import { buildRetryFeedback, buildSystemPrompt } from "./prompts.js";
 import { getReportProfile, resolveReportIntent } from "./report-scenarios/index.js";
@@ -212,6 +217,68 @@ export class CompareSynthesizeService {
     }
   }
 
+  /** Durable engine-internal signals for one run, parsed from
+   * serverMetrics.engineMetrics. All nullable — absent on older snapshots or
+   * when the engine / Prometheus didn't expose the metric. KV is reported in %
+   * (0..100); satFrac is rescaled to a percentage so the report can cite it
+   * directly (e.g. "saturated for 62% of the window"). */
+  private engineInternal(serverMetrics: unknown): {
+    kvPeakPct: number | null;
+    kvSatPct: number | null;
+    waitingPeak: number | null;
+    queuePeakMs: number | null;
+    preemptRps: number | null;
+    prefixHitPct: number | null;
+  } {
+    const kv = readEngineMetric(serverMetrics, "kv_cache_usage");
+    const waiting = readEngineMetric(serverMetrics, "scheduler_waiting");
+    const queue = readEngineMetric(serverMetrics, "request_queue_time");
+    const preempt = readEngineMetric(serverMetrics, "preemption_rate");
+    // Per-run prefix-cache hit rate from the normalized engineMetrics snapshot
+    // (avg over the window = steady-state hit rate). This is the cross-engine
+    // source — distinct from the lb-strategy-only `prefixCache` annotation that
+    // readPrefixCache() reads, which inference runs don't carry.
+    const prefixHit = readEngineMetric(serverMetrics, "prefix_cache_hit_rate");
+    return {
+      kvPeakPct: kv?.peak ?? null,
+      kvSatPct: kv?.satFrac != null ? kv.satFrac * 100 : null,
+      waitingPeak: waiting?.peak ?? null,
+      queuePeakMs: queue?.peak ?? null,
+      preemptRps: preempt?.avg ?? null,
+      prefixHitPct: prefixHit?.avg ?? null,
+    };
+  }
+
+  /** One-line engine-internal summary for a stage's prompt block. Empty string
+   * when the run carries no engine metrics (older snapshot / unsupported). */
+  private engineLine(serverMetrics: unknown, zh: boolean): string {
+    const e = this.engineInternal(serverMetrics);
+    const parts: string[] = [];
+    if (e.kvPeakPct != null) {
+      const sat =
+        e.kvSatPct != null
+          ? zh
+            ? `(饱和≥90% 占 ${e.kvSatPct.toFixed(0)}%)`
+            : ` (≥90% for ${e.kvSatPct.toFixed(0)}% of window)`
+          : "";
+      parts.push(`${zh ? "KV峰值" : "KV peak"} ${e.kvPeakPct.toFixed(0)}%${sat}`);
+    }
+    if (e.waitingPeak != null) {
+      parts.push(`${zh ? "waiting峰值" : "waiting peak"} ${e.waitingPeak.toFixed(0)}`);
+    }
+    if (e.queuePeakMs != null) {
+      parts.push(`${zh ? "queue峰值" : "queue peak"} ${e.queuePeakMs.toFixed(0)}ms`);
+    }
+    if (e.preemptRps != null) {
+      parts.push(`${zh ? "抢占" : "preempt"} ${e.preemptRps.toFixed(2)}/s`);
+    }
+    if (e.prefixHitPct != null) {
+      parts.push(`${zh ? "前缀缓存命中" : "prefix-cache hit"} ${e.prefixHitPct.toFixed(1)}%`);
+    }
+    if (parts.length === 0) return "";
+    return (zh ? "  引擎内部: " : "  engine: ") + parts.join(" · ");
+  }
+
   /**
    * Walk the input metrics summary and collect every number the LLM could
    * legitimately cite. Used by lint number cross-check (lint module reads this
@@ -236,6 +303,17 @@ export class CompareSynthesizeService {
       }
       const pc = readPrefixCache(b.serverMetrics);
       if (pc) nums.push(pc.hitRatePct, pc.topPodSharePct);
+      const e = this.engineInternal(b.serverMetrics);
+      for (const v of [
+        e.kvPeakPct,
+        e.kvSatPct,
+        e.waitingPeak,
+        e.queuePeakMs,
+        e.preemptRps,
+        e.prefixHitPct,
+      ]) {
+        if (v !== null) nums.push(v);
+      }
     }
     return nums;
   }
@@ -298,6 +376,7 @@ export class CompareSynthesizeService {
       lines.push(L.contextHeader, sc.context, "");
     }
     lines.push(L.runsHeader, L.metricsLegend, "");
+    let anyEngine = false;
     for (const b of sc.benchmarks) {
       if (b.missing) {
         lines.push(`- [${b.stageLabel}] ${L.deleted}`);
@@ -319,6 +398,23 @@ export class CompareSynthesizeService {
       lines.push(
         `- [${b.stageLabel}] ${b.name ?? "(unnamed)"} · tool=${b.tool ?? "?"} scenario=${b.scenario ?? "?"}`,
         `  qps=${m.throughput ?? "—"}  err=${m.errorRate ?? "—"}  ${ttftLine}  ${e2eLine}${pcLine}`,
+      );
+      const engineLine = this.engineLine(b.serverMetrics, zh);
+      if (engineLine) {
+        lines.push(engineLine);
+        anyEngine = true;
+      }
+    }
+
+    // Engine-internal causal-chain hint — only when at least one stage carries
+    // engine metrics, so the judge interprets the trend instead of restating it.
+    if (anyEngine) {
+      lines.push(
+        "",
+        zh ? "## 引擎内部分析提示" : "## Engine-internal analysis hint",
+        zh
+          ? "结合每个 stage 的「引擎内部」行分析因果链:高并发档 KV 饱和 → waiting 堆积 → 抢占/queue 时间上升 → TTFT 拐点或吞吐封顶。指出哪个引擎/stage 最先触发该链条,以及谁的 headroom 更大。"
+          : "Using the per-stage `engine:` lines, reason about the causal chain: at high concurrency KV saturates → waiting backlog grows → preemption / queue time rises → TTFT inflects or throughput plateaus. Call out which engine/stage triggers this chain first and which has more headroom.",
       );
     }
     if (sc.baselineId) {
