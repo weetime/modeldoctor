@@ -144,7 +144,9 @@ export class BenchmarkReconciler {
         // failure for our purposes.)
         try {
           const msg =
-            phase === "Succeeded" ? "pod succeeded but no result.json written" : podFailureMessage(pod);
+            phase === "Succeeded"
+              ? "pod succeeded but no result.json written"
+              : podFailureMessage(pod);
           const updated = await this.deps.repo.updateGuarded(b.id, IN_PROGRESS_STATES, {
             status: "failed",
             statusMessage: msg,
