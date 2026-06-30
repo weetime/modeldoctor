@@ -460,6 +460,32 @@ export class CompareSynthesizeService {
   private extractJson(content: string): string {
     const trimmed = content.trim();
     const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-    return fence ? fence[1].trim() : trimmed;
+    const body = (fence ? fence[1] : trimmed).trim();
+    // Weak/verbose judges sometimes wrap the JSON in a preamble or append
+    // trailing commentary (e.g. a closing note), which breaks JSON.parse with
+    // "Unexpected non-whitespace character after JSON". Slice out the first
+    // balanced top-level object/array, honoring strings and escapes.
+    const start = body.search(/[{[]/);
+    if (start === -1) return body;
+    const open = body[start];
+    const close = open === "{" ? "}" : "]";
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < body.length; i++) {
+      const ch = body[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === "\\") esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === open) depth++;
+      else if (ch === close && --depth === 0) return body.slice(start, i + 1);
+    }
+    // Unbalanced — return from the first bracket so JSON.parse surfaces the
+    // real error rather than tripping on any leading preamble.
+    return body.slice(start);
   }
 }

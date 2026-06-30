@@ -94,10 +94,18 @@ export class ReportLoader {
         await this.trySnapshotPrefixCache({
           runId,
           scenario: bench.scenario,
+          prometheusDatasourceId: bench.connection?.prometheusDatasourceId ?? null,
+          connectionModel: bench.connection?.model ?? null,
+          completedAt: updated.completedAt ?? null,
+          startedAt: bench.startedAt ?? null,
+        });
+        // Durable engine-metrics snapshot for ANY scenario (not just
+        // lb-strategy) — see trySnapshotEngineMetrics.
+        await this.trySnapshotEngineMetrics({
+          runId,
           userId: bench.userId ?? null,
           connectionId: bench.connectionId ?? null,
           prometheusDatasourceId: bench.connection?.prometheusDatasourceId ?? null,
-          connectionModel: bench.connection?.model ?? null,
           completedAt: updated.completedAt ?? null,
           startedAt: bench.startedAt ?? null,
         });
@@ -147,23 +155,13 @@ export class ReportLoader {
   private async trySnapshotPrefixCache(opts: {
     runId: string;
     scenario: string;
-    userId: string | null;
-    connectionId: string | null;
     prometheusDatasourceId: string | null;
     connectionModel: string | null;
     completedAt: Date | null;
     startedAt: Date | null;
   }): Promise<void> {
-    const {
-      runId,
-      scenario,
-      userId,
-      connectionId,
-      prometheusDatasourceId,
-      connectionModel,
-      completedAt,
-      startedAt,
-    } = opts;
+    const { runId, scenario, prometheusDatasourceId, connectionModel, completedAt, startedAt } =
+      opts;
     if (!this.deps.prefixCacheSnapshot || !this.deps.promFetcher) return;
     try {
       if (scenario !== "lb-strategy") return;
@@ -187,28 +185,56 @@ export class ReportLoader {
       if (ann) {
         await this.deps.repo.mergeServerMetrics(runId, { prefixCache: ann });
       }
-
-      // Engine metrics: reuse the live snapshot manifest (fetchSnapshot resolves
-      // connection → datasource → all manifest queries) and reduce to durable
-      // scalars so historical compares survive Prometheus retention. Isolated
-      // try/catch — an engine-metrics failure must not undo the prefix-cache
-      // snapshot already merged above.
-      if (this.deps.engineMetrics && userId && connectionId) {
-        try {
-          const snap = await this.deps.engineMetrics.fetchSnapshot(userId, connectionId, {
-            from: startedAt.toISOString(),
-            to: end.toISOString(),
-          });
-          const engineAnn = reduceEngineSnapshot(snap);
-          if (engineAnn.metrics.length > 0) {
-            await this.deps.repo.mergeServerMetrics(runId, { engineMetrics: engineAnn });
-          }
-        } catch (e) {
-          this.log.warn(`engine-metrics snapshot(${runId}) failed: ${(e as Error).message}`);
-        }
-      }
     } catch (e) {
       this.log.warn(`trySnapshotPrefixCache(${runId}) failed: ${(e as Error).message}`);
+    }
+  }
+
+  /**
+   * Best-effort durable engine-metrics snapshot for ANY scenario.
+   *
+   * The live "ENGINE INTERNAL" charts on the detail page query the bound
+   * Prometheus datasource directly for the run window, so they work for every
+   * scenario. This method additionally REDUCES that snapshot to durable scalars
+   * stored under `serverMetrics.engineMetrics`, so SavedCompare engine-side
+   * columns survive Prometheus retention. Previously this only ran for
+   * `lb-strategy` (it was nested inside trySnapshotPrefixCache); engine-side
+   * metrics are scenario-agnostic, so it now runs for inference/capacity/etc.
+   *
+   * Guards (mirrors the prefix-cache snapshot):
+   *   1. engineMetrics service injected.
+   *   2. Explicit `prometheusDatasourceId` binding — never fall back to the
+   *      workspace default (would snapshot the wrong Prometheus).
+   *   3. userId + connectionId present (fetchSnapshot resolves the datasource
+   *      from the connection).
+   *   4. startedAt present.
+   * Never throws.
+   */
+  private async trySnapshotEngineMetrics(opts: {
+    runId: string;
+    userId: string | null;
+    connectionId: string | null;
+    prometheusDatasourceId: string | null;
+    completedAt: Date | null;
+    startedAt: Date | null;
+  }): Promise<void> {
+    const { runId, userId, connectionId, prometheusDatasourceId, completedAt, startedAt } = opts;
+    if (!this.deps.engineMetrics) return;
+    if (!prometheusDatasourceId) return;
+    if (!userId || !connectionId) return;
+    if (!startedAt) return;
+    try {
+      const end = completedAt ?? new Date();
+      const snap = await this.deps.engineMetrics.fetchSnapshot(userId, connectionId, {
+        from: startedAt.toISOString(),
+        to: end.toISOString(),
+      });
+      const engineAnn = reduceEngineSnapshot(snap);
+      if (engineAnn.metrics.length > 0) {
+        await this.deps.repo.mergeServerMetrics(runId, { engineMetrics: engineAnn });
+      }
+    } catch (e) {
+      this.log.warn(`engine-metrics snapshot(${runId}) failed: ${(e as Error).message}`);
     }
   }
 

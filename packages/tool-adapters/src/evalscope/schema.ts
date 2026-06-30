@@ -11,7 +11,9 @@ export const evalscopeParamsSchema = z
   .object({
     parallel: z.number().int().min(1).max(256).default(8),
     number: z.number().int().min(1).max(10000).default(64),
-    dataset: z.enum(["longalpaca", "openqa", "random"]).default("longalpaca"),
+    dataset: z
+      .enum(["longalpaca", "openqa", "random", "share_gpt_en", "share_gpt_zh"])
+      .default("longalpaca"),
     minPromptLength: z.number().int().min(1).max(32000).default(8000),
     maxPromptLength: z.number().int().min(1).max(32000).default(9000),
     minTokens: z.number().int().min(1).max(4096).default(160),

@@ -645,6 +645,32 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     },
     tags: ["inference", "aiperf", "baseline", "synthetic"],
   },
+  {
+    id: "tpl_inf_aiperf_sharegpt_xengine",
+    name: "真实对话 ShareGPT · 多引擎横评 (aiperf)",
+    description:
+      "【多引擎横评 · 真实数据】aiperf 内置 ShareGPT 真实人机对话语料,闭环 --concurrency 压测,业界跨引擎对比事实口径。固定 OSL 512(同 max-tokens)+ seed 42 保证三引擎可比。用法:三引擎各自建连接后用同一模板各跑一次进 compare;要画吞吐-延迟 Pareto 曲线则复制本模板、把 concurrency 改成 1/4/8/16/32 多档分别跑(aiperf 并发是单值,无单 run 内置 sweep,一个 compare 最多 10 个 run)。",
+    scenario: "inference",
+    tool: "aiperf",
+    config: {
+      concurrency: 32,
+      requestCount: 500,
+      // ShareGPT 提供真实输入分布,这两个 synthetic 输入参数在 dataset=sharegpt 下不生效,
+      // 仅为通过 schema;输出固定 512 / stddev 0 = 等长 OSL,保证跨引擎吞吐可比。
+      inputTokensMean: 256,
+      inputTokensStddev: 0,
+      outputTokensMean: 512,
+      outputTokensStddev: 0,
+      endpointType: "chat",
+      streaming: true,
+      dataset: "sharegpt",
+      seed: 42,
+      // Qwen3 默认带 thinking,关掉以对齐生产 chat 形态、避免输出被推理链拉长污染吞吐口径。
+      extraArgs: '--extra-inputs \'{"chat_template_kwargs":{"enable_thinking":false}}\'',
+    },
+    tags: ["inference", "aiperf", "sharegpt", "real-data", "cross-engine"],
+    categories: ["chat"],
+  },
   // -------------------------------------------------------------------------
   // Capacity · 2 个官方 guidellm 模板
   //

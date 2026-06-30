@@ -101,6 +101,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
           accessKeyId: config.get("S3_ACCESS_KEY", { infer: true }) as string,
           secretAccessKey: config.get("S3_SECRET_KEY", { infer: true }) as string,
           bucket: config.get("S3_BUCKET", { infer: true }) as string,
+          forcePathStyle: config.get("S3_FORCE_PATH_STYLE", { infer: true }) as boolean,
         });
       },
     },

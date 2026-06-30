@@ -9,6 +9,8 @@ export interface S3ReportStorageConfig {
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
+  // MinIO: true (path-style). Aliyun OSS / AWS S3: false (virtual-hosted).
+  forcePathStyle?: boolean;
 }
 
 @Injectable()
@@ -20,8 +22,15 @@ export class S3ReportStorage implements ReportStorage {
     this.client = new S3Client({
       endpoint: cfg.endpoint,
       region: cfg.region,
-      forcePathStyle: true,
+      forcePathStyle: cfg.forcePathStyle ?? true,
       credentials: { accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey },
+      // Aliyun OSS rejects the streaming "aws-chunked" content encoding that
+      // SDK v3 turns on by default for flexible checksums ("aws-chunked
+      // encoding is not supported with the specified x-amz-content-sha256").
+      // WHEN_REQUIRED only computes/validates checksums when the operation
+      // mandates it — safe for MinIO too (we only Head/Get here anyway).
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
       maxAttempts: 2,
     });
     this.bucket = cfg.bucket;

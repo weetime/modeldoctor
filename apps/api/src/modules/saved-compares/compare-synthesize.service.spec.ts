@@ -268,4 +268,32 @@ describe("CompareSynthesizeService", () => {
       expect(out).toBe(input);
     });
   });
+
+  // Weak/verbose judges occasionally append commentary after the JSON value
+  // (or wrap it in a fence). extractJson must recover the first balanced
+  // top-level object so JSON.parse doesn't choke on the trailing text.
+  describe("extractJson", () => {
+    const extract = (s: string) =>
+      (svc as never as { extractJson: (c: string) => string }).extractJson(s);
+
+    it("returns a clean object unchanged", () => {
+      expect(extract('{"a":1}')).toBe('{"a":1}');
+    });
+
+    it("strips trailing commentary after a bare JSON object", () => {
+      expect(extract('{"a":1,"b":[2,3]}\n\nNote: hope this helps!')).toBe('{"a":1,"b":[2,3]}');
+    });
+
+    it("unwraps a ```json fence", () => {
+      expect(extract('```json\n{"a":1}\n```')).toBe('{"a":1}');
+    });
+
+    it("ignores braces inside strings", () => {
+      expect(extract('{"a":"}{ tricky"}trailing')).toBe('{"a":"}{ tricky"}');
+    });
+
+    it("strips a leading preamble before the object", () => {
+      expect(extract('Here is the JSON:\n{"a":1}')).toBe('{"a":1}');
+    });
+  });
 });

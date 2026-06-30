@@ -1,0 +1,131 @@
+# PrometheusRule: MindIE Service (Ascend 推理引擎)
+#
+# 把 MindIE Service /metrics 暴露的原始指标归一化到平台统一的 infer:* 命名空间。
+# MindIE 的指标名是 vLLM 风格的裸名(无 `mindie:` / `vllm:` 前缀),
+# 所以这里直接引用裸名;硬编码 label `engine="mindie"` 注入每条 record
+# (与 sglang/tgi 同模式 —— 静态 label,不走 vllm-common 那种版本 join,
+#  因为 MindIE 无版本歧义)。
+#
+# 前置条件(在 MindIE 侧 / scrape 侧):
+#   1. MindIE 启动前必须 `export MIES_SERVICE_MONITOR_MODE=1`,否则 /metrics
+#      不返回业务指标。默认监听管理面 IP:1027(由 config.json metricsPort 定)。
+#   2. MindIE 一进程一模型;若 scrape 不带 model_name label,按模型查询会塌缩 ——
+#      建议在 scrape job relabel_configs 补 model_name(同 sglang 的告诫)。
+#   3. 安全模式下 /metrics 可能是 https(自签证书),scrape 需 scheme: https
+#      + tls_config.insecure_skip_verify。
+#
+# ⚠️ 上线前需在真实 800I-A2 / 2.1.RC1 pod 上 `curl http://{mgmt-ip}:1027/metrics`
+#    验证两点(本文件按 vLLM 同名指标的惯例取值,MindIE 大概率一致但未逐字确认):
+#    - npu_cache_usage_perc / npu_prefix_cache_hit_rate 是 0–1 还是 0–100。
+#      本文件假设 0–1(与 vLLM gpu_cache_usage_perc 一致,app 端再 *100 转 %)。
+#      若实测是 0–100,把对应 expr 改成 `(<metric>) / 100`。
+#    - histogram bucket(le)边界存在且粒度够用(histogram_quantile 依赖之)。
+#
+# MindIE 未暴露的 infer:* 序列(对应面板对 MindIE 为空,属预期):
+#   - infer:request:queue_seconds:p95   (MindIE 无排队时延直方图)
+#   - infer:request:prefill_seconds:avg (MindIE 仅有 avg_*_throughput gauge,无分阶段耗时直方图)
+#   - infer:request:decode_seconds:avg
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: modeldoctor-mindie
+  labels:
+    app.kubernetes.io/name: modeldoctor
+    app.kubernetes.io/component: prometheus-rules
+    modeldoctor.io/engine: mindie
+    modeldoctor.io/kind: recording
+spec:
+  groups:
+    - name: modeldoctor.mindie.request
+      interval: 30s
+      rules:
+        - record: infer:request:running
+          expr: num_requests_running
+          labels:
+            engine: mindie
+        - record: infer:request:waiting
+          expr: num_requests_waiting
+          labels:
+            engine: mindie
+        - record: infer:request:swapped
+          expr: num_requests_swapped
+          labels:
+            engine: mindie
+        - record: infer:request:preempted_total
+          expr: num_preemptions_total
+          labels:
+            engine: mindie
+        - record: infer:request:ttft_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:ttft_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:ttft_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(time_to_first_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:tpot_seconds:p50
+          expr: histogram_quantile(0.50, sum by (le, model_name, instance) (rate(time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:tpot_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:tpot_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(time_per_output_token_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:e2e_seconds:p95
+          expr: histogram_quantile(0.95, sum by (le, model_name, instance) (rate(e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        - record: infer:request:e2e_seconds:p99
+          expr: histogram_quantile(0.99, sum by (le, model_name, instance) (rate(e2e_request_latency_seconds_bucket[5m])))
+          labels:
+            engine: mindie
+        # success ratio: 成功请求 / (成功 + 失败)。clamp_min(denom,1) 在无流量时给 0(非 NaN)。
+        - record: infer:request:success_ratio
+          expr: |
+            sum by (instance, model_name) (rate(request_success_total[5m]))
+            / clamp_min(
+                sum by (instance, model_name) (rate(request_success_total[5m]))
+                + sum by (instance, model_name) (rate(request_failed_total[5m])),
+                1)
+          labels:
+            engine: mindie
+
+    - name: modeldoctor.mindie.throughput
+      interval: 30s
+      rules:
+        - record: infer:throughput:prompt_tokens_total
+          expr: prompt_tokens_total
+          labels:
+            engine: mindie
+        - record: infer:throughput:generation_tokens_total
+          expr: generation_tokens_total
+          labels:
+            engine: mindie
+        # 用 counter 自己算速率,比 MindIE 自带的 avg_generation_throughput_toks_per_s
+        # gauge(瞬时滑动平均)更可控、与 vLLM/SGLang 口径一致。
+        - record: infer:throughput:generation_rate_tps
+          expr: sum by (model_name, instance) (rate(generation_tokens_total[1m]))
+          labels:
+            engine: mindie
+
+    - name: modeldoctor.mindie.cache
+      interval: 30s
+      rules:
+        # ⚠️ 假设 0–1(app 端 *100 转 %)。实测若为 0–100 改成 `(<metric>) / 100`。
+        - record: infer:cache:kv_usage_ratio
+          expr: npu_cache_usage_perc
+          labels:
+            engine: mindie
+        - record: infer:cache:prefix_hit_ratio
+          expr: npu_prefix_cache_hit_rate
+          labels:
+            engine: mindie

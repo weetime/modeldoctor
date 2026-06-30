@@ -173,7 +173,9 @@ describe("evalscope.parseFinalReport", () => {
     expect(report.data.ttft.p50).toBeCloseTo(5980.2);
     expect(report.data.ttft.p99).toBeCloseTo(12054.6);
     expect(report.data.e2eLatency.p95).toBeCloseTo(13210); // 13.21s → 13210ms
-    expect(report.data.itl.p90).toBeCloseTo(36.4);
+    // itl maps to evalscope's TPOT (time per output token), not its raw ITL
+    // field — see runtime.ts parseFinalReport. Fixture p90 TPOT = 35.2.
+    expect(report.data.itl.p90).toBeCloseTo(35.2);
     // prefix cache: 64.3% → 0.643
     expect(report.data.prefixCacheStats?.hitRate).toBeCloseTo(0.643);
   });

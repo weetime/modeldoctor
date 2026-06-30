@@ -9,7 +9,7 @@ import type { PodLogStreamerPool } from "./pod-log-streamer-pool.js";
 import { type DesiredTransition, type ReducerConfig, reduce } from "./pod-state-reducer.js";
 import { getRunnerStatus } from "./runner-container.js";
 
-export type WatcherMode = "off" | "primary";
+export type WatcherMode = "off" | "primary" | "poll";
 
 const RUN_ID_LABEL = "modeldoctor.ai/run-id";
 
@@ -56,29 +56,47 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       this.log.log("K8S_WATCHER_MODE=off → skipping informer + reconciler");
       return;
     }
-    this.informer = this.deps.makeInformer();
-    this.informer.on("add", (p) => this.handlePodEvent(p));
-    this.informer.on("update", (p) => this.handlePodEvent(p));
-    this.informer.on("delete", (p) => this.handlePodDelete(p));
-    this.informer.on("connect", () => {
-      this.consecutiveErrors = 0;
-      this.log.log("informer connected");
-    });
-    this.informer.on("error", (e) => {
-      this.consecutiveErrors += 1;
-      this.log.warn(
-        `informer error (#${this.consecutiveErrors}): ${e instanceof Error ? e.message : String(e)}`,
+    // poll mode deliberately skips the informer: a long-lived watch stream over
+    // an unreliable link (cross-cluster / VPN) drops constantly and the failing
+    // socket surfaces as an unhandled rejection that crashes the process. The
+    // periodic reconcile below uses short, retryable list calls instead — it
+    // can't deliver live logs but it does drive every run to a terminal state.
+    if (this.deps.mode === "primary") {
+      this.informer = this.deps.makeInformer();
+      this.informer.on("add", (p) => this.handlePodEvent(p));
+      this.informer.on("update", (p) => this.handlePodEvent(p));
+      this.informer.on("delete", (p) => this.handlePodDelete(p));
+      this.informer.on("connect", () => {
+        this.consecutiveErrors = 0;
+        this.log.log("informer connected");
+      });
+      this.informer.on("error", (e) => {
+        this.consecutiveErrors += 1;
+        this.log.warn(
+          `informer error (#${this.consecutiveErrors}): ${e instanceof Error ? e.message : String(e)}`,
+        );
+        // @kubernetes/client-node's informer does NOT auto-restart on a non-410
+        // watch error — doneHandler fires the ERROR callback and returns without
+        // re-establishing the watch (only clean done / 410 self-heal). Per the
+        // library README we must restart it ourselves, or the event stream stays
+        // dead forever and every run gets stuck IN_PROGRESS.
+        this.scheduleInformerRestart();
+      });
+      await this.informer.start();
+      this.log.log(`K8s watcher started (mode=primary, ns=${this.deps.namespace})`);
+    } else {
+      this.log.log(
+        `K8S_WATCHER_MODE=poll → reconcile-only (no watch stream), ns=${this.deps.namespace}`,
       );
-      // @kubernetes/client-node's informer does NOT auto-restart on a non-410
-      // watch error — doneHandler fires the ERROR callback and returns without
-      // re-establishing the watch (only clean done / 410 self-heal). Per the
-      // library README we must restart it ourselves, or the event stream stays
-      // dead forever and every run gets stuck IN_PROGRESS.
-      this.scheduleInformerRestart();
-    });
-    await this.informer.start();
-    this.log.log(`K8s watcher started (mode=${this.deps.mode}, ns=${this.deps.namespace})`);
-    await this.deps.reconciler.run();
+    }
+
+    // Boot reconcile: best-effort. A transient list failure (flaky apiserver
+    // link) must NOT abort startup — the periodic timer will catch up.
+    try {
+      await this.deps.reconciler.run();
+    } catch (e) {
+      this.log.warn(`boot reconcile failed: ${(e as Error).message}; periodic sweep will retry`);
+    }
 
     if (this.deps.reconcileIntervalMs > 0) {
       this.reconcileTimer = setInterval(() => {

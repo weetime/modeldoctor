@@ -41,6 +41,12 @@ const EVALSCOPE_LOCKED_FLAGS: ReadonlySet<string> = new Set([
 //   - random: fully synthetic, no dataset file.
 const LONGALPACA_PROMPTS = "/opt/evalscope-datasets/longalpaca.txt";
 const OPENQA_JSONL = "/opt/evalscope-datasets/openqa/open_qa.jsonl";
+// swift/sharegpt (multi-turn conversations). evalscope's share_gpt plugin reads
+// --dataset-path directly (skips the modelscope auto-download when set), so we
+// bake the jsonl and point at it. Multi-turn: each entry sends the conversation
+// history ending on a user turn (more realistic than single-shot prompts).
+const SHAREGPT_EN_JSONL = "/opt/evalscope-datasets/sharegpt/common_en_70k.jsonl";
+const SHAREGPT_ZH_JSONL = "/opt/evalscope-datasets/sharegpt/common_zh_70k.jsonl";
 
 const OUTPUTS_DIR = "out";
 const RUN_NAME = "evalscope-run";
@@ -83,6 +89,10 @@ export function buildCommand(plan: BuildCommandPlan<EvalscopeParams>): BuildComm
     argv.push("--dataset", "line_by_line", "--dataset-path", LONGALPACA_PROMPTS);
   } else if (params.dataset === "openqa") {
     argv.push("--dataset", "openqa", "--dataset-path", OPENQA_JSONL);
+  } else if (params.dataset === "share_gpt_en") {
+    argv.push("--dataset", "share_gpt_en", "--dataset-path", SHAREGPT_EN_JSONL);
+  } else if (params.dataset === "share_gpt_zh") {
+    argv.push("--dataset", "share_gpt_zh", "--dataset-path", SHAREGPT_ZH_JSONL);
   } else {
     argv.push("--dataset", params.dataset); // random — synthetic, no file
   }
@@ -171,7 +181,11 @@ function findPercentile(rows: EvalscopePercentileRow[], pct: "50%" | "90%" | "95
   return rows.find((r) => r.Percentiles === pct);
 }
 
-function readDist(rows: EvalscopePercentileRow[], field: "TTFT (ms)" | "ITL (ms)", mean: number) {
+function readDist(
+  rows: EvalscopePercentileRow[],
+  field: "TTFT (ms)" | "ITL (ms)" | "TPOT (ms)",
+  mean: number,
+) {
   return {
     mean,
     p50: findPercentile(rows, "50%")?.[field] ?? 0,
@@ -225,7 +239,12 @@ export function parseFinalReport(_stdout: string, files: Record<string, Buffer>)
     },
     ttft: readDist(percentile, "TTFT (ms)", summary["TTFT (ms)"] ?? 0),
     e2eLatency: readLatencyDist(percentile, summary["Avg Latency (s)"] ?? 0),
-    itl: readDist(percentile, "ITL (ms)", summary["ITL (ms)"] ?? 0),
+    // Map our "itl" (inter-token latency) to evalscope's TPOT (time per output
+    // token), NOT its raw "ITL" field. evalscope's ITL is the raw gap between
+    // streamed chunks — with chunk batching many gaps are ~0 (p50≈0.04ms), so
+    // it's not a meaningful decode-latency metric. TPOT is the normalized
+    // per-output-token latency and is what aiperf/vLLM call ITL. (#341)
+    itl: readDist(percentile, "TPOT (ms)", summary["TPOT (ms)"] ?? 0),
     requests: {
       total,
       success,

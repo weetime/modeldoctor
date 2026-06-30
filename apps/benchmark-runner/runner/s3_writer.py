@@ -17,6 +17,10 @@ class S3Writer:
     @classmethod
     def from_env(cls) -> S3Writer:
         region = os.environ.get("S3_REGION", "us-east-1")
+        # MinIO needs path-style; Aliyun OSS / AWS S3 need virtual-hosted.
+        # Mirrors the API's S3_FORCE_PATH_STYLE (env.schema.ts). boto3 defaults
+        # custom-endpoint clients to path-style, so OSS must be told "virtual".
+        force_path = os.environ.get("S3_FORCE_PATH_STYLE", "true").lower() != "false"
         client = boto3.client(
             "s3",
             endpoint_url=os.environ["S3_ENDPOINT"],
@@ -25,6 +29,13 @@ class S3Writer:
             region_name=region,
             config=Config(
                 signature_version="s3v4",
+                s3={"addressing_style": "path" if force_path else "virtual"},
+                # OSS rejects the streaming "aws-chunked" content encoding that
+                # botocore >=1.36 enables by default for flexible checksums.
+                # WHEN_REQUIRED keeps checksums off unless an op mandates them;
+                # harmless for MinIO.
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
                 retries={"max_attempts": 2, "mode": "standard"},
                 connect_timeout=5,
                 read_timeout=30,
