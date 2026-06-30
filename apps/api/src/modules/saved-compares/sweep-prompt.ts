@@ -4,7 +4,7 @@ import {
   type SweepRunInput,
   type SweepSeries,
 } from "@modeldoctor/contracts";
-import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
+import { readMetricSafe } from "@modeldoctor/tool-adapters";
 import { readEngineMetric } from "./metrics.js";
 
 /** Per-run concurrency that forms the sweep x-axis: aiperf/genai-perf use

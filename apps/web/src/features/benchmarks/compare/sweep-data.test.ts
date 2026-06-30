@@ -73,6 +73,7 @@ describe("toSweepLineSeries", () => {
     ]);
     // Missing metric → null y (no dropped points; the chart filters nulls).
     const noSecondary = toSweepLineSeries(series, "itlP50", () => "#x");
+    expect(noSecondary[0].points).toHaveLength(2);
     expect(noSecondary[0].points.every((p) => p.y === null)).toBe(true);
     expect(noSecondary[0].secondary).toBeUndefined();
   });
