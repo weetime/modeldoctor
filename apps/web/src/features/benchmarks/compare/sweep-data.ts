@@ -1,9 +1,4 @@
-import type {
-  FigureRefId,
-  SweepMetricKey,
-  SweepRunInput,
-  SweepSeries,
-} from "@modeldoctor/contracts";
+import type { SweepMetricKey, SweepRunInput, SweepSeries } from "@modeldoctor/contracts";
 import { readMetricSafe } from "@modeldoctor/tool-adapters/schemas";
 import type { SweepLineSeries } from "../../../components/charts/SweepLineChart";
 import { readEngineMetric } from "./client-metrics";
@@ -46,33 +41,6 @@ export function buildSweepRuns(runs: SweepRunSource[]): SweepRunInput[] {
         queueDepth: queue?.avg ?? null,
       },
     });
-  }
-  return out;
-}
-
-/** Each sweep figure → the primary metric it plots (sweep-ttft adds a p95
- * dashed line, handled in the renderer). */
-export const SWEEP_FIGURE_METRIC: Record<
-  "sweep-throughput" | "sweep-ttft" | "sweep-itl" | "sweep-e2e" | "sweep-kv-cache" | "sweep-queue",
-  SweepMetricKey
-> = {
-  "sweep-throughput": "outTps",
-  "sweep-ttft": "ttftP50",
-  "sweep-itl": "itlP50",
-  "sweep-e2e": "e2eP50",
-  "sweep-kv-cache": "kvAvg",
-  "sweep-queue": "queueDepth",
-};
-
-/** A sweep figure is renderable when ≥2 series each carry ≥2 points for that
- * metric (a single point or a single series isn't a curve worth a line chart). */
-export function availableSweepFigures(series: SweepSeries[]): Set<FigureRefId> {
-  const out = new Set<FigureRefId>();
-  const seriesWith = (metric: SweepMetricKey) =>
-    series.filter((s) => s.points.filter((p) => typeof p.values[metric] === "number").length >= 2)
-      .length;
-  for (const [refId, metric] of Object.entries(SWEEP_FIGURE_METRIC)) {
-    if (seriesWith(metric) >= 2) out.add(refId as FigureRefId);
   }
   return out;
 }

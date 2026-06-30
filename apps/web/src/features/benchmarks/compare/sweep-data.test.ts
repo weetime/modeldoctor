@@ -1,6 +1,6 @@
-import type { SweepSeries } from "@modeldoctor/contracts";
+import { availableSweepFigures, type SweepSeries } from "@modeldoctor/contracts";
 import { describe, expect, it } from "vitest";
-import { availableSweepFigures, buildSweepRuns, toSweepLineSeries } from "./sweep-data";
+import { buildSweepRuns, toSweepLineSeries } from "./sweep-data";
 
 describe("buildSweepRuns", () => {
   it("drops runs without an x value or series identity", () => {
@@ -55,7 +55,12 @@ describe("availableSweepFigures", () => {
 
 describe("toSweepLineSeries", () => {
   it("maps the primary metric + optional dashed secondary, with per-series color", () => {
-    const out = toSweepLineSeries(series, "ttftP50", (k) => (k === "c-v" ? "#blue" : "#green"), "ttftP95");
+    const out = toSweepLineSeries(
+      series,
+      "ttftP50",
+      (k) => (k === "c-v" ? "#blue" : "#green"),
+      "ttftP95",
+    );
     expect(out).toHaveLength(2);
     expect(out[0]).toMatchObject({ label: "vLLM", color: "#blue" });
     expect(out[0].points).toEqual([

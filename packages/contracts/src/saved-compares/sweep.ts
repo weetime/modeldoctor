@@ -1,3 +1,5 @@
+import type { FigureRefId } from "./compare-narrative.js";
+
 // Pure sweep aggregation: group benchmark runs into series (by connection) over
 // a swept x-axis (concurrency), taking the median per (series, x) cell across
 // repeats. Metric EXTRACTION (reading summaryMetrics / serverMetrics) stays in
@@ -93,4 +95,32 @@ export function aggregateSweep(runs: SweepRunInput[]): SweepSeries[] {
     series.push({ seriesKey, seriesLabel: s.label, points });
   }
   return series;
+}
+
+/** Each sweep figure refId → the primary metric it plots. sweep-ttft also draws
+ * a p95 dashed line (handled in the renderer). Shared client↔server so the
+ * availability gate + offered-to-LLM list + renderer all agree. */
+export const SWEEP_FIGURE_METRIC: Record<
+  "sweep-throughput" | "sweep-ttft" | "sweep-itl" | "sweep-e2e" | "sweep-kv-cache" | "sweep-queue",
+  SweepMetricKey
+> = {
+  "sweep-throughput": "outTps",
+  "sweep-ttft": "ttftP50",
+  "sweep-itl": "itlP50",
+  "sweep-e2e": "e2eP50",
+  "sweep-kv-cache": "kvAvg",
+  "sweep-queue": "queueDepth",
+};
+
+/** A sweep figure is renderable when ≥2 series each carry ≥2 points for its
+ * metric (a single point or single series isn't a curve worth a line chart). */
+export function availableSweepFigures(series: SweepSeries[]): Set<FigureRefId> {
+  const out = new Set<FigureRefId>();
+  const seriesWith = (metric: SweepMetricKey) =>
+    series.filter((s) => s.points.filter((p) => typeof p.values[metric] === "number").length >= 2)
+      .length;
+  for (const [refId, metric] of Object.entries(SWEEP_FIGURE_METRIC)) {
+    if (seriesWith(metric) >= 2) out.add(refId as FigureRefId);
+  }
+  return out;
 }

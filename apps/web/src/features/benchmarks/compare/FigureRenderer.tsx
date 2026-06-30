@@ -1,4 +1,9 @@
-import { aggregateSweep, type FigureRefId, type SweepMetricKey } from "@modeldoctor/contracts";
+import {
+  aggregateSweep,
+  availableSweepFigures,
+  type FigureRefId,
+  type SweepMetricKey,
+} from "@modeldoctor/contracts";
 import { memo } from "react";
 import { assignRunColors } from "@/components/charts/_shared";
 import { LatencyCDF } from "@/components/charts/LatencyCDF";
@@ -21,7 +26,7 @@ import {
   summarizeForPrompt,
 } from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
-import { availableSweepFigures, buildSweepRuns, toSweepLineSeries } from "./sweep-data";
+import { buildSweepRuns, toSweepLineSeries } from "./sweep-data";
 
 export interface FigureRendererProps {
   refId: FigureRefId;

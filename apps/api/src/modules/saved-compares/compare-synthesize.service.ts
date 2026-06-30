@@ -67,7 +67,7 @@ export class CompareSynthesizeService {
     }
 
     const runCount = sc.benchmarks.filter((b) => !b.missing).length;
-    const intent = resolveReportIntent(sc.scenario, runCount);
+    const intent = resolveReportIntent(sc.scenario, runCount, sc.reportKind);
     const profile = getReportProfile(intent);
     const scenarioData = profile.dataAssembly(sc);
     const sys = buildSystemPrompt(body.locale, profile.promptFragment(body.locale));
@@ -442,6 +442,13 @@ export class CompareSynthesizeService {
           hasLatencyCdf: !!b.latencyCdf?.samples?.length,
         })),
     );
+    // Sweep figures aren't in the per-run availability set (they need the
+    // cross-run aggregation). The sweep profile's preferredFigures are already
+    // availability-filtered (via availableSweepFigures in dataAssembly), so
+    // fold them into the offered set for sweep reports.
+    if (sc.reportKind === "sweep") {
+      for (const r of scenarioData.preferredFigures) available.add(r);
+    }
     const preferred = scenarioData.preferredFigures.filter((r) => available.has(r));
     const offered = preferred.length > 0 ? preferred : [...available];
     lines.push(
