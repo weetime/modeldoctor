@@ -97,6 +97,17 @@ export const figureRefIdSchema = z.enum([
   // Phase-2 figure — rendered from HydratedBenchmarkRef.latencyCdf.samples;
   // shows the e2e latency CDF across runs for guidellm/vegeta tools.
   "latency-distribution",
+  // Sweep figures (reportKind="sweep") — metric-vs-axis line charts across the
+  // whole sweep, one line per SERIES (engine/connection), aggregated to the
+  // per-(series,x) median. Distinct from the guidellm-only
+  // `throughput-vs-concurrency` (single-run capacityCurve): these are cross-run.
+  // sweep-ttft draws p50 solid + p95 dashed; the rest are single lines.
+  "sweep-throughput",
+  "sweep-ttft",
+  "sweep-itl",
+  "sweep-e2e",
+  "sweep-kv-cache",
+  "sweep-queue",
 ]);
 export type FigureRefId = z.infer<typeof figureRefIdSchema>;
 

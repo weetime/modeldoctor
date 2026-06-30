@@ -46,7 +46,7 @@ interface Narrative {
   ];                     // exactly 6 sections in this order
   figures: Array<{
     id: string;
-    refId: "stage-bars-throughput" | "stage-bars-error-rate" | "stage-bars-ttft-p95" | "stage-bars-tpot-p95" | "stage-bars-e2e-p95" | "stage-bars-prefix-cache-hit" | "stage-bars-top-pod-share" | "stage-bars-kv-cache" | "stage-bars-preemption" | "stage-bars-queue" | "pod-traffic-distribution" | "pod-hit-rate" | "cold-warm-delta" | "throughput-vs-concurrency" | "latency-distribution" | "compare-grid";
+    refId: "stage-bars-throughput" | "stage-bars-error-rate" | "stage-bars-ttft-p95" | "stage-bars-tpot-p95" | "stage-bars-e2e-p95" | "stage-bars-prefix-cache-hit" | "stage-bars-top-pod-share" | "stage-bars-kv-cache" | "stage-bars-preemption" | "stage-bars-queue" | "pod-traffic-distribution" | "pod-hit-rate" | "cold-warm-delta" | "throughput-vs-concurrency" | "latency-distribution" | "compare-grid" | "sweep-throughput" | "sweep-ttft" | "sweep-itl" | "sweep-e2e" | "sweep-kv-cache" | "sweep-queue";
     caption: string;
     anchorSection?: "summary" | "scope" | "method" | "results" | "caveats" | "advice";
   }>;

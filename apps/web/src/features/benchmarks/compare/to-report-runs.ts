@@ -9,8 +9,11 @@ import type { ReportRun } from "./ReportSections";
 export function extractParamsSummary(params: unknown): ReportRun["paramsSummary"] {
   if (!params || typeof params !== "object") return {};
   const p = params as Record<string, unknown>;
+  // aiperf/genai-perf use `concurrency`; evalscope uses `parallel` — both are
+  // the per-run concurrency that forms the sweep x-axis.
+  const c = typeof p.concurrency === "number" ? p.concurrency : p.parallel;
   return {
-    concurrency: typeof p.concurrency === "number" ? p.concurrency : undefined,
+    concurrency: typeof c === "number" ? c : undefined,
   };
 }
 
@@ -49,5 +52,11 @@ export function toReportRuns(benchmarks: HydratedBenchmarkRef[]): ReportRun[] {
           latencyCdf: b.latencyCdf ?? null,
         },
     paramsSummary: extractParamsSummary(b.params),
+    // Sweep series identity: group by connection, label by engine kind. Falls
+    // back to stageLabel when a run has no connection (won't sweep-group, but
+    // stays a distinct series rather than collapsing).
+    series: b.connectionId
+      ? { key: b.connectionId, label: b.engineKind ?? b.connectionId }
+      : { key: b.id, label: b.engineKind ?? b.stageLabel },
   }));
 }
