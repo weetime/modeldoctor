@@ -108,6 +108,12 @@ export const figureRefIdSchema = z.enum([
   "sweep-e2e",
   "sweep-kv-cache",
   "sweep-queue",
+  // sweep-peak: one bar per engine at the highest concurrency point (the
+  // "who-wins-at-peak-load" verdict snapshot — bars complement the trend
+  // lines). sweep-matrix: the full engine × concurrency median table in the
+  // report body.
+  "sweep-peak",
+  "sweep-matrix",
 ]);
 export type FigureRefId = z.infer<typeof figureRefIdSchema>;
 

@@ -3,6 +3,7 @@ import {
   availableSweepFigures,
   type FigureRefId,
   type SweepMetricKey,
+  type SweepSeries,
 } from "@modeldoctor/contracts";
 import { memo } from "react";
 import { assignRunColors } from "@/components/charts/_shared";
@@ -459,6 +460,31 @@ export const FigureRenderer = memo(function FigureRenderer({
         secondaryName={spec.secondaryName}
       />
     );
+  } else if (refId === "sweep-peak") {
+    // Verdict snapshot: one bar per engine at its highest-concurrency point.
+    const peakX = Math.max(0, ...sweepSeries.flatMap((s) => s.points.map((p) => p.x)));
+    const rows = sweepSeries
+      .map((s) => ({
+        s,
+        pt: [...s.points].reverse().find((p) => typeof p.values.outTps === "number"),
+      }))
+      .filter(
+        (x): x is { s: (typeof sweepSeries)[number]; pt: NonNullable<typeof x.pt> } => !!x.pt,
+      );
+    chart = (
+      <StageBarChart
+        title={`Output tok/s · peak concurrency (c${peakX})`}
+        data={rows.map(({ s, pt }) => ({ stage: s.seriesLabel, v: pt.values.outTps as number }))}
+        series={[
+          { key: "v", label: "out tok/s", color: "#2980b9", decimals: 0, higherIsBetter: true },
+        ]}
+        barColors={rows.map(({ s }) => seriesColor[s.seriesKey])}
+        yLabel="out tok/s"
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "sweep-matrix") {
+    chart = <SweepMatrixTable series={sweepSeries} />;
   }
 
   return (
@@ -507,6 +533,45 @@ function FourMetricTable({ runs }: { runs: ReportRun[] }) {
             </td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Sweep data matrix: one row per (engine, concurrency) median — the full
+ * engine × concurrency grid in the report body (sweep-matrix figure). */
+function SweepMatrixTable({ series }: { series: SweepSeries[] }) {
+  const fmt = (v: number | null | undefined, d = 0) => (typeof v === "number" ? v.toFixed(d) : "—");
+  const num = { textAlign: "right" as const, fontFamily: "var(--pr-mono)" };
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Engine</th>
+          <th style={num}>Conc</th>
+          <th style={num}>out tok/s</th>
+          <th style={num}>TTFT p50</th>
+          <th style={num}>E2E p50</th>
+          <th style={num}>KV %</th>
+          <th style={num}>Queue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {series.flatMap((s) =>
+          s.points.map((p) => (
+            <tr key={`${s.seriesKey}-${p.x}`}>
+              <td>
+                <strong>{s.seriesLabel}</strong>
+              </td>
+              <td style={num}>{p.x}</td>
+              <td style={num}>{fmt(p.values.outTps)}</td>
+              <td style={num}>{fmt(p.values.ttftP50)}</td>
+              <td style={num}>{fmt(p.values.e2eP50)}</td>
+              <td style={num}>{fmt(p.values.kvAvg, 1)}</td>
+              <td style={num}>{fmt(p.values.queueDepth, 1)}</td>
+            </tr>
+          )),
+        )}
       </tbody>
     </table>
   );

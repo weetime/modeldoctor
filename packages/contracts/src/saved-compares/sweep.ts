@@ -122,5 +122,13 @@ export function availableSweepFigures(series: SweepSeries[]): Set<FigureRefId> {
   for (const [refId, metric] of Object.entries(SWEEP_FIGURE_METRIC)) {
     if (seriesWith(metric) >= 2) out.add(refId as FigureRefId);
   }
+  // sweep-peak (bars, one engine per bar at its highest-concurrency point):
+  // needs ≥2 series carrying throughput at any point.
+  if (series.filter((s) => s.points.some((p) => typeof p.values.outTps === "number")).length >= 2) {
+    out.add("sweep-peak");
+  }
+  // sweep-matrix (the engine × concurrency data table): renders whenever ≥2
+  // series have any aggregated point.
+  if (series.filter((s) => s.points.length > 0).length >= 2) out.add("sweep-matrix");
   return out;
 }
