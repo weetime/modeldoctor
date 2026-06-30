@@ -3,7 +3,9 @@ import type {
   CreateSavedCompareRequest,
   HydratedBenchmarkRef,
   HydratedSavedCompare,
+  ReportKind,
   SavedCompare,
+  SweepAxis,
   UpdateSavedCompareRequest,
 } from "@modeldoctor/contracts";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
@@ -46,6 +48,8 @@ export class SavedComparesService {
     version: number;
     scenario: string | null;
     tool: string | null;
+    reportKind: string | null;
+    sweepAxis: string | null;
     narrative: unknown;
     narrativeAt: Date | null;
     createdAt: Date;
@@ -64,6 +68,8 @@ export class SavedComparesService {
       version: row.version,
       scenario: row.scenario,
       tool: row.tool,
+      reportKind: (row.reportKind as ReportKind | null) ?? null,
+      sweepAxis: (row.sweepAxis as SweepAxis | null) ?? null,
       narrative: row.narrative,
       narrativeAt: row.narrativeAt ? row.narrativeAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
@@ -99,6 +105,8 @@ export class SavedComparesService {
         clientName: body.clientName ?? null,
         scenario: members.length > 0 ? ([...scenarios][0] ?? null) : null,
         tool: members.length > 0 ? ([...tools][0] ?? null) : null,
+        reportKind: body.reportKind ?? null,
+        sweepAxis: body.reportKind === "sweep" ? (body.sweepAxis ?? "parallel") : null,
       },
     });
     return this.serialize(row);
@@ -126,6 +134,9 @@ export class SavedComparesService {
 
     const benchmarks = await this.prisma.benchmark.findMany({
       where: { id: { in: sc.benchmarkIds } },
+      // Sweep mode groups runs into series by connection; pull the connection's
+      // serverKind so each series can be labelled by engine (vllm/mindie/sglang).
+      include: { connection: { select: { serverKind: true } } },
     });
     const benchmarkById = new Map(benchmarks.map((b) => [b.id, b]));
     const hydratedBenchmarks: HydratedBenchmarkRef[] = sc.benchmarkIds.map((bid) => {
@@ -138,6 +149,8 @@ export class SavedComparesService {
         name: b.name,
         tool: b.tool,
         scenario: b.scenario,
+        connectionId: b.connectionId,
+        engineKind: b.connection?.serverKind ?? null,
         summaryMetrics: b.summaryMetrics,
         serverMetrics: b.serverMetrics,
         params: b.params,
@@ -181,6 +194,8 @@ export class SavedComparesService {
         context: body.context === undefined ? undefined : body.context,
         classification: body.classification ?? undefined,
         clientName: body.clientName === undefined ? undefined : body.clientName,
+        reportKind: body.reportKind === undefined ? undefined : body.reportKind,
+        sweepAxis: body.sweepAxis === undefined ? undefined : body.sweepAxis,
       },
     });
     return this.serialize(row);

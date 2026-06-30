@@ -1,4 +1,10 @@
-import type { FigureRefId } from "@modeldoctor/contracts";
+import {
+  aggregateSweep,
+  availableSweepFigures,
+  type FigureRefId,
+  type SweepMetricKey,
+  type SweepSeries,
+} from "@modeldoctor/contracts";
 import { memo } from "react";
 import { assignRunColors } from "@/components/charts/_shared";
 import { LatencyCDF } from "@/components/charts/LatencyCDF";
@@ -9,6 +15,7 @@ import {
   type StageBarLabelColors,
   type StageBarSeries,
 } from "@/components/charts/StageBarChart";
+import { SweepLineChart } from "@/components/charts/SweepLineChart";
 import { ThroughputConcurrencyChart } from "@/components/charts/ThroughputConcurrencyChart";
 import {
   availableFigureRefIds,
@@ -20,6 +27,7 @@ import {
   summarizeForPrompt,
 } from "./client-metrics";
 import type { ReportRun } from "./ReportSections";
+import { buildSweepRuns, toSweepLineSeries } from "./sweep-data";
 
 export interface FigureRendererProps {
   refId: FigureRefId;
@@ -56,6 +64,36 @@ const REPORT_PALETTE = [
 const PERCENTILES = ["p50", "p90", "p99"] as const;
 // ITL (TPOT) only carries p50/p95 across tools — see MetricKind.
 const ITL_PERCENTILES = ["p50", "p95"] as const;
+
+/** Sweep figure refId → how to render its line chart (metric, axis label,
+ * log-y for wide-dynamic-range latency, optional dashed secondary line). */
+const SWEEP_FIGURE_SPEC: Record<
+  "sweep-throughput" | "sweep-ttft" | "sweep-itl" | "sweep-e2e" | "sweep-kv-cache" | "sweep-queue",
+  {
+    metric: SweepMetricKey;
+    secondary?: SweepMetricKey;
+    yLabel: string;
+    logY?: boolean;
+    decimals: number;
+    primaryName?: string;
+    secondaryName?: string;
+  }
+> = {
+  "sweep-throughput": { metric: "outTps", yLabel: "Output tok/s", decimals: 0 },
+  "sweep-ttft": {
+    metric: "ttftP50",
+    secondary: "ttftP95",
+    yLabel: "TTFT (ms)",
+    logY: true,
+    decimals: 0,
+    primaryName: "p50",
+    secondaryName: "p95",
+  },
+  "sweep-itl": { metric: "itlP50", yLabel: "ITL p50 (ms)", decimals: 1 },
+  "sweep-e2e": { metric: "e2eP50", yLabel: "E2E p50 (ms)", decimals: 0 },
+  "sweep-kv-cache": { metric: "kvAvg", yLabel: "KV cache (%)", decimals: 0 },
+  "sweep-queue": { metric: "queueDepth", yLabel: "Queue depth", decimals: 1 },
+};
 
 /** Index of the baseline stage within `rows` (preserving their order). Falls
  * back to the first stage when no baseline is set or it was filtered out. */
@@ -119,6 +157,26 @@ export const FigureRenderer = memo(function FigureRenderer({
       hasLatencyCdf: !!r.benchmark?.latencyCdf?.samples?.length,
     })),
   );
+  // Sweep figures: aggregate runs into per-engine series over the concurrency
+  // axis. Colors are keyed by SERIES (engine) so a 3-engine sweep uses 3 colors,
+  // never wrapping the 8-color palette. Merge the renderable sweep refIds into
+  // the availability set so the gate below passes for them.
+  const sweepSeries = aggregateSweep(
+    buildSweepRuns(
+      runs.map((r) => ({
+        x: r.paramsSummary.concurrency,
+        series: r.series,
+        summaryMetrics: r.summaryMetrics,
+        serverMetrics: r.benchmark?.serverMetrics,
+      })),
+    ),
+  );
+  const seriesColor = assignRunColors(
+    sweepSeries.map((s) => s.seriesKey),
+    REPORT_PALETTE,
+  );
+  for (const id of availableSweepFigures(sweepSeries)) available.add(id);
+
   if (!available.has(refId)) {
     return (
       <figure className="pr-figure">
@@ -385,6 +443,48 @@ export const FigureRenderer = memo(function FigureRenderer({
     chart = <ColdWarmDeltaTable runs={runs} baselineId={baselineId} />;
   } else if (refId === "compare-grid") {
     chart = <FourMetricTable runs={runs} />;
+  } else if (refId in SWEEP_FIGURE_SPEC) {
+    const spec = SWEEP_FIGURE_SPEC[refId as keyof typeof SWEEP_FIGURE_SPEC];
+    chart = (
+      <SweepLineChart
+        series={toSweepLineSeries(
+          sweepSeries,
+          spec.metric,
+          (key) => seriesColor[key] ?? REPORT_PALETTE[0],
+          spec.secondary,
+        )}
+        yLabel={spec.yLabel}
+        logY={spec.logY}
+        valueFormatter={(v) => v.toFixed(spec.decimals)}
+        primaryName={spec.primaryName}
+        secondaryName={spec.secondaryName}
+      />
+    );
+  } else if (refId === "sweep-peak") {
+    // Verdict snapshot: one bar per engine at its highest-concurrency point.
+    const peakX = Math.max(0, ...sweepSeries.flatMap((s) => s.points.map((p) => p.x)));
+    const rows = sweepSeries
+      .map((s) => ({
+        s,
+        pt: [...s.points].reverse().find((p) => typeof p.values.outTps === "number"),
+      }))
+      .filter(
+        (x): x is { s: (typeof sweepSeries)[number]; pt: NonNullable<typeof x.pt> } => !!x.pt,
+      );
+    chart = (
+      <StageBarChart
+        title={`Output tok/s · peak concurrency (c${peakX})`}
+        data={rows.map(({ s, pt }) => ({ stage: s.seriesLabel, v: pt.values.outTps as number }))}
+        series={[
+          { key: "v", label: "out tok/s", color: "#2980b9", decimals: 0, higherIsBetter: true },
+        ]}
+        barColors={rows.map(({ s }) => seriesColor[s.seriesKey])}
+        yLabel="out tok/s"
+        labelColors={REPORT_LABEL_COLORS}
+      />
+    );
+  } else if (refId === "sweep-matrix") {
+    chart = <SweepMatrixTable series={sweepSeries} />;
   }
 
   return (
@@ -433,6 +533,45 @@ function FourMetricTable({ runs }: { runs: ReportRun[] }) {
             </td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Sweep data matrix: one row per (engine, concurrency) median — the full
+ * engine × concurrency grid in the report body (sweep-matrix figure). */
+function SweepMatrixTable({ series }: { series: SweepSeries[] }) {
+  const fmt = (v: number | null | undefined, d = 0) => (typeof v === "number" ? v.toFixed(d) : "—");
+  const num = { textAlign: "right" as const, fontFamily: "var(--pr-mono)" };
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Engine</th>
+          <th style={num}>Conc</th>
+          <th style={num}>out tok/s</th>
+          <th style={num}>TTFT p50</th>
+          <th style={num}>E2E p50</th>
+          <th style={num}>KV %</th>
+          <th style={num}>Queue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {series.flatMap((s) =>
+          s.points.map((p) => (
+            <tr key={`${s.seriesKey}-${p.x}`}>
+              <td>
+                <strong>{s.seriesLabel}</strong>
+              </td>
+              <td style={num}>{p.x}</td>
+              <td style={num}>{fmt(p.values.outTps)}</td>
+              <td style={num}>{fmt(p.values.ttftP50)}</td>
+              <td style={num}>{fmt(p.values.e2eP50)}</td>
+              <td style={num}>{fmt(p.values.kvAvg, 1)}</td>
+              <td style={num}>{fmt(p.values.queueDepth, 1)}</td>
+            </tr>
+          )),
+        )}
       </tbody>
     </table>
   );

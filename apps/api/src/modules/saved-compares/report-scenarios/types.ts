@@ -10,6 +10,7 @@ export type ReportIntent =
   | "gateway"
   | "inference-single"
   | "inference-multi"
+  | "sweep"
   | "default";
 
 /** Scenario-specific data the profile assembled from the hydrated compare,

@@ -4,12 +4,17 @@ import { engineKvCacheProfile } from "./engine-kv-cache.js";
 import { gatewayProfile } from "./gateway.js";
 import { inferenceMultiProfile, inferenceSingleProfile } from "./inference.js";
 import { lbStrategyProfile } from "./lb-strategy.js";
+import { sweepProfile } from "./sweep.js";
 import type { ReportIntent, ReportScenarioProfile } from "./types.js";
 
 export function resolveReportIntent(
   scenario: string | null | undefined,
   runCount: number,
+  reportKind?: string | null,
 ): ReportIntent {
+  // Report archetype wins over scenario: a sweep compare always narrates as a
+  // parametric sweep regardless of which scenario its runs share.
+  if (reportKind === "sweep") return "sweep";
   switch (scenario) {
     case "lb-strategy":
       return "lb-strategy";
@@ -34,6 +39,7 @@ const REGISTRY: Record<ReportIntent, ReportScenarioProfile> = {
   gateway: gatewayProfile,
   "inference-single": inferenceSingleProfile,
   "inference-multi": inferenceMultiProfile,
+  sweep: sweepProfile,
 };
 
 export function getReportProfile(intent: ReportIntent): ReportScenarioProfile {

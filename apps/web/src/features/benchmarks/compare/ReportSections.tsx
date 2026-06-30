@@ -60,6 +60,9 @@ export interface ReportRun extends StageRun {
    *  underlying benchmark was deleted. */
   benchmark: ReportBenchmarkSnapshot | null;
   paramsSummary: { concurrency?: number };
+  /** Sweep series identity — set in sweep mode so runs group into lines by
+   *  engine/connection. key = connectionId (stable), label = engine kind. */
+  series?: { key: string; label: string };
 }
 
 export interface ReportSectionsProps {

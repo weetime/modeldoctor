@@ -371,6 +371,13 @@ model SavedCompare {
   clientName       String?   @map("client_name")
   scenario         String?   // derived: shared scenario of all member benchmarks
   tool             String?   // derived: shared tool of all member benchmarks
+  /// Report archetype. null = the default discrete side-by-side stage compare.
+  /// 'sweep' = parametric sweep: members are grouped into series (by connection)
+  /// across a swept axis (sweepAxis) and rendered as metric-vs-axis line charts.
+  reportKind       String?   @map("report_kind")
+  /// For reportKind='sweep': the per-run param forming the x-axis. Currently
+  /// 'parallel' (evalscope concurrency); reserved for other tools' axes later.
+  sweepAxis        String?   @map("sweep_axis")
   /// Monotonically increasing version stamp, bumped by the UI when the
   /// user regenerates or edits the report. Surfaced in Hero meta.
   version          Int       @default(1)
