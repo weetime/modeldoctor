@@ -133,6 +133,9 @@ export function SaveCompareDialog({
   const [ctx, setCtx] = useState(context);
   const [classification, setClassification] = useState<Classification>("internal");
   const [clientName, setClientName] = useState("");
+  // Sweep mode: render the report as metric-vs-concurrency line charts grouped
+  // by engine (instead of per-run bars), and lift the run cap to 50.
+  const [sweepMode, setSweepMode] = useState(false);
 
   // Re-seed order + labels from the latest matrix order/labels on the
   // closed→open transition only. The component stays mounted across open/close,
@@ -184,6 +187,8 @@ export function SaveCompareDialog({
       context: ctx.trim() || undefined,
       classification,
       clientName: clientName.trim() || undefined,
+      reportKind: sweepMode ? "sweep" : undefined,
+      sweepAxis: sweepMode ? "parallel" : undefined,
     });
     onOpenChange(false);
     const suffix = generateAfterSave ? "?generate=1" : "";
@@ -282,6 +287,28 @@ export function SaveCompareDialog({
               />
             </div>
           </div>
+          <label className="flex items-start gap-2 text-sm" htmlFor="sc-sweep">
+            <input
+              id="sc-sweep"
+              type="checkbox"
+              className="mt-0.5"
+              checked={sweepMode}
+              onChange={(e) => setSweepMode(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">
+                {t("savedCompare.dialog.sweepLabel", {
+                  defaultValue: "Sweep mode (concurrency curves)",
+                })}
+              </span>
+              <span className="block text-muted-foreground">
+                {t("savedCompare.dialog.sweepHint", {
+                  defaultValue:
+                    "Plot metric-vs-concurrency lines grouped by engine; allows up to 50 runs. Use when comparing one workload swept across concurrency levels.",
+                })}
+              </span>
+            </span>
+          </label>
           {create.error ? (
             <div className="text-sm text-rose-600">{create.error.message}</div>
           ) : null}
