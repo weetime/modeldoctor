@@ -73,25 +73,31 @@ export function SweepLineChart({
           .filter((p) => p.y !== null)
           .sort((a, b) => a.x - b.x)
           .map((p) => [p.x, p.y] as [number, number]);
+      // Static value labels ONLY on the rightmost (highest-concurrency) point of
+      // each line: at low concurrency the engines bunch together (e.g. 177/175/
+      // 144) and per-point labels overlap into mush; at the right edge the
+      // values are spread apart and read cleanly — same choice as the reference
+      // matplotlib report. Tooltip still shows every point on hover.
+      const solidPts = [...s.points].filter((p) => p.y !== null).sort((a, b) => a.x - b.x);
       const solid = {
         name: secondaryName && primaryName ? `${s.label} · ${primaryName}` : s.label,
         type: "line" as const,
-        data: toData(s.points),
+        data: solidPts.map((p, i) => ({
+          value: [p.x, p.y] as [number, number],
+          label: {
+            show: i === solidPts.length - 1,
+            position: "top" as const,
+            color: s.color,
+            fontSize: 10,
+            fontWeight: 600 as const,
+            formatter: () => (typeof p.y === "number" ? valueFormatter(p.y) : ""),
+          },
+        })),
         itemStyle: { color: s.color },
         lineStyle: { color: s.color, width: 2 },
         symbol: "circle" as const,
         symbolSize: 6,
-        label: {
-          show: true,
-          position: "top" as const,
-          color: LABEL.value,
-          fontSize: 10,
-          fontWeight: 500 as const,
-          formatter: (p: { value: [number, number] | unknown }) =>
-            Array.isArray(p.value) && typeof p.value[1] === "number"
-              ? valueFormatter(p.value[1])
-              : "",
-        },
+        labelLayout: { hideOverlap: true },
       };
       if (!s.secondary) return [solid];
       const dashed = {
