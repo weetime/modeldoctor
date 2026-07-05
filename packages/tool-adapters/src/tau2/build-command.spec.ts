@@ -1,3 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildTau2Command, tau2MaxDurationSeconds } from "./build-command.js";
 import { tau2ParamDefaults } from "./schema.js";
@@ -20,8 +24,8 @@ describe("buildTau2Command", () => {
     const s = r.argv[2];
     expect(s).toContain("--domain airline");
     expect(s).toContain("--domain retail");
-    expect(s).toContain("--agent-llm openai/qwen3-8b");
-    expect(s).toContain("--user-llm openai/deepseek-v3");
+    expect(s).toContain("--agent-llm 'openai/qwen3-8b'");
+    expect(s).toContain("--user-llm 'openai/deepseek-v3'");
     expect(s).toContain("--num-tasks 5");
     expect(s).toContain("--num-trials 2");
     expect(s).toContain("--auto-resume");
@@ -48,6 +52,31 @@ describe("buildTau2Command", () => {
     expect(r.outputFiles.summary).toBe("md_out/summary.json");
     expect(r.outputFiles.results_airline).toBe("data/simulations/run123_airline/results.json");
     expect(r.outputFiles.results_retail).toBe("data/simulations/run123_retail/results.json");
+  });
+});
+
+describe("buildTau2Command shell injection safety", () => {
+  it("shell-escapes a malicious model so it cannot break out of /bin/sh -c", () => {
+    // NB: the raw payload text can still appear as a substring of the quoted
+    // output (e.g. "; touch ..." sits harmlessly inside '...'); a substring
+    // assertion alone doesn't prove safety. Prove it for real: execute the
+    // generated /bin/sh -c script and confirm the injected command never runs.
+    const marker = join(tmpdir(), `md_tau2_shq_pwn_${Date.now()}_${process.pid}`);
+    const evil = {
+      ...plan,
+      connection: { ...plan.connection, model: `m'; touch ${marker}; echo '` },
+    } as any;
+    const r = buildTau2Command(evil);
+    const s = r.argv[2];
+    expect(s).toContain("'\\''"); // single quote was escaped
+    try {
+      // tau2/python aren't installed in the test env; command-not-found exits
+      // non-zero, which is expected and irrelevant to injection safety.
+      execFileSync(r.argv[0], [r.argv[1], s], { stdio: "ignore" });
+    } catch {
+      // ignore non-zero exit from missing tau2/python binaries
+    }
+    expect(existsSync(marker)).toBe(false); // injected command never executed
   });
 });
 
