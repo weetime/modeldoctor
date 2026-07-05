@@ -187,6 +187,8 @@
 ## 5. 硬约束与风险
 
 1. **被测 endpoint 必须支持 OpenAI 工具调用（function calling)**。tau2 的 agent 靠 tool-call 执行领域工具,不支持则整场评测无意义。vLLM 侧需 `--enable-auto-tool-choice` + 对应 tool parser。**创建表单需前置校验/提示**,报告在 endpoint 不支持 tool-call 时给明确错误（而非一堆 0 分）。
+
+1b. **被测 endpoint 需足够大的上下文窗口(实测 ~64k)**。多轮对话 + 领域工具 schema + 系统政策会迅速堆高 prompt;实跑 PPU DeepSeek 时 8k 直接爆(`context_window_exceeded`),抬到 **64k** 才稳。归因桶已含 `agent_crash`(覆盖 `context_window_exceeded`)——若某 domain `agent_crash` 占比异常高,首先怀疑上下文窗口不够。创建表单/文档提示服务端 `--max-model-len` 要够大。已知参照:user-sim=deepseek-chat 时 airline ~80% / retail ~86.8% pass^1(user 模拟器非 GPT-4.1,**不可直接对标官方 leaderboard**,呼应 §5.4)。
 2. **双 endpoint key 注入**:两把 key 都走 per-run Secret → `secretEnv`,在 `--*-llm-args` 里以占位引用。实现时确认 tau2 对 llm-args 里 `api_key` 的优先级 > 全局 `OPENAI_API_KEY`(否则 agent/user 撞 key)。
 3. **成本/时长**:每 episode 是整段多轮对话（每轮 agent+user 各一次 LLM 调用),Standard 180 episodes ≈ 数千次调用,Full ≈ 上万次。`getMaxDurationSeconds` 要给足,Job activeDeadline 别误杀。
 4. **user-sim 用弱判官增噪**:结果稳定性受模拟用户模型影响。报告显式标注模拟用户模型;pass^k（多 trial)本就是为对抗非确定性设计,缓解部分噪声。
