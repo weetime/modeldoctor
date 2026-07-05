@@ -26,11 +26,16 @@ describe("computeGate", () => {
     expect(g.result).toBe("FAILED"); // 0.40 vs 0.50 = -10pp > 5
   });
   it("baselineRegression WARNING within half the threshold", () => {
-    const g = computeGate(base as any, { mode: "baselineRegression", baselineRegressionPp: 30 }, 0.5);
-    expect(g.result).toBe("WARNING"); // -10pp, within [15,30) → warn
+    const g = computeGate(base as any, { mode: "baselineRegression", baselineRegressionPp: 16 }, 0.5);
+    expect(g.result).toBe("WARNING"); // 10pp drop, band [8,16) → WARNING
   });
   it("baselineRegression PASSED when no meaningful drop", () => {
     const g = computeGate(base as any, { mode: "baselineRegression", baselineRegressionPp: 30 }, 0.41);
+    expect(g.result).toBe("PASSED");
+  });
+  it("baselineRegression never FAILS on an improvement over baseline", () => {
+    // overall 0.4 vs baseline 0.3 = +10pp improvement; must be PASSED regardless of threshold
+    const g = computeGate(base as any, { mode: "baselineRegression", baselineRegressionPp: 5 }, 0.3);
     expect(g.result).toBe("PASSED");
   });
 });

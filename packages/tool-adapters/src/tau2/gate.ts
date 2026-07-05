@@ -27,12 +27,9 @@ export function computeGate(
   if (baselineOverallPass1 == null) {
     return { mode: gate.mode, result: null, detail: "no baseline" };
   }
-  const absoluteDrop = Math.abs(report.overall.pass1 - baselineOverallPass1);
+  const dropPp = (baselineOverallPass1 - report.overall.pass1) * 100; // signed: negative = improvement
   const th = gate.baselineRegressionPp ?? 5;
-  const thAsAbsolute = baselineOverallPass1 * (th / 100);
-  const thHalf = thAsAbsolute / 2;
-  const dropPp = (baselineOverallPass1 - report.overall.pass1) * 100;
-  if (absoluteDrop >= thAsAbsolute) return { mode: gate.mode, result: "FAILED", detail: `-${dropPp.toFixed(1)}pp vs baseline` };
-  if (absoluteDrop >= thHalf) return { mode: gate.mode, result: "WARNING", detail: `-${dropPp.toFixed(1)}pp vs baseline` };
+  if (dropPp >= th) return { mode: gate.mode, result: "FAILED", detail: `-${dropPp.toFixed(1)}pp vs baseline` };
+  if (dropPp >= th / 2) return { mode: gate.mode, result: "WARNING", detail: `-${dropPp.toFixed(1)}pp vs baseline` };
   return { mode: gate.mode, result: "PASSED", detail: `${dropPp <= 0 ? "+" : "-"}${Math.abs(dropPp).toFixed(1)}pp vs baseline` };
 }
