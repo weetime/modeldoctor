@@ -95,15 +95,11 @@
 
 **`parseProgress(line)`**:从 tau2 stdout 解析进度（如 `task 12/60`）→ `ProgressEvent`。具体正则实现时对真实 stdout 定。
 
-**`parseFinalReport(stdout, files)`** → `ToolReport`（写入 `Benchmark.summaryMetrics` / `rawOutput`):
+**指标计算下沉到 Python（复用 tau2 自带 `compute_metrics`)**:tau2 已内置完整指标模块 `tau2.metrics.agent_metrics.compute_metrics(Results) → AgentMetrics`,含官方 `pass^k = C(success,k)/C(trials,k)` 公式、termination-reason 计数、DB-match、read/write action 正确率。**不在 TS 里重造 pass^k**。tau2 镜像内附一个我方小脚本 `md_tau2_summarize.py`:每个 domain 一次 `tau2 run` → 一个 `data/simulations/<runId>_<domain>/results.json`;脚本 `Results.load` 每个 domain → `compute_metrics` → 拼 per-domain + overall + 失败归因 + 高光/翻车 sim 定位 → 写单个 `summary.json`(我方形状,见 §4.3)。runner 把 `summary.json` + 各 `results.json`(供回放)都采到 MinIO。
 
-- 读 `data/simulations/*.json`,每个 task 每个 trial 有一个 reward（pass/fail,tau2 基于最终 DB 状态 + action 校验判定)。
-- 计算：per-domain **pass^1**（首个 trial 平均通过率）、**pass^k**（同一任务全部 k 个 trial 都过的比例,k=numTrials)、overall 加权完成率。
-- **失败归因**（见 §4.5）。
-- **门禁结果**（见 §4.4）。
-- `summaryMetrics` 形状见 §4.3。
+**`parseFinalReport(stdout, files)`** → `ToolReport`（写入 `Benchmark.summaryMetrics`):TS 侧只做两件事——(1) 读 `summary.json` 直接映射为 `summaryMetrics`;(2) 依 `params.gate` + DB 里的 baseline 算门禁（见 §4.4)。原始 trajectory 不解析,留在 MinIO 供报告页按需拉。
 
-> ⚠️ **实现前置**:tau2 trajectory JSON 的确切字段名（`reward` / `task_id` / `messages` / `tool_calls` / termination reason）**必须先跑一次真实 mock/airline 小样本、`tau2 view` + 直接看 JSON 落实**,不照本设计猜。本设计只锚定「有 per-task per-trial 的通过判定 + 完整消息轨迹」这一已确认的事实。
+> tau2 结果 schema 已从源码落实(`data_model/simulation.py`):`Results{info, tasks, simulations[]}`;`SimulationRun{task_id, trial, reward_info.reward(float,1.0=pass), termination_reason(enum), messages[], reward_info.{db_check.db_match, action_checks[].{action_match, tool_type}}}`。text run 默认 monolithic JSON。字段无需再猜;仍需 Smoke 小样本端到端验证一次(§7)。
 
 ### 4.2 runner 镜像 — `apps/benchmark-runner/images/tau2.Dockerfile`
 
@@ -129,8 +125,8 @@
     "retail":  { "pass1": 0.21, "passK": 0.18, "tasks": 20 },
     "telecom": { "pass1": 0.33, "passK": 0.27, "tasks": 20 }
   },
-  "attribution": { "wrongTool": 0.28, "wrongArgs": 0.19, "policyViolation": 0.22,
-                   "partial": 0.15, "other": 0.16 },   // 失败案例占比,见 §4.5
+  "attribution": { "agent_crash": 0.10, "no_completion": 0.25, "wrong_action": 0.28,
+                   "wrong_final_state": 0.22, "missing_info": 0.10, "other": 0.05 }, // 失败占比,见 §4.5
   "gate": { "mode": "off", "result": null },           // 或 PASSED/WARNING/FAILED
   "highlights": { "successRunId": "...", "failureRunId": "..." } // 报告默认挑的高光/翻车案例定位
 }
@@ -148,14 +144,20 @@
 
 前端在报告头渲染 gate badge（复用现有 gate 配色语义 PASSED/WARNING/FAILED)。
 
-### 4.5 失败归因 — 分两层,V1 只做已确证的粗粒度
+### 4.5 失败归因 — 从 tau2 结构化信号确定性推导(无需 LLM)
 
-leadership 材料里的「失败归因饼图」依赖对失败案例的分类。诚实处理不确定性:
+τ² **不**保留原始 τ-bench 的 `auto_error_identification.py`,但它的 `reward_info` + `termination_reason` 提供了比那更结构化的信号,足以**确定性**分类失败,V1 **不需要 LLM judge**。`md_tau2_summarize.py` 对每个失败 sim(`reward < 1.0`)按优先级归桶:
 
-- **V1（粗粒度,已确证可得)**:基于 tau2 每 task 的 reward + 终止原因,分「通过 / 部分完成 / 未通过」这类从 tau2 输出直接可得的桶。若 tau2 输出含 reward 分项（action check vs DB-state check）或 termination reason,据此细分到「用错工具 / 违反政策」等。
-- **V2（语义归因,可能需要,标为条件性)**:若 tau2 **不**自带细粒度错误分类（原始 τ-bench 有 `auto_error_identification.py`,τ² 是否保留**待实现时确认**),则对失败 trajectory 跑一趟轻量 LLM-judge（复用 `LlmJudgeService` + default provider）产出分类标签。这一步**可能引入 LLM 分类噪声,报告需标注「自动分类可能有误」**。
+| 桶 | 判定(优先级从上到下) | 语义 |
+|---|---|---|
+| `agent_crash` | `termination_reason ∈ {agent_error, too_many_errors, context_window_exceeded}` | agent 报错/连续工具错误崩掉 |
+| `no_completion` | `termination_reason == max_steps`(或 timeout) | 多轮没跑完/兜圈子 |
+| `wrong_action` | 任一 `action_checks[].action_match == False` | 用错工具 / 给错参数 |
+| `wrong_final_state` | `db_check.db_match == False` | 最终数据库状态错(做了错的写操作) |
+| `missing_info` | `communicate_checks` 有未满足项 | 没把必需信息告诉用户 |
+| `other` | 兜底 | 其余 |
 
-> 设计不锁死归因来源;`attribution` 字段的桶集合在实现确认 tau2 能力后定稿。V1 至少交付「通过/部分/失败」三桶 + 若 tau2 原生支持则细分,LLM 语义归因作为 V1.1 增量。
+`tool_type`(read/write)可进一步区分只读误用 vs 写操作违规。归因是 `summary.json` 的一部分,前端直接画饼图。**自动分类基于确定性规则,非 LLM,故无「分类可能有误」免责需求**(仅 user-simulator 本身的噪声需标注,见 §5.4)。可选 `--auto-review`(tau2 内置 LLM review,产 severity/tag)作为 V1.1 富化,默认关。
 
 ### 4.6 Web 报告 — `AgentReport`
 
@@ -188,7 +190,7 @@ leadership 材料里的「失败归因饼图」依赖对失败案例的分类。
 2. **双 endpoint key 注入**:两把 key 都走 per-run Secret → `secretEnv`,在 `--*-llm-args` 里以占位引用。实现时确认 tau2 对 llm-args 里 `api_key` 的优先级 > 全局 `OPENAI_API_KEY`(否则 agent/user 撞 key)。
 3. **成本/时长**:每 episode 是整段多轮对话（每轮 agent+user 各一次 LLM 调用),Standard 180 episodes ≈ 数千次调用,Full ≈ 上万次。`getMaxDurationSeconds` 要给足,Job activeDeadline 别误杀。
 4. **user-sim 用弱判官增噪**:结果稳定性受模拟用户模型影响。报告显式标注模拟用户模型;pass^k（多 trial)本就是为对抗非确定性设计,缓解部分噪声。
-5. **tau2 trajectory JSON 字段未逐字确认**:§4.1/§4.5 已标注实现前必须跑真实小样本落实字段,不猜。
+5. **tau2 结果 schema**:已从源码(`data_model/simulation.py`、`metrics/agent_metrics.py`)逐字落实,指标复用 tau2 自带 `compute_metrics`。剩余唯一实测项:Smoke 小样本端到端验证 `--*-llm-args` 的 `api_base`/`api_key` 确实生效、`--save-to` 产物路径符合预期(§7),不阻塞设计。
 6. **Python 版本**:tau2 需 3.12,现有 runner 镜像 3.11 → tau2 镜像单独基于 3.12,不动其他工具镜像。
 
 ---
