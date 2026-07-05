@@ -65,6 +65,14 @@ export interface BuildCommandPlan<TParams = unknown> {
       bearerToken: string | null;
     } | null;
   };
+  /**
+   * Agent-scenario only (tau2): the user-simulator endpoint (a resolved
+   * LlmJudgeProvider). Null for all non-agent tools. apiKey is plaintext
+   * post-decryption — same trust boundary as connection.apiKey; adapters
+   * MUST route it via secretEnv, never argv. Interface evolution (like
+   * tokenizerHfId): a cross-cutting optional capability, documented here.
+   */
+  userSimulator?: { baseUrl: string; model: string; apiKey: string } | null;
 }
 
 // ── buildCommand output ───────────────────────────────────────────────
