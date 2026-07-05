@@ -11,6 +11,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -145,7 +146,9 @@ def _materialize_input_files() -> None:
 
 def _redacted(argv: list[str]) -> list[str]:
     """Mask secrets in argv for logging: --backend-kwargs= JSON (may contain
-    api_key) and the value following --api-key (evalscope auth)."""
+    api_key), the value following --api-key (evalscope auth), and any
+    "api_key":"..." pair embedded elsewhere (e.g. tau2's --*-llm-args JSON,
+    after a __MD_SECRET_<NAME>__ token has been swapped for a real key)."""
     out: list[str] = []
     mask_next = False
     for a in argv:
@@ -159,7 +162,7 @@ def _redacted(argv: list[str]) -> list[str]:
             out.append(a)
             mask_next = True
         else:
-            out.append(a)
+            out.append(re.sub(r'("api_key"\s*:\s*")[^"]+', r"\1***", a))
     return out
 
 
@@ -181,6 +184,33 @@ def _inject_api_key_sentinel(argv: list[str]) -> list[str]:
     """
     api_key = os.environ.get("OPENAI_API_KEY", "")
     return [api_key if a == OPENAI_API_KEY_SENTINEL else a for a in argv]
+
+
+# Generic named-secret sentinel: __MD_SECRET_<NAME>__ -> os.environ[<NAME>].
+# Generalizes OPENAI_API_KEY_SENTINEL for tools that need MULTIPLE distinct
+# secrets in argv (e.g. tau2-bench's agent-endpoint and user-simulator-endpoint
+# API keys, each embedded inside a separate --*-llm-args JSON blob). Adapters
+# emit this token so every secret stays out of the persisted K8s manifest /
+# MD_ARGV; the runner swaps in the real value (from per-run Secret env) just
+# before Popen. Unknown env names are left as-is (not our job to validate
+# which secrets a given tool declares).
+_NAMED_SECRET_RE = re.compile(r"__MD_SECRET_([A-Z0-9_]+)__")
+
+
+def _inject_named_secrets(argv: list[str]) -> list[str]:
+    """Replace __MD_SECRET_<NAME>__ tokens with os.environ[<NAME>].
+
+    Generalizes the single OPENAI_API_KEY sentinel so a tool needing
+    multiple distinct secrets in argv (e.g. tau2's agent + user endpoint
+    keys inside --*-llm-args JSON) can keep every key out of the persisted
+    MD_ARGV / K8s manifest. Unknown env names are left as-is.
+    """
+
+    def sub(m: re.Match) -> str:
+        val = os.environ.get(m.group(1))
+        return val if val is not None else m.group(0)
+
+    return [_NAMED_SECRET_RE.sub(sub, a) for a in argv]
 
 
 def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
@@ -247,6 +277,7 @@ def main() -> int:
 
     argv = _inject_api_key_into_backend_kwargs(argv)
     argv = _inject_api_key_sentinel(argv)
+    argv = _inject_named_secrets(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
     proc = subprocess.Popen(  # noqa: S603
         argv,
