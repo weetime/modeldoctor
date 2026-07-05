@@ -9,7 +9,7 @@ export type { MetricKind, ToolMetricExtractor } from "./metric-extractor.js";
 // superset (additionally `'e2e'` and `'custom'`) — those don't go through
 // ToolAdapter and follow their own codepaths. ToolName covers exactly the
 // adapters the registry knows about.
-export type ToolName = "guidellm" | "vegeta" | "evalscope" | "aiperf";
+export type ToolName = "guidellm" | "vegeta" | "evalscope" | "aiperf" | "tau2";
 
 // ── Progress events (uniform across tools) ────────────────────────────
 export type ProgressEvent =

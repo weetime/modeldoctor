@@ -2,7 +2,13 @@ import { z } from "zod";
 import type { ToolName } from "./core/interface.js";
 import { allAdapters, byTool } from "./core/registry.js";
 
-export type ScenarioId = "inference" | "capacity" | "gateway" | "lb-strategy" | "engine-kv-cache";
+export type ScenarioId =
+  | "inference"
+  | "capacity"
+  | "gateway"
+  | "lb-strategy"
+  | "engine-kv-cache"
+  | "agent";
 
 export const scenarioIdSchema = z.enum([
   "inference",
@@ -10,6 +16,7 @@ export const scenarioIdSchema = z.enum([
   "gateway",
   "lb-strategy",
   "engine-kv-cache",
+  "agent",
 ]);
 
 export interface ScenarioConfig {
@@ -22,7 +29,8 @@ export interface ScenarioConfig {
     | "CapacityReport"
     | "GatewayReport"
     | "KvCacheStressReport"
-    | "PrefixCachePanel";
+    | "PrefixCachePanel"
+    | "AgentReport";
 }
 
 export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
@@ -70,6 +78,14 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     tools: ["evalscope", "aiperf"],
     paramsConstraints: {},
     reportComponent: "KvCacheStressReport",
+  },
+  agent: {
+    label: "Agent 能力评测",
+    description:
+      "τ²-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力(完成率 / pass^k)。",
+    tools: ["tau2"],
+    paramsConstraints: {},
+    reportComponent: "AgentReport",
   },
 };
 
