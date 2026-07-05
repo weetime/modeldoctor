@@ -120,7 +120,7 @@ agent: {
 },
 ```
 
-- [ ] **Step 4: Run test** — `pnpm -F @modeldoctor/tool-adapters test -- scenarios` → PASS. (`assertScenariosInvariant` will fail at import until Task 3 registers the adapter; if the spec calls it, skip that assertion until Task 3 or land Task 1+2+3 together. Prefer: keep Task 1 test narrow to the two `it()` above, which don't call the invariant.)
+- [ ] **Step 4: Run test** — `pnpm -F @modeldoctor/tool-adapters test -- scenarios` → PASS. (`assertScenariosInvariant` + any test iterating `byTool` over all scenarios will fail until **Task 6** registers the tau2 adapter; scope-skip the `agent` scenario / `it.skip` that invariant test with a `TODO(Task 6)` tag. **Task 6 MUST revert these skips.** Keep Task 1's own new test narrow to the two `it()` above, which don't call the invariant.)
 
 - [ ] **Step 5: Commit**
 
