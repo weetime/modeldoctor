@@ -30,7 +30,7 @@ def test_named_secret_escaped_value_round_trips_through_shell_and_json(monkeypat
     real /bin/sh quote-parsing + json.loads must recover the exact original
     secret, not a mangled or truncated one.
     """
-    secret = 'a\'b"c\\d'
+    secret = "a'b\"c\\d"
     monkeypatch.setenv("MD_AGENT_KEY", secret)
     argv = [
         "/bin/sh",
@@ -50,7 +50,7 @@ def test_redacted_masks_escaped_api_key_without_leaking_tail():
     embedded `\\"` must not be mistaken for the JSON closing quote by
     _redacted — the whole value (including anything after the escaped
     quote) must be masked, not just the prefix up to it."""
-    secret = 'a\'b"c\\d'
+    secret = "a'b\"c\\d"
     argv = ["/bin/sh", "-c", "x"]
     # Emulate what _inject_named_secrets would have produced for `secret`.
     escaped = secret.replace("\\", "\\\\").replace('"', '\\"').replace("'", "'\\''")
@@ -69,7 +69,7 @@ def test_redacted_masks_bare_api_key_json():
         "/bin/sh",
         "-c",
         (
-            'tau2 run --agent-llm-args '
+            "tau2 run --agent-llm-args "
             '{"api_base":"http://a/v1","api_key":"sk-agent"} '
             '--user-llm-args {"api_key":"sk-user"}'
         ),
