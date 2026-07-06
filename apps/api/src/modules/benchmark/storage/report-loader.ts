@@ -259,9 +259,13 @@ export class ReportLoader {
     if (bench.tool !== "tau2" || summary.tool !== "tau2") return summary;
     const gateConfig = (bench.params as { gate?: Parameters<typeof computeGate>[1] } | null)?.gate;
     if (!gateConfig) return summary;
-    const baselinePass1 = bench.baselineId
-      ? await this.deps.repo.findBaselineOverallPass1(bench.baselineId)
-      : null;
+    // Only look up the baseline when the gate mode actually consumes it —
+    // `off`/`perDomainFloor` ignore the baselinePass1 arg in computeGate, so
+    // resolving it for those modes would be a wasted lookup.
+    const baselinePass1 =
+      gateConfig.mode === "baselineRegression" && bench.baselineId
+        ? await this.deps.repo.findBaselineOverallPass1(bench.baselineId)
+        : null;
     const gate = computeGate(summary.data, gateConfig, baselinePass1);
     return { tool: "tau2", data: { ...summary.data, gate } };
   }

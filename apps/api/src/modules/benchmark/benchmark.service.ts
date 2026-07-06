@@ -176,6 +176,15 @@ export class BenchmarkService {
       );
     }
 
+    // 5. Agent scenario only: reject up front if no user-simulator provider
+    //    resolves, BEFORE the row is persisted. Mirrors every other create-time
+    //    validation above — a missing provider must never produce an orphan
+    //    `status:"failed"` row + a `benchmark.failed` notification. `start()`
+    //    still calls `resolveUserSimulator` again to obtain the decrypted
+    //    endpoint for `buildCommand`; that second call is intentional (this one
+    //    is purely a pre-flight existence check, its result is discarded).
+    await this.resolveUserSimulator(req.scenario, req.tool, params);
+
     const created = await this.repo.create({
       userId,
       connectionId: conn.id,
@@ -457,7 +466,10 @@ export class BenchmarkService {
 
   /**
    * Agent-scenario (tau2) only: resolve the LLM-judge provider that plays the
-   * "user simulator" role and decrypt its key, so `start()` can hand it to
+   * "user simulator" role and decrypt its key. Called twice by design: once
+   * from `create()` as a pre-flight existence check (result discarded — see
+   * call site) so a missing provider rejects BEFORE the benchmark row is
+   * persisted, and once from `start()` to obtain the decrypted endpoint for
    * `adapter.buildCommand()` as `plan.userSimulator`. For every other
    * scenario/tool this resolves to `undefined` — no LlmJudgeService call is
    * made at all, so non-agent runs are unaffected.

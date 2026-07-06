@@ -1,3 +1,4 @@
+import type { ToolReport } from "@modeldoctor/tool-adapters";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportLoader, type ReportLoaderDeps } from "./report-loader.js";
 import type { ReportStorage } from "./report-storage.js";
@@ -41,7 +42,11 @@ function makeDeps() {
   const notify = { emit: vi.fn(async () => {}) };
   const sse = { close: vi.fn() };
   const adapter = {
-    parseFinalReport: vi.fn(() => ({ tool: "guidellm" as const, data: { latency: 42 } })),
+    // Cast: this fixture is intentionally a minimal stand-in, not a full
+    // GuidellmReport — the mock's declared return type is the ToolReport
+    // union so any other tool's shape (e.g. tau2, in makeTau2Deps below) can
+    // be assigned to the same field without a structural-mismatch error.
+    parseFinalReport: vi.fn(() => ({ tool: "guidellm" as const, data: { latency: 42 } }) as unknown as ToolReport),
   };
   const byTool = vi.fn(() => adapter);
   return { storage, repo, notify, sse, byTool, adapter };
@@ -448,7 +453,9 @@ function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {})
       failureDomain: null,
     },
   };
-  base.adapter.parseFinalReport = vi.fn(() => ({ tool: "tau2" as const, data: tau2Report }));
+  base.adapter.parseFinalReport = vi.fn(
+    () => ({ tool: "tau2" as const, data: tau2Report }) as unknown as ToolReport,
+  );
   const findBaselineOverallPass1 = vi.fn(async () => null as number | null);
   (base.repo as unknown as { findBaselineOverallPass1: typeof findBaselineOverallPass1 }).findBaselineOverallPass1 =
     findBaselineOverallPass1;

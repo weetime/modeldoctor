@@ -198,6 +198,7 @@ function build(
   templateRepo?: MockTemplateRepo,
   baselineSvc?: MockBaselineService,
   llmJudge?: MockLlmJudgeService,
+  notify?: { emit: ReturnType<typeof vi.fn> },
 ) {
   return new BenchmarkService(
     repo as unknown as BenchmarkRepository,
@@ -207,7 +208,7 @@ function build(
     (templateRepo ?? new MockTemplateRepo()) as unknown as BenchmarkTemplateRepository,
     (baselineSvc ?? new MockBaselineService()) as unknown as BaselineService,
     { connection: { findMany: vi.fn() } } as never,
-    { emit: vi.fn() } as never,
+    (notify ?? { emit: vi.fn() }) as never,
     (llmJudge ?? new MockLlmJudgeService()) as unknown as LlmJudgeService,
   );
 }
@@ -275,6 +276,50 @@ describe("BenchmarkService.create", () => {
       }),
     ).rejects.toThrow(ConflictException);
     expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("agent scenario + no default judge provider: rejects BEFORE persisting a row (no orphan row, no notify)", async () => {
+    // build()'s default MockLlmJudgeService.getDecrypted resolves to null —
+    // i.e. no default judge provider configured.
+    const notify = { emit: vi.fn() };
+    const svcNoJudge = build(repo, undefined, undefined, undefined, undefined, notify);
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const origByTool = adapters.byTool;
+    (adapters as { byTool: typeof origByTool }).byTool = (() => ({
+      name: "tau2",
+      scenarios: ["agent"],
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "tau2" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
+    })) as unknown as typeof origByTool;
+    try {
+      let err: unknown;
+      try {
+        await svcNoJudge.create("u1", {
+          tool: "tau2",
+          scenario: "agent",
+          connectionId: "c1",
+          name: "agent-run",
+          params: { domains: ["airline"], gate: { mode: "off" } },
+        });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({
+        code: "BENCHMARK_USER_SIMULATOR_NOT_CONFIGURED",
+      });
+      // The whole point of this fix: no orphan `status:"failed"` row and no
+      // benchmark.failed notification — the request never got past validation.
+      expect(repo.create).not.toHaveBeenCalled();
+      expect(notify.emit).not.toHaveBeenCalled();
+    } finally {
+      (adapters as { byTool: typeof origByTool }).byTool = origByTool;
+    }
   });
 });
 
@@ -899,7 +944,12 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
   });
 
   it("does not resolve a userSimulator for non-agent tools (plan.userSimulator absent)", async () => {
-    const buildCommand = vi.fn(() => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }));
+    const buildCommand = vi.fn((_plan: { userSimulator?: unknown }) => ({
+      argv: [],
+      env: {},
+      secretEnv: {},
+      outputFiles: {},
+    }));
     const adapters = await import("@modeldoctor/tool-adapters");
     const origByTool = adapters.byTool;
     (adapters as { byTool: typeof origByTool }).byTool = (() => ({
@@ -926,7 +976,7 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
       );
       await svc.start("b1");
       expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
-      const plan = buildCommand.mock.calls[0][0] as { userSimulator?: unknown };
+      const plan = buildCommand.mock.calls[0][0];
       expect(plan.userSimulator).toBeUndefined();
     } finally {
       (adapters as { byTool: typeof origByTool }).byTool = origByTool;
