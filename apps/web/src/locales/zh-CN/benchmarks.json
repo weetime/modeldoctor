@@ -587,7 +587,20 @@
         "ariaLabel": "各领域 pass^1 / pass^k 完成率"
       },
       "replayPlaceholder": "会话回放即将上线",
-      "attributionPlaceholder": "失败归因即将上线"
+      "attributionPlaceholder": "失败归因即将上线",
+      "replay": {
+        "taskPicker": "任务",
+        "loading": "会话加载中…",
+        "error": "会话加载失败",
+        "notFound": "未找到该模拟会话",
+        "faultyTurn": "问题回合",
+        "roles": {
+          "user": "用户",
+          "assistant": "智能体",
+          "tool": "工具",
+          "system": "系统"
+        }
+      }
     },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",

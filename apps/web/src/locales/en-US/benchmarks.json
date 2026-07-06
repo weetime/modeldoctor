@@ -587,7 +587,20 @@
         "ariaLabel": "Per-domain pass^1 / pass^k completion rate"
       },
       "replayPlaceholder": "Conversation replay coming soon",
-      "attributionPlaceholder": "Failure attribution coming soon"
+      "attributionPlaceholder": "Failure attribution coming soon",
+      "replay": {
+        "taskPicker": "Task",
+        "loading": "Loading conversation…",
+        "error": "Failed to load conversation",
+        "notFound": "Simulation not found",
+        "faultyTurn": "Faulty turn",
+        "roles": {
+          "user": "User",
+          "assistant": "Agent",
+          "tool": "Tool",
+          "system": "System"
+        }
+      }
     },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
