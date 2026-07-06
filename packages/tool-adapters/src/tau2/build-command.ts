@@ -50,7 +50,7 @@ export function buildTau2Command(plan: BuildCommandPlan<Tau2Params>): BuildComma
     ].filter(Boolean).join(" ");
   });
 
-  const summarize = `python /app/tau2/md_tau2_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
+  const summarize = `python /app/tau2_summarize/md_tau2_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
   const script = [...perDomain, summarize].join(" && ");
 
   const outputFiles: Record<string, string> = { summary: "md_out/summary.json" };

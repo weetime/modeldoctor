@@ -10,7 +10,7 @@ importing tau2 itself. `summarize_lib` only imports tau2 lazily inside
 
 from types import SimpleNamespace as NS
 
-from tau2.summarize_lib import (
+from tau2_summarize.summarize_lib import (
     aggregate_overall,
     attribution_and_highlights,
     bucket_failure,

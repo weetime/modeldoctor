@@ -27,7 +27,7 @@ def main() -> None:
     args = ap.parse_args()
 
     per_domain = {}
-    for d in args.domains.split(","):
+    for d in [d.strip() for d in args.domains.split(",")]:
         path = Path(f"data/simulations/{args.run_id}_{d}/results.json")
         per_domain[d] = Results.load(path)
 

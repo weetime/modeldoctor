@@ -45,7 +45,7 @@ def bucket_failure(sim) -> str:
     return "other"
 
 
-def attribution_and_highlights(per_domain_sims: dict) -> tuple:
+def attribution_and_highlights(per_domain_sims: dict) -> tuple[dict, dict]:
     """per_domain_sims: {domain: [sim, ...]}. Returns (attribution_dict, highlights_dict).
 
     attribution = failed-bucket fractions over ALL failed sims (infra errors excluded).
