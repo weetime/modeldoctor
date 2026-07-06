@@ -22,6 +22,7 @@ import type { EvalscopeReport } from "../evalscope/schema.js";
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
+import type { Tau2Report } from "../tau2/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
 // ── Discriminated union: report (consumers switch on `tool`) ──────────
@@ -29,7 +30,8 @@ export type ToolReport =
   | { tool: "guidellm"; data: GuidellmReport }
   | { tool: "vegeta"; data: VegetaReport }
   | { tool: "evalscope"; data: EvalscopeReport }
-  | { tool: "aiperf"; data: AiperfReport };
+  | { tool: "aiperf"; data: AiperfReport }
+  | { tool: "tau2"; data: Tau2Report };
 
 // ── buildCommand inputs ───────────────────────────────────────────────
 export interface BuildCommandPlan<TParams = unknown> {
