@@ -88,6 +88,7 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   gateway: "benchmarkGateway",
   "lb-strategy": "benchmarkPrefixCache",
   "engine-kv-cache": "benchmarkKvCacheStress",
+  agent: "benchmarkAgent",
 };
 
 export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {

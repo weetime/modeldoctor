@@ -65,8 +65,10 @@ export {
 export { computeGate, type GateResult } from "./tau2/gate.js";
 export { tau2ReadMetric } from "./tau2/read-metric.js";
 export {
+  type Tau2Domain,
   type Tau2Params,
   type Tau2Report,
+  tau2DomainSchema,
   tau2ParamDefaults,
   tau2ParamsSchema,
   tau2ReportSchema,

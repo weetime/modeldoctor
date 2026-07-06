@@ -12,7 +12,9 @@
       "inference": "新建推理性能基准",
       "capacity": "新建容量规划",
       "gateway": "新建网关压测",
-      "lb-strategy": "新建 负载均衡策略验证"
+      "lb-strategy": "新建 负载均衡策略验证",
+      "engine-kv-cache": "新建引擎 KV / 前缀缓存测试",
+      "agent": "新建 Agent 能力评测"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -26,19 +28,23 @@
       "name": "名称",
       "description": "备注（可选）",
       "tool": "工具",
-      "connectionCategoryHint": "类别:"
+      "connectionCategoryHint": "类别:",
+      "agentToolCallHint": "被测 endpoint 必须支持 OpenAI 工具调用(function calling),否则评测无意义",
+      "agentContextWindowHint": "需足够大的上下文窗口(实测 ~64k;8k 会 context_window_exceeded),服务端 --max-model-len 要够大"
     },
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
       "evalscope": "evalscope",
-      "aiperf": "aiperf"
+      "aiperf": "aiperf",
+      "tau2": "tau2"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
       "evalscope": "Modelscope 出品的推理性能工具，支持 chat / completions 与 prefix-cache 命中率统计",
-      "aiperf": "NVIDIA AIPerf：主流 LLM 推理性能基准"
+      "aiperf": "NVIDIA AIPerf：主流 LLM 推理性能基准",
+      "tau2": "τ²-bench：多轮工具调用 agent 评测(航空/零售/电信客服场景)"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
@@ -131,7 +137,9 @@
     "inference": "TTFT / TPOT / 单次吞吐基线",
     "capacity": "SLO 驱动的负载阶梯扫描",
     "gateway": "Higress / API 链路 HTTP 性能",
-    "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本"
+    "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本",
+    "engine-kv-cache": "单实例 / 引擎级缓存有效性对比(vanilla / LMCache / YRCache,mooncake trace 块级前缀复用)",
+    "agent": "τ²-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力"
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
@@ -516,6 +524,23 @@
       "conversationType": "会话类型",
       "mooncakeTrace": "Mooncake Trace 类型",
       "traceReplayWindowSec": "回放窗口(秒)"
+    },
+    "agent": {
+      "domains": "领域(domains)",
+      "tier": "档位",
+      "tierPlaceholder": "选择档位…",
+      "tiers": {
+        "smoke": "冒烟(Smoke) · 5 任务 × 1 trial",
+        "standard": "基本能力(Standard) · 20 任务 × 3 trial",
+        "full": "全量(Full) · 全任务集 × 4 trial"
+      },
+      "numTasksPerDomain": "每领域任务数",
+      "numTrials": "试验次数(numTrials)",
+      "fullPlaceholder": "全量(每领域全部任务)",
+      "fullTierCostHint": "全量约上千 episodes,预计小时级,消耗大量 token",
+      "userSimProviderId": "用户模拟器 Provider(可选)",
+      "userSimProviderDefault": "使用默认 LLM Provider",
+      "userSimProviderHint": "模拟用户对话的 LLM;留空使用默认 Provider(设置 → LLM Provider)"
     }
   },
   "reports": {

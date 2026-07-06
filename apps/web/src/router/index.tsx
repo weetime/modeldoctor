@@ -6,6 +6,7 @@ import { RegisterPage } from "@/features/auth/RegisterPage";
 import { TemplateCreatePage } from "@/features/benchmark-templates/TemplateCreatePage";
 import { TemplateEditPage } from "@/features/benchmark-templates/TemplateEditPage";
 import { TemplateListPage } from "@/features/benchmark-templates/TemplateListPage";
+import { BenchmarkAgentPage } from "@/features/benchmarks/BenchmarkAgentPage";
 import { BenchmarkCapacityPage } from "@/features/benchmarks/BenchmarkCapacityPage";
 import { BenchmarkCreatePage } from "@/features/benchmarks/BenchmarkCreatePage";
 import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
@@ -94,6 +95,7 @@ export const routes: RouteObject[] = [
             path: "benchmarks/engine-kv-cache",
             element: <BenchmarkKvCacheStressPage />,
           },
+          { path: "benchmarks/agent", element: <BenchmarkAgentPage /> },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
           { path: "reports/:id", element: <ReportDetailRoute /> },
