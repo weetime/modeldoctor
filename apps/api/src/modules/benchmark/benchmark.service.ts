@@ -484,7 +484,7 @@ export class BenchmarkService {
     tool: string,
     params: unknown,
   ): Promise<{ baseUrl: string; model: string; apiKey: string } | undefined> {
-    if (scenario !== "agent" && tool !== "tau2") return undefined;
+    if (scenario !== "agent" || tool !== "tau2") return undefined;
     const providerId = (params as { userSimProviderId?: string } | null | undefined)
       ?.userSimProviderId;
     const provider = await this.llmJudge.getDecrypted(providerId ? { id: providerId } : undefined);

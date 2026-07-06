@@ -885,6 +885,21 @@ describe("BenchmarkService.resolveUserSimulator", () => {
     expect(result).toBeUndefined();
     expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
   });
+
+  it("returns undefined when scenario/tool are only partially agent/tau2 (guard uses ||, not &&)", async () => {
+    // scenario="agent" but tool!=="tau2" — with the old `&&` guard this
+    // would have fallen through and called LlmJudgeService; with `||` it
+    // must short-circuit to undefined, matching the JSDoc intent that ANY
+    // mismatch (not just both) resolves to undefined.
+    const resultA = await svc.resolveUserSimulator("agent", "guidellm", {});
+    expect(resultA).toBeUndefined();
+
+    // tool==="tau2" but scenario!=="agent"
+    const resultB = await svc.resolveUserSimulator("inference", "tau2", {});
+    expect(resultB).toBeUndefined();
+
+    expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
+  });
 });
 
 describe("BenchmarkService.start — agent scenario wiring", () => {
