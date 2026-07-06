@@ -88,6 +88,7 @@ export const EnvSchema = z.object({
   RUNNER_IMAGE_VEGETA: z.string().min(1),
   RUNNER_IMAGE_EVALSCOPE: z.string().min(1),
   RUNNER_IMAGE_AIPERF: z.string().min(1),
+  RUNNER_IMAGE_TAU2: z.string().min(1),
   // Optional HuggingFace endpoint injected as HF_ENDPOINT into every runner
   // Job. Point it at a reachable mirror / internal HF proxy (e.g.
   // https://hf-mirror.com) so aiperf/guidellm load tokenizers from there
