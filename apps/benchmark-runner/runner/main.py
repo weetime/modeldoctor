@@ -162,7 +162,12 @@ def _redacted(argv: list[str]) -> list[str]:
             out.append(a)
             mask_next = True
         else:
-            out.append(re.sub(r'("api_key"\s*:\s*")[^"]+', r"\1***", a))
+            # Value may itself be JSON-escaped (see _inject_named_secrets):
+            # a literal `\"` or `\\` inside it must NOT be mistaken for the
+            # closing quote, or the tail of the secret leaks in cleartext.
+            # `(?:[^"\\]|\\.)*` consumes escaped pairs atomically so only an
+            # unescaped `"` ends the match.
+            out.append(re.sub(r'("api_key"\s*:\s*")(?:[^"\\]|\\.)*', r"\1***", a))
     return out
 
 
@@ -204,11 +209,27 @@ def _inject_named_secrets(argv: list[str]) -> list[str]:
     multiple distinct secrets in argv (e.g. tau2's agent + user endpoint
     keys inside --*-llm-args JSON) can keep every key out of the persisted
     MD_ARGV / K8s manifest. Unknown env names are left as-is.
+
+    Escaping contract: named-secret sentinels are substituted with a value
+    escaped for a JSON-string-inside-single-quoted-shell context — the
+    context tool adapters emit them in (see tau2's build-command, which
+    wraps `--agent-llm-args '{"api_key":"__MD_SECRET_...__"}'`). The
+    substituted value is escaped for BOTH layers it sits in, in this order:
+    (1) JSON string escaping (`\\` -> `\\\\`, `"` -> `\\"`) — no surrounding
+    quotes are added, the template already supplies them; then (2) shell
+    single-quote escaping (`'` -> `'\\''`) so a value containing `'` cannot
+    break out of the enclosing `'...'` argv token. Without this: a secret
+    containing `'` is a (self-scoped) shell-injection vector, and one
+    containing `"` or `\\` corrupts the tool's JSON parse.
     """
+
+    def _escape(val: str) -> str:
+        json_escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+        return json_escaped.replace("'", "'\\''")
 
     def sub(m: re.Match) -> str:
         val = os.environ.get(m.group(1))
-        return val if val is not None else m.group(0)
+        return _escape(val) if val is not None else m.group(0)
 
     return [_NAMED_SECRET_RE.sub(sub, a) for a in argv]
 
