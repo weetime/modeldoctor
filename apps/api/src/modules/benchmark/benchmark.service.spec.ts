@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import type { ConnectionService } from "../connection/connection.service.js";
+import type { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { BenchmarkRepository, type BenchmarkWithRelations } from "./benchmark.repository.js";
 import { BenchmarkService } from "./benchmark.service.js";
 import type { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
@@ -63,6 +64,7 @@ const ENV_DEFAULTS: Record<string, unknown> = {
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
+  RUNNER_IMAGE_TAU2: "md-runner-tau2:test",
 };
 
 function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
@@ -186,11 +188,16 @@ class MockTemplateRepo {
   findByIdOrNull = vi.fn(async (id: string) => this.rows.get(id) ?? null);
 }
 
+class MockLlmJudgeService {
+  getDecrypted = vi.fn(async () => null as null | Record<string, unknown>);
+}
+
 function build(
   repo: MockRepo,
   configOverrides?: Record<string, unknown>,
   templateRepo?: MockTemplateRepo,
   baselineSvc?: MockBaselineService,
+  llmJudge?: MockLlmJudgeService,
 ) {
   return new BenchmarkService(
     repo as unknown as BenchmarkRepository,
@@ -201,6 +208,7 @@ function build(
     (baselineSvc ?? new MockBaselineService()) as unknown as BaselineService,
     { connection: { findMany: vi.fn() } } as never,
     { emit: vi.fn() } as never,
+    (llmJudge ?? new MockLlmJudgeService()) as unknown as LlmJudgeService,
   );
 }
 
@@ -774,6 +782,158 @@ describe("BenchmarkService.create — FK reference validation", () => {
   });
 });
 
+describe("BenchmarkService.resolveUserSimulator", () => {
+  let repo: MockRepo;
+  let llmJudge: MockLlmJudgeService;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    llmJudge = new MockLlmJudgeService();
+    svc = build(repo, undefined, undefined, undefined, llmJudge);
+    vi.clearAllMocks();
+  });
+
+  it("resolves the default judge provider for scenario='agent'", async () => {
+    llmJudge.getDecrypted.mockResolvedValue({
+      id: "prov-1",
+      baseUrl: "http://judge/v1",
+      model: "deepseek-v3",
+      apiKey: "sk-user",
+    });
+    const result = await svc.resolveUserSimulator("agent", "tau2", {
+      domains: ["airline"],
+      gate: { mode: "off" },
+    });
+    expect(llmJudge.getDecrypted).toHaveBeenCalledWith(undefined);
+    expect(result).toEqual({ baseUrl: "http://judge/v1", model: "deepseek-v3", apiKey: "sk-user" });
+  });
+
+  it("resolves a pinned provider by params.userSimProviderId", async () => {
+    llmJudge.getDecrypted.mockResolvedValue({
+      id: "prov-2",
+      baseUrl: "http://judge2/v1",
+      model: "qwen",
+      apiKey: "sk-2",
+    });
+    const result = await svc.resolveUserSimulator("agent", "tau2", {
+      domains: ["airline"],
+      gate: { mode: "off" },
+      userSimProviderId: "prov-2",
+    });
+    expect(llmJudge.getDecrypted).toHaveBeenCalledWith({ id: "prov-2" });
+    expect(result).toEqual({ baseUrl: "http://judge2/v1", model: "qwen", apiKey: "sk-2" });
+  });
+
+  it("throws a clear domain error when no default judge provider is configured", async () => {
+    llmJudge.getDecrypted.mockResolvedValue(null);
+    await expect(
+      svc.resolveUserSimulator("agent", "tau2", { domains: ["airline"], gate: { mode: "off" } }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      svc.resolveUserSimulator("agent", "tau2", { domains: ["airline"], gate: { mode: "off" } }),
+    ).rejects.toThrow(/LLM judge provider/);
+  });
+
+  it("returns undefined (no LlmJudgeService call) for non-agent scenarios/tools", async () => {
+    const result = await svc.resolveUserSimulator("inference", "guidellm", {});
+    expect(result).toBeUndefined();
+    expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
+  });
+});
+
+describe("BenchmarkService.start — agent scenario wiring", () => {
+  let repo: MockRepo;
+  let llmJudge: MockLlmJudgeService;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    llmJudge = new MockLlmJudgeService();
+    svc = build(repo, undefined, undefined, undefined, llmJudge);
+    vi.clearAllMocks();
+  });
+
+  it("injects the resolved userSimulator into adapter.buildCommand's plan for tool=tau2", async () => {
+    llmJudge.getDecrypted.mockResolvedValue({
+      id: "prov-1",
+      baseUrl: "http://judge/v1",
+      model: "deepseek-v3",
+      apiKey: "sk-user",
+    });
+    const buildCommand = vi.fn(() => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }));
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const origByTool = adapters.byTool;
+    (adapters as { byTool: typeof origByTool }).byTool = (() => ({
+      name: "tau2",
+      scenarios: ["agent"],
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand,
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "tau2" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
+    })) as unknown as typeof origByTool;
+    try {
+      repo.setup(
+        makeBenchmarkRow({
+          id: "b1",
+          userId: "u1",
+          connectionId: "c1",
+          status: "pending",
+          scenario: "agent",
+          tool: "tau2",
+          params: { domains: ["airline"], gate: { mode: "off" } },
+        }),
+      );
+      await svc.start("b1");
+      expect(buildCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userSimulator: { baseUrl: "http://judge/v1", model: "deepseek-v3", apiKey: "sk-user" },
+        }),
+      );
+    } finally {
+      (adapters as { byTool: typeof origByTool }).byTool = origByTool;
+    }
+  });
+
+  it("does not resolve a userSimulator for non-agent tools (plan.userSimulator absent)", async () => {
+    const buildCommand = vi.fn(() => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }));
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const origByTool = adapters.byTool;
+    (adapters as { byTool: typeof origByTool }).byTool = (() => ({
+      name: "guidellm",
+      scenarios: ["inference", "capacity"],
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand,
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "guidellm" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
+    })) as unknown as typeof origByTool;
+    try {
+      repo.setup(
+        makeBenchmarkRow({
+          id: "b1",
+          userId: "u1",
+          connectionId: "c1",
+          status: "pending",
+          scenario: "inference",
+          tool: "guidellm",
+        }),
+      );
+      await svc.start("b1");
+      expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
+      const plan = buildCommand.mock.calls[0][0] as { userSimulator?: unknown };
+      expect(plan.userSimulator).toBeUndefined();
+    } finally {
+      (adapters as { byTool: typeof origByTool }).byTool = origByTool;
+    }
+  });
+});
+
 // ── getByConnectionReports ───────────────────────────────────────────────────
 
 function makeMockRepoLocal() {
@@ -862,6 +1022,7 @@ describe("BenchmarkService.getByConnectionReports", () => {
       {} as never, // baselines — not used
       prisma as never,
       { emit: vi.fn() } as never, // notify — not used
+      {} as never, // llmJudge — not used
     );
   }
 

@@ -8,6 +8,7 @@ import { SseJwtAuthGuard } from "../auth/sse-jwt-auth.guard.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
+import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
 import { BenchmarkRepository } from "./benchmark.repository.js";
@@ -112,6 +113,12 @@ describe("BenchmarkController", () => {
         {
           provide: SseHub,
           useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
+        },
+        {
+          // Controller spec never exercises the agent-scenario (tau2) path,
+          // so a no-op getDecrypted is enough to satisfy DI.
+          provide: LlmJudgeService,
+          useValue: { getDecrypted: vi.fn(async () => null) },
         },
       ],
     })
@@ -546,6 +553,12 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
         {
           provide: SseHub,
           useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
+        },
+        {
+          // Controller spec never exercises the agent-scenario (tau2) path,
+          // so a no-op getDecrypted is enough to satisfy DI.
+          provide: LlmJudgeService,
+          useValue: { getDecrypted: vi.fn(async () => null) },
         },
       ],
     })

@@ -26,6 +26,7 @@ import { PrismaService } from "../../database/prisma.service.js";
 import { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import { ConnectionService } from "../connection/connection.service.js";
+import { LlmJudgeService } from "../llm-judge/llm-judge.service.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import {
   BenchmarkRepository,
@@ -56,6 +57,7 @@ export class BenchmarkService {
     private readonly baselines: BaselineService,
     private readonly prisma: PrismaService,
     private readonly notify: NotifyService,
+    private readonly llmJudge: LlmJudgeService,
   ) {}
 
   async findById(id: string): Promise<Benchmark | null> {
@@ -201,6 +203,7 @@ export class BenchmarkService {
     try {
       const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
       const adapter = byTool(row.tool as ToolName);
+      const userSimulator = await this.resolveUserSimulator(row.scenario, row.tool, row.params);
       const buildResult = adapter.buildCommand({
         runId: row.id,
         params: row.params,
@@ -213,6 +216,7 @@ export class BenchmarkService {
           tokenizerHfId: conn.tokenizerHfId,
           prometheusDatasource: conn.prometheusDatasource,
         },
+        ...(userSimulator ? { userSimulator } : {}),
       });
       const result = await this.runner.start({
         runId: row.id,
@@ -449,6 +453,37 @@ export class BenchmarkService {
       generatedAt: new Date().toISOString(),
       items,
     };
+  }
+
+  /**
+   * Agent-scenario (tau2) only: resolve the LLM-judge provider that plays the
+   * "user simulator" role and decrypt its key, so `start()` can hand it to
+   * `adapter.buildCommand()` as `plan.userSimulator`. For every other
+   * scenario/tool this resolves to `undefined` — no LlmJudgeService call is
+   * made at all, so non-agent runs are unaffected.
+   *
+   * Selector: `params.userSimProviderId` (if the caller pinned a specific
+   * provider) else the workspace default (`LlmJudgeService.getDecrypted()`
+   * with no selector). If neither exists, throws a domain BadRequestException
+   * rather than letting `buildCommand` blow up on a missing endpoint later.
+   */
+  async resolveUserSimulator(
+    scenario: string,
+    tool: string,
+    params: unknown,
+  ): Promise<{ baseUrl: string; model: string; apiKey: string } | undefined> {
+    if (scenario !== "agent" && tool !== "tau2") return undefined;
+    const providerId = (params as { userSimProviderId?: string } | null | undefined)
+      ?.userSimProviderId;
+    const provider = await this.llmJudge.getDecrypted(providerId ? { id: providerId } : undefined);
+    if (!provider) {
+      throw new BadRequestException({
+        code: "BENCHMARK_USER_SIMULATOR_NOT_CONFIGURED",
+        message:
+          "Agent 评测需要一个默认 LLM judge provider 作为模拟用户(在 设置 → LLM 判官 配置一个默认项)",
+      });
+    }
+    return { baseUrl: provider.baseUrl, model: provider.model, apiKey: provider.apiKey };
   }
 
   /**

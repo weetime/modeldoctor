@@ -11,6 +11,7 @@ import { BenchmarkTemplateModule } from "../benchmark-template/benchmark-templat
 import { ConnectionModule } from "../connection/connection.module.js";
 import { EngineMetricsModule } from "../engine-metrics/engine-metrics.module.js";
 import { EngineMetricsService } from "../engine-metrics/engine-metrics.service.js";
+import { LlmJudgeModule } from "../llm-judge/llm-judge.module.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { NotifyService } from "../notifications/notify.service.js";
 import { BenchmarkController } from "./benchmark.controller.js";
@@ -52,6 +53,7 @@ async function loadKubeConfig(config: ConfigService<Env, true>): Promise<KubeCon
     NotificationsModule,
     AlertsModule,
     EngineMetricsModule,
+    LlmJudgeModule,
   ],
   controllers: [BenchmarkController, BenchmarkFilesController],
   providers: [

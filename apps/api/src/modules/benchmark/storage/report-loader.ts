@@ -1,12 +1,17 @@
 import { type ReportMeta, type ReportResult, reportStorageKeys } from "@modeldoctor/contracts";
-import { byTool as defaultByTool, type ToolName } from "@modeldoctor/tool-adapters";
+import {
+  byTool as defaultByTool,
+  computeGate,
+  type ToolName,
+  type ToolReport,
+} from "@modeldoctor/tool-adapters";
 import { Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import type { PrometheusFetcherService } from "../../alerts/prometheus-fetcher.service.js";
 import type { EngineMetricsService } from "../../engine-metrics/engine-metrics.service.js";
 import { reduceEngineSnapshot } from "../../engine-metrics/engine-metrics-snapshot.reduce.js";
 import type { NotifyService } from "../../notifications/notify.service.js";
-import type { BenchmarkRepository } from "../benchmark.repository.js";
+import type { BenchmarkRepository, BenchmarkWithRelations } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
 import type { PrefixCacheSnapshotService } from "../prefix-cache/prefix-cache-snapshot.service.js";
 import type { SseHub } from "../sse/sse-hub.service.js";
@@ -56,7 +61,8 @@ export class ReportLoader {
         this.deps.storage.readText(keys.stderr),
       ]);
       const files = await this.loadFiles(runId, result.files);
-      const summary = this.byTool(bench.tool as ToolName).parseFinalReport(stdout, files);
+      const parsed = this.byTool(bench.tool as ToolName).parseFinalReport(stdout, files);
+      const summary = await this.applyTau2Gate(bench, parsed);
       const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
         status: "completed",
         toolVersion: meta.toolVersion,
@@ -236,6 +242,28 @@ export class ReportLoader {
     } catch (e) {
       this.log.warn(`engine-metrics snapshot(${runId}) failed: ${(e as Error).message}`);
     }
+  }
+
+  /**
+   * tau2-only: after `parseFinalReport`, compute the pass/warn/fail gate from
+   * `bench.params.gate` (+ an optional baseline comparison) and merge it into
+   * `summary.data.gate`. No-op — returns `summary` unchanged — for every
+   * other tool, and for tau2 runs whose params carry no `gate` config (should
+   * not happen since `tau2ParamsSchema.gate` defaults to `{ mode: "off" }`,
+   * but a defensive no-op is cheaper than assuming that invariant here).
+   */
+  private async applyTau2Gate(
+    bench: BenchmarkWithRelations,
+    summary: ToolReport,
+  ): Promise<ToolReport> {
+    if (bench.tool !== "tau2" || summary.tool !== "tau2") return summary;
+    const gateConfig = (bench.params as { gate?: Parameters<typeof computeGate>[1] } | null)?.gate;
+    if (!gateConfig) return summary;
+    const baselinePass1 = bench.baselineId
+      ? await this.deps.repo.findBaselineOverallPass1(bench.baselineId)
+      : null;
+    const gate = computeGate(summary.data, gateConfig, baselinePass1);
+    return { tool: "tau2", data: { ...summary.data, gate } };
   }
 
   private async loadFiles(

@@ -416,3 +416,96 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
     expect(deps.notify.emit).not.toHaveBeenCalled();
   });
 });
+
+// ── tau2 gate merge ───────────────────────────────────────────────────────
+
+function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {}) {
+  const base = makeDeps();
+  (base.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
+    id,
+    status: "running",
+    tool: "tau2",
+    userId: "u1",
+    name: "agent-run",
+    scenario: "agent",
+    connectionId: "conn-1",
+    connection: { id: "conn-1", name: "c", model: "m", baseUrl: "http://vllm" },
+    startedAt: new Date("2026-05-25T00:00:00.000Z"),
+    baselineId: over.baselineId ?? null,
+    params: { domains: ["airline"], gate: over.gate ?? { mode: "off" } },
+  }));
+  const tau2Report = {
+    kind: "agent-tau2" as const,
+    userSimModel: "deepseek-v3",
+    numTrials: 3,
+    overall: { pass1: 0.4, passK: 0.4, tasks: 20 },
+    perDomain: { airline: { pass1: 0.4, passK: 0.4, tasks: 20 } },
+    attribution: {},
+    highlights: {
+      successSimId: null,
+      successDomain: null,
+      failureSimId: null,
+      failureDomain: null,
+    },
+  };
+  base.adapter.parseFinalReport = vi.fn(() => ({ tool: "tau2" as const, data: tau2Report }));
+  const findBaselineOverallPass1 = vi.fn(async () => null as number | null);
+  (base.repo as unknown as { findBaselineOverallPass1: typeof findBaselineOverallPass1 }).findBaselineOverallPass1 =
+    findBaselineOverallPass1;
+  return { ...base, findBaselineOverallPass1 };
+}
+
+describe("ReportLoader – tau2 gate merge", () => {
+  it("perDomainFloor below floor → summary.data.gate.result === 'FAILED'", async () => {
+    const deps = makeTau2Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.9 } } });
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
+    const patch = call[2] as { summaryMetrics: { data: { gate: { result: string } } } };
+    expect(patch.summaryMetrics.data.gate.result).toBe("FAILED");
+  });
+
+  it("perDomainFloor at/above floor → summary.data.gate.result === 'PASSED'", async () => {
+    const deps = makeTau2Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.3 } } });
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
+    const patch = call[2] as { summaryMetrics: { data: { gate: { result: string } } } };
+    expect(patch.summaryMetrics.data.gate.result).toBe("PASSED");
+  });
+
+  it("mode='off' → gate.result is null and no baseline lookup is attempted", async () => {
+    const deps = makeTau2Deps({ gate: { mode: "off" } });
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
+    const patch = call[2] as { summaryMetrics: { data: { gate: { result: string | null } } } };
+    expect(patch.summaryMetrics.data.gate.result).toBeNull();
+    expect(deps.findBaselineOverallPass1).not.toHaveBeenCalled();
+  });
+
+  it("baselineRegression mode with a baselineId loads the baseline's overall pass^1", async () => {
+    const deps = makeTau2Deps({
+      baselineId: "bl-1",
+      gate: { mode: "baselineRegression", baselineRegressionPp: 5 },
+    });
+    deps.findBaselineOverallPass1.mockResolvedValue(0.9);
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    expect(deps.findBaselineOverallPass1).toHaveBeenCalledWith("bl-1");
+    const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
+    const patch = call[2] as { summaryMetrics: { data: { gate: { result: string } } } };
+    // baseline pass1=0.9, run pass1=0.4 → -50pp drop, way over the 5pp threshold
+    expect(patch.summaryMetrics.data.gate.result).toBe("FAILED");
+  });
+
+  it("non-tau2 tool: gate path is not invoked (summary passes through unchanged)", async () => {
+    const deps = makeDeps(); // tool: "guidellm" by default
+    const loader = newLoader(deps);
+    await loader.tryLoad("r1");
+    const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
+    const patch = call[2] as { summaryMetrics: { data: Record<string, unknown> } };
+    expect(patch.summaryMetrics.data).toEqual({ latency: 42 });
+    expect(patch.summaryMetrics.data.gate).toBeUndefined();
+  });
+});
