@@ -62,7 +62,7 @@ export class ReportLoader {
       ]);
       const files = await this.loadFiles(runId, result.files);
       const parsed = this.byTool(bench.tool as ToolName).parseFinalReport(stdout, files);
-      const summary = await this.applyTau2Gate(bench, parsed);
+      const summary = await this.applyTau3Gate(bench, parsed);
       const updated = await this.deps.repo.updateGuarded(runId, IN_PROGRESS_STATES, {
         status: "completed",
         toolVersion: meta.toolVersion,
@@ -245,18 +245,18 @@ export class ReportLoader {
   }
 
   /**
-   * tau2-only: after `parseFinalReport`, compute the pass/warn/fail gate from
+   * tau3-only: after `parseFinalReport`, compute the pass/warn/fail gate from
    * `bench.params.gate` (+ an optional baseline comparison) and merge it into
    * `summary.data.gate`. No-op — returns `summary` unchanged — for every
-   * other tool, and for tau2 runs whose params carry no `gate` config (should
-   * not happen since `tau2ParamsSchema.gate` defaults to `{ mode: "off" }`,
+   * other tool, and for tau3 runs whose params carry no `gate` config (should
+   * not happen since `tau3ParamsSchema.gate` defaults to `{ mode: "off" }`,
    * but a defensive no-op is cheaper than assuming that invariant here).
    */
-  private async applyTau2Gate(
+  private async applyTau3Gate(
     bench: BenchmarkWithRelations,
     summary: ToolReport,
   ): Promise<ToolReport> {
-    if (bench.tool !== "tau2" || summary.tool !== "tau2") return summary;
+    if (bench.tool !== "tau3" || summary.tool !== "tau3") return summary;
     const gateConfig = (bench.params as { gate?: Parameters<typeof computeGate>[1] } | null)?.gate;
     if (!gateConfig) return summary;
     // Only look up the baseline when the gate mode actually consumes it —
@@ -267,7 +267,7 @@ export class ReportLoader {
         ? await this.deps.repo.findBaselineOverallPass1(bench.baselineId)
         : null;
     const gate = computeGate(summary.data, gateConfig, baselinePass1);
-    return { tool: "tau2", data: { ...summary.data, gate } };
+    return { tool: "tau3", data: { ...summary.data, gate } };
   }
 
   private async loadFiles(

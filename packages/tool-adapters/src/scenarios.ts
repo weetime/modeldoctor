@@ -82,8 +82,8 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
   agent: {
     label: "Agent 能力评测",
     description:
-      "τ²-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力(完成率 / pass^k)。",
-    tools: ["tau2"],
+      "τ³-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力(完成率 / pass^k)。",
+    tools: ["tau3"],
     paramsConstraints: {},
     reportComponent: "AgentReport",
   },

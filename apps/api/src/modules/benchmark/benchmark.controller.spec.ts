@@ -115,7 +115,7 @@ describe("BenchmarkController", () => {
           useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
         },
         {
-          // Controller spec never exercises the agent-scenario (tau2) path,
+          // Controller spec never exercises the agent-scenario (tau3) path,
           // so a no-op getDecrypted is enough to satisfy DI.
           provide: LlmJudgeService,
           useValue: { getDecrypted: vi.fn(async () => null) },
@@ -555,7 +555,7 @@ describe("BenchmarkController.getCharts (F3 #88)", () => {
           useValue: { subscribe: vi.fn(), publish: vi.fn(), close: vi.fn(), has: vi.fn() },
         },
         {
-          // Controller spec never exercises the agent-scenario (tau2) path,
+          // Controller spec never exercises the agent-scenario (tau3) path,
           // so a no-op getDecrypted is enough to satisfy DI.
           provide: LlmJudgeService,
           useValue: { getDecrypted: vi.fn(async () => null) },

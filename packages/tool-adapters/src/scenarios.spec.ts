@@ -41,9 +41,9 @@ describe("SCENARIOS constant", () => {
     expect(SCENARIOS.gateway.tools).toEqual(["vegeta"]);
   });
 
-  it("registers the agent scenario bound to tau2 with AgentReport", () => {
+  it("registers the agent scenario bound to tau3 with AgentReport", () => {
     expect(SCENARIOS.agent).toBeDefined();
-    expect(SCENARIOS.agent.tools).toEqual(["tau2"]);
+    expect(SCENARIOS.agent.tools).toEqual(["tau3"]);
     expect(SCENARIOS.agent.reportComponent).toBe("AgentReport");
   });
   it("scenarioIdSchema accepts agent", () => {

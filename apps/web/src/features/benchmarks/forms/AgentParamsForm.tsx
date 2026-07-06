@@ -1,4 +1,4 @@
-import type { Tau2Domain } from "@modeldoctor/tool-adapters/schemas";
+import type { Tau3Domain } from "@modeldoctor/tool-adapters/schemas";
 import { useId } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ import {
 import { useLlmJudgeProviders } from "@/features/llm-judge-providers/queries";
 import { numberField } from "./_shared/numberField";
 
-const DOMAINS: Tau2Domain[] = ["airline", "retail", "telecom"];
+const DOMAINS: Tau3Domain[] = ["airline", "retail", "telecom"];
 
 type Tier = "smoke" | "standard" | "full";
 
@@ -45,7 +45,7 @@ interface AgentParamsFormProps {
   fieldPrefix?: "params" | "config";
 }
 
-/** τ²-bench (tau2) agent-scenario params: domains multiselect, tier picker
+/** τ³-bench (tau3) agent-scenario params: domains multiselect, tier picker
  * (fills numTasksPerDomain/numTrials), and optional user-simulator provider.
  * `gate` stays at its `{mode:"off"}` default — no editor here, per Task 14
  * scope (a full gate editor is a separate, optional follow-up). */
@@ -55,7 +55,7 @@ export function AgentParamsForm({ fieldPrefix = "params" }: AgentParamsFormProps
   const id = useId();
   const providers = useLlmJudgeProviders();
 
-  const domains = (useWatch({ control, name: `${fieldPrefix}.domains` }) ?? []) as Tau2Domain[];
+  const domains = (useWatch({ control, name: `${fieldPrefix}.domains` }) ?? []) as Tau3Domain[];
   const numTasksPerDomain = useWatch({ control, name: `${fieldPrefix}.numTasksPerDomain` }) as
     | number
     | null
@@ -64,7 +64,7 @@ export function AgentParamsForm({ fieldPrefix = "params" }: AgentParamsFormProps
   // Toggle via a Set so a redundant click (already-checked domain re-checked)
   // can never produce a duplicate entry — `domains` always stays a de-duped
   // subset of DOMAINS, in DOMAINS' canonical order.
-  function toggleDomain(domain: Tau2Domain, checked: boolean) {
+  function toggleDomain(domain: Tau3Domain, checked: boolean) {
     const next = new Set(domains);
     if (checked) next.add(domain);
     else next.delete(domain);

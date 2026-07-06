@@ -1,11 +1,11 @@
-import type { Tau2Params } from "./schema.js";
-import type { Tau2Report } from "./schema.js";
+import type { Tau3Params } from "./schema.js";
+import type { Tau3Report } from "./schema.js";
 
 export type GateResult = { mode: string; result: "PASSED" | "WARNING" | "FAILED" | null; detail?: string };
 
 export function computeGate(
-  report: Tau2Report,
-  gate: Tau2Params["gate"],
+  report: Tau3Report,
+  gate: Tau3Params["gate"],
   baselineOverallPass1: number | null,
 ): GateResult {
   if (gate.mode === "off") return { mode: "off", result: null };

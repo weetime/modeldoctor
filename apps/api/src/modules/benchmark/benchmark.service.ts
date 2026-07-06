@@ -465,7 +465,7 @@ export class BenchmarkService {
   }
 
   /**
-   * Agent-scenario (tau2) only: resolve the LLM-judge provider that plays the
+   * Agent-scenario (tau3) only: resolve the LLM-judge provider that plays the
    * "user simulator" role and decrypt its key. Called twice by design: once
    * from `create()` as a pre-flight existence check (result discarded — see
    * call site) so a missing provider rejects BEFORE the benchmark row is
@@ -484,7 +484,7 @@ export class BenchmarkService {
     tool: string,
     params: unknown,
   ): Promise<{ baseUrl: string; model: string; apiKey: string } | undefined> {
-    if (scenario !== "agent" || tool !== "tau2") return undefined;
+    if (scenario !== "agent" || tool !== "tau3") return undefined;
     const providerId = (params as { userSimProviderId?: string } | null | undefined)
       ?.userSimProviderId;
     const provider = await this.llmJudge.getDecrypted(providerId ? { id: providerId } : undefined);

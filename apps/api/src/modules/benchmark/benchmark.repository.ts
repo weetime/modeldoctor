@@ -206,7 +206,7 @@ export class BenchmarkRepository {
   }
 
   /**
-   * tau2 gate support: resolve the canonical benchmark's overall pass^1 for a
+   * tau3 gate support: resolve the canonical benchmark's overall pass^1 for a
    * given Baseline id, so ReportLoader can feed it into `computeGate()` for
    * the "baselineRegression" gate mode. `baselineId` here is a `Baseline.id`
    * (not a Benchmark id) — it's joined through `Baseline.benchmark` to reach

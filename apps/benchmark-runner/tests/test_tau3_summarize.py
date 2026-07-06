@@ -1,4 +1,4 @@
-"""Tests for tau2/summarize_lib.py — the pure attribution/aggregation logic.
+"""Tests for tau3_summarize/summarize_lib.py — the pure attribution/aggregation logic.
 
 Deliberately tau2-free: benchmark-runner is Python 3.11 but tau2-bench requires
 >=3.12, so it cannot be imported (or installed) under this project's dev env.
@@ -10,7 +10,7 @@ importing tau2 itself. `summarize_lib` only imports tau2 lazily inside
 
 from types import SimpleNamespace as NS
 
-from tau2_summarize.summarize_lib import (
+from tau3_summarize.summarize_lib import (
     aggregate_overall,
     attribution_and_highlights,
     bucket_failure,

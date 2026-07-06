@@ -476,7 +476,7 @@ describe("BenchmarkCreatePage", () => {
       expect(await screen.findByText(/episodes/i)).toBeInTheDocument();
     });
 
-    it("submits scenario=agent/tool=tau2 with Standard tier params (numTrials=3, 3 deduped domains)", async () => {
+    it("submits scenario=agent/tool=tau3 with Standard tier params (numTrials=3, 3 deduped domains)", async () => {
       mockMutate.mockResolvedValue({ id: "b-new", scenario: "agent", name: "agent-run" });
       const { default: userEvent } = await import("@testing-library/user-event");
       const user = userEvent.setup();
@@ -507,7 +507,7 @@ describe("BenchmarkCreatePage", () => {
 
       const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.scenario).toBe("agent");
-      expect(payload.tool).toBe("tau2");
+      expect(payload.tool).toBe("tau3");
       const params = payload.params as { numTrials: number; domains: string[] };
       expect(params.numTrials).toBe(3);
       expect(params.domains).toHaveLength(3);

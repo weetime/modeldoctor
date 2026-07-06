@@ -1,4 +1,4 @@
-import type { Tau2Report } from "@modeldoctor/tool-adapters/schemas";
+import type { Tau3Report } from "@modeldoctor/tool-adapters/schemas";
 import { useTranslation } from "react-i18next";
 import { useChartTokens } from "@/components/charts/_shared";
 import { StageBarChart } from "@/components/charts/StageBarChart";
@@ -12,22 +12,22 @@ import {
 } from "@/components/ui/table";
 
 export interface CompletionBarsProps {
-  perDomain: Tau2Report["perDomain"];
+  perDomain: Tau3Report["perDomain"];
   numTrials: number;
 }
 
-// `Tau2Report["overall"]` and each value of `perDomain` share the same
+// `Tau3Report["overall"]` and each value of `perDomain` share the same
 // per-domain-metrics shape (pass1/passK/tasks/...). Naming it here (rather
 // than indexing `perDomain[key]`) sidesteps `noUncheckedIndexedAccess`, which
 // would otherwise widen a computed indexed-access type to `| undefined`.
-type DomainMetrics = Tau2Report["overall"];
+type DomainMetrics = Tau3Report["overall"];
 
 function fmtPct(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
 /**
- * Grouped pass^1 / pass^k completion-rate bars, one group per tau2 domain.
+ * Grouped pass^1 / pass^k completion-rate bars, one group per tau3 domain.
  * Reuses the app's existing categorical-x grouped bar chart (StageBarChart,
  * ECharts under the hood) rather than adding a new chart dependency.
  *

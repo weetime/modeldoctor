@@ -1,9 +1,9 @@
 import type { BuildCommandPlan, BuildCommandResult, ProgressEvent } from "../core/interface.js";
-import { tau2ParamsSchema, type Tau2Domain, type Tau2Params } from "./schema.js";
+import { tau3ParamsSchema, type Tau3Domain, type Tau3Params } from "./schema.js";
 
 // Full task-set sizes (from tau2 source data/tau2/domains). Used only for
 // duration estimation when numTasksPerDomain is null (full set).
-const FULL_TASK_COUNT: Record<Tau2Domain, number> = { airline: 50, retail: 114, telecom: 114 };
+const FULL_TASK_COUNT: Record<Tau3Domain, number> = { airline: 50, retail: 114, telecom: 114 };
 const SECONDS_PER_EPISODE = 90; // generous per multi-turn episode upper bound
 
 function llmArgs(apiBase: string, keyEnvName: string): string {
@@ -18,10 +18,10 @@ function shq(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'";
 }
 
-export function buildTau2Command(plan: BuildCommandPlan<Tau2Params>): BuildCommandResult {
-  const params = tau2ParamsSchema.parse(plan.params) as Tau2Params;
+export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildCommandResult {
+  const params = tau3ParamsSchema.parse(plan.params) as Tau3Params;
   const { runId, connection, userSimulator } = plan;
-  if (!userSimulator) throw new Error("tau2 requires a resolved userSimulator endpoint");
+  if (!userSimulator) throw new Error("tau3 requires a resolved userSimulator endpoint");
 
   const agentArgs = llmArgs(connection.baseUrl, "MD_AGENT_KEY");
   const userArgs = llmArgs(userSimulator.baseUrl, "MD_USER_KEY");
@@ -50,7 +50,7 @@ export function buildTau2Command(plan: BuildCommandPlan<Tau2Params>): BuildComma
     ].filter(Boolean).join(" ");
   });
 
-  const summarize = `python /app/tau2_summarize/md_tau2_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
+  const summarize = `python /app/tau3_summarize/md_tau3_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
   const script = [...perDomain, summarize].join(" && ");
 
   const outputFiles: Record<string, string> = { summary: "md_out/summary.json" };
@@ -64,14 +64,14 @@ export function buildTau2Command(plan: BuildCommandPlan<Tau2Params>): BuildComma
   };
 }
 
-export function tau2MaxDurationSeconds(params: unknown): number {
-  const p = tau2ParamsSchema.parse(params) as Tau2Params;
+export function tau3MaxDurationSeconds(params: unknown): number {
+  const p = tau3ParamsSchema.parse(params) as Tau3Params;
   const totalTasks = p.domains.reduce(
     (sum, d) => sum + (p.numTasksPerDomain ?? FULL_TASK_COUNT[d]), 0);
   return totalTasks * p.numTrials * SECONDS_PER_EPISODE;
 }
 
-export function tau2ParseProgress(line: string): ProgressEvent | null {
+export function tau3ParseProgress(line: string): ProgressEvent | null {
   // tau2 prints task progress; surface a coarse log line. A tighter percent
   // parser can be tuned in Task 13 against real stdout.
   const m = line.match(/(\d+)\s*\/\s*(\d+)\s+tasks?/i);

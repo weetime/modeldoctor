@@ -114,7 +114,7 @@ def load_domains(domains: list, loader) -> tuple:
     domain must not take down the whole multi-domain summarize run.
 
     tau2-free by design: `loader` is injected so this can be unit-tested
-    without importing tau2 (see md_tau2_summarize.py for the real,
+    without importing tau2 (see md_tau3_summarize.py for the real,
     tau2-backed loader).
 
     Returns (per_domain_results, skipped_domains).
@@ -128,6 +128,22 @@ def load_domains(domains: list, loader) -> tuple:
             print(f"WARNING: skipping domain {d!r} — failed to load results: {e}", file=sys.stderr)
             skipped.append(d)
     return per_domain, skipped
+
+
+def bench_version(per_domain_results: dict) -> str:
+    """τ³-bench provenance: the upstream `results.info.git_commit` of the
+    first loaded domain, when present, else a static fallback.
+
+    `Results.info.git_commit` (tau2/data_model/simulation.py `Info`) is a
+    required field on real tau2 Results, but we defensively getattr() here
+    so a stub/fake Results (as used in unit tests) or a future upstream
+    schema change degrades to the fallback instead of raising.
+    """
+    for r in per_domain_results.values():
+        commit = getattr(getattr(r, "info", None), "git_commit", None)
+        if commit:
+            return str(commit)
+    return "tau3-bench v1.0.0"
 
 
 def build_summary(
@@ -147,7 +163,7 @@ def build_summary(
     per_domain_sims = {d: list(r.simulations) for d, r in per_domain_results.items()}
     attribution, highlights = attribution_and_highlights(per_domain_sims)
     return {
-        "kind": "agent-tau2",
+        "kind": "agent-tau3",
         "userSimModel": user_sim_model,
         "numTrials": num_trials,
         "overall": aggregate_overall(dmetrics),
@@ -155,4 +171,5 @@ def build_summary(
         "attribution": attribution,
         "highlights": highlights,
         "skippedDomains": skipped_domains or [],
+        "benchVersion": bench_version(per_domain_results),
     }

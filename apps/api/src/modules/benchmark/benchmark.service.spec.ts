@@ -64,7 +64,7 @@ const ENV_DEFAULTS: Record<string, unknown> = {
   BENCHMARK_DEFAULT_MAX_DURATION_SECONDS: 1800,
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
-  RUNNER_IMAGE_TAU2: "md-runner-tau2:test",
+  RUNNER_IMAGE_TAU3: "md-runner-tau3:test",
 };
 
 function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
@@ -286,21 +286,21 @@ describe("BenchmarkService.create", () => {
     const adapters = await import("@modeldoctor/tool-adapters");
     const origByTool = adapters.byTool;
     (adapters as { byTool: typeof origByTool }).byTool = (() => ({
-      name: "tau2",
+      name: "tau3",
       scenarios: ["agent"],
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
       buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
       parseProgress: () => null,
-      parseFinalReport: () => ({ tool: "tau2" as const, data: {} }),
+      parseFinalReport: () => ({ tool: "tau3" as const, data: {} }),
       getMaxDurationSeconds: () => 1800,
     })) as unknown as typeof origByTool;
     try {
       let err: unknown;
       try {
         await svcNoJudge.create("u1", {
-          tool: "tau2",
+          tool: "tau3",
           scenario: "agent",
           connectionId: "c1",
           name: "agent-run",
@@ -846,7 +846,7 @@ describe("BenchmarkService.resolveUserSimulator", () => {
       model: "deepseek-v3",
       apiKey: "sk-user",
     });
-    const result = await svc.resolveUserSimulator("agent", "tau2", {
+    const result = await svc.resolveUserSimulator("agent", "tau3", {
       domains: ["airline"],
       gate: { mode: "off" },
     });
@@ -861,7 +861,7 @@ describe("BenchmarkService.resolveUserSimulator", () => {
       model: "qwen",
       apiKey: "sk-2",
     });
-    const result = await svc.resolveUserSimulator("agent", "tau2", {
+    const result = await svc.resolveUserSimulator("agent", "tau3", {
       domains: ["airline"],
       gate: { mode: "off" },
       userSimProviderId: "prov-2",
@@ -873,10 +873,10 @@ describe("BenchmarkService.resolveUserSimulator", () => {
   it("throws a clear domain error when no default judge provider is configured", async () => {
     llmJudge.getDecrypted.mockResolvedValue(null);
     await expect(
-      svc.resolveUserSimulator("agent", "tau2", { domains: ["airline"], gate: { mode: "off" } }),
+      svc.resolveUserSimulator("agent", "tau3", { domains: ["airline"], gate: { mode: "off" } }),
     ).rejects.toThrow(BadRequestException);
     await expect(
-      svc.resolveUserSimulator("agent", "tau2", { domains: ["airline"], gate: { mode: "off" } }),
+      svc.resolveUserSimulator("agent", "tau3", { domains: ["airline"], gate: { mode: "off" } }),
     ).rejects.toThrow(/LLM judge provider/);
   });
 
@@ -886,16 +886,16 @@ describe("BenchmarkService.resolveUserSimulator", () => {
     expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
   });
 
-  it("returns undefined when scenario/tool are only partially agent/tau2 (guard uses ||, not &&)", async () => {
-    // scenario="agent" but tool!=="tau2" — with the old `&&` guard this
+  it("returns undefined when scenario/tool are only partially agent/tau3 (guard uses ||, not &&)", async () => {
+    // scenario="agent" but tool!=="tau3" — with the old `&&` guard this
     // would have fallen through and called LlmJudgeService; with `||` it
     // must short-circuit to undefined, matching the JSDoc intent that ANY
     // mismatch (not just both) resolves to undefined.
     const resultA = await svc.resolveUserSimulator("agent", "guidellm", {});
     expect(resultA).toBeUndefined();
 
-    // tool==="tau2" but scenario!=="agent"
-    const resultB = await svc.resolveUserSimulator("inference", "tau2", {});
+    // tool==="tau3" but scenario!=="agent"
+    const resultB = await svc.resolveUserSimulator("inference", "tau3", {});
     expect(resultB).toBeUndefined();
 
     expect(llmJudge.getDecrypted).not.toHaveBeenCalled();
@@ -914,7 +914,7 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
     vi.clearAllMocks();
   });
 
-  it("injects the resolved userSimulator into adapter.buildCommand's plan for tool=tau2", async () => {
+  it("injects the resolved userSimulator into adapter.buildCommand's plan for tool=tau3", async () => {
     llmJudge.getDecrypted.mockResolvedValue({
       id: "prov-1",
       baseUrl: "http://judge/v1",
@@ -925,14 +925,14 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
     const adapters = await import("@modeldoctor/tool-adapters");
     const origByTool = adapters.byTool;
     (adapters as { byTool: typeof origByTool }).byTool = (() => ({
-      name: "tau2",
+      name: "tau3",
       scenarios: ["agent"],
       paramsSchema: { parse: (x: unknown) => x },
       reportSchema: { parse: (x: unknown) => x },
       paramDefaults: {},
       buildCommand,
       parseProgress: () => null,
-      parseFinalReport: () => ({ tool: "tau2" as const, data: {} }),
+      parseFinalReport: () => ({ tool: "tau3" as const, data: {} }),
       getMaxDurationSeconds: () => 1800,
     })) as unknown as typeof origByTool;
     try {
@@ -943,7 +943,7 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
           connectionId: "c1",
           status: "pending",
           scenario: "agent",
-          tool: "tau2",
+          tool: "tau3",
           params: { domains: ["airline"], gate: { mode: "off" } },
         }),
       );

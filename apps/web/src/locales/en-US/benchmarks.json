@@ -37,14 +37,14 @@
       "vegeta": "vegeta",
       "evalscope": "evalscope",
       "aiperf": "aiperf",
-      "tau2": "tau2"
+      "tau3": "tau3"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
       "evalscope": "Modelscope perf tool; chat / completions with prefix-cache hit-rate stats",
       "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark",
-      "tau2": "τ²-bench: multi-turn tool-calling agent eval (airline/retail/telecom customer-service scenarios)"
+      "tau3": "τ³-bench: multi-turn tool-calling agent eval (airline/retail/telecom customer-service scenarios)"
     },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
@@ -139,7 +139,7 @@
     "gateway": "Higress / API path HTTP performance",
     "lb-strategy": "Validate LB routing strategies (currently ai-load-balancer prefix_cache) pin same-prefix requests to one replica",
     "engine-kv-cache": "Single-instance / engine-level cache effectiveness (vanilla / LMCache / YRCache, mooncake trace block-level prefix reuse)",
-    "agent": "τ²-bench multi-turn tool calling: airline/retail/telecom customer-service scenarios, testing policy adherence + correct domain-tool calls"
+    "agent": "τ³-bench multi-turn tool calling: airline/retail/telecom customer-service scenarios, testing policy adherence + correct domain-tool calls"
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
@@ -602,6 +602,7 @@
       },
       "userSimLabel": "User simulator: {{model}}",
       "userSimCaveat": "Results depend on the user-simulator model (not the official judge) and are not directly comparable to the official leaderboard.",
+      "benchProvenance": "Benchmark: τ³-bench v1.0.0 (2026) · dataset includes 75+ task fixes over τ²-bench",
       "pass1": "pass^1",
       "passK": "pass^k",
       "domain": "Domain",

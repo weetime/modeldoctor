@@ -3,61 +3,61 @@ import { useMemo } from "react";
 import { api } from "@/lib/api-client";
 
 /**
- * Minimal shape of a raw τ²-bench `results.json` (the runner's per-domain
+ * Minimal shape of a raw τ³-bench `results.json` (the runner's per-domain
  * output, stored under the `results_<domain>` file alias — see Task 4's
- * buildCommand). This is intentionally NOT the same as `Tau2Report`
+ * buildCommand). This is intentionally NOT the same as `Tau3Report`
  * (`@modeldoctor/tool-adapters/schemas`), which is the aggregated
  * summary.json the gate/report reads. We only type the fields the
- * conversation-replay UI actually reads; upstream τ²-bench's `Message` /
+ * conversation-replay UI actually reads; upstream τ³-bench's `Message` /
  * `Simulation` types carry many more fields we pass through untouched.
  */
-export type Tau2MessageRole = "user" | "assistant" | "tool" | "system";
+export type Tau3MessageRole = "user" | "assistant" | "tool" | "system";
 
-export interface Tau2ToolCall {
+export interface Tau3ToolCall {
   id?: string;
   name: string;
   arguments?: Record<string, unknown> | string;
 }
 
-export interface Tau2Message {
-  role: Tau2MessageRole;
+export interface Tau3Message {
+  role: Tau3MessageRole;
   content?: string | null;
-  tool_calls?: Tau2ToolCall[] | null;
+  tool_calls?: Tau3ToolCall[] | null;
   tool_call_id?: string;
   [extra: string]: unknown;
 }
 
-export interface Tau2ActionCheckAction {
+export interface Tau3ActionCheckAction {
   name?: string;
   requestor?: string;
   [extra: string]: unknown;
 }
 
-export interface Tau2ActionCheck {
+export interface Tau3ActionCheck {
   action_match: boolean;
   tool_type?: string;
-  action?: Tau2ActionCheckAction | null;
+  action?: Tau3ActionCheckAction | null;
   [extra: string]: unknown;
 }
 
-export interface Tau2RewardInfo {
+export interface Tau3RewardInfo {
   reward: number;
-  action_checks?: Tau2ActionCheck[] | null;
+  action_checks?: Tau3ActionCheck[] | null;
   [extra: string]: unknown;
 }
 
-export interface Tau2Simulation {
+export interface Tau3Simulation {
   id: string;
   task_id: string;
   trial: number;
   termination_reason?: string;
-  reward_info?: Tau2RewardInfo | null;
-  messages: Tau2Message[];
+  reward_info?: Tau3RewardInfo | null;
+  messages: Tau3Message[];
   [extra: string]: unknown;
 }
 
-export interface Tau2Results {
-  simulations: Tau2Simulation[];
+export interface Tau3Results {
+  simulations: Tau3Simulation[];
   [extra: string]: unknown;
 }
 
@@ -68,7 +68,7 @@ export const trajectoryKeys = {
 };
 
 /**
- * Fetches the domain's raw τ²-bench `results.json` via the benchmark's
+ * Fetches the domain's raw τ³-bench `results.json` via the benchmark's
  * generic output-file endpoint (`GET /benchmarks/:id/files/results_<domain>`)
  * and indexes simulations by id for the conversation-replay picker.
  *
@@ -79,14 +79,14 @@ export function useTrajectory(benchmarkId: string, domain: string) {
   const query = useQuery({
     queryKey: trajectoryKeys.detail(benchmarkId, domain),
     queryFn: () =>
-      api.get<Tau2Results>(`/api/benchmarks/${benchmarkId}/files/results_${domain}`),
+      api.get<Tau3Results>(`/api/benchmarks/${benchmarkId}/files/results_${domain}`),
     enabled: benchmarkId.length > 0 && domain.length > 0,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 5 * 60 * 1000,
   });
 
   const simsById = useMemo(() => {
-    const map = new Map<string, Tau2Simulation>();
+    const map = new Map<string, Tau3Simulation>();
     for (const sim of query.data?.simulations ?? []) map.set(sim.id, sim);
     return map;
   }, [query.data]);

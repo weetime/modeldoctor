@@ -1,5 +1,5 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import { type Tau2Report, tau2ReportSchema } from "@modeldoctor/tool-adapters/schemas";
+import { type Tau3Report, tau3ReportSchema } from "@modeldoctor/tool-adapters/schemas";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompletionBars } from "./agent/CompletionBars";
@@ -39,7 +39,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Agent-scenario (tau2-bench) report container. Renders overall/gate/user-sim
+ * Agent-scenario (tau3-bench) report container. Renders overall/gate/user-sim
  * header tiles, per-domain completion-rate bars (CompletionBars), the
  * success/failure conversation highlights (ConversationReplay), and the
  * failure-attribution breakdown (FailureAttribution). Each highlight only
@@ -50,11 +50,11 @@ function StatTile({ label, value }: { label: string; value: string }) {
 export function AgentReport({ benchmark }: AgentReportProps) {
   const { t } = useTranslation("benchmarks");
   const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
-  const parsed = tau2ReportSchema.safeParse(tagged?.data);
+  const parsed = tau3ReportSchema.safeParse(tagged?.data);
   if (!parsed.success) {
     return <UnknownReport benchmark={benchmark} reason={parsed.error.message} />;
   }
-  const data: Tau2Report = parsed.data;
+  const data: Tau3Report = parsed.data;
   const gateResult = data.gate?.result ?? null;
   const { successSimId, successDomain, failureSimId, failureDomain } = data.highlights;
 
@@ -89,6 +89,10 @@ export function AgentReport({ benchmark }: AgentReportProps) {
           {t("reports.agent.userSimLabel", { model: data.userSimModel })}
         </div>
         <p className="mt-1 text-xs text-muted-foreground">{t("reports.agent.userSimCaveat")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("reports.agent.benchProvenance")}
+          {data.benchVersion ? ` · ${data.benchVersion}` : null}
+        </p>
       </div>
 
       <CompletionBars perDomain={data.perDomain} numTrials={data.numTrials} />

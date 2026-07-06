@@ -25,7 +25,7 @@ function fmtPct0(v: number): string {
 }
 
 /**
- * Failure-attribution chart: a donut of the tau2 failure buckets plus a
+ * Failure-attribution chart: a donut of the tau3 failure buckets plus a
  * one-line conclusion naming the largest bucket. Reuses the app's existing
  * `PieChart` (ECharts, same as `CompletionBars`' `StageBarChart`) — no new
  * chart dependency.

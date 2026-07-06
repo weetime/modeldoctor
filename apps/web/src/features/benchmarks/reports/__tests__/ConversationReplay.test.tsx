@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@/lib/i18n";
-import type { Tau2Results } from "../agent/queries";
+import type { Tau3Results } from "../agent/queries";
 
 vi.mock("@/lib/api-client", () => {
   class ApiError extends Error {
@@ -20,7 +20,7 @@ vi.mock("@/lib/api-client", () => {
 import { api } from "@/lib/api-client";
 import { ConversationReplay } from "../agent/ConversationReplay";
 
-const sampleResults: Tau2Results = {
+const sampleResults: Tau3Results = {
   simulations: [
     {
       id: "s1",

@@ -1,5 +1,5 @@
 import type { Benchmark } from "@modeldoctor/contracts";
-import type { Tau2Report } from "@modeldoctor/tool-adapters/schemas";
+import type { Tau3Report } from "@modeldoctor/tool-adapters/schemas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -20,10 +20,10 @@ vi.mock("@/lib/api-client", () => {
 
 import { api } from "@/lib/api-client";
 import { AgentReport } from "../AgentReport";
-import type { Tau2Results } from "../agent/queries";
+import type { Tau3Results } from "../agent/queries";
 
-const tau2Report: Tau2Report = {
-  kind: "agent-tau2",
+const tau3Report: Tau3Report = {
+  kind: "agent-tau3",
   userSimModel: "deepseek-v3",
   numTrials: 3,
   overall: { pass1: 0.4, passK: 0.6, tasks: 60 },
@@ -44,11 +44,11 @@ const tau2Report: Tau2Report = {
 
 const agentBenchmarkFixture = {
   id: "b1",
-  name: "Agent · tau2-bench",
-  tool: "tau2",
+  name: "Agent · tau3-bench",
+  tool: "tau3",
   scenario: "agent",
   status: "completed",
-  summaryMetrics: { tool: "tau2", data: tau2Report },
+  summaryMetrics: { tool: "tau3", data: tau3Report },
 } as unknown as Benchmark;
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -81,10 +81,10 @@ describe("AgentReport", () => {
     expect(screen.getByText(/FAILED|PASSED|WARNING/)).toBeInTheDocument();
   });
 
-  it("falls back to UnknownReport when summaryMetrics does not parse as a Tau2Report", () => {
+  it("falls back to UnknownReport when summaryMetrics does not parse as a Tau3Report", () => {
     const bm = {
       ...agentBenchmarkFixture,
-      summaryMetrics: { tool: "tau2", data: { kind: "not-a-tau2-report" } },
+      summaryMetrics: { tool: "tau3", data: { kind: "not-a-tau3-report" } },
     } as unknown as Benchmark;
     render(<AgentReport benchmark={bm} />, { wrapper: Wrapper });
     expect(screen.getByText(/Report shape not recognized/i)).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe("AgentReport", () => {
   });
 
   it("mounts ConversationReplay for a non-null success highlight while leaving the null failure highlight unmounted", async () => {
-    const results: Tau2Results = {
+    const results: Tau3Results = {
       simulations: [
         {
           id: "s1",
@@ -123,9 +123,9 @@ describe("AgentReport", () => {
     const bm = {
       ...agentBenchmarkFixture,
       summaryMetrics: {
-        tool: "tau2",
+        tool: "tau3",
         data: {
-          ...tau2Report,
+          ...tau3Report,
           highlights: {
             successSimId: "s1",
             successDomain: "airline",

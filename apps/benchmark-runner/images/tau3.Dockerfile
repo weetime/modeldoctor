@@ -17,11 +17,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-# Pin a commit for reproducibility (repo has no release tags as of writing).
+# Pin the τ³-bench v1.0.0 release tag for reproducibility.
 # Bump deliberately via a PR — tau2's CLI surface feeds packages/tool-adapters/
-# src/tau2/build-command.ts directly, so an upstream flag/behavior change must
+# src/tau3/build-command.ts directly, so an upstream flag/behavior change must
 # be caught by tau2's own runtime tests, not silently picked up on rebuild.
-ARG TAU2_REF=1901a301961cbbe3fd11f3e84a2a376530c759e3
+ARG TAU3_REF=v1.0.0
 
 # Clone + install tau2-bench (editable, src-layout: source stays at
 # /opt/tau2/src/tau2 — repo root /opt/tau2 has NO top-level `tau2/` dir, so it
@@ -39,7 +39,7 @@ ARG TAU2_REF=1901a301961cbbe3fd11f3e84a2a376530c759e3
 # introspection surviving future tau2 refactors.
 RUN git clone https://github.com/sierra-research/tau2-bench.git /opt/tau2 \
     && cd /opt/tau2 \
-    && git checkout "${TAU2_REF}" \
+    && git checkout "${TAU3_REF}" \
     && rm -rf .git data/tau2/results data/voice \
     && pip install --no-cache-dir -e .
 
@@ -54,18 +54,18 @@ WORKDIR /app
 RUN pip install --no-cache-dir --disable-pip-version-check 'requests>=2.31,<3' 'boto3>=1.34,<2'
 
 COPY runner runner
-# The tau2-report summarizer (packages/tool-adapters' buildCommand invokes it
-# via `python /app/tau2_summarize/md_tau2_summarize.py`). Its
+# The tau3-report summarizer (packages/tool-adapters' buildCommand invokes it
+# via `python /app/tau3_summarize/md_tau3_summarize.py`). Its
 # `from summarize_lib import build_summary` is a flat import resolved via
 # Python's implicit "script's own directory" sys.path[0] entry — no
 # PYTHONPATH needed for that half. `from tau2.data_model...` resolves to the
 # real pip-installed tau2 above (this dir is deliberately NOT named `tau2/` —
 # see Task 7, which renamed it to avoid exactly this shadow).
-COPY tau2_summarize tau2_summarize
+COPY tau3_summarize /app/tau3_summarize
 
 # `python -m runner.main` must resolve regardless of CWD, so PYTHONPATH
-# points at /app where `runner` and `tau2_summarize` live. The process CWD
-# is set to /opt/tau2 (NOT /app) — packages/tool-adapters/src/tau2/
+# points at /app where `runner` and `tau3_summarize` live. The process CWD
+# is set to /opt/tau2 (NOT /app) — packages/tool-adapters/src/tau3/
 # build-command.ts's outputFiles use paths relative to tau2's own data dir
 # convention (`data/simulations/<runId>_<domain>/results.json`,
 # `md_out/summary.json`); the generic runner (runner/main.py) resolves those

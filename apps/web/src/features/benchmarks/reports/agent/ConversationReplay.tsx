@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { Tau2Message, Tau2Simulation } from "./queries";
+import type { Tau3Message, Tau3Simulation } from "./queries";
 import { useTrajectory } from "./queries";
 
 export interface ConversationReplayProps {
@@ -36,7 +36,7 @@ function stringifyArgs(args: Record<string, unknown> | string | undefined): stri
  * turn when no action_checks are present (or none failed), since a task can
  * also fail without a mismatched tool call (e.g. missing final answer).
  */
-function computeFaultyIndices(sim: Tau2Simulation): Set<number> {
+function computeFaultyIndices(sim: Tau3Simulation): Set<number> {
   const failedActionNames = new Set(
     (sim.reward_info?.action_checks ?? [])
       .filter((c) => c.action_match === false)
@@ -69,7 +69,7 @@ function MessageBubble({
   message,
   isFaulty,
 }: {
-  message: Tau2Message;
+  message: Tau3Message;
   isFaulty: boolean;
 }) {
   const { t } = useTranslation("benchmarks");

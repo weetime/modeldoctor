@@ -11,7 +11,7 @@ export * from "./core/registry.js";
 export { evalscopeAdapter, evalscopeReadMetric } from "./evalscope/index.js";
 export { guidellmAdapter, guidellmReadMetric } from "./guidellm/index.js";
 export * from "./scenarios.js";
-export { computeGate, type GateResult, tau2Adapter, tau2ReadMetric } from "./tau2/index.js";
+export { computeGate, type GateResult, tau3Adapter, tau3ReadMetric } from "./tau3/index.js";
 // Re-export schemas + types for convenience (so `apps/api` doesn't need to
 // reach into subpaths to validate `req.params`).
 // NOTE: cherry-picked to avoid the `readMetricSafe` re-export from
@@ -44,13 +44,13 @@ export {
   type ScenarioConfig,
   type ScenarioId,
   scenarioIdSchema,
-  type Tau2Domain,
-  type Tau2Params,
-  type Tau2Report,
-  tau2DomainSchema,
-  tau2ParamDefaults,
-  tau2ParamsSchema,
-  tau2ReportSchema,
+  type Tau3Domain,
+  type Tau3Params,
+  type Tau3Report,
+  tau3DomainSchema,
+  tau3ParamDefaults,
+  tau3ParamsSchema,
+  tau3ReportSchema,
   VEGETA_API_TYPE_TO_BODY,
   VEGETA_API_TYPE_TO_PATH,
   VEGETA_CATEGORY_DEFAULTS,

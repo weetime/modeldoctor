@@ -44,7 +44,7 @@ function makeDeps() {
   const adapter = {
     // Cast: this fixture is intentionally a minimal stand-in, not a full
     // GuidellmReport — the mock's declared return type is the ToolReport
-    // union so any other tool's shape (e.g. tau2, in makeTau2Deps below) can
+    // union so any other tool's shape (e.g. tau3, in makeTau3Deps below) can
     // be assigned to the same field without a structural-mismatch error.
     parseFinalReport: vi.fn(() => ({ tool: "guidellm" as const, data: { latency: 42 } }) as unknown as ToolReport),
   };
@@ -422,14 +422,14 @@ describe("ReportLoader – prefix-cache snapshot hook", () => {
   });
 });
 
-// ── tau2 gate merge ───────────────────────────────────────────────────────
+// ── tau3 gate merge ───────────────────────────────────────────────────────
 
-function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {}) {
+function makeTau3Deps(over: { baselineId?: string | null; gate?: unknown } = {}) {
   const base = makeDeps();
   (base.repo.findById as ReturnType<typeof vi.fn>).mockImplementation(async (id: string) => ({
     id,
     status: "running",
-    tool: "tau2",
+    tool: "tau3",
     userId: "u1",
     name: "agent-run",
     scenario: "agent",
@@ -439,8 +439,8 @@ function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {})
     baselineId: over.baselineId ?? null,
     params: { domains: ["airline"], gate: over.gate ?? { mode: "off" } },
   }));
-  const tau2Report = {
-    kind: "agent-tau2" as const,
+  const tau3Report = {
+    kind: "agent-tau3" as const,
     userSimModel: "deepseek-v3",
     numTrials: 3,
     overall: { pass1: 0.4, passK: 0.4, tasks: 20 },
@@ -454,7 +454,7 @@ function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {})
     },
   };
   base.adapter.parseFinalReport = vi.fn(
-    () => ({ tool: "tau2" as const, data: tau2Report }) as unknown as ToolReport,
+    () => ({ tool: "tau3" as const, data: tau3Report }) as unknown as ToolReport,
   );
   const findBaselineOverallPass1 = vi.fn(async () => null as number | null);
   (base.repo as unknown as { findBaselineOverallPass1: typeof findBaselineOverallPass1 }).findBaselineOverallPass1 =
@@ -462,9 +462,9 @@ function makeTau2Deps(over: { baselineId?: string | null; gate?: unknown } = {})
   return { ...base, findBaselineOverallPass1 };
 }
 
-describe("ReportLoader – tau2 gate merge", () => {
+describe("ReportLoader – tau3 gate merge", () => {
   it("perDomainFloor below floor → summary.data.gate.result === 'FAILED'", async () => {
-    const deps = makeTau2Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.9 } } });
+    const deps = makeTau3Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.9 } } });
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -473,7 +473,7 @@ describe("ReportLoader – tau2 gate merge", () => {
   });
 
   it("perDomainFloor at/above floor → summary.data.gate.result === 'PASSED'", async () => {
-    const deps = makeTau2Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.3 } } });
+    const deps = makeTau3Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.3 } } });
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -482,7 +482,7 @@ describe("ReportLoader – tau2 gate merge", () => {
   });
 
   it("mode='off' → gate.result is null and no baseline lookup is attempted", async () => {
-    const deps = makeTau2Deps({ gate: { mode: "off" } });
+    const deps = makeTau3Deps({ gate: { mode: "off" } });
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -492,7 +492,7 @@ describe("ReportLoader – tau2 gate merge", () => {
   });
 
   it("baselineRegression mode with a baselineId loads the baseline's overall pass^1", async () => {
-    const deps = makeTau2Deps({
+    const deps = makeTau3Deps({
       baselineId: "bl-1",
       gate: { mode: "baselineRegression", baselineRegressionPp: 5 },
     });
@@ -506,7 +506,7 @@ describe("ReportLoader – tau2 gate merge", () => {
     expect(patch.summaryMetrics.data.gate.result).toBe("FAILED");
   });
 
-  it("non-tau2 tool: gate path is not invoked (summary passes through unchanged)", async () => {
+  it("non-tau3 tool: gate path is not invoked (summary passes through unchanged)", async () => {
     const deps = makeDeps(); // tool: "guidellm" by default
     const loader = newLoader(deps);
     await loader.tryLoad("r1");

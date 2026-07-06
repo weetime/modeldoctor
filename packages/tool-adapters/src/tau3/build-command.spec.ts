@@ -3,19 +3,19 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildTau2Command, tau2MaxDurationSeconds } from "./build-command.js";
-import { tau2ParamDefaults } from "./schema.js";
+import { buildTau3Command, tau3MaxDurationSeconds } from "./build-command.js";
+import { tau3ParamDefaults } from "./schema.js";
 
 const plan = {
   runId: "run123",
-  params: { ...tau2ParamDefaults, domains: ["airline", "retail"], numTasksPerDomain: 5, numTrials: 2 },
+  params: { ...tau3ParamDefaults, domains: ["airline", "retail"], numTasksPerDomain: 5, numTrials: 2 },
   connection: { baseUrl: "http://agent.svc/v1", apiKey: "sk-agent", model: "qwen3-8b",
     customHeaders: "", queryParams: "", tokenizerHfId: null, prometheusDatasource: null },
   userSimulator: { baseUrl: "http://judge.svc/v1", model: "deepseek-v3", apiKey: "sk-user" },
 } as const;
 
-describe("buildTau2Command", () => {
-  const r = buildTau2Command(plan as any);
+describe("buildTau3Command", () => {
+  const r = buildTau3Command(plan as any);
   it("shells out via /bin/sh -c", () => {
     expect(r.argv[0]).toBe("/bin/sh");
     expect(r.argv[1]).toBe("-c");
@@ -44,7 +44,7 @@ describe("buildTau2Command", () => {
     expect(r.secretEnv.MD_USER_KEY).toBe("sk-user");
   });
   it("calls the summarizer with runId + domains", () => {
-    expect(r.argv[2]).toContain("md_tau2_summarize.py");
+    expect(r.argv[2]).toContain("md_tau3_summarize.py");
     expect(r.argv[2]).toContain("--run-id run123");
     expect(r.argv[2]).toContain("--domains airline,retail");
   });
@@ -55,18 +55,18 @@ describe("buildTau2Command", () => {
   });
 });
 
-describe("buildTau2Command shell injection safety", () => {
+describe("buildTau3Command shell injection safety", () => {
   it("shell-escapes a malicious model so it cannot break out of /bin/sh -c", () => {
     // NB: the raw payload text can still appear as a substring of the quoted
     // output (e.g. "; touch ..." sits harmlessly inside '...'); a substring
     // assertion alone doesn't prove safety. Prove it for real: execute the
     // generated /bin/sh -c script and confirm the injected command never runs.
-    const marker = join(tmpdir(), `md_tau2_shq_pwn_${Date.now()}_${process.pid}`);
+    const marker = join(tmpdir(), `md_tau3_shq_pwn_${Date.now()}_${process.pid}`);
     const evil = {
       ...plan,
       connection: { ...plan.connection, model: `m'; touch ${marker}; echo '` },
     } as any;
-    const r = buildTau2Command(evil);
+    const r = buildTau3Command(evil);
     const s = r.argv[2];
     expect(s).toContain("'\\''"); // single quote was escaped
     try {
@@ -80,10 +80,10 @@ describe("buildTau2Command shell injection safety", () => {
   });
 });
 
-describe("tau2MaxDurationSeconds", () => {
+describe("tau3MaxDurationSeconds", () => {
   it("scales with domains × tasks × trials", () => {
-    const full = tau2MaxDurationSeconds({ ...tau2ParamDefaults, domains: ["airline","retail","telecom"], numTasksPerDomain: null, numTrials: 4 });
-    const smoke = tau2MaxDurationSeconds({ ...tau2ParamDefaults, domains: ["airline"], numTasksPerDomain: 5, numTrials: 1 });
+    const full = tau3MaxDurationSeconds({ ...tau3ParamDefaults, domains: ["airline","retail","telecom"], numTasksPerDomain: null, numTrials: 4 });
+    const smoke = tau3MaxDurationSeconds({ ...tau3ParamDefaults, domains: ["airline"], numTasksPerDomain: 5, numTrials: 1 });
     expect(full).toBeGreaterThan(smoke);
     expect(smoke).toBeGreaterThan(0);
   });

@@ -7,7 +7,7 @@ import {
   evalscopeParamDefaults,
   GUIDELLM_CATEGORY_DEFAULTS,
   guidellmParamDefaults,
-  tau2ParamDefaults,
+  tau3ParamDefaults,
   VEGETA_CATEGORY_DEFAULTS,
   vegetaParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
@@ -27,13 +27,13 @@ import { useConnections } from "@/features/connections/queries";
 import { SCENARIOS } from "../scenarios";
 
 /**
- * tau2 (agent scenario) has no connection-shaped param field (no apiType /
+ * tau3 (agent scenario) has no connection-shaped param field (no apiType /
  * apiPath / endpointType — the user-simulator is a separate LlmJudgeProvider,
  * not the benchmarked connection). It still needs a category-compat entry so
- * TOOL_CATEGORY_DEFAULTS stays a total Record<ToolName, ...> — tau2 requires
+ * TOOL_CATEGORY_DEFAULTS stays a total Record<ToolName, ...> — tau3 requires
  * OpenAI tool-calling, which only "chat" connections plausibly support.
  */
-const TAU2_CATEGORY_DEFAULTS = {
+const TAU3_CATEGORY_DEFAULTS = {
   chat: {},
   audio: { unsupported: true },
   embeddings: { unsupported: true },
@@ -46,7 +46,7 @@ const TOOL_CATEGORY_DEFAULTS = {
   guidellm: GUIDELLM_CATEGORY_DEFAULTS,
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
-  tau2: TAU2_CATEGORY_DEFAULTS,
+  tau3: TAU3_CATEGORY_DEFAULTS,
 } as const;
 
 import { AgentParamsForm } from "./AgentParamsForm";
@@ -61,7 +61,7 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   vegeta: vegetaParamDefaults,
   evalscope: evalscopeParamDefaults,
   aiperf: aiperfParamDefaults,
-  tau2: tau2ParamDefaults,
+  tau3: tau3ParamDefaults,
 };
 
 /**
@@ -80,7 +80,7 @@ function pickParamsForm(tool: ToolName) {
       return EvalscopeParamsForm;
     case "aiperf":
       return AiperfParamsForm;
-    case "tau2":
+    case "tau3":
       return AgentParamsForm;
     default: {
       const _exhaustive: never = tool;

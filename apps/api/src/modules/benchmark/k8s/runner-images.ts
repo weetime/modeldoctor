@@ -7,7 +7,7 @@ const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
   vegeta: "RUNNER_IMAGE_VEGETA",
   evalscope: "RUNNER_IMAGE_EVALSCOPE",
   aiperf: "RUNNER_IMAGE_AIPERF",
-  tau2: "RUNNER_IMAGE_TAU2",
+  tau3: "RUNNER_IMAGE_TAU3",
 };
 
 /**

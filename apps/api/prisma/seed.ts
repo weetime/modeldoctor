@@ -35,7 +35,7 @@ import {
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
-  tau2ParamsSchema,
+  tau3ParamsSchema,
   vegetaParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -226,7 +226,7 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau2";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau3";
 type SeedScenario = "inference" | "engine-kv-cache" | "capacity" | "gateway" | "lb-strategy" | "agent";
 interface BenchmarkTemplateSeed {
   id: string;
@@ -954,9 +954,9 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     categories: ["chat"],
   },
   // -------------------------------------------------------------------------
-  // Agent · τ²-bench 三档官方模板 (Task 10)
+  // Agent · τ³-bench 三档官方模板 (Task 10)
   //
-  // τ²-bench (tau2) 是官方 agent-scenario 基准：模拟用户 + 工具环境跑多轮对话，
+  // τ³-bench (tau3) 是官方 agent-scenario 基准：模拟用户 + 工具环境跑多轮对话，
   // 按 domain (airline/retail/telecom) 判 pass/fail。三档只在 numTasksPerDomain /
   // numTrials 上分层，其余参数（maxSteps/maxConcurrency/gate）三档一致。
   // -------------------------------------------------------------------------
@@ -965,7 +965,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "Agent 冒烟(Smoke)",
     description: "3 domain × 5 任务 × 1 trial，验证链路 / 快速回归门禁。",
     scenario: "agent",
-    tool: "tau2",
+    tool: "tau3",
     config: {
       domains: ["airline", "retail", "telecom"],
       numTasksPerDomain: 5,
@@ -974,7 +974,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       maxConcurrency: 4,
       gate: { mode: "off" },
     },
-    tags: ["agent", "tau2", "smoke"],
+    tags: ["agent", "tau3", "smoke"],
     categories: ["chat"],
   },
   {
@@ -982,7 +982,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "Agent 基本能力(Standard)",
     description: "3 domain × 20 任务 × 3 trial，测基本 Agent 能力 + pass^k 稳定性。",
     scenario: "agent",
-    tool: "tau2",
+    tool: "tau3",
     config: {
       domains: ["airline", "retail", "telecom"],
       numTasksPerDomain: 20,
@@ -991,7 +991,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       maxConcurrency: 4,
       gate: { mode: "off" },
     },
-    tags: ["agent", "tau2", "standard"],
+    tags: ["agent", "tau3", "standard"],
     categories: ["chat"],
   },
   {
@@ -999,7 +999,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     name: "Agent 全量(Full)",
     description: "3 domain 全任务集(50/114/114)× 4 trial，对标官方 leaderboard。慢且贵。",
     scenario: "agent",
-    tool: "tau2",
+    tool: "tau3",
     config: {
       domains: ["airline", "retail", "telecom"],
       numTasksPerDomain: null,
@@ -1008,7 +1008,7 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
       maxConcurrency: 4,
       gate: { mode: "off" },
     },
-    tags: ["agent", "tau2", "full"],
+    tags: ["agent", "tau3", "full"],
     categories: ["chat"],
   },
 ];
@@ -1064,8 +1064,8 @@ async function seedBenchmarkTemplates(): Promise<void> {
           ? aiperfParamsSchema
           : t.tool === "vegeta"
             ? vegetaParamsSchema
-            : t.tool === "tau2"
-              ? tau2ParamsSchema
+            : t.tool === "tau3"
+              ? tau3ParamsSchema
               : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeGate } from "./gate.js";
 
 const base = {
-  kind: "agent-tau2", userSimModel: "x", numTrials: 3,
+  kind: "agent-tau3", userSimModel: "x", numTrials: 3,
   overall: { pass1: 0.4, passK: 0.3, tasks: 60 },
   perDomain: { airline: { pass1: 0.25, passK: 0.2, tasks: 20 }, retail: { pass1: 0.5, passK: 0.4, tasks: 20 } },
   attribution: {}, highlights: { successSimId: null, successDomain: null, failureSimId: null, failureDomain: null },
