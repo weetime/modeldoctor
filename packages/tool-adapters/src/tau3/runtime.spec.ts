@@ -8,7 +8,12 @@ const summary = {
   overall: { pass1: 0.4, passK: 0.3, tasks: 30 },
   perDomain: { airline: { pass1: 0.4, passK: 0.3, tasks: 30 } },
   attribution: { wrong_action: 1.0 },
-  highlights: { successSimId: "s1", successDomain: "airline", failureSimId: "s2", failureDomain: "airline" },
+  highlights: {
+    successSimId: "s1",
+    successDomain: "airline",
+    failureSimId: "s2",
+    failureDomain: "airline",
+  },
 };
 
 describe("tau3Adapter", () => {

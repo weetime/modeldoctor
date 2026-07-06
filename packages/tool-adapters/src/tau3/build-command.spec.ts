@@ -8,9 +8,21 @@ import { tau3ParamDefaults } from "./schema.js";
 
 const plan = {
   runId: "run123",
-  params: { ...tau3ParamDefaults, domains: ["airline", "retail"], numTasksPerDomain: 5, numTrials: 2 },
-  connection: { baseUrl: "http://agent.svc/v1", apiKey: "sk-agent", model: "qwen3-8b",
-    customHeaders: "", queryParams: "", tokenizerHfId: null, prometheusDatasource: null },
+  params: {
+    ...tau3ParamDefaults,
+    domains: ["airline", "retail"],
+    numTasksPerDomain: 5,
+    numTrials: 2,
+  },
+  connection: {
+    baseUrl: "http://agent.svc/v1",
+    apiKey: "sk-agent",
+    model: "qwen3-8b",
+    customHeaders: "",
+    queryParams: "",
+    tokenizerHfId: null,
+    prometheusDatasource: null,
+  },
   userSimulator: { baseUrl: "http://judge.svc/v1", model: "deepseek-v3", apiKey: "sk-user" },
 } as const;
 
@@ -82,8 +94,18 @@ describe("buildTau3Command shell injection safety", () => {
 
 describe("tau3MaxDurationSeconds", () => {
   it("scales with domains × tasks × trials", () => {
-    const full = tau3MaxDurationSeconds({ ...tau3ParamDefaults, domains: ["airline","retail","telecom"], numTasksPerDomain: null, numTrials: 4 });
-    const smoke = tau3MaxDurationSeconds({ ...tau3ParamDefaults, domains: ["airline"], numTasksPerDomain: 5, numTrials: 1 });
+    const full = tau3MaxDurationSeconds({
+      ...tau3ParamDefaults,
+      domains: ["airline", "retail", "telecom"],
+      numTasksPerDomain: null,
+      numTrials: 4,
+    });
+    const smoke = tau3MaxDurationSeconds({
+      ...tau3ParamDefaults,
+      domains: ["airline"],
+      numTasksPerDomain: 5,
+      numTrials: 1,
+    });
     expect(full).toBeGreaterThan(smoke);
     expect(smoke).toBeGreaterThan(0);
   });

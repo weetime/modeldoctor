@@ -78,8 +78,7 @@ export const trajectoryKeys = {
 export function useTrajectory(benchmarkId: string, domain: string) {
   const query = useQuery({
     queryKey: trajectoryKeys.detail(benchmarkId, domain),
-    queryFn: () =>
-      api.get<Tau3Results>(`/api/benchmarks/${benchmarkId}/files/results_${domain}`),
+    queryFn: () => api.get<Tau3Results>(`/api/benchmarks/${benchmarkId}/files/results_${domain}`),
     enabled: benchmarkId.length > 0 && domain.length > 0,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 5 * 60 * 1000,

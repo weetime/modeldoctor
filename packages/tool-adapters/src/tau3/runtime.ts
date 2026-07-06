@@ -17,7 +17,8 @@ export const tau3Adapter: ToolAdapter = {
   readMetric: tau3ReadMetric,
   parseFinalReport(_stdout: string, files: Record<string, Buffer>): ToolReport {
     const buf = files.summary;
-    if (!buf) throw new Error("tau3 parseFinalReport: missing 'summary' output file (summary.json)");
+    if (!buf)
+      throw new Error("tau3 parseFinalReport: missing 'summary' output file (summary.json)");
     const data = tau3ReportSchema.parse(JSON.parse(buf.toString("utf8")));
     return { tool: "tau3", data };
   },

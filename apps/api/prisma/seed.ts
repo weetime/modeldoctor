@@ -227,7 +227,13 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 // ---------------------------------------------------------------------------
 
 type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau3";
-type SeedScenario = "inference" | "engine-kv-cache" | "capacity" | "gateway" | "lb-strategy" | "agent";
+type SeedScenario =
+  | "inference"
+  | "engine-kv-cache"
+  | "capacity"
+  | "gateway"
+  | "lb-strategy"
+  | "agent";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;

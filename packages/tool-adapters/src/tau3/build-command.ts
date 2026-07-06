@@ -1,5 +1,5 @@
 import type { BuildCommandPlan, BuildCommandResult, ProgressEvent } from "../core/interface.js";
-import { tau3ParamsSchema, type Tau3Domain, type Tau3Params } from "./schema.js";
+import { type Tau3Domain, type Tau3Params, tau3ParamsSchema } from "./schema.js";
 
 // Full task-set sizes (from tau2 source data/tau2/domains). Used only for
 // duration estimation when numTasksPerDomain is null (full set).
@@ -9,13 +9,17 @@ const SECONDS_PER_EPISODE = 90; // generous per multi-turn episode upper bound
 function llmArgs(apiBase: string, keyEnvName: string): string {
   // JSON dict passed to tau2 --*-llm-args (json.loads). api_key is a named-
   // secret sentinel; runner swaps in os.environ[keyEnvName] before spawn.
-  return JSON.stringify({ api_base: apiBase, api_key: `__MD_SECRET_${keyEnvName}__`, temperature: 0.0 });
+  return JSON.stringify({
+    api_base: apiBase,
+    api_key: `__MD_SECRET_${keyEnvName}__`,
+    temperature: 0.0,
+  });
 }
 
 // Safely single-quote a value for inclusion in a /bin/sh -c script:
 // wrap in single quotes and escape any embedded single quote as '\'' .
 function shq(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'";
+  return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
 export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildCommandResult {
@@ -25,7 +29,8 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
 
   const agentArgs = llmArgs(connection.baseUrl, "MD_AGENT_KEY");
   const userArgs = llmArgs(userSimulator.baseUrl, "MD_USER_KEY");
-  const numTasksFlag = params.numTasksPerDomain != null ? ` --num-tasks ${params.numTasksPerDomain}` : "";
+  const numTasksFlag =
+    params.numTasksPerDomain != null ? ` --num-tasks ${params.numTasksPerDomain}` : "";
 
   const perDomain = params.domains.map((d) => {
     // shq() neutralizes any single quote in the interpolated value, so this
@@ -37,9 +42,9 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
     return [
       "tau2 run",
       `--domain ${d}`,
-      `--agent-llm ${shq("openai/" + connection.model)}`,
+      `--agent-llm ${shq(`openai/${connection.model}`)}`,
       `--agent-llm-args ${shq(agentArgs)}`,
-      `--user-llm ${shq("openai/" + userSimulator.model)}`,
+      `--user-llm ${shq(`openai/${userSimulator.model}`)}`,
       `--user-llm-args ${shq(userArgs)}`,
       `--num-trials ${params.numTrials}`,
       numTasksFlag.trim(),
@@ -47,14 +52,17 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
       `--max-concurrency ${params.maxConcurrency}`,
       `--save-to ${runId}_${d}`,
       "--auto-resume",
-    ].filter(Boolean).join(" ");
+    ]
+      .filter(Boolean)
+      .join(" ");
   });
 
   const summarize = `python /app/tau3_summarize/md_tau3_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
   const script = [...perDomain, summarize].join(" && ");
 
   const outputFiles: Record<string, string> = { summary: "md_out/summary.json" };
-  for (const d of params.domains) outputFiles[`results_${d}`] = `data/simulations/${runId}_${d}/results.json`;
+  for (const d of params.domains)
+    outputFiles[`results_${d}`] = `data/simulations/${runId}_${d}/results.json`;
 
   return {
     argv: ["/bin/sh", "-c", script],
@@ -67,7 +75,9 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
 export function tau3MaxDurationSeconds(params: unknown): number {
   const p = tau3ParamsSchema.parse(params) as Tau3Params;
   const totalTasks = p.domains.reduce(
-    (sum, d) => sum + (p.numTasksPerDomain ?? FULL_TASK_COUNT[d]), 0);
+    (sum, d) => sum + (p.numTasksPerDomain ?? FULL_TASK_COUNT[d]),
+    0,
+  );
   return totalTasks * p.numTrials * SECONDS_PER_EPISODE;
 }
 

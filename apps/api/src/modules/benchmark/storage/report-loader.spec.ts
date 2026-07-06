@@ -46,7 +46,9 @@ function makeDeps() {
     // GuidellmReport — the mock's declared return type is the ToolReport
     // union so any other tool's shape (e.g. tau3, in makeTau3Deps below) can
     // be assigned to the same field without a structural-mismatch error.
-    parseFinalReport: vi.fn(() => ({ tool: "guidellm" as const, data: { latency: 42 } }) as unknown as ToolReport),
+    parseFinalReport: vi.fn(
+      () => ({ tool: "guidellm" as const, data: { latency: 42 } }) as unknown as ToolReport,
+    ),
   };
   const byTool = vi.fn(() => adapter);
   return { storage, repo, notify, sse, byTool, adapter };
@@ -457,14 +459,17 @@ function makeTau3Deps(over: { baselineId?: string | null; gate?: unknown } = {})
     () => ({ tool: "tau3" as const, data: tau3Report }) as unknown as ToolReport,
   );
   const findBaselineOverallPass1 = vi.fn(async () => null as number | null);
-  (base.repo as unknown as { findBaselineOverallPass1: typeof findBaselineOverallPass1 }).findBaselineOverallPass1 =
-    findBaselineOverallPass1;
+  (
+    base.repo as unknown as { findBaselineOverallPass1: typeof findBaselineOverallPass1 }
+  ).findBaselineOverallPass1 = findBaselineOverallPass1;
   return { ...base, findBaselineOverallPass1 };
 }
 
 describe("ReportLoader – tau3 gate merge", () => {
   it("perDomainFloor below floor → summary.data.gate.result === 'FAILED'", async () => {
-    const deps = makeTau3Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.9 } } });
+    const deps = makeTau3Deps({
+      gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.9 } },
+    });
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -473,7 +478,9 @@ describe("ReportLoader – tau3 gate merge", () => {
   });
 
   it("perDomainFloor at/above floor → summary.data.gate.result === 'PASSED'", async () => {
-    const deps = makeTau3Deps({ gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.3 } } });
+    const deps = makeTau3Deps({
+      gate: { mode: "perDomainFloor", perDomainFloor: { airline: 0.3 } },
+    });
     const loader = newLoader(deps);
     await loader.tryLoad("r1");
     const call = (deps.repo.updateGuarded as ReturnType<typeof vi.fn>).mock.calls[0];

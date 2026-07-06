@@ -65,13 +65,7 @@ function computeFaultyIndices(sim: Tau3Simulation): Set<number> {
   return indices;
 }
 
-function MessageBubble({
-  message,
-  isFaulty,
-}: {
-  message: Tau3Message;
-  isFaulty: boolean;
-}) {
+function MessageBubble({ message, isFaulty }: { message: Tau3Message; isFaulty: boolean }) {
   const { t } = useTranslation("benchmarks");
   return (
     <div
@@ -94,7 +88,10 @@ function MessageBubble({
       ) : null}
       {(message.tool_calls ?? []).map((tc, idx) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: append-only tool-call list within a single message
-        <div key={idx} className="mt-2 rounded border border-border bg-muted/40 p-2 font-mono text-xs">
+        <div
+          key={idx}
+          className="mt-2 rounded border border-border bg-muted/40 p-2 font-mono text-xs"
+        >
           <span className="font-semibold">{tc.name}</span>
           <span className="text-muted-foreground">({stringifyArgs(tc.arguments)})</span>
         </div>
@@ -113,7 +110,12 @@ function MessageBubble({
  * Standalone for Task 12 — Task 13 mounts this into `AgentReport`'s
  * `agent-report-replay-slot` placeholder.
  */
-export function ConversationReplay({ benchmarkId, simId, domain, variant }: ConversationReplayProps) {
+export function ConversationReplay({
+  benchmarkId,
+  simId,
+  domain,
+  variant,
+}: ConversationReplayProps) {
   const { t } = useTranslation("benchmarks");
   const { data, simsById, isLoading, isError } = useTrajectory(benchmarkId, domain);
   const [selectedSimId, setSelectedSimId] = useState(simId);

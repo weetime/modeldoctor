@@ -1,7 +1,7 @@
 import { type ReportMeta, type ReportResult, reportStorageKeys } from "@modeldoctor/contracts";
 import {
-  byTool as defaultByTool,
   computeGate,
+  byTool as defaultByTool,
   type ToolName,
   type ToolReport,
 } from "@modeldoctor/tool-adapters";

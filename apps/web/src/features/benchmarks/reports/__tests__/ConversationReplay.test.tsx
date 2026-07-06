@@ -72,10 +72,9 @@ describe("ConversationReplay", () => {
 
   it("renders chat bubbles for the highlighted failure sim and marks the faulty turn", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(sampleResults);
-    render(
-      <ConversationReplay benchmarkId="b1" simId="s2" domain="airline" variant="failure" />,
-      { wrapper: Wrapper },
-    );
+    render(<ConversationReplay benchmarkId="b1" simId="s2" domain="airline" variant="failure" />, {
+      wrapper: Wrapper,
+    });
 
     expect(await screen.findByText(/改签/)).toBeInTheDocument();
     expect(screen.getByText(/book_reservation/)).toBeInTheDocument();
