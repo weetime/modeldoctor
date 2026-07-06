@@ -24,6 +24,7 @@
  */
 
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import {
   evaluationSampleSchema,
   type ModalityCategory,
@@ -1832,7 +1833,7 @@ async function main(): Promise<void> {
 // only run `main()` when this file is the actual entrypoint.
 const isDirectRun = (() => {
   const entry = process.argv[1];
-  return typeof entry === "string" && import.meta.url === `file://${entry}`;
+  return typeof entry === "string" && pathToFileURL(entry).href === import.meta.url;
 })();
 
 if (isDirectRun) {
