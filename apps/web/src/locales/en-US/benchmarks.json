@@ -567,6 +567,28 @@
       },
       "noData": "No prefix cache metrics available — ensure a Prometheus datasource is bound and vLLM has prefix caching enabled"
     },
+    "agent": {
+      "overallPass1": "Overall pass^1",
+      "overallPassK": "Overall pass^k",
+      "totalTasks": "Total tasks",
+      "gate": {
+        "title": "Gate result",
+        "off": "Gate not enabled"
+      },
+      "userSimLabel": "User simulator: {{model}}",
+      "userSimCaveat": "Results depend on the user-simulator model (not the official judge) and are not directly comparable to the official leaderboard.",
+      "pass1": "pass^1",
+      "passK": "pass^k",
+      "domain": "Domain",
+      "tasks": "Tasks",
+      "completionRate": "Completion rate",
+      "completionBars": {
+        "title": "Per-domain completion rate ({{count}} trials)",
+        "ariaLabel": "Per-domain pass^1 / pass^k completion rate"
+      },
+      "replayPlaceholder": "Conversation replay coming soon",
+      "attributionPlaceholder": "Failure attribution coming soon"
+    },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",

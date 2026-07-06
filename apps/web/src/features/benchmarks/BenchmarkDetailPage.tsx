@@ -40,6 +40,7 @@ import {
   useDeleteBenchmark,
 } from "./queries";
 import { RequestSetupSection } from "./RequestSetupSection";
+import { AgentReport } from "./reports/AgentReport";
 import { BenchmarkChartsSection } from "./reports/BenchmarkChartsSection";
 import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
@@ -184,6 +185,8 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       ) : (
         <KvCacheStressReport benchmark={benchmark} />
       );
+    case "agent":
+      return <AgentReport benchmark={benchmark} />;
     default:
       return <UnknownReport benchmark={benchmark} />;
   }
@@ -285,6 +288,7 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   gateway: "benchmarkGateway",
   "lb-strategy": "benchmarkPrefixCache",
   "engine-kv-cache": "benchmarkKvCacheStress",
+  agent: "benchmarkAgent",
 };
 
 export function BenchmarkDetailPage() {

@@ -567,6 +567,28 @@
       },
       "noData": "未获取到 Prefix Cache 指标；请确认已绑定 Prometheus 数据源且 vLLM 已开启 prefix caching"
     },
+    "agent": {
+      "overallPass1": "整体 pass^1",
+      "overallPassK": "整体 pass^k",
+      "totalTasks": "任务总数",
+      "gate": {
+        "title": "门禁结果",
+        "off": "未启用门禁"
+      },
+      "userSimLabel": "模拟用户: {{model}}",
+      "userSimCaveat": "结果依赖于用户模拟器模型（非官方裁判），不能与官方排行榜直接比较。",
+      "pass1": "pass^1",
+      "passK": "pass^k",
+      "domain": "领域",
+      "tasks": "任务数",
+      "completionRate": "完成率",
+      "completionBars": {
+        "title": "各领域完成率（{{count}} 次试验）",
+        "ariaLabel": "各领域 pass^1 / pass^k 完成率"
+      },
+      "replayPlaceholder": "会话回放即将上线",
+      "attributionPlaceholder": "失败归因即将上线"
+    },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
     "rangeLabel": "时间范围",
