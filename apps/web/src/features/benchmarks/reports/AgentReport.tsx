@@ -3,6 +3,8 @@ import { type Tau2Report, tau2ReportSchema } from "@modeldoctor/tool-adapters/sc
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompletionBars } from "./agent/CompletionBars";
+import { ConversationReplay } from "./agent/ConversationReplay";
+import { FailureAttribution } from "./agent/FailureAttribution";
 import { UnknownReport } from "./UnknownReport";
 
 export interface AgentReportProps {
@@ -14,8 +16,7 @@ type GateResultValue = "PASSED" | "WARNING" | "FAILED";
 // Mirrors the color semantics of GateStatusBadge (quality-gate):
 // emerald=passed, amber=warning, destructive=failed.
 const GATE_BADGE_CLASS: Record<GateResultValue, string> = {
-  PASSED:
-    "border-emerald-600/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  PASSED: "border-emerald-600/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   WARNING: "border-amber-600/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   FAILED: "border-destructive/30 bg-destructive/10 text-destructive",
 };
@@ -39,10 +40,12 @@ function StatTile({ label, value }: { label: string; value: string }) {
 
 /**
  * Agent-scenario (tau2-bench) report container. Renders overall/gate/user-sim
- * header tiles + per-domain completion-rate bars (CompletionBars).
- *
- * Conversation replay (Task 12) and failure attribution (Task 13) mount into
- * the marked placeholder slots below — not built here.
+ * header tiles, per-domain completion-rate bars (CompletionBars), the
+ * success/failure conversation highlights (ConversationReplay), and the
+ * failure-attribution breakdown (FailureAttribution). Each highlight only
+ * mounts when its `highlights.*SimId`/`*Domain` pair is non-null — a run
+ * with too few failures (or a successful run with no failures at all) can
+ * leave either or both null.
  */
 export function AgentReport({ benchmark }: AgentReportProps) {
   const { t } = useTranslation("benchmarks");
@@ -53,6 +56,7 @@ export function AgentReport({ benchmark }: AgentReportProps) {
   }
   const data: Tau2Report = parsed.data;
   const gateResult = data.gate?.result ?? null;
+  const { successSimId, successDomain, failureSimId, failureDomain } = data.highlights;
 
   return (
     <div className="space-y-6">
@@ -84,27 +88,47 @@ export function AgentReport({ benchmark }: AgentReportProps) {
         <div className="font-medium">
           {t("reports.agent.userSimLabel", { model: data.userSimModel })}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("reports.agent.userSimCaveat")}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("reports.agent.userSimCaveat")}</p>
       </div>
 
       <CompletionBars perDomain={data.perDomain} numTrials={data.numTrials} />
 
-      {/* Task 12: conversation replay mounts here. */}
-      <div
-        data-testid="agent-report-replay-slot"
-        className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
-      >
-        {t("reports.agent.replayPlaceholder")}
+      <div data-testid="agent-report-replay-slot" className="space-y-6">
+        {successSimId && successDomain ? (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              {t("reports.agent.replay.successHeading")}
+            </h3>
+            <ConversationReplay
+              benchmarkId={benchmark.id}
+              simId={successSimId}
+              domain={successDomain}
+              variant="success"
+            />
+          </div>
+        ) : null}
+        {failureSimId && failureDomain ? (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              {t("reports.agent.replay.failureHeading")}
+            </h3>
+            <ConversationReplay
+              benchmarkId={benchmark.id}
+              simId={failureSimId}
+              domain={failureDomain}
+              variant="failure"
+            />
+          </div>
+        ) : null}
+        {!successSimId && !failureSimId ? (
+          <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            {t("reports.agent.replayPlaceholder")}
+          </p>
+        ) : null}
       </div>
 
-      {/* Task 13: failure attribution mounts here. */}
-      <div
-        data-testid="agent-report-attribution-slot"
-        className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
-      >
-        {t("reports.agent.attributionPlaceholder")}
+      <div data-testid="agent-report-attribution-slot">
+        <FailureAttribution attribution={data.attribution} />
       </div>
     </div>
   );

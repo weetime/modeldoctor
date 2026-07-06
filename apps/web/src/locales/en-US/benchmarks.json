@@ -594,11 +594,29 @@
         "error": "Failed to load conversation",
         "notFound": "Simulation not found",
         "faultyTurn": "Faulty turn",
+        "successHeading": "Highlight conversation",
+        "failureHeading": "Failure conversation",
         "roles": {
           "user": "User",
           "assistant": "Agent",
           "tool": "Tool",
           "system": "System"
+        }
+      },
+      "attribution": {
+        "title": "Failure attribution",
+        "ariaLabel": "Failure attribution breakdown",
+        "bucketColumn": "Bucket",
+        "shareColumn": "Share",
+        "empty": "No failed samples",
+        "conclusion": "Failures come mainly from {{label}}, accounting for {{pct}}",
+        "buckets": {
+          "agent_crash": "Crash / repeated errors",
+          "no_completion": "Multi-turn incomplete",
+          "wrong_action": "Wrong tool/args",
+          "wrong_final_state": "Wrong final state",
+          "missing_info": "Missing info disclosed",
+          "other": "Other"
         }
       }
     },
