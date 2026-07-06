@@ -14,6 +14,7 @@ from tau2_summarize.summarize_lib import (
     aggregate_overall,
     attribution_and_highlights,
     bucket_failure,
+    load_domains,
 )
 
 
@@ -121,3 +122,48 @@ def test_attribution_no_failures():
     assert attr == {}
     assert hi["failureSimId"] is None
     assert hi["failureDomain"] is None
+
+
+def test_load_domains_skips_missing_and_continues(capsys):
+    """One domain crashing before writing results.json (FileNotFoundError
+    from the loader) must not prevent the other domains from loading."""
+
+    def loader(d):
+        if d == "airline":
+            raise FileNotFoundError(f"no results.json for domain {d!r}")
+        return f"results-for-{d}"
+
+    per_domain, skipped = load_domains(["airline", "retail"], loader)
+    assert per_domain == {"retail": "results-for-retail"}
+    assert skipped == ["airline"]
+    assert "airline" in capsys.readouterr().err
+
+
+def test_load_domains_skips_any_load_failure_not_just_missing_file():
+    """A domain whose results.json exists but fails to parse (e.g. Results.load
+    raises ValueError on a corrupt file) is skipped the same way as a
+    missing file — any loader failure is non-fatal for the overall run."""
+
+    def loader(d):
+        if d == "retail":
+            raise ValueError("corrupt results.json")
+        return f"results-for-{d}"
+
+    per_domain, skipped = load_domains(["airline", "retail"], loader)
+    assert per_domain == {"airline": "results-for-airline"}
+    assert skipped == ["retail"]
+
+
+def test_load_domains_all_missing_returns_empty():
+    def loader(d):
+        raise FileNotFoundError(f"no results.json for domain {d!r}")
+
+    per_domain, skipped = load_domains(["airline", "retail"], loader)
+    assert per_domain == {}
+    assert skipped == ["airline", "retail"]
+
+
+def test_load_domains_none_missing_returns_no_skips():
+    per_domain, skipped = load_domains(["airline", "retail"], lambda d: f"r-{d}")
+    assert per_domain == {"airline": "r-airline", "retail": "r-retail"}
+    assert skipped == []

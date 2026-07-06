@@ -10,6 +10,8 @@ module import time here). The tau2 dependency lives only in the Docker image
 that runs this CLI (a 3.12 base, see Task 8).
 """
 
+import sys
+
 # termination_reason compared by string value → works for both tau2's str-Enum
 # and plain-string test fakes (no tau2 import needed here).
 _CRASH = {"agent_error", "too_many_errors", "context_window_exceeded", "unexpected_error"}
@@ -104,8 +106,43 @@ def domain_metrics(results) -> dict:
     }
 
 
-def build_summary(per_domain_results: dict, num_trials: int, user_sim_model: str) -> dict:
-    """per_domain_results: {domain: tau2 Results}. Orchestrates the tau2 + pure parts."""
+def load_domains(domains: list, loader) -> tuple:
+    """Load per-domain results via `loader(domain) -> Results`, skipping (with
+    a stderr warning) any domain whose loader raises — e.g. a domain that
+    crashed before writing results.json (FileNotFoundError), or one whose
+    results.json is truncated/corrupt (any other load failure). One bad
+    domain must not take down the whole multi-domain summarize run.
+
+    tau2-free by design: `loader` is injected so this can be unit-tested
+    without importing tau2 (see md_tau2_summarize.py for the real,
+    tau2-backed loader).
+
+    Returns (per_domain_results, skipped_domains).
+    """
+    per_domain: dict = {}
+    skipped: list = []
+    for d in domains:
+        try:
+            per_domain[d] = loader(d)
+        except Exception as e:  # noqa: BLE001 - any single-domain load failure is non-fatal
+            print(f"WARNING: skipping domain {d!r} — failed to load results: {e}", file=sys.stderr)
+            skipped.append(d)
+    return per_domain, skipped
+
+
+def build_summary(
+    per_domain_results: dict,
+    num_trials: int,
+    user_sim_model: str,
+    skipped_domains: list | None = None,
+) -> dict:
+    """per_domain_results: {domain: tau2 Results}. Orchestrates the tau2 + pure parts.
+
+    `skipped_domains`: domains that crashed / had no results.json and were
+    excluded from `per_domain_results` upstream (see `load_domains`) — passed
+    through so the summary makes the gap visible instead of silently
+    reporting a partial run as if it were complete.
+    """
     dmetrics = {d: domain_metrics(r) for d, r in per_domain_results.items()}
     per_domain_sims = {d: list(r.simulations) for d, r in per_domain_results.items()}
     attribution, highlights = attribution_and_highlights(per_domain_sims)
@@ -117,4 +154,5 @@ def build_summary(per_domain_results: dict, num_trials: int, user_sim_model: str
         "perDomain": dmetrics,
         "attribution": attribution,
         "highlights": highlights,
+        "skippedDomains": skipped_domains or [],
     }
