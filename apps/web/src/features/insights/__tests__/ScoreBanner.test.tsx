@@ -19,6 +19,7 @@ describe("ScoreBanner", () => {
           gateway: 82,
           "lb-strategy": null,
           "engine-kv-cache": null,
+          agent: null,
         }}
         totalChecks={18}
         totalRuns={25}
@@ -41,6 +42,7 @@ describe("ScoreBanner", () => {
           gateway: null,
           "lb-strategy": null,
           "engine-kv-cache": null,
+          agent: null,
         }}
         totalChecks={0}
         totalRuns={0}
@@ -60,6 +62,7 @@ describe("ScoreBanner", () => {
           gateway: null,
           "lb-strategy": null,
           "engine-kv-cache": null,
+          agent: null,
         }}
         totalChecks={7}
         totalRuns={5}

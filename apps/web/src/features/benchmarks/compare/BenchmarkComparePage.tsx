@@ -23,6 +23,11 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   gateway: "benchmarkGateway",
   "lb-strategy": "benchmarkPrefixCache",
   "engine-kv-cache": "benchmarkKvCacheStress",
+  // Agent-scenario compare isn't a defined product surface yet (tau3 report
+  // semantics don't have a compare-grid story); this key only feeds the
+  // breadcrumb label lookup so tsc stays green if a compare URL ever carries
+  // ids for agent-scenario benchmarks.
+  agent: "benchmarkAgent",
 };
 
 function parseIds(searchParams: URLSearchParams): string[] {

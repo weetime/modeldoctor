@@ -6,11 +6,13 @@ import {
   assertScenariosInvariant,
   SCENARIOS,
   type ScenarioId,
+  scenarioIdSchema,
 } from "./scenarios.js";
 
 describe("SCENARIOS constant", () => {
   it("declares all known scenarios", () => {
     expect(Object.keys(SCENARIOS).sort()).toEqual([
+      "agent",
       "capacity",
       "engine-kv-cache",
       "gateway",
@@ -37,6 +39,15 @@ describe("SCENARIOS constant", () => {
 
   it("gateway scenario lists vegeta only", () => {
     expect(SCENARIOS.gateway.tools).toEqual(["vegeta"]);
+  });
+
+  it("registers the agent scenario bound to tau3 with AgentReport", () => {
+    expect(SCENARIOS.agent).toBeDefined();
+    expect(SCENARIOS.agent.tools).toEqual(["tau3"]);
+    expect(SCENARIOS.agent.reportComponent).toBe("AgentReport");
+  });
+  it("scenarioIdSchema accepts agent", () => {
+    expect(scenarioIdSchema.parse("agent")).toBe("agent");
   });
 });
 

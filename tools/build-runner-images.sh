@@ -8,7 +8,7 @@
 # images are not yet in the registry or need a version bump.
 #
 # Usage:
-#   ./tools/build-runner-images.sh                      # build + import all five
+#   ./tools/build-runner-images.sh                      # build + import all six
 #   ./tools/build-runner-images.sh vegeta evalscope     # specific tools only
 #   ./tools/build-runner-images.sh --no-import          # build only, skip k3d import
 #   K3D_CLUSTER=other ./tools/build-runner-images.sh
@@ -38,12 +38,12 @@ TOOLS=()
 for arg in "$@"; do
   case "$arg" in
     --no-import) IMPORT=false ;;
-    guidellm|vegeta|evalscope|aiperf) TOOLS+=("$arg") ;;
+    guidellm|vegeta|evalscope|aiperf|tau3) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 if [[ ${#TOOLS[@]} -eq 0 ]]; then
-  TOOLS=(guidellm vegeta evalscope aiperf)
+  TOOLS=(guidellm vegeta evalscope aiperf tau3)
 fi
 
 echo "==> Runner images at tag :$TAG (tools: ${TOOLS[*]})"

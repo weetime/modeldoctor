@@ -12,7 +12,9 @@
       "inference": "New Inference Benchmark",
       "capacity": "New Capacity Plan",
       "gateway": "New Gateway Test",
-      "lb-strategy": "New LB-strategy Validation"
+      "lb-strategy": "New LB-strategy Validation",
+      "engine-kv-cache": "New Engine KV / Prefix Cache Test",
+      "agent": "New Agent Scenario Eval"
     },
     "subtitle": "Configure parameters, then submit",
     "sections": {
@@ -26,19 +28,23 @@
       "name": "Name",
       "description": "Description (optional)",
       "tool": "Tool",
-      "connectionCategoryHint": "Category:"
+      "connectionCategoryHint": "Category:",
+      "agentToolCallHint": "The target endpoint must support OpenAI-style tool calling (function calling) — otherwise this evaluation is meaningless.",
+      "agentContextWindowHint": "Requires a sufficiently large context window (~64k observed; 8k triggers context_window_exceeded) — the server's --max-model-len must be large enough."
     },
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
       "evalscope": "evalscope",
-      "aiperf": "aiperf"
+      "aiperf": "aiperf",
+      "tau3": "tau3"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
       "evalscope": "Modelscope perf tool; chat / completions with prefix-cache hit-rate stats",
-      "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark"
+      "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark",
+      "tau3": "τ³-bench: multi-turn tool-calling agent eval (airline/retail/telecom customer-service scenarios)"
     },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
@@ -131,7 +137,9 @@
     "inference": "TTFT / TPOT / single-run throughput baseline",
     "capacity": "SLO-driven load step sweep",
     "gateway": "Higress / API path HTTP performance",
-    "lb-strategy": "Validate LB routing strategies (currently ai-load-balancer prefix_cache) pin same-prefix requests to one replica"
+    "lb-strategy": "Validate LB routing strategies (currently ai-load-balancer prefix_cache) pin same-prefix requests to one replica",
+    "engine-kv-cache": "Single-instance / engine-level cache effectiveness (vanilla / LMCache / YRCache, mooncake trace block-level prefix reuse)",
+    "agent": "τ³-bench multi-turn tool calling: airline/retail/telecom customer-service scenarios, testing policy adherence + correct domain-tool calls"
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
@@ -516,6 +524,23 @@
       "conversationType": "Conversation type",
       "mooncakeTrace": "Mooncake trace type",
       "traceReplayWindowSec": "Replay window (s)"
+    },
+    "agent": {
+      "domains": "Domains",
+      "tier": "Tier",
+      "tierPlaceholder": "Select a tier…",
+      "tiers": {
+        "smoke": "Smoke · 5 tasks × 1 trial",
+        "standard": "Standard · 20 tasks × 3 trials",
+        "full": "Full · full task set × 4 trials"
+      },
+      "numTasksPerDomain": "Tasks per domain",
+      "numTrials": "Trials (numTrials)",
+      "fullPlaceholder": "Full (all tasks per domain)",
+      "fullTierCostHint": "Full tier runs roughly 1000+ episodes — expect hour-scale runtime and heavy token consumption.",
+      "userSimProviderId": "User-simulator provider (optional)",
+      "userSimProviderDefault": "Use default LLM provider",
+      "userSimProviderHint": "LLM that simulates the user's turns; leave blank to use the default provider (Settings → LLM Provider)"
     }
   },
   "reports": {
@@ -566,6 +591,60 @@
         "hitRate": "Hit rate"
       },
       "noData": "No prefix cache metrics available — ensure a Prometheus datasource is bound and vLLM has prefix caching enabled"
+    },
+    "agent": {
+      "overallPass1": "Overall pass^1",
+      "overallPassK": "Overall pass^k",
+      "totalTasks": "Total tasks",
+      "gate": {
+        "title": "Gate result",
+        "off": "Gate not enabled"
+      },
+      "userSimLabel": "User simulator: {{model}}",
+      "userSimCaveat": "Results depend on the user-simulator model (not the official judge) and are not directly comparable to the official leaderboard.",
+      "benchProvenance": "Benchmark: τ³-bench v1.0.0 (2026) · dataset includes 75+ task fixes over τ²-bench",
+      "pass1": "pass^1",
+      "passK": "pass^k",
+      "domain": "Domain",
+      "tasks": "Tasks",
+      "completionRate": "Completion rate",
+      "completionBars": {
+        "title": "Per-domain completion rate ({{count}} trials)",
+        "ariaLabel": "Per-domain pass^1 / pass^k completion rate"
+      },
+      "replayPlaceholder": "Conversation replay coming soon",
+      "attributionPlaceholder": "Failure attribution coming soon",
+      "replay": {
+        "taskPicker": "Task",
+        "loading": "Loading conversation…",
+        "error": "Failed to load conversation",
+        "notFound": "Simulation not found",
+        "faultyTurn": "Faulty turn",
+        "successHeading": "Highlight conversation",
+        "failureHeading": "Failure conversation",
+        "roles": {
+          "user": "User",
+          "assistant": "Agent",
+          "tool": "Tool",
+          "system": "System"
+        }
+      },
+      "attribution": {
+        "title": "Failure attribution",
+        "ariaLabel": "Failure attribution breakdown",
+        "bucketColumn": "Bucket",
+        "shareColumn": "Share",
+        "empty": "No failed samples",
+        "conclusion": "Failures come mainly from {{label}}, accounting for {{pct}}",
+        "buckets": {
+          "agent_crash": "Crash / repeated errors",
+          "no_completion": "Multi-turn incomplete",
+          "wrong_action": "Wrong tool/args",
+          "wrong_final_state": "Wrong final state",
+          "missing_info": "Missing info disclosed",
+          "other": "Other"
+        }
+      }
     },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",

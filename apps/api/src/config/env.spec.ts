@@ -16,6 +16,7 @@ const validEnv = () => ({
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
   RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
   RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
+  RUNNER_IMAGE_TAU3: "md-runner-tau3:test",
   // S3-compatible object storage (required since Phase 2).
   S3_ENDPOINT: "http://localhost:9999",
   S3_ACCESS_KEY: "test-access-key",
@@ -67,6 +68,7 @@ describe("validateEnv", () => {
       "RUNNER_IMAGE_VEGETA",
       "RUNNER_IMAGE_EVALSCOPE",
       "RUNNER_IMAGE_AIPERF",
+      "RUNNER_IMAGE_TAU3",
       // S3 (required since Phase 2 — S3_REGION has a default so excluded)
       "S3_ENDPOINT",
       "S3_ACCESS_KEY",

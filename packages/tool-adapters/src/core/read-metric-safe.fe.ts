@@ -6,6 +6,7 @@
 import { aiperfReadMetric } from "../aiperf/read-metric.js";
 import { evalscopeReadMetric } from "../evalscope/read-metric.js";
 import { guidellmReadMetric } from "../guidellm/read-metric.js";
+import { tau3ReadMetric } from "../tau3/read-metric.js";
 import { vegetaReadMetric } from "../vegeta/read-metric.js";
 import type { MetricKind } from "./metric-extractor.js";
 import { type ReadMetricTable, readMetricSafeFromTable } from "./read-metric-safe.js";
@@ -15,6 +16,7 @@ const FE_TABLE: ReadMetricTable = {
   vegeta: vegetaReadMetric,
   evalscope: evalscopeReadMetric,
   aiperf: aiperfReadMetric,
+  tau3: tau3ReadMetric,
 };
 
 export function readMetricSafe(

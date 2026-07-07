@@ -12,7 +12,9 @@
       "inference": "新建推理性能基准",
       "capacity": "新建容量规划",
       "gateway": "新建网关压测",
-      "lb-strategy": "新建 负载均衡策略验证"
+      "lb-strategy": "新建 负载均衡策略验证",
+      "engine-kv-cache": "新建引擎 KV / 前缀缓存测试",
+      "agent": "新建 Agent 能力评测"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -26,19 +28,23 @@
       "name": "名称",
       "description": "备注（可选）",
       "tool": "工具",
-      "connectionCategoryHint": "类别:"
+      "connectionCategoryHint": "类别:",
+      "agentToolCallHint": "被测 endpoint 必须支持 OpenAI 工具调用(function calling),否则评测无意义",
+      "agentContextWindowHint": "需足够大的上下文窗口(实测 ~64k;8k 会 context_window_exceeded),服务端 --max-model-len 要够大"
     },
     "tools": {
       "guidellm": "guidellm",
       "vegeta": "vegeta",
       "evalscope": "evalscope",
-      "aiperf": "aiperf"
+      "aiperf": "aiperf",
+      "tau3": "tau3"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
       "evalscope": "Modelscope 出品的推理性能工具，支持 chat / completions 与 prefix-cache 命中率统计",
-      "aiperf": "NVIDIA AIPerf：主流 LLM 推理性能基准"
+      "aiperf": "NVIDIA AIPerf：主流 LLM 推理性能基准",
+      "tau3": "τ³-bench：多轮工具调用 agent 评测(航空/零售/电信客服场景)"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
@@ -131,7 +137,9 @@
     "inference": "TTFT / TPOT / 单次吞吐基线",
     "capacity": "SLO 驱动的负载阶梯扫描",
     "gateway": "Higress / API 链路 HTTP 性能",
-    "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本"
+    "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本",
+    "engine-kv-cache": "单实例 / 引擎级缓存有效性对比(vanilla / LMCache / YRCache,mooncake trace 块级前缀复用)",
+    "agent": "τ³-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力"
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
@@ -516,6 +524,23 @@
       "conversationType": "会话类型",
       "mooncakeTrace": "Mooncake Trace 类型",
       "traceReplayWindowSec": "回放窗口(秒)"
+    },
+    "agent": {
+      "domains": "领域(domains)",
+      "tier": "档位",
+      "tierPlaceholder": "选择档位…",
+      "tiers": {
+        "smoke": "冒烟(Smoke) · 5 任务 × 1 trial",
+        "standard": "基本能力(Standard) · 20 任务 × 3 trial",
+        "full": "全量(Full) · 全任务集 × 4 trial"
+      },
+      "numTasksPerDomain": "每领域任务数",
+      "numTrials": "试验次数(numTrials)",
+      "fullPlaceholder": "全量(每领域全部任务)",
+      "fullTierCostHint": "全量约上千 episodes,预计小时级,消耗大量 token",
+      "userSimProviderId": "用户模拟器 Provider(可选)",
+      "userSimProviderDefault": "使用默认 LLM Provider",
+      "userSimProviderHint": "模拟用户对话的 LLM;留空使用默认 Provider(设置 → LLM Provider)"
     }
   },
   "reports": {
@@ -566,6 +591,60 @@
         "hitRate": "命中率"
       },
       "noData": "未获取到 Prefix Cache 指标；请确认已绑定 Prometheus 数据源且 vLLM 已开启 prefix caching"
+    },
+    "agent": {
+      "overallPass1": "整体 pass^1",
+      "overallPassK": "整体 pass^k",
+      "totalTasks": "任务总数",
+      "gate": {
+        "title": "门禁结果",
+        "off": "未启用门禁"
+      },
+      "userSimLabel": "模拟用户: {{model}}",
+      "userSimCaveat": "结果依赖于用户模拟器模型（非官方裁判），不能与官方排行榜直接比较。",
+      "benchProvenance": "评测基准:τ³-bench v1.0.0 (2026)·数据集较 τ²-bench 有 75+ 处任务修复",
+      "pass1": "pass^1",
+      "passK": "pass^k",
+      "domain": "领域",
+      "tasks": "任务数",
+      "completionRate": "完成率",
+      "completionBars": {
+        "title": "各领域完成率（{{count}} 次试验）",
+        "ariaLabel": "各领域 pass^1 / pass^k 完成率"
+      },
+      "replayPlaceholder": "会话回放即将上线",
+      "attributionPlaceholder": "失败归因即将上线",
+      "replay": {
+        "taskPicker": "任务",
+        "loading": "会话加载中…",
+        "error": "会话加载失败",
+        "notFound": "未找到该模拟会话",
+        "faultyTurn": "问题回合",
+        "successHeading": "高光对话",
+        "failureHeading": "翻车对话",
+        "roles": {
+          "user": "用户",
+          "assistant": "智能体",
+          "tool": "工具",
+          "system": "系统"
+        }
+      },
+      "attribution": {
+        "title": "失败归因",
+        "ariaLabel": "失败归因分布",
+        "bucketColumn": "归因",
+        "shareColumn": "占比",
+        "empty": "无失败样本",
+        "conclusion": "失败最主要来自 {{label}}，占 {{pct}}",
+        "buckets": {
+          "agent_crash": "崩溃/连续报错",
+          "no_completion": "多轮未完成",
+          "wrong_action": "用错工具/参数",
+          "wrong_final_state": "最终状态错",
+          "missing_info": "漏告知信息",
+          "other": "其他"
+        }
+      }
     },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",

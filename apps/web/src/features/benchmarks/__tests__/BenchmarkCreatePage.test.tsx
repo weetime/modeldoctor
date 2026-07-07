@@ -11,6 +11,10 @@ vi.mock("@/features/benchmark-templates/queries", () => ({
   useCreateTemplate: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
 }));
 
+vi.mock("@/features/llm-judge-providers/queries", () => ({
+  useLlmJudgeProviders: () => ({ data: [], isLoading: false }),
+}));
+
 const mockUseConnection = vi.fn();
 vi.mock("@/features/connections/queries", () => ({
   useConnections: () => ({
@@ -445,5 +449,69 @@ describe("BenchmarkCreatePage", () => {
     });
     // Banner gone (templateId reset).
     expect(screen.queryByText(/prefilled from template|已从模板/i)).not.toBeInTheDocument();
+  });
+
+  describe("agent scenario", () => {
+    it("renders AgentParamsForm fields + tool-call/context-window hints when ?scenario=agent", () => {
+      renderAt("/benchmarks/new?scenario=agent");
+      // Domains multiselect (airline/retail/telecom).
+      expect(screen.getByRole("checkbox", { name: "airline" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "retail" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "telecom" })).toBeInTheDocument();
+      // Tier picker.
+      expect(screen.getByRole("combobox", { name: /Tier|档位/i })).toBeInTheDocument();
+      // Static pre-flight hints near the connection picker.
+      expect(screen.getByText(/function calling/i)).toBeInTheDocument();
+      expect(screen.getByText(/max-model-len/i)).toBeInTheDocument();
+    });
+
+    it("shows the Full-tier cost hint only after selecting Full", async () => {
+      const { default: userEvent } = await import("@testing-library/user-event");
+      const user = userEvent.setup();
+      renderAt("/benchmarks/new?scenario=agent");
+      // Default (Standard-shaped) params: no cost hint yet.
+      expect(screen.queryByText(/episodes/i)).not.toBeInTheDocument();
+      await user.click(screen.getByRole("combobox", { name: /Tier|档位/i }));
+      await user.click(screen.getByRole("option", { name: /Full|全量/i }));
+      expect(await screen.findByText(/episodes/i)).toBeInTheDocument();
+    });
+
+    it("submits scenario=agent/tool=tau3 with Standard tier params (numTrials=3, 3 deduped domains)", async () => {
+      mockMutate.mockResolvedValue({ id: "b-new", scenario: "agent", name: "agent-run" });
+      const { default: userEvent } = await import("@testing-library/user-event");
+      const user = userEvent.setup();
+      renderAt("/benchmarks/new?scenario=agent");
+
+      // ConnectionPicker is the first combobox in DOM order (Target card sits
+      // above the params card, which also renders comboboxes of its own).
+      const [connectionCombo] = screen.getAllByRole("combobox");
+      await user.click(connectionCombo);
+      await user.click(await screen.findByText("test-conn"));
+
+      await user.type(screen.getByLabelText(/Name|名称/i), "agent-run");
+
+      // Explicitly (re-)pick Standard — fills numTasksPerDomain=20/numTrials=3.
+      await user.click(screen.getByRole("combobox", { name: /Tier|档位/i }));
+      await user.click(screen.getByRole("option", { name: /Standard|基本能力/i }));
+
+      // Uncheck + recheck a domain: the resulting array must stay exactly the
+      // 3 canonical domains with no duplicate entries (Set-based toggle).
+      const retailCheckbox = screen.getByRole("checkbox", { name: "retail" });
+      await user.click(retailCheckbox);
+      await user.click(retailCheckbox);
+
+      const submit = screen.getByRole("button", { name: /Submit|提交/i });
+      await waitFor(() => expect(submit).not.toBeDisabled());
+      await user.click(submit);
+      await waitFor(() => expect(mockMutate).toHaveBeenCalled());
+
+      const payload = mockMutate.mock.calls[0][0] as Record<string, unknown>;
+      expect(payload.scenario).toBe("agent");
+      expect(payload.tool).toBe("tau3");
+      const params = payload.params as { numTrials: number; domains: string[] };
+      expect(params.numTrials).toBe(3);
+      expect(params.domains).toHaveLength(3);
+      expect(new Set(params.domains).size).toBe(3);
+    });
   });
 });

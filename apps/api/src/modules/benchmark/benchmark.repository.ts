@@ -1,3 +1,4 @@
+import type { BenchmarkTool } from "@modeldoctor/contracts";
 import { Injectable } from "@nestjs/common";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service.js";
@@ -17,7 +18,7 @@ export type CreateBenchmarkInput = {
   userId?: string | null;
   connectionId?: string | null;
   scenario: string;
-  tool: "guidellm" | "vegeta" | "evalscope" | "aiperf";
+  tool: BenchmarkTool;
   params: Prisma.InputJsonValue;
   name: string;
   description?: string | null;
@@ -202,6 +203,30 @@ export class BenchmarkRepository {
       select: { id: true },
     });
     return row !== null;
+  }
+
+  /**
+   * tau3 gate support: resolve the canonical benchmark's overall pass^1 for a
+   * given Baseline id, so ReportLoader can feed it into `computeGate()` for
+   * the "baselineRegression" gate mode. `baselineId` here is a `Baseline.id`
+   * (not a Benchmark id) — it's joined through `Baseline.benchmark` to reach
+   * the canonical run's `summaryMetrics`.
+   *
+   * Returns null whenever the baseline row, its benchmark, or
+   * `summaryMetrics.data.overall.pass1` is missing/malformed — callers treat
+   * null as "no baseline available", matching computeGate's
+   * `baselineOverallPass1: number | null` contract.
+   */
+  async findBaselineOverallPass1(baselineId: string): Promise<number | null> {
+    const baseline = await this.prisma.baseline.findUnique({
+      where: { id: baselineId },
+      select: { benchmark: { select: { summaryMetrics: true } } },
+    });
+    const summary = baseline?.benchmark?.summaryMetrics as
+      | { data?: { overall?: { pass1?: number } } }
+      | null
+      | undefined;
+    return summary?.data?.overall?.pass1 ?? null;
   }
 
   /**

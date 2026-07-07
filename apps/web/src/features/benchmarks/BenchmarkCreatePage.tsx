@@ -218,6 +218,7 @@ export function BenchmarkCreatePage() {
     gateway: "benchmarkGateway",
     "lb-strategy": "benchmarkPrefixCache",
     "engine-kv-cache": "benchmarkKvCacheStress",
+    agent: "benchmarkAgent",
   };
   const breadcrumbs = [
     { label: tSidebar("groups.benchmarks") },
@@ -343,6 +344,12 @@ export function BenchmarkCreatePage() {
                       </FormItem>
                     )}
                   />
+                  {scenario === "agent" && (
+                    <div className="space-y-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-muted-foreground">
+                      <p>{t("create.fields.agentToolCallHint")}</p>
+                      <p>{t("create.fields.agentContextWindowHint")}</p>
+                    </div>
+                  )}
                   <ToolSelectorField scenario={scenario} />
                 </CardContent>
               </Card>

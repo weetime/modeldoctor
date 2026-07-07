@@ -58,6 +58,21 @@ export {
   type ScenarioId,
   scenarioIdSchema,
 } from "./scenarios.js";
+// computeGate is pure (no fs/child_process) — safe for the FE bundle.
+// GATE itself is computed server-side (BenchmarkService, Task 9, has
+// params + baseline); the FE re-export exists for template/gate-preview
+// UI that wants to run the same rule client-side.
+export { computeGate, type GateResult } from "./tau3/gate.js";
+export { tau3ReadMetric } from "./tau3/read-metric.js";
+export {
+  type Tau3Domain,
+  type Tau3Params,
+  type Tau3Report,
+  tau3DomainSchema,
+  tau3ParamDefaults,
+  tau3ParamsSchema,
+  tau3ReportSchema,
+} from "./tau3/schema.js";
 export { migrateVegetaParams } from "./vegeta/migrate-params.js";
 export { vegetaReadMetric } from "./vegeta/read-metric.js";
 export {

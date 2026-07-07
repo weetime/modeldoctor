@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Bot,
   Boxes,
   Bug,
   CheckCircle2,
@@ -67,6 +68,7 @@ export const sidebarGroups: SidebarGroup[] = [
         icon: Database,
         labelKey: "items.benchmarkKvCacheStress",
       },
+      { to: "/benchmarks/agent", icon: Bot, labelKey: "items.benchmarkAgent" },
       { to: "/benchmarks/reports", icon: BarChart3, labelKey: "items.endpointReports" },
       {
         to: "/benchmarks/compare/saved",

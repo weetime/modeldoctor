@@ -20,11 +20,15 @@ describe("registry", () => {
     expect(byTool("aiperf").name).toBe("aiperf");
   });
 
-  it("allAdapters returns four adapters", () => {
+  it("byTool('tau3') returns the tau3 adapter", () => {
+    expect(byTool("tau3").name).toBe("tau3");
+  });
+
+  it("allAdapters returns five adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(4);
+    expect(all).toHaveLength(5);
     expect(all.map((a) => a.name).sort()).toEqual(
-      ["aiperf", "evalscope", "guidellm", "vegeta"].sort(),
+      ["aiperf", "evalscope", "guidellm", "tau3", "vegeta"].sort(),
     );
   });
 });

@@ -24,6 +24,7 @@
  */
 
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import {
   evaluationSampleSchema,
   type ModalityCategory,
@@ -34,6 +35,7 @@ import {
   applyScenarioConstraints,
   evalscopeParamsSchema,
   guidellmParamsSchema,
+  tau3ParamsSchema,
   vegetaParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -224,8 +226,14 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta";
-type SeedScenario = "inference" | "engine-kv-cache" | "capacity" | "gateway" | "lb-strategy";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau3";
+type SeedScenario =
+  | "inference"
+  | "engine-kv-cache"
+  | "capacity"
+  | "gateway"
+  | "lb-strategy"
+  | "agent";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
@@ -242,7 +250,7 @@ interface BenchmarkTemplateSeed {
   categories?: ModalityCategory[];
 }
 
-const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
+export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
   {
     id: "tpl_official_chat_standard",
     name: "通用对话 · 标准",
@@ -951,6 +959,64 @@ const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     tags: ["prefix-cache", "aiperf", "mooncake"],
     categories: ["chat"],
   },
+  // -------------------------------------------------------------------------
+  // Agent · τ³-bench 三档官方模板 (Task 10)
+  //
+  // τ³-bench (tau3) 是官方 agent-scenario 基准：模拟用户 + 工具环境跑多轮对话，
+  // 按 domain (airline/retail/telecom) 判 pass/fail。三档只在 numTasksPerDomain /
+  // numTrials 上分层，其余参数（maxSteps/maxConcurrency/gate）三档一致。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_official_agent_smoke",
+    name: "Agent 冒烟(Smoke)",
+    description: "3 domain × 5 任务 × 1 trial，验证链路 / 快速回归门禁。",
+    scenario: "agent",
+    tool: "tau3",
+    config: {
+      domains: ["airline", "retail", "telecom"],
+      numTasksPerDomain: 5,
+      numTrials: 1,
+      maxSteps: 50,
+      maxConcurrency: 4,
+      gate: { mode: "off" },
+    },
+    tags: ["agent", "tau3", "smoke"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_official_agent_standard",
+    name: "Agent 基本能力(Standard)",
+    description: "3 domain × 20 任务 × 3 trial，测基本 Agent 能力 + pass^k 稳定性。",
+    scenario: "agent",
+    tool: "tau3",
+    config: {
+      domains: ["airline", "retail", "telecom"],
+      numTasksPerDomain: 20,
+      numTrials: 3,
+      maxSteps: 50,
+      maxConcurrency: 4,
+      gate: { mode: "off" },
+    },
+    tags: ["agent", "tau3", "standard"],
+    categories: ["chat"],
+  },
+  {
+    id: "tpl_official_agent_full",
+    name: "Agent 全量(Full)",
+    description: "3 domain 全任务集(50/114/114)× 4 trial，对标官方 leaderboard。慢且贵。",
+    scenario: "agent",
+    tool: "tau3",
+    config: {
+      domains: ["airline", "retail", "telecom"],
+      numTasksPerDomain: null,
+      numTrials: 4,
+      maxSteps: 50,
+      maxConcurrency: 4,
+      gate: { mode: "off" },
+    },
+    tags: ["agent", "tau3", "full"],
+    categories: ["chat"],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1004,7 +1070,9 @@ async function seedBenchmarkTemplates(): Promise<void> {
           ? aiperfParamsSchema
           : t.tool === "vegeta"
             ? vegetaParamsSchema
-            : evalscopeParamsSchema;
+            : t.tool === "tau3"
+              ? tau3ParamsSchema
+              : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (engine-kv-cache, evalscope) this is
@@ -1765,11 +1833,22 @@ async function main(): Promise<void> {
   }
 }
 
-main()
-  .catch((e) => {
-    console.error("Seed failed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Guard so importing this module (e.g. from a vitest spec that only wants
+// `BENCHMARK_TEMPLATES` / `EVALUATION_PROFILES`) does not also execute the
+// seed run — Prisma invokes this file directly via `tsx prisma/seed.ts`, so
+// only run `main()` when this file is the actual entrypoint.
+const isDirectRun = (() => {
+  const entry = process.argv[1];
+  return typeof entry === "string" && pathToFileURL(entry).href === import.meta.url;
+})();
+
+if (isDirectRun) {
+  main()
+    .catch((e) => {
+      console.error("Seed failed:", e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

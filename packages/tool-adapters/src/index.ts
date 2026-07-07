@@ -43,6 +43,13 @@ export {
   type ScenarioConfig,
   type ScenarioId,
   scenarioIdSchema,
+  type Tau3Domain,
+  type Tau3Params,
+  type Tau3Report,
+  tau3DomainSchema,
+  tau3ParamDefaults,
+  tau3ParamsSchema,
+  tau3ReportSchema,
   VEGETA_API_TYPE_TO_BODY,
   VEGETA_API_TYPE_TO_PATH,
   VEGETA_CATEGORY_DEFAULTS,
@@ -52,4 +59,5 @@ export {
   vegetaParamsSchema,
   vegetaReportSchema,
 } from "./schemas-entry.js";
+export { computeGate, type GateResult, tau3Adapter, tau3ReadMetric } from "./tau3/index.js";
 export { vegetaAdapter, vegetaReadMetric } from "./vegeta/index.js";

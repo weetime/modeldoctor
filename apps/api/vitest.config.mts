@@ -25,7 +25,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["src/**/*.spec.ts"],
+    include: ["src/**/*.spec.ts", "prisma/**/*.spec.ts"],
     exclude: ["node_modules", "dist", "test/**"],
     // Repository / service specs share one Postgres DB and clear rows in
     // beforeEach; running spec files in parallel races those wipes against

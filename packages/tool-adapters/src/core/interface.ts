@@ -9,7 +9,7 @@ export type { MetricKind, ToolMetricExtractor } from "./metric-extractor.js";
 // superset (additionally `'e2e'` and `'custom'`) — those don't go through
 // ToolAdapter and follow their own codepaths. ToolName covers exactly the
 // adapters the registry knows about.
-export type ToolName = "guidellm" | "vegeta" | "evalscope" | "aiperf";
+export type ToolName = "guidellm" | "vegeta" | "evalscope" | "aiperf" | "tau3";
 
 // ── Progress events (uniform across tools) ────────────────────────────
 export type ProgressEvent =
@@ -22,6 +22,7 @@ import type { EvalscopeReport } from "../evalscope/schema.js";
 // We use type-only imports to break a circular dep concern: schema files
 // don't import from interface.ts; interface.ts imports their inferred types.
 import type { GuidellmReport } from "../guidellm/schema.js";
+import type { Tau3Report } from "../tau3/schema.js";
 import type { VegetaReport } from "../vegeta/schema.js";
 
 // ── Discriminated union: report (consumers switch on `tool`) ──────────
@@ -29,7 +30,8 @@ export type ToolReport =
   | { tool: "guidellm"; data: GuidellmReport }
   | { tool: "vegeta"; data: VegetaReport }
   | { tool: "evalscope"; data: EvalscopeReport }
-  | { tool: "aiperf"; data: AiperfReport };
+  | { tool: "aiperf"; data: AiperfReport }
+  | { tool: "tau3"; data: Tau3Report };
 
 // ── buildCommand inputs ───────────────────────────────────────────────
 export interface BuildCommandPlan<TParams = unknown> {
@@ -65,6 +67,14 @@ export interface BuildCommandPlan<TParams = unknown> {
       bearerToken: string | null;
     } | null;
   };
+  /**
+   * Agent-scenario only (tau3): the user-simulator endpoint (a resolved
+   * LlmJudgeProvider). Null for all non-agent tools. apiKey is plaintext
+   * post-decryption — same trust boundary as connection.apiKey; adapters
+   * MUST route it via secretEnv, never argv. Interface evolution (like
+   * tokenizerHfId): a cross-cutting optional capability, documented here.
+   */
+  userSimulator?: { baseUrl: string; model: string; apiKey: string } | null;
 }
 
 // ── buildCommand output ───────────────────────────────────────────────

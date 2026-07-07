@@ -30,6 +30,7 @@
     "logout": "Logout",
     "devCharts": "Dev Charts",
     "deploymentRecipes": "Deployment Recipes",
-    "benchmarkKvCacheStress": "Engine KV / Prefix Cache"
+    "benchmarkKvCacheStress": "Engine KV / Prefix Cache",
+    "benchmarkAgent": "Agent Scenario Eval"
   }
 }
