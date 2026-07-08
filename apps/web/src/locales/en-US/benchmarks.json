@@ -87,7 +87,8 @@
     "running": "Running",
     "completed": "Completed",
     "failed": "Failed",
-    "canceled": "Canceled"
+    "canceled": "Canceled",
+    "interrupted": "Interrupted"
   },
   "filters": {
     "tool": "Tool",
@@ -258,6 +259,9 @@
       "errors": {
         "generic": "Failed to submit re-run"
       }
+    },
+    "resume": {
+      "button": "Resume"
     },
     "running": {
       "pending": "Waiting to start…",

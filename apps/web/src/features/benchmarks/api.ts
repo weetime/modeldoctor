@@ -33,6 +33,7 @@ export const benchmarkApi = {
   get: (id: string) => api.get<Benchmark>(`/api/benchmarks/${id}`),
   create: (body: CreateBenchmarkRequest) => api.post<Benchmark>("/api/benchmarks", body),
   cancel: (id: string) => api.post<Benchmark>(`/api/benchmarks/${id}/cancel`, {}),
+  resume: (id: string) => api.post<Benchmark>(`/api/benchmarks/${id}/resume`, {}),
   update: (id: string, body: BenchmarkUpdateRequest) =>
     api.patch<Benchmark>(`/api/benchmarks/${id}`, body),
   delete: (id: string) => api.del<void>(`/api/benchmarks/${id}`),

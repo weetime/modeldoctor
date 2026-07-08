@@ -1,6 +1,6 @@
 import type { BenchmarkStatus } from "@modeldoctor/contracts";
 import type { LucideIcon } from "lucide-react";
-import { Ban, CheckCircle2, Clock, Loader2, Send, XCircle } from "lucide-react";
+import { Ban, CheckCircle2, Clock, Loader2, PauseCircle, Send, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface StatusVisual {
@@ -23,6 +23,8 @@ interface StatusVisual {
  * - submitted → blue (in-flight, server has accepted)
  * - pending   → muted (before submit)
  * - canceled  → muted (terminal but neutral)
+ * - interrupted → amber (terminal but resumable — distinct from destructive
+ *   `failed` and neutral `canceled`; signals "paused, action available")
  */
 export const STATUS_DISPLAY: Record<BenchmarkStatus, StatusVisual> = {
   pending: {
@@ -54,6 +56,11 @@ export const STATUS_DISPLAY: Record<BenchmarkStatus, StatusVisual> = {
     icon: Ban,
     iconClassName: "text-muted-foreground",
     textClassName: "text-muted-foreground",
+  },
+  interrupted: {
+    icon: PauseCircle,
+    iconClassName: "text-amber-600 dark:text-amber-400",
+    textClassName: "text-amber-600 dark:text-amber-400",
   },
 };
 

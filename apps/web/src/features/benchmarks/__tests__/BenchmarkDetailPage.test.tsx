@@ -610,6 +610,31 @@ describe("BenchmarkDetailPage", () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/cancel", {}));
   });
 
+  it("renders the Resume button when status is interrupted", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "interrupted" }));
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Resume$|^继续$/ })).toBeInTheDocument(),
+    );
+  });
+
+  it("hides the Resume button when status is completed", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "completed" }));
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    await screen.findByRole("heading", { name: "smoke" });
+    expect(screen.queryByRole("button", { name: /^Resume$|^继续$/ })).not.toBeInTheDocument();
+  });
+
+  it("calls resume API on click", async () => {
+    vi.mocked(api.get).mockResolvedValueOnce(makeBenchmark({ status: "interrupted" }));
+    vi.mocked(api.post).mockResolvedValueOnce(makeBenchmark({ status: "submitted" }));
+    const user = userEvent.setup();
+    render(<BenchmarkDetailPage />, { wrapper: Wrapper });
+    const resumeBtn = await screen.findByRole("button", { name: /^Resume$|^继续$/ });
+    await user.click(resumeBtn);
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/benchmarks/r1/resume", {}));
+  });
+
   it("renders stderr tail when status=failed and rawOutput.stderr is non-empty", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       makeBenchmark({

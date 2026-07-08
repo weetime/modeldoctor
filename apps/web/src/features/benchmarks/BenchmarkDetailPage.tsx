@@ -2,7 +2,7 @@ import type { Benchmark, ConnectionPublic, ScenarioId } from "@modeldoctor/contr
 import { migrateVegetaParams } from "@modeldoctor/tool-adapters/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Copy, Loader2, RefreshCw, SearchX } from "lucide-react";
+import { Copy, Loader2, Play, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -38,6 +38,7 @@ import {
   useCancelBenchmark,
   useCreateBenchmark,
   useDeleteBenchmark,
+  useResumeBenchmark,
 } from "./queries";
 import { RequestSetupSection } from "./RequestSetupSection";
 import { AgentReport } from "./reports/AgentReport";
@@ -310,6 +311,7 @@ export function BenchmarkDetailPage() {
   const remove = useDeleteBaseline();
   const deleteBenchmark = useDeleteBenchmark();
   const cancelBenchmark = useCancelBenchmark();
+  const resumeBenchmark = useResumeBenchmark();
   const createBenchmark = useCreateBenchmark();
   const navigate = useNavigate();
   const setActivePath = useSidebarStore((s) => s.setActivePath);
@@ -463,6 +465,17 @@ export function BenchmarkDetailPage() {
             {!isTerminal && (
               <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
                 {t("detail.cancel.button")}
+              </Button>
+            )}
+            {benchmark.status === "interrupted" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => resumeBenchmark.mutate(benchmark.id)}
+                disabled={resumeBenchmark.isPending}
+              >
+                <Play className="mr-1 h-4 w-4" />
+                {t("detail.resume.button")}
               </Button>
             )}
             <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
