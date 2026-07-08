@@ -53,5 +53,8 @@ export function appendToolResultMessage(
   toolCallId: string,
   resultContent: string,
 ): ChatMessage[] {
-  return [...continuationMessages, { role: "tool", tool_call_id: toolCallId, content: resultContent }];
+  return [
+    ...continuationMessages,
+    { role: "tool", tool_call_id: toolCallId, content: resultContent },
+  ];
 }

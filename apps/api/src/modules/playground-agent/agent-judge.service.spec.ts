@@ -30,11 +30,11 @@ function fakeLlmJudgeService(getDecrypted: LlmJudgeService["getDecrypted"]): Llm
   return { getDecrypted } as unknown as LlmJudgeService;
 }
 
-function okResponse(content: string) {
+function okResponse(content: string): Response {
   return {
     ok: true,
     json: async () => ({ choices: [{ message: { content } }] }),
-  } as any;
+  } as unknown as Response;
 }
 
 const TRANSCRIPT: ChatMessage[] = [
@@ -89,7 +89,8 @@ describe("AgentJudgeService", () => {
     // Sanity-check the request actually went to the configured provider.
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("https://judge.example.com/v1/chat/completions");
-    expect((init as any).headers.authorization).toBe("Bearer sk-judge");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers.authorization).toBe("Bearer sk-judge");
   });
 
   it("tolerates a ```json-fenced verdict body", async () => {

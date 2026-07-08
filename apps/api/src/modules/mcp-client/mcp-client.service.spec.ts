@@ -1,5 +1,5 @@
-import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
 import { McpClientService } from "./mcp-client.service.js";
 
 function makeServer(overrides: Partial<DecryptedMcpServer> = {}): DecryptedMcpServer {

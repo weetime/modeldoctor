@@ -53,8 +53,8 @@ describe("SkillService", () => {
 
   describe("create", () => {
     it("creates a skill with defaults and returns the public shape", async () => {
-      prismaMock.skill.create.mockImplementation(
-        async (args: { data: Record<string, unknown> }) => makeRow(args.data),
+      prismaMock.skill.create.mockImplementation(async (args: { data: Record<string, unknown> }) =>
+        makeRow(args.data),
       );
       const out = await service.create("u_1", {
         name: "researcher",
@@ -134,9 +134,8 @@ describe("SkillService", () => {
   describe("update", () => {
     it("updates fields and returns the public shape", async () => {
       prismaMock.skill.findUnique.mockResolvedValue(makeRow());
-      prismaMock.skill.update.mockImplementation(
-        async (args: { data: Record<string, unknown> }) =>
-          makeRow({ name: "renamed", ...args.data }),
+      prismaMock.skill.update.mockImplementation(async (args: { data: Record<string, unknown> }) =>
+        makeRow({ name: "renamed", ...args.data }),
       );
       const out = await service.update("u_1", "sk_1", { name: "renamed", maxSteps: 30 });
       expect(out.name).toBe("renamed");

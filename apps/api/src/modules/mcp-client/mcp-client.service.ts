@@ -1,6 +1,6 @@
-import type { McpServerTool } from "@modeldoctor/contracts";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { McpServerTool } from "@modeldoctor/contracts";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { parseHeaderLines } from "../../integrations/openai-client/url.js";
 import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
@@ -74,9 +74,7 @@ function isTextContentPart(part: unknown): part is TextContentPart {
 export class McpClientService {
   private readonly clientFactory: McpClientFactory;
 
-  constructor(
-    @Optional() @Inject(MCP_CLIENT_FACTORY) clientFactory?: McpClientFactory,
-  ) {
+  constructor(@Optional() @Inject(MCP_CLIENT_FACTORY) clientFactory?: McpClientFactory) {
     this.clientFactory = clientFactory ?? createDefaultClientHandle;
   }
 

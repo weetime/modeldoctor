@@ -1,4 +1,8 @@
-import { AgentRunRequestSchema, type AgentRunRequest, type AgentSseEvent } from "@modeldoctor/contracts";
+import {
+  type AgentRunRequest,
+  AgentRunRequestSchema,
+  type AgentSseEvent,
+} from "@modeldoctor/contracts";
 import { Body, Controller, HttpCode, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";

@@ -1,10 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import type {
-  AgentRunRequest,
-  ChatMessage,
-  CreateSkill,
-  ToolDef,
-} from "@modeldoctor/contracts";
+import type { AgentRunRequest, ChatMessage, CreateSkill, ToolDef } from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -540,7 +535,11 @@ export function AgentPage() {
     const fresh = useAgentStore.getState();
     const pending: PendingInlineTool | null = fresh.pendingInlineTool;
     if (!pending || !fresh.continuationMessages) return;
-    const messages = appendToolResultMessage(fresh.continuationMessages, pending.toolCallId, resultContent);
+    const messages = appendToolResultMessage(
+      fresh.continuationMessages,
+      pending.toolCallId,
+      resultContent,
+    );
     void startAgentRun(t, { messages });
   };
 

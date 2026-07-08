@@ -57,7 +57,13 @@ export type ToolCall = z.infer<typeof ToolCallSchema>;
  * - `error` — either an upstream call failed, a builtin/MCP tool threw, an
  *   MCP tool call named an unknown/unavailable server, or `maxSteps` was hit.
  */
-export const AgentStepKindSchema = z.enum(["plan", "tool_call", "tool_result", "assistant", "error"]);
+export const AgentStepKindSchema = z.enum([
+  "plan",
+  "tool_call",
+  "tool_result",
+  "assistant",
+  "error",
+]);
 export type AgentStepKind = z.infer<typeof AgentStepKindSchema>;
 
 export const AgentStepSchema = z.object({

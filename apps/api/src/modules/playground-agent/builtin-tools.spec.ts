@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { BUILTIN_TOOLS, BUILTIN_TOOL_DEFS, executeBuiltin } from "./builtin-tools.js";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
+import { BUILTIN_TOOL_DEFS, BUILTIN_TOOLS, executeBuiltin } from "./builtin-tools.js";
 
 describe("get_current_time", () => {
   it("returns a parseable ISO timestamp", async () => {
@@ -17,7 +17,9 @@ describe("calculator", () => {
   });
 
   it("evaluates expressions with parentheses and decimals", async () => {
-    await expect(BUILTIN_TOOLS.calculator.run({ expression: "(2 + 3) * 4.5" })).resolves.toBe("22.5");
+    await expect(BUILTIN_TOOLS.calculator.run({ expression: "(2 + 3) * 4.5" })).resolves.toBe(
+      "22.5",
+    );
   });
 
   it("rejects expressions containing code/letters", async () => {
@@ -33,7 +35,9 @@ describe("calculator", () => {
   });
 
   it("rejects non-string / empty expressions", async () => {
-    await expect(BUILTIN_TOOLS.calculator.run({ expression: 42 as unknown as string })).rejects.toThrow();
+    await expect(
+      BUILTIN_TOOLS.calculator.run({ expression: 42 as unknown as string }),
+    ).rejects.toThrow();
     await expect(BUILTIN_TOOLS.calculator.run({ expression: "   " })).rejects.toThrow();
   });
 

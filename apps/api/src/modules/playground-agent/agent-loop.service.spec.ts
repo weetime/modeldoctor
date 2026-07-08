@@ -94,7 +94,11 @@ describe("AgentLoopService", () => {
         content: "",
         usage: undefined,
         tool_calls: [
-          { id: "call_1", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "get_current_time", arguments: "{}" },
+          },
         ],
       })
       .mockResolvedValueOnce({
@@ -186,9 +190,20 @@ describe("AgentLoopService", () => {
     expect(events).toEqual([
       {
         type: "step",
-        step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_9", tMs: expect.any(Number) },
+        step: {
+          kind: "tool_call",
+          name: "my_custom_tool",
+          args: { foo: "bar" },
+          toolCallId: "call_9",
+          tMs: expect.any(Number),
+        },
       },
-      { type: "tool_result_needed", toolCallId: "call_9", name: "my_custom_tool", args: { foo: "bar" } },
+      {
+        type: "tool_result_needed",
+        toolCallId: "call_9",
+        name: "my_custom_tool",
+        args: { foo: "bar" },
+      },
       {
         type: "done",
         // Full-transcript continuation (Task 11 fix pass): `done` carries the
@@ -201,7 +216,11 @@ describe("AgentLoopService", () => {
             role: "assistant",
             content: "",
             tool_calls: [
-              { id: "call_9", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
+              {
+                id: "call_9",
+                type: "function",
+                function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+              },
             ],
           },
         ],
@@ -231,7 +250,9 @@ describe("AgentLoopService", () => {
       });
 
     const events: AgentSseEvent[] = [];
-    await svc.run(fakeConnection(), baseReq({ builtinTools: ["calculator"] }), (e) => events.push(e));
+    await svc.run(fakeConnection(), baseReq({ builtinTools: ["calculator"] }), (e) =>
+      events.push(e),
+    );
 
     expect(svc.callModel).toHaveBeenCalledTimes(2);
     const errorStep = events.find(
@@ -295,10 +316,17 @@ describe("AgentLoopService", () => {
     expect(toolResultStep.step.kind).toBe("tool_result");
     expect(toolResultStep.step.toolCallId).toBe("call_b");
     expect(
-      Number.isNaN(new Date(String((toolResultStep.step as { content?: unknown }).content)).getTime()),
+      Number.isNaN(
+        new Date(String((toolResultStep.step as { content?: unknown }).content)).getTime(),
+      ),
     ).toBe(false);
     expect(stepEvents[2]).toMatchObject({
-      step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_i" },
+      step: {
+        kind: "tool_call",
+        name: "my_custom_tool",
+        args: { foo: "bar" },
+        toolCallId: "call_i",
+      },
     });
 
     expect(events).toContainEqual({
@@ -319,8 +347,16 @@ describe("AgentLoopService", () => {
         role: "assistant",
         content: "",
         tool_calls: [
-          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
-          { id: "call_i", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
+          {
+            id: "call_b",
+            type: "function",
+            function: { name: "get_current_time", arguments: "{}" },
+          },
+          {
+            id: "call_i",
+            type: "function",
+            function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+          },
         ],
       },
       { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
@@ -368,7 +404,12 @@ describe("AgentLoopService", () => {
     );
     expect(stepEvents.map((e) => e.step.kind)).toEqual(["tool_call", "tool_call", "tool_result"]);
     expect(stepEvents[0]).toMatchObject({
-      step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_i" },
+      step: {
+        kind: "tool_call",
+        name: "my_custom_tool",
+        args: { foo: "bar" },
+        toolCallId: "call_i",
+      },
     });
     expect(stepEvents[1]).toMatchObject({
       step: { kind: "tool_call", name: "get_current_time", toolCallId: "call_b" },
@@ -394,8 +435,16 @@ describe("AgentLoopService", () => {
         role: "assistant",
         content: "",
         tool_calls: [
-          { id: "call_i", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
-          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+          {
+            id: "call_i",
+            type: "function",
+            function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+          },
+          {
+            id: "call_b",
+            type: "function",
+            function: { name: "get_current_time", arguments: "{}" },
+          },
         ],
       },
       { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
@@ -411,7 +460,11 @@ describe("AgentLoopService", () => {
       fakeMcpServer(),
     );
     (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+      {
+        name: "search",
+        description: "Search docs",
+        inputSchema: { type: "object", properties: {} },
+      },
     ]);
     (mcpClient.callTool as ReturnType<typeof vi.fn>).mockResolvedValue("search result text");
 
@@ -450,7 +503,10 @@ describe("AgentLoopService", () => {
     expect(mcpClient.callTool).toHaveBeenCalledWith(fakeMcpServer(), "search", { q: "x" });
 
     // The discovered tool was advertised to the model, namespaced.
-    const advertisedTools = toolsAt(svc.callModel as unknown as ReturnType<typeof vi.fn>, 0) as Array<{
+    const advertisedTools = toolsAt(
+      svc.callModel as unknown as ReturnType<typeof vi.fn>,
+      0,
+    ) as Array<{
       function: { name: string };
     }>;
     expect(advertisedTools.map((t) => t.function.name)).toContain("mcp__mcp_1__search");
@@ -474,7 +530,11 @@ describe("AgentLoopService", () => {
       fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
     );
     (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+      {
+        name: "search",
+        description: "Search docs",
+        inputSchema: { type: "object", properties: {} },
+      },
     ]);
 
     const svc = new AgentLoopService(mcpClient, mcpServerService);
@@ -517,7 +577,11 @@ describe("AgentLoopService", () => {
         role: "assistant",
         content: "",
         tool_calls: [
-          { id: "call_mcp", type: "function", function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' } },
+          {
+            id: "call_mcp",
+            type: "function",
+            function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+          },
         ],
       },
     ]);
@@ -574,7 +638,11 @@ describe("AgentLoopService", () => {
       fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
     );
     (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+      {
+        name: "search",
+        description: "Search docs",
+        inputSchema: { type: "object", properties: {} },
+      },
     ]);
 
     const svc = new AgentLoopService(mcpClient, mcpServerService);
@@ -625,8 +693,16 @@ describe("AgentLoopService", () => {
         role: "assistant",
         content: "",
         tool_calls: [
-          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
-          { id: "call_mcp", type: "function", function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' } },
+          {
+            id: "call_b",
+            type: "function",
+            function: { name: "get_current_time", arguments: "{}" },
+          },
+          {
+            id: "call_mcp",
+            type: "function",
+            function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+          },
         ],
       },
       { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
@@ -679,7 +755,12 @@ describe("AgentLoopService", () => {
     );
     expect(secondSteps.map((e) => e.step.kind)).toEqual(["tool_result", "assistant"]);
     expect(secondSteps[0]).toMatchObject({
-      step: { kind: "tool_result", name: "mcp__mcp_1__search", toolCallId: "call_mcp", content: "search result text" },
+      step: {
+        kind: "tool_result",
+        name: "mcp__mcp_1__search",
+        toolCallId: "call_mcp",
+        content: "search result text",
+      },
     });
     expect(secondSteps[1]).toMatchObject({ step: { kind: "assistant", content: "Done both." } });
 
@@ -696,7 +777,11 @@ describe("AgentLoopService", () => {
       fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
     );
     (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+      {
+        name: "search",
+        description: "Search docs",
+        inputSchema: { type: "object", properties: {} },
+      },
     ]);
 
     const svc = new AgentLoopService(mcpClient, mcpServerService);
@@ -744,7 +829,9 @@ describe("AgentLoopService", () => {
     expect(events.at(-1)).toEqual({ type: "done" });
 
     const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
-    const toolMsg = secondCallMessages.find((m) => m.role === "tool" && m.tool_call_id === "call_bad");
+    const toolMsg = secondCallMessages.find(
+      (m) => m.role === "tool" && m.tool_call_id === "call_bad",
+    );
     expect(toolMsg?.content).toMatch(/unknown or unavailable MCP server\/tool/i);
   });
 
@@ -771,7 +858,10 @@ describe("AgentLoopService", () => {
     });
 
     expect(events).toEqual([
-      { type: "step", step: { kind: "assistant", content: "The answer is 2.", tMs: expect.any(Number) } },
+      {
+        type: "step",
+        step: { kind: "assistant", content: "The answer is 2.", tMs: expect.any(Number) },
+      },
       { type: "verdict", verdict: SAMPLE_VERDICT },
       { type: "done" },
     ]);
@@ -843,7 +933,9 @@ describe("AgentLoopService", () => {
     const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
     const mcpClient = fakeMcpClient();
     const mcpServerService = fakeMcpServerService();
-    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(fakeMcpServer());
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer(),
+    );
     (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
       { name: "search", description: "search", inputSchema: { type: "object" } },
     ]);

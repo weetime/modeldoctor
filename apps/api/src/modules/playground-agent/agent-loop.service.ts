@@ -119,7 +119,9 @@ export class AgentLoopService {
     );
     const tools = [...this.resolveTools(req), ...mcpToolDefs];
     const isResume = Boolean(req.messages && req.messages.length > 0);
-    const messages: ChatMessage[] = isResume ? [...(req.messages as ChatMessage[])] : this.buildInitialMessages(req);
+    const messages: ChatMessage[] = isResume
+      ? [...(req.messages as ChatMessage[])]
+      : this.buildInitialMessages(req);
 
     // Full-transcript continuation (Task 11 fix pass): a resumed request's
     // `messages` may end with an assistant `tool_calls` message that wasn't
@@ -228,7 +230,11 @@ export class AgentLoopService {
 
     emit({
       type: "step",
-      step: { kind: "error", content: `Stopped after reaching maxSteps (${maxSteps}).`, tMs: tMs() },
+      step: {
+        kind: "error",
+        content: `Stopped after reaching maxSteps (${maxSteps}).`,
+        tMs: tMs(),
+      },
     });
     // Also a true completion (the run ran to its full budget rather than
     // pausing for a human) — judge it the same as the no-more-tool-calls path.
@@ -320,7 +326,13 @@ export class AgentLoopService {
             const result = await this.mcpClient!.callTool(server, parsedName.toolName, args);
             emit({
               type: "step",
-              step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: ctx.tMs() },
+              step: {
+                kind: "tool_result",
+                name,
+                content: result,
+                toolCallId: call.id,
+                tMs: ctx.tMs(),
+              },
             });
             messages.push({ role: "tool", tool_call_id: call.id, content: result });
           } catch (e) {
@@ -349,12 +361,18 @@ export class AgentLoopService {
         continue;
       }
 
-      if (Object.prototype.hasOwnProperty.call(BUILTIN_TOOLS, name)) {
+      if (Object.hasOwn(BUILTIN_TOOLS, name)) {
         try {
           const result = await executeBuiltin(name, args);
           emit({
             type: "step",
-            step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: ctx.tMs() },
+            step: {
+              kind: "tool_result",
+              name,
+              content: result,
+              toolCallId: call.id,
+              tMs: ctx.tMs(),
+            },
           });
           messages.push({ role: "tool", tool_call_id: call.id, content: result });
         } catch (e) {

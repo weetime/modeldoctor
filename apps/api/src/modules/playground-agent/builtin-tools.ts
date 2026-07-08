@@ -164,7 +164,7 @@ const CALCULATOR_DEF: ToolDef = {
       properties: {
         expression: {
           type: "string",
-          description: "Arithmetic expression, e.g. \"2 + 3 * 4\".",
+          description: 'Arithmetic expression, e.g. "2 + 3 * 4".',
         },
       },
       required: ["expression"],
@@ -328,7 +328,7 @@ export const BUILTIN_TOOLS: Record<
 export const BUILTIN_TOOL_DEFS: ToolDef[] = Object.values(BUILTIN_TOOLS).map((t) => t.def);
 
 export async function executeBuiltin(name: string, args: Record<string, unknown>): Promise<string> {
-  if (!Object.prototype.hasOwnProperty.call(BUILTIN_TOOLS, name)) {
+  if (!Object.hasOwn(BUILTIN_TOOLS, name)) {
     throw new Error(`executeBuiltin: unknown built-in tool "${name}"`);
   }
   const tool = BUILTIN_TOOLS[name];
