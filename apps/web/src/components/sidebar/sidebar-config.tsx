@@ -21,6 +21,7 @@ import {
   Rocket,
   Settings,
   ShieldCheck,
+  Wrench,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -126,6 +127,7 @@ export const sidebarGroups: SidebarGroup[] = [
 export const sidebarPrimaryItems: SidebarItem[] = [
   { to: "/connections", icon: Database, labelKey: "items.connections" },
   { to: "/mcp-servers", icon: Plug, labelKey: "items.mcpServers" },
+  { to: "/skills", icon: Wrench, labelKey: "items.skills" },
 ];
 
 export const sidebarUtilityItems: SidebarItem[] = [

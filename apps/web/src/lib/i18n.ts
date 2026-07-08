@@ -22,6 +22,7 @@ import enPrometheusDatasources from "@/locales/en-US/prometheus-datasources.json
 import enQualityGate from "@/locales/en-US/quality-gate.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
+import enSkills from "@/locales/en-US/skills.json";
 import zhAlerts from "@/locales/zh-CN/alerts.json";
 import zhBenchmarkTemplates from "@/locales/zh-CN/benchmark-templates.json";
 import zhBenchmarks from "@/locales/zh-CN/benchmarks.json";
@@ -42,6 +43,7 @@ import zhPrometheusDatasources from "@/locales/zh-CN/prometheus-datasources.json
 import zhQualityGate from "@/locales/zh-CN/quality-gate.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
+import zhSkills from "@/locales/zh-CN/skills.json";
 
 void i18n.use(initReactI18next).init({
   resources: {
@@ -66,6 +68,7 @@ void i18n.use(initReactI18next).init({
       "prometheus-datasources": enPrometheusDatasources,
       "llm-judge-providers": enLlmJudgeProviders,
       "mcp-servers": enMcpServers,
+      skills: enSkills,
     },
     "zh-CN": {
       common: zhCommon,
@@ -88,6 +91,7 @@ void i18n.use(initReactI18next).init({
       "prometheus-datasources": zhPrometheusDatasources,
       "llm-judge-providers": zhLlmJudgeProviders,
       "mcp-servers": zhMcpServers,
+      skills: zhSkills,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -114,6 +118,7 @@ void i18n.use(initReactI18next).init({
     "prometheus-datasources",
     "llm-judge-providers",
     "mcp-servers",
+    "skills",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

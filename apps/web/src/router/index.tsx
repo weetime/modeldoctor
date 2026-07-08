@@ -47,6 +47,7 @@ import { RunReportPage } from "@/features/quality-gate/RunReportPage";
 import { RunsListPage } from "@/features/quality-gate/RunsListPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { SkillsPage } from "@/features/skills/SkillsPage";
 import { AppShell } from "@/layouts/AppShell";
 
 function RedirectToInsights() {
@@ -123,6 +124,7 @@ export const routes: RouteObject[] = [
           { path: "alerts", element: <AlertsPage /> },
           { path: "connections", element: <ConnectionsPage /> },
           { path: "mcp-servers", element: <McpServersPage /> },
+          { path: "skills", element: <SkillsPage /> },
           {
             path: "me",
             element: <MeLayout />,
