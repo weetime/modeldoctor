@@ -33,4 +33,7 @@ describe("tau3Adapter", () => {
   it("parseFinalReport throws a clear error when summary missing", () => {
     expect(() => tau3Adapter.parseFinalReport("", {})).toThrow(/summary/i);
   });
+  it("tau3 declares its checkpoint dir; others don't", () => {
+    expect(tau3Adapter.checkpointDir).toBe("data/simulations");
+  });
 });

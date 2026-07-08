@@ -1,4 +1,5 @@
 import json
+from unittest.mock import MagicMock
 
 import boto3
 import pytest
@@ -49,3 +50,34 @@ def test_writer_raises_when_bucket_missing(s3_env):
     writer = S3Writer(client=s3_client, bucket="test-bucket")
     with pytest.raises(ClientError):
         writer.put_json("r1/meta.json", {})
+
+
+def test_list_keys_paginates():
+    client = MagicMock()
+    client.get_paginator.return_value.paginate.return_value = [
+        {"Contents": [{"Key": "run1/checkpoint/a.json"}]},
+        {"Contents": [{"Key": "run1/checkpoint/d/b.json"}]},
+    ]
+    w = S3Writer(client=client, bucket="b")
+    assert w.list_keys("run1/checkpoint/") == ["run1/checkpoint/a.json", "run1/checkpoint/d/b.json"]
+
+
+def test_download_prefix_rebuilds_subdirs(tmp_path):
+    client = MagicMock()
+    client.get_paginator.return_value.paginate.return_value = [
+        {"Contents": [{"Key": "run1/checkpoint/x_air/results.json"}]},
+    ]
+    w = S3Writer(client=client, bucket="b")
+    n = w.download_prefix("run1/checkpoint/", str(tmp_path))
+    assert n == 1
+    client.download_file.assert_called_once()
+    # local path = tmp_path/x_air/results.json
+    args = client.download_file.call_args[0]
+    assert args[0] == "b" and args[1] == "run1/checkpoint/x_air/results.json"
+    assert args[2].endswith("x_air/results.json")
+
+
+def test_download_prefix_empty_returns_zero():
+    client = MagicMock()
+    client.get_paginator.return_value.paginate.return_value = [{}]  # no Contents
+    assert S3Writer(client=client, bucket="b").download_prefix("nope/", "/tmp") == 0

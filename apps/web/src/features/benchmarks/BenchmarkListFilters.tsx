@@ -23,6 +23,7 @@ const STATUSES: BenchmarkStatus[] = [
   "submitted",
   "running",
   "completed",
+  "interrupted",
   "failed",
   "canceled",
 ];

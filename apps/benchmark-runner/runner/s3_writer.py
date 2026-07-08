@@ -67,3 +67,23 @@ class S3Writer:
     def put_file(self, key: str, local_path: str) -> None:
         # upload_file handles multipart automatically for objects > 5MB
         self.client.upload_file(local_path, self.bucket, key)
+
+    def list_keys(self, prefix: str) -> list[str]:
+        keys: list[str] = []
+        paginator = self.client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                keys.append(obj["Key"])
+        return keys
+
+    def download_prefix(self, prefix: str, local_dir: str) -> int:
+        count = 0
+        for key in self.list_keys(prefix):
+            rel = key[len(prefix) :] if key.startswith(prefix) else key
+            if not rel:  # the prefix "dir" placeholder object, if any
+                continue
+            dest = os.path.join(local_dir, rel)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            self.client.download_file(self.bucket, key, dest)
+            count += 1
+        return count

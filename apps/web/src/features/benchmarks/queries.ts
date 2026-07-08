@@ -18,7 +18,12 @@ import { benchmarkApi } from "./api";
 const POLL_INTERVAL_MS = 2_000;
 
 export function isTerminalStatus(status: Benchmark["status"] | undefined): boolean {
-  return status === "completed" || status === "failed" || status === "canceled";
+  return (
+    status === "completed" ||
+    status === "failed" ||
+    status === "canceled" ||
+    status === "interrupted"
+  );
 }
 
 export const benchmarkKeys = {
@@ -66,6 +71,17 @@ export function useCancelBenchmark() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => benchmarkApi.cancel(id),
+    onSuccess: (_b, id) => {
+      qc.invalidateQueries({ queryKey: benchmarkKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });
+    },
+  });
+}
+
+export function useResumeBenchmark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => benchmarkApi.resume(id),
     onSuccess: (_b, id) => {
       qc.invalidateQueries({ queryKey: benchmarkKeys.detail(id) });
       qc.invalidateQueries({ queryKey: benchmarkKeys.lists() });

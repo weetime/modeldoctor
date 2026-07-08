@@ -1,4 +1,4 @@
-from runner.storage_keys import file_key, keys_for
+from runner.storage_keys import checkpoint_prefix, file_key, keys_for
 
 
 def test_keys_for_basic():
@@ -11,3 +11,7 @@ def test_keys_for_basic():
 
 def test_file_key():
     assert file_key("run-abc", "report.json") == "run-abc/files/report.json"
+
+
+def test_checkpoint_prefix():
+    assert checkpoint_prefix("run123") == "run123/checkpoint/"

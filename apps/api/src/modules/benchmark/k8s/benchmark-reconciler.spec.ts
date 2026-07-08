@@ -14,6 +14,31 @@ function podWithRunId(runId: string): V1Pod {
   };
 }
 
+/** A terminated (Failed-phase) pod for the run — used by the interrupted-vs-failed tests. */
+function podFailedWithRunId(runId: string): V1Pod {
+  return {
+    metadata: {
+      name: `run-${runId}-xyz12`,
+      namespace: "modeldoctor-benchmarks",
+      labels: { "modeldoctor.ai/run-id": runId },
+    },
+    spec: { containers: [{ name: "runner", image: "x" }] },
+    status: {
+      phase: "Failed",
+      containerStatuses: [
+        {
+          name: "runner",
+          ready: false,
+          restartCount: 0,
+          image: "x",
+          imageID: "",
+          state: { terminated: { exitCode: 1, reason: "Error", message: "boom" } },
+        },
+      ],
+    },
+  };
+}
+
 function makeDeps(
   opts: { livePods?: V1Pod[]; storageExists?: boolean | ((key: string) => Promise<boolean>) } = {},
 ): {
@@ -59,8 +84,8 @@ function makeDeps(
 }
 
 // A benchmark row old enough to clear any orphan grace window.
-function oldRow(id: string, status = "running") {
-  return { id, status, createdAt: new Date("2020-01-01T00:00:00Z") };
+function oldRow(id: string, status = "running", tool = "guidellm") {
+  return { id, status, tool, createdAt: new Date("2020-01-01T00:00:00Z") };
 }
 
 describe("BenchmarkReconciler", () => {
@@ -181,6 +206,62 @@ describe("BenchmarkReconciler", () => {
     expect(repo.updateGuarded).not.toHaveBeenCalled();
   });
 
+  describe("interrupted vs failed (resumable tools)", () => {
+    it("tau3 run, pod terminated with no result.json → interrupted, no completedAt", async () => {
+      const { deps, repo } = makeDeps({ livePods: [podFailedWithRunId("t1")] });
+      repo.listByStatus.mockResolvedValue([oldRow("t1", "running", "tau3")]);
+
+      await new BenchmarkReconciler(deps).run();
+
+      expect(repo.updateGuarded).toHaveBeenCalledWith("t1", ["pending", "submitted", "running"], {
+        status: "interrupted",
+        statusMessage: expect.any(String),
+      });
+      const call = repo.updateGuarded.mock.calls.find((c) => c[0] === "t1");
+      expect(call?.[2]).not.toHaveProperty("completedAt");
+    });
+
+    it("guidellm run, pod terminated with no result.json → failed (regression, unchanged)", async () => {
+      const { deps, repo } = makeDeps({ livePods: [podFailedWithRunId("g1")] });
+      repo.listByStatus.mockResolvedValue([oldRow("g1", "running", "guidellm")]);
+
+      await new BenchmarkReconciler(deps).run();
+
+      expect(repo.updateGuarded).toHaveBeenCalledWith(
+        "g1",
+        ["pending", "submitted", "running"],
+        expect.objectContaining({ status: "failed", completedAt: expect.any(Date) }),
+      );
+    });
+
+    it("tau3 run, orphan (no live pod, no result.json) → interrupted, no completedAt", async () => {
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([oldRow("t2", "submitted", "tau3")]);
+
+      await new BenchmarkReconciler(deps).run();
+
+      expect(repo.updateGuarded).toHaveBeenCalledWith("t2", ["pending", "submitted", "running"], {
+        status: "interrupted",
+        statusMessage: "pod gone before reconcile",
+      });
+      const call = repo.updateGuarded.mock.calls.find((c) => c[0] === "t2");
+      expect(call?.[2]).not.toHaveProperty("completedAt");
+    });
+
+    it("guidellm run, orphan (no live pod, no result.json) → failed (regression, unchanged)", async () => {
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([oldRow("g2", "submitted", "guidellm")]);
+
+      await new BenchmarkReconciler(deps).run();
+
+      expect(repo.updateGuarded).toHaveBeenCalledWith(
+        "g2",
+        ["pending", "submitted", "running"],
+        expect.objectContaining({ status: "failed", completedAt: expect.any(Date) }),
+      );
+    });
+  });
+
   describe("orphan grace window (periodic mode)", () => {
     it("does NOT orphan-fail a run younger than orphanMinAgeMs", async () => {
       const { deps, repo } = makeDeps({ livePods: [] });
@@ -211,6 +292,43 @@ describe("BenchmarkReconciler", () => {
       await new BenchmarkReconciler(deps).run();
       expect(repo.updateGuarded).toHaveBeenCalledWith(
         "fresh",
+        expect.anything(),
+        expect.objectContaining({ status: "failed" }),
+      );
+    });
+
+    it("resumed run (stale createdAt, fresh startedAt) is NOT re-orphaned mid-resume", async () => {
+      // Mirrors resume()'s CAS: row.createdAt is hours old (original submit),
+      // but resume() just stamped a fresh startedAt. A reconcile landing in
+      // the gap before the new pod exists must anchor the grace on the
+      // fresher of the two timestamps, not just createdAt.
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([
+        {
+          id: "resumed",
+          status: "submitted",
+          tool: "tau3",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2h ago
+          startedAt: new Date(), // just re-stamped by resume()
+        },
+      ]);
+      await new BenchmarkReconciler(deps).run({ orphanMinAgeMs: 60_000 });
+      expect(repo.updateGuarded).not.toHaveBeenCalled();
+    });
+
+    it("row with both createdAt and startedAt stale (or startedAt null) is still orphaned", async () => {
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([
+        {
+          id: "reallystale",
+          status: "submitted",
+          createdAt: new Date("2020-01-01T00:00:00Z"),
+          startedAt: null,
+        },
+      ]);
+      await new BenchmarkReconciler(deps).run({ orphanMinAgeMs: 60_000 });
+      expect(repo.updateGuarded).toHaveBeenCalledWith(
+        "reallystale",
         expect.anything(),
         expect.objectContaining({ status: "failed" }),
       );

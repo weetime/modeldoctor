@@ -110,6 +110,40 @@ describe("buildJobManifest HF tokenizer env (#339)", () => {
   });
 });
 
+describe("buildJobManifest checkpoint env (resume)", () => {
+  function envOf(j: ReturnType<typeof buildJobManifest>) {
+    const env = j.spec?.template.spec?.containers[0].env ?? [];
+    return Object.fromEntries(env.map((x) => [x.name, x.value]));
+  }
+
+  it("injects checkpoint env when opts.checkpointDir set", () => {
+    const j = buildJobManifest(ctx, {
+      namespace: "ns",
+      checkpointDir: "data/simulations",
+      checkpointIntervalSec: 60,
+    });
+    const env = envOf(j);
+    expect(env.MD_CHECKPOINT_DIR).toBe("data/simulations");
+    expect(env.MD_CHECKPOINT_INTERVAL_SEC).toBe("60");
+    expect(env.MD_RESUME).toBeUndefined();
+  });
+
+  it("adds MD_RESUME=1 only when ctx.resume", () => {
+    const j = buildJobManifest(
+      { ...ctx, resume: true },
+      { namespace: "ns", checkpointDir: "data/simulations" },
+    );
+    expect(envOf(j).MD_RESUME).toBe("1");
+  });
+
+  it("no checkpoint env when checkpointDir absent (non-resumable tool unchanged)", () => {
+    const env = envOf(buildJobManifest(ctx, { namespace: "ns" }));
+    expect(env.MD_CHECKPOINT_DIR).toBeUndefined();
+    expect(env.MD_CHECKPOINT_INTERVAL_SEC).toBeUndefined();
+    expect(env.MD_RESUME).toBeUndefined();
+  });
+});
+
 describe("naming helpers", () => {
   it("jobName is run-<id>", () => {
     expect(jobName("xyz")).toBe("run-xyz");

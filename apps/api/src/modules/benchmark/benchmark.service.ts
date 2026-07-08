@@ -37,6 +37,7 @@ import { IN_PROGRESS_STATES, isInProgressStatus, TERMINAL_STATES } from "./const
 import { K8sBenchmarkRunner } from "./k8s/k8s-benchmark-runner.js";
 import { imageForTool } from "./k8s/runner-images.js";
 import { readP95LatencyMs } from "./metrics.js";
+import { isResumable } from "./resumable.js";
 
 /** Safety cap for the per-user/per-window query the reports endpoint
  * issues. In practice user × 30-day windows are << 1000 rows; this
@@ -201,7 +202,7 @@ export class BenchmarkService {
     return await this.start(created.id);
   }
 
-  async start(benchmarkId: string): Promise<Benchmark> {
+  async start(benchmarkId: string, opts?: { resume?: boolean }): Promise<Benchmark> {
     const row = await this.repo.findById(benchmarkId);
     if (!row) throw new NotFoundException(`Benchmark ${benchmarkId} not found`);
     if (!row.userId || !row.connectionId) {
@@ -232,6 +233,7 @@ export class BenchmarkService {
         tool: row.tool as ToolName,
         buildResult,
         image: imageForTool(row.tool as ToolName, this.config),
+        resume: opts?.resume,
       });
       handle = result.handle;
     } catch (e) {
@@ -291,6 +293,66 @@ export class BenchmarkService {
     const reloaded = await this.repo.findById(row.id);
     if (!reloaded) throw new NotFoundException(`Benchmark ${row.id} not found`);
     return toContract(reloaded);
+  }
+
+  /**
+   * Re-submit a Job for a benchmark that previously stopped mid-flight with a
+   * saved checkpoint (currently only tau3, via `checkpointDir`). Reuses the
+   * SAME benchmark row / runId — tau3's `--save-to` is keyed to runId, so
+   * only the same runId lets the freshly-created Job's runner process pick up
+   * the restored checkpoint written by the interrupted run.
+   *
+   * Ordering is load-bearing:
+   *   1. Ownership check (mirrors cancel()).
+   *   2. Reject unless status==="interrupted" AND the tool is resumable.
+   *   3. CAS claim via updateGuarded(..., ["interrupted"], ...) — guards the
+   *      ROW before touching the cluster. If a concurrent resume already won
+   *      the race, this returns null and we bail out WITHOUT deleting
+   *      anything, so a lost race can never delete a Job the other actor now
+   *      owns.
+   *   4. Only after the CAS succeeds do we delete the dead Job — start()'s
+   *      Job creation is idempotent-via-409-swallow, so without this delete
+   *      the recreate would silently no-op and the resume would never launch.
+   *   5. start(..., { resume: true }) re-launches with MD_RESUME=1.
+   */
+  async resume(benchmarkId: string, ownerId?: string): Promise<Benchmark> {
+    const row = await this.repo.findById(benchmarkId);
+    if (!row) throw new NotFoundException(`Benchmark ${benchmarkId} not found`);
+    if (ownerId !== undefined && row.userId !== ownerId) {
+      throw new NotFoundException(`Benchmark ${benchmarkId} not found`);
+    }
+    if (row.status !== "interrupted" || !isResumable(row.tool)) {
+      throw new BadRequestException({
+        code: "BENCHMARK_NOT_RESUMABLE",
+        message: "该评测不可续跑(需 interrupted 状态且工具支持断点续跑)",
+      });
+    }
+    // CAS: only proceeds if the row is still "interrupted" at write time.
+    // Guards against two concurrent /resume calls both winning.
+    // startedAt is stamped fresh here (not just later in start()) so the
+    // reconciler's orphan-grace anchor (max(createdAt, startedAt)) is fresh
+    // from the very start of the resume launch — covering the
+    // pending→deleteRun→submitted sub-window before the new pod exists,
+    // where a periodic reconcile would otherwise see this row's hours-old
+    // createdAt and wrongly re-orphan it. start() sets startedAt again
+    // slightly later; harmless.
+    const claimed = await this.repo.updateGuarded(row.id, ["interrupted"], {
+      status: "pending",
+      statusMessage: null,
+      completedAt: null,
+      startedAt: new Date(),
+    });
+    if (!claimed) {
+      throw new BadRequestException({
+        code: "BENCHMARK_RESUME_CONFLICT",
+        message: "该评测已在续跑中",
+      });
+    }
+    // Remove the dead Job so start()'s idempotent create actually recreates
+    // it — Job name is fixed (`run-<runId>`); without this delete, create
+    // 409-swallows against the old Job and silently does nothing.
+    await this.runner.deleteRun(row.id);
+    return this.start(row.id, { resume: true });
   }
 
   async delete(id: string, userId?: string): Promise<void> {

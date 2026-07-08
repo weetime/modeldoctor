@@ -26,3 +26,7 @@ def keys_for(run_id: str) -> StorageKeys:
 
 def file_key(run_id: str, alias: str) -> str:
     return f"{run_id}/files/{alias}"
+
+
+def checkpoint_prefix(run_id: str) -> str:
+    return f"{run_id}/checkpoint/"

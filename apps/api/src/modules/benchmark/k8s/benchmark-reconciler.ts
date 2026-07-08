@@ -3,6 +3,7 @@ import { reportStorageKeys } from "@modeldoctor/contracts";
 import { Injectable, Logger } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
+import { isResumable } from "../resumable.js";
 import type { ReportLoader } from "../storage/report-loader.js";
 import type { ReportStorage } from "../storage/report-storage.js";
 import { getRunnerStatus } from "./runner-container.js";
@@ -139,20 +140,24 @@ export class BenchmarkReconciler {
           // Still in flight; informer (or a later reconcile) will resolve it.
           continue;
         }
-        // Terminal pod but no result.json: drive to failed. (Succeeded-without-
-        // result means the runner exited 0 without writing a report — also a
-        // failure for our purposes.)
+        // Terminal pod but no result.json: drive to failed (or interrupted if
+        // the run is resumable — the caller can resume from checkpoint rather
+        // than starting over). (Succeeded-without-result means the runner
+        // exited 0 without writing a report — also a failure for our purposes.)
         try {
           const msg =
             phase === "Succeeded"
               ? "pod succeeded but no result.json written"
               : podFailureMessage(pod);
-          const updated = await this.deps.repo.updateGuarded(b.id, IN_PROGRESS_STATES, {
-            status: "failed",
-            statusMessage: msg,
-            completedAt: new Date(),
-          });
-          if (updated) this.log.log(`reconcile: marked ${b.id} failed (pod ${phase}): ${msg}`);
+          const status = isResumable(b.tool) ? "interrupted" : "failed";
+          const updated = await this.deps.repo.updateGuarded(
+            b.id,
+            IN_PROGRESS_STATES,
+            status === "interrupted"
+              ? { status, statusMessage: msg }
+              : { status, statusMessage: msg, completedAt: new Date() },
+          );
+          if (updated) this.log.log(`reconcile: marked ${b.id} ${status} (pod ${phase}): ${msg}`);
         } catch (e) {
           this.log.warn(`reconcile: updateGuarded(${b.id}) threw: ${(e as Error).message}`);
         }
@@ -164,7 +169,19 @@ export class BenchmarkReconciler {
         //    grace window so a just-submitted run whose pod isn't created yet
         //    isn't killed out from under the scheduler.
         if (orphanMinAgeMs > 0) {
-          const ageMs = now - new Date(b.createdAt).getTime();
+          // Anchor on the LATER of createdAt/startedAt: resume() flips an
+          // hours-old row back to pending/submitted and re-submits a Job for
+          // the SAME runId, so createdAt alone is stale the instant the row
+          // is claimed — a periodic reconcile landing in the gap before the
+          // new pod exists would otherwise see a long-expired grace and
+          // re-orphan a run that's actually just (re)starting. startedAt is
+          // set on every (re)submit (start()/resume()'s CAS patch), so it's
+          // fresh exactly when createdAt isn't.
+          const anchor = Math.max(
+            new Date(b.createdAt).getTime(),
+            b.startedAt ? new Date(b.startedAt).getTime() : 0,
+          );
+          const ageMs = now - anchor;
           if (ageMs < orphanMinAgeMs) {
             this.log.debug(
               `reconcile: ${b.id} has no pod yet (age ${Math.round(ageMs / 1000)}s < grace); skipping orphan check`,
@@ -173,13 +190,16 @@ export class BenchmarkReconciler {
           }
         }
 
-        const updated = await this.deps.repo.updateGuarded(b.id, IN_PROGRESS_STATES, {
-          status: "failed",
-          statusMessage: "pod gone before reconcile",
-          completedAt: new Date(),
-        });
+        const status = isResumable(b.tool) ? "interrupted" : "failed";
+        const updated = await this.deps.repo.updateGuarded(
+          b.id,
+          IN_PROGRESS_STATES,
+          status === "interrupted"
+            ? { status, statusMessage: "pod gone before reconcile" }
+            : { status, statusMessage: "pod gone before reconcile", completedAt: new Date() },
+        );
         if (updated) {
-          this.log.log(`reconcile: marked ${b.id} failed (orphan)`);
+          this.log.log(`reconcile: marked ${b.id} ${status} (orphan)`);
         }
       } catch (e) {
         // One benchmark's update failing must not skip every later benchmark.

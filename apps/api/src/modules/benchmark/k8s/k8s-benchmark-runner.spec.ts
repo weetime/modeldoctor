@@ -68,4 +68,38 @@ describe("K8sBenchmarkRunner", () => {
     }) as never;
     await expect(runner.cancel("ns/run-abc")).rejects.toThrow(/apiserver flake/);
   });
+
+  it("deleteRun returns silently on 404", async () => {
+    const { runner, batch } = mkRunner();
+    batch.deleteNamespacedJob = vi.fn(async () => {
+      const e = new Error("not found") as Error & { statusCode?: number };
+      e.statusCode = 404;
+      throw e;
+    }) as never;
+    await expect(runner.deleteRun("abc")).resolves.toBeUndefined();
+  });
+
+  it("deleteRun rethrows a non-404 error", async () => {
+    const { runner, batch } = mkRunner();
+    batch.deleteNamespacedJob = vi.fn(async () => {
+      const e = new Error("apiserver flake") as Error & { statusCode?: number };
+      e.statusCode = 500;
+      throw e;
+    }) as never;
+    await expect(runner.deleteRun("abc")).rejects.toThrow(/apiserver flake/);
+  });
+
+  it("deleteRun uses Foreground propagation (unlike cancel's Background) so a resume-recreate waits for the Job to actually be gone", async () => {
+    const { runner, batch } = mkRunner();
+    await runner.deleteRun("abc");
+    expect(batch.deleteNamespacedJob).toHaveBeenCalledWith(
+      "run-abc",
+      "ns",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "Foreground",
+    );
+  });
 });
