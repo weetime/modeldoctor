@@ -19,6 +19,7 @@ export * from "./engine-metrics.js";
 export * from "./errors.js";
 export * from "./health.js";
 export * from "./insights/index.js";
+export * from "./mcp-server.js";
 export * from "./modality.js";
 export * from "./notifications.js";
 export * from "./playground.js";

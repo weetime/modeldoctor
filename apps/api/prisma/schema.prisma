@@ -30,6 +30,7 @@ model User {
   savedCompares         SavedCompare[]
   evaluations           Evaluation[]
   evaluationRuns        EvaluationRun[]
+  mcpServers            McpServer[]
 
   @@index([email])
   @@map("users")
@@ -121,6 +122,42 @@ model Connection {
   @@index([userId])
   @@index([prometheusDatasourceId])
   @@map("connections")
+}
+
+// A user-registered external MCP (Model Context Protocol) server. Separate
+// from Connection — Connection always points at an OpenAI-shape model
+// endpoint, while an McpServer exposes tools over the MCP protocol.
+model McpServer {
+  id          String  @id @default(cuid())
+  userId      String  @map("user_id")
+  name        String
+  description String?
+
+  transport String @default("http")
+  url       String
+
+  // AES-256-GCM v1, see common/crypto/aes-gcm.ts. Nullable: not every MCP
+  // server requires auth.
+  authTokenCipher String? @map("auth_token_cipher")
+
+  headers String @default("")
+
+  // Cached tools/list result + when it was last refreshed, so the UI can
+  // show available tools without a live round-trip on every render.
+  toolsCache    Json?     @map("tools_cache")
+  toolsCachedAt DateTime? @map("tools_cached_at") @db.Timestamptz(3)
+
+  // Archive flag, mirrors Connection.enabled.
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("mcp_servers")
 }
 
 model Benchmark {
