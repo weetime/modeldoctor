@@ -223,7 +223,7 @@ const saveAsSkillSchema = z.object({
 });
 
 /**
- * "存为 skill" dialog: takes name + optional description, then POSTs the
+ * "Save as skill" dialog: takes name + optional description, then POSTs the
  * CURRENT agent-store config (system prompt, plan/max-steps knobs, inline
  * tools, selected MCP servers, selected connection) as a new Skill. Reads
  * the store via `getState()` at submit time (not a render-time snapshot) so

@@ -26,8 +26,8 @@ Respond with STRICT JSON only — no markdown code fences, no explanation before
 {"taskCompleted": boolean, "toolUseCorrect": boolean, "extraSteps": number, "oneLineVerdict": "string"}`;
 
 /**
- * Lightweight trajectory judge (Task 13) — the Agent Playground's "能力测试"
- * payoff. Scores a JUST-COMPLETED agent run using the workspace's default
+ * Lightweight trajectory judge (Task 13) — the Agent Playground's "capability
+ * test" payoff. Scores a JUST-COMPLETED agent run using the workspace's default
  * LLM-judge provider (`LlmJudgeService.getDecrypted()`), mirroring the
  * fetch/header/body pattern other `getDecrypted()` consumers use
  * (`AlertExplainerService`, `SynthesizeService`) via the shared

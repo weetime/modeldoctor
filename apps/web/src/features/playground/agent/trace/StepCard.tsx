@@ -107,8 +107,8 @@ export interface ApprovalCardProps {
 /**
  * Rendered at the end of the trace when the loop emitted `tool_approval`
  * for an MCP tool call (`AgentRunRequest.autoRunMcp` not set — Task 11).
- * 批准 re-runs the request with `autoRunMcp: true` so the loop executes the
- * tool in-request; 拒绝 just clears the pending card (the run already ended
+ * Approve re-runs the request with `autoRunMcp: true` so the loop executes the
+ * tool in-request; Reject just clears the pending card (the run already ended
  * via `done`, nothing further happens).
  */
 export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProps) {
@@ -143,7 +143,7 @@ export interface VerdictCardProps {
 }
 
 /**
- * The Agent Playground's "能力测试" payoff card (Task 13): renders the
+ * The Agent Playground's "capability test" payoff card (Task 13): renders the
  * lightweight trajectory judge's verdict at the end of a completed run.
  * Only ever present when the workspace has a default LLM-judge provider
  * configured AND the run actually completed (see `AgentSseEvent`'s
