@@ -11,6 +11,7 @@ export const tau3Adapter: ToolAdapter = {
   paramsSchema: tau3ParamsSchema,
   reportSchema: tau3ReportSchema,
   paramDefaults: tau3ParamDefaults,
+  checkpointDir: "data/simulations",
   buildCommand: buildTau3Command,
   parseProgress: tau3ParseProgress,
   getMaxDurationSeconds: tau3MaxDurationSeconds,

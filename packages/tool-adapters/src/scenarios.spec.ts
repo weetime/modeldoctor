@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byTool } from "./core/registry.js";
+import { allAdapters, byTool } from "./core/registry.js";
 import { guidellmParamsSchema } from "./guidellm/schema.js";
 import {
   applyScenarioConstraints,
@@ -72,6 +72,15 @@ describe("invariant: SCENARIOS.tools ⊆ adapters that declare the scenario", ()
 
   it("assertScenariosInvariant passes for the current registry", () => {
     expect(() => assertScenariosInvariant()).not.toThrow();
+  });
+});
+
+describe("ToolAdapter.checkpointDir", () => {
+  it("only tau3 declares checkpointDir", () => {
+    for (const a of allAdapters()) {
+      if (a.name === "tau3") expect(a.checkpointDir).toBe("data/simulations");
+      else expect(a.checkpointDir).toBeUndefined();
+    }
   });
 });
 

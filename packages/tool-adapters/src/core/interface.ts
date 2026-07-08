@@ -114,6 +114,15 @@ export interface ToolAdapter extends ToolMetricExtractor {
   readonly paramsSchema: z.ZodTypeAny;
   readonly reportSchema: z.ZodTypeAny;
   readonly paramDefaults: unknown;
+  /**
+   * cwd-relative dir the tool writes RESUMABLE incremental state into. Presence
+   * declares the tool supports 断点续跑: the runner checkpoints this dir to MinIO
+   * periodically and restores it before the subprocess on resume. The dir name
+   * must be stable across the SAME runId (tau3's --save-to <runId>_<domain>).
+   * undefined = not resumable; all checkpoint/interrupted paths stay inert.
+   * Deliberate interface evolution (see file-level contract comment).
+   */
+  readonly checkpointDir?: string;
 
   buildCommand(plan: BuildCommandPlan): BuildCommandResult;
   parseProgress(line: string): ProgressEvent | null;
