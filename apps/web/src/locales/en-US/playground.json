@@ -296,5 +296,78 @@
         "temperature": "Temperature"
       }
     }
+  },
+  "agent": {
+    "title": "Agent",
+    "subtitle": "A multi-turn tool-call loop: the model can plan, call tools, see results, and keep going until the task is done.",
+    "task": {
+      "label": "Task",
+      "placeholder": "Describe what you want the agent to accomplish…"
+    },
+    "systemPrompt": {
+      "label": "System prompt",
+      "placeholder": "Optional. E.g. You are a helpful assistant that makes good use of tools."
+    },
+    "planFirst": "Plan first",
+    "maxSteps": "Max steps",
+    "builtinTools": {
+      "title": "Builtin tools",
+      "get_current_time": {
+        "label": "get_current_time",
+        "description": "Returns the current ISO-8601 timestamp."
+      },
+      "calculator": {
+        "label": "calculator",
+        "description": "Evaluates a basic arithmetic expression."
+      },
+      "http_get": {
+        "label": "http_get",
+        "description": "Read-only GET request against a public http/https URL."
+      }
+    },
+    "inlineTools": {
+      "title": "Inline tools",
+      "empty": "No inline tools yet.",
+      "namePlaceholder": "Tool name, e.g. lookup_order",
+      "descriptionPlaceholder": "Tool description (optional)",
+      "paramsPlaceholder": "JSON Schema, e.g. {\"type\":\"object\",\"properties\":{...}}",
+      "add": "+ Add tool",
+      "remove": "Remove",
+      "invalidParams": "Params must be a valid JSON object"
+    },
+    "mcpServers": {
+      "title": "MCP Servers",
+      "empty": "No MCP servers registered yet.",
+      "autoRun": "Auto-run MCP tool results"
+    },
+    "skill": {
+      "title": "Skill",
+      "placeholder": "Pick a Skill (auto-apply coming soon)",
+      "none": "No skill"
+    },
+    "run": "Run",
+    "running": "Running…",
+    "stop": "Stop",
+    "reset": "Reset",
+    "needConnection": "Pick a chat connection first",
+    "needTask": "Fill in a task description",
+    "errors": {
+      "run": "Run failed: {{message}}"
+    },
+    "steps": {
+      "plan": "Plan",
+      "tool_call": "Tool call",
+      "tool_result": "Tool result",
+      "assistant": "Assistant",
+      "error": "Error"
+    },
+    "pendingTool": {
+      "title": "\"{{name}}\" needs a manually-supplied result",
+      "placeholder": "Paste or type the tool's result…",
+      "submit": "Submit result"
+    },
+    "trace": {
+      "empty": "Run a task and its execution trace will appear here."
+    }
   }
 }

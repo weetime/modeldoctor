@@ -12,6 +12,7 @@
     "playgroundAudio": "Audio",
     "playgroundEmbeddings": "Embeddings",
     "playgroundRerank": "Rerank",
+    "playgroundAgent": "Agent",
     "benchmarkInference": "Inference Performance",
     "benchmarkCapacity": "Capacity Planning",
     "benchmarkGateway": "Gateway Load Test",

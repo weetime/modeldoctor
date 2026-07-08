@@ -21,6 +21,7 @@ import {
   Rocket,
   Settings,
   ShieldCheck,
+  Sparkles,
   Wrench,
 } from "lucide-react";
 
@@ -51,6 +52,7 @@ export const sidebarGroups: SidebarGroup[] = [
         labelKey: "items.playgroundEmbeddings",
       },
       { to: "/playground/rerank", icon: ListOrdered, labelKey: "items.playgroundRerank" },
+      { to: "/playground/agent", icon: Sparkles, labelKey: "items.playgroundAgent" },
     ],
   },
   {

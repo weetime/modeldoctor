@@ -32,6 +32,7 @@ import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
 import { ProfilePage } from "@/features/me/ProfilePage";
 import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
+import { AgentPage } from "@/features/playground/agent/AgentPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
 import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
@@ -146,6 +147,7 @@ export const routes: RouteObject[] = [
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
+          { path: "playground/agent", element: <AgentPage /> },
           { path: "dev/charts", element: <DevChartsPage /> },
           { path: "dev/deployments", element: <DeploymentRecipesPage /> },
           { path: "*", element: <NotFoundPage /> },
