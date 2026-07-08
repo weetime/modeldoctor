@@ -31,6 +31,7 @@ import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { PrometheusDatasourceModule } from "./modules/prometheus-datasource/prometheus-datasource.module.js";
 import { QualityGateModule } from "./modules/quality-gate/quality-gate.module.js";
 import { SavedComparesModule } from "./modules/saved-compares/saved-compares.module.js";
+import { SkillModule } from "./modules/skill/skill.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
@@ -94,6 +95,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     AlertsModule,
     McpModule,
     McpServerModule,
+    SkillModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
     }),

@@ -31,6 +31,7 @@ model User {
   evaluations           Evaluation[]
   evaluationRuns        EvaluationRun[]
   mcpServers            McpServer[]
+  skills                Skill[]
 
   @@index([email])
   @@map("users")
@@ -158,6 +159,39 @@ model McpServer {
   @@unique([userId, name])
   @@index([userId])
   @@map("mcp_servers")
+}
+
+// A LOCAL preset composing an agent-run configuration: an optional system
+// prompt, an optional model Connection to drive completions, zero or more
+// referenced McpServers (by id — no Prisma relation, since this is a
+// point-in-time reference list, not a foreign key the DB should enforce),
+// optional inline function-tool definitions, and agent-loop knobs
+// (planFirst / maxSteps). Unlike Connection/McpServer, a Skill holds no
+// secret of its own — nothing here is encrypted.
+model Skill {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  name              String
+  description       String?
+  systemPrompt      String? @map("system_prompt") @db.Text
+  modelConnectionId String? @map("model_connection_id")
+  mcpServerIds      String[] @map("mcp_server_ids")
+
+  // ToolDef[] (see @modeldoctor/contracts agent.ts). Nullable: a Skill may
+  // rely solely on its referenced McpServers for tools.
+  inlineTools Json? @map("inline_tools")
+
+  planFirst Boolean @default(false) @map("plan_first")
+  maxSteps  Int     @default(12) @map("max_steps")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("skills")
 }
 
 model Benchmark {
