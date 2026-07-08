@@ -169,7 +169,19 @@ export class BenchmarkReconciler {
         //    grace window so a just-submitted run whose pod isn't created yet
         //    isn't killed out from under the scheduler.
         if (orphanMinAgeMs > 0) {
-          const ageMs = now - new Date(b.createdAt).getTime();
+          // Anchor on the LATER of createdAt/startedAt: resume() flips an
+          // hours-old row back to pending/submitted and re-submits a Job for
+          // the SAME runId, so createdAt alone is stale the instant the row
+          // is claimed — a periodic reconcile landing in the gap before the
+          // new pod exists would otherwise see a long-expired grace and
+          // re-orphan a run that's actually just (re)starting. startedAt is
+          // set on every (re)submit (start()/resume()'s CAS patch), so it's
+          // fresh exactly when createdAt isn't.
+          const anchor = Math.max(
+            new Date(b.createdAt).getTime(),
+            b.startedAt ? new Date(b.startedAt).getTime() : 0,
+          );
+          const ageMs = now - anchor;
           if (ageMs < orphanMinAgeMs) {
             this.log.debug(
               `reconcile: ${b.id} has no pod yet (age ${Math.round(ageMs / 1000)}s < grace); skipping orphan check`,

@@ -329,10 +329,18 @@ export class BenchmarkService {
     }
     // CAS: only proceeds if the row is still "interrupted" at write time.
     // Guards against two concurrent /resume calls both winning.
+    // startedAt is stamped fresh here (not just later in start()) so the
+    // reconciler's orphan-grace anchor (max(createdAt, startedAt)) is fresh
+    // from the very start of the resume launch — covering the
+    // pending→deleteRun→submitted sub-window before the new pod exists,
+    // where a periodic reconcile would otherwise see this row's hours-old
+    // createdAt and wrongly re-orphan it. start() sets startedAt again
+    // slightly later; harmless.
     const claimed = await this.repo.updateGuarded(row.id, ["interrupted"], {
       status: "pending",
       statusMessage: null,
       completedAt: null,
+      startedAt: new Date(),
     });
     if (!claimed) {
       throw new BadRequestException({

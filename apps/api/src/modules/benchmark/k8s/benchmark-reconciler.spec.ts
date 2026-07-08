@@ -298,5 +298,42 @@ describe("BenchmarkReconciler", () => {
         expect.objectContaining({ status: "failed" }),
       );
     });
+
+    it("resumed run (stale createdAt, fresh startedAt) is NOT re-orphaned mid-resume", async () => {
+      // Mirrors resume()'s CAS: row.createdAt is hours old (original submit),
+      // but resume() just stamped a fresh startedAt. A reconcile landing in
+      // the gap before the new pod exists must anchor the grace on the
+      // fresher of the two timestamps, not just createdAt.
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([
+        {
+          id: "resumed",
+          status: "submitted",
+          tool: "tau3",
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2h ago
+          startedAt: new Date(), // just re-stamped by resume()
+        },
+      ]);
+      await new BenchmarkReconciler(deps).run({ orphanMinAgeMs: 60_000 });
+      expect(repo.updateGuarded).not.toHaveBeenCalled();
+    });
+
+    it("row with both createdAt and startedAt stale (or startedAt null) is still orphaned", async () => {
+      const { deps, repo } = makeDeps({ livePods: [] });
+      repo.listByStatus.mockResolvedValue([
+        {
+          id: "reallystale",
+          status: "submitted",
+          createdAt: new Date("2020-01-01T00:00:00Z"),
+          startedAt: null,
+        },
+      ]);
+      await new BenchmarkReconciler(deps).run({ orphanMinAgeMs: 60_000 });
+      expect(repo.updateGuarded).toHaveBeenCalledWith(
+        "reallystale",
+        expect.anything(),
+        expect.objectContaining({ status: "failed" }),
+      );
+    });
   });
 });

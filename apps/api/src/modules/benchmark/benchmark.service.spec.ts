@@ -1077,6 +1077,7 @@ describe("BenchmarkService.resume", () => {
         status: "pending",
         statusMessage: null,
         completedAt: null,
+        startedAt: expect.any(Date),
       });
       expect(mockRunner.deleteRun).toHaveBeenCalledWith("b1");
       expect(mockRunner.start).toHaveBeenCalledWith(
