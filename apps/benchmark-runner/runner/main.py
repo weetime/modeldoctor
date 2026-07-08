@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TextIO
 
 from runner.s3_writer import S3Writer
-from runner.storage_keys import file_key, keys_for
+from runner.storage_keys import checkpoint_prefix, file_key, keys_for
 
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
@@ -284,8 +284,6 @@ def _checkpoint_dir_abs() -> str | None:
 
 def _upload_checkpoint_once(s3: S3Writer, run_id: str, dir_abs: str) -> None:
     """Walk dir_abs and put_file every file under <run_id>/checkpoint/<rel>."""
-    from runner.storage_keys import checkpoint_prefix
-
     if not os.path.isdir(dir_abs):
         return
     prefix = checkpoint_prefix(run_id)
@@ -363,7 +361,7 @@ def main() -> int:
     # MD_CHECKPOINT_DIR set but MD_RESUME unset starts clean (no restore).
     ckpt_dir = _checkpoint_dir_abs()
     if ckpt_dir and os.environ.get("MD_RESUME") == "1":
-        n = s3.download_prefix(f"{benchmark_id}/checkpoint/", ckpt_dir)
+        n = s3.download_prefix(checkpoint_prefix(benchmark_id), ckpt_dir)
         log.info("restored %d checkpoint file(s) into %s", n, ckpt_dir)
 
     proc = subprocess.Popen(  # noqa: S603
@@ -396,7 +394,10 @@ def main() -> int:
     if uploader:
         uploader.stop()
         uploader.join(timeout=10)
-        _upload_checkpoint_once(s3, benchmark_id, ckpt_dir)  # final flush
+        try:
+            _upload_checkpoint_once(s3, benchmark_id, ckpt_dir)  # final flush — best-effort
+        except Exception as e:  # noqa: BLE001 - checkpoint is best-effort, must not crash the run
+            log.warning("final checkpoint flush failed: %s", e)
 
     # 2. Upload output files via put_file (auto-multipart for >5 MB)
     files_map: dict[str, str] = {}
