@@ -121,6 +121,40 @@ describe("McpClientService", () => {
     });
   });
 
+  describe("SSRF guard", () => {
+    it.each([
+      ["http://localhost/mcp", "loopback hostname"],
+      ["http://169.254.169.254/mcp", "cloud metadata address"],
+      ["http://10.0.0.1/mcp", "private 10.0.0.0/8 address"],
+      ["http://192.168.1.1/mcp", "private 192.168.0.0/16 address"],
+      ["http://100.64.0.5/mcp", "CGNAT 100.64.0.0/10 address"],
+      ["file:///etc/passwd", "non-http(s) scheme"],
+      ["not a url", "malformed url"],
+    ])("discoverTools rejects %s (%s) without invoking the client factory", async (url) => {
+      await expect(service.discoverTools(makeServer({ url }))).rejects.toThrow();
+      expect(factorySpy).not.toHaveBeenCalled();
+      expect(fakeClient.connect).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["http://localhost/mcp", "loopback hostname"],
+      ["http://169.254.169.254/mcp", "cloud metadata address"],
+      ["http://10.0.0.1/mcp", "private 10.0.0.0/8 address"],
+      ["file:///etc/passwd", "non-http(s) scheme"],
+    ])("callTool rejects %s (%s) without invoking the client factory", async (url) => {
+      await expect(service.callTool(makeServer({ url }), "some_tool", {})).rejects.toThrow();
+      expect(factorySpy).not.toHaveBeenCalled();
+      expect(fakeClient.connect).not.toHaveBeenCalled();
+    });
+
+    it("allows a normal https URL through to the client factory", async () => {
+      fakeClient.listTools.mockResolvedValue({ tools: [] });
+      await expect(service.discoverTools(makeServer())).resolves.toEqual([]);
+      expect(factorySpy).toHaveBeenCalledTimes(1);
+      expect(fakeClient.connect).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("callTool", () => {
     it("joins multi-part text content into a single string", async () => {
       fakeClient.callTool.mockResolvedValue({

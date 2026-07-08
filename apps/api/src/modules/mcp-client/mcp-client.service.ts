@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { McpServerTool } from "@modeldoctor/contracts";
 import { Inject, Injectable, Optional } from "@nestjs/common";
+import { isBlockedHost } from "../../common/net/ssrf-guard.js";
 import { parseHeaderLines } from "../../integrations/openai-client/url.js";
 import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
 
@@ -79,6 +80,7 @@ export class McpClientService {
   }
 
   async discoverTools(server: DecryptedMcpServer): Promise<McpServerTool[]> {
+    this.assertServerUrlAllowed(server);
     const { client, transport } = this.clientFactory(server, this.buildHeaders(server));
     try {
       await client.connect(transport);
@@ -94,6 +96,7 @@ export class McpClientService {
     name: string,
     args: Record<string, unknown>,
   ): Promise<string> {
+    this.assertServerUrlAllowed(server);
     const { client, transport } = this.clientFactory(server, this.buildHeaders(server));
     try {
       await client.connect(transport);
@@ -120,6 +123,40 @@ export class McpClientService {
       await client.close();
     } catch {
       // Intentionally ignored — see doc comment above.
+    }
+  }
+
+  /**
+   * SSRF guard (mirrors the `http_get` built-in tool — see
+   * `apps/api/src/common/net/ssrf-guard.ts`). `server.url` is a
+   * user-supplied value (created/edited via the MCP-servers CRUD, then
+   * driven by both the `discover` endpoint and the agent loop's tool_call
+   * path), so it MUST be validated before this service ever constructs a
+   * transport or reaches the client factory — a bare `new URL(...)` +
+   * `StreamableHTTPClientTransport` with no host check would let a caller
+   * point the connection at localhost, RFC1918 ranges, or the cloud
+   * metadata endpoint. Runs before `this.clientFactory(...)` (not just
+   * before `connect()`) so neither the factory nor any transport
+   * construction happens for a blocked/invalid URL.
+   */
+  private assertServerUrlAllowed(server: DecryptedMcpServer): void {
+    let parsed: URL;
+    try {
+      parsed = new URL(server.url);
+    } catch {
+      throw new Error(`MCP server url "${server.url}" is not a valid URL`);
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error(
+        `MCP server url "${server.url}" uses unsupported scheme "${parsed.protocol}" (only http/https allowed)`,
+      );
+    }
+
+    if (isBlockedHost(parsed.hostname)) {
+      throw new Error(
+        `MCP server host "${parsed.hostname}" is blocked (loopback/private/link-local/metadata addresses are not allowed)`,
+      );
     }
   }
 

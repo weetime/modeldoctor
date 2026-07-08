@@ -330,7 +330,12 @@ describe("AgentPage", () => {
     await waitFor(() => {
       expect(useAgentStore.getState().pendingApproval).toBeNull();
     });
-    expect(useAgentStore.getState().autoRunMcp).toBe(true);
+    // Final-review fix: approving must NOT mutate the shared `autoRunMcp`
+    // toggle — otherwise the NEXT fresh run would silently start with the
+    // approval gate disabled. The store's persistent flag stays at its
+    // pre-approval value (false); only this one continuation's request body
+    // carries the override.
+    expect(useAgentStore.getState().autoRunMcp).toBe(false);
     expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
     const call = playgroundFetchStreamMock.mock.calls[0][0];
     expect(call.body.autoRunMcp).toBe(true);

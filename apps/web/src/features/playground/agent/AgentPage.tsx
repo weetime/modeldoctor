@@ -51,7 +51,7 @@ const INLINE_TOOL_ITEM_CLASS =
 /** Kicks off (or continues) one agent run. Exported for direct testing. */
 export async function startAgentRun(
   t: (key: string, opts?: Record<string, unknown>) => string,
-  continuation?: { messages: ChatMessage[] },
+  continuation?: { messages: ChatMessage[]; autoRunMcpOverride?: boolean },
 ) {
   const fresh = useAgentStore.getState();
   if (!fresh.selectedConnectionId) return;
@@ -74,7 +74,11 @@ export async function startAgentRun(
     inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
     builtinTools: fresh.builtinTools.length > 0 ? fresh.builtinTools : undefined,
     mcpServerIds: fresh.selectedMcpServerIds.length > 0 ? fresh.selectedMcpServerIds : undefined,
-    autoRunMcp: fresh.autoRunMcp,
+    // Approve is a PER-CONTINUATION override (`autoRunMcpOverride`), not a
+    // mutation of the persistent `autoRunMcp` toggle — see `onApproveMcp`'s
+    // doc comment. Only this one resume request runs with the gate open;
+    // the store's toggle (and thus the NEXT fresh run) is unaffected.
+    autoRunMcp: continuation?.autoRunMcpOverride ?? fresh.autoRunMcp,
     messages: continuation?.messages,
   };
 
@@ -550,12 +554,20 @@ export function AgentPage() {
   // `continuationMessages` as a `role: "tool"` entry and is never re-run.
   // Passing `{ messages }` as `continuation` also keeps `startAgentRun` from
   // calling `clearSteps()` — the trace is appended to, not restarted.
+  //
+  // Security note (final-review fix): this is a PER-CONTINUATION override
+  // (`autoRunMcpOverride: true`), NOT `fresh.setAutoRunMcp(true)`. Mutating
+  // the shared store flag would silently disable the approval gate for the
+  // NEXT fresh run too — `clearSteps()` doesn't reset `autoRunMcp`, and
+  // `startAgentRun` reads it straight off the store. Approving one tool call
+  // once must never leave the gate open for a future unrelated run; the
+  // user's persistent toggle only changes via the explicit Switch in
+  // `AgentConfigPanel`.
   const onApproveMcp = () => {
     const fresh = useAgentStore.getState();
     if (!fresh.continuationMessages) return;
     fresh.setPendingApproval(null);
-    fresh.setAutoRunMcp(true);
-    void startAgentRun(t, { messages: fresh.continuationMessages });
+    void startAgentRun(t, { messages: fresh.continuationMessages, autoRunMcpOverride: true });
   };
 
   const onRejectMcp = () => {
