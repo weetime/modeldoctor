@@ -79,7 +79,7 @@ class S3Writer:
     def download_prefix(self, prefix: str, local_dir: str) -> int:
         count = 0
         for key in self.list_keys(prefix):
-            rel = key[len(prefix):] if key.startswith(prefix) else key
+            rel = key[len(prefix) :] if key.startswith(prefix) else key
             if not rel:  # the prefix "dir" placeholder object, if any
                 continue
             dest = os.path.join(local_dir, rel)
