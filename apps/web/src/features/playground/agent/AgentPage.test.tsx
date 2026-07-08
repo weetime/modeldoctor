@@ -413,6 +413,61 @@ describe("AgentPage", () => {
   });
 
   // Task 12: "存为 Skill" POSTs the CURRENT store config via useCreateSkill.
+  // Task 13: lightweight trajectory judge verdict — rendered only on a true
+  // completion, as the last card in the timeline.
+  const SAMPLE_VERDICT: AgentSseEvent = {
+    type: "verdict",
+    verdict: {
+      taskCompleted: true,
+      toolUseCorrect: true,
+      extraSteps: 0,
+      oneLineVerdict: "The agent solved 1+1 correctly using the calculator tool.",
+    },
+  };
+
+  it("a scripted verdict SSE event renders the verdict card at the end of the trace", async () => {
+    playgroundFetchStreamMock.mockImplementationOnce(
+      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
+        onSseEvent(
+          JSON.stringify({
+            type: "step",
+            step: { kind: "assistant", content: "The answer is 2.", tMs: 20 },
+          } satisfies AgentSseEvent),
+        );
+        onSseEvent(JSON.stringify(SAMPLE_VERDICT));
+        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AgentPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+    const taskBox = screen.getAllByRole("textbox")[0];
+    await user.type(taskBox, "what is 1+1?");
+    await user.click(screen.getByRole("button", { name: /run|运行/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-verdict-card")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("The agent solved 1+1 correctly using the calculator tool."),
+    ).toBeInTheDocument();
+    expect(useAgentStore.getState().verdict).toEqual(SAMPLE_VERDICT.verdict);
+
+    // Verdict is the last card, after the assistant step.
+    const testIds = [
+      ...screen.getAllByTestId(/^step-/).map((el) => el.getAttribute("data-testid")),
+      "agent-verdict-card",
+    ];
+    expect(testIds.at(-1)).toBe("agent-verdict-card");
+  });
+
   it("存为 Skill 用当前配置调用 createSkill", async () => {
     const user = userEvent.setup();
     render(

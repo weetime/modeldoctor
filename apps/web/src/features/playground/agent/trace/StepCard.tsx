@@ -1,4 +1,4 @@
-import type { AgentStep } from "@modeldoctor/contracts";
+import type { AgentStep, AgentVerdict } from "@modeldoctor/contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,50 @@ export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProp
           {t("agent.approval.reject")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+export interface VerdictCardProps {
+  verdict: AgentVerdict;
+}
+
+/**
+ * The Agent Playground's "能力测试" payoff card (Task 13): renders the
+ * lightweight trajectory judge's verdict at the end of a completed run.
+ * Only ever present when the workspace has a default LLM-judge provider
+ * configured AND the run actually completed (see `AgentSseEvent`'s
+ * `verdict` event doc) — absent on a pause, an upstream error, or when no
+ * judge is configured.
+ */
+export function VerdictCard({ verdict }: VerdictCardProps) {
+  const { t } = useTranslation("playground");
+
+  return (
+    <div
+      data-testid="agent-verdict-card"
+      className="rounded-md border border-border bg-card px-3 py-2 text-sm"
+    >
+      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <span aria-hidden="true">🏁</span>
+        {t("agent.verdict.title")}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-3 text-xs">
+        <span className="flex items-center gap-1">
+          <span aria-hidden="true">{verdict.taskCompleted ? "✅" : "❌"}</span>
+          {t("agent.verdict.taskCompleted")}
+        </span>
+        <span className="flex items-center gap-1">
+          <span aria-hidden="true">{verdict.toolUseCorrect ? "✅" : "❌"}</span>
+          {t("agent.verdict.toolUseCorrect")}
+        </span>
+        <span className="text-muted-foreground">
+          {t("agent.verdict.extraSteps", { count: verdict.extraSteps })}
+        </span>
+      </div>
+      <p className="mt-1.5 whitespace-pre-wrap break-words text-foreground">
+        {verdict.oneLineVerdict}
+      </p>
     </div>
   );
 }

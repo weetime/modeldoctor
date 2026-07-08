@@ -72,6 +72,24 @@ export const AgentStepSchema = z.object({
 export type AgentStep = z.infer<typeof AgentStepSchema>;
 
 /**
+ * Lightweight trajectory judge verdict (Task 13) — a single-run "did this
+ * agent actually do the task" scorecard, NOT a τ³-style pass^k benchmark
+ * suite. Produced by `AgentJudgeService.judge()` on the API from the task +
+ * the completed run's transcript, using the workspace's default LLM-judge
+ * provider (`LlmJudgeService.getDecrypted()`). Absent when no judge provider
+ * is configured, or the judge call/parse fails for any reason — the agent
+ * run itself is never blocked on this.
+ */
+export const AgentVerdictSchema = z.object({
+  taskCompleted: z.boolean(),
+  toolUseCorrect: z.boolean(),
+  /** Count of tool calls/turns in the trajectory judged unnecessary or redundant. */
+  extraSteps: z.number(),
+  oneLineVerdict: z.string(),
+});
+export type AgentVerdict = z.infer<typeof AgentVerdictSchema>;
+
+/**
  * SSE payload shape for `POST /api/playground/agent`. Each server-sent
  * `data:` line JSON.stringify()s one of these.
  *
@@ -120,5 +138,14 @@ export const AgentSseEventSchema = z.discriminatedUnion("type", [
     args: z.unknown(),
   }),
   z.object({ type: z.literal("done"), messages: z.array(z.custom<ChatMessage>()).optional() }),
+  /**
+   * Emitted BEFORE the terminal `done` event, only on a true completion (the
+   * model returned with no further `tool_calls`, or `maxSteps` was reached) —
+   * never on a pausing `done` (`tool_result_needed` / `tool_approval`) and
+   * never when the upstream call itself failed. Absent entirely (no event at
+   * all) when no LLM-judge provider is configured or the judge call fails —
+   * see `AgentVerdictSchema` doc.
+   */
+  z.object({ type: z.literal("verdict"), verdict: AgentVerdictSchema }),
 ]);
 export type AgentSseEvent = z.infer<typeof AgentSseEventSchema>;

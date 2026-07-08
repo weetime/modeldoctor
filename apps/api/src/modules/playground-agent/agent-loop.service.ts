@@ -17,6 +17,7 @@ import type { DecryptedConnection } from "../connection/connection.service.js";
 import { McpClientService } from "../mcp-client/mcp-client.service.js";
 import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
 import { McpServerService } from "../mcp-server/mcp-server.service.js";
+import { AgentJudgeService } from "./agent-judge.service.js";
 import { BUILTIN_TOOLS, executeBuiltin } from "./builtin-tools.js";
 
 const DEFAULT_PATH = "/v1/chat/completions";
@@ -60,14 +61,18 @@ export type ModelCaller = (
 @Injectable()
 export class AgentLoopService {
   /**
-   * Both are `@Optional()` (undefined when unset) purely so unit specs can
-   * `new AgentLoopService()` with no DI container at all when a test doesn't
-   * touch MCP — real requests always get them via `PlaygroundAgentModule`
-   * importing `McpClientModule` + `McpServerModule`.
+   * All three are `@Optional()` (undefined when unset) purely so unit specs
+   * can `new AgentLoopService()` with no DI container at all when a test
+   * doesn't touch MCP/judging — real requests always get them via
+   * `PlaygroundAgentModule` importing `McpClientModule` + `McpServerModule`
+   * + `LlmJudgeModule`. When `judge` is undefined, verdict emission is
+   * simply skipped (see `maybeEmitVerdict`) — it is never required for the
+   * loop to function.
    */
   constructor(
     @Optional() private readonly mcpClient?: McpClientService,
     @Optional() private readonly mcpServerService?: McpServerService,
+    @Optional() private readonly judge?: AgentJudgeService,
   ) {}
 
   /**
@@ -182,6 +187,15 @@ export class AgentLoopService {
 
       const toolCalls = parsed.tool_calls ?? [];
       if (toolCalls.length === 0) {
+        // True completion: the model produced a final answer with no further
+        // tool_calls. Judge this trajectory (best-effort) BEFORE `done` — the
+        // final assistant turn's content never gets pushed into `messages`
+        // on this path (only prior turns are), so splice it in for the judge.
+        await this.maybeEmitVerdict(
+          req.task,
+          [...messages, { role: "assistant", content: parsed.content ?? "" }],
+          emit,
+        );
         emit({ type: "done" });
         return;
       }
@@ -216,7 +230,33 @@ export class AgentLoopService {
       type: "step",
       step: { kind: "error", content: `Stopped after reaching maxSteps (${maxSteps}).`, tMs: tMs() },
     });
+    // Also a true completion (the run ran to its full budget rather than
+    // pausing for a human) — judge it the same as the no-more-tool-calls path.
+    await this.maybeEmitVerdict(req.task, messages, emit);
     emit({ type: "done" });
+  }
+
+  /**
+   * Best-effort trajectory verdict, emitted immediately before a terminal
+   * `done` on a TRUE completion only (see call sites). No-op when no
+   * `AgentJudgeService` was injected (unit specs, or a deployment with no
+   * LLM-judge provider wired up at all). `AgentJudgeService.judge()` itself
+   * never throws (returns `null` on any failure/timeout), but this is
+   * wrapped defensively too so a judge outage can never surface as a run
+   * failure or hang the response.
+   */
+  private async maybeEmitVerdict(
+    task: string,
+    messages: ChatMessage[],
+    emit: EmitFn,
+  ): Promise<void> {
+    if (!this.judge) return;
+    try {
+      const verdict = await this.judge.judge({ task, messages });
+      if (verdict) emit({ type: "verdict", verdict });
+    } catch {
+      // Never let a judge failure affect the agent run itself.
+    }
   }
 
   /**

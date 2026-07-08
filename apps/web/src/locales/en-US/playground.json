@@ -382,6 +382,12 @@
     },
     "trace": {
       "empty": "Run a task and its execution trace will appear here."
+    },
+    "verdict": {
+      "title": "Capability verdict",
+      "taskCompleted": "Task completed",
+      "toolUseCorrect": "Tool use correct",
+      "extraSteps": "Extra steps: {{count}}"
     }
   }
 }

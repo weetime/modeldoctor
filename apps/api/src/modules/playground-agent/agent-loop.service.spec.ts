@@ -1,10 +1,27 @@
-import type { AgentRunRequest, AgentSseEvent, ChatMessage } from "@modeldoctor/contracts";
+import type {
+  AgentRunRequest,
+  AgentSseEvent,
+  AgentVerdict,
+  ChatMessage,
+} from "@modeldoctor/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { DecryptedConnection } from "../connection/connection.service.js";
 import type { McpClientService } from "../mcp-client/mcp-client.service.js";
 import type { DecryptedMcpServer, McpServerService } from "../mcp-server/mcp-server.service.js";
+import type { AgentJudgeService } from "./agent-judge.service.js";
 import { AgentLoopService } from "./agent-loop.service.js";
 import * as builtinToolsModule from "./builtin-tools.js";
+
+const SAMPLE_VERDICT: AgentVerdict = {
+  taskCompleted: true,
+  toolUseCorrect: true,
+  extraSteps: 0,
+  oneLineVerdict: "Agent solved the task correctly.",
+};
+
+function fakeAgentJudgeService(judge: AgentJudgeService["judge"]): AgentJudgeService {
+  return { judge } as unknown as AgentJudgeService;
+}
 
 function fakeConnection(): DecryptedConnection {
   return {
@@ -729,5 +746,162 @@ describe("AgentLoopService", () => {
     const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
     const toolMsg = secondCallMessages.find((m) => m.role === "tool" && m.tool_call_id === "call_bad");
     expect(toolMsg?.content).toMatch(/unknown or unavailable MCP server\/tool/i);
+  });
+
+  // Task 13: lightweight trajectory judge — emitted on TRUE completion only.
+  it("G: on normal completion (no more tool_calls) with a judge configured, emits verdict then done", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValueOnce({
+      content: "The answer is 2.",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+
+    expect(judgeFn).toHaveBeenCalledTimes(1);
+    expect(judgeFn.mock.calls[0][0].task).toBe("what time is it?");
+    // The final assistant turn's content isn't pushed into `messages` on
+    // this path — the judge input must still carry it.
+    expect(judgeFn.mock.calls[0][0].messages).toContainEqual({
+      role: "assistant",
+      content: "The answer is 2.",
+    });
+
+    expect(events).toEqual([
+      { type: "step", step: { kind: "assistant", content: "The answer is 2.", tMs: expect.any(Number) } },
+      { type: "verdict", verdict: SAMPLE_VERDICT },
+      { type: "done" },
+    ]);
+  });
+
+  it("H: reaching maxSteps also judges the trajectory (true completion, not a pause)", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        { id: "call_x", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ builtinTools: ["get_current_time"], maxSteps: 1 }),
+      (e) => events.push(e),
+    );
+
+    expect(judgeFn).toHaveBeenCalledTimes(1);
+    const verdictIdx = events.findIndex((e) => e.type === "verdict");
+    const doneIdx = events.findIndex((e) => e.type === "done");
+    expect(verdictIdx).toBeGreaterThanOrEqual(0);
+    expect(verdictIdx).toBeLessThan(doneIdx);
+  });
+
+  it("I: NO verdict is emitted when the run pauses for an inline tool_result_needed", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        {
+          id: "call_9",
+          type: "function",
+          function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+        },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        inlineTools: [
+          {
+            type: "function",
+            function: {
+              name: "my_custom_tool",
+              description: "hand-authored, no server executor",
+              parameters: { type: "object", properties: {} },
+            },
+          },
+        ],
+      }),
+      (e) => events.push(e),
+    );
+
+    expect(judgeFn).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === "verdict")).toBe(false);
+  });
+
+  it("J: NO verdict is emitted when the run pauses for an MCP tool_approval", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(fakeMcpServer());
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "search", description: "search", inputSchema: { type: "object" } },
+    ]);
+    const svc = new AgentLoopService(mcpClient, mcpServerService, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        {
+          id: "call_mcp",
+          type: "function",
+          function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+        },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_1"] }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(events.some((e) => e.type === "tool_approval")).toBe(true);
+    expect(judgeFn).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === "verdict")).toBe(false);
+  });
+
+  it("K: NO verdict is emitted when the upstream model call fails", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockRejectedValue(new Error("upstream 500: boom"));
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+
+    expect(judgeFn).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === "verdict")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  it("L: a judge that returns null (no provider / failure) emits no verdict event", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(null);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValueOnce({
+      content: "done.",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+
+    expect(judgeFn).toHaveBeenCalledTimes(1);
+    expect(events.some((e) => e.type === "verdict")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done" });
   });
 });

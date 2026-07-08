@@ -1,4 +1,4 @@
-import type { AgentStep, ChatMessage, ToolDef } from "@modeldoctor/contracts";
+import type { AgentStep, AgentVerdict, ChatMessage, ToolDef } from "@modeldoctor/contracts";
 import { create } from "zustand";
 
 /** A `tool_result_needed` SSE event, held until the user supplies a result. */
@@ -39,6 +39,14 @@ export interface AgentStoreState {
    * without restarting the whole task from turn 0 (Task 11 fix pass).
    */
   continuationMessages: ChatMessage[] | null;
+  /**
+   * Lightweight trajectory judge verdict (Task 13), set from the `verdict`
+   * SSE event — only emitted on a true run completion (never on a pausing
+   * `done`, and never at all when no LLM-judge provider is configured).
+   * Cleared alongside the rest of the trace by `clearSteps()` so a fresh run
+   * doesn't show a stale verdict from the previous one.
+   */
+  verdict: AgentVerdict | null;
   running: boolean;
   abortController: AbortController | null;
   error: string | null;
@@ -60,6 +68,7 @@ export interface AgentStoreState {
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
   setPendingApproval: (approval: PendingMcpApproval | null) => void;
   setContinuationMessages: (messages: ChatMessage[] | null) => void;
+  setVerdict: (v: AgentVerdict | null) => void;
   setRunning: (b: boolean) => void;
   setAbortController: (ac: AbortController | null) => void;
   setError: (s: string | null) => void;
@@ -80,6 +89,7 @@ const initial = {
   pendingInlineTool: null as PendingInlineTool | null,
   pendingApproval: null as PendingMcpApproval | null,
   continuationMessages: null as ChatMessage[] | null,
+  verdict: null as AgentVerdict | null,
   running: false,
   abortController: null as AbortController | null,
   error: null as string | null,
@@ -121,11 +131,13 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
       pendingInlineTool: null,
       pendingApproval: null,
       continuationMessages: null,
+      verdict: null,
       error: null,
     }),
   setPendingInlineTool: (tool) => set({ pendingInlineTool: tool }),
   setPendingApproval: (approval) => set({ pendingApproval: approval }),
   setContinuationMessages: (messages) => set({ continuationMessages: messages }),
+  setVerdict: (v) => set({ verdict: v }),
   setRunning: (b) => set({ running: b }),
   setAbortController: (ac) => set({ abortController: ac }),
   setError: (e) => set({ error: e }),

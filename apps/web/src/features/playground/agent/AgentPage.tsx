@@ -99,6 +99,11 @@ export async function startAgentRun(
           name: evt.name,
           args: evt.args,
         });
+      } else if (evt.type === "verdict") {
+        // Task 13: lightweight trajectory judge — only emitted right before
+        // a TRUE-completion `done` (never on a pausing one), so it's safe
+        // to just set it here and let it ride until the next `clearSteps()`.
+        s.setVerdict(evt.verdict);
       } else if (evt.type === "done") {
         // Full-transcript continuation (Task 11 fix pass): `messages` is
         // populated only when the server is pausing for a
@@ -611,6 +616,7 @@ export function AgentPage() {
             pendingApproval={slice.pendingApproval}
             onApproveMcp={onApproveMcp}
             onRejectMcp={onRejectMcp}
+            verdict={slice.verdict}
           />
         </div>
       </div>

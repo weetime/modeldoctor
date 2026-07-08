@@ -382,6 +382,12 @@
     },
     "trace": {
       "empty": "运行任务后，这里会显示执行轨迹。"
+    },
+    "verdict": {
+      "title": "能力测试评分",
+      "taskCompleted": "任务完成",
+      "toolUseCorrect": "工具使用正确",
+      "extraSteps": "多余步骤: {{count}}"
     }
   }
 }
