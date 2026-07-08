@@ -6,7 +6,8 @@
     "description": "描述",
     "maxSteps": "最大步数",
     "planFirst": "执行策略",
-    "actions": "操作"
+    "actions": "操作",
+    "references": "引用"
   },
   "badges": {
     "planFirst": "先规划",
@@ -57,5 +58,13 @@
     "title": "尚未创建任何 Skill",
     "body": "点击「新建 Skill」开始。",
     "create": "新建 Skill"
+  },
+  "references": {
+    "inlineTools_one": "{{count}} 个手写工具",
+    "inlineTools_other": "{{count}} 个手写工具",
+    "mcpServers_one": "{{count}} 个 MCP Server",
+    "mcpServers_other": "{{count}} 个 MCP Server",
+    "connectionSet": "已关联连接",
+    "connectionUnset": "未关联连接"
   }
 }

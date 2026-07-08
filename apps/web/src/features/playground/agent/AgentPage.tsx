@@ -1,9 +1,35 @@
-import type { AgentRunRequest, ChatMessage, ToolDef } from "@modeldoctor/contracts";
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type {
+  AgentRunRequest,
+  ChatMessage,
+  CreateSkill,
+  ToolDef,
+} from "@modeldoctor/contracts";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
+import { FormActions } from "@/components/common/form-actions";
+import { FormSection } from "@/components/common/form-section";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +42,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useMcpServers } from "@/features/mcp-servers/queries";
-import { useSkills } from "@/features/skills/queries";
+import { useCreateSkill, useSkills } from "@/features/skills/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { AGENT_BUILTIN_TOOL_NAMES, appendToolResultMessage, runAgentSse } from "./api";
@@ -179,12 +205,150 @@ function InlineToolEditor() {
   );
 }
 
+interface SaveAsSkillFormValues {
+  name: string;
+  description: string;
+}
+
+const saveAsSkillSchema = z.object({
+  name: z
+    .string()
+    .transform((v) => v.trim())
+    .pipe(z.string().min(1).max(120)),
+  description: z.string().default(""),
+});
+
+/**
+ * "存为 skill" dialog: takes name + optional description, then POSTs the
+ * CURRENT agent-store config (system prompt, plan/max-steps knobs, inline
+ * tools, selected MCP servers, selected connection) as a new Skill. Reads
+ * the store via `getState()` at submit time (not a render-time snapshot) so
+ * it always saves what's on screen, mirroring `startAgentRun`'s pattern.
+ */
+function SaveAsSkillDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation("playground");
+  const { t: tc } = useTranslation("common");
+  const createMut = useCreateSkill();
+
+  const form = useForm<SaveAsSkillFormValues>({
+    resolver: zodResolver(saveAsSkillSchema),
+    mode: "onTouched",
+    defaultValues: { name: "", description: "" },
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form reference is stable; reset only when the dialog (re)opens
+  useEffect(() => {
+    if (open) form.reset({ name: "", description: "" });
+  }, [open]);
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    const s = useAgentStore.getState();
+    const body: CreateSkill = {
+      name: values.name,
+      description: values.description.trim() || undefined,
+      systemPrompt: s.systemPrompt.trim() || undefined,
+      modelConnectionId: s.selectedConnectionId ?? undefined,
+      mcpServerIds: s.selectedMcpServerIds,
+      inlineTools: s.inlineTools.length > 0 ? s.inlineTools : undefined,
+      planFirst: s.planFirst,
+      maxSteps: s.maxSteps,
+    };
+    try {
+      await createMut.mutateAsync(body);
+      toast.success(t("agent.skill.saveSuccess"));
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("agent.skill.saveError"));
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <Form {...form}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{t("agent.skill.saveAsTitle")}</DialogTitle>
+              <DialogDescription>{t("agent.skill.saveAsDescription")}</DialogDescription>
+            </DialogHeader>
+
+            <FormSection>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>{t("agent.skill.saveAsFields.name")}</FormLabel>
+                    <FormControl>
+                      <Input autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("agent.skill.saveAsFields.description")}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={2} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormSection>
+
+            <DialogFooter>
+              <FormActions
+                onCancel={() => onOpenChange(false)}
+                cancelLabel={tc("actions.cancel")}
+                submitLabel={tc("actions.save")}
+                pending={createMut.isPending}
+              />
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AgentConfigPanel() {
   const { t } = useTranslation("playground");
   const slice = useAgentStore();
   const { data: mcpServers } = useMcpServers();
   const { data: skills } = useSkills();
   const [selectedSkillId, setSelectedSkillId] = useState<string>(NO_SKILL);
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
+
+  /**
+   * Applying a Skill loads it as a preset into the store: systemPrompt,
+   * planFirst, maxSteps, inlineTools, selectedMcpServerIds (=
+   * skill.mcpServerIds), and selectedConnectionId (= skill.modelConnectionId,
+   * if the skill has one). `builtinTools` isn't part of the Skill schema, so
+   * it's left untouched.
+   */
+  const applySkill = (skillId: string) => {
+    setSelectedSkillId(skillId);
+    if (skillId === NO_SKILL) return;
+    const skill = (skills ?? []).find((sk) => sk.id === skillId);
+    if (!skill) return;
+    slice.setSystemPrompt(skill.systemPrompt ?? "");
+    slice.setPlanFirst(skill.planFirst);
+    slice.setMaxSteps(skill.maxSteps);
+    slice.setInlineTools(skill.inlineTools ?? []);
+    slice.setSelectedMcpServerIds(skill.mcpServerIds);
+    if (skill.modelConnectionId) slice.setSelectedConnectionId(skill.modelConnectionId);
+  };
 
   return (
     <div className="space-y-4">
@@ -308,20 +472,33 @@ function AgentConfigPanel() {
 
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">{t("agent.skill.title")}</Label>
-        <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
-          <SelectTrigger className="w-full text-xs">
-            <SelectValue placeholder={t("agent.skill.placeholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_SKILL}>{t("agent.skill.none")}</SelectItem>
-            {(skills ?? []).map((skill) => (
-              <SelectItem key={skill.id} value={skill.id}>
-                {skill.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={selectedSkillId} onValueChange={applySkill}>
+            <SelectTrigger className="w-full text-xs">
+              <SelectValue placeholder={t("agent.skill.placeholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_SKILL}>{t("agent.skill.none")}</SelectItem>
+              {(skills ?? []).map((skill) => (
+                <SelectItem key={skill.id} value={skill.id}>
+                  {skill.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 text-xs"
+            onClick={() => setSaveAsOpen(true)}
+          >
+            {t("agent.skill.saveAs")}
+          </Button>
+        </div>
       </div>
+
+      <SaveAsSkillDialog open={saveAsOpen} onOpenChange={setSaveAsOpen} />
     </div>
   );
 }

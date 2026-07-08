@@ -1,5 +1,10 @@
 import "@/lib/i18n";
-import type { AgentSseEvent, ChatMessage, ConnectionPublic } from "@modeldoctor/contracts";
+import type {
+  AgentSseEvent,
+  ChatMessage,
+  ConnectionPublic,
+  SkillPublic,
+} from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -35,8 +40,30 @@ vi.mock("@/features/mcp-servers/queries", () => ({
   useMcpServers: () => ({ data: [], isLoading: false }),
 }));
 
+const SAMPLE_SKILL: SkillPublic = {
+  id: "skill1",
+  userId: "u1",
+  name: "diagnose-vllm",
+  description: "Diagnose a vLLM deployment",
+  systemPrompt: "You are an SRE assistant.",
+  modelConnectionId: "c1",
+  mcpServerIds: ["mcp1"],
+  inlineTools: [
+    { type: "function", function: { name: "lookup_order", parameters: { type: "object" } } },
+  ],
+  planFirst: true,
+  maxSteps: 30,
+  createdAt: "2026-07-05T00:00:00Z",
+  updatedAt: "2026-07-05T00:00:00Z",
+};
+
+// Mutable so individual tests can opt into a non-empty skill list.
+let skillsListData: SkillPublic[] = [];
+const createSkillMutateAsync = vi.fn();
+
 vi.mock("@/features/skills/queries", () => ({
-  useSkills: () => ({ data: [], isLoading: false }),
+  useSkills: () => ({ data: skillsListData, isLoading: false }),
+  useCreateSkill: () => ({ mutateAsync: createSkillMutateAsync, isPending: false }),
 }));
 
 // The scripted SSE sequence this fake plays back for every run: plan →
@@ -86,6 +113,9 @@ describe("AgentPage", () => {
   beforeEach(() => {
     useAgentStore.getState().reset();
     playgroundFetchStreamMock.mockClear();
+    skillsListData = [];
+    createSkillMutateAsync.mockClear();
+    createSkillMutateAsync.mockResolvedValue(SAMPLE_SKILL);
   });
 
   it("renders the 4 scripted step cards in order and running=false after done", async () => {
@@ -354,5 +384,66 @@ describe("AgentPage", () => {
       expect(useAgentStore.getState().pendingApproval).toBeNull();
     });
     expect(playgroundFetchStreamMock).not.toHaveBeenCalled();
+  });
+
+  // Task 12: applying a Skill loads it as a preset into the store.
+  it("applying a skill from the dropdown loads its config into the store", async () => {
+    skillsListData = [SAMPLE_SKILL];
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AgentPage />
+      </MemoryRouter>,
+    );
+
+    // Comboboxes: [0] connection picker, [1] Skill dropdown.
+    const comboboxes = screen.getAllByRole("combobox");
+    await user.click(comboboxes[1]);
+    await user.click(screen.getByRole("option", { name: /diagnose-vllm/i }));
+
+    await waitFor(() => {
+      const s = useAgentStore.getState();
+      expect(s.systemPrompt).toBe(SAMPLE_SKILL.systemPrompt);
+      expect(s.planFirst).toBe(true);
+      expect(s.maxSteps).toBe(30);
+      expect(s.selectedMcpServerIds).toEqual(["mcp1"]);
+      expect(s.inlineTools).toEqual(SAMPLE_SKILL.inlineTools);
+      expect(s.selectedConnectionId).toBe("c1");
+    });
+  });
+
+  // Task 12: "存为 Skill" POSTs the CURRENT store config via useCreateSkill.
+  it("存为 Skill 用当前配置调用 createSkill", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AgentPage />
+      </MemoryRouter>,
+    );
+
+    // Configure the current store: connection + system prompt + a max-steps tweak.
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+    const systemPromptBox = screen.getAllByRole("textbox")[1];
+    await user.type(systemPromptBox, "custom prompt");
+
+    await user.click(screen.getByRole("button", { name: /save as skill|存为 skill/i }));
+
+    const nameInput = screen.getByLabelText(/^name|^名称/i) as HTMLInputElement;
+    await user.type(nameInput, "my-skill");
+    await user.click(screen.getByRole("button", { name: /^save$|^保存$/i }));
+
+    await waitFor(() => {
+      expect(createSkillMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "my-skill",
+          systemPrompt: "custom prompt",
+          planFirst: false,
+          maxSteps: 12,
+          mcpServerIds: [],
+          modelConnectionId: "c1",
+        }),
+      );
+    });
   });
 });

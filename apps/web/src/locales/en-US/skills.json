@@ -6,7 +6,8 @@
     "description": "Description",
     "maxSteps": "Max steps",
     "planFirst": "Strategy",
-    "actions": "Actions"
+    "actions": "Actions",
+    "references": "References"
   },
   "badges": {
     "planFirst": "Plan first",
@@ -57,5 +58,13 @@
     "title": "No skills yet",
     "body": "Click New skill to create one.",
     "create": "New skill"
+  },
+  "references": {
+    "inlineTools_one": "{{count}} inline tool",
+    "inlineTools_other": "{{count}} inline tools",
+    "mcpServers_one": "{{count}} MCP server",
+    "mcpServers_other": "{{count}} MCP servers",
+    "connectionSet": "connection set",
+    "connectionUnset": "no connection"
   }
 }

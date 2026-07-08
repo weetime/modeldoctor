@@ -25,6 +25,24 @@ import {
 import { useDeleteSkill, useSkills } from "./queries";
 import { SkillSheet, type SkillSheetMode } from "./SkillSheet";
 
+/**
+ * Displays what a skill references — inline tool count, MCP server count,
+ * and whether it carries a model connection — without opening the edit
+ * sheet. These references are only populated by the Agent playground
+ * "save as skill" flow (Task 12); `SkillSheet` itself doesn't edit them.
+ */
+function SkillReferences({ skill }: { skill: SkillPublic }) {
+  const { t } = useTranslation("skills");
+  const inlineCount = skill.inlineTools?.length ?? 0;
+  const mcpCount = skill.mcpServerIds.length;
+  const parts = [
+    t("references.inlineTools", { count: inlineCount }),
+    t("references.mcpServers", { count: mcpCount }),
+    skill.modelConnectionId ? t("references.connectionSet") : t("references.connectionUnset"),
+  ];
+  return <span className="text-xs text-muted-foreground">{parts.join(" · ")}</span>;
+}
+
 export function SkillsPage() {
   const { t } = useTranslation("skills");
   const { t: tc } = useTranslation("common");
@@ -79,6 +97,7 @@ export function SkillsPage() {
                 <TableRow>
                   <TableHead>{t("table.name")}</TableHead>
                   <TableHead>{t("table.description")}</TableHead>
+                  <TableHead>{t("table.references")}</TableHead>
                   <TableHead>{t("table.maxSteps")}</TableHead>
                   <TableHead>{t("table.planFirst")}</TableHead>
                   <TableHead className="w-24 text-center">{t("table.actions")}</TableHead>
@@ -98,6 +117,9 @@ export function SkillsPage() {
                     </TableCell>
                     <TableCell className="max-w-md truncate text-muted-foreground">
                       {s.description}
+                    </TableCell>
+                    <TableCell>
+                      <SkillReferences skill={s} />
                     </TableCell>
                     <TableCell>{s.maxSteps}</TableCell>
                     <TableCell>

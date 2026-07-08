@@ -12,9 +12,11 @@ const seedList: SkillPublic[] = [
     name: "diagnose-vllm",
     description: "Diagnose a vLLM deployment via metrics + logs",
     systemPrompt: "You are an SRE assistant.",
-    modelConnectionId: undefined,
-    mcpServerIds: [],
-    inlineTools: null,
+    modelConnectionId: "c1",
+    mcpServerIds: ["mcp1"],
+    inlineTools: [
+      { type: "function", function: { name: "lookup_order", parameters: { type: "object" } } },
+    ],
     planFirst: true,
     maxSteps: 12,
     createdAt: "2026-07-05T00:00:00Z",
@@ -48,6 +50,20 @@ describe("SkillsPage", () => {
     expect(screen.getByText("diagnose-vllm")).toBeInTheDocument();
     expect(screen.getByText("Diagnose a vLLM deployment via metrics + logs")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /New skill|新建 Skill/i })).toBeInTheDocument();
+  });
+
+  // Task 12 (deferred Task 5 review item): the list shows what a skill
+  // references — inline tool count, MCP server count, connection presence —
+  // without opening the edit sheet.
+  it("renders reference counts (inline tools / MCP servers / connection) for a skill", () => {
+    render(
+      <MemoryRouter>
+        <SkillsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/1 inline tool|1 个手写工具/)).toBeInTheDocument();
+    expect(screen.getByText(/1 MCP server|1 个 MCP Server/)).toBeInTheDocument();
+    expect(screen.getByText(/connection set|已关联连接/)).toBeInTheDocument();
   });
 
   it("delete flow: opens the confirm dialog and calls delete after typing DELETE", async () => {

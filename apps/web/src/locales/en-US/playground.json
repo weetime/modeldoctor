@@ -342,8 +342,17 @@
     },
     "skill": {
       "title": "Skill",
-      "placeholder": "Pick a Skill (auto-apply coming soon)",
-      "none": "No skill"
+      "placeholder": "Pick a Skill to apply as a preset",
+      "none": "No skill",
+      "saveAs": "Save as Skill",
+      "saveAsTitle": "Save current config as a Skill",
+      "saveAsFields": {
+        "name": "Name",
+        "description": "Description"
+      },
+      "saveSuccess": "Skill saved",
+      "saveError": "Failed to save skill",
+      "saveAsDescription": "Bundles the current config (system prompt, tools, MCP servers, connection) into a reusable Skill preset."
     },
     "run": "Run",
     "running": "Running…",
