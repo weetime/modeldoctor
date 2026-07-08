@@ -361,8 +361,11 @@ def main() -> int:
     # MD_CHECKPOINT_DIR set but MD_RESUME unset starts clean (no restore).
     ckpt_dir = _checkpoint_dir_abs()
     if ckpt_dir and os.environ.get("MD_RESUME") == "1":
-        n = s3.download_prefix(checkpoint_prefix(benchmark_id), ckpt_dir)
-        log.info("restored %d checkpoint file(s) into %s", n, ckpt_dir)
+        try:
+            n = s3.download_prefix(checkpoint_prefix(benchmark_id), ckpt_dir)
+            log.info("restored %d checkpoint file(s) into %s", n, ckpt_dir)
+        except Exception as e:  # noqa: BLE001 - restore is best-effort; proceed with a clean run
+            log.warning("checkpoint restore failed, continuing without prior state: %s", e)
 
     proc = subprocess.Popen(  # noqa: S603
         argv,
