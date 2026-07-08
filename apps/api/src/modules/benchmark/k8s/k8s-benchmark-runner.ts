@@ -1,5 +1,5 @@
 import type { BatchV1Api, CoreV1Api } from "@kubernetes/client-node";
-import type { BuildCommandResult, ToolName } from "@modeldoctor/tool-adapters";
+import { type BuildCommandResult, byTool, type ToolName } from "@modeldoctor/tool-adapters";
 import { Injectable, Logger } from "@nestjs/common";
 import { buildJobManifest, buildSecretManifest, jobName, secretName } from "./k8s-job-manifest.js";
 
@@ -18,6 +18,10 @@ export interface BenchmarkRunInput {
   tool: ToolName;
   buildResult: BuildCommandResult;
   image: string;
+  /** Resume a previously-checkpointed run (tau3). Forwarded to the Job as
+   *  MD_RESUME=1 alongside MD_CHECKPOINT_DIR so the runner loads existing
+   *  progress instead of starting fresh. */
+  resume?: boolean;
 }
 
 /** Opaque handle to an in-flight Job. Format: `<namespace>/<jobName>`. */
@@ -45,6 +49,10 @@ export class K8sBenchmarkRunner {
     private readonly core: CoreV1Api,
     /** Global HF tokenizer-source settings injected into every runner Job (#339). */
     private readonly hf?: { endpoint?: string; token?: string; offline?: boolean },
+    /** Checkpoint-write interval (seconds) for resumable tools (tau3).
+     *  Forwarded as MD_CHECKPOINT_INTERVAL_SEC when the tool's adapter
+     *  reports a `checkpointDir`. */
+    private readonly checkpointIntervalSec: number = 60,
   ) {}
 
   /**
@@ -98,7 +106,13 @@ export class K8sBenchmarkRunner {
 
     let jobUid: string | undefined;
     try {
-      const job = buildJobManifest(ctx, { namespace: ns, hf: this.hf });
+      const checkpointDir = byTool(ctx.tool).checkpointDir;
+      const job = buildJobManifest(ctx, {
+        namespace: ns,
+        hf: this.hf,
+        checkpointDir,
+        checkpointIntervalSec: this.checkpointIntervalSec,
+      });
       const created = await this.withRetry(
         "createNamespacedJob",
         () => this.batch.createNamespacedJob(ns, job),
@@ -180,6 +194,37 @@ export class K8sBenchmarkRunner {
         (e as { statusCode?: number }).statusCode;
       if (status === 404) return;
       this.log.warn(`cancel: deleteNamespacedJob failed: ${(e as Error).message}`);
+      throw e;
+    }
+  }
+
+  /**
+   * Foreground-delete the Job for a run so a resume-submit can recreate it
+   * under the same name without an AlreadyExists collision. "Foreground"
+   * propagation (vs. cancel()'s "Background") makes the delete call not
+   * resolve until the Job + its cascaded pods are actually gone — resume
+   * needs that ordering guarantee before it re-creates the Job. Cascades
+   * to the per-run Secret too, via the ownerReference set in start().
+   * 404 means the Job is already gone — idempotent no-op, same as cancel().
+   */
+  async deleteRun(runId: string): Promise<void> {
+    const ns = this.namespace;
+    try {
+      await this.batch.deleteNamespacedJob(
+        jobName(runId),
+        ns,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "Foreground",
+      );
+    } catch (e) {
+      const status =
+        (e as { statusCode?: number; response?: { statusCode?: number } }).response?.statusCode ??
+        (e as { statusCode?: number }).statusCode;
+      if (status === 404) return;
+      this.log.warn(`deleteRun: deleteNamespacedJob failed: ${(e as Error).message}`);
       throw e;
     }
   }

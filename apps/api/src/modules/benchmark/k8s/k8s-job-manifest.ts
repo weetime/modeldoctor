@@ -60,6 +60,14 @@ export interface JobManifestOptions {
    *  HF-based tools (aiperf/guidellm) fetch tokenizers from a reachable
    *  mirror / internal proxy instead of huggingface.co (#339). */
   hf?: { endpoint?: string; token?: string; offline?: boolean };
+  /** Checkpoint directory (relative to the tool's cwd) for tools that
+   *  support mid-run checkpointing (e.g. tau3). Set from `byTool(tool)
+   *  .checkpointDir`; absent for non-resumable tools — no checkpoint env
+   *  is injected in that case, keeping those Jobs byte-identical. */
+  checkpointDir?: string;
+  /** Checkpoint-write interval in seconds. Only meaningful when
+   *  `checkpointDir` is set; defaults to 60. */
+  checkpointIntervalSec?: number;
 }
 
 export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOptions): V1Job {
@@ -90,6 +98,17 @@ export function buildJobManifest(ctx: BenchmarkRunInput, opts: JobManifestOption
   }
   if (opts.hf?.offline) {
     env.push({ name: "HF_HUB_OFFLINE", value: "1" });
+  }
+  // Checkpoint/resume (tau3): only resumable tools carry `checkpointDir`
+  // (from `byTool(ctx.tool).checkpointDir`), so this env is absent for
+  // every other tool's Job — no behavior change for them.
+  if (opts.checkpointDir) {
+    env.push({ name: "MD_CHECKPOINT_DIR", value: opts.checkpointDir });
+    env.push({
+      name: "MD_CHECKPOINT_INTERVAL_SEC",
+      value: String(opts.checkpointIntervalSec ?? 60),
+    });
+    if (ctx.resume) env.push({ name: "MD_RESUME", value: "1" });
   }
 
   const hasInputFiles = Object.keys(ctx.buildResult.inputFiles ?? {}).length > 0;
