@@ -1089,8 +1089,7 @@ describe("BenchmarkService.resume", () => {
       const guardOrder = repo.updateGuarded.mock.invocationCallOrder[0];
       const deleteOrder = (mockRunner.deleteRun as ReturnType<typeof vi.fn>).mock
         .invocationCallOrder[0];
-      const startOrder = (mockRunner.start as ReturnType<typeof vi.fn>).mock
-        .invocationCallOrder[0];
+      const startOrder = (mockRunner.start as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
       expect(guardOrder).toBeLessThan(deleteOrder);
       expect(deleteOrder).toBeLessThan(startOrder);
 
@@ -1099,9 +1098,7 @@ describe("BenchmarkService.resume", () => {
   });
 
   it("non-interrupted status → BadRequestException, no delete, no CAS write attempted to succeed", async () => {
-    repo.setup(
-      makeBenchmarkRow({ id: "b1", userId: "u1", status: "failed", tool: "tau3" }),
-    );
+    repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1", status: "failed", tool: "tau3" }));
     await expect(svc.resume("b1", "u1")).rejects.toThrow(BadRequestException);
     expect(mockRunner.deleteRun).not.toHaveBeenCalled();
     expect(mockRunner.start).not.toHaveBeenCalled();
@@ -1117,9 +1114,7 @@ describe("BenchmarkService.resume", () => {
 
   it("CAS loss (a concurrent resume already claimed the row) → throws, no delete, no start", async () => {
     await withTau3Adapter(async () => {
-      repo.setup(
-        makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }),
-      );
+      repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }));
       repo.updateGuarded.mockResolvedValueOnce(null); // lost the race
       await expect(svc.resume("b1", "u1")).rejects.toThrow(BadRequestException);
       expect(mockRunner.deleteRun).not.toHaveBeenCalled();
@@ -1129,9 +1124,7 @@ describe("BenchmarkService.resume", () => {
 
   it("throws NotFound when the benchmark is not owned by the caller", async () => {
     await withTau3Adapter(async () => {
-      repo.setup(
-        makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }),
-      );
+      repo.setup(makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }));
       await expect(svc.resume("b1", "someone-else")).rejects.toThrow(NotFoundException);
       expect(mockRunner.deleteRun).not.toHaveBeenCalled();
     });

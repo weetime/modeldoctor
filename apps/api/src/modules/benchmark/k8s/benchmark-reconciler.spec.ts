@@ -213,11 +213,10 @@ describe("BenchmarkReconciler", () => {
 
       await new BenchmarkReconciler(deps).run();
 
-      expect(repo.updateGuarded).toHaveBeenCalledWith(
-        "t1",
-        ["pending", "submitted", "running"],
-        { status: "interrupted", statusMessage: expect.any(String) },
-      );
+      expect(repo.updateGuarded).toHaveBeenCalledWith("t1", ["pending", "submitted", "running"], {
+        status: "interrupted",
+        statusMessage: expect.any(String),
+      });
       const call = repo.updateGuarded.mock.calls.find((c) => c[0] === "t1");
       expect(call?.[2]).not.toHaveProperty("completedAt");
     });
@@ -241,11 +240,10 @@ describe("BenchmarkReconciler", () => {
 
       await new BenchmarkReconciler(deps).run();
 
-      expect(repo.updateGuarded).toHaveBeenCalledWith(
-        "t2",
-        ["pending", "submitted", "running"],
-        { status: "interrupted", statusMessage: "pod gone before reconcile" },
-      );
+      expect(repo.updateGuarded).toHaveBeenCalledWith("t2", ["pending", "submitted", "running"], {
+        status: "interrupted",
+        statusMessage: "pod gone before reconcile",
+      });
       const call = repo.updateGuarded.mock.calls.find((c) => c[0] === "t2");
       expect(call?.[2]).not.toHaveProperty("completedAt");
     });
