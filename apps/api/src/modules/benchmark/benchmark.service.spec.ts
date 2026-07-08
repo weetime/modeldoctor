@@ -143,6 +143,19 @@ class MockRepo {
   // Existence probe used by BenchmarkService.create when validating
   // `parentBenchmarkId`. Tests that need a miss override this to false.
   existsById = vi.fn(async (id: string) => this.rows.has(id));
+  // Conditional update — mirrors the real repo's guard semantics (only
+  // writes when current status is in `allowedStatuses`) so resume() tests
+  // exercise realistic CAS behavior without every test having to stub this
+  // manually. Tests asserting a lost race override via mockResolvedValueOnce.
+  updateGuarded = vi.fn(
+    async (id: string, allowedStatuses: readonly string[], patch: Record<string, unknown>) => {
+      const cur = this.rows.get(id);
+      if (!cur || !allowedStatuses.includes(cur.status)) return null;
+      const next = { ...cur, ...patch } as BenchmarkWithRelations;
+      this.rows.set(id, next);
+      return next as unknown as PrismaBenchmark;
+    },
+  );
 }
 
 class MockBaselineService {
@@ -161,6 +174,7 @@ const mockRunner = {
   start: vi.fn(async () => ({ handle: "subprocess:1234" })),
   cancel: vi.fn(async () => undefined),
   cleanup: vi.fn(async () => undefined),
+  deleteRun: vi.fn(async () => undefined),
 } as unknown as K8sBenchmarkRunner;
 
 const mockConnections: ConnectionService = {
@@ -996,6 +1010,154 @@ describe("BenchmarkService.start — agent scenario wiring", () => {
     } finally {
       (adapters as { byTool: typeof origByTool }).byTool = origByTool;
     }
+  });
+});
+
+describe("BenchmarkService.resume", () => {
+  let repo: MockRepo;
+  let llmJudge: MockLlmJudgeService;
+  let svc: BenchmarkService;
+
+  beforeEach(() => {
+    repo = new MockRepo();
+    llmJudge = new MockLlmJudgeService();
+    svc = build(repo, undefined, undefined, undefined, llmJudge);
+    vi.clearAllMocks();
+  });
+
+  // isResumable() calls the mocked byTool() too (resumable.ts imports the
+  // same mocked module), and the file-level default stub always returns
+  // `name: "guidellm"` with no `checkpointDir`. Tests that need tool="tau3"
+  // to read as resumable must install a tau3-shaped adapter stub that
+  // declares checkpointDir, then restore the original in a finally.
+  async function withTau3Adapter<T>(fn: () => Promise<T>): Promise<T> {
+    const adapters = await import("@modeldoctor/tool-adapters");
+    const origByTool = adapters.byTool;
+    (adapters as { byTool: typeof origByTool }).byTool = (() => ({
+      name: "tau3",
+      scenarios: ["agent"],
+      checkpointDir: "data/simulations",
+      paramsSchema: { parse: (x: unknown) => x },
+      reportSchema: { parse: (x: unknown) => x },
+      paramDefaults: {},
+      buildCommand: () => ({ argv: [], env: {}, secretEnv: {}, outputFiles: {} }),
+      parseProgress: () => null,
+      parseFinalReport: () => ({ tool: "tau3" as const, data: {} }),
+      getMaxDurationSeconds: () => 1800,
+    })) as unknown as typeof origByTool;
+    try {
+      return await fn();
+    } finally {
+      (adapters as { byTool: typeof origByTool }).byTool = origByTool;
+    }
+  }
+
+  it("interrupted tau3 → CAS-claims the row, deletes the dead Job, then starts with resume=true", async () => {
+    llmJudge.getDecrypted.mockResolvedValue({
+      id: "prov-1",
+      baseUrl: "http://judge/v1",
+      model: "deepseek-v3",
+      apiKey: "sk-user",
+    });
+    await withTau3Adapter(async () => {
+      repo.setup(
+        makeBenchmarkRow({
+          id: "b1",
+          userId: "u1",
+          connectionId: "c1",
+          status: "interrupted",
+          scenario: "agent",
+          tool: "tau3",
+          params: { domains: ["airline"], gate: { mode: "off" } },
+        }),
+      );
+      const dto = await svc.resume("b1", "u1");
+
+      expect(repo.updateGuarded).toHaveBeenCalledWith("b1", ["interrupted"], {
+        status: "pending",
+        statusMessage: null,
+        completedAt: null,
+      });
+      expect(mockRunner.deleteRun).toHaveBeenCalledWith("b1");
+      expect(mockRunner.start).toHaveBeenCalledWith(
+        expect.objectContaining({ runId: "b1", resume: true }),
+      );
+      // CAS-before-delete ordering: the row guard must win the race BEFORE
+      // the Job is deleted, so a lost race never deletes a Job another actor
+      // now owns.
+      const guardOrder = repo.updateGuarded.mock.invocationCallOrder[0];
+      const deleteOrder = (mockRunner.deleteRun as ReturnType<typeof vi.fn>).mock
+        .invocationCallOrder[0];
+      const startOrder = (mockRunner.start as ReturnType<typeof vi.fn>).mock
+        .invocationCallOrder[0];
+      expect(guardOrder).toBeLessThan(deleteOrder);
+      expect(deleteOrder).toBeLessThan(startOrder);
+
+      expect(dto.status).toBe("submitted");
+    });
+  });
+
+  it("non-interrupted status → BadRequestException, no delete, no CAS write attempted to succeed", async () => {
+    repo.setup(
+      makeBenchmarkRow({ id: "b1", userId: "u1", status: "failed", tool: "tau3" }),
+    );
+    await expect(svc.resume("b1", "u1")).rejects.toThrow(BadRequestException);
+    expect(mockRunner.deleteRun).not.toHaveBeenCalled();
+    expect(mockRunner.start).not.toHaveBeenCalled();
+  });
+
+  it("non-resumable tool (guidellm), even if interrupted → BadRequestException, no delete", async () => {
+    repo.setup(
+      makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "guidellm" }),
+    );
+    await expect(svc.resume("b1", "u1")).rejects.toThrow(BadRequestException);
+    expect(mockRunner.deleteRun).not.toHaveBeenCalled();
+  });
+
+  it("CAS loss (a concurrent resume already claimed the row) → throws, no delete, no start", async () => {
+    await withTau3Adapter(async () => {
+      repo.setup(
+        makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }),
+      );
+      repo.updateGuarded.mockResolvedValueOnce(null); // lost the race
+      await expect(svc.resume("b1", "u1")).rejects.toThrow(BadRequestException);
+      expect(mockRunner.deleteRun).not.toHaveBeenCalled();
+      expect(mockRunner.start).not.toHaveBeenCalled();
+    });
+  });
+
+  it("throws NotFound when the benchmark is not owned by the caller", async () => {
+    await withTau3Adapter(async () => {
+      repo.setup(
+        makeBenchmarkRow({ id: "b1", userId: "u1", status: "interrupted", tool: "tau3" }),
+      );
+      await expect(svc.resume("b1", "someone-else")).rejects.toThrow(NotFoundException);
+      expect(mockRunner.deleteRun).not.toHaveBeenCalled();
+    });
+  });
+
+  it("admin elevation (ownerId undefined) resumes across user boundaries", async () => {
+    llmJudge.getDecrypted.mockResolvedValue({
+      id: "prov-1",
+      baseUrl: "http://judge/v1",
+      model: "deepseek-v3",
+      apiKey: "sk-user",
+    });
+    await withTau3Adapter(async () => {
+      repo.setup(
+        makeBenchmarkRow({
+          id: "b1",
+          userId: "owner",
+          connectionId: "c1",
+          status: "interrupted",
+          scenario: "agent",
+          tool: "tau3",
+        }),
+      );
+      const dto = await svc.resume("b1", undefined);
+      expect(dto.status).toBe("submitted");
+      expect(mockRunner.deleteRun).toHaveBeenCalledWith("b1");
+    });
   });
 });
 

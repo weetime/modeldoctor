@@ -112,6 +112,12 @@ export class BenchmarkController {
     return this.service.cancel(id, user.roles.includes("admin") ? undefined : user.sub);
   }
 
+  @ApiOperation({ summary: "Resume an interrupted, checkpoint-capable benchmark" })
+  @Post(":id/resume")
+  resume(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<Benchmark> {
+    return this.service.resume(id, user.roles.includes("admin") ? undefined : user.sub);
+  }
+
   @ApiOperation({ summary: "Delete a benchmark and its artifacts" })
   @Delete(":id")
   @HttpCode(204)
