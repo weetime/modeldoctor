@@ -15,3 +15,18 @@ export const toolDefSchema = z.object({
   }),
 });
 export type ToolDef = z.infer<typeof toolDefSchema>;
+
+/**
+ * OpenAI-style tool-call emitted by an assistant message (chat-completions
+ * `message.tool_calls[]`). `function.arguments` is a JSON-encoded string
+ * (not a parsed object) — that's how the upstream API returns it.
+ */
+export const ToolCallSchema = z.object({
+  id: z.string(),
+  type: z.literal("function"),
+  function: z.object({
+    name: z.string(),
+    arguments: z.string(),
+  }),
+});
+export type ToolCall = z.infer<typeof ToolCallSchema>;

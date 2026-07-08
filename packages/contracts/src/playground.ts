@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ToolCallSchema, toolDefSchema } from "./agent.js";
 
 /**
  * OpenAI-compatible chat message. Content is either a plain string OR an
@@ -33,8 +34,12 @@ export const ChatMessageContentPartSchema = z.discriminatedUnion("type", [
 export type ChatMessageContentPart = z.infer<typeof ChatMessageContentPartSchema>;
 
 export const ChatMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+  role: z.enum(["user", "assistant", "system", "tool"]),
   content: z.union([z.string(), z.array(ChatMessageContentPartSchema)]),
+  /** Assistant message requesting tool invocation(s). */
+  tool_calls: z.array(ToolCallSchema).optional(),
+  /** Tool-role message: id of the ToolCall this result answers. */
+  tool_call_id: z.string().optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -48,6 +53,8 @@ export const ChatParamsSchema = z
     seed: z.number().int().optional(),
     stop: z.array(z.string()).optional(),
     stream: z.boolean().optional(),
+    tools: z.array(toolDefSchema).optional(),
+    tool_choice: z.union([z.enum(["auto", "none", "required"]), z.record(z.unknown())]).optional(),
   })
   .partial();
 export type ChatParams = z.infer<typeof ChatParamsSchema>;
