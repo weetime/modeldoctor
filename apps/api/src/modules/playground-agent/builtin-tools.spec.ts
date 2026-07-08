@@ -95,6 +95,34 @@ describe("http_get guards", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("rejects IPv4-mapped IPv6 loopback (::ffff:127.0.0.1)", async () => {
+    await expect(
+      BUILTIN_TOOLS.http_get.run({ url: "http://[::ffff:127.0.0.1]/" }),
+    ).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects IPv4-mapped IPv6 cloud metadata address (::ffff:169.254.169.254)", async () => {
+    await expect(
+      BUILTIN_TOOLS.http_get.run({ url: "http://[::ffff:169.254.169.254]/" }),
+    ).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects IPv4-mapped IPv6 10.0.0.0/8 addresses (::ffff:10.0.0.1)", async () => {
+    await expect(
+      BUILTIN_TOOLS.http_get.run({ url: "http://[::ffff:10.0.0.1]/" }),
+    ).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects IPv4-mapped IPv6 192.168.0.0/16 addresses (::ffff:192.168.1.1)", async () => {
+    await expect(
+      BUILTIN_TOOLS.http_get.run({ url: "http://[::ffff:192.168.1.1]/" }),
+    ).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("calls fetch with a timeout signal and truncates a long body for allowed hosts", async () => {
     const longBody = "x".repeat(20 * 1024);
     fetchSpy.mockResolvedValue({
@@ -120,6 +148,11 @@ describe("executeBuiltin", () => {
 
   it("throws a clear error for an unknown tool", async () => {
     await expect(executeBuiltin("nope", {})).rejects.toThrow(/unknown built-in tool/i);
+  });
+
+  it("throws the clean unknown-tool error for prototype-polluting names", async () => {
+    await expect(executeBuiltin("__proto__", {})).rejects.toThrow(/unknown built-in tool/i);
+    await expect(executeBuiltin("constructor", {})).rejects.toThrow(/unknown built-in tool/i);
   });
 });
 
