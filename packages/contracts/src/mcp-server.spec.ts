@@ -28,4 +28,20 @@ describe("mcp-server contracts", () => {
     });
     expect("authTokenCipher" in p).toBe(false);
   });
+
+  it("public shape parses toolsCache: null (unset nullable Prisma column, not undefined)", () => {
+    const p = mcpServerPublicSchema.parse({
+      id: "m1",
+      name: "gw",
+      url: "https://h/mcp",
+      transport: "http",
+      headers: "",
+      toolsCache: null,
+      toolsCachedAt: null,
+      enabled: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    expect(p.toolsCache).toBeNull();
+  });
 });

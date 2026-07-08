@@ -30,7 +30,7 @@ export const mcpServerPublicSchema = z.object({
   url: z.string().url(),
   authTokenPreview: z.string().optional(),
   headers: z.string(),
-  toolsCache: z.array(mcpServerToolSchema).optional(),
+  toolsCache: z.array(mcpServerToolSchema).nullable().optional(),
   toolsCachedAt: z.string().datetime().nullable().optional(),
   enabled: z.boolean(),
   createdAt: z.string().datetime(),

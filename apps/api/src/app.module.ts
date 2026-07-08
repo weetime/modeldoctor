@@ -25,6 +25,7 @@ import { HealthModule } from "./modules/health/health.module.js";
 import { InsightsModule } from "./modules/insights/insights.module.js";
 import { LlmJudgeModule } from "./modules/llm-judge/llm-judge.module.js";
 import { McpModule } from "./modules/mcp/mcp.module.js";
+import { McpServerModule } from "./modules/mcp-server/mcp-server.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
 import { PrometheusDatasourceModule } from "./modules/prometheus-datasource/prometheus-datasource.module.js";
@@ -92,6 +93,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     NotificationsModule,
     AlertsModule,
     McpModule,
+    McpServerModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
     }),
