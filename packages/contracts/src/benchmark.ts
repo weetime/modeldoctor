@@ -225,6 +225,7 @@ export const reportStorageKeys = (runId: string) => ({
   result: `${runId}/result.json`,
   stdout: `${runId}/stdout.log`,
   stderr: `${runId}/stderr.log`,
+  checkpointPrefix: `${runId}/checkpoint/`,
   file: (alias: string) => `${runId}/files/${alias}`,
 });
 
