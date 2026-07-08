@@ -6,6 +6,7 @@
  */
 
 export * from "./agent.js";
+export * from "./agent-run.js";
 export * from "./auth.js";
 export * from "./baseline.js";
 export * from "./benchmark.js";
