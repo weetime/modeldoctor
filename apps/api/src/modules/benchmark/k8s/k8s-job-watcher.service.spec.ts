@@ -353,6 +353,18 @@ describe("K8sJobWatcherService — reduce → execute branches", () => {
       expect.objectContaining({ status: "failed" }),
     );
   });
+
+  it("Failed pod on a resumable tool (tau3) → defers to reconciler, no updateGuarded", async () => {
+    const { deps, informer, repo } = makeDeps("primary");
+    repo.findById.mockResolvedValue({ id: podRunId(), status: "running", tool: "tau3" });
+    const svc = new K8sJobWatcherService(deps);
+    await svc.onModuleInit();
+
+    informer.fire("update", podFailed(1, "Error", "tool exit 1"));
+    await new Promise((r) => setTimeout(r, 5));
+
+    expect(repo.updateGuarded).not.toHaveBeenCalled();
+  });
 });
 
 describe("Phase 3 — pod log streamer", () => {

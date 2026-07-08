@@ -3,6 +3,7 @@ import type { ToolName } from "@modeldoctor/tool-adapters";
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { BenchmarkRepository } from "../benchmark.repository.js";
 import { IN_PROGRESS_STATES } from "../constants.js";
+import { isResumable } from "../resumable.js";
 import type { ReportLoader } from "../storage/report-loader.js";
 import type { BenchmarkReconciler } from "./benchmark-reconciler.js";
 import type { PodLogStreamerPool } from "./pod-log-streamer-pool.js";
@@ -210,7 +211,7 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
       config: this.deps.reducerConfig,
     });
 
-    await this.execute(runId, transition, now);
+    await this.execute(runId, transition, now, bench.tool);
 
     // Phase 3: idempotent attach. Informer replay on startup gives free bootstrap.
     if (
@@ -230,7 +231,12 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
     this.deps.pool.stop(runId);
   }
 
-  private async execute(runId: string, t: DesiredTransition, now: Date): Promise<void> {
+  private async execute(
+    runId: string,
+    t: DesiredTransition,
+    now: Date,
+    tool: string,
+  ): Promise<void> {
     switch (t.kind) {
       case "noop":
         return;
@@ -260,6 +266,16 @@ export class K8sJobWatcherService implements OnModuleInit, OnModuleDestroy {
 
       case "failed-pre-start":
       case "failed-terminal": {
+        // A resumable tool's mid-flight pod death is NOT the watcher's call to
+        // make: the informer can't see whether result.json exists in storage,
+        // so it must defer the failed-vs-interrupted decision to the
+        // S3-aware reconciler rather than writing a terminal "failed" here.
+        // (failed-pre-start is excluded on purpose — nothing ran yet, so
+        // there's no checkpoint to resume from.)
+        if (t.kind === "failed-terminal" && isResumable(tool)) {
+          this.log.log(`${runId} pod failed but resumable — deferring to reconciler`);
+          return;
+        }
         // Phase 3: stderr is already in S3 via Phase 2; no need to wait for drain.
         await this.deps.pool.drainAndStop(runId, 0);
         try {

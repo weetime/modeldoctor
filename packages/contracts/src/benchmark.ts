@@ -24,6 +24,7 @@ export const benchmarkStatusSchema = z.enum([
   "completed",
   "failed",
   "canceled",
+  "interrupted",
 ]);
 export type BenchmarkStatus = z.infer<typeof benchmarkStatusSchema>;
 
