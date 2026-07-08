@@ -22,6 +22,7 @@ export type IsAbortedFn = () => boolean;
 export type ModelCaller = (
   conn: DecryptedConnection,
   body: Record<string, unknown>,
+  signal?: AbortSignal,
 ) => Promise<ParsedPlaygroundChatResponse>;
 
 /**
@@ -46,14 +47,14 @@ export class AgentLoopService {
    * `tool_calls` array before it can dispatch, so there's no benefit to
    * streaming deltas per turn.
    */
-  callModel: ModelCaller = async (conn, body) => {
+  callModel: ModelCaller = async (conn, body, signal) => {
     const url = buildUrl({
       apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
       queryParams: conn.queryParams,
     });
     const headers = buildHeaders(conn.apiKey, conn.customHeaders);
-    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`upstream ${res.status}: ${text || res.statusText}`);
@@ -67,6 +68,7 @@ export class AgentLoopService {
     req: AgentRunRequest,
     emit: EmitFn,
     isAborted: IsAbortedFn = () => false,
+    signal?: AbortSignal,
   ): Promise<void> {
     const start = Date.now();
     const tMs = () => Date.now() - start;
@@ -89,8 +91,9 @@ export class AgentLoopService {
             stream: undefined,
           },
         });
-        parsed = await this.callModel(conn, body);
+        parsed = await this.callModel(conn, body, signal);
       } catch (e) {
+        if (isAborted()) return;
         emit({
           type: "step",
           step: { kind: "error", content: this.errMsg(e), tMs: tMs() },
@@ -98,6 +101,11 @@ export class AgentLoopService {
         emit({ type: "done" });
         return;
       }
+
+      // The upstream call may have taken long enough for the client to
+      // disconnect; check immediately before emitting anything derived
+      // from `parsed` so we never `res.write` after the connection closed.
+      if (isAborted()) return;
 
       if (parsed.content && parsed.content.trim().length > 0) {
         const kind = turn === 0 && req.planFirst ? "plan" : "assistant";
@@ -111,6 +119,14 @@ export class AgentLoopService {
       }
 
       messages.push({ role: "assistant", content: parsed.content ?? "", tool_calls: toolCalls });
+
+      // A turn can request several tool_calls at once. Every one of them
+      // MUST be emitted/executed (or, for inline tools, flagged as needing
+      // a result) before we decide whether to end the request — otherwise
+      // any call ordered after an inline tool would be silently dropped,
+      // leaving the assistant message above with tool_call_ids that never
+      // got a `role: "tool"` response.
+      let sawInlineTool = false;
 
       for (const call of toolCalls) {
         if (isAborted()) return;
@@ -162,9 +178,15 @@ export class AgentLoopService {
 
         // Hand-authored inline tool with no server-side executor: cannot
         // resolve within this request. Per the design note, do NOT block
-        // waiting for a human — emit the event and let the frontend
-        // continue with a fresh request once it has the result.
+        // waiting for a human — emit the event and keep iterating so any
+        // remaining tool_calls in this same turn still get executed; the
+        // frontend continues with a fresh request once it has filled in
+        // every `tool_result_needed` from this turn.
         emit({ type: "tool_result_needed", toolCallId: call.id, name, args });
+        sawInlineTool = true;
+      }
+
+      if (sawInlineTool) {
         emit({ type: "done" });
         return;
       }

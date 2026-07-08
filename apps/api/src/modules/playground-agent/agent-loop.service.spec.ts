@@ -179,4 +179,130 @@ describe("AgentLoopService", () => {
     const toolMsg = secondCallMessages.find((m) => m.role === "tool");
     expect(toolMsg?.content).toMatch(/^error:/);
   });
+
+  it("E: a turn with [builtin, inline] tool_calls executes the builtin AND flags the inline one, then done (regression for dropped trailing calls)", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+        {
+          id: "call_i",
+          type: "function",
+          function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+        },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        builtinTools: ["get_current_time"],
+        inlineTools: [
+          {
+            type: "function",
+            function: {
+              name: "my_custom_tool",
+              description: "hand-authored, no server executor",
+              parameters: { type: "object", properties: {} },
+            },
+          },
+        ],
+      }),
+      (e) => events.push(e),
+    );
+
+    // Only one turn: the trailing inline tool ends the request, but the
+    // leading builtin tool_call must still have been executed first.
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+
+    const stepEvents = events.filter(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step",
+    );
+    expect(stepEvents.map((e) => e.step.kind)).toEqual(["tool_call", "tool_result", "tool_call"]);
+    expect(stepEvents[0]).toMatchObject({
+      step: { kind: "tool_call", name: "get_current_time", toolCallId: "call_b" },
+    });
+    const toolResultStep = stepEvents[1];
+    expect(toolResultStep.step.kind).toBe("tool_result");
+    expect(toolResultStep.step.toolCallId).toBe("call_b");
+    expect(
+      Number.isNaN(new Date(String((toolResultStep.step as { content?: unknown }).content)).getTime()),
+    ).toBe(false);
+    expect(stepEvents[2]).toMatchObject({
+      step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_i" },
+    });
+
+    expect(events).toContainEqual({
+      type: "tool_result_needed",
+      toolCallId: "call_i",
+      name: "my_custom_tool",
+      args: { foo: "bar" },
+    });
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  it("F: a turn with [inline, builtin] tool_calls (reverse order) still executes the builtin AND flags the inline one, then done", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        {
+          id: "call_i",
+          type: "function",
+          function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' },
+        },
+        { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        builtinTools: ["get_current_time"],
+        inlineTools: [
+          {
+            type: "function",
+            function: {
+              name: "my_custom_tool",
+              description: "hand-authored, no server executor",
+              parameters: { type: "object", properties: {} },
+            },
+          },
+        ],
+      }),
+      (e) => events.push(e),
+    );
+
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+
+    const stepEvents = events.filter(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step",
+    );
+    expect(stepEvents.map((e) => e.step.kind)).toEqual(["tool_call", "tool_call", "tool_result"]);
+    expect(stepEvents[0]).toMatchObject({
+      step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_i" },
+    });
+    expect(stepEvents[1]).toMatchObject({
+      step: { kind: "tool_call", name: "get_current_time", toolCallId: "call_b" },
+    });
+    const toolResultStep = stepEvents[2];
+    expect(toolResultStep.step.kind).toBe("tool_result");
+    expect(toolResultStep.step.toolCallId).toBe("call_b");
+
+    // The builtin's result MUST still be executed (and fed back via
+    // messages) even though the inline tool_call came first in the turn —
+    // this is the exact ordering the pre-fix `return` inside the loop broke.
+    expect(events).toContainEqual({
+      type: "tool_result_needed",
+      toolCallId: "call_i",
+      name: "my_custom_tool",
+      args: { foo: "bar" },
+    });
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
 });

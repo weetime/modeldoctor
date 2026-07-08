@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { BUILTIN_TOOLS, BUILTIN_TOOL_DEFS, executeBuiltin } from "./builtin-tools.js";
 
 describe("get_current_time", () => {
@@ -43,7 +43,7 @@ describe("calculator", () => {
 });
 
 describe("http_get guards", () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  let fetchSpy: MockInstance<typeof globalThis.fetch>;
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, "fetch");

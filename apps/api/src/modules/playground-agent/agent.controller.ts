@@ -19,8 +19,12 @@ class AgentRunRequestDto extends createZodDto(AgentRunRequestSchema) {}
  * `res.end()` once `AgentLoopService.run` resolves.
  *
  * The client closing the connection (nav away, tab close, explicit abort)
- * flips `aborted`, which `AgentLoopService.run` polls between turns/tool
- * calls so the loop doesn't keep burning upstream calls for a dead request.
+ * aborts a shared `AbortController`: its `signal` cancels any in-flight
+ * upstream fetch (mirrors `pipeUpstreamSseToResponse` in
+ * integrations/openai-client/sse.ts), and its `aborted` flag is polled by
+ * `AgentLoopService.run` between turns/tool calls — and checked again the
+ * instant the upstream call resolves — so the loop never keeps burning
+ * upstream calls, nor writes to the response, for a dead request.
  */
 @ApiTags("playground")
 @Controller("playground")
@@ -50,19 +54,20 @@ export class AgentController {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    let aborted = false;
+    const abortController = new AbortController();
     res.on("close", () => {
-      aborted = true;
+      if (!abortController.signal.aborted) abortController.abort();
     });
+    const isAborted = (): boolean => abortController.signal.aborted;
 
     const emit = (event: AgentSseEvent): void => {
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     };
 
     try {
-      await this.svc.run(conn, body, emit, () => aborted);
+      await this.svc.run(conn, body, emit, isAborted, abortController.signal);
     } catch (e) {
-      if (!aborted) {
+      if (!isAborted()) {
         emit({
           type: "step",
           step: {
@@ -74,7 +79,7 @@ export class AgentController {
         emit({ type: "done" });
       }
     } finally {
-      if (!aborted) res.end();
+      if (!isAborted()) res.end();
     }
   }
 }
