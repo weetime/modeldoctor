@@ -6,6 +6,9 @@
     "url": "URL",
     "transport": "传输方式",
     "status": "状态",
+    "tools": "工具",
+    "toolsCount": "{{count}} 个",
+    "toolsNone": "未发现",
     "actions": "操作"
   },
   "badges": {
@@ -48,7 +51,12 @@
   "actions": {
     "new": "新建 MCP 服务器",
     "edit": "编辑",
-    "delete": "删除"
+    "delete": "删除",
+    "discover": "发现工具"
+  },
+  "discover": {
+    "success": "已从「{{name}}」发现 {{count}} 个工具",
+    "error": "从「{{name}}」发现工具失败"
   },
   "delete": {
     "title": "删除 MCP 服务器",

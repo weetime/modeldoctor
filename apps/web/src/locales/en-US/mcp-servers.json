@@ -6,6 +6,9 @@
     "url": "URL",
     "transport": "Transport",
     "status": "Status",
+    "tools": "Tools",
+    "toolsCount": "{{count}}",
+    "toolsNone": "Not discovered",
     "actions": "Actions"
   },
   "badges": {
@@ -48,7 +51,12 @@
   "actions": {
     "new": "New MCP server",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "discover": "Discover tools"
+  },
+  "discover": {
+    "success": "Discovered {{count}} tools from \"{{name}}\"",
+    "error": "Failed to discover tools from \"{{name}}\""
   },
   "delete": {
     "title": "Delete MCP server",

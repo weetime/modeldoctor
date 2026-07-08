@@ -87,7 +87,7 @@ export class McpClientService {
       const { tools } = await client.listTools();
       return tools.map((tool) => this.normalizeTool(tool));
     } finally {
-      await client.close();
+      await this.closeQuietly(client);
     }
   }
 
@@ -102,7 +102,26 @@ export class McpClientService {
       const result = await client.callTool({ name, arguments: args });
       return this.normalizeContent(result);
     } finally {
+      await this.closeQuietly(client);
+    }
+  }
+
+  /**
+   * `client.close()` in a bare `finally` would replace any in-flight error
+   * from the `try` block with its own if it also throws (or silently
+   * swallow a successful result if `close()` throws after the `try`
+   * resolved but before `return` copies its value out — `finally` runs
+   * either way and a throw there always wins). Swallowing this secondary
+   * error keeps the original success/failure of `connect`/`listTools`/
+   * `callTool` as the one thing callers observe; a close() failure just
+   * means the underlying transport didn't tear down cleanly, which isn't
+   * actionable for the caller anyway.
+   */
+  private async closeQuietly(client: McpSdkClient): Promise<void> {
+    try {
       await client.close();
+    } catch {
+      // Intentionally ignored — see doc comment above.
     }
   }
 
@@ -129,11 +148,28 @@ export class McpClientService {
     };
   }
 
+  /**
+   * All-text content joins cleanly. Mixed content (e.g. a text summary
+   * alongside an image part) still has useful text worth surfacing to the
+   * model, so it's joined too — with a trailing note naming how many
+   * non-text parts were omitted — rather than discarding it in favor of the
+   * full JSON dump. Only when there is NO text at all (all-non-text, or an
+   * empty/absent `content` array) does this fall back to `JSON.stringify`.
+   */
   private normalizeContent(result: unknown): string {
     const content = (result as { content?: unknown[] } | undefined)?.content;
-    if (Array.isArray(content) && content.length > 0 && content.every(isTextContentPart)) {
-      return (content as TextContentPart[]).map((part) => part.text).join("\n");
+    if (!Array.isArray(content) || content.length === 0) {
+      return JSON.stringify(result);
     }
-    return JSON.stringify(result);
+    const textParts = content.filter(isTextContentPart);
+    if (textParts.length === 0) {
+      return JSON.stringify(result);
+    }
+    const joined = textParts.map((part) => part.text).join("\n");
+    if (textParts.length === content.length) {
+      return joined;
+    }
+    const omitted = content.length - textParts.length;
+    return `${joined}\n[${omitted} non-text content part${omitted === 1 ? "" : "s"} omitted]`;
   }
 }

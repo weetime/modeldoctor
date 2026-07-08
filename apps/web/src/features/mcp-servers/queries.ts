@@ -49,3 +49,15 @@ export function useDeleteMcpServer() {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }
+
+/** Live `tools/list` discovery round-trip (Task 11) — refreshes `toolsCache`. */
+export function useDiscoverMcpServer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => mcpServerApi.discover(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: detailKey(data.id) });
+    },
+  });
+}

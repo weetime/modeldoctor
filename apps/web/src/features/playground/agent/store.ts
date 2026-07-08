@@ -8,6 +8,14 @@ export interface PendingInlineTool {
   args: unknown;
 }
 
+/** A `tool_approval` SSE event (MCP, Task 11), held until the user approves/rejects. */
+export interface PendingMcpApproval {
+  toolCallId: string;
+  server: { id: string; name: string };
+  name: string;
+  args: unknown;
+}
+
 export interface AgentStoreState {
   selectedConnectionId: string | null;
   task: string;
@@ -21,6 +29,7 @@ export interface AgentStoreState {
   autoRunMcp: boolean;
   steps: AgentStep[];
   pendingInlineTool: PendingInlineTool | null;
+  pendingApproval: PendingMcpApproval | null;
   running: boolean;
   abortController: AbortController | null;
   error: string | null;
@@ -40,6 +49,7 @@ export interface AgentStoreState {
   appendStep: (step: AgentStep) => void;
   clearSteps: () => void;
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
+  setPendingApproval: (approval: PendingMcpApproval | null) => void;
   setRunning: (b: boolean) => void;
   setAbortController: (ac: AbortController | null) => void;
   setError: (s: string | null) => void;
@@ -58,6 +68,7 @@ const initial = {
   autoRunMcp: false,
   steps: [] as AgentStep[],
   pendingInlineTool: null as PendingInlineTool | null,
+  pendingApproval: null as PendingMcpApproval | null,
   running: false,
   abortController: null as AbortController | null,
   error: null as string | null,
@@ -93,8 +104,9 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
     })),
   setAutoRunMcp: (b) => set({ autoRunMcp: b }),
   appendStep: (step) => set((s) => ({ steps: [...s.steps, step] })),
-  clearSteps: () => set({ steps: [], pendingInlineTool: null, error: null }),
+  clearSteps: () => set({ steps: [], pendingInlineTool: null, pendingApproval: null, error: null }),
   setPendingInlineTool: (tool) => set({ pendingInlineTool: tool }),
+  setPendingApproval: (approval) => set({ pendingApproval: approval }),
   setRunning: (b) => set({ running: b }),
   setAbortController: (ac) => set({ abortController: ac }),
   setError: (e) => set({ error: e }),

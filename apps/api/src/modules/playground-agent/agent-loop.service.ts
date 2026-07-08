@@ -1,5 +1,5 @@
 import type { AgentRunRequest, AgentSseEvent, ChatMessage, ToolDef } from "@modeldoctor/contracts";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import {
   buildHeaders,
   buildPlaygroundChatBody,
@@ -8,11 +8,14 @@ import {
   parsePlaygroundChatResponse,
 } from "../../integrations/openai-client/index.js";
 import type { DecryptedConnection } from "../connection/connection.service.js";
+import { McpClientService } from "../mcp-client/mcp-client.service.js";
+import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
+import { McpServerService } from "../mcp-server/mcp-server.service.js";
 import { BUILTIN_TOOLS, executeBuiltin } from "./builtin-tools.js";
 
 const DEFAULT_PATH = "/v1/chat/completions";
 const DEFAULT_MAX_STEPS = 12;
-/** MCP tool names are namespaced `mcp__<server>__<tool>`; wiring is Task 11. */
+/** MCP tool names are namespaced `mcp__<serverId>__<tool>` (Task 11). */
 const MCP_TOOL_PREFIX = "mcp__";
 
 export type EmitFn = (event: AgentSseEvent) => void;
@@ -26,19 +29,33 @@ export type ModelCaller = (
 ) => Promise<ParsedPlaygroundChatResponse>;
 
 /**
- * Server-side multi-turn tool-call loop for the Agent Playground (Task 8).
+ * Server-side multi-turn tool-call loop for the Agent Playground (Task 8;
+ * MCP wiring Task 11).
  *
- * One `run()` call drives *one* HTTP request's worth of turns: builtin (and,
- * later, MCP) tools execute inline and the loop keeps going; a hand-authored
- * "inline" tool with no server-side executor cannot be resolved here, so the
- * loop emits `tool_result_needed` + `done` and returns — the frontend is
- * expected to fill in that tool's result and start a *new* `run()` (POST)
- * with the accumulated `messages`, per the brief's continuation design
- * (SSE requests are short-lived and stateless; the server never blocks
- * waiting on a human).
+ * One `run()` call drives *one* HTTP request's worth of turns: builtin and
+ * MCP (when `autoRunMcp` is set) tools execute inline and the loop keeps
+ * going; a hand-authored "inline" tool with no server-side executor, or an
+ * MCP tool without `autoRunMcp`, cannot be resolved here, so the loop emits
+ * `tool_result_needed` / `tool_approval` + `done` and returns — the frontend
+ * is expected to either fill in that tool's result (inline) or re-send with
+ * `autoRunMcp: true` (MCP) and start a *new* `run()` (POST) with the
+ * accumulated `messages`, per the brief's continuation design (SSE requests
+ * are short-lived and stateless; the server never blocks waiting on a
+ * human).
  */
 @Injectable()
 export class AgentLoopService {
+  /**
+   * Both are `@Optional()` (undefined when unset) purely so unit specs can
+   * `new AgentLoopService()` with no DI container at all when a test doesn't
+   * touch MCP — real requests always get them via `PlaygroundAgentModule`
+   * importing `McpClientModule` + `McpServerModule`.
+   */
+  constructor(
+    @Optional() private readonly mcpClient?: McpClientService,
+    @Optional() private readonly mcpServerService?: McpServerService,
+  ) {}
+
   /**
    * Upstream chat-completions call for a single turn. A plain overridable
    * instance property (not a constructor-injected token) so specs can stub
@@ -69,11 +86,19 @@ export class AgentLoopService {
     emit: EmitFn,
     isAborted: IsAbortedFn = () => false,
     signal?: AbortSignal,
+    /** Owner of `req.mcpServerIds` — required only when that field is set. */
+    userId?: string,
   ): Promise<void> {
     const start = Date.now();
     const tMs = () => Date.now() - start;
     const maxSteps = req.maxSteps ?? DEFAULT_MAX_STEPS;
-    const tools = this.resolveTools(req);
+    const { toolDefs: mcpToolDefs, serverMap: mcpServerMap } = await this.discoverMcpTools(
+      req,
+      userId,
+      emit,
+      tMs,
+    );
+    const tools = [...this.resolveTools(req), ...mcpToolDefs];
     const messages: ChatMessage[] =
       req.messages && req.messages.length > 0 ? [...req.messages] : this.buildInitialMessages(req);
 
@@ -127,6 +152,7 @@ export class AgentLoopService {
       // leaving the assistant message above with tool_call_ids that never
       // got a `role: "tool"` response.
       let sawInlineTool = false;
+      let sawApprovalNeeded = false;
 
       for (const call of toolCalls) {
         if (isAborted()) return;
@@ -139,21 +165,50 @@ export class AgentLoopService {
         });
 
         if (name.startsWith(MCP_TOOL_PREFIX)) {
+          const parsedName = this.parseMcpToolName(name);
+          const server = parsedName ? mcpServerMap.get(parsedName.serverId) : undefined;
+          if (!parsedName || !server) {
+            const msg = "error: unknown or unavailable MCP server/tool";
+            emit({
+              type: "step",
+              step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: tMs() },
+            });
+            messages.push({ role: "tool", tool_call_id: call.id, content: msg });
+            continue;
+          }
+
+          if (req.autoRunMcp) {
+            try {
+              // biome-ignore lint/style/noNonNullAssertion: `server` resolved only via mcpServerMap, which is only populated when `this.mcpClient` succeeded
+              const result = await this.mcpClient!.callTool(server, parsedName.toolName, args);
+              emit({
+                type: "step",
+                step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: tMs() },
+              });
+              messages.push({ role: "tool", tool_call_id: call.id, content: result });
+            } catch (e) {
+              const msg = this.errMsg(e);
+              emit({
+                type: "step",
+                step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: tMs() },
+              });
+              messages.push({ role: "tool", tool_call_id: call.id, content: `error: ${msg}` });
+            }
+            continue;
+          }
+
+          // Not auto-run: cannot execute inline, mirror the inline-tool
+          // continuation model — emit the approval request and keep
+          // iterating so any remaining tool_calls in this same turn still
+          // get executed/flagged before the request ends.
           emit({
-            type: "step",
-            step: {
-              kind: "error",
-              name,
-              toolCallId: call.id,
-              content: "MCP not yet available",
-              tMs: tMs(),
-            },
+            type: "tool_approval",
+            toolCallId: call.id,
+            server: { id: server.id, name: server.name },
+            name,
+            args,
           });
-          messages.push({
-            role: "tool",
-            tool_call_id: call.id,
-            content: "error: MCP tools are not yet available",
-          });
+          sawApprovalNeeded = true;
           continue;
         }
 
@@ -186,7 +241,7 @@ export class AgentLoopService {
         sawInlineTool = true;
       }
 
-      if (sawInlineTool) {
+      if (sawInlineTool || sawApprovalNeeded) {
         emit({ type: "done" });
         return;
       }
@@ -204,6 +259,66 @@ export class AgentLoopService {
       .map((name) => BUILTIN_TOOLS[name]?.def)
       .filter((d): d is ToolDef => Boolean(d));
     return [...builtins, ...(req.inlineTools ?? [])];
+  }
+
+  /**
+   * Discovers tools for every requested `mcpServerIds` entry and turns them
+   * into namespaced `ToolDef`s (`mcp__<serverId>__<tool>`) advertised to the
+   * model alongside builtins/inline tools. A dead/unauthorized server (bad
+   * credentials, unreachable, not owned by `userId`, …) emits an `error`
+   * step for that one server and is simply excluded from the returned map —
+   * it does NOT throw and does NOT stop the other servers or the run.
+   */
+  private async discoverMcpTools(
+    req: AgentRunRequest,
+    userId: string | undefined,
+    emit: EmitFn,
+    tMs: () => number,
+  ): Promise<{ toolDefs: ToolDef[]; serverMap: Map<string, DecryptedMcpServer> }> {
+    const toolDefs: ToolDef[] = [];
+    const serverMap = new Map<string, DecryptedMcpServer>();
+    const serverIds = req.mcpServerIds ?? [];
+    if (serverIds.length === 0) return { toolDefs, serverMap };
+
+    for (const serverId of serverIds) {
+      try {
+        if (!userId) throw new Error("no authenticated user to resolve MCP servers for");
+        if (!this.mcpServerService || !this.mcpClient) {
+          throw new Error("MCP client is not available on this AgentLoopService instance");
+        }
+        const server = await this.mcpServerService.getOwnedDecrypted(userId, serverId);
+        const tools = await this.mcpClient.discoverTools(server);
+        serverMap.set(serverId, server);
+        for (const tool of tools) {
+          toolDefs.push({
+            type: "function",
+            function: {
+              name: `${MCP_TOOL_PREFIX}${serverId}__${tool.name}`,
+              description: tool.description,
+              parameters: tool.inputSchema,
+            },
+          });
+        }
+      } catch (e) {
+        emit({
+          type: "step",
+          step: {
+            kind: "error",
+            content: `MCP discovery failed for server ${serverId}: ${this.errMsg(e)}`,
+            tMs: tMs(),
+          },
+        });
+      }
+    }
+    return { toolDefs, serverMap };
+  }
+
+  /** Splits `mcp__<serverId>__<tool>` into its parts; `null` if malformed. */
+  private parseMcpToolName(name: string): { serverId: string; toolName: string } | null {
+    const rest = name.slice(MCP_TOOL_PREFIX.length);
+    const sepIdx = rest.indexOf("__");
+    if (sepIdx <= 0 || sepIdx === rest.length - 2) return null;
+    return { serverId: rest.slice(0, sepIdx), toolName: rest.slice(sepIdx + 2) };
   }
 
   private buildInitialMessages(req: AgentRunRequest): ChatMessage[] {

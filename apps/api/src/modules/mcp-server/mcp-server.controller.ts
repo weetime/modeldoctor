@@ -24,6 +24,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { McpClientService } from "../mcp-client/mcp-client.service.js";
 import { McpServerService } from "./mcp-server.service.js";
 
 @ApiTags("mcp-servers")
@@ -31,7 +32,10 @@ import { McpServerService } from "./mcp-server.service.js";
 @Controller("mcp-servers")
 @UseGuards(JwtAuthGuard)
 export class McpServerController {
-  constructor(private readonly service: McpServerService) {}
+  constructor(
+    private readonly service: McpServerService,
+    private readonly mcpClient: McpClientService,
+  ) {}
 
   @ApiOperation({ summary: "List MCP servers owned by the user" })
   @Get()
@@ -69,5 +73,18 @@ export class McpServerController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<void> {
     await this.service.delete(user.sub, id);
+  }
+
+  @ApiOperation({
+    summary: "Live tools/list round-trip against the server, caching the result",
+  })
+  @Post(":id/discover")
+  async discover(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+  ): Promise<McpServerPublic> {
+    const server = await this.service.getOwnedDecrypted(user.sub, id);
+    const tools = await this.mcpClient.discoverTools(server);
+    return this.service.cacheTools(user.sub, id, tools);
   }
 }

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { PendingInlineTool } from "../store";
+import type { PendingInlineTool, PendingMcpApproval } from "../store";
 
 const KIND_ICON: Record<AgentStep["kind"], string> = {
   plan: "🧠",
@@ -94,6 +94,46 @@ export function PendingToolCard({ tool, onSubmit, submitting }: PendingToolCardP
       >
         {t("agent.pendingTool.submit")}
       </Button>
+    </div>
+  );
+}
+
+export interface ApprovalCardProps {
+  approval: PendingMcpApproval;
+  onApprove: () => void;
+  onReject: () => void;
+}
+
+/**
+ * Rendered at the end of the trace when the loop emitted `tool_approval`
+ * for an MCP tool call (`AgentRunRequest.autoRunMcp` not set — Task 11).
+ * 批准 re-runs the request with `autoRunMcp: true` so the loop executes the
+ * tool in-request; 拒绝 just clears the pending card (the run already ended
+ * via `done`, nothing further happens).
+ */
+export function ApprovalCard({ approval, onApprove, onReject }: ApprovalCardProps) {
+  const { t } = useTranslation("playground");
+
+  return (
+    <div
+      data-testid="mcp-approval-card"
+      className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+    >
+      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+        <span aria-hidden="true">🔐</span>
+        {t("agent.approval.title", { server: approval.server.name, name: approval.name })}
+      </div>
+      <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-xs text-muted-foreground">
+        {JSON.stringify(approval.args ?? {}, null, 2)}
+      </pre>
+      <div className="mt-2 flex gap-2">
+        <Button type="button" size="sm" onClick={onApprove}>
+          {t("agent.approval.approve")}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onReject}>
+          {t("agent.approval.reject")}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -66,7 +66,7 @@ const SCRIPTED_EVENTS: AgentSseEvent[] = [
 
 interface FakeStreamInput {
   path: string;
-  body: { messages?: unknown };
+  body: { messages?: unknown; autoRunMcp?: boolean };
   signal: AbortSignal;
   onSseEvent: (data: string) => void;
 }
@@ -192,5 +192,103 @@ describe("AgentPage", () => {
         expect.objectContaining({ role: "tool", tool_call_id: "call2", content: "42" }),
       ]),
     );
+  });
+
+  it("renders a pending MCP tool_approval card; 批准/Approve re-runs with autoRunMcp=true", async () => {
+    playgroundFetchStreamMock.mockImplementationOnce(
+      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
+        onSseEvent(
+          JSON.stringify({
+            type: "tool_approval",
+            toolCallId: "call3",
+            server: { id: "mcp_1", name: "higress-gw" },
+            name: "mcp__mcp_1__search",
+            args: { q: "x" },
+          } satisfies AgentSseEvent),
+        );
+        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AgentPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+    const taskBox = screen.getAllByRole("textbox")[0];
+    await user.type(taskBox, "search something via MCP");
+    await user.click(screen.getByRole("button", { name: /run|运行/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mcp-approval-card")).toBeInTheDocument();
+    });
+    expect(useAgentStore.getState().pendingApproval).toEqual({
+      toolCallId: "call3",
+      server: { id: "mcp_1", name: "higress-gw" },
+      name: "mcp__mcp_1__search",
+      args: { q: "x" },
+    });
+    expect(useAgentStore.getState().autoRunMcp).toBe(false);
+
+    playgroundFetchStreamMock.mockClear();
+    playgroundFetchStreamMock.mockImplementationOnce(async ({ onSseEvent }: FakeStreamInput) => {
+      onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+    });
+
+    await user.click(screen.getByRole("button", { name: /approve|批准/i }));
+
+    await waitFor(() => {
+      expect(useAgentStore.getState().pendingApproval).toBeNull();
+    });
+    expect(useAgentStore.getState().autoRunMcp).toBe(true);
+    expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
+    const call = playgroundFetchStreamMock.mock.calls[0][0];
+    expect(call.body.autoRunMcp).toBe(true);
+  });
+
+  it("拒绝/Reject just clears the pending approval card without re-running", async () => {
+    playgroundFetchStreamMock.mockImplementationOnce(
+      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
+        onSseEvent(
+          JSON.stringify({
+            type: "tool_approval",
+            toolCallId: "call4",
+            server: { id: "mcp_1", name: "higress-gw" },
+            name: "mcp__mcp_1__search",
+            args: {},
+          } satisfies AgentSseEvent),
+        );
+        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+      },
+    );
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AgentPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+    const taskBox = screen.getAllByRole("textbox")[0];
+    await user.type(taskBox, "search something via MCP");
+    await user.click(screen.getByRole("button", { name: /run|运行/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mcp-approval-card")).toBeInTheDocument();
+    });
+
+    playgroundFetchStreamMock.mockClear();
+    await user.click(screen.getByRole("button", { name: /reject|拒绝/i }));
+
+    await waitFor(() => {
+      expect(useAgentStore.getState().pendingApproval).toBeNull();
+    });
+    expect(playgroundFetchStreamMock).not.toHaveBeenCalled();
   });
 });

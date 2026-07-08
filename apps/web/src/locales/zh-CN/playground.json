@@ -363,6 +363,11 @@
       "placeholder": "粘贴或输入该工具的执行结果…",
       "submit": "提交结果"
     },
+    "approval": {
+      "title": "MCP 服务器「{{server}}」请求调用 {{name}}，需要你的批准",
+      "approve": "批准",
+      "reject": "拒绝"
+    },
     "trace": {
       "empty": "运行任务后，这里会显示执行轨迹。"
     }

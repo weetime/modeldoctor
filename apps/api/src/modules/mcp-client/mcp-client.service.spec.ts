@@ -111,6 +111,14 @@ describe("McpClientService", () => {
       expect(fakeClient.connect).toHaveBeenCalledWith({ __fakeTransport: true });
       expect(fakeClient.close).toHaveBeenCalledTimes(1);
     });
+
+    it("surfaces the original listTools() error even when close() also throws", async () => {
+      fakeClient.listTools.mockRejectedValue(new Error("original failure"));
+      fakeClient.close.mockRejectedValue(new Error("close blew up"));
+
+      await expect(service.discoverTools(makeServer())).rejects.toThrow("original failure");
+      expect(fakeClient.close).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("callTool", () => {
@@ -157,6 +165,29 @@ describe("McpClientService", () => {
       await expect(service.callTool(makeServer(), "some_tool", {})).rejects.toThrow("kaboom");
 
       expect(fakeClient.close).toHaveBeenCalledTimes(1);
+    });
+
+    it("surfaces the original callTool() error even when close() also throws", async () => {
+      fakeClient.callTool.mockRejectedValue(new Error("original failure"));
+      fakeClient.close.mockRejectedValue(new Error("close blew up"));
+
+      await expect(service.callTool(makeServer(), "some_tool", {})).rejects.toThrow(
+        "original failure",
+      );
+      expect(fakeClient.close).toHaveBeenCalledTimes(1);
+    });
+
+    it("joins text parts and appends a note for non-text parts in mixed content", async () => {
+      fakeClient.callTool.mockResolvedValue({
+        content: [
+          { type: "text", text: "here is the summary" },
+          { type: "image", data: "base64...", mimeType: "image/png" },
+        ],
+      });
+
+      const result = await service.callTool(makeServer(), "some_tool", {});
+
+      expect(result).toBe("here is the summary\n[1 non-text content part omitted]");
     });
   });
 });

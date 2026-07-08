@@ -1,25 +1,35 @@
 import type { AgentStep } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
-import type { PendingInlineTool } from "../store";
-import { PendingToolCard, StepCard } from "./StepCard";
+import type { PendingInlineTool, PendingMcpApproval } from "../store";
+import { ApprovalCard, PendingToolCard, StepCard } from "./StepCard";
 
 export interface TraceTimelineProps {
   steps: AgentStep[];
   pendingInlineTool: PendingInlineTool | null;
   onSubmitToolResult: (resultContent: string) => void;
   submittingToolResult?: boolean;
+  pendingApproval: PendingMcpApproval | null;
+  onApproveMcp: () => void;
+  onRejectMcp: () => void;
 }
 
-/** Vertical list of `StepCard`s, plus the pending inline-tool card at the end. */
+/**
+ * Vertical list of `StepCard`s, plus the pending inline-tool card and/or the
+ * pending MCP approval card at the end (both can't be pending at once — the
+ * loop returns after the first one it encounters in a turn).
+ */
 export function TraceTimeline({
   steps,
   pendingInlineTool,
   onSubmitToolResult,
   submittingToolResult,
+  pendingApproval,
+  onApproveMcp,
+  onRejectMcp,
 }: TraceTimelineProps) {
   const { t } = useTranslation("playground");
 
-  if (steps.length === 0 && !pendingInlineTool) {
+  if (steps.length === 0 && !pendingInlineTool && !pendingApproval) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-sm text-muted-foreground">
         {t("agent.trace.empty")}
@@ -39,6 +49,9 @@ export function TraceTimeline({
           onSubmit={onSubmitToolResult}
           submitting={submittingToolResult}
         />
+      ) : null}
+      {pendingApproval ? (
+        <ApprovalCard approval={pendingApproval} onApprove={onApproveMcp} onReject={onRejectMcp} />
       ) : null}
     </div>
   );

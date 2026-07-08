@@ -46,8 +46,8 @@ export type ToolCall = z.infer<typeof ToolCallSchema>;
  *   (`content`), correlated back to `toolCallId`.
  * - `assistant` — assistant free-text content, on any turn (including the
  *   final one with no further tool calls).
- * - `error` — either an upstream call failed, a builtin tool threw, an
- *   MCP tool was requested (not wired until Task 11), or `maxSteps` was hit.
+ * - `error` — either an upstream call failed, a builtin/MCP tool threw, an
+ *   MCP tool call named an unknown/unavailable server, or `maxSteps` was hit.
  */
 export const AgentStepKindSchema = z.enum(["plan", "tool_call", "tool_result", "assistant", "error"]);
 export type AgentStepKind = z.infer<typeof AgentStepKindSchema>;
@@ -75,12 +75,27 @@ export type AgentStep = z.infer<typeof AgentStepSchema>;
  * `POST /api/playground/agent` request, passing the accumulated
  * `messages` (including a `{role:"tool", tool_call_id, content}` entry for
  * this call) via `AgentRunRequest.messages` to continue the run.
+ *
+ * `tool_approval` (Task 11) is the MCP analogue: emitted when the loop
+ * dispatches a `mcp__<serverId>__<tool>` call and `AgentRunRequest.autoRunMcp`
+ * was not set. The loop does NOT execute the MCP tool — it emits this event
+ * (with the owning server's id/name for display) followed by `done`. The
+ * frontend either re-sends the same request with `autoRunMcp: true` (simplest
+ * V1 "approve" flow — see `AgentRunRequest.autoRunMcp` doc) or discards the
+ * run ("reject").
  */
 export const AgentSseEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("step"), step: AgentStepSchema }),
   z.object({
     type: z.literal("tool_result_needed"),
     toolCallId: z.string(),
+    name: z.string(),
+    args: z.unknown(),
+  }),
+  z.object({
+    type: z.literal("tool_approval"),
+    toolCallId: z.string(),
+    server: z.object({ id: z.string(), name: z.string() }),
     name: z.string(),
     args: z.unknown(),
   }),

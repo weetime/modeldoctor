@@ -14,4 +14,6 @@ export const mcpServerApi = {
   update: (id: string, body: UpdateMcpServer) =>
     api.patch<McpServerWithSecret | McpServerPublic>(`/api/mcp-servers/${id}`, body),
   delete: (id: string) => api.del<void>(`/api/mcp-servers/${id}`),
+  /** Live `tools/list` round-trip against the server; caches + returns the updated row (Task 11). */
+  discover: (id: string) => api.post<McpServerPublic>(`/api/mcp-servers/${id}/discover`, undefined),
 };

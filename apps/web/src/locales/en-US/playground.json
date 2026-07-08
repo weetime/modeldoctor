@@ -366,6 +366,11 @@
       "placeholder": "Paste or type the tool's result…",
       "submit": "Submit result"
     },
+    "approval": {
+      "title": "MCP server \"{{server}}\" wants to call {{name}} — approval required",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
     "trace": {
       "empty": "Run a task and its execution trace will appear here."
     }

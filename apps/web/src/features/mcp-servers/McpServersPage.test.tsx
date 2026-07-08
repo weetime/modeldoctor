@@ -24,10 +24,12 @@ const seedList: McpServerPublic[] = [
 ];
 
 const deleteMutate = vi.fn();
+const discoverMutate = vi.fn();
 
 vi.mock("./queries", () => ({
   useMcpServers: () => ({ data: seedList, isLoading: false, error: null }),
   useDeleteMcpServer: () => ({ mutate: deleteMutate, isPending: false }),
+  useDiscoverMcpServer: () => ({ mutate: discoverMutate, isPending: false }),
   // McpServerSheet imports these — stub so it renders if the sheet ever opens.
   useCreateMcpServer: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateMcpServer: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -38,6 +40,7 @@ import { McpServersPage } from "./McpServersPage";
 describe("McpServersPage", () => {
   beforeEach(() => {
     deleteMutate.mockClear();
+    discoverMutate.mockClear();
   });
 
   it("renders name, url and the create button", () => {
@@ -67,5 +70,17 @@ describe("McpServersPage", () => {
     await userEvent.click(confirmBtn);
 
     expect(deleteMutate).toHaveBeenCalledWith("m1", expect.anything());
+  });
+
+  it("discover flow: the discover action calls the discover mutation with the server id", async () => {
+    render(
+      <MemoryRouter>
+        <McpServersPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /actions|操作/i }));
+    await userEvent.click(await screen.findByText(/Discover tools|发现工具/i));
+
+    expect(discoverMutate).toHaveBeenCalledWith("m1", expect.anything());
   });
 });

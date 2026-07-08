@@ -1,6 +1,8 @@
 import type { AgentRunRequest, AgentSseEvent, ChatMessage } from "@modeldoctor/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { DecryptedConnection } from "../connection/connection.service.js";
+import type { McpClientService } from "../mcp-client/mcp-client.service.js";
+import type { DecryptedMcpServer, McpServerService } from "../mcp-server/mcp-server.service.js";
 import { AgentLoopService } from "./agent-loop.service.js";
 
 function fakeConnection(): DecryptedConnection {
@@ -33,6 +35,36 @@ function baseReq(overrides: Partial<AgentRunRequest> = {}): AgentRunRequest {
 function lastMessages(mock: ReturnType<typeof vi.fn>): ChatMessage[] {
   const call = mock.mock.calls.at(-1) as [DecryptedConnection, { messages: ChatMessage[] }];
   return call[1].messages;
+}
+
+/** Extracts the `tools` array passed to a given callModel mock call (0-indexed). */
+function toolsAt(mock: ReturnType<typeof vi.fn>, callIndex: number): unknown[] {
+  const call = mock.mock.calls[callIndex] as [DecryptedConnection, { tools?: unknown[] }];
+  return call[1].tools ?? [];
+}
+
+function fakeMcpServer(overrides: Partial<DecryptedMcpServer> = {}): DecryptedMcpServer {
+  return {
+    id: "mcp_1",
+    name: "higress-gw",
+    url: "https://higress.local/mcp",
+    headers: "",
+    authToken: "",
+    ...overrides,
+  };
+}
+
+function fakeMcpClient(): McpClientService {
+  return {
+    discoverTools: vi.fn(),
+    callTool: vi.fn(),
+  } as unknown as McpClientService;
+}
+
+function fakeMcpServerService(): McpServerService {
+  return {
+    getOwnedDecrypted: vi.fn(),
+  } as unknown as McpServerService;
 }
 
 describe("AgentLoopService", () => {
@@ -303,6 +335,156 @@ describe("AgentLoopService", () => {
       name: "my_custom_tool",
       args: { foo: "bar" },
     });
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  // ─── MCP wiring (Task 11) ────────────────────────────────────────────────
+
+  it("G: autoRunMcp=true executes the discovered MCP tool via callTool, feeds the result back, and continues the loop", async () => {
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer(),
+    );
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+    ]);
+    (mcpClient.callTool as ReturnType<typeof vi.fn>).mockResolvedValue("search result text");
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+    svc.callModel = vi
+      .fn()
+      .mockResolvedValueOnce({
+        content: "",
+        usage: undefined,
+        tool_calls: [
+          {
+            id: "call_mcp",
+            type: "function",
+            function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        content: "Here's what I found.",
+        usage: undefined,
+        tool_calls: undefined,
+      });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_1"], autoRunMcp: true }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(mcpServerService.getOwnedDecrypted).toHaveBeenCalledWith("user_1", "mcp_1");
+    expect(mcpClient.discoverTools).toHaveBeenCalledWith(fakeMcpServer());
+    expect(mcpClient.callTool).toHaveBeenCalledWith(fakeMcpServer(), "search", { q: "x" });
+
+    // The discovered tool was advertised to the model, namespaced.
+    const advertisedTools = toolsAt(svc.callModel as unknown as ReturnType<typeof vi.fn>, 0) as Array<{
+      function: { name: string };
+    }>;
+    expect(advertisedTools.map((t) => t.function.name)).toContain("mcp__mcp_1__search");
+
+    const kinds = events
+      .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
+      .map((e) => e.step.kind);
+    expect(kinds).toEqual(["tool_call", "tool_result", "assistant"]);
+    expect(events.at(-1)).toEqual({ type: "done" });
+
+    const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
+    const toolMsg = secondCallMessages.find((m) => m.role === "tool");
+    expect(toolMsg?.tool_call_id).toBe("call_mcp");
+    expect(toolMsg?.content).toBe("search result text");
+  });
+
+  it("H: autoRunMcp=false (default) emits tool_approval + done without ever calling callTool", async () => {
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
+    );
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+    ]);
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        {
+          id: "call_mcp",
+          type: "function",
+          function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+        },
+      ],
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_1"] }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+    expect(mcpClient.callTool).not.toHaveBeenCalled();
+    expect(events).toContainEqual({
+      type: "tool_approval",
+      toolCallId: "call_mcp",
+      server: { id: "mcp_1", name: "higress-gw" },
+      name: "mcp__mcp_1__search",
+      args: { q: "x" },
+    });
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  it("I: a server that fails discovery emits an error step but the run still completes normally", async () => {
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("boom: unreachable"),
+    );
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "All good, no tools needed.",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_bad"] }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(mcpClient.discoverTools).not.toHaveBeenCalled();
+    const errorStep = events.find(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> =>
+        e.type === "step" && e.step.kind === "error",
+    );
+    expect(errorStep?.step.content).toMatch(/mcp_bad/);
+    expect(errorStep?.step.content).toMatch(/boom: unreachable/);
+
+    const assistantStep = events.find(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> =>
+        e.type === "step" && e.step.kind === "assistant",
+    );
+    expect(assistantStep?.step.content).toBe("All good, no tools needed.");
     expect(events.at(-1)).toEqual({ type: "done" });
   });
 });

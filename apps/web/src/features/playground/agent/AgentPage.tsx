@@ -38,6 +38,7 @@ export async function startAgentRun(
 
   if (!continuation) fresh.clearSteps();
   fresh.setPendingInlineTool(null);
+  fresh.setPendingApproval(null);
   fresh.setError(null);
   fresh.setRunning(true);
 
@@ -51,6 +52,8 @@ export async function startAgentRun(
     maxSteps: fresh.maxSteps,
     inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
     builtinTools: fresh.builtinTools.length > 0 ? fresh.builtinTools : undefined,
+    mcpServerIds: fresh.selectedMcpServerIds.length > 0 ? fresh.selectedMcpServerIds : undefined,
+    autoRunMcp: fresh.autoRunMcp,
     messages: continuation?.messages,
   };
 
@@ -63,6 +66,13 @@ export async function startAgentRun(
         s.appendStep(evt.step);
       } else if (evt.type === "tool_result_needed") {
         s.setPendingInlineTool({ toolCallId: evt.toolCallId, name: evt.name, args: evt.args });
+      } else if (evt.type === "tool_approval") {
+        s.setPendingApproval({
+          toolCallId: evt.toolCallId,
+          server: evt.server,
+          name: evt.name,
+          args: evt.args,
+        });
       }
       // "done" needs no explicit handling — running flips false in `finally`.
     });
@@ -340,6 +350,23 @@ export function AgentPage() {
     void startAgentRun(t, { messages });
   };
 
+  // Simplest V1 (per the brief): "approve" re-runs the exact same request
+  // with `autoRunMcp` forced on, so the loop executes the MCP tool
+  // in-request instead of pausing for approval again. This restarts the run
+  // from turn 0 (same as any fresh run) rather than trying to splice a
+  // partial transcript back in — the frontend only has `AgentStep`s, not the
+  // full `ChatMessage[]` the server-side loop was tracking internally.
+  const onApproveMcp = () => {
+    const fresh = useAgentStore.getState();
+    fresh.setPendingApproval(null);
+    fresh.setAutoRunMcp(true);
+    void startAgentRun(t);
+  };
+
+  const onRejectMcp = () => {
+    useAgentStore.getState().setPendingApproval(null);
+  };
+
   return (
     <PlaygroundShell
       category="chat"
@@ -390,6 +417,9 @@ export function AgentPage() {
             pendingInlineTool={slice.pendingInlineTool}
             onSubmitToolResult={onSubmitToolResult}
             submittingToolResult={slice.running}
+            pendingApproval={slice.pendingApproval}
+            onApproveMcp={onApproveMcp}
+            onRejectMcp={onRejectMcp}
           />
         </div>
       </div>

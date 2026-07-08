@@ -1,5 +1,5 @@
 import type { McpServerPublic } from "@modeldoctor/contracts";
-import { MoreHorizontal, Pencil, Plug, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plug, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -23,14 +23,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { McpServerSheet, type McpServerSheetMode } from "./McpServerSheet";
-import { useDeleteMcpServer, useMcpServers } from "./queries";
+import { useDeleteMcpServer, useDiscoverMcpServer, useMcpServers } from "./queries";
 
 export function McpServersPage() {
   const { t } = useTranslation("mcp-servers");
   const { t: tc } = useTranslation("common");
   const listQuery = useMcpServers();
   const deleteMut = useDeleteMcpServer();
+  const discoverMut = useDiscoverMcpServer();
   const list: McpServerPublic[] = listQuery.data ?? [];
+
+  const onDiscover = (server: McpServerPublic) => {
+    discoverMut.mutate(server.id, {
+      onSuccess: (updated) => {
+        const names = (updated.toolsCache ?? []).map((tool) => tool.name);
+        toast.success(t("discover.success", { count: names.length, name: server.name }), {
+          description: names.length > 0 ? names.join(", ") : undefined,
+        });
+      },
+      onError: () => toast.error(t("discover.error", { name: server.name })),
+    });
+  };
 
   const [dialogMode, setDialogMode] = useState<McpServerSheetMode | null>(null);
   const [pendingDelete, setPendingDelete] = useState<McpServerPublic | null>(null);
@@ -81,6 +94,7 @@ export function McpServersPage() {
                   <TableHead>{t("table.url")}</TableHead>
                   <TableHead>{t("table.transport")}</TableHead>
                   <TableHead>{t("table.status")}</TableHead>
+                  <TableHead>{t("table.tools")}</TableHead>
                   <TableHead className="w-24 text-center">{t("table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -113,6 +127,11 @@ export function McpServersPage() {
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {s.toolsCache && s.toolsCache.length > 0
+                        ? t("table.toolsCount", { count: s.toolsCache.length })
+                        : t("table.toolsNone")}
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center gap-1">
                         <Button
@@ -136,6 +155,14 @@ export function McpServersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => onDiscover(s)}
+                              disabled={discoverMut.isPending}
+                              className="gap-2"
+                            >
+                              <Search className="h-4 w-4" />
+                              {t("actions.discover")}
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => setPendingDelete(s)}
                               className="gap-2 text-destructive focus:text-destructive"

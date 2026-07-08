@@ -37,7 +37,7 @@ export class AgentController {
 
   @ApiOperation({
     summary:
-      "Run one Agent Playground turn-loop over SSE (builtin + inline tools; MCP tools placeholder until Task 11)",
+      "Run one Agent Playground turn-loop over SSE (builtin + inline + MCP tools; MCP tools gated by autoRunMcp/tool_approval)",
   })
   @ApiBody({ type: AgentRunRequestDto })
   @Post("agent")
@@ -65,7 +65,7 @@ export class AgentController {
     };
 
     try {
-      await this.svc.run(conn, body, emit, isAborted, abortController.signal);
+      await this.svc.run(conn, body, emit, isAborted, abortController.signal, user.sub);
     } catch (e) {
       if (!isAborted()) {
         emit({

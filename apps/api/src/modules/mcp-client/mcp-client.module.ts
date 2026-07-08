@@ -1,20 +1,17 @@
 import { Module } from "@nestjs/common";
-import { McpServerModule } from "../mcp-server/mcp-server.module.js";
 import { McpClientService } from "./mcp-client.service.js";
 
 /**
  * Standalone module for the MCP client (discover + call external MCP
- * tools). Imports McpServerModule so consumers in this module's graph can
- * resolve `McpServerService` (e.g. to fetch `getOwnedDecrypted` before
- * calling into `McpClientService`) — `McpClientService` itself stays pure
- * and takes an already-decrypted server as an argument, it does not reach
- * into McpServerService directly.
- *
- * Not wired into `AppModule` yet — the (later) agent loop module imports
- * this directly.
+ * tools). Deliberately has NO imports: `McpClientService` is pure — it takes
+ * an already-decrypted server as a plain argument and never reaches into
+ * `McpServerService` itself. Consumers (e.g. `McpServerModule`'s discover
+ * route, `PlaygroundAgentModule`'s agent loop — Task 11) import both this
+ * module and `McpServerModule` side by side; `McpServerModule` importing
+ * this module back would create a cycle if this module also imported
+ * `McpServerModule`, so it must not.
  */
 @Module({
-  imports: [McpServerModule],
   providers: [McpClientService],
   exports: [McpClientService],
 })

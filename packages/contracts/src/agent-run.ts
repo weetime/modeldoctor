@@ -34,5 +34,15 @@ export const AgentRunRequestSchema = z.object({
   /** Full transcript so far — present on continuation requests. */
   messages: z.array(ChatMessageSchema).optional(),
   tool_choice: z.union([z.enum(["auto", "none", "required"]), z.record(z.unknown())]).optional(),
+  /** IDs of user-owned McpServers to discover + advertise as tools (Task 11). */
+  mcpServerIds: z.array(z.string()).optional(),
+  /**
+   * When true, MCP tool calls execute in-request via `McpClientService`
+   * (same continuous multi-turn model as builtins). When false/omitted, an
+   * MCP tool call instead emits a `tool_approval` event + `done` — the
+   * frontend re-sends with `autoRunMcp: true` (or the approved result) to
+   * continue, mirroring the `tool_result_needed` continuation model.
+   */
+  autoRunMcp: z.boolean().optional(),
 });
 export type AgentRunRequest = z.infer<typeof AgentRunRequestSchema>;
