@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Mic,
   Network,
+  Plug,
   Rocket,
   Settings,
   ShieldCheck,
@@ -124,6 +125,7 @@ export const sidebarGroups: SidebarGroup[] = [
  * from anywhere in the app. */
 export const sidebarPrimaryItems: SidebarItem[] = [
   { to: "/connections", icon: Database, labelKey: "items.connections" },
+  { to: "/mcp-servers", icon: Plug, labelKey: "items.mcpServers" },
 ];
 
 export const sidebarUtilityItems: SidebarItem[] = [

@@ -1,0 +1,65 @@
+{
+  "title": "MCP Servers",
+  "subtitle": "External Model Context Protocol servers registered for the Agent playground to call as tools.",
+  "table": {
+    "name": "Name",
+    "url": "URL",
+    "transport": "Transport",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "badges": {
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "sheet": {
+    "createTitle": "New MCP server",
+    "editTitle": "Edit MCP server",
+    "resetAuthToken": "Reset auth token",
+    "resetAuthTokenRequired": "Reset toggle is on — enter the new auth token",
+    "fields": {
+      "name": {
+        "label": "Name",
+        "placeholder": "e.g. higress-gateway"
+      },
+      "url": {
+        "label": "URL",
+        "placeholder": "https://host/mcp"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "What this server exposes (optional)"
+      },
+      "headers": {
+        "label": "Custom headers (one per line)",
+        "placeholder": "Header-Name: value"
+      },
+      "authToken": {
+        "label": "Auth token",
+        "placeholder": "Optional bearer token",
+        "help": "Stored encrypted on the server. Leave empty if this MCP server doesn't require auth."
+      }
+    }
+  },
+  "toast": {
+    "createSuccess": "MCP server created",
+    "updateSuccess": "MCP server updated"
+  },
+  "actions": {
+    "new": "New MCP server",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "delete": {
+    "title": "Delete MCP server",
+    "body": "Delete \"{{name}}\"? This cannot be undone.",
+    "confirm": "Delete",
+    "success": "MCP server deleted",
+    "error": "Failed to delete MCP server"
+  },
+  "empty": {
+    "title": "No MCP servers yet",
+    "body": "Click New MCP server to register one.",
+    "create": "New MCP server"
+  }
+}

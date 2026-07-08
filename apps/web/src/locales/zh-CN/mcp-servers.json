@@ -1,0 +1,65 @@
+{
+  "title": "MCP 服务器",
+  "subtitle": "已注册的外部 Model Context Protocol 服务器，供 Agent playground 作为工具调用。",
+  "table": {
+    "name": "名称",
+    "url": "URL",
+    "transport": "传输方式",
+    "status": "状态",
+    "actions": "操作"
+  },
+  "badges": {
+    "enabled": "已启用",
+    "disabled": "已关闭"
+  },
+  "sheet": {
+    "createTitle": "新建 MCP 服务器",
+    "editTitle": "编辑 MCP 服务器",
+    "resetAuthToken": "重新设置 Auth Token",
+    "resetAuthTokenRequired": "已开启重新设置，请输入新的 Auth Token",
+    "fields": {
+      "name": {
+        "label": "名称",
+        "placeholder": "例如 higress-gateway"
+      },
+      "url": {
+        "label": "URL",
+        "placeholder": "https://host/mcp"
+      },
+      "description": {
+        "label": "描述",
+        "placeholder": "该服务器提供的能力（可选）"
+      },
+      "headers": {
+        "label": "自定义 Headers（每行一条）",
+        "placeholder": "Header-Name: value"
+      },
+      "authToken": {
+        "label": "Auth Token",
+        "placeholder": "可选的 Bearer Token",
+        "help": "已加密存储于云端。若该 MCP 服务器无需鉴权，可留空。"
+      }
+    }
+  },
+  "toast": {
+    "createSuccess": "MCP 服务器已创建",
+    "updateSuccess": "MCP 服务器已更新"
+  },
+  "actions": {
+    "new": "新建 MCP 服务器",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "delete": {
+    "title": "删除 MCP 服务器",
+    "body": "确定要删除「{{name}}」吗？该操作无法撤销。",
+    "confirm": "删除",
+    "success": "MCP 服务器已删除",
+    "error": "删除 MCP 服务器失败"
+  },
+  "empty": {
+    "title": "尚未注册任何 MCP 服务器",
+    "body": "点击「新建 MCP 服务器」开始。",
+    "create": "新建 MCP 服务器"
+  }
+}

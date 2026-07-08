@@ -26,6 +26,7 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { LlmJudgeProvidersPage } from "@/features/llm-judge-providers/LlmJudgeProvidersPage";
+import { McpServersPage } from "@/features/mcp-servers/McpServersPage";
 import { MeLayout } from "@/features/me/MeLayout";
 import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
 import { ProfilePage } from "@/features/me/ProfilePage";
@@ -121,6 +122,7 @@ export const routes: RouteObject[] = [
           { path: "debug", element: <RequestDebugPage /> },
           { path: "alerts", element: <AlertsPage /> },
           { path: "connections", element: <ConnectionsPage /> },
+          { path: "mcp-servers", element: <McpServersPage /> },
           {
             path: "me",
             element: <MeLayout />,
