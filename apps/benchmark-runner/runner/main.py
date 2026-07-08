@@ -268,6 +268,63 @@ def _inject_api_key_into_backend_kwargs(argv: list[str]) -> list[str]:
     return out
 
 
+def _checkpoint_dir_abs() -> str | None:
+    """Resolve MD_CHECKPOINT_DIR relative to Path.cwd(); None if unset.
+
+    Gate for the whole checkpoint feature (Task 3): every call site below
+    is a no-op when this returns None, so tools that don't set
+    MD_CHECKPOINT_DIR (i.e. everything except tau3) see zero behavior
+    change.
+    """
+    rel = os.environ.get("MD_CHECKPOINT_DIR")
+    if not rel:
+        return None
+    return str(Path.cwd() / rel)
+
+
+def _upload_checkpoint_once(s3: S3Writer, run_id: str, dir_abs: str) -> None:
+    """Walk dir_abs and put_file every file under <run_id>/checkpoint/<rel>."""
+    from runner.storage_keys import checkpoint_prefix
+
+    if not os.path.isdir(dir_abs):
+        return
+    prefix = checkpoint_prefix(run_id)
+    for root, _dirs, files in os.walk(dir_abs):
+        for name in files:
+            full = os.path.join(root, name)
+            rel = os.path.relpath(full, dir_abs)
+            s3.put_file(f"{prefix}{rel}", full)
+
+
+class _CheckpointUploader(threading.Thread):
+    """Background daemon that periodically flushes the tool's checkpoint dir
+    to S3 so a killed/preempted run can resume from the last interval.
+
+    Best-effort: an upload failure is logged and retried on the next tick,
+    never raised into the run (a checkpoint hiccup must not fail the
+    benchmark itself).
+    """
+
+    def __init__(self, s3: S3Writer, run_id: str, dir_abs: str, interval: float):
+        super().__init__(daemon=True)
+        self._s3, self._run_id, self._dir, self._interval = s3, run_id, dir_abs, interval
+        # NOTE: named _stop_event, NOT _stop — threading.Thread already owns a
+        # private _stop() method it calls internally from join()/_wait_for_
+        # tstate_lock(); an attribute named self._stop shadows it and makes
+        # join() raise "TypeError: 'Event' object is not callable".
+        self._stop_event = threading.Event()
+
+    def run(self) -> None:
+        while not self._stop_event.wait(self._interval):
+            try:
+                _upload_checkpoint_once(self._s3, self._run_id, self._dir)
+            except Exception as e:  # noqa: BLE001 - checkpoint is best-effort
+                log.warning("checkpoint upload failed (will retry): %s", e)
+
+    def stop(self) -> None:
+        self._stop_event.set()
+
+
 def main() -> int:
     benchmark_id = os.environ["MD_BENCHMARK_ID"]
     argv = json.loads(os.environ["MD_ARGV"])
@@ -300,6 +357,15 @@ def main() -> int:
     argv = _inject_api_key_sentinel(argv)
     argv = _inject_named_secrets(argv)
     log.info("running: %s", " ".join(_redacted(argv)))
+
+    # Restore-from-checkpoint (gated): only when the tool declared a
+    # checkpoint dir AND the run was launched as a resume. A fresh run with
+    # MD_CHECKPOINT_DIR set but MD_RESUME unset starts clean (no restore).
+    ckpt_dir = _checkpoint_dir_abs()
+    if ckpt_dir and os.environ.get("MD_RESUME") == "1":
+        n = s3.download_prefix(f"{benchmark_id}/checkpoint/", ckpt_dir)
+        log.info("restored %d checkpoint file(s) into %s", n, ckpt_dir)
+
     proc = subprocess.Popen(  # noqa: S603
         argv,
         stdout=subprocess.PIPE,
@@ -314,9 +380,23 @@ def main() -> int:
     t1.start()
     t2.start()
 
+    # Periodic checkpoint upload (gated): starts only when the tool declared
+    # a checkpoint dir, independent of MD_RESUME (a fresh run still needs to
+    # persist checkpoints so a LATER resume has something to restore).
+    uploader = None
+    if ckpt_dir:
+        interval = float(os.environ.get("MD_CHECKPOINT_INTERVAL_SEC", "60"))
+        uploader = _CheckpointUploader(s3, benchmark_id, ckpt_dir, interval)
+        uploader.start()
+
     proc.wait()
     t1.join(timeout=5)
     t2.join(timeout=5)
+
+    if uploader:
+        uploader.stop()
+        uploader.join(timeout=10)
+        _upload_checkpoint_once(s3, benchmark_id, ckpt_dir)  # final flush
 
     # 2. Upload output files via put_file (auto-multipart for >5 MB)
     files_map: dict[str, str] = {}
