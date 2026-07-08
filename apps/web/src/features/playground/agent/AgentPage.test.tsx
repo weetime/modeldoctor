@@ -1,5 +1,5 @@
 import "@/lib/i18n";
-import type { AgentSseEvent, ConnectionPublic } from "@modeldoctor/contracts";
+import type { AgentSseEvent, ChatMessage, ConnectionPublic } from "@modeldoctor/contracts";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -133,6 +133,25 @@ describe("AgentPage", () => {
     expect(useAgentStore.getState().running).toBe(false);
   });
 
+  // Full-transcript continuation (Task 11 fix pass): the server's `done`
+  // event carries the full transcript so far when pausing — the frontend
+  // stashes it (`continuationMessages`) and resends it verbatim on
+  // submit/approve, instead of rebuilding a minimal 3-message transcript.
+  const PAUSED_INLINE_TOOL_TRANSCRIPT: ChatMessage[] = [
+    { role: "user", content: "call my inline tool" },
+    {
+      role: "assistant",
+      content: "",
+      tool_calls: [
+        {
+          id: "call2",
+          type: "function",
+          function: { name: "my_inline_tool", arguments: JSON.stringify({ foo: "bar" }) },
+        },
+      ],
+    },
+  ];
+
   it("renders a pending inline-tool card with a submit-result affordance", async () => {
     playgroundFetchStreamMock.mockImplementationOnce(
       async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
@@ -144,7 +163,12 @@ describe("AgentPage", () => {
             args: { foo: "bar" },
           } satisfies AgentSseEvent),
         );
-        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+        onSseEvent(
+          JSON.stringify({
+            type: "done",
+            messages: PAUSED_INLINE_TOOL_TRANSCRIPT,
+          } satisfies AgentSseEvent),
+        );
       },
     );
 
@@ -171,8 +195,9 @@ describe("AgentPage", () => {
     });
 
     // Submitting the result triggers a continuation run — it should clear
-    // the pending card and call playgroundFetchStream a second time with a
-    // `messages` array carrying the tool result keyed by toolCallId.
+    // the pending card and call playgroundFetchStream a second time with the
+    // full `continuationMessages` transcript plus the tool result appended,
+    // NOT a rebuilt minimal transcript.
     playgroundFetchStreamMock.mockClear();
     playgroundFetchStreamMock.mockImplementationOnce(async ({ onSseEvent }: FakeStreamInput) => {
       onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
@@ -187,16 +212,42 @@ describe("AgentPage", () => {
     });
     expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
     const call = playgroundFetchStreamMock.mock.calls[0][0];
-    expect(call.body.messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ role: "tool", tool_call_id: "call2", content: "42" }),
-      ]),
-    );
+    expect(call.body.messages).toEqual([
+      ...PAUSED_INLINE_TOOL_TRANSCRIPT,
+      { role: "tool", tool_call_id: "call2", content: "42" },
+    ]);
   });
+
+  const PAUSED_MCP_APPROVAL_TRANSCRIPT: ChatMessage[] = [
+    { role: "user", content: "search something via MCP" },
+    {
+      role: "assistant",
+      content: "",
+      tool_calls: [
+        {
+          id: "call3",
+          type: "function",
+          function: { name: "mcp__mcp_1__search", arguments: JSON.stringify({ q: "x" }) },
+        },
+      ],
+    },
+  ];
 
   it("renders a pending MCP tool_approval card; 批准/Approve re-runs with autoRunMcp=true", async () => {
     playgroundFetchStreamMock.mockImplementationOnce(
       async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
+        onSseEvent(
+          JSON.stringify({
+            type: "step",
+            step: {
+              kind: "tool_call",
+              name: "mcp__mcp_1__search",
+              args: { q: "x" },
+              toolCallId: "call3",
+              tMs: 5,
+            },
+          } satisfies AgentSseEvent),
+        );
         onSseEvent(
           JSON.stringify({
             type: "tool_approval",
@@ -206,7 +257,12 @@ describe("AgentPage", () => {
             args: { q: "x" },
           } satisfies AgentSseEvent),
         );
-        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
+        onSseEvent(
+          JSON.stringify({
+            type: "done",
+            messages: PAUSED_MCP_APPROVAL_TRANSCRIPT,
+          } satisfies AgentSseEvent),
+        );
       },
     );
 
@@ -248,6 +304,14 @@ describe("AgentPage", () => {
     expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
     const call = playgroundFetchStreamMock.mock.calls[0][0];
     expect(call.body.autoRunMcp).toBe(true);
+    // Approve resends the exact paused transcript (resume), not a fresh
+    // from-scratch task — this is what lets the server skip re-running
+    // whatever already executed before the pause.
+    expect(call.body.messages).toEqual(PAUSED_MCP_APPROVAL_TRANSCRIPT);
+    // The existing trace (the tool_call step from the paused run) is
+    // appended to, not cleared/restarted, by the approve resend.
+    expect(useAgentStore.getState().steps).toHaveLength(1);
+    expect(useAgentStore.getState().steps[0].kind).toBe("tool_call");
   });
 
   it("拒绝/Reject just clears the pending approval card without re-running", async () => {

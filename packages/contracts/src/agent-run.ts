@@ -19,6 +19,16 @@ import { ChatMessageSchema } from "./playground.js";
  * multi-request continuation model (inline tools with no server-side
  * executor). `task` is still required even on a continuation call; the
  * loop ignores it in favor of `messages` when the latter is present.
+ *
+ * Full-transcript continuation (Task 11 fix pass): `messages` here MUST be
+ * the *exact* array the server handed back on `AgentSseEvent`'s `done.messages`
+ * (see that field's doc) — the frontend does not rebuild it. When `run()`
+ * sees this array end in an assistant message whose `tool_calls` aren't all
+ * answered by a following `role: "tool"` message yet, it resolves ONLY the
+ * unanswered ones (executing a newly-approved MCP tool when `autoRunMcp` is
+ * now true, or re-pausing) before calling the model again — so builtins and
+ * auto-run MCP tools that already executed in the paused turn are never
+ * re-run on continuation.
  */
 export const AgentRunRequestSchema = z.object({
   connectionId: z.string().min(1),

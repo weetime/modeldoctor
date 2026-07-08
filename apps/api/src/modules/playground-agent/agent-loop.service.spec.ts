@@ -4,6 +4,7 @@ import type { DecryptedConnection } from "../connection/connection.service.js";
 import type { McpClientService } from "../mcp-client/mcp-client.service.js";
 import type { DecryptedMcpServer, McpServerService } from "../mcp-server/mcp-server.service.js";
 import { AgentLoopService } from "./agent-loop.service.js";
+import * as builtinToolsModule from "./builtin-tools.js";
 
 function fakeConnection(): DecryptedConnection {
   return {
@@ -171,7 +172,23 @@ describe("AgentLoopService", () => {
         step: { kind: "tool_call", name: "my_custom_tool", args: { foo: "bar" }, toolCallId: "call_9", tMs: expect.any(Number) },
       },
       { type: "tool_result_needed", toolCallId: "call_9", name: "my_custom_tool", args: { foo: "bar" } },
-      { type: "done" },
+      {
+        type: "done",
+        // Full-transcript continuation (Task 11 fix pass): `done` carries the
+        // transcript so far — here just the user task + the assistant's
+        // tool_calls message, since the one call in this turn is the inline
+        // tool that never got a `role: "tool"` answer.
+        messages: [
+          { role: "user", content: "what time is it?" },
+          {
+            role: "assistant",
+            content: "",
+            tool_calls: [
+              { id: "call_9", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
+            ],
+          },
+        ],
+      },
     ]);
   });
 
@@ -273,7 +290,24 @@ describe("AgentLoopService", () => {
       name: "my_custom_tool",
       args: { foo: "bar" },
     });
-    expect(events.at(-1)).toEqual({ type: "done" });
+    // Full-transcript continuation: `done.messages` must include the
+    // builtin's already-executed tool result (not just the assistant's
+    // tool_calls message) — this is exactly what lets a resumed request
+    // skip re-running it.
+    const doneEvent = events.at(-1) as Extract<AgentSseEvent, { type: "done" }>;
+    expect(doneEvent.type).toBe("done");
+    expect(doneEvent.messages).toEqual([
+      { role: "user", content: "what time is it?" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+          { id: "call_i", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
+        ],
+      },
+      { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
+    ]);
   });
 
   it("F: a turn with [inline, builtin] tool_calls (reverse order) still executes the builtin AND flags the inline one, then done", async () => {
@@ -335,7 +369,20 @@ describe("AgentLoopService", () => {
       name: "my_custom_tool",
       args: { foo: "bar" },
     });
-    expect(events.at(-1)).toEqual({ type: "done" });
+    const doneEvent = events.at(-1) as Extract<AgentSseEvent, { type: "done" }>;
+    expect(doneEvent.type).toBe("done");
+    expect(doneEvent.messages).toEqual([
+      { role: "user", content: "what time is it?" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          { id: "call_i", type: "function", function: { name: "my_custom_tool", arguments: '{"foo":"bar"}' } },
+          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+        ],
+      },
+      { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
+    ]);
   });
 
   // ─── MCP wiring (Task 11) ────────────────────────────────────────────────
@@ -445,7 +492,18 @@ describe("AgentLoopService", () => {
       name: "mcp__mcp_1__search",
       args: { q: "x" },
     });
-    expect(events.at(-1)).toEqual({ type: "done" });
+    const doneEvent = events.at(-1) as Extract<AgentSseEvent, { type: "done" }>;
+    expect(doneEvent.type).toBe("done");
+    expect(doneEvent.messages).toEqual([
+      { role: "user", content: "what time is it?" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          { id: "call_mcp", type: "function", function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' } },
+        ],
+      },
+    ]);
   });
 
   it("I: a server that fails discovery emits an error step but the run still completes normally", async () => {
@@ -486,5 +544,190 @@ describe("AgentLoopService", () => {
     );
     expect(assistantStep?.step.content).toBe("All good, no tools needed.");
     expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  // ─── Full-transcript continuation / resume (Task 11 fix pass) ─────────────
+
+  it("J: [builtin, mcp-needs-approval] pauses with the builtin result in done.messages; resuming with autoRunMcp=true executes ONLY the approved MCP tool (builtin never re-runs)", async () => {
+    const executeBuiltinSpy = vi.spyOn(builtinToolsModule, "executeBuiltin");
+
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
+    );
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+    ]);
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+
+    // ── First request: model asks for a builtin + an MCP tool in one turn.
+    svc.callModel = vi.fn().mockResolvedValueOnce({
+      content: "",
+      usage: undefined,
+      tool_calls: [
+        { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+        {
+          id: "call_mcp",
+          type: "function",
+          function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' },
+        },
+      ],
+    });
+
+    const firstEvents: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ builtinTools: ["get_current_time"], mcpServerIds: ["mcp_1"] }),
+      (e) => firstEvents.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+    expect(executeBuiltinSpy).toHaveBeenCalledTimes(1);
+    expect(mcpClient.callTool).not.toHaveBeenCalled();
+    expect(firstEvents).toContainEqual({
+      type: "tool_approval",
+      toolCallId: "call_mcp",
+      server: { id: "mcp_1", name: "higress-gw" },
+      name: "mcp__mcp_1__search",
+      args: { q: "x" },
+    });
+
+    const firstDone = firstEvents.at(-1) as Extract<AgentSseEvent, { type: "done" }>;
+    expect(firstDone.type).toBe("done");
+    const transcript = firstDone.messages as ChatMessage[];
+    // The builtin already executed — its result MUST be in the handed-back
+    // transcript so the resume never has to (and doesn't) re-run it.
+    expect(transcript).toEqual([
+      { role: "user", content: "what time is it?" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          { id: "call_b", type: "function", function: { name: "get_current_time", arguments: "{}" } },
+          { id: "call_mcp", type: "function", function: { name: "mcp__mcp_1__search", arguments: '{"q":"x"}' } },
+        ],
+      },
+      { role: "tool", tool_call_id: "call_b", content: expect.any(String) },
+    ]);
+
+    // ── Second request: frontend "approve" resend — same transcript,
+    // autoRunMcp now true. The builtin's tool_call has no unanswered
+    // sibling other than the MCP one, so only the MCP tool should execute.
+    (mcpClient.callTool as ReturnType<typeof vi.fn>).mockResolvedValue("search result text");
+    svc.callModel = vi.fn().mockResolvedValueOnce({
+      content: "Done both.",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const secondEvents: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        builtinTools: ["get_current_time"],
+        mcpServerIds: ["mcp_1"],
+        autoRunMcp: true,
+        messages: transcript,
+      }),
+      (e) => secondEvents.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    // The builtin executor is still called exactly once in total — the
+    // resume must NOT re-execute it, only the newly-approved MCP tool runs.
+    expect(executeBuiltinSpy).toHaveBeenCalledTimes(1);
+    expect(mcpClient.callTool).toHaveBeenCalledTimes(1);
+    expect(mcpClient.callTool).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "mcp_1" }),
+      "search",
+      { q: "x" },
+    );
+
+    // Resume must NOT restart from turn 0 — the model is called exactly
+    // once more (the turn that concludes the run), not from scratch.
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+
+    // The already-shown `tool_call` step for the builtin/MCP calls is not
+    // re-emitted on resume (it's already in the frontend's persisted
+    // trace) — only the MCP tool's result and the final assistant turn are.
+    const secondSteps = secondEvents.filter(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step",
+    );
+    expect(secondSteps.map((e) => e.step.kind)).toEqual(["tool_result", "assistant"]);
+    expect(secondSteps[0]).toMatchObject({
+      step: { kind: "tool_result", name: "mcp__mcp_1__search", toolCallId: "call_mcp", content: "search result text" },
+    });
+    expect(secondSteps[1]).toMatchObject({ step: { kind: "assistant", content: "Done both." } });
+
+    // Normal completion (no further pause) — `done` carries no `messages`.
+    expect(secondEvents.at(-1)).toEqual({ type: "done" });
+
+    executeBuiltinSpy.mockRestore();
+  });
+
+  it("K: an mcp__<serverId>__tool naming a server NOT in mcpServerIds/not owned is rejected with an error step, callTool is never called, and the run continues", async () => {
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer({ id: "mcp_1", name: "higress-gw" }),
+    );
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "search", description: "Search docs", inputSchema: { type: "object", properties: {} } },
+    ]);
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+    svc.callModel = vi
+      .fn()
+      .mockResolvedValueOnce({
+        content: "",
+        usage: undefined,
+        tool_calls: [
+          {
+            id: "call_bad",
+            type: "function",
+            // Names a server ("mcp_2") never discovered/owned — only
+            // "mcp_1" was requested via mcpServerIds below.
+            function: { name: "mcp__mcp_2__search", arguments: '{"q":"y"}' },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        content: "Handled the rejection and moved on.",
+        usage: undefined,
+        tool_calls: undefined,
+      });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_1"], autoRunMcp: true }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    expect(mcpClient.callTool).not.toHaveBeenCalled();
+    const errorStep = events.find(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> =>
+        e.type === "step" && e.step.kind === "error" && e.step.toolCallId === "call_bad",
+    );
+    expect(errorStep?.step.content).toMatch(/unknown or unavailable MCP server\/tool/i);
+
+    // Rejecting one unknown-server call is not a pause condition — the loop
+    // continues to a second model turn and finishes normally.
+    expect(svc.callModel).toHaveBeenCalledTimes(2);
+    expect(events.at(-1)).toEqual({ type: "done" });
+
+    const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
+    const toolMsg = secondCallMessages.find((m) => m.role === "tool" && m.tool_call_id === "call_bad");
+    expect(toolMsg?.content).toMatch(/unknown or unavailable MCP server\/tool/i);
   });
 });

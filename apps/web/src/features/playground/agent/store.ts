@@ -1,4 +1,4 @@
-import type { AgentStep, ToolDef } from "@modeldoctor/contracts";
+import type { AgentStep, ChatMessage, ToolDef } from "@modeldoctor/contracts";
 import { create } from "zustand";
 
 /** A `tool_result_needed` SSE event, held until the user supplies a result. */
@@ -30,6 +30,15 @@ export interface AgentStoreState {
   steps: AgentStep[];
   pendingInlineTool: PendingInlineTool | null;
   pendingApproval: PendingMcpApproval | null;
+  /**
+   * The full-transcript continuation array carried by the most recent
+   * `done` SSE event (only present when the server paused for a
+   * `tool_result_needed` / `tool_approval`; `null` otherwise). The frontend
+   * resends this array verbatim — plus one more `{role:"tool", ...}` entry
+   * for an inline-tool result — as `AgentRunRequest.messages` to resume
+   * without restarting the whole task from turn 0 (Task 11 fix pass).
+   */
+  continuationMessages: ChatMessage[] | null;
   running: boolean;
   abortController: AbortController | null;
   error: string | null;
@@ -50,6 +59,7 @@ export interface AgentStoreState {
   clearSteps: () => void;
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
   setPendingApproval: (approval: PendingMcpApproval | null) => void;
+  setContinuationMessages: (messages: ChatMessage[] | null) => void;
   setRunning: (b: boolean) => void;
   setAbortController: (ac: AbortController | null) => void;
   setError: (s: string | null) => void;
@@ -69,6 +79,7 @@ const initial = {
   steps: [] as AgentStep[],
   pendingInlineTool: null as PendingInlineTool | null,
   pendingApproval: null as PendingMcpApproval | null,
+  continuationMessages: null as ChatMessage[] | null,
   running: false,
   abortController: null as AbortController | null,
   error: null as string | null,
@@ -104,9 +115,17 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
     })),
   setAutoRunMcp: (b) => set({ autoRunMcp: b }),
   appendStep: (step) => set((s) => ({ steps: [...s.steps, step] })),
-  clearSteps: () => set({ steps: [], pendingInlineTool: null, pendingApproval: null, error: null }),
+  clearSteps: () =>
+    set({
+      steps: [],
+      pendingInlineTool: null,
+      pendingApproval: null,
+      continuationMessages: null,
+      error: null,
+    }),
   setPendingInlineTool: (tool) => set({ pendingInlineTool: tool }),
   setPendingApproval: (approval) => set({ pendingApproval: approval }),
+  setContinuationMessages: (messages) => set({ continuationMessages: messages }),
   setRunning: (b) => set({ running: b }),
   setAbortController: (ac) => set({ abortController: ac }),
   setError: (e) => set({ error: e }),

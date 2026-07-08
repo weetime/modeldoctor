@@ -19,7 +19,7 @@ import { useMcpServers } from "@/features/mcp-servers/queries";
 import { useSkills } from "@/features/skills/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { PlaygroundShell } from "../PlaygroundShell";
-import { AGENT_BUILTIN_TOOL_NAMES, buildContinuationMessages, runAgentSse } from "./api";
+import { AGENT_BUILTIN_TOOL_NAMES, appendToolResultMessage, runAgentSse } from "./api";
 import { type PendingInlineTool, useAgentStore } from "./store";
 import { TraceTimeline } from "./trace/TraceTimeline";
 
@@ -73,8 +73,15 @@ export async function startAgentRun(
           name: evt.name,
           args: evt.args,
         });
+      } else if (evt.type === "done") {
+        // Full-transcript continuation (Task 11 fix pass): `messages` is
+        // populated only when the server is pausing for a
+        // `tool_result_needed`/`tool_approval` continuation — stash it so
+        // the resend (submit/approve) can hand it straight back verbatim.
+        // A normal (non-pausing) `done` clears any stale value.
+        s.setContinuationMessages(evt.messages ?? null);
       }
-      // "done" needs no explicit handling — running flips false in `finally`.
+      // running flips false in `finally`.
     });
   } catch (e) {
     if (!(e instanceof DOMException && e.name === "AbortError")) {
@@ -342,25 +349,32 @@ export function AgentPage() {
     useAgentStore.getState().reset();
   };
 
+  // Full-transcript continuation (Task 11 fix pass): resend the exact
+  // `continuationMessages` transcript the server handed back on `done` (see
+  // `AgentSseEvent`'s `done.messages` doc), plus one more `role: "tool"`
+  // entry for the user-supplied result. The server resumes from where it
+  // paused instead of restarting the task from turn 0.
   const onSubmitToolResult = (resultContent: string) => {
     const fresh = useAgentStore.getState();
     const pending: PendingInlineTool | null = fresh.pendingInlineTool;
-    if (!pending) return;
-    const messages = buildContinuationMessages(fresh.task, pending, resultContent);
+    if (!pending || !fresh.continuationMessages) return;
+    const messages = appendToolResultMessage(fresh.continuationMessages, pending.toolCallId, resultContent);
     void startAgentRun(t, { messages });
   };
 
-  // Simplest V1 (per the brief): "approve" re-runs the exact same request
-  // with `autoRunMcp` forced on, so the loop executes the MCP tool
-  // in-request instead of pausing for approval again. This restarts the run
-  // from turn 0 (same as any fresh run) rather than trying to splice a
-  // partial transcript back in — the frontend only has `AgentStep`s, not the
-  // full `ChatMessage[]` the server-side loop was tracking internally.
+  // "Approve" resends the same paused transcript with `autoRunMcp: true` —
+  // the server's resume path (`AgentLoopService.run`'s unanswered-tool-call
+  // check) executes ONLY the newly-approved MCP tool_call; any builtin (or
+  // other already-run MCP call) from the same paused turn is already in
+  // `continuationMessages` as a `role: "tool"` entry and is never re-run.
+  // Passing `{ messages }` as `continuation` also keeps `startAgentRun` from
+  // calling `clearSteps()` — the trace is appended to, not restarted.
   const onApproveMcp = () => {
     const fresh = useAgentStore.getState();
+    if (!fresh.continuationMessages) return;
     fresh.setPendingApproval(null);
     fresh.setAutoRunMcp(true);
-    void startAgentRun(t);
+    void startAgentRun(t, { messages: fresh.continuationMessages });
   };
 
   const onRejectMcp = () => {

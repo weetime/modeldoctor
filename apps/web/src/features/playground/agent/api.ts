@@ -1,6 +1,5 @@
 import type { AgentRunRequest, AgentSseEvent, ChatMessage } from "@modeldoctor/contracts";
 import { playgroundFetchStream } from "@/lib/playground-stream";
-import type { PendingInlineTool } from "./store";
 
 export const AGENT_PATH = "/api/playground/agent";
 
@@ -39,35 +38,20 @@ export async function runAgentSse(
 }
 
 /**
- * Minimal continuation transcript for a resolved `tool_result_needed`
- * inline tool: the original task, the assistant's tool-call request, and the
- * tool result keyed by `toolCallId`. This is NOT a full replay of every step
- * emitted so far (the frontend only sees `AgentStep`s, not raw `ChatMessage`s)
- * — but it is enough for the loop to resume with the one tool result the
- * model was blocked on, which is the contract `tool_result_needed`'s doc
- * comment describes.
+ * Full-transcript continuation (Task 11 fix pass): appends one
+ * `{role:"tool", tool_call_id, content}` entry — the user-supplied result
+ * for a `tool_result_needed` inline tool — onto the server-authoritative
+ * `continuationMessages` transcript carried by the pausing `done` event.
+ * The server seeds `messages` from this array verbatim on resume (see
+ * `AgentRunRequest.messages` doc) rather than rebuilding it, so this MUST be
+ * the exact array the server handed back, not a hand-rebuilt minimal one —
+ * that's what lets the resume skip re-running anything (systemPrompt, prior
+ * turns, already-executed builtins/MCP calls) that already happened.
  */
-export function buildContinuationMessages(
-  task: string,
-  pending: PendingInlineTool,
+export function appendToolResultMessage(
+  continuationMessages: ChatMessage[],
+  toolCallId: string,
   resultContent: string,
 ): ChatMessage[] {
-  return [
-    { role: "user", content: task },
-    {
-      role: "assistant",
-      content: "",
-      tool_calls: [
-        {
-          id: pending.toolCallId,
-          type: "function",
-          function: {
-            name: pending.name,
-            arguments: JSON.stringify(pending.args ?? {}),
-          },
-        },
-      ],
-    },
-    { role: "tool", tool_call_id: pending.toolCallId, content: resultContent },
-  ];
+  return [...continuationMessages, { role: "tool", tool_call_id: toolCallId, content: resultContent }];
 }

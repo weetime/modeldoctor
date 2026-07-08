@@ -1,4 +1,10 @@
-import type { AgentRunRequest, AgentSseEvent, ChatMessage, ToolDef } from "@modeldoctor/contracts";
+import type {
+  AgentRunRequest,
+  AgentSseEvent,
+  ChatMessage,
+  ToolCall,
+  ToolDef,
+} from "@modeldoctor/contracts";
 import { Injectable, Optional } from "@nestjs/common";
 import {
   buildHeaders,
@@ -36,12 +42,20 @@ export type ModelCaller = (
  * MCP (when `autoRunMcp` is set) tools execute inline and the loop keeps
  * going; a hand-authored "inline" tool with no server-side executor, or an
  * MCP tool without `autoRunMcp`, cannot be resolved here, so the loop emits
- * `tool_result_needed` / `tool_approval` + `done` and returns — the frontend
- * is expected to either fill in that tool's result (inline) or re-send with
- * `autoRunMcp: true` (MCP) and start a *new* `run()` (POST) with the
- * accumulated `messages`, per the brief's continuation design (SSE requests
- * are short-lived and stateless; the server never blocks waiting on a
- * human).
+ * `tool_result_needed` / `tool_approval` + `done { messages }` and returns —
+ * the frontend is expected to either fill in that tool's result (inline) or
+ * re-send with `autoRunMcp: true` (MCP), passing the exact `done.messages`
+ * transcript back as `AgentRunRequest.messages`, and start a *new* `run()`
+ * (POST) (SSE requests are short-lived and stateless; the server never
+ * blocks waiting on a human).
+ *
+ * Full-transcript continuation (Task 11 fix pass): a resumed `run()` seeds
+ * `messages` verbatim from `req.messages` (never rebuilt from
+ * `task`/`systemPrompt`), then — before calling the model — resolves any
+ * `tool_calls` from the prior (paused) turn that aren't answered yet. This
+ * guarantees a builtin or auto-run MCP tool that already executed before the
+ * pause is never re-executed on resume; only the newly-approved/newly-filled
+ * call(s) run. See `findUnansweredToolCalls`/`processToolCalls`.
  */
 @Injectable()
 export class AgentLoopService {
@@ -99,8 +113,37 @@ export class AgentLoopService {
       tMs,
     );
     const tools = [...this.resolveTools(req), ...mcpToolDefs];
-    const messages: ChatMessage[] =
-      req.messages && req.messages.length > 0 ? [...req.messages] : this.buildInitialMessages(req);
+    const isResume = Boolean(req.messages && req.messages.length > 0);
+    const messages: ChatMessage[] = isResume ? [...(req.messages as ChatMessage[])] : this.buildInitialMessages(req);
+
+    // Full-transcript continuation (Task 11 fix pass): a resumed request's
+    // `messages` may end with an assistant `tool_calls` message that wasn't
+    // *fully* answered yet in the paused turn — e.g. the frontend just
+    // approved one MCP tool_call, but that assistant turn also included a
+    // builtin call that already executed (and is already in `messages` as a
+    // `role: "tool"` entry) before the pause. Resolve only the still-
+    // unanswered call(s) first — this is what executes the newly-approved
+    // MCP tool (or re-pauses if it's still not resolvable) WITHOUT
+    // re-running anything that already executed — before calling the model
+    // for a new turn.
+    if (isResume) {
+      if (isAborted()) return;
+      const unanswered = this.findUnansweredToolCalls(messages);
+      if (unanswered) {
+        const { sawInlineTool, sawApprovalNeeded } = await this.processToolCalls(
+          unanswered,
+          messages,
+          emit,
+          { mcpServerMap, autoRunMcp: req.autoRunMcp, tMs, isAborted },
+          { skipToolCallStep: true },
+        );
+        if (isAborted()) return;
+        if (sawInlineTool || sawApprovalNeeded) {
+          emit({ type: "done", messages: [...messages] });
+          return;
+        }
+      }
+    }
 
     for (let turn = 0; turn < maxSteps; turn++) {
       if (isAborted()) return;
@@ -151,98 +194,20 @@ export class AgentLoopService {
       // any call ordered after an inline tool would be silently dropped,
       // leaving the assistant message above with tool_call_ids that never
       // got a `role: "tool"` response.
-      let sawInlineTool = false;
-      let sawApprovalNeeded = false;
-
-      for (const call of toolCalls) {
-        if (isAborted()) return;
-        const name = call.function.name;
-        const args = this.parseArgs(call.function.arguments);
-
-        emit({
-          type: "step",
-          step: { kind: "tool_call", name, args, toolCallId: call.id, tMs: tMs() },
-        });
-
-        if (name.startsWith(MCP_TOOL_PREFIX)) {
-          const parsedName = this.parseMcpToolName(name);
-          const server = parsedName ? mcpServerMap.get(parsedName.serverId) : undefined;
-          if (!parsedName || !server) {
-            const msg = "error: unknown or unavailable MCP server/tool";
-            emit({
-              type: "step",
-              step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: tMs() },
-            });
-            messages.push({ role: "tool", tool_call_id: call.id, content: msg });
-            continue;
-          }
-
-          if (req.autoRunMcp) {
-            try {
-              // biome-ignore lint/style/noNonNullAssertion: `server` resolved only via mcpServerMap, which is only populated when `this.mcpClient` succeeded
-              const result = await this.mcpClient!.callTool(server, parsedName.toolName, args);
-              emit({
-                type: "step",
-                step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: tMs() },
-              });
-              messages.push({ role: "tool", tool_call_id: call.id, content: result });
-            } catch (e) {
-              const msg = this.errMsg(e);
-              emit({
-                type: "step",
-                step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: tMs() },
-              });
-              messages.push({ role: "tool", tool_call_id: call.id, content: `error: ${msg}` });
-            }
-            continue;
-          }
-
-          // Not auto-run: cannot execute inline, mirror the inline-tool
-          // continuation model — emit the approval request and keep
-          // iterating so any remaining tool_calls in this same turn still
-          // get executed/flagged before the request ends.
-          emit({
-            type: "tool_approval",
-            toolCallId: call.id,
-            server: { id: server.id, name: server.name },
-            name,
-            args,
-          });
-          sawApprovalNeeded = true;
-          continue;
-        }
-
-        if (Object.prototype.hasOwnProperty.call(BUILTIN_TOOLS, name)) {
-          try {
-            const result = await executeBuiltin(name, args);
-            emit({
-              type: "step",
-              step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: tMs() },
-            });
-            messages.push({ role: "tool", tool_call_id: call.id, content: result });
-          } catch (e) {
-            const msg = this.errMsg(e);
-            emit({
-              type: "step",
-              step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: tMs() },
-            });
-            messages.push({ role: "tool", tool_call_id: call.id, content: `error: ${msg}` });
-          }
-          continue;
-        }
-
-        // Hand-authored inline tool with no server-side executor: cannot
-        // resolve within this request. Per the design note, do NOT block
-        // waiting for a human — emit the event and keep iterating so any
-        // remaining tool_calls in this same turn still get executed; the
-        // frontend continues with a fresh request once it has filled in
-        // every `tool_result_needed` from this turn.
-        emit({ type: "tool_result_needed", toolCallId: call.id, name, args });
-        sawInlineTool = true;
-      }
+      const { sawInlineTool, sawApprovalNeeded } = await this.processToolCalls(
+        toolCalls,
+        messages,
+        emit,
+        { mcpServerMap, autoRunMcp: req.autoRunMcp, tMs, isAborted },
+      );
+      if (isAborted()) return;
 
       if (sawInlineTool || sawApprovalNeeded) {
-        emit({ type: "done" });
+        // Full-transcript continuation: hand back the accumulated transcript
+        // so far (system/user/assistant + every tool result already
+        // executed this turn) so a resumed request can pick up exactly
+        // where this one left off instead of restarting from turn 0.
+        emit({ type: "done", messages: [...messages] });
         return;
       }
     }
@@ -252,6 +217,169 @@ export class AgentLoopService {
       step: { kind: "error", content: `Stopped after reaching maxSteps (${maxSteps}).`, tMs: tMs() },
     });
     emit({ type: "done" });
+  }
+
+  /**
+   * Dispatches every `toolCalls` entry: builtin (execute inline + append
+   * `role: "tool"`), MCP (execute inline when `ctx.autoRunMcp`, else emit
+   * `tool_approval`), or hand-authored inline (emit `tool_result_needed`).
+   * Always processes ALL calls before returning — see the "trailing calls"
+   * regression tests (E/F) this preserves. Shared by the per-turn loop in
+   * `run()` and by `resumeUnansweredToolCalls` (continuation resume), which
+   * is why the MCP-server lookup / `autoRunMcp` / clock are threaded through
+   * `ctx` rather than read off `this`/a closure.
+   *
+   * `opts.skipToolCallStep` suppresses the `tool_call` step re-emission —
+   * set by the resume path, where these `tool_call`s were already emitted
+   * (and are already in the frontend's persisted trace) in the request that
+   * originally paused.
+   */
+  private async processToolCalls(
+    toolCalls: ToolCall[],
+    messages: ChatMessage[],
+    emit: EmitFn,
+    ctx: {
+      mcpServerMap: Map<string, DecryptedMcpServer>;
+      autoRunMcp?: boolean;
+      tMs: () => number;
+      isAborted: IsAbortedFn;
+    },
+    opts: { skipToolCallStep?: boolean } = {},
+  ): Promise<{ sawInlineTool: boolean; sawApprovalNeeded: boolean }> {
+    let sawInlineTool = false;
+    let sawApprovalNeeded = false;
+
+    for (const call of toolCalls) {
+      if (ctx.isAborted()) return { sawInlineTool, sawApprovalNeeded };
+      const name = call.function.name;
+      const args = this.parseArgs(call.function.arguments);
+
+      if (!opts.skipToolCallStep) {
+        emit({
+          type: "step",
+          step: { kind: "tool_call", name, args, toolCallId: call.id, tMs: ctx.tMs() },
+        });
+      }
+
+      if (name.startsWith(MCP_TOOL_PREFIX)) {
+        const parsedName = this.parseMcpToolName(name);
+        const server = parsedName ? ctx.mcpServerMap.get(parsedName.serverId) : undefined;
+        if (!parsedName || !server) {
+          const msg = "error: unknown or unavailable MCP server/tool";
+          emit({
+            type: "step",
+            step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: ctx.tMs() },
+          });
+          messages.push({ role: "tool", tool_call_id: call.id, content: msg });
+          continue;
+        }
+
+        if (ctx.autoRunMcp) {
+          try {
+            // biome-ignore lint/style/noNonNullAssertion: `server` resolved only via mcpServerMap, which is only populated when `this.mcpClient` succeeded
+            const result = await this.mcpClient!.callTool(server, parsedName.toolName, args);
+            emit({
+              type: "step",
+              step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: ctx.tMs() },
+            });
+            messages.push({ role: "tool", tool_call_id: call.id, content: result });
+          } catch (e) {
+            const msg = this.errMsg(e);
+            emit({
+              type: "step",
+              step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: ctx.tMs() },
+            });
+            messages.push({ role: "tool", tool_call_id: call.id, content: `error: ${msg}` });
+          }
+          continue;
+        }
+
+        // Not auto-run: cannot execute inline, mirror the inline-tool
+        // continuation model — emit the approval request and keep
+        // iterating so any remaining tool_calls in this same turn still
+        // get executed/flagged before the request ends.
+        emit({
+          type: "tool_approval",
+          toolCallId: call.id,
+          server: { id: server.id, name: server.name },
+          name,
+          args,
+        });
+        sawApprovalNeeded = true;
+        continue;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(BUILTIN_TOOLS, name)) {
+        try {
+          const result = await executeBuiltin(name, args);
+          emit({
+            type: "step",
+            step: { kind: "tool_result", name, content: result, toolCallId: call.id, tMs: ctx.tMs() },
+          });
+          messages.push({ role: "tool", tool_call_id: call.id, content: result });
+        } catch (e) {
+          const msg = this.errMsg(e);
+          emit({
+            type: "step",
+            step: { kind: "error", name, toolCallId: call.id, content: msg, tMs: ctx.tMs() },
+          });
+          messages.push({ role: "tool", tool_call_id: call.id, content: `error: ${msg}` });
+        }
+        continue;
+      }
+
+      // Hand-authored inline tool with no server-side executor: cannot
+      // resolve within this request. Per the design note, do NOT block
+      // waiting for a human — emit the event and keep iterating so any
+      // remaining tool_calls in this same turn still get executed; the
+      // frontend continues with a fresh request once it has filled in
+      // every `tool_result_needed` from this turn.
+      emit({ type: "tool_result_needed", toolCallId: call.id, name, args });
+      sawInlineTool = true;
+    }
+
+    return { sawInlineTool, sawApprovalNeeded };
+  }
+
+  /**
+   * Finds the most recent assistant `tool_calls` message and returns
+   * whichever of its calls have no `{role:"tool", tool_call_id}` answer
+   * anywhere in `messages` yet — i.e. this is a resumed request picking
+   * back up mid-turn.
+   *
+   * Deliberately does NOT require that assistant message to be the literal
+   * last entry: a turn with `[builtin, mcp-needs-approval]` appends the
+   * builtin's `role: "tool"` answer right after the assistant message
+   * *before* pausing, so the actual last message at pause time is that
+   * `tool` entry, not the assistant one. Scanning backward for the most
+   * recent assistant-with-tool_calls message and cross-checking ALL of
+   * `messages` for each call's answer handles that (every earlier
+   * assistant-with-tool_calls turn is guaranteed fully answered already —
+   * the loop always pauses/returns on the first turn with any unresolved
+   * call, so only the latest such turn can have one).
+   *
+   * Returns `null` when there's nothing to resolve (fresh run, or every
+   * call in the latest tool_calls turn was already answered before the
+   * pause).
+   */
+  private findUnansweredToolCalls(messages: ChatMessage[]): ToolCall[] | null {
+    let lastToolCallsMsg: ChatMessage | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant" && m.tool_calls && m.tool_calls.length > 0) {
+        lastToolCallsMsg = m;
+        break;
+      }
+    }
+    if (!lastToolCallsMsg?.tool_calls) return null;
+
+    const answeredIds = new Set(
+      messages
+        .filter((m) => m.role === "tool" && typeof m.tool_call_id === "string")
+        .map((m) => m.tool_call_id as string),
+    );
+    const unanswered = lastToolCallsMsg.tool_calls.filter((tc) => !answeredIds.has(tc.id));
+    return unanswered.length > 0 ? unanswered : null;
   }
 
   private resolveTools(req: AgentRunRequest): ToolDef[] {

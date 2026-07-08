@@ -1,4 +1,12 @@
 import { z } from "zod";
+// Type-only: `playground.ts` imports `toolDefSchema`/`ToolCallSchema` from
+// THIS module at the value level, so a value import of `ChatMessageSchema`
+// back from `playground.ts` here would be a real ESM circular-import (the
+// same hazard documented on `AgentRunRequestSchema` in agent-run.ts). A
+// `import type` is erased entirely at compile time — no runtime cycle — so
+// it's safe to reference the `ChatMessage` *type* (not its zod schema) for
+// the `done` event's `messages` field below.
+import type { ChatMessage } from "./playground.js";
 
 /**
  * OpenAI-style function-tool definition. Shared by `Skill.inlineTools`
@@ -83,6 +91,18 @@ export type AgentStep = z.infer<typeof AgentStepSchema>;
  * frontend either re-sends the same request with `autoRunMcp: true` (simplest
  * V1 "approve" flow — see `AgentRunRequest.autoRunMcp` doc) or discards the
  * run ("reject").
+ *
+ * `done.messages` (full-transcript continuation, Task 11 fix pass): populated
+ * ONLY when the loop is pausing for a continuation (i.e. this same request
+ * also emitted a `tool_result_needed` and/or `tool_approval` beforehand) —
+ * every other `done` (normal completion, upstream error, maxSteps) omits it.
+ * It carries the FULL running transcript so far (system message if any, the
+ * user task, every assistant `tool_calls` message, and every tool result
+ * already executed in this turn — builtins and any auto-run MCP calls). The
+ * frontend resends this array verbatim (plus, for an inline tool, one more
+ * `{role:"tool", ...}` entry) as `AgentRunRequest.messages` to continue —
+ * this is what lets `run()` resume without re-executing anything that
+ * already ran (see `AgentRunRequest.messages` doc).
  */
 export const AgentSseEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("step"), step: AgentStepSchema }),
@@ -99,6 +119,6 @@ export const AgentSseEventSchema = z.discriminatedUnion("type", [
     name: z.string(),
     args: z.unknown(),
   }),
-  z.object({ type: z.literal("done") }),
+  z.object({ type: z.literal("done"), messages: z.array(z.custom<ChatMessage>()).optional() }),
 ]);
 export type AgentSseEvent = z.infer<typeof AgentSseEventSchema>;
