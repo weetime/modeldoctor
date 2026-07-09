@@ -365,16 +365,6 @@ function AgentConfigPanel() {
       />
 
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">{t("agent.task.label")}</Label>
-        <Textarea
-          value={slice.task}
-          onChange={(e) => slice.setTask(e.target.value)}
-          placeholder={t("agent.task.placeholder")}
-          className="h-20 text-xs"
-        />
-      </div>
-
-      <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">{t("agent.systemPrompt.label")}</Label>
         <Textarea
           value={slice.systemPrompt}
@@ -646,36 +636,45 @@ export function AgentPage() {
       paramsSlot={<AgentConfigPanel />}
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-6 py-3">
-          <div className="flex items-center gap-2">
-            {slice.running ? (
-              <Button type="button" variant="destructive" size="sm" onClick={onStop}>
-                {t("agent.stop")}
-              </Button>
-            ) : (
+        <div className="space-y-2 border-b border-border px-6 py-3">
+          <Textarea
+            value={slice.task}
+            onChange={(e) => slice.setTask(e.target.value)}
+            placeholder={t("agent.task.placeholder")}
+            disabled={slice.running}
+            className="min-h-16 text-sm"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {slice.running ? (
+                <Button type="button" variant="destructive" size="sm" onClick={onStop}>
+                  {t("agent.stop")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onRun}
+                  disabled={!canRun}
+                  title={disabledReason}
+                >
+                  {t("agent.run")}
+                </Button>
+              )}
               <Button
                 type="button"
+                variant="ghost"
                 size="sm"
-                onClick={onRun}
-                disabled={!canRun}
-                title={disabledReason}
+                onClick={onReset}
+                disabled={slice.running}
               >
-                {t("agent.run")}
+                {t("agent.reset")}
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onReset}
-              disabled={slice.running}
-            >
-              {t("agent.reset")}
-            </Button>
+            </div>
+            {slice.running ? (
+              <span className="text-xs text-muted-foreground">{t("agent.running")}</span>
+            ) : null}
           </div>
-          {slice.running ? (
-            <span className="text-xs text-muted-foreground">{t("agent.running")}</span>
-          ) : null}
         </div>
         {slice.error ? (
           <div className="mx-6 mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
