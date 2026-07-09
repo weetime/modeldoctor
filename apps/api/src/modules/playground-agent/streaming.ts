@@ -65,6 +65,15 @@ interface StreamChunk {
   choices?: Array<{
     delta?: {
       content?: string;
+      /**
+       * Reasoning-model chain-of-thought. Servers disagree on the field
+       * name: vLLM's reasoning parsers emit `reasoning_content`, while some
+       * gateways (and OpenRouter-style proxies) emit `reasoning`. We read
+       * both — `reasoning_content` first — so either upstream surfaces the
+       * thinking stream.
+       */
+      reasoning_content?: string;
+      reasoning?: string;
       tool_calls?: ToolCallDelta[];
     };
   }>;
@@ -72,11 +81,12 @@ interface StreamChunk {
 
 /**
  * Reads an OpenAI-style streaming chat-completions `Response` to completion,
- * calling `onTextDelta` for every `delta.content` fragment as it arrives and
- * accumulating `delta.tool_calls` fragments by index (see
- * `accumulateToolCallDelta`). Resolves once the stream ends (either a
- * `data: [DONE]` record or the underlying reader reports `done`) with the
- * fully assembled `{ content, tool_calls }`.
+ * calling `onTextDelta` for every `delta.content` fragment and
+ * `onReasoningDelta` for every reasoning fragment (`delta.reasoning_content`
+ * / `delta.reasoning`) as they arrive, and accumulating `delta.tool_calls`
+ * fragments by index (see `accumulateToolCallDelta`). Resolves once the
+ * stream ends (either a `data: [DONE]` record or the underlying reader
+ * reports `done`) with the fully assembled `{ content, reasoning, tool_calls }`.
  *
  * SSE framing mirrors `apps/web/src/lib/playground-stream.ts`: records are
  * separated by a blank line (`\n\n`), each record's payload line is
@@ -89,12 +99,14 @@ interface StreamChunk {
 export async function readStreamingChatCompletion(
   upstream: Response,
   onTextDelta: (s: string) => void,
-): Promise<{ content: string; tool_calls: ToolCall[] }> {
+  onReasoningDelta: (s: string) => void = () => {},
+): Promise<{ content: string; reasoning: string; tool_calls: ToolCall[] }> {
   if (!upstream.body) throw new Error("streaming response has no body");
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
   const toolCalls: StreamingToolCall[] = [];
   let content = "";
+  let reasoning = "";
   let buf = "";
 
   const handleRecord = (record: string): boolean => {
@@ -110,6 +122,12 @@ export async function readStreamingChatCompletion(
       }
       const delta = parsed?.choices?.[0]?.delta;
       if (!delta) continue;
+      const reasoningChunk =
+        typeof delta.reasoning_content === "string" ? delta.reasoning_content : delta.reasoning;
+      if (typeof reasoningChunk === "string" && reasoningChunk.length > 0) {
+        reasoning += reasoningChunk;
+        onReasoningDelta(reasoningChunk);
+      }
       if (typeof delta.content === "string" && delta.content.length > 0) {
         content += delta.content;
         onTextDelta(delta.content);
@@ -131,14 +149,15 @@ export async function readStreamingChatCompletion(
     while (idx !== -1) {
       const record = buf.slice(0, idx);
       buf = buf.slice(idx + 2);
-      if (handleRecord(record)) return { content, tool_calls: finalizeToolCalls(toolCalls) };
+      if (handleRecord(record))
+        return { content, reasoning, tool_calls: finalizeToolCalls(toolCalls) };
       idx = buf.indexOf("\n\n");
     }
   }
   // Flush any trailing record that wasn't terminated by a final \n\n.
   if (buf.trim().length > 0) handleRecord(buf);
 
-  return { content, tool_calls: finalizeToolCalls(toolCalls) };
+  return { content, reasoning, tool_calls: finalizeToolCalls(toolCalls) };
 }
 
 /**

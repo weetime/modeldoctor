@@ -787,7 +787,19 @@ export function AgentPage() {
             {slice.error}
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-3 px-6 py-2">
+        <MessageComposer
+          systemMessage={slice.systemPrompt}
+          onSystemMessageChange={slice.setSystemPrompt}
+          onSend={onSend}
+          onStop={onStop}
+          sending={slice.running}
+          streaming={slice.running}
+          disabled={!slice.selectedConnectionId}
+          disabledReason={t("agent.needConnection")}
+        />
+        {/* Tools row sits BELOW the composer (mainstream chat layout — the
+            input is the primary affordance; tool toggles are secondary). */}
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-2 pt-1">
           <label
             htmlFor="agent-tools-toggle"
             className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
@@ -820,16 +832,6 @@ export function AgentPage() {
             {t("agent.reset")}
           </Button>
         </div>
-        <MessageComposer
-          systemMessage={slice.systemPrompt}
-          onSystemMessageChange={slice.setSystemPrompt}
-          onSend={onSend}
-          onStop={onStop}
-          sending={slice.running}
-          streaming={slice.running}
-          disabled={!slice.selectedConnectionId}
-          disabledReason={t("agent.needConnection")}
-        />
       </div>
     </PlaygroundShell>
   );

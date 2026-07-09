@@ -372,7 +372,9 @@
       "reject": "Reject"
     },
     "trace": {
-      "empty": "Run a task and its execution trace will appear here.",
+      "empty": "Start a conversation, or turn on Tools to run a multi-turn agent.",
+      "reasoning": "Reasoning",
+      "reasoningActive": "Thinking…",
       "resultSize": "{{kb}} KB",
       "summaryTools_one": "{{count}} tool call",
       "summaryTools_other": "{{count}} tool calls",

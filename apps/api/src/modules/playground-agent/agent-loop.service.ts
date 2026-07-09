@@ -48,6 +48,12 @@ export type ModelCaller = (
    * compiling/passing untouched — a stub is free to ignore it.
    */
   onTextDelta?: (delta: string) => void,
+  /**
+   * Called synchronously for every reasoning fragment (chain-of-thought) as
+   * a reasoning model streams it — emitted BEFORE any `onTextDelta`. Optional
+   * for the same reason as `onTextDelta`; non-reasoning models never call it.
+   */
+  onReasoningDelta?: (delta: string) => void,
 ) => Promise<ParsedPlaygroundChatResponse>;
 
 /**
@@ -121,7 +127,7 @@ export class AgentLoopService {
    * (kept in the return shape only for `ParsedPlaygroundChatResponse`
    * compatibility).
    */
-  callModel: ModelCaller = async (conn, body, signal, onTextDelta) => {
+  callModel: ModelCaller = async (conn, body, signal, onTextDelta, onReasoningDelta) => {
     const url = buildUrl({
       apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
@@ -136,6 +142,7 @@ export class AgentLoopService {
     const { content, tool_calls } = await readStreamingChatCompletion(
       res,
       onTextDelta ?? (() => {}),
+      onReasoningDelta ?? (() => {}),
     );
     return { content, usage: undefined, tool_calls };
   };
@@ -230,12 +237,14 @@ export class AgentLoopService {
         // A plan turn's text is NOT streamed to the client — it's emitted as
         // a single `{kind:"plan"}` step below once the full plan text is in,
         // so the pinned plan strip never shows a partial/duplicated plan.
-        // Every other turn streams its assistant text live via `text_delta`.
+        // Every other turn streams its assistant text live via `text_delta`,
+        // and its chain-of-thought (reasoning models only) via `reasoning_delta`.
         parsed = await this.callModel(
           conn,
           body,
           signal,
           isPlanTurn ? undefined : (delta) => emit({ type: "text_delta", delta }),
+          isPlanTurn ? undefined : (delta) => emit({ type: "reasoning_delta", delta }),
         );
       } catch (e) {
         if (isAborted()) return;

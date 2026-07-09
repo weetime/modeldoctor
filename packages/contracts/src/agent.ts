@@ -163,6 +163,17 @@ export const AgentSseEventSchema = z.discriminatedUnion("type", [
    */
   z.object({ type: z.literal("text_delta"), delta: z.string() }),
   /**
+   * Unified playground stream — a chunk of the assistant's *reasoning* /
+   * chain-of-thought, emitted only by reasoning models that expose their
+   * thinking as a separate `delta.reasoning` / `delta.reasoning_content`
+   * field (Qwen3, DeepSeek-R1, etc.). Distinct from `text_delta` (the final
+   * answer): reasoning is streamed first, before any answer tokens, so the
+   * frontend can show a live "thinking" block that collapses once the answer
+   * begins. Absent entirely for non-reasoning models (or servers that don't
+   * surface the field).
+   */
+  z.object({ type: z.literal("reasoning_delta"), delta: z.string() }),
+  /**
    * Marks the end of the current assistant turn's `text_delta` stream (the
    * model has finished emitting free text for this turn — it may still go
    * on to request tool calls, or the run may end). Lets the frontend close

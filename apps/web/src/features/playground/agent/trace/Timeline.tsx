@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PendingInlineTool, PendingMcpApproval } from "../store";
 import type { TimelineItem } from "../timeline";
@@ -63,18 +64,75 @@ function RunSummary({
 }
 
 /**
+ * A reasoning model's chain-of-thought, shown above the answer as a
+ * collapsible block (`<details>`-style). Auto-expanded while the model is
+ * still thinking (`thinking` — reasoning streaming, no answer yet), then
+ * auto-collapsed the moment the answer begins, so the finished bubble reads
+ * as a clean answer with the thinking tucked behind a toggle. Mirrors the
+ * mainstream reasoning-model UX (ChatGPT / DeepSeek / Claude).
+ */
+function ReasoningBlock({ reasoning, thinking }: { reasoning: string; thinking: boolean }) {
+  const { t } = useTranslation("playground");
+  // Expanded while actively thinking (live stream), collapsed-by-default for
+  // an already-finished turn (history restore / re-render) — matches the
+  // mainstream "Thought for Xs ▸" collapsed default.
+  const [open, setOpen] = useState(thinking);
+  const wasThinking = useRef(thinking);
+  useEffect(() => {
+    // Collapse once thinking finishes (the answer has started streaming).
+    if (wasThinking.current && !thinking) setOpen(false);
+    wasThinking.current = thinking;
+  }, [thinking]);
+
+  return (
+    <div className="mb-2 rounded-md border border-border/60 bg-muted/30">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs font-medium text-muted-foreground"
+      >
+        {open ? (
+          <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+        )}
+        <span aria-hidden="true">💭</span>
+        {thinking ? t("agent.trace.reasoningActive") : t("agent.trace.reasoning")}
+      </button>
+      {open ? (
+        <div className="border-t border-border/60 px-2.5 py-2 text-xs text-muted-foreground">
+          <TraceMarkdown>{reasoning || " "}</TraceMarkdown>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * A streaming/complete assistant reply — the "chat bubble" rendering of an
  * `assistant_text` timeline item. When `toolsEnabled` is off, the ENTIRE
  * timeline is a sequence of these — that's what makes a tools-off run read
- * as plain chat rather than an agent trace.
+ * as plain chat rather than an agent trace. A reasoning model's
+ * chain-of-thought (`reasoning`) renders as a collapsible block above the
+ * answer; `thinking` is true only while reasoning is still streaming with no
+ * answer text yet.
  */
-function AssistantBubble({ content }: { content: string }) {
+function AssistantBubble({
+  content,
+  reasoning,
+  thinking,
+}: {
+  content: string;
+  reasoning?: string;
+  thinking: boolean;
+}) {
   return (
     <div
       data-testid="assistant-bubble"
       className="rounded-md border border-border bg-card px-3 py-2 text-sm"
     >
-      <TraceMarkdown>{content || " "}</TraceMarkdown>
+      {reasoning ? <ReasoningBlock reasoning={reasoning} thinking={thinking} /> : null}
+      {content ? <TraceMarkdown>{content}</TraceMarkdown> : null}
     </div>
   );
 }
@@ -142,8 +200,15 @@ export function Timeline({
         if (item === planItem) return null;
         if (item.kind === "assistant_text") {
           return (
-            // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
-            <AssistantBubble key={idx} content={item.content} />
+            <AssistantBubble
+              // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+              key={idx}
+              content={item.content}
+              reasoning={item.reasoning}
+              // Still thinking = reasoning has streamed but no answer text yet
+              // and the turn isn't closed.
+              thinking={Boolean(item.reasoning) && item.content.length === 0 && !item.closed}
+            />
           );
         }
         if (item.kind === "verdict") {

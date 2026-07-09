@@ -61,7 +61,7 @@ describe("readStreamingChatCompletion — text content", () => {
     const result = await readStreamingChatCompletion(res, (s) => seen.push(s));
 
     expect(seen).toEqual(["He", "llo"]);
-    expect(result).toEqual({ content: "Hello", tool_calls: [] });
+    expect(result).toEqual({ content: "Hello", reasoning: "", tool_calls: [] });
   });
 
   it("stops at [DONE] without requiring the reader to report done", async () => {
@@ -71,6 +71,45 @@ describe("readStreamingChatCompletion — text content", () => {
     ]);
     const result = await readStreamingChatCompletion(res, () => {});
     expect(result.content).toBe("hi");
+  });
+});
+
+describe("readStreamingChatCompletion — reasoning (chain-of-thought)", () => {
+  it("streams `reasoning` deltas (before content) via onReasoningDelta and returns joined reasoning", async () => {
+    // Reasoning models (Qwen3 / some gateways) emit thinking in `delta.reasoning`
+    // FIRST, then the answer in `delta.content`.
+    const res = fakeStreamResponse([
+      'data: {"choices":[{"delta":{"reasoning":"Let me "}}]}\n\n',
+      'data: {"choices":[{"delta":{"reasoning":"think."}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"Blue."}}]}\n\n',
+      "data: [DONE]\n\n",
+    ]);
+    const text: string[] = [];
+    const reason: string[] = [];
+    const result = await readStreamingChatCompletion(
+      res,
+      (s) => text.push(s),
+      (s) => reason.push(s),
+    );
+
+    expect(reason).toEqual(["Let me ", "think."]);
+    expect(text).toEqual(["Blue."]);
+    expect(result).toEqual({ content: "Blue.", reasoning: "Let me think.", tool_calls: [] });
+  });
+
+  it("also reads the vLLM `reasoning_content` field name", async () => {
+    const res = fakeStreamResponse([
+      'data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}\n\n',
+      "data: [DONE]\n\n",
+    ]);
+    const reason: string[] = [];
+    const result = await readStreamingChatCompletion(
+      res,
+      () => {},
+      (s) => reason.push(s),
+    );
+    expect(reason).toEqual(["hmm"]);
+    expect(result.reasoning).toBe("hmm");
   });
 });
 

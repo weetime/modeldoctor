@@ -7,6 +7,25 @@ function fold(events: AgentSseEvent[]): TimelineItem[] {
 }
 
 describe("reduceEvent", () => {
+  it("accumulates reasoning_delta into the bubble before content, then appends the answer", () => {
+    // Reasoning models stream chain-of-thought FIRST (opening the bubble with
+    // empty content), then the answer via text_delta on the same open bubble.
+    const timeline = fold([
+      { type: "reasoning_delta", delta: "Let me " },
+      { type: "reasoning_delta", delta: "think." },
+      { type: "text_delta", delta: "Blue." },
+      { type: "assistant_end" },
+    ]);
+
+    expect(timeline).toHaveLength(1);
+    expect(timeline[0]).toEqual({
+      kind: "assistant_text",
+      content: "Blue.",
+      reasoning: "Let me think.",
+      closed: true,
+    });
+  });
+
   it("folds the brief's sequence into the expected timeline", () => {
     const events: AgentSseEvent[] = [
       { type: "text_delta", delta: "He" },
