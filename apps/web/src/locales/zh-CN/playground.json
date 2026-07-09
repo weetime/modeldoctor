@@ -297,13 +297,8 @@
   "agent": {
     "title": "Agent",
     "subtitle": "多轮工具调用循环：模型可规划、调用工具、查看结果并继续，直至完成任务。",
-    "task": {
-      "label": "任务",
-      "placeholder": "描述你希望 Agent 完成的任务…"
-    },
-    "systemPrompt": {
-      "label": "系统提示词",
-      "placeholder": "可选。如：你是一个善用工具的助手。"
+    "toolsToggle": {
+      "label": "工具"
     },
     "planFirst": "先写计划",
     "maxSteps": "最大步数",
@@ -351,12 +346,8 @@
       "saveError": "保存 Skill 失败",
       "saveAsDescription": "将当前配置（系统提示词、工具、MCP Server、连接）打包为可复用的 Skill 预设。"
     },
-    "run": "运行",
-    "running": "运行中…",
-    "stop": "停止",
     "reset": "重置",
     "needConnection": "请先选择一个对话类连接",
-    "needTask": "请填写任务描述",
     "errors": {
       "run": "运行失败：{{message}}"
     },

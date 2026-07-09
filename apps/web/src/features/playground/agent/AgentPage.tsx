@@ -40,49 +40,98 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMcpServers } from "@/features/mcp-servers/queries";
 import { useCreateSkill, useSkills } from "@/features/skills/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
+import { type AttachedFile, buildContentParts } from "../chat/attachments";
+import { MessageComposer } from "../chat/MessageComposer";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { AGENT_BUILTIN_TOOL_NAMES, appendToolResultMessage, runAgentSse } from "./api";
 import { type AgentHistorySnapshot, useAgentHistoryStore } from "./history";
 import { type PendingInlineTool, useAgentStore } from "./store";
-import { TraceTimeline } from "./trace/TraceTimeline";
+import { Timeline } from "./trace/Timeline";
 
 const NO_SKILL = "__none__";
 const INLINE_TOOL_ITEM_CLASS =
   "flex items-center justify-between gap-2 rounded border border-border px-2 py-1 text-xs";
 
-/** Kicks off (or continues) one agent run. Exported for direct testing. */
-export async function startAgentRun(
+/**
+ * Placeholder `AgentRunRequest.task` sent on a continuation request (inline-tool
+ * result submit / MCP approve). The schema requires `task` to be non-empty
+ * even on a continuation, but the loop ignores it in favor of `messages` once
+ * that's present (see `AgentRunRequestSchema`'s doc) — this value is never
+ * seen by the model.
+ */
+const CONTINUATION_TASK_PLACEHOLDER = "continue";
+
+export type StartRunArgs =
+  | { text: string; attachments: AttachedFile[] }
+  | { continuation: { messages: ChatMessage[]; autoRunMcpOverride?: boolean } };
+
+/**
+ * Kicks off (or continues) one unified-playground run. Exported for direct
+ * testing. A fresh run builds `task` from the composer's text + multimodal
+ * attachments (`buildContentParts`); a continuation resends the paused
+ * transcript instead (see `appendToolResultMessage`/`onApproveMcp` doc
+ * comments in `AgentPage` below).
+ *
+ * Tool-related fields (`builtinTools`/`inlineTools`/`mcpServerIds`/
+ * `autoRunMcp`/`planFirst`/`maxSteps`) are included ONLY when
+ * `store.toolsEnabled` is on — omitting them entirely when off is what makes
+ * the request an equivalent streaming-chat call (tools-off = pure
+ * `text_delta*→assistant_end→done`, per the unified-playground design doc).
+ */
+export async function startRun(
   t: (key: string, opts?: Record<string, unknown>) => string,
-  continuation?: { messages: ChatMessage[]; autoRunMcpOverride?: boolean },
-) {
+  args: StartRunArgs,
+): Promise<void> {
   const fresh = useAgentStore.getState();
   if (!fresh.selectedConnectionId) return;
-  if (!continuation && fresh.task.trim().length === 0) return;
 
-  if (!continuation) fresh.clearSteps();
+  const isContinuation = "continuation" in args;
+  if (!isContinuation) {
+    if (args.text.trim().length === 0 && args.attachments.length === 0) return;
+    // Stashed for history preview + as the (ignored) `task` placeholder on a
+    // later continuation request — see `CONTINUATION_TASK_PLACEHOLDER`.
+    fresh.setTask(args.text);
+    fresh.clearSteps();
+  }
   fresh.setPendingInlineTool(null);
   fresh.setPendingApproval(null);
   fresh.setError(null);
   fresh.setRunning(true);
 
+  const toolFields = fresh.toolsEnabled
+    ? {
+        builtinTools: fresh.builtinTools.length > 0 ? fresh.builtinTools : undefined,
+        inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
+        mcpServerIds:
+          fresh.selectedMcpServerIds.length > 0 ? fresh.selectedMcpServerIds : undefined,
+        // A continuation resumes the loop at turn 0 again — force planFirst off
+        // so the first assistant turn of the continuation isn't mislabeled "plan".
+        planFirst: isContinuation ? false : fresh.planFirst,
+        // Approve is a PER-CONTINUATION override (`autoRunMcpOverride`), not a
+        // mutation of the persistent `autoRunMcp` toggle — see `onApproveMcp`'s
+        // doc comment. Only this one resume request runs with the gate open;
+        // the store's toggle (and thus the NEXT fresh run) is unaffected.
+        autoRunMcp: isContinuation
+          ? (args.continuation.autoRunMcpOverride ?? fresh.autoRunMcp)
+          : fresh.autoRunMcp,
+      }
+    : {};
+
   const body: AgentRunRequest = {
     connectionId: fresh.selectedConnectionId,
-    task: fresh.task,
+    task: isContinuation
+      ? fresh.task.trim() || CONTINUATION_TASK_PLACEHOLDER
+      : buildContentParts(args.text, args.attachments),
     systemPrompt: fresh.systemPrompt.trim() || undefined,
-    // A continuation resumes the loop at turn 0 again — force planFirst off
-    // so the first assistant turn of the continuation isn't mislabeled "plan".
-    planFirst: continuation ? false : fresh.planFirst,
+    // Always present (contract's `maxSteps` has a default, so the inferred
+    // request type requires it). Harmless for a tools-off run — with no tools
+    // the loop never iterates past the single streaming turn anyway.
     maxSteps: fresh.maxSteps,
-    inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
-    builtinTools: fresh.builtinTools.length > 0 ? fresh.builtinTools : undefined,
-    mcpServerIds: fresh.selectedMcpServerIds.length > 0 ? fresh.selectedMcpServerIds : undefined,
-    // Approve is a PER-CONTINUATION override (`autoRunMcpOverride`), not a
-    // mutation of the persistent `autoRunMcp` toggle — see `onApproveMcp`'s
-    // doc comment. Only this one resume request runs with the gate open;
-    // the store's toggle (and thus the NEXT fresh run) is unaffected.
-    autoRunMcp: continuation?.autoRunMcpOverride ?? fresh.autoRunMcp,
-    messages: continuation?.messages,
+    // Full-transcript continuation (Task 11 fix pass, carried over): resends
+    // the exact `messages` array the server handed back on `done`.
+    messages: isContinuation ? args.continuation.messages : undefined,
+    ...toolFields,
   };
 
   const ac = new AbortController();
@@ -90,9 +139,10 @@ export async function startAgentRun(
   try {
     await runAgentSse(body, ac.signal, (evt) => {
       const s = useAgentStore.getState();
-      if (evt.type === "step") {
-        s.appendStep(evt.step);
-      } else if (evt.type === "tool_result_needed") {
+      // Every event folds into the renderable timeline first...
+      s.appendEvent(evt);
+      // ...then side effects for the events the timeline doesn't fully own.
+      if (evt.type === "tool_result_needed") {
         s.setPendingInlineTool({ toolCallId: evt.toolCallId, name: evt.name, args: evt.args });
       } else if (evt.type === "tool_approval") {
         s.setPendingApproval({
@@ -102,9 +152,12 @@ export async function startAgentRun(
           args: evt.args,
         });
       } else if (evt.type === "verdict") {
-        // Task 13: lightweight trajectory judge — only emitted right before
-        // a TRUE-completion `done` (never on a pausing one), so it's safe
-        // to just set it here and let it ride until the next `clearSteps()`.
+        // Single-source-of-render decision: `appendEvent` above already
+        // pushed a `{kind:"verdict"}` timeline item, which is what
+        // `Timeline` renders — this call is ONLY for history persistence
+        // (`AgentHistorySnapshot.verdict`), never a second render source.
+        // Do NOT also pass `store.verdict` into `Timeline` — that would
+        // render the verdict card twice.
         s.setVerdict(evt.verdict);
       } else if (evt.type === "done") {
         // Full-transcript continuation (Task 11 fix pass): `messages` is
@@ -230,7 +283,7 @@ const saveAsSkillSchema = z.object({
  * CURRENT agent-store config (system prompt, plan/max-steps knobs, inline
  * tools, selected MCP servers, selected connection) as a new Skill. Reads
  * the store via `getState()` at submit time (not a render-time snapshot) so
- * it always saves what's on screen, mirroring `startAgentRun`'s pattern.
+ * it always saves what's on screen, mirroring `startRun`'s pattern.
  */
 function SaveAsSkillDialog({
   open,
@@ -331,10 +384,10 @@ function SaveAsSkillDialog({
 
 /**
  * Composer-row controls for the per-run "what this run uses" selectors:
- * Skill preset, builtin tools, and MCP servers. Lives next to the Task
- * input in the left composer area (mainstream pattern), leaving the right
- * config panel for tuning params only. Owns the Skill/save-as state and the
- * `applySkill` preset-loader that used to live in `AgentConfigPanel`.
+ * Skill preset, builtin tools, and MCP servers. Rendered only while
+ * `toolsEnabled` is on (see `AgentPage`) — with tools off, this is a pure
+ * chat run and none of these apply. Owns the Skill/save-as state and the
+ * `applySkill` preset-loader.
  */
 function AgentComposerControls() {
   const { t } = useTranslation("playground");
@@ -482,60 +535,61 @@ function AgentComposerControls() {
   );
 }
 
+/**
+ * Right-side config panel: the connection picker (always active — needed in
+ * both chat and agent mode) plus the agent-only knobs (plan-first, max-steps,
+ * hand-authored inline tools), which are only relevant — and only rendered —
+ * while `toolsEnabled` is on.
+ */
 function AgentConfigPanel() {
   const { t } = useTranslation("playground");
   const slice = useAgentStore();
 
   return (
-    // Disabled during a run (see AgentComposerControls) — same fieldset cascade.
-    <fieldset
-      disabled={slice.running}
-      className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-60"
-    >
-      <CategoryEndpointSelector
-        category="chat"
-        selectedConnectionId={slice.selectedConnectionId}
-        onSelect={slice.setSelectedConnectionId}
-      />
-
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">{t("agent.systemPrompt.label")}</Label>
-        <Textarea
-          value={slice.systemPrompt}
-          onChange={(e) => slice.setSystemPrompt(e.target.value)}
-          placeholder={t("agent.systemPrompt.placeholder")}
-          className="h-16 text-xs"
+    <div className="space-y-4">
+      <fieldset disabled={slice.running} className="m-0 min-w-0 border-0 p-0 disabled:opacity-60">
+        <CategoryEndpointSelector
+          category="chat"
+          selectedConnectionId={slice.selectedConnectionId}
+          onSelect={slice.setSelectedConnectionId}
         />
-      </div>
+      </fieldset>
 
-      <div className="flex items-center justify-between">
-        <Label className="text-xs text-muted-foreground" htmlFor="agent-plan-first">
-          {t("agent.planFirst")}
-        </Label>
-        <Switch
-          id="agent-plan-first"
-          checked={slice.planFirst}
-          onCheckedChange={(b) => slice.setPlanFirst(b)}
-        />
-      </div>
+      {slice.toolsEnabled ? (
+        <fieldset
+          disabled={slice.running}
+          className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-60"
+        >
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground" htmlFor="agent-plan-first">
+              {t("agent.planFirst")}
+            </Label>
+            <Switch
+              id="agent-plan-first"
+              checked={slice.planFirst}
+              onCheckedChange={(b) => slice.setPlanFirst(b)}
+            />
+          </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground" htmlFor="agent-max-steps">
-          {t("agent.maxSteps")}
-        </Label>
-        <Input
-          id="agent-max-steps"
-          type="number"
-          min={1}
-          max={50}
-          value={slice.maxSteps}
-          onChange={(e) => slice.setMaxSteps(Number(e.target.value) || 1)}
-          className="h-8 w-24 text-xs"
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground" htmlFor="agent-max-steps">
+              {t("agent.maxSteps")}
+            </Label>
+            <Input
+              id="agent-max-steps"
+              type="number"
+              min={1}
+              max={50}
+              value={slice.maxSteps}
+              onChange={(e) => slice.setMaxSteps(Number(e.target.value) || 1)}
+              className="h-8 w-24 text-xs"
+            />
+          </div>
 
-      <InlineToolEditor />
-    </fieldset>
+          <InlineToolEditor />
+        </fieldset>
+      ) : null}
+    </div>
   );
 }
 
@@ -546,15 +600,8 @@ export function AgentPage() {
   const mcpServerNames: Record<string, string> = {};
   for (const s of mcpServers ?? []) mcpServerNames[s.id] = s.name;
 
-  const canRun = !!slice.selectedConnectionId && slice.task.trim().length > 0 && !slice.running;
-  const disabledReason = !slice.selectedConnectionId
-    ? t("agent.needConnection")
-    : slice.task.trim().length === 0
-      ? t("agent.needTask")
-      : undefined;
-
-  const onRun = () => {
-    void startAgentRun(t);
+  const onSend = (text: string, attachments: AttachedFile[]) => {
+    void startRun(t, { text, attachments });
   };
 
   const onStop = () => {
@@ -579,7 +626,7 @@ export function AgentPage() {
       pending.toolCallId,
       resultContent,
     );
-    void startAgentRun(t, { messages });
+    void startRun(t, { continuation: { messages } });
   };
 
   // "Approve" resends the same paused transcript with `autoRunMcp: true` —
@@ -587,22 +634,24 @@ export function AgentPage() {
   // check) executes ONLY the newly-approved MCP tool_call; any builtin (or
   // other already-run MCP call) from the same paused turn is already in
   // `continuationMessages` as a `role: "tool"` entry and is never re-run.
-  // Passing `{ messages }` as `continuation` also keeps `startAgentRun` from
-  // calling `clearSteps()` — the trace is appended to, not restarted.
+  // Passing `{ continuation: { messages, autoRunMcpOverride: true } }` also
+  // keeps `startRun` from calling `clearSteps()` — the timeline is appended
+  // to, not restarted.
   //
-  // Security note (final-review fix): this is a PER-CONTINUATION override
-  // (`autoRunMcpOverride: true`), NOT `fresh.setAutoRunMcp(true)`. Mutating
-  // the shared store flag would silently disable the approval gate for the
-  // NEXT fresh run too — `clearSteps()` doesn't reset `autoRunMcp`, and
-  // `startAgentRun` reads it straight off the store. Approving one tool call
-  // once must never leave the gate open for a future unrelated run; the
-  // user's persistent toggle only changes via the explicit Switch in
-  // `AgentConfigPanel`.
+  // Security note (final-review fix, carried over): this is a
+  // PER-CONTINUATION override (`autoRunMcpOverride: true`), NOT
+  // `fresh.setAutoRunMcp(true)`. Mutating the shared store flag would
+  // silently disable the approval gate for the NEXT fresh run too. Approving
+  // one tool call once must never leave the gate open for a future unrelated
+  // run; the user's persistent toggle only changes via the explicit Switch in
+  // `AgentComposerControls`.
   const onApproveMcp = () => {
     const fresh = useAgentStore.getState();
     if (!fresh.continuationMessages) return;
     fresh.setPendingApproval(null);
-    void startAgentRun(t, { messages: fresh.continuationMessages, autoRunMcpOverride: true });
+    void startRun(t, {
+      continuation: { messages: fresh.continuationMessages, autoRunMcpOverride: true },
+    });
   };
 
   const onRejectMcp = () => {
@@ -612,6 +661,13 @@ export function AgentPage() {
   // Restore a history entry's snapshot into the live agent store. Mirrors
   // ChatPage's restoreSnap; agent trajectories are plain JSON, so unlike chat
   // there are no blobs to rehydrate.
+  //
+  // NOTE (known gap, tracked for the later history-merge task): `timeline`
+  // isn't part of `AgentHistorySnapshot` yet, so a restored entry shows an
+  // empty timeline even though `steps`/`verdict` are restored into the
+  // store — display of a restored trace is deferred to that task, which also
+  // moves persistence off `steps` (no longer populated by live runs; see
+  // `startRun`'s dispatch, which only calls `appendEvent`).
   const restoreSnap = (snap: AgentHistorySnapshot) => {
     const s = useAgentStore.getState();
     s.reset();
@@ -676,65 +732,58 @@ export function AgentPage() {
       paramsSlot={<AgentConfigPanel />}
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="space-y-2 border-b border-border px-6 py-3">
-          <Textarea
-            value={slice.task}
-            onChange={(e) => slice.setTask(e.target.value)}
-            placeholder={t("agent.task.placeholder")}
-            disabled={slice.running}
-            className="min-h-16 text-sm"
-          />
-          <AgentComposerControls />
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {slice.running ? (
-                <Button type="button" variant="destructive" size="sm" onClick={onStop}>
-                  {t("agent.stop")}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={onRun}
-                  disabled={!canRun}
-                  title={disabledReason}
-                >
-                  {t("agent.run")}
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onReset}
-                disabled={slice.running}
-              >
-                {t("agent.reset")}
-              </Button>
-            </div>
-            {slice.running ? (
-              <span className="text-xs text-muted-foreground">{t("agent.running")}</span>
-            ) : null}
-          </div>
-        </div>
-        {slice.error ? (
-          <div className="mx-6 mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {slice.error}
-          </div>
-        ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <TraceTimeline
-            steps={slice.steps}
+          <Timeline
+            timeline={slice.timeline}
             pendingInlineTool={slice.pendingInlineTool}
             onSubmitToolResult={onSubmitToolResult}
             submittingToolResult={slice.running}
             pendingApproval={slice.pendingApproval}
             onApproveMcp={onApproveMcp}
             onRejectMcp={onRejectMcp}
-            verdict={slice.verdict}
             mcpServerNames={mcpServerNames}
           />
         </div>
+        {slice.error ? (
+          <div className="mx-6 mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {slice.error}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-3 px-6 py-2">
+          <label
+            htmlFor="agent-tools-toggle"
+            className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
+          >
+            <Switch
+              id="agent-tools-toggle"
+              checked={slice.toolsEnabled}
+              onCheckedChange={slice.setToolsEnabled}
+              disabled={slice.running}
+            />
+            {t("agent.toolsToggle.label")}
+          </label>
+          {slice.toolsEnabled ? <AgentComposerControls /> : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto shrink-0"
+            onClick={onReset}
+            disabled={slice.running}
+          >
+            {t("agent.reset")}
+          </Button>
+        </div>
+        <MessageComposer
+          systemMessage={slice.systemPrompt}
+          onSystemMessageChange={slice.setSystemPrompt}
+          onSend={onSend}
+          onStop={onStop}
+          sending={slice.running}
+          streaming={slice.running}
+          disabled={!slice.selectedConnectionId}
+          disabledReason={t("agent.needConnection")}
+        />
       </div>
     </PlaygroundShell>
   );

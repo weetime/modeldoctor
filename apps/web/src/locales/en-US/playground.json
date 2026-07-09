@@ -300,13 +300,8 @@
   "agent": {
     "title": "Agent",
     "subtitle": "A multi-turn tool-call loop: the model can plan, call tools, see results, and keep going until the task is done.",
-    "task": {
-      "label": "Task",
-      "placeholder": "Describe what you want the agent to accomplish…"
-    },
-    "systemPrompt": {
-      "label": "System prompt",
-      "placeholder": "Optional. E.g. You are a helpful assistant that makes good use of tools."
+    "toolsToggle": {
+      "label": "Tools"
     },
     "planFirst": "Plan first",
     "maxSteps": "Max steps",
@@ -354,12 +349,8 @@
       "saveError": "Failed to save skill",
       "saveAsDescription": "Bundles the current config (system prompt, tools, MCP servers, connection) into a reusable Skill preset."
     },
-    "run": "Run",
-    "running": "Running…",
-    "stop": "Stop",
     "reset": "Reset",
     "needConnection": "Pick a chat connection first",
-    "needTask": "Fill in a task description",
     "errors": {
       "run": "Run failed: {{message}}"
     },

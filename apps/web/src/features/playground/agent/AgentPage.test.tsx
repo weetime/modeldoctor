@@ -5,7 +5,7 @@ import type {
   ConnectionPublic,
   SkillPublic,
 } from "@modeldoctor/contracts";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -66,48 +66,58 @@ vi.mock("@/features/skills/queries", () => ({
   useCreateSkill: () => ({ mutateAsync: createSkillMutateAsync, isPending: false }),
 }));
 
-// The scripted SSE sequence this fake plays back for every run: plan →
-// tool_call → tool_result → assistant → done. Each event is JSON.stringify()d
-// before being handed to onSseEvent, mirroring the real wire format (a
-// `data: <json>` SSE line, minus the `data:` prefix which the real
-// playgroundFetchStream strips before calling this callback).
-const SCRIPTED_EVENTS: AgentSseEvent[] = [
-  { type: "step", step: { kind: "plan", content: "1. compute 1+1", tMs: 5 } },
-  {
-    type: "step",
-    step: {
-      kind: "tool_call",
-      name: "calculator",
-      args: { expression: "1+1" },
-      toolCallId: "call1",
-      tMs: 10,
-    },
-  },
-  {
-    type: "step",
-    step: { kind: "tool_result", name: "calculator", content: "2", toolCallId: "call1", tMs: 15 },
-  },
-  { type: "step", step: { kind: "assistant", content: "The answer is 2.", tMs: 20 } },
-  { type: "done" },
-];
-
 interface FakeStreamInput {
   path: string;
-  body: { messages?: unknown; autoRunMcp?: boolean };
+  body: {
+    task?: unknown;
+    builtinTools?: string[];
+    mcpServerIds?: string[];
+    messages?: unknown;
+    autoRunMcp?: boolean;
+  };
   signal: AbortSignal;
   onSseEvent: (data: string) => void;
 }
 
 const playgroundFetchStreamMock = vi.fn(async ({ onSseEvent }: FakeStreamInput) => {
-  for (const evt of SCRIPTED_EVENTS) onSseEvent(JSON.stringify(evt));
+  onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
 });
 
 vi.mock("@/lib/playground-stream", () => ({
   playgroundFetchStream: (input: FakeStreamInput) => playgroundFetchStreamMock(input),
 }));
 
+/** Plays back a scripted event sequence on the NEXT `playgroundFetchStream` call. */
+function scriptNextRun(events: AgentSseEvent[]) {
+  playgroundFetchStreamMock.mockImplementationOnce(
+    async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
+      for (const evt of events) onSseEvent(JSON.stringify(evt));
+    },
+  );
+}
+
 import { AgentPage } from "./AgentPage";
 import { useAgentStore } from "./store";
+
+async function selectConnection(user: ReturnType<typeof userEvent.setup>) {
+  // In the default (tools-off) state, the Skill picker isn't rendered, so the
+  // connection picker is the only combobox on screen.
+  await user.click(screen.getByRole("combobox"));
+  await user.click(screen.getByRole("option", { name: /chat-1/i }));
+}
+
+async function enableTools(user: ReturnType<typeof userEvent.setup>) {
+  // In the default (tools-off) state, the tools toggle is the only switch on
+  // screen — planFirst/autoRunMcp switches only render once tools are on
+  // (planFirst) or their popover is opened (autoRunMcp).
+  await user.click(screen.getByRole("switch"));
+}
+
+async function typeTaskAndSend(user: ReturnType<typeof userEvent.setup>, text: string) {
+  const draft = screen.getByPlaceholderText(/type your message|输入消息/i);
+  await user.type(draft, text);
+  await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+}
 
 describe("AgentPage", () => {
   beforeEach(() => {
@@ -118,395 +128,406 @@ describe("AgentPage", () => {
     createSkillMutateAsync.mockResolvedValue(SAMPLE_SKILL);
   });
 
-  it("renders the 4 scripted step cards in order and running=false after done", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
+  describe("tools-off: unified endpoint reads as plain streaming chat", () => {
+    it("renders one growing assistant bubble, no tool cards, running=false after done", async () => {
+      scriptNextRun([
+        { type: "text_delta", delta: "He" },
+        { type: "text_delta", delta: "llo" },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
 
-    // Pick the connection (second combobox — the Skill dropdown in the
-    // composer now renders first in the DOM, followed by the endpoint
-    // picker in the right config panel).
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
 
-    // Fill in the task.
-    const taskBox = screen.getAllByRole("textbox")[0];
-    await user.type(taskBox, "what is 1+1?");
+      await selectConnection(user);
+      await typeTaskAndSend(user, "hi");
 
-    // Run.
-    await user.click(screen.getByRole("button", { name: /run|运行/i }));
+      await waitFor(() => {
+        expect(screen.getByTestId("assistant-bubble")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Hello")).toBeInTheDocument();
+      expect(screen.queryAllByTestId(/^step-/)).toHaveLength(0);
+      expect(screen.queryByTestId("agent-plan-strip")).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("assistant-bubble")).toHaveLength(1);
 
-    await waitFor(() => {
-      // The `plan` step is surfaced as the pinned plan strip, not an inline card.
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /^send$|^发送$/i })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /^stop$|^停止$/i })).not.toBeInTheDocument();
+      });
+      expect(useAgentStore.getState().running).toBe(false);
+
+      // Tools-off: no builtinTools/mcpServerIds/inlineTools/planFirst/maxSteps
+      // on the wire — this IS the equivalence with a plain streaming chat call.
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(call.body).not.toHaveProperty("builtinTools");
+      expect(call.body).not.toHaveProperty("mcpServerIds");
+      expect(call.body).not.toHaveProperty("inlineTools");
+      expect(call.body).not.toHaveProperty("planFirst");
+      expect(call.body).not.toHaveProperty("autoRunMcp");
+      expect(call.body.task).toBe("hi");
+    });
+  });
+
+  describe("tools-on: interleaved bubbles + trace cards", () => {
+    it("renders plan strip, assistant bubbles, tool cards, and verdict in order", async () => {
+      scriptNextRun([
+        { type: "step", step: { kind: "plan", content: "1. call a tool", tMs: 1 } },
+        { type: "text_delta", delta: "calling" },
+        { type: "assistant_end" },
+        {
+          type: "step",
+          step: { kind: "tool_call", name: "calculator", args: { expr: "1+1" }, tMs: 5 },
+        },
+        { type: "step", step: { kind: "tool_result", content: "2", tMs: 10 } },
+        { type: "text_delta", delta: "the answer is 2" },
+        { type: "assistant_end" },
+        {
+          type: "verdict",
+          verdict: {
+            taskCompleted: true,
+            toolUseCorrect: true,
+            extraSteps: 0,
+            oneLineVerdict: "Solved it.",
+          },
+        },
+        { type: "done" },
+      ]);
+
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await enableTools(user);
+      // With tools on, the Skill picker (composer/children) now renders
+      // before the connection picker (paramsSlot) in the DOM.
+      const comboboxes = screen.getAllByRole("combobox");
+      await user.click(comboboxes[1]);
+      await user.click(screen.getByRole("option", { name: /chat-1/i }));
+      await typeTaskAndSend(user, "what is 1+1?");
+
+      await waitFor(() => {
+        expect(screen.getByTestId("agent-verdict-card")).toBeInTheDocument();
+      });
+
       expect(screen.getByTestId("agent-plan-strip")).toBeInTheDocument();
-      expect(screen.getByTestId("step-tool_call")).toBeInTheDocument();
-      expect(screen.getByTestId("step-tool_result")).toBeInTheDocument();
-      expect(screen.getByTestId("step-assistant")).toBeInTheDocument();
+      // The plan is pinned, not also inlined as a step card.
+      expect(screen.queryByTestId("step-plan")).not.toBeInTheDocument();
+
+      const testIds = screen
+        .getAllByTestId(/^(assistant-bubble|step-tool_call|step-tool_result|agent-verdict-card)$/)
+        .map((el) => el.getAttribute("data-testid"));
+      expect(testIds).toEqual([
+        "assistant-bubble",
+        "step-tool_call",
+        "step-tool_result",
+        "assistant-bubble",
+        "agent-verdict-card",
+      ]);
+
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      // Tools on: builtin/mcp fields ARE present (even if empty arrays, since
+      // none were picked here) — asserted via maxSteps/planFirst always present.
+      expect(call.body).toHaveProperty("maxSteps");
+      expect(call.body).toHaveProperty("planFirst");
     });
-
-    // The inline cards (plan filtered out to the pinned strip) render in order.
-    const cards = screen.getAllByTestId(/^step-/);
-    expect(cards.map((c) => c.getAttribute("data-testid"))).toEqual([
-      "step-tool_call",
-      "step-tool_result",
-      "step-assistant",
-    ]);
-
-    // running flips false after "done" — Run button is back, Stop is gone.
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /run|运行/i })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /stop|停止/i })).not.toBeInTheDocument();
-    });
-
-    expect(useAgentStore.getState().steps).toHaveLength(4);
-    expect(useAgentStore.getState().running).toBe(false);
   });
 
-  // Full-transcript continuation (Task 11 fix pass): the server's `done`
-  // event carries the full transcript so far when pausing — the frontend
-  // stashes it (`continuationMessages`) and resends it verbatim on
-  // submit/approve, instead of rebuilding a minimal 3-message transcript.
-  const PAUSED_INLINE_TOOL_TRANSCRIPT: ChatMessage[] = [
-    { role: "user", content: "call my inline tool" },
-    {
-      role: "assistant",
-      content: "",
-      tool_calls: [
-        {
-          id: "call2",
-          type: "function",
-          function: { name: "my_inline_tool", arguments: JSON.stringify({ foo: "bar" }) },
-        },
-      ],
-    },
-  ];
+  describe("multimodal attachments", () => {
+    it("turns the task into ContentPart[] when an image is attached", async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
 
-  it("renders a pending inline-tool card with a submit-result affordance", async () => {
-    playgroundFetchStreamMock.mockImplementationOnce(
-      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
-        onSseEvent(
-          JSON.stringify({
-            type: "tool_result_needed",
-            toolCallId: "call2",
-            name: "my_inline_tool",
-            args: { foo: "bar" },
-          } satisfies AgentSseEvent),
-        );
-        onSseEvent(
-          JSON.stringify({
-            type: "done",
-            messages: PAUSED_INLINE_TOOL_TRANSCRIPT,
-          } satisfies AgentSseEvent),
-        );
+      await selectConnection(user);
+
+      const imageInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      ) as HTMLInputElement;
+      const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "a.png", {
+        type: "image/png",
+      });
+      fireEvent.change(imageInput, { target: { files: [file] } });
+      await waitFor(() => expect(screen.getByText("a.png")).toBeInTheDocument());
+
+      const draft = screen.getByPlaceholderText(/type your message|输入消息/i);
+      await user.type(draft, "describe this");
+      await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+
+      await waitFor(() => expect(playgroundFetchStreamMock).toHaveBeenCalled());
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(Array.isArray(call.body.task)).toBe(true);
+      const parts = call.body.task as Array<{ type: string }>;
+      expect(parts.some((p) => p.type === "text")).toBe(true);
+      expect(parts.some((p) => p.type === "image_url")).toBe(true);
+    });
+  });
+
+  describe("MCP approval (Task 11 carried over)", () => {
+    const PAUSED_MCP_APPROVAL_TRANSCRIPT: ChatMessage[] = [
+      { role: "user", content: "search something via MCP" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          {
+            id: "call3",
+            type: "function",
+            function: { name: "mcp__mcp_1__search", arguments: JSON.stringify({ q: "x" }) },
+          },
+        ],
       },
-    );
+    ];
 
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
-    const taskBox = screen.getAllByRole("textbox")[0];
-    await user.type(taskBox, "call my inline tool");
-    await user.click(screen.getByRole("button", { name: /run|运行/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/my_inline_tool/)).toBeInTheDocument();
-    });
-    expect(useAgentStore.getState().pendingInlineTool).toEqual({
-      toolCallId: "call2",
-      name: "my_inline_tool",
-      args: { foo: "bar" },
-    });
-
-    // Submitting the result triggers a continuation run — it should clear
-    // the pending card and call playgroundFetchStream a second time with the
-    // full `continuationMessages` transcript plus the tool result appended,
-    // NOT a rebuilt minimal transcript.
-    playgroundFetchStreamMock.mockClear();
-    playgroundFetchStreamMock.mockImplementationOnce(async ({ onSseEvent }: FakeStreamInput) => {
-      onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
-    });
-
-    const resultBox = screen.getByPlaceholderText(/paste|结果/i);
-    await user.type(resultBox, "42");
-    await user.click(screen.getByRole("button", { name: /submit|提交/i }));
-
-    await waitFor(() => {
-      expect(useAgentStore.getState().pendingInlineTool).toBeNull();
-    });
-    expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
-    const call = playgroundFetchStreamMock.mock.calls[0][0];
-    expect(call.body.messages).toEqual([
-      ...PAUSED_INLINE_TOOL_TRANSCRIPT,
-      { role: "tool", tool_call_id: "call2", content: "42" },
-    ]);
-  });
-
-  const PAUSED_MCP_APPROVAL_TRANSCRIPT: ChatMessage[] = [
-    { role: "user", content: "search something via MCP" },
-    {
-      role: "assistant",
-      content: "",
-      tool_calls: [
+    async function runToApproval(user: ReturnType<typeof userEvent.setup>) {
+      scriptNextRun([
         {
-          id: "call3",
-          type: "function",
-          function: { name: "mcp__mcp_1__search", arguments: JSON.stringify({ q: "x" }) },
-        },
-      ],
-    },
-  ];
-
-  it("renders a pending MCP tool_approval card; 批准/Approve re-runs with autoRunMcp=true", async () => {
-    playgroundFetchStreamMock.mockImplementationOnce(
-      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
-        onSseEvent(
-          JSON.stringify({
-            type: "step",
-            step: {
-              kind: "tool_call",
-              name: "mcp__mcp_1__search",
-              args: { q: "x" },
-              toolCallId: "call3",
-              tMs: 5,
-            },
-          } satisfies AgentSseEvent),
-        );
-        onSseEvent(
-          JSON.stringify({
-            type: "tool_approval",
-            toolCallId: "call3",
-            server: { id: "mcp_1", name: "higress-gw" },
+          type: "step",
+          step: {
+            kind: "tool_call",
             name: "mcp__mcp_1__search",
             args: { q: "x" },
-          } satisfies AgentSseEvent),
-        );
-        onSseEvent(
-          JSON.stringify({
-            type: "done",
-            messages: PAUSED_MCP_APPROVAL_TRANSCRIPT,
-          } satisfies AgentSseEvent),
-        );
-      },
-    );
+            toolCallId: "call3",
+            tMs: 5,
+          },
+        },
+        {
+          type: "tool_approval",
+          toolCallId: "call3",
+          server: { id: "mcp_1", name: "higress-gw" },
+          name: "mcp__mcp_1__search",
+          args: { q: "x" },
+        },
+        { type: "done", messages: PAUSED_MCP_APPROVAL_TRANSCRIPT },
+      ]);
 
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
-    const taskBox = screen.getAllByRole("textbox")[0];
-    await user.type(taskBox, "search something via MCP");
-    await user.click(screen.getByRole("button", { name: /run|运行/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("mcp-approval-card")).toBeInTheDocument();
-    });
-    expect(useAgentStore.getState().pendingApproval).toEqual({
-      toolCallId: "call3",
-      server: { id: "mcp_1", name: "higress-gw" },
-      name: "mcp__mcp_1__search",
-      args: { q: "x" },
-    });
-    expect(useAgentStore.getState().autoRunMcp).toBe(false);
-
-    playgroundFetchStreamMock.mockClear();
-    playgroundFetchStreamMock.mockImplementationOnce(async ({ onSseEvent }: FakeStreamInput) => {
-      onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
-    });
-
-    await user.click(screen.getByRole("button", { name: /approve|批准/i }));
-
-    await waitFor(() => {
-      expect(useAgentStore.getState().pendingApproval).toBeNull();
-    });
-    // Final-review fix: approving must NOT mutate the shared `autoRunMcp`
-    // toggle — otherwise the NEXT fresh run would silently start with the
-    // approval gate disabled. The store's persistent flag stays at its
-    // pre-approval value (false); only this one continuation's request body
-    // carries the override.
-    expect(useAgentStore.getState().autoRunMcp).toBe(false);
-    expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
-    const call = playgroundFetchStreamMock.mock.calls[0][0];
-    expect(call.body.autoRunMcp).toBe(true);
-    // Approve resends the exact paused transcript (resume), not a fresh
-    // from-scratch task — this is what lets the server skip re-running
-    // whatever already executed before the pause.
-    expect(call.body.messages).toEqual(PAUSED_MCP_APPROVAL_TRANSCRIPT);
-    // The existing trace (the tool_call step from the paused run) is
-    // appended to, not cleared/restarted, by the approve resend.
-    expect(useAgentStore.getState().steps).toHaveLength(1);
-    expect(useAgentStore.getState().steps[0].kind).toBe("tool_call");
-  });
-
-  it("拒绝/Reject just clears the pending approval card without re-running", async () => {
-    playgroundFetchStreamMock.mockImplementationOnce(
-      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
-        onSseEvent(
-          JSON.stringify({
-            type: "tool_approval",
-            toolCallId: "call4",
-            server: { id: "mcp_1", name: "higress-gw" },
-            name: "mcp__mcp_1__search",
-            args: {},
-          } satisfies AgentSseEvent),
-        );
-        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
-      },
-    );
-
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
-    const taskBox = screen.getAllByRole("textbox")[0];
-    await user.type(taskBox, "search something via MCP");
-    await user.click(screen.getByRole("button", { name: /run|运行/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("mcp-approval-card")).toBeInTheDocument();
-    });
-
-    playgroundFetchStreamMock.mockClear();
-    await user.click(screen.getByRole("button", { name: /reject|拒绝/i }));
-
-    await waitFor(() => {
-      expect(useAgentStore.getState().pendingApproval).toBeNull();
-    });
-    expect(playgroundFetchStreamMock).not.toHaveBeenCalled();
-  });
-
-  // Task 12: applying a Skill loads it as a preset into the store.
-  it("applying a skill from the dropdown loads its config into the store", async () => {
-    skillsListData = [SAMPLE_SKILL];
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    // Comboboxes: [0] Skill dropdown (composer, renders before the right
-    // config panel in the DOM), [1] connection picker.
-    const comboboxes = screen.getAllByRole("combobox");
-    await user.click(comboboxes[0]);
-    await user.click(screen.getByRole("option", { name: /diagnose-vllm/i }));
-
-    await waitFor(() => {
-      const s = useAgentStore.getState();
-      expect(s.systemPrompt).toBe(SAMPLE_SKILL.systemPrompt);
-      expect(s.planFirst).toBe(true);
-      expect(s.maxSteps).toBe(30);
-      expect(s.selectedMcpServerIds).toEqual(["mcp1"]);
-      expect(s.inlineTools).toEqual(SAMPLE_SKILL.inlineTools);
-      expect(s.selectedConnectionId).toBe("c1");
-    });
-  });
-
-  // Task 12: "存为 Skill" POSTs the CURRENT store config via useCreateSkill.
-  // Task 13: lightweight trajectory judge verdict — rendered only on a true
-  // completion, as the last card in the timeline.
-  const SAMPLE_VERDICT: AgentSseEvent = {
-    type: "verdict",
-    verdict: {
-      taskCompleted: true,
-      toolUseCorrect: true,
-      extraSteps: 0,
-      oneLineVerdict: "The agent solved 1+1 correctly using the calculator tool.",
-    },
-  };
-
-  it("a scripted verdict SSE event renders the verdict card at the end of the trace", async () => {
-    playgroundFetchStreamMock.mockImplementationOnce(
-      async ({ onSseEvent }: { onSseEvent: (data: string) => void }) => {
-        onSseEvent(
-          JSON.stringify({
-            type: "step",
-            step: { kind: "assistant", content: "The answer is 2.", tMs: 20 },
-          } satisfies AgentSseEvent),
-        );
-        onSseEvent(JSON.stringify(SAMPLE_VERDICT));
-        onSseEvent(JSON.stringify({ type: "done" } satisfies AgentSseEvent));
-      },
-    );
-
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
-    const taskBox = screen.getAllByRole("textbox")[0];
-    await user.type(taskBox, "what is 1+1?");
-    await user.click(screen.getByRole("button", { name: /run|运行/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("agent-verdict-card")).toBeInTheDocument();
-    });
-    expect(
-      screen.getByText("The agent solved 1+1 correctly using the calculator tool."),
-    ).toBeInTheDocument();
-    expect(useAgentStore.getState().verdict).toEqual(SAMPLE_VERDICT.verdict);
-
-    // Verdict is the last card, after the assistant step.
-    const testIds = [
-      ...screen.getAllByTestId(/^step-/).map((el) => el.getAttribute("data-testid")),
-      "agent-verdict-card",
-    ];
-    expect(testIds.at(-1)).toBe("agent-verdict-card");
-  });
-
-  it("存为 Skill 用当前配置调用 createSkill", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <AgentPage />
-      </MemoryRouter>,
-    );
-
-    // Configure the current store: connection + system prompt + a max-steps tweak.
-    await user.click(screen.getAllByRole("combobox")[1]);
-    await user.click(screen.getByRole("option", { name: /chat-1/i }));
-    const systemPromptBox = screen.getAllByRole("textbox")[1];
-    await user.type(systemPromptBox, "custom prompt");
-
-    await user.click(screen.getByRole("button", { name: /save as skill|存为 skill/i }));
-
-    const nameInput = screen.getByLabelText(/^name|^名称/i) as HTMLInputElement;
-    await user.type(nameInput, "my-skill");
-    await user.click(screen.getByRole("button", { name: /^save$|^保存$/i }));
-
-    await waitFor(() => {
-      expect(createSkillMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: "my-skill",
-          systemPrompt: "custom prompt",
-          planFirst: false,
-          maxSteps: 12,
-          mcpServerIds: [],
-          modelConnectionId: "c1",
-        }),
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
       );
+
+      await enableTools(user);
+      const comboboxes = screen.getAllByRole("combobox");
+      await user.click(comboboxes[1]);
+      await user.click(screen.getByRole("option", { name: /chat-1/i }));
+      await typeTaskAndSend(user, "search something via MCP");
+
+      await waitFor(() => {
+        expect(screen.getByTestId("mcp-approval-card")).toBeInTheDocument();
+      });
+    }
+
+    it("renders the pending approval card; Approve re-runs with autoRunMcp=true", async () => {
+      const user = userEvent.setup();
+      await runToApproval(user);
+
+      expect(useAgentStore.getState().pendingApproval).toEqual({
+        toolCallId: "call3",
+        server: { id: "mcp_1", name: "higress-gw" },
+        name: "mcp__mcp_1__search",
+        args: { q: "x" },
+      });
+      expect(useAgentStore.getState().autoRunMcp).toBe(false);
+
+      playgroundFetchStreamMock.mockClear();
+      scriptNextRun([{ type: "done" }]);
+
+      await user.click(screen.getByRole("button", { name: /approve|批准/i }));
+
+      await waitFor(() => {
+        expect(useAgentStore.getState().pendingApproval).toBeNull();
+      });
+      // Approving one call must never mutate the persistent toggle.
+      expect(useAgentStore.getState().autoRunMcp).toBe(false);
+      expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(call.body.autoRunMcp).toBe(true);
+      expect(call.body.messages).toEqual(PAUSED_MCP_APPROVAL_TRANSCRIPT);
+      // The existing tool_call card from the paused run is appended to, not
+      // cleared/restarted, by the approve resend.
+      expect(screen.getByTestId("step-tool_call")).toBeInTheDocument();
+    });
+
+    it("Reject just clears the pending approval card without re-running", async () => {
+      const user = userEvent.setup();
+      await runToApproval(user);
+
+      playgroundFetchStreamMock.mockClear();
+      await user.click(screen.getByRole("button", { name: /reject|拒绝/i }));
+
+      await waitFor(() => {
+        expect(useAgentStore.getState().pendingApproval).toBeNull();
+      });
+      expect(playgroundFetchStreamMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pending inline tool (Task 8/11 carried over)", () => {
+    const PAUSED_INLINE_TOOL_TRANSCRIPT: ChatMessage[] = [
+      { role: "user", content: "call my inline tool" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          {
+            id: "call2",
+            type: "function",
+            function: { name: "my_inline_tool", arguments: JSON.stringify({ foo: "bar" }) },
+          },
+        ],
+      },
+    ];
+
+    it("renders a pending inline-tool card; submit resends the full transcript + result", async () => {
+      scriptNextRun([
+        {
+          type: "tool_result_needed",
+          toolCallId: "call2",
+          name: "my_inline_tool",
+          args: { foo: "bar" },
+        },
+        { type: "done", messages: PAUSED_INLINE_TOOL_TRANSCRIPT },
+      ]);
+
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await enableTools(user);
+      const comboboxes = screen.getAllByRole("combobox");
+      await user.click(comboboxes[1]);
+      await user.click(screen.getByRole("option", { name: /chat-1/i }));
+      await typeTaskAndSend(user, "call my inline tool");
+
+      await waitFor(() => {
+        expect(screen.getByText(/my_inline_tool/)).toBeInTheDocument();
+      });
+      expect(useAgentStore.getState().pendingInlineTool).toEqual({
+        toolCallId: "call2",
+        name: "my_inline_tool",
+        args: { foo: "bar" },
+      });
+
+      playgroundFetchStreamMock.mockClear();
+      scriptNextRun([{ type: "done" }]);
+
+      const resultBox = screen.getByPlaceholderText(/paste|结果/i);
+      await user.type(resultBox, "42");
+      await user.click(screen.getByRole("button", { name: /submit|提交/i }));
+
+      await waitFor(() => {
+        expect(useAgentStore.getState().pendingInlineTool).toBeNull();
+      });
+      expect(playgroundFetchStreamMock).toHaveBeenCalledTimes(1);
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(call.body.messages).toEqual([
+        ...PAUSED_INLINE_TOOL_TRANSCRIPT,
+        { role: "tool", tool_call_id: "call2", content: "42" },
+      ]);
+    });
+  });
+
+  describe("Skill preset (Task 12 carried over)", () => {
+    it("applying a skill from the dropdown loads its config into the store", async () => {
+      skillsListData = [SAMPLE_SKILL];
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await enableTools(user);
+      // [0] Skill dropdown (composer, renders before the right config panel).
+      const comboboxes = screen.getAllByRole("combobox");
+      await user.click(comboboxes[0]);
+      await user.click(screen.getByRole("option", { name: /diagnose-vllm/i }));
+
+      await waitFor(() => {
+        const s = useAgentStore.getState();
+        expect(s.systemPrompt).toBe(SAMPLE_SKILL.systemPrompt);
+        expect(s.planFirst).toBe(true);
+        expect(s.maxSteps).toBe(30);
+        expect(s.selectedMcpServerIds).toEqual(["mcp1"]);
+        expect(s.inlineTools).toEqual(SAMPLE_SKILL.inlineTools);
+        expect(s.selectedConnectionId).toBe("c1");
+      });
+    });
+
+    it("存为 Skill 用当前配置调用 createSkill", async () => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await selectConnection(user);
+      // The system message lives in the MessageComposer's collapsible field
+      // (placeholder "Optional. e.g. …" / "可选。如：…").
+      const systemPromptBox = screen.getByPlaceholderText(/^optional|^可选/i);
+      await user.type(systemPromptBox, "custom prompt");
+
+      await enableTools(user);
+      await user.click(screen.getByRole("button", { name: /save as skill|存为 skill/i }));
+
+      const nameInput = screen.getByLabelText(/^name|^名称/i) as HTMLInputElement;
+      await user.type(nameInput, "my-skill");
+      await user.click(screen.getByRole("button", { name: /^save$|^保存$/i }));
+
+      await waitFor(() => {
+        expect(createSkillMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: "my-skill",
+            systemPrompt: "custom prompt",
+            planFirst: false,
+            maxSteps: 12,
+            mcpServerIds: [],
+            modelConnectionId: "c1",
+          }),
+        );
+      });
+    });
+  });
+
+  describe("tools toggle hides agent-only controls", () => {
+    it("hides AgentComposerControls (Skill/builtin/mcp) and agent-only config when tools are off", () => {
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      expect(screen.queryByText(/plan first|先写计划/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/save as skill|存为 skill/i)).not.toBeInTheDocument();
+      // Only one combobox (the connection picker) — no Skill picker.
+      expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    });
+
+    it("shows them once tools are enabled", async () => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await enableTools(user);
+      expect(screen.getByText(/plan first|先写计划/i)).toBeInTheDocument();
+      expect(screen.getByText(/save as skill|存为 skill/i)).toBeInTheDocument();
+      expect(screen.getAllByRole("combobox")).toHaveLength(2);
     });
   });
 });
