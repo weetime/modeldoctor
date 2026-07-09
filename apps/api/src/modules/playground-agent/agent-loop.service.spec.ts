@@ -9,7 +9,7 @@ import type { DecryptedConnection } from "../connection/connection.service.js";
 import type { McpClientService } from "../mcp-client/mcp-client.service.js";
 import type { DecryptedMcpServer, McpServerService } from "../mcp-server/mcp-server.service.js";
 import type { AgentJudgeService } from "./agent-judge.service.js";
-import { AgentLoopService } from "./agent-loop.service.js";
+import { AgentLoopService, taskToText } from "./agent-loop.service.js";
 import * as builtinToolsModule from "./builtin-tools.js";
 
 const SAMPLE_VERDICT: AgentVerdict = {
@@ -117,7 +117,12 @@ describe("AgentLoopService", () => {
     const kinds = events
       .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
       .map((e) => e.step.kind);
-    expect(kinds).toEqual(["tool_call", "tool_result", "assistant"]);
+    // The final turn's assistant text no longer emits a whole-turn `assistant`
+    // step (Task 3) — it streams via `text_delta` (unexercised here since the
+    // mock `callModel` never invokes `onTextDelta`) and closes with
+    // `assistant_end`.
+    expect(kinds).toEqual(["tool_call", "tool_result"]);
+    expect(events).toContainEqual({ type: "assistant_end" });
     expect(events.at(-1)).toEqual({ type: "done" });
 
     // The tool result was fed back to the model as a `role: "tool"` message
@@ -170,7 +175,11 @@ describe("AgentLoopService", () => {
     const kinds = events
       .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
       .map((e) => e.step.kind);
-    expect(kinds).toEqual(["plan", "tool_call", "tool_result", "assistant"]);
+    // Same as above: the final turn ends with `assistant_end`, not a whole
+    // `assistant` step. The plan turn's own `plan` step is unaffected — plan
+    // text is never streamed via `text_delta` (see Step 1 assertion above).
+    expect(kinds).toEqual(["plan", "tool_call", "tool_result"]);
+    expect(events).toContainEqual({ type: "assistant_end" });
     expect(svc.callModel).toHaveBeenCalledTimes(3);
   });
 
@@ -560,7 +569,8 @@ describe("AgentLoopService", () => {
     const kinds = events
       .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
       .map((e) => e.step.kind);
-    expect(kinds).toEqual(["tool_call", "tool_result", "assistant"]);
+    expect(kinds).toEqual(["tool_call", "tool_result"]);
+    expect(events).toContainEqual({ type: "assistant_end" });
     expect(events.at(-1)).toEqual({ type: "done" });
 
     const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
@@ -718,11 +728,9 @@ describe("AgentLoopService", () => {
     expect(errorStep?.step.content).toMatch(/mcp_bad/);
     expect(errorStep?.step.content).toMatch(/boom: unreachable/);
 
-    const assistantStep = events.find(
-      (e): e is Extract<AgentSseEvent, { type: "step" }> =>
-        e.type === "step" && e.step.kind === "assistant",
-    );
-    expect(assistantStep?.step.content).toBe("All good, no tools needed.");
+    // The final turn has non-empty content, so it closes with `assistant_end`
+    // (no whole-turn `assistant` step any more — Task 3).
+    expect(events).toContainEqual({ type: "assistant_end" });
     expect(events.at(-1)).toEqual({ type: "done" });
   });
 
@@ -848,11 +856,12 @@ describe("AgentLoopService", () => {
 
     // The already-shown `tool_call` step for the builtin/MCP calls is not
     // re-emitted on resume (it's already in the frontend's persisted
-    // trace) — only the MCP tool's result and the final assistant turn are.
+    // trace) — only the MCP tool's result step is left; the final turn's
+    // text closes with `assistant_end` instead of a whole `assistant` step.
     const secondSteps = secondEvents.filter(
       (e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step",
     );
-    expect(secondSteps.map((e) => e.step.kind)).toEqual(["tool_result", "assistant"]);
+    expect(secondSteps.map((e) => e.step.kind)).toEqual(["tool_result"]);
     expect(secondSteps[0]).toMatchObject({
       step: {
         kind: "tool_result",
@@ -861,7 +870,7 @@ describe("AgentLoopService", () => {
         content: "search result text",
       },
     });
-    expect(secondSteps[1]).toMatchObject({ step: { kind: "assistant", content: "Done both." } });
+    expect(secondEvents).toContainEqual({ type: "assistant_end" });
 
     // Normal completion (no further pause) — `done` carries no `messages`.
     expect(secondEvents.at(-1)).toEqual({ type: "done" });
@@ -957,10 +966,7 @@ describe("AgentLoopService", () => {
     });
 
     expect(events).toEqual([
-      {
-        type: "step",
-        step: { kind: "assistant", content: "The answer is 2.", tMs: expect.any(Number) },
-      },
+      { type: "assistant_end" },
       { type: "verdict", verdict: SAMPLE_VERDICT },
       { type: "done" },
     ]);
@@ -1094,5 +1100,97 @@ describe("AgentLoopService", () => {
     expect(judgeFn).toHaveBeenCalledTimes(1);
     expect(events.some((e) => e.type === "verdict")).toBe(false);
     expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  // ─── Streaming (Task 3) ─────────────────────────────────────────────────
+
+  it("O: callModel streams assistant text via text_delta, closed by assistant_end — no whole-turn assistant step", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockImplementation(async (_conn, _body, _signal, onTextDelta) => {
+      onTextDelta?.("Hel");
+      onTextDelta?.("lo");
+      return { content: "Hello", usage: undefined, tool_calls: undefined };
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+
+    expect(events).toEqual([
+      { type: "text_delta", delta: "Hel" },
+      { type: "text_delta", delta: "lo" },
+      { type: "assistant_end" },
+      { type: "done" },
+    ]);
+    expect(events.some((e) => e.type === "step" && e.step.kind === "assistant")).toBe(false);
+  });
+
+  it("P: a plan turn passes no onTextDelta to callModel (plan text is never streamed) and still emits a plan step", async () => {
+    const svc = new AgentLoopService();
+    const onTextDeltaByCall: Array<((d: string) => void) | undefined> = [];
+    svc.callModel = vi.fn().mockImplementation(async (_conn, _body, _signal, onTextDelta) => {
+      onTextDeltaByCall.push(onTextDelta);
+      return onTextDeltaByCall.length === 1
+        ? { content: "1. plan step", usage: undefined, tool_calls: undefined }
+        : { content: "Done.", usage: undefined, tool_calls: undefined };
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq({ planFirst: true }), (e) => events.push(e));
+
+    // Turn 0 (the plan) gets no onTextDelta at all; turn 1 (normal) does.
+    expect(onTextDeltaByCall[0]).toBeUndefined();
+    expect(onTextDeltaByCall[1]).toBeTypeOf("function");
+
+    const stepKinds = events
+      .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
+      .map((e) => e.step.kind);
+    expect(stepKinds).toEqual(["plan"]);
+    // No text_delta fired for the plan turn — the mock never calls the
+    // (undefined) onTextDelta for it, and the loop doesn't stream it either
+    // way. Turn 1's completion still ends in assistant_end.
+    expect(events.some((e) => e.type === "text_delta")).toBe(false);
+    expect(events).toContainEqual({ type: "assistant_end" });
+  });
+
+  it("Q: the judge receives the flattened text of a multimodal task via taskToText", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockResolvedValueOnce({
+      content: "Found it.",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        task: [
+          { type: "text", text: "find X" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,abc" } },
+        ],
+      }),
+      (e) => events.push(e),
+    );
+
+    expect(judgeFn).toHaveBeenCalledTimes(1);
+    expect(judgeFn.mock.calls[0][0].task).toBe("find X");
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  describe("taskToText", () => {
+    it("returns the string as-is when the task is plain text", () => {
+      expect(taskToText("what time is it?")).toBe("what time is it?");
+    });
+
+    it("joins the text parts of a multimodal task with a space, ignoring non-text parts", () => {
+      expect(
+        taskToText([
+          { type: "text", text: "find X" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,abc" } },
+          { type: "text", text: "please" },
+        ]),
+      ).toBe("find X please");
+    });
   });
 });

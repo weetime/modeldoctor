@@ -11,7 +11,6 @@ import {
   buildPlaygroundChatBody,
   buildUrl,
   type ParsedPlaygroundChatResponse,
-  parsePlaygroundChatResponse,
 } from "../../integrations/openai-client/index.js";
 import type { DecryptedConnection } from "../connection/connection.service.js";
 import { McpClientService } from "../mcp-client/mcp-client.service.js";
@@ -19,6 +18,7 @@ import type { DecryptedMcpServer } from "../mcp-server/mcp-server.service.js";
 import { McpServerService } from "../mcp-server/mcp-server.service.js";
 import { AgentJudgeService } from "./agent-judge.service.js";
 import { BUILTIN_TOOLS, executeBuiltin } from "./builtin-tools.js";
+import { readStreamingChatCompletion } from "./streaming.js";
 
 const DEFAULT_PATH = "/v1/chat/completions";
 const DEFAULT_MAX_STEPS = 12;
@@ -41,7 +41,31 @@ export type ModelCaller = (
   conn: DecryptedConnection,
   body: Record<string, unknown>,
   signal?: AbortSignal,
+  /**
+   * Called synchronously for every `delta.content` fragment as the upstream
+   * streams the turn's assistant text. Optional so existing unit specs that
+   * stub `callModel` entirely (`service.callModel = vi.fn()...`) keep
+   * compiling/passing untouched — a stub is free to ignore it.
+   */
+  onTextDelta?: (delta: string) => void,
 ) => Promise<ParsedPlaygroundChatResponse>;
+
+/**
+ * `req.task` (Task 1+ unified playground) is either plain text or multimodal
+ * content parts. The judge (`AgentJudgeService`) and any other plain-text
+ * consumer only ever need the textual gist of the task, so this collapses
+ * either shape to a single string — for an array, it joins the `text` parts
+ * (ignoring images/audio/files, which the judge prompt has no use for).
+ */
+export function taskToText(task: AgentRunRequest["task"]): string {
+  if (typeof task === "string") return task;
+  return task
+    .filter(
+      (part): part is Extract<(typeof task)[number], { type: "text" }> => part.type === "text",
+    )
+    .map((part) => part.text)
+    .join(" ");
+}
 
 /**
  * Server-side multi-turn tool-call loop for the Agent Playground (Task 8;
@@ -87,11 +111,17 @@ export class AgentLoopService {
    * Upstream chat-completions call for a single turn. A plain overridable
    * instance property (not a constructor-injected token) so specs can stub
    * it directly — `service.callModel = vi.fn()...` — without any network
-   * I/O or NestJS DI ceremony. Non-streaming: the loop needs the complete
-   * `tool_calls` array before it can dispatch, so there's no benefit to
-   * streaming deltas per turn.
+   * I/O or NestJS DI ceremony. Streaming (Task 3, unified playground): the
+   * caller passes `stream: true` in `body` and this reads the SSE response
+   * via `readStreamingChatCompletion`, forwarding each text fragment to
+   * `onTextDelta` as it arrives while still returning the fully assembled
+   * `{content, tool_calls}` once the stream ends — the loop still needs the
+   * complete `tool_calls` array before it can dispatch a turn. `usage` isn't
+   * available from a streamed response, so it's always `undefined` here
+   * (kept in the return shape only for `ParsedPlaygroundChatResponse`
+   * compatibility).
    */
-  callModel: ModelCaller = async (conn, body, signal) => {
+  callModel: ModelCaller = async (conn, body, signal, onTextDelta) => {
     const url = buildUrl({
       apiBaseUrl: conn.baseUrl,
       defaultPath: DEFAULT_PATH,
@@ -103,8 +133,11 @@ export class AgentLoopService {
       const text = await res.text().catch(() => "");
       throw new Error(`upstream ${res.status}: ${text || res.statusText}`);
     }
-    const json = await res.json();
-    return parsePlaygroundChatResponse(json);
+    const { content, tool_calls } = await readStreamingChatCompletion(
+      res,
+      onTextDelta ?? (() => {}),
+    );
+    return { content, usage: undefined, tool_calls };
   };
 
   async run(
@@ -178,10 +211,19 @@ export class AgentLoopService {
           params: {
             tools: tools.length > 0 ? tools : undefined,
             tool_choice: isPlanTurn ? "none" : req.tool_choice,
-            stream: undefined,
+            stream: true,
           },
         });
-        parsed = await this.callModel(conn, body, signal);
+        // A plan turn's text is NOT streamed to the client — it's emitted as
+        // a single `{kind:"plan"}` step below once the full plan text is in,
+        // so the pinned plan strip never shows a partial/duplicated plan.
+        // Every other turn streams its assistant text live via `text_delta`.
+        parsed = await this.callModel(
+          conn,
+          body,
+          signal,
+          isPlanTurn ? undefined : (delta) => emit({ type: "text_delta", delta }),
+        );
       } catch (e) {
         if (isAborted()) return;
         emit({
@@ -205,8 +247,13 @@ export class AgentLoopService {
         continue;
       }
 
+      // The text itself already streamed out via `text_delta` above (from
+      // inside `callModel`) — `assistant_end` just marks the turn's text
+      // boundary so the frontend can close off the in-progress bubble
+      // without waiting for the terminal `done`. No more whole-turn
+      // `{kind:"assistant"}` step is emitted.
       if (parsed.content && parsed.content.trim().length > 0) {
-        emit({ type: "step", step: { kind: "assistant", content: parsed.content, tMs: tMs() } });
+        emit({ type: "assistant_end" });
       }
 
       const toolCalls = parsed.tool_calls ?? [];
@@ -216,7 +263,7 @@ export class AgentLoopService {
         // final assistant turn's content never gets pushed into `messages`
         // on this path (only prior turns are), so splice it in for the judge.
         await this.maybeEmitVerdict(
-          req.task,
+          taskToText(req.task),
           [...messages, { role: "assistant", content: parsed.content ?? "" }],
           emit,
         );
@@ -260,7 +307,7 @@ export class AgentLoopService {
     });
     // Also a true completion (the run ran to its full budget rather than
     // pausing for a human) — judge it the same as the no-more-tool-calls path.
-    await this.maybeEmitVerdict(req.task, messages, emit);
+    await this.maybeEmitVerdict(taskToText(req.task), messages, emit);
     emit({ type: "done" });
   }
 
