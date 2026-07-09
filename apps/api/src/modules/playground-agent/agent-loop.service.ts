@@ -163,6 +163,13 @@ export class AgentLoopService {
     for (let turn = 0; turn < maxSteps; turn++) {
       if (isAborted()) return;
 
+      // planFirst: force the FIRST turn of a fresh run to be text-only via
+      // `tool_choice: "none"`, so a tool-happy model has to write a plan
+      // instead of jumping straight to tool calls (a soft "please plan first"
+      // instruction alone gets ignored). The plan turn is NOT a completion —
+      // we emit it and continue to execute with tools enabled next turn.
+      const isPlanTurn = turn === 0 && req.planFirst && !isResume;
+
       let parsed: ParsedPlaygroundChatResponse;
       try {
         const body = buildPlaygroundChatBody({
@@ -170,7 +177,7 @@ export class AgentLoopService {
           messages,
           params: {
             tools: tools.length > 0 ? tools : undefined,
-            tool_choice: req.tool_choice,
+            tool_choice: isPlanTurn ? "none" : req.tool_choice,
             stream: undefined,
           },
         });
@@ -190,9 +197,16 @@ export class AgentLoopService {
       // from `parsed` so we never `res.write` after the connection closed.
       if (isAborted()) return;
 
+      if (isPlanTurn) {
+        if (parsed.content && parsed.content.trim().length > 0) {
+          emit({ type: "step", step: { kind: "plan", content: parsed.content, tMs: tMs() } });
+          messages.push({ role: "assistant", content: parsed.content });
+        }
+        continue;
+      }
+
       if (parsed.content && parsed.content.trim().length > 0) {
-        const kind = turn === 0 && req.planFirst ? "plan" : "assistant";
-        emit({ type: "step", step: { kind, content: parsed.content, tMs: tMs() } });
+        emit({ type: "step", step: { kind: "assistant", content: parsed.content, tMs: tMs() } });
       }
 
       const toolCalls = parsed.tool_calls ?? [];

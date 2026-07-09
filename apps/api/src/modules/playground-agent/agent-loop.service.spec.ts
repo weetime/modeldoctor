@@ -128,6 +128,52 @@ describe("AgentLoopService", () => {
     expect(Number.isNaN(new Date(String(toolMsg?.content)).getTime())).toBe(false);
   });
 
+  it("N: planFirst forces a text-only plan turn (tool_choice none), emits a plan step, then executes", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi
+      .fn()
+      .mockResolvedValueOnce({
+        content: "1. get the time\n2. answer",
+        usage: undefined,
+        tool_calls: undefined,
+      })
+      .mockResolvedValueOnce({
+        content: "",
+        usage: undefined,
+        tool_calls: [
+          {
+            id: "call_b",
+            type: "function",
+            function: { name: "get_current_time", arguments: "{}" },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ content: "It is noon.", usage: undefined, tool_calls: undefined });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ planFirst: true, builtinTools: ["get_current_time"] }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    const mock = svc.callModel as unknown as ReturnType<typeof vi.fn>;
+    // Turn 0 (the plan) is forced text-only; turn 1 uses the normal tool_choice.
+    expect((mock.mock.calls[0][1] as { tool_choice?: unknown }).tool_choice).toBe("none");
+    expect((mock.mock.calls[1][1] as { tool_choice?: unknown }).tool_choice).not.toBe("none");
+
+    // The plan is emitted as a `plan` step (not treated as completion), then
+    // execution runs with tools enabled.
+    const kinds = events
+      .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
+      .map((e) => e.step.kind);
+    expect(kinds).toEqual(["plan", "tool_call", "tool_result", "assistant"]);
+    expect(svc.callModel).toHaveBeenCalledTimes(3);
+  });
+
   it("B: stops at maxSteps when the model keeps requesting tool_calls", async () => {
     const svc = new AgentLoopService();
     svc.callModel = vi.fn().mockResolvedValue({
