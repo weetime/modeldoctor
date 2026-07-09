@@ -60,10 +60,12 @@ export interface AgentStoreState {
   addInlineTool: (tool: ToolDef) => void;
   removeInlineTool: (index: number) => void;
   toggleBuiltinTool: (name: string, on: boolean) => void;
+  setBuiltinTools: (names: string[]) => void;
   setSelectedMcpServerIds: (ids: string[]) => void;
   toggleMcpServer: (id: string, on: boolean) => void;
   setAutoRunMcp: (b: boolean) => void;
   appendStep: (step: AgentStep) => void;
+  setSteps: (steps: AgentStep[]) => void;
   clearSteps: () => void;
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
   setPendingApproval: (approval: PendingMcpApproval | null) => void;
@@ -114,6 +116,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
           : [...s.builtinTools, name]
         : s.builtinTools.filter((n) => n !== name),
     })),
+  setBuiltinTools: (names) => set({ builtinTools: names }),
   setSelectedMcpServerIds: (ids) => set({ selectedMcpServerIds: ids }),
   toggleMcpServer: (id, on) =>
     set((s) => ({
@@ -125,6 +128,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
     })),
   setAutoRunMcp: (b) => set({ autoRunMcp: b }),
   appendStep: (step) => set((s) => ({ steps: [...s.steps, step] })),
+  setSteps: (steps) => set({ steps }),
   clearSteps: () =>
     set({
       steps: [],

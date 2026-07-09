@@ -39,8 +39,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMcpServers } from "@/features/mcp-servers/queries";
 import { useCreateSkill, useSkills } from "@/features/skills/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
+import { HistoryDrawer } from "../history/HistoryDrawer";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { AGENT_BUILTIN_TOOL_NAMES, appendToolResultMessage, runAgentSse } from "./api";
+import { type AgentHistorySnapshot, useAgentHistoryStore } from "./history";
 import { type PendingInlineTool, useAgentStore } from "./store";
 import { TraceTimeline } from "./trace/TraceTimeline";
 
@@ -574,11 +576,70 @@ export function AgentPage() {
     useAgentStore.getState().setPendingApproval(null);
   };
 
+  // Restore a history entry's snapshot into the live agent store. Mirrors
+  // ChatPage's restoreSnap; agent trajectories are plain JSON, so unlike chat
+  // there are no blobs to rehydrate.
+  const restoreSnap = (snap: AgentHistorySnapshot) => {
+    const s = useAgentStore.getState();
+    s.reset();
+    s.setSelectedConnectionId(snap.selectedConnectionId);
+    s.setTask(snap.task);
+    s.setSystemPrompt(snap.systemPrompt);
+    s.setPlanFirst(snap.planFirst);
+    s.setMaxSteps(snap.maxSteps);
+    s.setInlineTools(snap.inlineTools);
+    s.setBuiltinTools(snap.builtinTools);
+    s.setSelectedMcpServerIds(snap.selectedMcpServerIds);
+    s.setAutoRunMcp(snap.autoRunMcp);
+    s.setSteps(snap.steps);
+    s.setVerdict(snap.verdict);
+  };
+
+  const historyCurrentId = useAgentHistoryStore((h) => h.currentId);
+  const historyRestoreVersion = useAgentHistoryStore((h) => h.restoreVersion);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are intentional — restoreVersion handles in-place snapshot replacement (newSession / restore) without re-firing on routine save/scheduleAutoSave
+  useEffect(() => {
+    const entry = useAgentHistoryStore.getState().list.find((e) => e.id === historyCurrentId);
+    if (entry) restoreSnap(entry.snapshot);
+  }, [historyCurrentId, historyRestoreVersion]);
+
+  // Auto-save the current agent run (config + trajectory + verdict) into the
+  // current history entry — debounced 1500ms inside the store.
+  useEffect(() => {
+    const snap: AgentHistorySnapshot = {
+      selectedConnectionId: slice.selectedConnectionId,
+      task: slice.task,
+      systemPrompt: slice.systemPrompt,
+      planFirst: slice.planFirst,
+      maxSteps: slice.maxSteps,
+      inlineTools: slice.inlineTools,
+      builtinTools: slice.builtinTools,
+      selectedMcpServerIds: slice.selectedMcpServerIds,
+      autoRunMcp: slice.autoRunMcp,
+      steps: slice.steps,
+      verdict: slice.verdict,
+    };
+    useAgentHistoryStore.getState().scheduleAutoSave(snap);
+  }, [
+    slice.selectedConnectionId,
+    slice.task,
+    slice.systemPrompt,
+    slice.planFirst,
+    slice.maxSteps,
+    slice.inlineTools,
+    slice.builtinTools,
+    slice.selectedMcpServerIds,
+    slice.autoRunMcp,
+    slice.steps,
+    slice.verdict,
+  ]);
+
   return (
     <PlaygroundShell
       category="chat"
       title={t("agent.title")}
       subtitle={t("agent.subtitle")}
+      historySlot={<HistoryDrawer useHistoryStore={useAgentHistoryStore} />}
       paramsSlot={<AgentConfigPanel />}
     >
       <div className="flex min-h-0 flex-1 flex-col">
