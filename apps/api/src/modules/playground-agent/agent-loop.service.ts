@@ -159,6 +159,14 @@ export class AgentLoopService {
       tMs,
     );
     const tools = [...this.resolveTools(req), ...mcpToolDefs];
+    // Task 4 (unified playground): with NO tools advertised at all (no
+    // builtinTools/inlineTools/mcpServerIds), a run is an equivalent
+    // streaming CHAT — text_delta* -> assistant_end -> done, no tool/step
+    // noise. The trajectory verdict is an agent-capability score (did it
+    // pick the right tool, etc.) and is meaningless for plain conversation,
+    // so it's gated off here even when a judge provider IS configured. See
+    // the two `maybeEmitVerdict` call sites below.
+    const toolsWereAvailable = tools.length > 0;
     const isResume = Boolean(req.messages && req.messages.length > 0);
     const messages: ChatMessage[] = isResume
       ? [...(req.messages as ChatMessage[])]
@@ -262,11 +270,13 @@ export class AgentLoopService {
         // tool_calls. Judge this trajectory (best-effort) BEFORE `done` — the
         // final assistant turn's content never gets pushed into `messages`
         // on this path (only prior turns are), so splice it in for the judge.
-        await this.maybeEmitVerdict(
-          taskToText(req.task),
-          [...messages, { role: "assistant", content: parsed.content ?? "" }],
-          emit,
-        );
+        if (toolsWereAvailable) {
+          await this.maybeEmitVerdict(
+            taskToText(req.task),
+            [...messages, { role: "assistant", content: parsed.content ?? "" }],
+            emit,
+          );
+        }
         emit({ type: "done" });
         return;
       }
@@ -307,7 +317,12 @@ export class AgentLoopService {
     });
     // Also a true completion (the run ran to its full budget rather than
     // pausing for a human) — judge it the same as the no-more-tool-calls path.
-    await this.maybeEmitVerdict(taskToText(req.task), messages, emit);
+    // maxSteps is only reachable when tools were requested (a tools-off run
+    // never has tool_calls to loop on), but the gate applies uniformly here
+    // too for consistency with the other call site.
+    if (toolsWereAvailable) {
+      await this.maybeEmitVerdict(taskToText(req.task), messages, emit);
+    }
     emit({ type: "done" });
   }
 

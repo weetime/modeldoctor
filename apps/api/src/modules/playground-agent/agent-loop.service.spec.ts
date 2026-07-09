@@ -944,7 +944,12 @@ describe("AgentLoopService", () => {
   });
 
   // Task 13: lightweight trajectory judge — emitted on TRUE completion only.
-  it("G: on normal completion (no more tool_calls) with a judge configured, emits verdict then done", async () => {
+  // Task 4 (unified playground): verdict is an agent-capability score, so it
+  // only makes sense when tools were actually advertised to the model — this
+  // run offers a builtin tool (even though the model doesn't end up calling
+  // it) so the tools-available gate (see Task 4 tests below) doesn't
+  // suppress it.
+  it("G: on normal completion (no more tool_calls) with a judge configured AND tools available, emits verdict then done", async () => {
     const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
     const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
     svc.callModel = vi.fn().mockResolvedValueOnce({
@@ -954,7 +959,9 @@ describe("AgentLoopService", () => {
     });
 
     const events: AgentSseEvent[] = [];
-    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+    await svc.run(fakeConnection(), baseReq({ builtinTools: ["get_current_time"] }), (e) =>
+      events.push(e),
+    );
 
     expect(judgeFn).toHaveBeenCalledTimes(1);
     expect(judgeFn.mock.calls[0][0].task).toBe("what time is it?");
@@ -1095,7 +1102,12 @@ describe("AgentLoopService", () => {
     });
 
     const events: AgentSseEvent[] = [];
-    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+    // Tools available (see Task 4 gate below) so the judge is actually
+    // invoked — this test is about a null judge RESULT, not the tools-off
+    // skip path.
+    await svc.run(fakeConnection(), baseReq({ builtinTools: ["get_current_time"] }), (e) =>
+      events.push(e),
+    );
 
     expect(judgeFn).toHaveBeenCalledTimes(1);
     expect(events.some((e) => e.type === "verdict")).toBe(false);
@@ -1162,9 +1174,13 @@ describe("AgentLoopService", () => {
     });
 
     const events: AgentSseEvent[] = [];
+    // Tools available (see Task 4 gate below) so the judge is actually
+    // invoked — this test is about taskToText flattening, not the
+    // tools-off skip path.
     await svc.run(
       fakeConnection(),
       baseReq({
+        builtinTools: ["get_current_time"],
         task: [
           { type: "text", text: "find X" },
           { type: "image_url", image_url: { url: "data:image/png;base64,abc" } },
@@ -1176,6 +1192,37 @@ describe("AgentLoopService", () => {
     expect(judgeFn).toHaveBeenCalledTimes(1);
     expect(judgeFn.mock.calls[0][0].task).toBe("find X");
     expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
+  // ─── Tools-off run = equivalent streaming chat (Task 4) ────────────────
+  // With NO tools advertised (no builtinTools/inlineTools/mcpServerIds), a
+  // run degenerates to a pure streaming conversation: text_delta* →
+  // assistant_end → done, with no tool/step noise. The trajectory verdict
+  // is an agent-CAPABILITY score (did it pick the right tool, etc.) and is
+  // meaningless for plain chat, so it must be skipped even when a judge
+  // provider IS configured — this is what lets chat be subsumed by this
+  // same endpoint.
+
+  it("R: a tools-off run (no builtinTools/inlineTools/mcpServerIds) with a judge configured is a pure text_delta stream — no step/verdict events, judge never called", async () => {
+    const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
+    const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
+    svc.callModel = vi.fn().mockImplementation(async (_conn, _body, _signal, onTextDelta) => {
+      onTextDelta?.("Hel");
+      onTextDelta?.("lo");
+      return { content: "Hello", usage: undefined, tool_calls: undefined };
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq({}), (e) => events.push(e));
+
+    expect(events).toEqual([
+      { type: "text_delta", delta: "Hel" },
+      { type: "text_delta", delta: "lo" },
+      { type: "assistant_end" },
+      { type: "done" },
+    ]);
+    expect(svc.callModel).toHaveBeenCalledTimes(1);
+    expect(judgeFn).not.toHaveBeenCalled();
   });
 
   describe("taskToText", () => {
