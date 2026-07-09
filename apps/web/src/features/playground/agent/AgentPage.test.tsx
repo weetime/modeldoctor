@@ -126,8 +126,10 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    // Pick the connection (first combobox — the endpoint picker, not the Skill dropdown).
-    await user.click(screen.getAllByRole("combobox")[0]);
+    // Pick the connection (second combobox — the Skill dropdown in the
+    // composer now renders first in the DOM, followed by the endpoint
+    // picker in the right config panel).
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
 
     // Fill in the task.
@@ -209,7 +211,7 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
     const taskBox = screen.getAllByRole("textbox")[0];
     await user.type(taskBox, "call my inline tool");
@@ -303,7 +305,7 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
     const taskBox = screen.getAllByRole("textbox")[0];
     await user.type(taskBox, "search something via MCP");
@@ -372,7 +374,7 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
     const taskBox = screen.getAllByRole("textbox")[0];
     await user.type(taskBox, "search something via MCP");
@@ -401,9 +403,10 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    // Comboboxes: [0] connection picker, [1] Skill dropdown.
+    // Comboboxes: [0] Skill dropdown (composer, renders before the right
+    // config panel in the DOM), [1] connection picker.
     const comboboxes = screen.getAllByRole("combobox");
-    await user.click(comboboxes[1]);
+    await user.click(comboboxes[0]);
     await user.click(screen.getByRole("option", { name: /diagnose-vllm/i }));
 
     await waitFor(() => {
@@ -451,7 +454,7 @@ describe("AgentPage", () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
     const taskBox = screen.getAllByRole("textbox")[0];
     await user.type(taskBox, "what is 1+1?");
@@ -482,7 +485,7 @@ describe("AgentPage", () => {
     );
 
     // Configure the current store: connection + system prompt + a max-steps tweak.
-    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(screen.getByRole("option", { name: /chat-1/i }));
     const systemPromptBox = screen.getAllByRole("textbox")[1];
     await user.type(systemPromptBox, "custom prompt");

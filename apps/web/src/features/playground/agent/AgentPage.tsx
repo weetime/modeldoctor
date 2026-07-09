@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -328,7 +329,14 @@ function SaveAsSkillDialog({
   );
 }
 
-function AgentConfigPanel() {
+/**
+ * Composer-row controls for the per-run "what this run uses" selectors:
+ * Skill preset, builtin tools, and MCP servers. Lives next to the Task
+ * input in the left composer area (mainstream pattern), leaving the right
+ * config panel for tuning params only. Owns the Skill/save-as state and the
+ * `applySkill` preset-loader that used to live in `AgentConfigPanel`.
+ */
+function AgentComposerControls() {
   const { t } = useTranslation("playground");
   const slice = useAgentStore();
   const { data: mcpServers } = useMcpServers();
@@ -355,6 +363,121 @@ function AgentConfigPanel() {
     slice.setSelectedMcpServerIds(skill.mcpServerIds);
     if (skill.modelConnectionId) slice.setSelectedConnectionId(skill.modelConnectionId);
   };
+
+  const mcpServerCount = slice.selectedMcpServerIds.length;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select value={selectedSkillId} onValueChange={applySkill}>
+        <SelectTrigger className="h-8 w-48 text-xs">
+          <SelectValue placeholder={t("agent.skill.placeholder")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_SKILL}>{t("agent.skill.none")}</SelectItem>
+          {(skills ?? []).map((skill) => (
+            <SelectItem key={skill.id} value={skill.id}>
+              {skill.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+            {t("agent.builtinTools.title")} ({slice.builtinTools.length})
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-1.5">
+          <h4 className="text-xs font-semibold text-muted-foreground">
+            {t("agent.builtinTools.title")}
+          </h4>
+          {AGENT_BUILTIN_TOOL_NAMES.map((name) => {
+            const checkboxId = `agent-builtin-${name}`;
+            return (
+              <label key={name} htmlFor={checkboxId} className="flex items-start gap-2 text-xs">
+                <Checkbox
+                  id={checkboxId}
+                  checked={slice.builtinTools.includes(name)}
+                  onCheckedChange={(checked) => slice.toggleBuiltinTool(name, Boolean(checked))}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">{t(`agent.builtinTools.${name}.label`)}</span>
+                  <span className="block text-muted-foreground">
+                    {t(`agent.builtinTools.${name}.description`)}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+            {t("agent.mcpServers.title")} ({mcpServerCount})
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-1.5">
+          <h4 className="text-xs font-semibold text-muted-foreground">
+            {t("agent.mcpServers.title")}
+          </h4>
+          {mcpServers && mcpServers.length > 0 ? (
+            <ul className="space-y-1">
+              {mcpServers.map((server) => {
+                const checkboxId = `agent-mcp-${server.id}`;
+                return (
+                  <li key={server.id}>
+                    <label htmlFor={checkboxId} className="flex items-center gap-2 text-xs">
+                      <Checkbox
+                        id={checkboxId}
+                        checked={slice.selectedMcpServerIds.includes(server.id)}
+                        onCheckedChange={(checked) =>
+                          slice.toggleMcpServer(server.id, Boolean(checked))
+                        }
+                      />
+                      <span className="truncate">{server.name}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("agent.mcpServers.empty")}</p>
+          )}
+          <div className="flex items-center justify-between border-t border-border pt-1.5">
+            <Label className="text-xs text-muted-foreground" htmlFor="agent-auto-run-mcp">
+              {t("agent.mcpServers.autoRun")}
+            </Label>
+            <Switch
+              id="agent-auto-run-mcp"
+              checked={slice.autoRunMcp}
+              onCheckedChange={(b) => slice.setAutoRunMcp(b)}
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 text-xs"
+        onClick={() => setSaveAsOpen(true)}
+      >
+        {t("agent.skill.saveAs")}
+      </Button>
+
+      <SaveAsSkillDialog open={saveAsOpen} onOpenChange={setSaveAsOpen} />
+    </div>
+  );
+}
+
+function AgentConfigPanel() {
+  const { t } = useTranslation("playground");
+  const slice = useAgentStore();
 
   return (
     <div className="space-y-4">
@@ -400,101 +523,7 @@ function AgentConfigPanel() {
         />
       </div>
 
-      <div className="space-y-1.5">
-        <h4 className="text-xs font-semibold text-muted-foreground">
-          {t("agent.builtinTools.title")}
-        </h4>
-        {AGENT_BUILTIN_TOOL_NAMES.map((name) => {
-          const checkboxId = `agent-builtin-${name}`;
-          return (
-            <label key={name} htmlFor={checkboxId} className="flex items-start gap-2 text-xs">
-              <Checkbox
-                id={checkboxId}
-                checked={slice.builtinTools.includes(name)}
-                onCheckedChange={(checked) => slice.toggleBuiltinTool(name, Boolean(checked))}
-                className="mt-0.5"
-              />
-              <span>
-                <span className="font-medium">{t(`agent.builtinTools.${name}.label`)}</span>
-                <span className="block text-muted-foreground">
-                  {t(`agent.builtinTools.${name}.description`)}
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-
       <InlineToolEditor />
-
-      <div className="space-y-1.5">
-        <h4 className="text-xs font-semibold text-muted-foreground">
-          {t("agent.mcpServers.title")}
-        </h4>
-        {mcpServers && mcpServers.length > 0 ? (
-          <ul className="space-y-1">
-            {mcpServers.map((server) => {
-              const checkboxId = `agent-mcp-${server.id}`;
-              return (
-                <li key={server.id}>
-                  <label htmlFor={checkboxId} className="flex items-center gap-2 text-xs">
-                    <Checkbox
-                      id={checkboxId}
-                      checked={slice.selectedMcpServerIds.includes(server.id)}
-                      onCheckedChange={(checked) =>
-                        slice.toggleMcpServer(server.id, Boolean(checked))
-                      }
-                    />
-                    <span className="truncate">{server.name}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="text-xs text-muted-foreground">{t("agent.mcpServers.empty")}</p>
-        )}
-        <div className="flex items-center justify-between">
-          <Label className="text-xs text-muted-foreground" htmlFor="agent-auto-run-mcp">
-            {t("agent.mcpServers.autoRun")}
-          </Label>
-          <Switch
-            id="agent-auto-run-mcp"
-            checked={slice.autoRunMcp}
-            onCheckedChange={(b) => slice.setAutoRunMcp(b)}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">{t("agent.skill.title")}</Label>
-        <div className="flex items-center gap-2">
-          <Select value={selectedSkillId} onValueChange={applySkill}>
-            <SelectTrigger className="w-full text-xs">
-              <SelectValue placeholder={t("agent.skill.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_SKILL}>{t("agent.skill.none")}</SelectItem>
-              {(skills ?? []).map((skill) => (
-                <SelectItem key={skill.id} value={skill.id}>
-                  {skill.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 text-xs"
-            onClick={() => setSaveAsOpen(true)}
-          >
-            {t("agent.skill.saveAs")}
-          </Button>
-        </div>
-      </div>
-
-      <SaveAsSkillDialog open={saveAsOpen} onOpenChange={setSaveAsOpen} />
     </div>
   );
 }
@@ -644,6 +673,7 @@ export function AgentPage() {
             disabled={slice.running}
             className="min-h-16 text-sm"
           />
+          <AgentComposerControls />
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               {slice.running ? (
