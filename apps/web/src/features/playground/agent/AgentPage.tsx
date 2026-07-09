@@ -1,5 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { AgentRunRequest, ChatMessage, CreateSkill, ToolDef } from "@modeldoctor/contracts";
+import type {
+  AgentRunRequest,
+  ChatMessage,
+  ChatParams as ChatParamsType,
+  CreateSkill,
+  ToolDef,
+} from "@modeldoctor/contracts";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -41,6 +47,7 @@ import { useMcpServers } from "@/features/mcp-servers/queries";
 import { useCreateSkill, useSkills } from "@/features/skills/queries";
 import { CategoryEndpointSelector } from "../CategoryEndpointSelector";
 import { type AttachedFile, buildContentParts } from "../chat/attachments";
+import { ChatParams } from "../chat/ChatParams";
 import { MessageComposer } from "../chat/MessageComposer";
 import { HistoryDrawer } from "../history/HistoryDrawer";
 import { PlaygroundShell } from "../PlaygroundShell";
@@ -131,6 +138,15 @@ export async function startRun(
     // Full-transcript continuation (Task 11 fix pass, carried over): resends
     // the exact `messages` array the server handed back on `done`.
     messages: isContinuation ? args.continuation.messages : undefined,
+    // Sampling params (temperature/maxTokens/topP/...) apply to BOTH chat
+    // and agent runs — model sampling is always relevant, unlike the
+    // tool-only fields above. Sent whenever the store has at least one
+    // param set; omitted (not `{}`) otherwise so a tools-off run still reads
+    // as an equivalent plain streaming-chat call on the wire.
+    params:
+      Object.keys(fresh.params).length > 0
+        ? (fresh.params as AgentRunRequest["params"])
+        : undefined,
     ...toolFields,
   };
 
@@ -536,8 +552,9 @@ function AgentComposerControls() {
 }
 
 /**
- * Right-side config panel: the connection picker (always active — needed in
- * both chat and agent mode) plus the agent-only knobs (plan-first, max-steps,
+ * Right-side config panel: the connection picker + sampling params (always
+ * active — needed in both chat and agent mode, since model sampling is
+ * always relevant) plus the agent-only knobs (plan-first, max-steps,
  * hand-authored inline tools), which are only relevant — and only rendered —
  * while `toolsEnabled` is on.
  */
@@ -547,12 +564,16 @@ function AgentConfigPanel() {
 
   return (
     <div className="space-y-4">
-      <fieldset disabled={slice.running} className="m-0 min-w-0 border-0 p-0 disabled:opacity-60">
+      <fieldset
+        disabled={slice.running}
+        className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-60"
+      >
         <CategoryEndpointSelector
           category="chat"
           selectedConnectionId={slice.selectedConnectionId}
           onSelect={slice.setSelectedConnectionId}
         />
+        <ChatParams value={slice.params as ChatParamsType} onChange={slice.patchParams} />
       </fieldset>
 
       {slice.toolsEnabled ? (
@@ -739,6 +760,10 @@ export function AgentPage() {
   return (
     <PlaygroundShell
       category="chat"
+      // The i18n VALUES for `agent.title`/`agent.subtitle` were reworded for
+      // the unified playground merge (Task 12) — the KEYS are unchanged to
+      // avoid churn, but the strings no longer say "Agent"/tool-loop-only,
+      // since this page is chat-mode by default with an opt-in agent loop.
       title={t("agent.title")}
       subtitle={t("agent.subtitle")}
       historySlot={<HistoryDrawer useHistoryStore={useAgentHistoryStore} />}

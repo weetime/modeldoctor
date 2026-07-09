@@ -298,8 +298,8 @@
     }
   },
   "agent": {
-    "title": "Agent",
-    "subtitle": "A multi-turn tool-call loop: the model can plan, call tools, see results, and keep going until the task is done.",
+    "title": "Chat",
+    "subtitle": "Chat with a model, or turn on Tools to run a multi-turn agent.",
     "toolsToggle": {
       "label": "Tools"
     },

@@ -295,8 +295,8 @@
     }
   },
   "agent": {
-    "title": "Agent",
-    "subtitle": "多轮工具调用循环：模型可规划、调用工具、查看结果并继续，直至完成任务。",
+    "title": "对话",
+    "subtitle": "与模型对话，或打开「工具」运行多轮 Agent。",
     "toolsToggle": {
       "label": "工具"
     },

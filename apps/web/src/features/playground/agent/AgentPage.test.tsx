@@ -5,7 +5,7 @@ import type {
   ConnectionPublic,
   SkillPublic,
 } from "@modeldoctor/contracts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -74,6 +74,7 @@ interface FakeStreamInput {
     mcpServerIds?: string[];
     messages?: unknown;
     autoRunMcp?: boolean;
+    params?: Record<string, unknown>;
   };
   signal: AbortSignal;
   onSseEvent: (data: string) => void;
@@ -109,16 +110,30 @@ async function selectConnection(user: ReturnType<typeof userEvent.setup>) {
 }
 
 async function enableTools(user: ReturnType<typeof userEvent.setup>) {
-  // In the default (tools-off) state, the tools toggle is the only switch on
-  // screen — planFirst/autoRunMcp switches only render once tools are on
-  // (planFirst) or their popover is opened (autoRunMcp).
-  await user.click(screen.getByRole("switch"));
+  // The config panel's `ChatParams` (Task 12) also renders a "stream" switch
+  // that's visible in every mode, so the tools toggle must be targeted by
+  // its accessible name (not "the only switch on screen" anymore).
+  await user.click(screen.getByRole("switch", { name: /^tools$|^工具$/i }));
 }
 
 async function typeTaskAndSend(user: ReturnType<typeof userEvent.setup>, text: string) {
   const draft = screen.getByPlaceholderText(/type your message|输入消息/i);
   await user.type(draft, text);
   await user.click(screen.getByRole("button", { name: /^send$|^发送$/i }));
+}
+
+/**
+ * `ChatParams`'s temperature `SliderField` renders a `<Label>Temperature</Label>`
+ * next to a `role="spinbutton"` number input, both inside one wrapper `<div>`
+ * (the wrapper also holds the `role="slider"` thumb, which Radix doesn't
+ * label via the `aria-label` passed to `<Slider>` — it lands on the Root,
+ * not the Thumb — so the label text is the stable, unambiguous query here).
+ */
+function getTemperatureField(): { input: HTMLElement; wrapper: HTMLElement } {
+  const label = screen.getByText(/^temperature$/i);
+  const wrapper = label.closest("div")?.parentElement;
+  if (!wrapper) throw new Error("temperature field wrapper not found");
+  return { input: within(wrapper).getByRole("spinbutton"), wrapper };
 }
 
 describe("AgentPage", () => {
@@ -550,6 +565,72 @@ describe("AgentPage", () => {
       expect(screen.getByText(/plan first|先写计划/i)).toBeInTheDocument();
       expect(screen.getByText(/save as skill|存为 skill/i)).toBeInTheDocument();
       expect(screen.getAllByRole("combobox")).toHaveLength(2);
+    });
+  });
+
+  describe("sampling params panel (Task 12: ChatParams reused in both modes)", () => {
+    it("shows the temperature control in tools-off (chat) mode", () => {
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      const { input } = getTemperatureField();
+      expect(input).toBeInTheDocument();
+    });
+
+    it("still shows the temperature control once tools are enabled", async () => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await enableTools(user);
+      const { input } = getTemperatureField();
+      expect(input).toBeInTheDocument();
+    });
+
+    it("tools-off: setting temperature then sending includes params.temperature in the request body", async () => {
+      scriptNextRun([{ type: "done" }]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await selectConnection(user);
+      const { input: tempInput } = getTemperatureField();
+      fireEvent.change(tempInput, { target: { value: "0.4" } });
+      expect(useAgentStore.getState().params.temperature).toBe(0.4);
+
+      await typeTaskAndSend(user, "hi");
+
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(call.body.params?.temperature).toBe(0.4);
+    });
+
+    it("tools-on: setting temperature then sending includes params.temperature in the request body", async () => {
+      scriptNextRun([{ type: "done" }]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      await enableTools(user);
+      const { input: tempInput } = getTemperatureField();
+      fireEvent.change(tempInput, { target: { value: "0.7" } });
+
+      const comboboxes = screen.getAllByRole("combobox");
+      await user.click(comboboxes[1]);
+      await user.click(screen.getByRole("option", { name: /chat-1/i }));
+      await typeTaskAndSend(user, "what is 1+1?");
+
+      const call = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(call.body.params?.temperature).toBe(0.7);
     });
   });
 

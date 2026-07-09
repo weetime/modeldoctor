@@ -1244,6 +1244,76 @@ describe("AgentLoopService", () => {
     expect(judgeFn).not.toHaveBeenCalled();
   });
 
+  it("S: req.params (sampling) is forwarded onto the model body", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "Hello",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({
+        params: { temperature: 0.3, maxTokens: 256, topP: 0.9, seed: 7, stop: ["END"] },
+      }),
+      (e) => events.push(e),
+    );
+
+    expect(events.at(-1)).toEqual({ type: "done" });
+    const call = (svc.callModel as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    const body = call[1];
+    expect(body.temperature).toBe(0.3);
+    expect(body.max_tokens).toBe(256);
+    expect(body.top_p).toBe(0.9);
+    expect(body.seed).toBe(7);
+    expect(body.stop).toEqual(["END"]);
+    // The loop's own `stream: true` isn't overridable via `params` (the
+    // schema doesn't even expose a `stream` key on `AgentRunRequest.params`
+    // — see `AgentRunParamsSchema`), and stays derived internally.
+    expect(body.stream).toBe(true);
+  });
+
+  it("T: req.params can't clobber the internally-derived tools/tool_choice/stream keys even if a caller smuggles them in at runtime (spread order guard)", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockResolvedValue({
+      content: "Hello",
+      usage: undefined,
+      tool_calls: undefined,
+    });
+
+    const events: AgentSseEvent[] = [];
+    const req = baseReq({
+      builtinTools: ["get_current_time"],
+      // `AgentRunRequest.params`'s type has no `tools`/`tool_choice`/`stream`
+      // keys (see `AgentRunParamsSchema`) — this is deliberately widened at
+      // runtime to prove the loop's `...(req.params ?? {})` spread-FIRST
+      // ordering wins, not the type system.
+      params: {
+        stream: false,
+        tools: [],
+        tool_choice: "required",
+      } as unknown as AgentRunRequest["params"],
+    });
+
+    await svc.run(fakeConnection(), req, (e) => events.push(e));
+
+    expect(events.at(-1)).toEqual({ type: "done" });
+    const call = (svc.callModel as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    const body = call[1];
+    expect(body.stream).toBe(true);
+    expect(body.tool_choice).toBeUndefined();
+    expect(Array.isArray(body.tools)).toBe(true);
+    expect((body.tools as unknown[]).length).toBe(1);
+  });
+
   describe("taskToText", () => {
     it("returns the string as-is when the task is plain text", () => {
       expect(taskToText("what time is it?")).toBe("what time is it?");

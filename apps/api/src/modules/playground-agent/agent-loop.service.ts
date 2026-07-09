@@ -217,6 +217,11 @@ export class AgentLoopService {
           model: conn.model,
           messages,
           params: {
+            // Sampling params (temperature/maxTokens/topP/...) are always
+            // relevant, chat or agent — spread FIRST so the internal
+            // tools/tool_choice/stream keys below (derived from this turn's
+            // tool state, not user-configurable) always win.
+            ...(req.params ?? {}),
             tools: tools.length > 0 ? tools : undefined,
             tool_choice: isPlanTurn ? "none" : req.tool_choice,
             stream: true,
