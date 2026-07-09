@@ -367,7 +367,14 @@ function AgentComposerControls() {
   const mcpServerCount = slice.selectedMcpServerIds.length;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    // Locked while a run is in flight — config changes wouldn't take effect
+    // until the next run and are misleading mid-run. Stop/Reset live outside
+    // this fieldset. `disabled` on a fieldset cascades to every control inside
+    // (the Radix Select/Popover/Switch all render as buttons).
+    <fieldset
+      disabled={slice.running}
+      className="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0 disabled:opacity-60"
+    >
       <Select value={selectedSkillId} onValueChange={applySkill}>
         <SelectTrigger className="h-8 w-48 text-xs">
           <SelectValue placeholder={t("agent.skill.placeholder")} />
@@ -471,7 +478,7 @@ function AgentComposerControls() {
       </Button>
 
       <SaveAsSkillDialog open={saveAsOpen} onOpenChange={setSaveAsOpen} />
-    </div>
+    </fieldset>
   );
 }
 
@@ -480,7 +487,11 @@ function AgentConfigPanel() {
   const slice = useAgentStore();
 
   return (
-    <div className="space-y-4">
+    // Disabled during a run (see AgentComposerControls) — same fieldset cascade.
+    <fieldset
+      disabled={slice.running}
+      className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-60"
+    >
       <CategoryEndpointSelector
         category="chat"
         selectedConnectionId={slice.selectedConnectionId}
@@ -524,7 +535,7 @@ function AgentConfigPanel() {
       </div>
 
       <InlineToolEditor />
-    </div>
+    </fieldset>
   );
 }
 
