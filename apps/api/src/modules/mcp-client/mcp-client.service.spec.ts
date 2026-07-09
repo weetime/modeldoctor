@@ -122,12 +122,15 @@ describe("McpClientService", () => {
   });
 
   describe("SSRF guard", () => {
+    // Always blocked — even for admin-registered MCP servers. Loopback,
+    // 0.0.0.0, link-local/cloud-metadata, and non-http(s) schemes are never a
+    // legitimate MCP target.
     it.each([
       ["http://localhost/mcp", "loopback hostname"],
+      ["http://127.0.0.1/mcp", "loopback IPv4"],
+      ["http://0.0.0.0/mcp", "unspecified address"],
       ["http://169.254.169.254/mcp", "cloud metadata address"],
-      ["http://10.0.0.1/mcp", "private 10.0.0.0/8 address"],
-      ["http://192.168.1.1/mcp", "private 192.168.0.0/16 address"],
-      ["http://100.64.0.5/mcp", "CGNAT 100.64.0.0/10 address"],
+      ["http://[::ffff:169.254.169.254]/mcp", "IPv4-mapped metadata address"],
       ["file:///etc/passwd", "non-http(s) scheme"],
       ["not a url", "malformed url"],
     ])("discoverTools rejects %s (%s) without invoking the client factory", async (url) => {
@@ -139,12 +142,25 @@ describe("McpClientService", () => {
     it.each([
       ["http://localhost/mcp", "loopback hostname"],
       ["http://169.254.169.254/mcp", "cloud metadata address"],
-      ["http://10.0.0.1/mcp", "private 10.0.0.0/8 address"],
       ["file:///etc/passwd", "non-http(s) scheme"],
     ])("callTool rejects %s (%s) without invoking the client factory", async (url) => {
       await expect(service.callTool(makeServer({ url }), "some_tool", {})).rejects.toThrow();
       expect(factorySpy).not.toHaveBeenCalled();
       expect(fakeClient.connect).not.toHaveBeenCalled();
+    });
+
+    // Private/cluster ranges ARE allowed — MCP servers are deliberately
+    // registered by the admin against self-hosted (typically private-IP) infra.
+    it.each([
+      ["http://10.100.121.67:30888/mcp-servers/camp/mcp", "private 10.0.0.0/8 cluster address"],
+      ["http://192.168.1.1/mcp", "private 192.168.0.0/16 address"],
+      ["http://172.16.0.9/mcp", "private 172.16.0.0/12 address"],
+      ["http://100.64.0.5/mcp", "CGNAT 100.64.0.0/10 address"],
+    ])("discoverTools allows %s (%s) through to the client factory", async (url) => {
+      fakeClient.listTools.mockResolvedValue({ tools: [] });
+      await expect(service.discoverTools(makeServer({ url }))).resolves.toEqual([]);
+      expect(factorySpy).toHaveBeenCalledTimes(1);
+      expect(fakeClient.connect).toHaveBeenCalledTimes(1);
     });
 
     it("allows a normal https URL through to the client factory", async () => {

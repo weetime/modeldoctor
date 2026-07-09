@@ -153,9 +153,14 @@ export class McpClientService {
       );
     }
 
-    if (isBlockedHost(parsed.hostname)) {
+    // MCP servers are deliberately registered by the authenticated admin
+    // against their own (self-hosted, typically private-cluster) infra, so
+    // RFC1918 / CGNAT / IPv6 unique-local are allowed here — unlike the
+    // arbitrary `http_get` tool. Loopback, 0.0.0.0, and link-local/metadata
+    // (169.254.169.254) stay blocked either way.
+    if (isBlockedHost(parsed.hostname, { allowPrivateNetwork: true })) {
       throw new Error(
-        `MCP server host "${parsed.hostname}" is blocked (loopback/private/link-local/metadata addresses are not allowed)`,
+        `MCP server host "${parsed.hostname}" is blocked (loopback / 0.0.0.0 / link-local / cloud-metadata addresses are not allowed)`,
       );
     }
   }
