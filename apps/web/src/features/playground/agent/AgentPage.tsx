@@ -677,7 +677,14 @@ export function AgentPage() {
     s.setBuiltinTools(snap.builtinTools);
     s.setSelectedMcpServerIds(snap.selectedMcpServerIds);
     s.setAutoRunMcp(snap.autoRunMcp);
-    s.setTimeline(snap.timeline);
+    // `timeline` is missing on pre-unified-shape IDB entries (the old
+    // `steps`-based snapshot never had it) — the shared history-store
+    // `version` wasn't bumped for this migration (that's hardcoded in
+    // `createHistoryStore` and would wipe ALL modalities' history), so those
+    // old rows are still restorable. Fall back to `[]` like the other
+    // newly-optional fields above (`input`/`task`) instead of handing
+    // `Timeline` an `undefined` it can't `.length`/iterate.
+    s.setTimeline(snap.timeline ?? []);
     s.setVerdict(snap.verdict);
   };
 

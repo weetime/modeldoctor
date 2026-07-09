@@ -8,7 +8,7 @@ import type {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SAMPLE_CONN: ConnectionPublic = {
   id: "c1",
@@ -97,6 +97,8 @@ function scriptNextRun(events: AgentSseEvent[]) {
 }
 
 import { AgentPage } from "./AgentPage";
+import type { AgentHistorySnapshot } from "./history";
+import { useAgentHistoryStore } from "./history";
 import { useAgentStore } from "./store";
 
 async function selectConnection(user: ReturnType<typeof userEvent.setup>) {
@@ -548,6 +550,63 @@ describe("AgentPage", () => {
       expect(screen.getByText(/plan first|先写计划/i)).toBeInTheDocument();
       expect(screen.getByText(/save as skill|存为 skill/i)).toBeInTheDocument();
       expect(screen.getAllByRole("combobox")).toHaveLength(2);
+    });
+  });
+
+  describe("restoring a pre-unified-shape history entry (final-review fix)", () => {
+    afterEach(() => {
+      // Restore the default blank single-entry state so later tests (and
+      // their own beforeEach) don't see this test's injected entry.
+      useAgentHistoryStore.getState().reset();
+    });
+
+    it("does not crash when the restored snapshot has no `timeline` field (old IDB shape)", async () => {
+      // Simulates an entry persisted before the Task 9 unified-shape
+      // migration: `timeline` didn't exist yet on `AgentHistorySnapshot`, so
+      // rows saved back then are missing it entirely — `snap.timeline` is
+      // `undefined`, not `[]`. No `version` bump / `migrate` runs these
+      // through, so they're restored as-is.
+      const oldShapeSnapshot = {
+        selectedConnectionId: "c1",
+        systemPrompt: "",
+        params: {},
+        toolsEnabled: false,
+        planFirst: false,
+        maxSteps: 12,
+        inlineTools: [],
+        builtinTools: [],
+        selectedMcpServerIds: [],
+        autoRunMcp: false,
+        verdict: null,
+        // `input` / `task` / `timeline` intentionally absent.
+      } as unknown as AgentHistorySnapshot;
+
+      useAgentHistoryStore.setState({
+        list: [
+          {
+            id: "old-entry",
+            createdAt: "2026-01-01T00:00:00Z",
+            preview: "old run",
+            snapshot: oldShapeSnapshot,
+          },
+        ],
+        currentId: "old-entry",
+        restoreVersion: 1,
+      });
+
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+
+      // No throw during mount/restore, and the Timeline renders its empty
+      // state instead of crashing on an undefined `.length`/iteration.
+      await waitFor(() => {
+        expect(useAgentStore.getState().timeline).toEqual([]);
+      });
+      expect(screen.queryByTestId(/^step-/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("assistant-bubble")).not.toBeInTheDocument();
     });
   });
 });

@@ -260,7 +260,14 @@ export class AgentLoopService {
       // boundary so the frontend can close off the in-progress bubble
       // without waiting for the terminal `done`. No more whole-turn
       // `{kind:"assistant"}` step is emitted.
-      if (parsed.content && parsed.content.trim().length > 0) {
+      //
+      // Guard is `.length > 0`, NOT `.trim().length > 0`: `text_delta`
+      // (`streaming.ts`) fires for ANY non-empty `delta.content`, whitespace
+      // included, so a whitespace-only turn still opens a bubble on the
+      // frontend. Trimming here would leave that bubble unclosed (orphan
+      // `assistant_text` timeline item) — this must mirror the same
+      // non-empty condition `text_delta` uses.
+      if (parsed.content && parsed.content.length > 0) {
         emit({ type: "assistant_end" });
       }
 

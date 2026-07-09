@@ -1164,6 +1164,25 @@ describe("AgentLoopService", () => {
     expect(events).toContainEqual({ type: "assistant_end" });
   });
 
+  it("P2: a whitespace-only assistant turn still streams text_delta and closes with assistant_end (no orphan bubble)", async () => {
+    const svc = new AgentLoopService();
+    svc.callModel = vi.fn().mockImplementation(async (_conn, _body, _signal, onTextDelta) => {
+      onTextDelta?.("  ");
+      return { content: "  ", usage: undefined, tool_calls: undefined };
+    });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(fakeConnection(), baseReq(), (e) => events.push(e));
+
+    // `text_delta` fired for the whitespace fragment (streaming.ts's
+    // condition is non-empty, not non-whitespace) — so the frontend already
+    // opened a bubble for this turn. `assistant_end` MUST still be emitted
+    // to close it, even though `parsed.content.trim()` is empty.
+    expect(events).toContainEqual({ type: "text_delta", delta: "  " });
+    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events.at(-1)).toEqual({ type: "done" });
+  });
+
   it("Q: the judge receives the flattened text of a multimodal task via taskToText", async () => {
     const judgeFn = vi.fn().mockResolvedValue(SAMPLE_VERDICT);
     const svc = new AgentLoopService(undefined, undefined, fakeAgentJudgeService(judgeFn));
