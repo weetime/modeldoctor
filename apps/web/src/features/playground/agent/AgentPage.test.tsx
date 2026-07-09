@@ -154,6 +154,10 @@ describe("AgentPage", () => {
       expect(screen.queryAllByTestId(/^step-/)).toHaveLength(0);
       expect(screen.queryByTestId("agent-plan-strip")).not.toBeInTheDocument();
       expect(screen.getAllByTestId("assistant-bubble")).toHaveLength(1);
+      // Tools-off: no meaningless "0 tool calls" summary bar above the chat
+      // bubbles — a non-empty timeline with only assistant_text items isn't
+      // an agent trace.
+      expect(screen.queryByTestId("run-summary")).not.toBeInTheDocument();
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /^send$|^发送$/i })).toBeInTheDocument();
@@ -220,6 +224,8 @@ describe("AgentPage", () => {
       expect(screen.getByTestId("agent-plan-strip")).toBeInTheDocument();
       // The plan is pinned, not also inlined as a step card.
       expect(screen.queryByTestId("step-plan")).not.toBeInTheDocument();
+      // Tools-on: real tool cards in the trace, so the summary bar IS shown.
+      expect(screen.getByTestId("run-summary")).toBeInTheDocument();
 
       const testIds = screen
         .getAllByTestId(/^(assistant-bubble|step-tool_call|step-tool_result|agent-verdict-card)$/)
@@ -357,6 +363,20 @@ describe("AgentPage", () => {
       // The existing tool_call card from the paused run is appended to, not
       // cleared/restarted, by the approve resend.
       expect(screen.getByTestId("step-tool_call")).toBeInTheDocument();
+    });
+
+    it("locks the tools toggle while an approval is pending, to prevent continuation corruption", async () => {
+      // `running` flips false on the pausing `done` (see `startRun`'s
+      // `finally`), so `disabled={slice.running}` alone would let the user
+      // flip toolsEnabled off here, then Approve would omit
+      // mcpServerIds/inlineTools/autoRunMcp from the resume request.
+      const user = userEvent.setup();
+      await runToApproval(user);
+
+      expect(useAgentStore.getState().running).toBe(false);
+      const toolsToggle = document.getElementById("agent-tools-toggle");
+      expect(toolsToggle).not.toBeNull();
+      expect(toolsToggle).toBeDisabled();
     });
 
     it("Reject just clears the pending approval card without re-running", async () => {

@@ -36,7 +36,10 @@ function RunSummary({
   const totalMs = stepItems.reduce((max, i) => Math.max(max, i.step.tMs), 0);
   const turns = assistantTurns + planTurns;
   return (
-    <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+    <div
+      data-testid="run-summary"
+      className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground"
+    >
       <span className="flex items-center gap-1">
         <span aria-hidden="true">🔧</span>
         {t("agent.trace.summaryTools", { count: toolCalls })}
@@ -125,13 +128,16 @@ export function Timeline({
   );
   const planItem = stepItems.find((i) => i.kind === "plan");
   const assistantTurns = timeline.filter((i) => i.kind === "assistant_text").length;
+  // A tools-off run's timeline is nothing but `assistant_text` bubbles — no
+  // actual agent trace to summarize. Only show the summary bar once there's
+  // at least one tool/plan/error step item, so tools-off keeps reading as
+  // plain chat (see the module doc comment above).
+  const hasTrace = stepItems.length > 0;
 
   return (
     <div className="flex flex-col gap-2 overflow-y-auto px-6 py-4">
       {planItem?.step.content ? <PlanStrip content={planItem.step.content} /> : null}
-      {timeline.length > 0 ? (
-        <RunSummary stepItems={stepItems} assistantTurns={assistantTurns} />
-      ) : null}
+      {hasTrace ? <RunSummary stepItems={stepItems} assistantTurns={assistantTurns} /> : null}
       {timeline.map((item, idx) => {
         if (item === planItem) return null;
         if (item.kind === "assistant_text") {

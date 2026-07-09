@@ -758,7 +758,15 @@ export function AgentPage() {
               id="agent-tools-toggle"
               checked={slice.toolsEnabled}
               onCheckedChange={slice.setToolsEnabled}
-              disabled={slice.running}
+              // Also locked while a continuation is pending (inline-tool
+              // result / MCP approval) — `running` already flipped false on
+              // the pausing `done`, but flipping this off here and then
+              // Submit/Approve would make `startRun`'s `toolFields` omit
+              // mcpServerIds/inlineTools/autoRunMcp from the resume request,
+              // corrupting the continuation.
+              disabled={
+                slice.running || slice.pendingInlineTool !== null || slice.pendingApproval !== null
+              }
             />
             {t("agent.toolsToggle.label")}
           </label>
