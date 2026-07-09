@@ -35,8 +35,6 @@ export interface AgentStoreState {
   input: string;
   /** Sampling params (temperature, topP, ...) for the unified run request. */
   params: Record<string, unknown>;
-  /** Whether the unified composer's tool picker is expanded/active. */
-  toolsEnabled: boolean;
   systemPrompt: string;
   planFirst: boolean;
   maxSteps: number;
@@ -79,7 +77,6 @@ export interface AgentStoreState {
   setTask: (task: string) => void;
   setInput: (input: string) => void;
   patchParams: (p: Record<string, unknown>) => void;
-  setToolsEnabled: (b: boolean) => void;
   appendEvent: (evt: AgentSseEvent) => void;
   setSystemPrompt: (s: string) => void;
   setPlanFirst: (b: boolean) => void;
@@ -112,7 +109,6 @@ const initial = {
   task: "",
   input: "",
   params: {} as Record<string, unknown>,
-  toolsEnabled: false,
   systemPrompt: "",
   planFirst: false,
   maxSteps: 12,
@@ -137,7 +133,6 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   setTask: (task) => set({ task }),
   setInput: (input) => set({ input }),
   patchParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
-  setToolsEnabled: (b) => set({ toolsEnabled: b }),
   appendEvent: (evt) => set((s) => ({ timeline: reduceEvent(s.timeline, evt) })),
   setSystemPrompt: (s) => set({ systemPrompt: s }),
   setPlanFirst: (b) => set({ planFirst: b }),
@@ -187,3 +182,19 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   setError: (e) => set({ error: e }),
   reset: () => set({ ...initial }),
 }));
+
+/**
+ * Whether the current selection arms this chat with any tools — i.e. at least
+ * one builtin, hand-authored inline, or MCP-server tool is picked. This is the
+ * derived successor to the removed `toolsEnabled` mode flag: there is no
+ * "agent mode" switch anymore. A run with no tools is a plain streaming chat;
+ * selecting any tool lets the SAME conversation call it. Gates the run's
+ * tool fields (`startRun`) and the agent-only advanced knobs (`AgentConfigPanel`).
+ */
+export function hasToolsSelected(s: {
+  builtinTools: unknown[];
+  inlineTools: unknown[];
+  selectedMcpServerIds: unknown[];
+}): boolean {
+  return s.builtinTools.length > 0 || s.inlineTools.length > 0 || s.selectedMcpServerIds.length > 0;
+}

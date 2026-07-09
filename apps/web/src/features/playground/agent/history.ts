@@ -41,7 +41,14 @@ export interface AgentHistorySnapshot {
   /** Legacy agent-only task string (`store.task`) — kept for the preview + placeholder use. */
   task?: string;
   params: Record<string, unknown>;
-  toolsEnabled: boolean;
+  /**
+   * Legacy: whether the run had tools armed. The manual "tools mode" flag was
+   * removed — tool-presence is now derived from `builtinTools`/`inlineTools`/
+   * `selectedMcpServerIds` (see `hasToolsSelected`). Kept optional so old IDB
+   * rows still restore, and written on save (= derived) for forward reads; it
+   * no longer gates anything on restore.
+   */
+  toolsEnabled?: boolean;
   planFirst: boolean;
   maxSteps: number;
   inlineTools: ToolDef[];
@@ -60,7 +67,6 @@ export const useAgentHistoryStore = createHistoryStore<AgentHistorySnapshot>({
     systemPrompt: "",
     task: "",
     params: {},
-    toolsEnabled: false,
     planFirst: false,
     maxSteps: 12,
     inlineTools: [],

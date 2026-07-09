@@ -299,10 +299,7 @@
   },
   "agent": {
     "title": "Chat",
-    "subtitle": "Chat with a model, or turn on Tools to run a multi-turn agent.",
-    "toolsToggle": {
-      "label": "Tools"
-    },
+    "subtitle": "Chat with a model — attach MCP servers, skills, or tools and the same conversation can call them.",
     "planFirst": "Plan first",
     "maxSteps": "Max steps",
     "builtinTools": {
@@ -390,6 +387,9 @@
       "taskCompleted": "Task completed",
       "toolUseCorrect": "Tool use correct",
       "extraSteps": "Extra steps: {{count}}"
+    },
+    "toolsMenu": {
+      "title": "Tools"
     }
   }
 }

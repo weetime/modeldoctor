@@ -53,7 +53,7 @@ import { HistoryDrawer } from "../history/HistoryDrawer";
 import { PlaygroundShell } from "../PlaygroundShell";
 import { AGENT_BUILTIN_TOOL_NAMES, appendToolResultMessage, runAgentSse } from "./api";
 import { type AgentHistorySnapshot, useAgentHistoryStore } from "./history";
-import { type PendingInlineTool, useAgentStore } from "./store";
+import { hasToolsSelected, type PendingInlineTool, useAgentStore } from "./store";
 import { Timeline } from "./trace/Timeline";
 
 const NO_SKILL = "__none__";
@@ -81,10 +81,12 @@ export type StartRunArgs =
  * comments in `AgentPage` below).
  *
  * Tool-related fields (`builtinTools`/`inlineTools`/`mcpServerIds`/
- * `autoRunMcp`/`planFirst`/`maxSteps`) are included ONLY when
- * `store.toolsEnabled` is on — omitting them entirely when off is what makes
- * the request an equivalent streaming-chat call (tools-off = pure
- * `text_delta*→assistant_end→done`, per the unified-playground design doc).
+ * `autoRunMcp`/`planFirst`/`maxSteps`) are included ONLY when the chat is
+ * armed with at least one tool (`hasToolsSelected`) — omitting them entirely
+ * when none is picked is what makes the request an equivalent streaming-chat
+ * call (no-tools = pure `text_delta*→assistant_end→done`, per the
+ * unified-playground design doc). There is no "agent mode" toggle: a run is a
+ * plain chat until you select a tool, then the SAME conversation can call it.
  */
 export async function startRun(
   t: (key: string, opts?: Record<string, unknown>) => string,
@@ -106,7 +108,7 @@ export async function startRun(
   fresh.setError(null);
   fresh.setRunning(true);
 
-  const toolFields = fresh.toolsEnabled
+  const toolFields = hasToolsSelected(fresh)
     ? {
         builtinTools: fresh.builtinTools.length > 0 ? fresh.builtinTools : undefined,
         inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
@@ -399,11 +401,11 @@ function SaveAsSkillDialog({
 }
 
 /**
- * Composer-row controls for the per-run "what this run uses" selectors:
- * Skill preset, builtin tools, and MCP servers. Rendered only while
- * `toolsEnabled` is on (see `AgentPage`) — with tools off, this is a pure
- * chat run and none of these apply. Owns the Skill/save-as state and the
- * `applySkill` preset-loader.
+ * Composer-row controls for "what this chat is armed with": Skill preset,
+ * tools (builtin + hand-authored inline), and MCP servers. Always rendered
+ * below the composer (see `AgentPage`) — there's no tools-mode toggle; picking
+ * any of these arms the SAME conversation (see `hasToolsSelected`). Owns the
+ * Skill/save-as state and the `applySkill` preset-loader.
  */
 function AgentComposerControls() {
   const { t } = useTranslation("playground");
@@ -437,11 +439,17 @@ function AgentComposerControls() {
 
   return (
     // Locked while a run is in flight — config changes wouldn't take effect
-    // until the next run and are misleading mid-run. Stop/Reset live outside
-    // this fieldset. `disabled` on a fieldset cascades to every control inside
-    // (the Radix Select/Popover/Switch all render as buttons).
+    // until the next run and are misleading mid-run. ALSO locked while a
+    // continuation is pending (inline-tool result / MCP approval): `running`
+    // already flipped false on the pausing `done`, but deselecting a tool /
+    // MCP server here would make `startRun`'s `toolFields` omit it from the
+    // resume request, corrupting the continuation (this is the guard the
+    // removed tools toggle used to carry). Stop/Reset live outside this
+    // fieldset. `disabled` on a fieldset cascades to every control inside (the
+    // Radix Select/Popover all render as buttons).
     <fieldset
-      disabled={slice.running}
+      data-testid="agent-tool-controls"
+      disabled={slice.running || slice.pendingInlineTool !== null || slice.pendingApproval !== null}
       className="m-0 flex min-w-0 flex-wrap items-center gap-2 border-0 p-0 disabled:opacity-60"
     >
       <Select value={selectedSkillId} onValueChange={applySkill}>
@@ -461,32 +469,40 @@ function AgentComposerControls() {
       <Popover>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
-            {t("agent.builtinTools.title")} ({slice.builtinTools.length})
+            {t("agent.toolsMenu.title")} ({slice.builtinTools.length + slice.inlineTools.length})
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-80 space-y-1.5">
-          <h4 className="text-xs font-semibold text-muted-foreground">
-            {t("agent.builtinTools.title")}
-          </h4>
-          {AGENT_BUILTIN_TOOL_NAMES.map((name) => {
-            const checkboxId = `agent-builtin-${name}`;
-            return (
-              <label key={name} htmlFor={checkboxId} className="flex items-start gap-2 text-xs">
-                <Checkbox
-                  id={checkboxId}
-                  checked={slice.builtinTools.includes(name)}
-                  onCheckedChange={(checked) => slice.toggleBuiltinTool(name, Boolean(checked))}
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="font-medium">{t(`agent.builtinTools.${name}.label`)}</span>
-                  <span className="block text-muted-foreground">
-                    {t(`agent.builtinTools.${name}.description`)}
+        <PopoverContent align="start" className="w-80 space-y-3">
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-semibold text-muted-foreground">
+              {t("agent.builtinTools.title")}
+            </h4>
+            {AGENT_BUILTIN_TOOL_NAMES.map((name) => {
+              const checkboxId = `agent-builtin-${name}`;
+              return (
+                <label key={name} htmlFor={checkboxId} className="flex items-start gap-2 text-xs">
+                  <Checkbox
+                    id={checkboxId}
+                    checked={slice.builtinTools.includes(name)}
+                    onCheckedChange={(checked) => slice.toggleBuiltinTool(name, Boolean(checked))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">{t(`agent.builtinTools.${name}.label`)}</span>
+                    <span className="block text-muted-foreground">
+                      {t(`agent.builtinTools.${name}.description`)}
+                    </span>
                   </span>
-                </span>
-              </label>
-            );
-          })}
+                </label>
+              );
+            })}
+          </div>
+          {/* Hand-authored inline tools live in the same "Tools" menu so every
+              tool source is reachable from the always-visible bar (avoids the
+              chicken-and-egg of gating the inline editor behind having a tool). */}
+          <div className="border-t border-border pt-3">
+            <InlineToolEditor />
+          </div>
         </PopoverContent>
       </Popover>
 
@@ -553,14 +569,16 @@ function AgentComposerControls() {
 
 /**
  * Right-side config panel: the connection picker + sampling params (always
- * active — needed in both chat and agent mode, since model sampling is
- * always relevant) plus the agent-only knobs (plan-first, max-steps,
- * hand-authored inline tools), which are only relevant — and only rendered —
- * while `toolsEnabled` is on.
+ * active — model sampling is always relevant) plus the agent-loop knobs
+ * (plan-first, max-steps), which are only meaningful — and only rendered —
+ * once the chat is armed with a tool (`hasToolsSelected`). The tool selectors
+ * themselves live in the always-visible composer bar (`AgentComposerControls`),
+ * not here.
  */
 function AgentConfigPanel() {
   const { t } = useTranslation("playground");
   const slice = useAgentStore();
+  const showAgentKnobs = hasToolsSelected(slice);
 
   return (
     <div className="space-y-4">
@@ -576,7 +594,7 @@ function AgentConfigPanel() {
         <ChatParams value={slice.params as ChatParamsType} onChange={slice.patchParams} />
       </fieldset>
 
-      {slice.toolsEnabled ? (
+      {showAgentKnobs ? (
         <fieldset
           disabled={slice.running}
           className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-60"
@@ -606,8 +624,6 @@ function AgentConfigPanel() {
               className="h-8 w-24 text-xs"
             />
           </div>
-
-          <InlineToolEditor />
         </fieldset>
       ) : null}
     </div>
@@ -691,7 +707,8 @@ export function AgentPage() {
     s.setTask(snap.task ?? "");
     s.setSystemPrompt(snap.systemPrompt);
     s.patchParams(snap.params);
-    s.setToolsEnabled(snap.toolsEnabled);
+    // `snap.toolsEnabled` is intentionally ignored — tool-presence is derived
+    // from the restored tool arrays below (see `hasToolsSelected`), not a flag.
     s.setPlanFirst(snap.planFirst);
     s.setMaxSteps(snap.maxSteps);
     s.setInlineTools(snap.inlineTools);
@@ -729,7 +746,14 @@ export function AgentPage() {
       task: slice.task,
       systemPrompt: slice.systemPrompt,
       params: slice.params,
-      toolsEnabled: slice.toolsEnabled,
+      // Derived (back-compat only): the manual mode flag is gone; persist what
+      // the tool arrays imply so old readers still see a sane value. Pass the
+      // specific arrays (not `slice`) so this effect's deps stay field-precise.
+      toolsEnabled: hasToolsSelected({
+        builtinTools: slice.builtinTools,
+        inlineTools: slice.inlineTools,
+        selectedMcpServerIds: slice.selectedMcpServerIds,
+      }),
       planFirst: slice.planFirst,
       maxSteps: slice.maxSteps,
       inlineTools: slice.inlineTools,
@@ -746,7 +770,6 @@ export function AgentPage() {
     slice.task,
     slice.systemPrompt,
     slice.params,
-    slice.toolsEnabled,
     slice.planFirst,
     slice.maxSteps,
     slice.inlineTools,
@@ -760,10 +783,10 @@ export function AgentPage() {
   return (
     <PlaygroundShell
       category="chat"
-      // The i18n VALUES for `agent.title`/`agent.subtitle` were reworded for
-      // the unified playground merge (Task 12) — the KEYS are unchanged to
-      // avoid churn, but the strings no longer say "Agent"/tool-loop-only,
-      // since this page is chat-mode by default with an opt-in agent loop.
+      // One unified "Chat" surface: plain streaming chat by default, and the
+      // SAME conversation gains tool-calling the moment you arm it with a
+      // Skill / builtin tool / MCP server. The i18n VALUES say "Chat" (no
+      // "Agent" / "mode" framing); KEYS are unchanged to avoid churn.
       title={t("agent.title")}
       subtitle={t("agent.subtitle")}
       historySlot={<HistoryDrawer useHistoryStore={useAgentHistoryStore} />}
@@ -797,30 +820,12 @@ export function AgentPage() {
           disabled={!slice.selectedConnectionId}
           disabledReason={t("agent.needConnection")}
         />
-        {/* Tools row sits BELOW the composer (mainstream chat layout — the
-            input is the primary affordance; tool toggles are secondary). */}
+        {/* Tool bar sits BELOW the composer (mainstream chat layout — the input
+            is the primary affordance). The Skill / Tools / MCP selectors are
+            ALWAYS visible: picking any of them arms this same chat with tools;
+            picking none leaves it a plain streaming chat. No "agent mode". */}
         <div className="flex flex-wrap items-center gap-3 px-6 pb-2 pt-1">
-          <label
-            htmlFor="agent-tools-toggle"
-            className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
-          >
-            <Switch
-              id="agent-tools-toggle"
-              checked={slice.toolsEnabled}
-              onCheckedChange={slice.setToolsEnabled}
-              // Also locked while a continuation is pending (inline-tool
-              // result / MCP approval) — `running` already flipped false on
-              // the pausing `done`, but flipping this off here and then
-              // Submit/Approve would make `startRun`'s `toolFields` omit
-              // mcpServerIds/inlineTools/autoRunMcp from the resume request,
-              // corrupting the continuation.
-              disabled={
-                slice.running || slice.pendingInlineTool !== null || slice.pendingApproval !== null
-              }
-            />
-            {t("agent.toolsToggle.label")}
-          </label>
-          {slice.toolsEnabled ? <AgentComposerControls /> : null}
+          <AgentComposerControls />
           <Button
             type="button"
             variant="ghost"

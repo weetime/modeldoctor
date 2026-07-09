@@ -296,10 +296,7 @@
   },
   "agent": {
     "title": "对话",
-    "subtitle": "与模型对话，或打开「工具」运行多轮 Agent。",
-    "toolsToggle": {
-      "label": "工具"
-    },
+    "subtitle": "与模型对话；挂载 MCP、技能或工具后,同一个对话即可调用它们。",
     "planFirst": "先写计划",
     "maxSteps": "最大步数",
     "builtinTools": {
@@ -387,6 +384,9 @@
       "taskCompleted": "任务完成",
       "toolUseCorrect": "工具使用正确",
       "extraSteps": "多余步骤: {{count}}"
+    },
+    "toolsMenu": {
+      "title": "工具"
     }
   }
 }

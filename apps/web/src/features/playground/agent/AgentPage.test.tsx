@@ -103,17 +103,24 @@ import { useAgentHistoryStore } from "./history";
 import { useAgentStore } from "./store";
 
 async function selectConnection(user: ReturnType<typeof userEvent.setup>) {
-  // In the default (tools-off) state, the Skill picker isn't rendered, so the
-  // connection picker is the only combobox on screen.
-  await user.click(screen.getByRole("combobox"));
+  // The Skill picker (composer bar, DOM-before) is always rendered now, so the
+  // connection picker is the SECOND combobox (right config panel).
+  const comboboxes = screen.getAllByRole("combobox");
+  await user.click(comboboxes[1]);
   await user.click(screen.getByRole("option", { name: /chat-1/i }));
 }
 
 async function enableTools(user: ReturnType<typeof userEvent.setup>) {
-  // The config panel's `ChatParams` (Task 12) also renders a "stream" switch
-  // that's visible in every mode, so the tools toggle must be targeted by
-  // its accessible name (not "the only switch on screen" anymore).
-  await user.click(screen.getByRole("switch", { name: /^tools$|^工具$/i }));
+  // There is no tools "mode" toggle anymore — a chat is armed with tools by
+  // picking one. Open the always-visible "Tools" menu and tick the first
+  // builtin tool, which flips `hasToolsSelected` true (agent knobs appear,
+  // the run advertises tool fields), then close the popover so later queries
+  // aren't ambiguous.
+  await user.click(screen.getByRole("button", { name: /^tools|^工具/i }));
+  const firstBuiltin = document.querySelector('[id^="agent-builtin-"]') as HTMLElement | null;
+  if (!firstBuiltin) throw new Error("no builtin tool checkbox found in the Tools menu");
+  await user.click(firstBuiltin);
+  await user.keyboard("{Escape}");
 }
 
 async function typeTaskAndSend(user: ReturnType<typeof userEvent.setup>, text: string) {
@@ -382,18 +389,17 @@ describe("AgentPage", () => {
       expect(screen.getByTestId("step-tool_call")).toBeInTheDocument();
     });
 
-    it("locks the tools toggle while an approval is pending, to prevent continuation corruption", async () => {
+    it("locks the tool controls while an approval is pending, to prevent continuation corruption", async () => {
       // `running` flips false on the pausing `done` (see `startRun`'s
       // `finally`), so `disabled={slice.running}` alone would let the user
-      // flip toolsEnabled off here, then Approve would omit
+      // deselect the MCP server here, then Approve would omit
       // mcpServerIds/inlineTools/autoRunMcp from the resume request.
       const user = userEvent.setup();
       await runToApproval(user);
 
       expect(useAgentStore.getState().running).toBe(false);
-      const toolsToggle = document.getElementById("agent-tools-toggle");
-      expect(toolsToggle).not.toBeNull();
-      expect(toolsToggle).toBeDisabled();
+      // The whole tool-selectors fieldset (Skill / Tools / MCP) is locked.
+      expect(screen.getByTestId("agent-tool-controls")).toBeDisabled();
     });
 
     it("Reject just clears the pending approval card without re-running", async () => {
@@ -541,20 +547,23 @@ describe("AgentPage", () => {
     });
   });
 
-  describe("tools toggle hides agent-only controls", () => {
-    it("hides AgentComposerControls (Skill/builtin/mcp) and agent-only config when tools are off", () => {
+  describe("no tools mode: selectors always visible, agent knobs reveal when armed", () => {
+    it("shows the tool bar (Skill/save-as) always, but hides agent-loop knobs until a tool is picked", () => {
       render(
         <MemoryRouter>
           <AgentPage />
         </MemoryRouter>,
       );
+      // The tool bar is always present — the Skill combobox (2 total: Skill +
+      // connection) and Save-as-skill button are visible with no tools picked.
+      expect(screen.getAllByRole("combobox")).toHaveLength(2);
+      expect(screen.getByText(/save as skill|存为 skill/i)).toBeInTheDocument();
+      // ...but the agent-loop knobs (plan-first / max-steps) stay hidden until
+      // the chat is actually armed with a tool.
       expect(screen.queryByText(/plan first|先写计划/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/save as skill|存为 skill/i)).not.toBeInTheDocument();
-      // Only one combobox (the connection picker) — no Skill picker.
-      expect(screen.getAllByRole("combobox")).toHaveLength(1);
     });
 
-    it("shows them once tools are enabled", async () => {
+    it("reveals the agent-loop knobs once a tool is armed", async () => {
       const user = userEvent.setup();
       render(
         <MemoryRouter>
@@ -563,8 +572,6 @@ describe("AgentPage", () => {
       );
       await enableTools(user);
       expect(screen.getByText(/plan first|先写计划/i)).toBeInTheDocument();
-      expect(screen.getByText(/save as skill|存为 skill/i)).toBeInTheDocument();
-      expect(screen.getAllByRole("combobox")).toHaveLength(2);
     });
   });
 

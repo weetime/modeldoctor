@@ -110,9 +110,9 @@ function ReasoningBlock({ reasoning, thinking }: { reasoning: string; thinking: 
 
 /**
  * A streaming/complete assistant reply — the "chat bubble" rendering of an
- * `assistant_text` timeline item. When `toolsEnabled` is off, the ENTIRE
- * timeline is a sequence of these — that's what makes a tools-off run read
- * as plain chat rather than an agent trace. A reasoning model's
+ * `assistant_text` timeline item. With no tools armed, the ENTIRE timeline is
+ * a sequence of these — that's what makes a no-tools run read as plain chat
+ * rather than an agent trace. A reasoning model's
  * chain-of-thought (`reasoning`) renders as a collapsible block above the
  * answer; `thinking` is true only while reasoning is still streaming with no
  * answer text yet.
