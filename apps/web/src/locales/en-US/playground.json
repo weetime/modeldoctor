@@ -388,7 +388,8 @@
       "summaryTurns_one": "{{count}} turn",
       "summaryTurns_other": "{{count}} turns",
       "summaryErrors_one": "{{count}} error",
-      "summaryErrors_other": "{{count}} errors"
+      "summaryErrors_other": "{{count}} errors",
+      "elapsedTitle": "total {{elapsed}} elapsed"
     },
     "verdict": {
       "title": "Capability verdict",

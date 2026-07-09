@@ -91,6 +91,13 @@ export interface StepCardProps {
   index: number;
   /** Map of MCP server id → display name, for the server badge on MCP tool steps. */
   mcpServerNames?: Record<string, string>;
+  /**
+   * Cumulative elapsed ms of the PREVIOUS step (0 for the first). The card
+   * shows this step's own duration (`step.tMs - prevTMs`) — more useful than
+   * the raw cumulative for spotting which step was slow — with the cumulative
+   * elapsed available on hover.
+   */
+  prevTMs?: number;
 }
 
 /**
@@ -99,10 +106,11 @@ export interface StepCardProps {
  * kind-specific body — markdown for assistant/plan, a collapsible pretty-JSON
  * block for tool results, small pretty args for tool calls.
  */
-export function StepCard({ step, index, mcpServerNames }: StepCardProps) {
+export function StepCard({ step, index, mcpServerNames, prevTMs = 0 }: StepCardProps) {
   const { t } = useTranslation("playground");
   const label = step.name ? parseToolLabel(step.name) : null;
   const serverName = label?.serverId ? (mcpServerNames?.[label.serverId] ?? "MCP") : null;
+  const stepMs = Math.max(0, step.tMs - prevTMs);
 
   return (
     <div className="flex gap-3">
@@ -130,7 +138,12 @@ export function StepCard({ step, index, mcpServerNames }: StepCardProps) {
               </span>
             ) : null}
           </span>
-          <span className="shrink-0">{formatElapsed(step.tMs)}</span>
+          <span
+            className="shrink-0"
+            title={t("agent.trace.elapsedTitle", { elapsed: formatElapsed(step.tMs) })}
+          >
+            {formatElapsed(stepMs)}
+          </span>
         </div>
         {step.kind === "tool_call" ? (
           <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-xs text-muted-foreground">
