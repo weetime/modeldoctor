@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { toolDefSchema } from "./agent.js";
-import { ChatMessageSchema } from "./playground.js";
+import { ChatMessageContentPartSchema, ChatMessageSchema, ChatParamsSchema } from "./playground.js";
+
+/**
+ * Sampling-only subset of `ChatParamsSchema` — everything except `tools`,
+ * `tool_choice` (the agent loop derives these itself from
+ * `inlineTools`/`builtinTools`/`mcpServerIds`) and `stream` (the agent loop
+ * always streams; there's no non-streaming mode to opt into).
+ */
+const AgentRunParamsSchema = ChatParamsSchema.pick({
+  temperature: true,
+  maxTokens: true,
+  topP: true,
+  frequencyPenalty: true,
+  presencePenalty: true,
+  seed: true,
+  stop: true,
+}).partial();
 
 /**
  * Request body for `POST /api/playground/agent`.
@@ -32,10 +48,23 @@ import { ChatMessageSchema } from "./playground.js";
  */
 export const AgentRunRequestSchema = z.object({
   connectionId: z.string().min(1),
-  task: z.string().min(1),
+  /**
+   * The user's task, either as plain text or as multimodal content parts
+   * (Task 1+ unified playground — mirrors `ChatMessage.content`'s shape so
+   * the same composer/attachment UI can feed both plain chat and the agent
+   * loop). Non-empty either way: a string can't be `""`, an array can't be
+   * `[]`.
+   */
+  task: z.union([z.string().min(1), z.array(ChatMessageContentPartSchema).min(1)]),
   systemPrompt: z.string().optional(),
   /** Ask the model to write a short plan before acting (first turn only). */
   planFirst: z.boolean().optional(),
+  /**
+   * Sampling params (temperature/maxTokens/topP/...) forwarded to the
+   * upstream call, same fields as `PlaygroundChatRequest.params` minus
+   * tools/tool_choice/stream — see `AgentRunParamsSchema` above.
+   */
+  params: AgentRunParamsSchema.optional(),
   maxSteps: z.number().int().min(1).max(50).default(12),
   /** Ad-hoc, hand-authored tools with no server-side executor. */
   inlineTools: z.array(toolDefSchema).optional(),

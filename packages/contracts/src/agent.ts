@@ -153,5 +153,22 @@ export const AgentSseEventSchema = z.discriminatedUnion("type", [
    * see `AgentVerdictSchema` doc.
    */
   z.object({ type: z.literal("verdict"), verdict: AgentVerdictSchema }),
+  /**
+   * Unified playground stream (Task 1+) — a single incremental chunk of the
+   * assistant's free-text reply, mirroring the plain-chat SSE token stream.
+   * Distinct from the `assistant` `AgentStep` (which carries a full turn's
+   * accumulated text): `text_delta` is emitted as tokens arrive so the
+   * frontend can render the reply incrementally, one shared code path for
+   * both the chat-only and tool-using cases.
+   */
+  z.object({ type: z.literal("text_delta"), delta: z.string() }),
+  /**
+   * Marks the end of the current assistant turn's `text_delta` stream (the
+   * model has finished emitting free text for this turn — it may still go
+   * on to request tool calls, or the run may end). Lets the frontend close
+   * off the in-progress message bubble without waiting for the terminal
+   * `done` event.
+   */
+  z.object({ type: z.literal("assistant_end") }),
 ]);
 export type AgentSseEvent = z.infer<typeof AgentSseEventSchema>;
