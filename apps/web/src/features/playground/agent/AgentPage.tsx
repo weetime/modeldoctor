@@ -512,6 +512,9 @@ function AgentConfigPanel() {
 export function AgentPage() {
   const { t } = useTranslation("playground");
   const slice = useAgentStore();
+  const { data: mcpServers } = useMcpServers();
+  const mcpServerNames: Record<string, string> = {};
+  for (const s of mcpServers ?? []) mcpServerNames[s.id] = s.name;
 
   const canRun = !!slice.selectedConnectionId && slice.task.trim().length > 0 && !slice.running;
   const disabledReason = !slice.selectedConnectionId
@@ -689,6 +692,7 @@ export function AgentPage() {
             onApproveMcp={onApproveMcp}
             onRejectMcp={onRejectMcp}
             verdict={slice.verdict}
+            mcpServerNames={mcpServerNames}
           />
         </div>
       </div>

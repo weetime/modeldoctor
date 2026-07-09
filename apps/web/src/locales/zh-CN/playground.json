@@ -378,7 +378,14 @@
       "reject": "拒绝"
     },
     "trace": {
-      "empty": "运行任务后，这里会显示执行轨迹。"
+      "empty": "运行任务后，这里会显示执行轨迹。",
+      "resultSize": "{{kb}} KB",
+      "summaryTools_one": "{{count}} 次工具调用",
+      "summaryTools_other": "{{count}} 次工具调用",
+      "summaryTurns_one": "{{count}} 轮",
+      "summaryTurns_other": "{{count}} 轮",
+      "summaryErrors_one": "{{count}} 个错误",
+      "summaryErrors_other": "{{count}} 个错误"
     },
     "verdict": {
       "title": "能力测试评分",

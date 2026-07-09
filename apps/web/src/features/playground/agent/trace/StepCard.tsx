@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { PendingInlineTool, PendingMcpApproval } from "../store";
+import { TraceMarkdown } from "./TraceMarkdown";
 
 const KIND_ICON: Record<AgentStep["kind"], string> = {
   plan: "🧠",
@@ -21,35 +22,128 @@ const KIND_STYLE: Record<AgentStep["kind"], string> = {
   error: "border-destructive/40 bg-destructive/10",
 };
 
-export interface StepCardProps {
-  step: AgentStep;
+const MCP_PREFIX = "mcp__";
+
+/** A parsed tool name: the clean tool label + its source (MCP server id, or "builtin"). */
+export interface ToolLabel {
+  toolName: string;
+  serverId?: string;
 }
 
-/** Renders one AgentStep by kind, with an emoji icon + elapsed time. */
-export function StepCard({ step }: StepCardProps) {
+/** `mcp__<serverId>__list_tenants` → { toolName: "list_tenants", serverId }. Plain names pass through. */
+export function parseToolLabel(name: string): ToolLabel {
+  if (!name.startsWith(MCP_PREFIX)) return { toolName: name };
+  const rest = name.slice(MCP_PREFIX.length);
+  const sep = rest.indexOf("__");
+  if (sep < 0) return { toolName: rest };
+  return { serverId: rest.slice(0, sep), toolName: rest.slice(sep + 2) };
+}
+
+/** Cumulative elapsed ms since run start → "1.2s" (≥1s) or "840ms". */
+export function formatElapsed(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+}
+
+/** Pretty-print a tool-result string as JSON when possible; else return as-is. */
+function prettyMaybeJson(raw: string): { pretty: string; summary: string } {
+  try {
+    const parsed = JSON.parse(raw);
+    const pretty = JSON.stringify(parsed, null, 2);
+    let summary: string;
+    if (Array.isArray(parsed)) summary = `[] · ${parsed.length}`;
+    else if (parsed && typeof parsed === "object") summary = `{} · ${Object.keys(parsed).length}`;
+    else summary = String(parsed).slice(0, 60);
+    return { pretty, summary };
+  } catch {
+    return { pretty: raw, summary: raw.replace(/\s+/g, " ").slice(0, 60) };
+  }
+}
+
+/** Collapsed-by-default block for a (usually large, JSON) tool result. */
+function ResultBlock({ content }: { content: string }) {
   const { t } = useTranslation("playground");
+  const [open, setOpen] = useState(false);
+  const { pretty, summary } = prettyMaybeJson(content);
+  const sizeKb = (new Blob([content]).size / 1024).toFixed(1);
   return (
-    <div
-      data-testid={`step-${step.kind}`}
-      className={`rounded-md border px-3 py-2 text-sm ${KIND_STYLE[step.kind]}`}
-    >
-      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5 font-medium text-foreground">
-          <span aria-hidden="true">{KIND_ICON[step.kind]}</span>
-          {t(`agent.steps.${step.kind}`)}
-          {step.name ? (
-            <span className="font-mono font-normal text-muted-foreground">· {step.name}</span>
-          ) : null}
-        </span>
-        <span>{step.tMs}ms</span>
-      </div>
-      {step.kind === "tool_call" ? (
-        <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-xs text-muted-foreground">
-          {JSON.stringify(step.args ?? {}, null, 2)}
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
+      >
+        <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+        <span className="font-mono">{summary}</span>
+        <span className="ml-auto shrink-0">{t("agent.trace.resultSize", { kb: sizeKb })}</span>
+      </button>
+      {open ? (
+        <pre className="mt-1 max-h-72 overflow-auto rounded bg-muted p-2 font-mono text-xs text-muted-foreground">
+          {pretty}
         </pre>
-      ) : step.content ? (
-        <p className="mt-1 whitespace-pre-wrap break-words">{step.content}</p>
       ) : null}
+    </div>
+  );
+}
+
+export interface StepCardProps {
+  step: AgentStep;
+  /** 1-based index shown in the timeline rail. */
+  index: number;
+  /** Map of MCP server id → display name, for the server badge on MCP tool steps. */
+  mcpServerNames?: Record<string, string>;
+}
+
+/**
+ * Renders one AgentStep: a numbered timeline dot, a clean tool label (the
+ * `mcp__<id>__` prefix stripped, source shown as a badge), elapsed time, and a
+ * kind-specific body — markdown for assistant/plan, a collapsible pretty-JSON
+ * block for tool results, small pretty args for tool calls.
+ */
+export function StepCard({ step, index, mcpServerNames }: StepCardProps) {
+  const { t } = useTranslation("playground");
+  const label = step.name ? parseToolLabel(step.name) : null;
+  const serverName = label?.serverId ? (mcpServerNames?.[label.serverId] ?? "MCP") : null;
+
+  return (
+    <div className="flex gap-3">
+      {/* Timeline rail: numbered dot + connecting line. */}
+      <div className="flex flex-col items-center">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-[10px] text-muted-foreground">
+          {index}
+        </span>
+        <span className="mt-1 w-px flex-1 bg-border" />
+      </div>
+      <div
+        data-testid={`step-${step.kind}`}
+        className={`mb-1 flex-1 rounded-md border px-3 py-2 text-sm ${KIND_STYLE[step.kind]}`}
+      >
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
+            <span aria-hidden="true">{KIND_ICON[step.kind]}</span>
+            {t(`agent.steps.${step.kind}`)}
+            {label ? (
+              <span className="font-mono font-normal text-foreground">{label.toolName}</span>
+            ) : null}
+            {serverName ? (
+              <span className="rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                {serverName}
+              </span>
+            ) : null}
+          </span>
+          <span className="shrink-0">{formatElapsed(step.tMs)}</span>
+        </div>
+        {step.kind === "tool_call" ? (
+          <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-xs text-muted-foreground">
+            {JSON.stringify(step.args ?? {}, null, 2)}
+          </pre>
+        ) : step.kind === "tool_result" && step.content ? (
+          <ResultBlock content={step.content} />
+        ) : step.content ? (
+          <div className="mt-1">
+            <TraceMarkdown>{step.content}</TraceMarkdown>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

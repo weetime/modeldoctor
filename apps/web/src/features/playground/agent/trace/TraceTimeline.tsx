@@ -1,7 +1,7 @@
 import type { AgentStep, AgentVerdict } from "@modeldoctor/contracts";
 import { useTranslation } from "react-i18next";
 import type { PendingInlineTool, PendingMcpApproval } from "../store";
-import { ApprovalCard, PendingToolCard, StepCard, VerdictCard } from "./StepCard";
+import { ApprovalCard, formatElapsed, PendingToolCard, StepCard, VerdictCard } from "./StepCard";
 
 export interface TraceTimelineProps {
   steps: AgentStep[];
@@ -13,6 +13,39 @@ export interface TraceTimelineProps {
   onRejectMcp: () => void;
   /** Set only on a true run completion when a judge provider is configured (Task 13). */
   verdict?: AgentVerdict | null;
+  /** Map of MCP server id → display name, for server badges on MCP tool steps. */
+  mcpServerNames?: Record<string, string>;
+}
+
+/** A compact "N tools · M turns · X.Xs" summary bar above the trace. */
+function RunSummary({ steps }: { steps: AgentStep[] }) {
+  const { t } = useTranslation("playground");
+  const toolCalls = steps.filter((s) => s.kind === "tool_call").length;
+  const turns = steps.filter((s) => s.kind === "assistant" || s.kind === "plan").length;
+  const errors = steps.filter((s) => s.kind === "error").length;
+  const totalMs = steps.reduce((max, s) => Math.max(max, s.tMs), 0);
+  return (
+    <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <span aria-hidden="true">🔧</span>
+        {t("agent.trace.summaryTools", { count: toolCalls })}
+      </span>
+      <span className="flex items-center gap-1">
+        <span aria-hidden="true">💬</span>
+        {t("agent.trace.summaryTurns", { count: turns })}
+      </span>
+      <span className="flex items-center gap-1">
+        <span aria-hidden="true">⏱</span>
+        {formatElapsed(totalMs)}
+      </span>
+      {errors > 0 ? (
+        <span className="flex items-center gap-1 text-destructive">
+          <span aria-hidden="true">⚠️</span>
+          {t("agent.trace.summaryErrors", { count: errors })}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -31,6 +64,7 @@ export function TraceTimeline({
   onApproveMcp,
   onRejectMcp,
   verdict,
+  mcpServerNames,
 }: TraceTimelineProps) {
   const { t } = useTranslation("playground");
 
@@ -44,9 +78,10 @@ export function TraceTimeline({
 
   return (
     <div className="flex flex-col gap-2 overflow-y-auto px-6 py-4">
+      {steps.length > 0 ? <RunSummary steps={steps} /> : null}
       {steps.map((step, idx) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: append-only trace list
-        <StepCard key={idx} step={step} />
+        <StepCard key={idx} step={step} index={idx + 1} mcpServerNames={mcpServerNames} />
       ))}
       {pendingInlineTool ? (
         <PendingToolCard

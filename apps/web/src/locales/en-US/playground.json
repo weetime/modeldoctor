@@ -381,7 +381,14 @@
       "reject": "Reject"
     },
     "trace": {
-      "empty": "Run a task and its execution trace will appear here."
+      "empty": "Run a task and its execution trace will appear here.",
+      "resultSize": "{{kb}} KB",
+      "summaryTools_one": "{{count}} tool call",
+      "summaryTools_other": "{{count}} tool calls",
+      "summaryTurns_one": "{{count}} turn",
+      "summaryTurns_other": "{{count}} turns",
+      "summaryErrors_one": "{{count}} error",
+      "summaryErrors_other": "{{count}} errors"
     },
     "verdict": {
       "title": "Capability verdict",
