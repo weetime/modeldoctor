@@ -658,29 +658,26 @@ export function AgentPage() {
     useAgentStore.getState().setPendingApproval(null);
   };
 
-  // Restore a history entry's snapshot into the live agent store. Mirrors
-  // ChatPage's restoreSnap; agent trajectories are plain JSON, so unlike chat
-  // there are no blobs to rehydrate.
-  //
-  // NOTE (known gap, tracked for the later history-merge task): `timeline`
-  // isn't part of `AgentHistorySnapshot` yet, so a restored entry shows an
-  // empty timeline even though `steps`/`verdict` are restored into the
-  // store — display of a restored trace is deferred to that task, which also
-  // moves persistence off `steps` (no longer populated by live runs; see
-  // `startRun`'s dispatch, which only calls `appendEvent`).
+  // Restore a history entry's snapshot into the live agent store. Agent
+  // trajectories are plain JSON (see `AgentHistorySnapshot`'s doc on why
+  // there's no blob layer here, unlike `ChatPage`'s `restoreSnap`), so this
+  // is a single synchronous pass — no async rehydration step.
   const restoreSnap = (snap: AgentHistorySnapshot) => {
     const s = useAgentStore.getState();
     s.reset();
     s.setSelectedConnectionId(snap.selectedConnectionId);
-    s.setTask(snap.task);
+    s.setInput(snap.input ?? "");
+    s.setTask(snap.task ?? "");
     s.setSystemPrompt(snap.systemPrompt);
+    s.patchParams(snap.params);
+    s.setToolsEnabled(snap.toolsEnabled);
     s.setPlanFirst(snap.planFirst);
     s.setMaxSteps(snap.maxSteps);
     s.setInlineTools(snap.inlineTools);
     s.setBuiltinTools(snap.builtinTools);
     s.setSelectedMcpServerIds(snap.selectedMcpServerIds);
     s.setAutoRunMcp(snap.autoRunMcp);
-    s.setSteps(snap.steps);
+    s.setTimeline(snap.timeline);
     s.setVerdict(snap.verdict);
   };
 
@@ -692,34 +689,43 @@ export function AgentPage() {
     if (entry) restoreSnap(entry.snapshot);
   }, [historyCurrentId, historyRestoreVersion]);
 
-  // Auto-save the current agent run (config + trajectory + verdict) into the
-  // current history entry — debounced 1500ms inside the store.
+  // Auto-save the current agent run (config + timeline + verdict) into the
+  // current history entry — debounced 1500ms inside the store. Persists
+  // `timeline` (the unified renderable trace), not `steps` — see
+  // `AgentHistorySnapshot`'s doc for why `steps` is no longer the live
+  // source of truth.
   useEffect(() => {
     const snap: AgentHistorySnapshot = {
       selectedConnectionId: slice.selectedConnectionId,
+      input: slice.input,
       task: slice.task,
       systemPrompt: slice.systemPrompt,
+      params: slice.params,
+      toolsEnabled: slice.toolsEnabled,
       planFirst: slice.planFirst,
       maxSteps: slice.maxSteps,
       inlineTools: slice.inlineTools,
       builtinTools: slice.builtinTools,
       selectedMcpServerIds: slice.selectedMcpServerIds,
       autoRunMcp: slice.autoRunMcp,
-      steps: slice.steps,
+      timeline: slice.timeline,
       verdict: slice.verdict,
     };
     useAgentHistoryStore.getState().scheduleAutoSave(snap);
   }, [
     slice.selectedConnectionId,
+    slice.input,
     slice.task,
     slice.systemPrompt,
+    slice.params,
+    slice.toolsEnabled,
     slice.planFirst,
     slice.maxSteps,
     slice.inlineTools,
     slice.builtinTools,
     slice.selectedMcpServerIds,
     slice.autoRunMcp,
-    slice.steps,
+    slice.timeline,
     slice.verdict,
   ]);
 

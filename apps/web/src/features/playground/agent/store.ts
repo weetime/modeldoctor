@@ -94,6 +94,8 @@ export interface AgentStoreState {
   setAutoRunMcp: (b: boolean) => void;
   appendStep: (step: AgentStep) => void;
   setSteps: (steps: AgentStep[]) => void;
+  /** Replaces the whole timeline — used by history restore (Task 9). */
+  setTimeline: (items: TimelineItem[]) => void;
   clearSteps: () => void;
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
   setPendingApproval: (approval: PendingMcpApproval | null) => void;
@@ -165,6 +167,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   setAutoRunMcp: (b) => set({ autoRunMcp: b }),
   appendStep: (step) => set((s) => ({ steps: [...s.steps, step] })),
   setSteps: (steps) => set({ steps }),
+  setTimeline: (items) => set({ timeline: items }),
   clearSteps: () =>
     set({
       steps: [],

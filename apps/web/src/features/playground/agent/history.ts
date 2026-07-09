@@ -1,23 +1,54 @@
-import type { AgentStep, AgentVerdict, ToolDef } from "@modeldoctor/contracts";
+import type { AgentVerdict, ToolDef } from "@modeldoctor/contracts";
 import { createHistoryStore } from "../history/createHistoryStore";
+import type { TimelineItem } from "./timeline";
 
 /**
- * A persisted agent run: the task + full config plus the resulting trajectory
- * (`steps`) and `verdict`. Transient fields (running / abortController / error /
- * pendingInlineTool / pendingApproval / continuationMessages) are intentionally
- * excluded — they only matter mid-run and never need to survive a reload.
+ * A persisted unified-playground agent run: the input + full config plus the
+ * resulting `timeline` (Task 5+ renderable trace) and `verdict`. Transient
+ * fields (running / abortController / error / pendingInlineTool /
+ * pendingApproval / continuationMessages) are intentionally excluded — they
+ * only matter mid-run and never need to survive a reload.
+ *
+ * Unified-shape migration (Task 9): this used to persist `steps`
+ * (`AgentStep[]`), but the unified run dispatch (`startRun` in
+ * `AgentPage.tsx`) only ever calls `store.appendEvent` — it stopped
+ * populating `store.steps` back in the Task 5+ migration, so `steps` here
+ * was silently always `[]`. Persistence now follows the live store onto
+ * `timeline`, which IS kept up to date by every run.
+ *
+ * Attachment blobs (mirroring chat's `persistMessageAttachments` /
+ * `rehydrateMessageBlobs`): NOT wired up here. Unlike chat, where the
+ * `ChatMessage[]` transcript (with inline `data:` URLs) IS the persisted
+ * state, the agent flow only ever stores the composer's plain-text draft
+ * (`task/input`, both `string`) — multimodal attachments
+ * (`AttachedFile[]`, see `../chat/attachments.ts`) live in
+ * `MessageComposer`'s local component state and are folded into
+ * `ChatMessageContentPart[]` transiently inside `startRun`'s request body,
+ * never written into the zustand store or the `timeline` (see
+ * `reduceEvent` in `./timeline.ts` — there is no "user message" timeline
+ * item at all, only assistant/tool/plan/error/verdict items). So there is
+ * currently no binary data anywhere in an `AgentHistorySnapshot` to move
+ * into IDB blobs; wiring the blob layer here would be a no-op today. If a
+ * later task adds a user-turn timeline item that carries
+ * `ChatMessageContentPart[]`, revisit this and add the same
+ * persist/rehydrate pairing chat uses.
  */
 export interface AgentHistorySnapshot {
   selectedConnectionId: string | null;
-  task: string;
+  /** Unified composer draft text (Task 5+ `store.input`). */
+  input?: string;
   systemPrompt: string;
+  /** Legacy agent-only task string (`store.task`) — kept for the preview + placeholder use. */
+  task?: string;
+  params: Record<string, unknown>;
+  toolsEnabled: boolean;
   planFirst: boolean;
   maxSteps: number;
   inlineTools: ToolDef[];
   builtinTools: string[];
   selectedMcpServerIds: string[];
   autoRunMcp: boolean;
-  steps: AgentStep[];
+  timeline: TimelineItem[];
   verdict: AgentVerdict | null;
 }
 
@@ -25,16 +56,19 @@ export const useAgentHistoryStore = createHistoryStore<AgentHistorySnapshot>({
   name: "md-playground-history-agent",
   blank: () => ({
     selectedConnectionId: null,
-    task: "",
+    input: "",
     systemPrompt: "",
+    task: "",
+    params: {},
+    toolsEnabled: false,
     planFirst: false,
     maxSteps: 12,
     inlineTools: [],
     builtinTools: [],
     selectedMcpServerIds: [],
     autoRunMcp: false,
-    steps: [],
+    timeline: [],
     verdict: null,
   }),
-  preview: (s) => s.task.trim().slice(0, 80),
+  preview: (s) => (s.task ?? s.input ?? "").trim().slice(0, 80),
 });
