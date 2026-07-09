@@ -34,7 +34,6 @@ import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
 import { AgentPage } from "@/features/playground/agent/AgentPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
-import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
@@ -140,8 +139,8 @@ export const routes: RouteObject[] = [
           { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
           { path: "settings/prometheus-datasources", element: <DatasourcesPage /> },
           { path: "settings/llm-judge-providers", element: <LlmJudgeProvidersPage /> },
-          { path: "playground", element: <Navigate to="/playground/chat" replace /> },
-          { path: "playground/chat", element: <ChatPage /> },
+          { path: "playground", element: <Navigate to="/playground/agent" replace /> },
+          { path: "playground/chat", element: <Navigate to="/playground/agent" replace /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },
           { path: "playground/image", element: <ImagePage /> },
           { path: "playground/audio", element: <AudioPage /> },

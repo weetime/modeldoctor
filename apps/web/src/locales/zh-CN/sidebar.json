@@ -12,7 +12,6 @@
     "playgroundAudio": "语音",
     "playgroundEmbeddings": "嵌入",
     "playgroundRerank": "重排",
-    "playgroundAgent": "Agent",
     "benchmarkInference": "推理性能基准",
     "benchmarkCapacity": "容量规划",
     "benchmarkGateway": "网关压测",

@@ -21,7 +21,6 @@ import {
   Rocket,
   Settings,
   ShieldCheck,
-  Sparkles,
   Wrench,
 } from "lucide-react";
 
@@ -43,7 +42,7 @@ export const sidebarGroups: SidebarGroup[] = [
     id: "playground",
     labelKey: "groups.playground",
     items: [
-      { to: "/playground/chat", icon: MessageSquare, labelKey: "items.playgroundChat" },
+      { to: "/playground/agent", icon: MessageSquare, labelKey: "items.playgroundChat" },
       { to: "/playground/image", icon: ImageIcon, labelKey: "items.playgroundImage" },
       { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio" },
       {
@@ -52,7 +51,6 @@ export const sidebarGroups: SidebarGroup[] = [
         labelKey: "items.playgroundEmbeddings",
       },
       { to: "/playground/rerank", icon: ListOrdered, labelKey: "items.playgroundRerank" },
-      { to: "/playground/agent", icon: Sparkles, labelKey: "items.playgroundAgent" },
     ],
   },
   {
