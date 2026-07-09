@@ -386,7 +386,8 @@
       "summaryTurns_other": "{{count}} 轮",
       "summaryErrors_one": "{{count}} 个错误",
       "summaryErrors_other": "{{count}} 个错误",
-      "elapsedTitle": "累计 {{elapsed}}"
+      "elapsedTitle": "累计 {{elapsed}}",
+      "planTitle": "计划"
     },
     "verdict": {
       "title": "能力测试评分",

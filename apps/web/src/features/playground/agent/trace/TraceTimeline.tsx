@@ -2,6 +2,7 @@ import type { AgentStep, AgentVerdict } from "@modeldoctor/contracts";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { PendingInlineTool, PendingMcpApproval } from "../store";
+import { PlanStrip } from "./PlanStrip";
 import { ApprovalCard, formatElapsed, PendingToolCard, StepCard, VerdictCard } from "./StepCard";
 
 export interface TraceTimelineProps {
@@ -84,19 +85,29 @@ export function TraceTimeline({
     );
   }
 
+  // The first `plan` step (emitted on turn 0 when "Plan first" is on) is
+  // surfaced as a pinned checklist strip at the top instead of inline, so it
+  // stays visible as the execution trace scrolls. It's filtered from the inline
+  // list below to avoid duplication; original indices are kept so step numbers
+  // and per-step durations stay correct.
+  const planStep = steps.find((s) => s.kind === "plan");
+
   return (
     <div className="flex flex-col gap-2 overflow-y-auto px-6 py-4">
+      {planStep?.content ? <PlanStrip content={planStep.content} /> : null}
       {steps.length > 0 ? <RunSummary steps={steps} /> : null}
-      {steps.map((step, idx) => (
-        <StepCard
-          // biome-ignore lint/suspicious/noArrayIndexKey: append-only trace list
-          key={idx}
-          step={step}
-          index={idx + 1}
-          prevTMs={idx > 0 ? steps[idx - 1].tMs : 0}
-          mcpServerNames={mcpServerNames}
-        />
-      ))}
+      {steps.map((step, idx) =>
+        step === planStep ? null : (
+          <StepCard
+            // biome-ignore lint/suspicious/noArrayIndexKey: append-only trace list
+            key={idx}
+            step={step}
+            index={idx + 1}
+            prevTMs={idx > 0 ? steps[idx - 1].tMs : 0}
+            mcpServerNames={mcpServerNames}
+          />
+        ),
+      )}
       {pendingInlineTool ? (
         <PendingToolCard
           tool={pendingInlineTool}

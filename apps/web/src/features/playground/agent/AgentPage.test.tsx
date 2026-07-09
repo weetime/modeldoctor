@@ -140,16 +140,16 @@ describe("AgentPage", () => {
     await user.click(screen.getByRole("button", { name: /run|运行/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("step-plan")).toBeInTheDocument();
+      // The `plan` step is surfaced as the pinned plan strip, not an inline card.
+      expect(screen.getByTestId("agent-plan-strip")).toBeInTheDocument();
       expect(screen.getByTestId("step-tool_call")).toBeInTheDocument();
       expect(screen.getByTestId("step-tool_result")).toBeInTheDocument();
       expect(screen.getByTestId("step-assistant")).toBeInTheDocument();
     });
 
-    // Assert render order matches the scripted sequence.
+    // The inline cards (plan filtered out to the pinned strip) render in order.
     const cards = screen.getAllByTestId(/^step-/);
     expect(cards.map((c) => c.getAttribute("data-testid"))).toEqual([
-      "step-plan",
       "step-tool_call",
       "step-tool_result",
       "step-assistant",
