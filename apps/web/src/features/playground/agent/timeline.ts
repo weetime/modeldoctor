@@ -1,0 +1,66 @@
+import type { AgentSseEvent, AgentStep, AgentVerdict } from "@modeldoctor/contracts";
+
+/**
+ * A single renderable item in the unified playground timeline (Task 5).
+ * Produced from the raw `AgentSseEvent` stream by `reduceEvent` below.
+ *
+ * `assistant_text` bubbles are mutable while `closed:false` (still receiving
+ * `text_delta` chunks for the current turn); `assistant_end` closes the most
+ * recent open bubble. `tool_result_needed` / `tool_approval` / `done` do NOT
+ * produce a timeline item — the store holds those as separate pending /
+ * continuation fields (see `store.ts`).
+ */
+export type TimelineItem =
+  | { kind: "assistant_text"; content: string; closed: boolean }
+  | { kind: "tool_call" | "tool_result" | "plan" | "error"; step: AgentStep }
+  | { kind: "verdict"; verdict: AgentVerdict };
+
+/**
+ * Pure reducer: folds one `AgentSseEvent` onto the current timeline, always
+ * returning a NEW array (never mutates `items` or its entries) so it's safe
+ * to use directly as a zustand `set()` updater.
+ */
+export function reduceEvent(items: TimelineItem[], evt: AgentSseEvent): TimelineItem[] {
+  switch (evt.type) {
+    case "text_delta": {
+      const last = items[items.length - 1];
+      if (last?.kind === "assistant_text" && !last.closed) {
+        return [
+          ...items.slice(0, -1),
+          { kind: "assistant_text", content: last.content + evt.delta, closed: false },
+        ];
+      }
+      return [...items, { kind: "assistant_text", content: evt.delta, closed: false }];
+    }
+    case "assistant_end": {
+      const last = items[items.length - 1];
+      if (last?.kind === "assistant_text" && !last.closed) {
+        return [...items.slice(0, -1), { ...last, closed: true }];
+      }
+      return items;
+    }
+    case "step": {
+      const { step } = evt;
+      if (
+        step.kind === "plan" ||
+        step.kind === "tool_call" ||
+        step.kind === "tool_result" ||
+        step.kind === "error"
+      ) {
+        return [...items, { kind: step.kind, step }];
+      }
+      // `assistant` steps are the legacy full-turn shape (Task 8); the
+      // unified stream carries turn text via `text_delta`/`assistant_end`
+      // instead, so they're not added to the timeline.
+      return items;
+    }
+    case "verdict":
+      return [...items, { kind: "verdict", verdict: evt.verdict }];
+    case "tool_result_needed":
+    case "tool_approval":
+    case "done":
+      return items;
+    default:
+      return items;
+  }
+}

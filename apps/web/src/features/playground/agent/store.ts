@@ -1,5 +1,12 @@
-import type { AgentStep, AgentVerdict, ChatMessage, ToolDef } from "@modeldoctor/contracts";
+import type {
+  AgentSseEvent,
+  AgentStep,
+  AgentVerdict,
+  ChatMessage,
+  ToolDef,
+} from "@modeldoctor/contracts";
 import { create } from "zustand";
+import { reduceEvent, type TimelineItem } from "./timeline";
 
 /** A `tool_result_needed` SSE event, held until the user supplies a result. */
 export interface PendingInlineTool {
@@ -19,6 +26,17 @@ export interface PendingMcpApproval {
 export interface AgentStoreState {
   selectedConnectionId: string | null;
   task: string;
+  /**
+   * Unified playground (Task 5+) composer draft text. Kept as a plain string
+   * for now — multimodal attachments (images/files) are layered on in
+   * Task 6. Distinct from `task`, which the legacy agent-only flow still
+   * owns; both are kept until later tasks migrate rendering off `task`.
+   */
+  input: string;
+  /** Sampling params (temperature, topP, ...) for the unified run request. */
+  params: Record<string, unknown>;
+  /** Whether the unified composer's tool picker is expanded/active. */
+  toolsEnabled: boolean;
   systemPrompt: string;
   planFirst: boolean;
   maxSteps: number;
@@ -28,6 +46,12 @@ export interface AgentStoreState {
   selectedMcpServerIds: string[];
   autoRunMcp: boolean;
   steps: AgentStep[];
+  /**
+   * Unified playground timeline (Task 5+) — the renderable item list derived
+   * from the `AgentSseEvent` stream via `reduceEvent`. Additive alongside
+   * `steps`: later tasks (7/8) migrate rendering off `steps` onto this.
+   */
+  timeline: TimelineItem[];
   pendingInlineTool: PendingInlineTool | null;
   pendingApproval: PendingMcpApproval | null;
   /**
@@ -53,6 +77,10 @@ export interface AgentStoreState {
 
   setSelectedConnectionId: (id: string | null) => void;
   setTask: (task: string) => void;
+  setInput: (input: string) => void;
+  patchParams: (p: Record<string, unknown>) => void;
+  setToolsEnabled: (b: boolean) => void;
+  appendEvent: (evt: AgentSseEvent) => void;
   setSystemPrompt: (s: string) => void;
   setPlanFirst: (b: boolean) => void;
   setMaxSteps: (n: number) => void;
@@ -80,6 +108,9 @@ export interface AgentStoreState {
 const initial = {
   selectedConnectionId: null as string | null,
   task: "",
+  input: "",
+  params: {} as Record<string, unknown>,
+  toolsEnabled: false,
   systemPrompt: "",
   planFirst: false,
   maxSteps: 12,
@@ -88,6 +119,7 @@ const initial = {
   selectedMcpServerIds: [] as string[],
   autoRunMcp: false,
   steps: [] as AgentStep[],
+  timeline: [] as TimelineItem[],
   pendingInlineTool: null as PendingInlineTool | null,
   pendingApproval: null as PendingMcpApproval | null,
   continuationMessages: null as ChatMessage[] | null,
@@ -101,6 +133,10 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   ...initial,
   setSelectedConnectionId: (id) => set({ selectedConnectionId: id }),
   setTask: (task) => set({ task }),
+  setInput: (input) => set({ input }),
+  patchParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
+  setToolsEnabled: (b) => set({ toolsEnabled: b }),
+  appendEvent: (evt) => set((s) => ({ timeline: reduceEvent(s.timeline, evt) })),
   setSystemPrompt: (s) => set({ systemPrompt: s }),
   setPlanFirst: (b) => set({ planFirst: b }),
   setMaxSteps: (n) => set({ maxSteps: n }),
@@ -132,6 +168,7 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   clearSteps: () =>
     set({
       steps: [],
+      timeline: [],
       pendingInlineTool: null,
       pendingApproval: null,
       continuationMessages: null,
