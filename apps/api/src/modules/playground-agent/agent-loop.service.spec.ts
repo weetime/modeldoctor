@@ -523,6 +523,59 @@ describe("AgentLoopService", () => {
     expect(toolMsg?.content).toBe("search result text");
   });
 
+  it("M: a large MCP result is truncated in the model-facing message but the emitted step keeps the full content", async () => {
+    const huge = "x".repeat(20000); // > MAX_TOOL_RESULT_CHARS (8000)
+    const mcpClient = fakeMcpClient();
+    const mcpServerService = fakeMcpServerService();
+    (mcpServerService.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValue(
+      fakeMcpServer(),
+    );
+    (mcpClient.discoverTools as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { name: "list", description: "List", inputSchema: { type: "object", properties: {} } },
+    ]);
+    (mcpClient.callTool as ReturnType<typeof vi.fn>).mockResolvedValue(huge);
+
+    const svc = new AgentLoopService(mcpClient, mcpServerService);
+    svc.callModel = vi
+      .fn()
+      .mockResolvedValueOnce({
+        content: "",
+        usage: undefined,
+        tool_calls: [
+          {
+            id: "call_mcp",
+            type: "function",
+            function: { name: "mcp__mcp_1__list", arguments: "{}" },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ content: "done.", usage: undefined, tool_calls: undefined });
+
+    const events: AgentSseEvent[] = [];
+    await svc.run(
+      fakeConnection(),
+      baseReq({ mcpServerIds: ["mcp_1"], autoRunMcp: true }),
+      (e) => events.push(e),
+      undefined,
+      undefined,
+      "user_1",
+    );
+
+    // The UI step keeps the FULL result for inspection.
+    const resultStep = events.find(
+      (e): e is Extract<AgentSseEvent, { type: "step" }> =>
+        e.type === "step" && e.step.kind === "tool_result",
+    );
+    expect(resultStep?.step.content).toBe(huge);
+
+    // The model-facing tool message is truncated to the cap + a marker.
+    const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
+    const toolContent = secondCallMessages.find((m) => m.role === "tool")?.content as string;
+    expect(toolContent.length).toBeLessThan(huge.length);
+    expect(toolContent.startsWith("x".repeat(8000))).toBe(true);
+    expect(toolContent).toContain("[truncated:");
+  });
+
   it("H: autoRunMcp=false (default) emits tool_approval + done without ever calling callTool", async () => {
     const mcpClient = fakeMcpClient();
     const mcpServerService = fakeMcpServerService();

@@ -24,6 +24,14 @@ const DEFAULT_PATH = "/v1/chat/completions";
 const DEFAULT_MAX_STEPS = 12;
 /** MCP tool names are namespaced `mcp__<serverId>__<tool>` (Task 11). */
 const MCP_TOOL_PREFIX = "mcp__";
+/**
+ * Max characters of a tool result fed BACK to the model. A large result (e.g. a
+ * 342 KB MCP `list_*` dump) otherwise blows the model's context window and the
+ * next turn fails with an upstream 400. The full result is still streamed to
+ * the UI (the `tool_result` step) for inspection — only the copy the model sees
+ * is capped, with a marker telling it the result was truncated.
+ */
+const MAX_TOOL_RESULT_CHARS = 8000;
 
 export type EmitFn = (event: AgentSseEvent) => void;
 /** Polled between turns/tool-calls so a closed SSE connection stops the loop promptly. */
@@ -334,7 +342,11 @@ export class AgentLoopService {
                 tMs: ctx.tMs(),
               },
             });
-            messages.push({ role: "tool", tool_call_id: call.id, content: result });
+            messages.push({
+              role: "tool",
+              tool_call_id: call.id,
+              content: this.truncateToolResult(result),
+            });
           } catch (e) {
             const msg = this.errMsg(e);
             emit({
@@ -374,7 +386,11 @@ export class AgentLoopService {
               tMs: ctx.tMs(),
             },
           });
-          messages.push({ role: "tool", tool_call_id: call.id, content: result });
+          messages.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: this.truncateToolResult(result),
+          });
         } catch (e) {
           const msg = this.errMsg(e);
           emit({
@@ -533,5 +549,16 @@ export class AgentLoopService {
 
   private errMsg(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
+  }
+
+  /**
+   * Cap a tool result before it's fed back to the model, so a large result
+   * doesn't overflow the context window. The UI still gets the full result via
+   * the `tool_result` step — only this model-facing copy is truncated.
+   */
+  private truncateToolResult(result: string): string {
+    if (result.length <= MAX_TOOL_RESULT_CHARS) return result;
+    const omitted = result.length - MAX_TOOL_RESULT_CHARS;
+    return `${result.slice(0, MAX_TOOL_RESULT_CHARS)}\n\n[truncated: showing first ${MAX_TOOL_RESULT_CHARS} of ${result.length} chars; ${omitted} omitted to fit the model context. Narrow the query or ask for fewer items.]`;
   }
 }
