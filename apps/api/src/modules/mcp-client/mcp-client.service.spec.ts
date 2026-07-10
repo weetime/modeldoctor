@@ -103,6 +103,15 @@ describe("McpClientService", () => {
       expect(fakeClient.close).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+      ["non-array", "oops"],
+    ])("returns [] when a misbehaving server returns %s tools (no TypeError)", async (_label, tools) => {
+      fakeClient.listTools.mockResolvedValue({ tools });
+      await expect(service.discoverTools(makeServer())).resolves.toEqual([]);
+    });
+
     it("connects before listing tools", async () => {
       fakeClient.listTools.mockResolvedValue({ tools: [] });
 

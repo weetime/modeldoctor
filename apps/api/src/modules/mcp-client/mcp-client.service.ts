@@ -85,7 +85,9 @@ export class McpClientService {
     try {
       await client.connect(transport);
       const { tools } = await client.listTools();
-      return tools.map((tool) => this.normalizeTool(tool));
+      // A misbehaving MCP server may return a response whose `tools` is
+      // missing / null / not an array — guard so `.map` can't throw.
+      return (Array.isArray(tools) ? tools : []).map((tool) => this.normalizeTool(tool));
     } finally {
       await this.closeQuietly(client);
     }

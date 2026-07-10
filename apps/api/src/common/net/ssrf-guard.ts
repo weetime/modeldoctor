@@ -77,6 +77,18 @@ export function extractIpv4MappedAddress(host: string): [number, number, number,
   return null;
 }
 
+/**
+ * `hostname` MUST be a WHATWG-URL-parsed host (i.e. `new URL(userUrl).hostname`
+ * — how BOTH callers derive it: `http_get`'s `parsed.hostname` and the MCP
+ * client's `assertServerUrlAllowed`). That parser CANONICALIZES every
+ * alternative IPv4 notation an attacker could use to smuggle a loopback/private
+ * address past the dotted-decimal regex below — decimal (`2130706433`), hex
+ * (`0x7f000001`, `0x7f.0.0.1`), octal (`0177.0.0.1`), and short forms (`127.1`)
+ * all normalize to `127.0.0.1` before they reach here (covered in the spec).
+ * The same parser backs `fetch` / the MCP transport, so what we check is
+ * exactly what gets dialed — no parse-vs-dial discrepancy. Passing a RAW,
+ * unparsed host string would defeat this; don't.
+ */
 export function isBlockedHost(hostname: string, options: SsrfGuardOptions = {}): boolean {
   const allowPrivateNetwork = options.allowPrivateNetwork ?? false;
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");

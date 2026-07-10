@@ -89,11 +89,11 @@ export function SkillSheet({ open, onOpenChange, mode }: SkillSheetProps) {
     defaultValues: empty,
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: form reference is stable; we intentionally re-reset on mode/existing change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form/empty/existingToFormValues are stable; key on `existing?.id` (not the whole object) so a background refetch returning an identical-data NEW reference doesn't re-reset and wipe in-progress edits.
   useEffect(() => {
     if (!open) return;
     form.reset(existing ? existingToFormValues(existing) : empty);
-  }, [open, existing]);
+  }, [open, existing?.id]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
