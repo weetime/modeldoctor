@@ -51,6 +51,22 @@ describe("buildTau3Command", () => {
     expect(s).not.toContain("sk-agent");
     expect(s).not.toContain("sk-user");
   });
+  it("appends /v1 to a host-root baseUrl (litellm openai/ appends /chat/completions → needs /v1)", () => {
+    // Connection baseUrls follow the app convention of being the host root
+    // (no /v1). Without the prefix, litellm hits {host}/chat/completions → 404
+    // and every episode is an infra error. Idempotent: an already-/v1 base is
+    // left as-is (asserted by the fixtures above).
+    const rootPlan = {
+      ...plan,
+      connection: { ...plan.connection, baseUrl: "http://10.100.121.67:30888" },
+      userSimulator: { ...plan.userSimulator, baseUrl: "http://judge.svc:8080/" },
+    };
+    const s = buildTau3Command(rootPlan as any).argv[2];
+    expect(s).toContain('"api_base":"http://10.100.121.67:30888/v1"');
+    // trailing slash trimmed, then /v1 appended (no `//v1`).
+    expect(s).toContain('"api_base":"http://judge.svc:8080/v1"');
+    expect(s).not.toContain("//v1");
+  });
   it("passes keys via secretEnv, never argv", () => {
     expect(r.secretEnv.MD_AGENT_KEY).toBe("sk-agent");
     expect(r.secretEnv.MD_USER_KEY).toBe("sk-user");

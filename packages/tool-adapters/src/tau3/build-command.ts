@@ -6,11 +6,27 @@ import { type Tau3Domain, type Tau3Params, tau3ParamsSchema } from "./schema.js"
 const FULL_TASK_COUNT: Record<Tau3Domain, number> = { airline: 50, retail: 114, telecom: 114 };
 const SECONDS_PER_EPISODE = 90; // generous per multi-turn episode upper bound
 
+/**
+ * litellm's `openai/` provider POSTs to `{api_base}/chat/completions`, so the
+ * `api_base` it's handed MUST include the OpenAI `/v1` path prefix. Connection
+ * baseUrls follow the app-wide convention of being the host ROOT (no `/v1` —
+ * every other consumer appends the full `/v1/chat/completions` itself via
+ * `buildUrl`/`DEFAULT_PATH`, see `integrations/openai-client/url.ts`). Without
+ * this, litellm hits `{host}/chat/completions` → 404 and every τ³-bench
+ * episode is counted as an infra error (Total Tasks 0). Idempotent: a baseUrl
+ * that already ends in `/v1` is left untouched, and trailing slashes are
+ * trimmed first so we never emit `//v1`.
+ */
+function toOpenAiV1Base(baseUrl: string): string {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  return /\/v1$/.test(trimmed) ? trimmed : `${trimmed}/v1`;
+}
+
 function llmArgs(apiBase: string, keyEnvName: string): string {
   // JSON dict passed to tau2 --*-llm-args (json.loads). api_key is a named-
   // secret sentinel; runner swaps in os.environ[keyEnvName] before spawn.
   return JSON.stringify({
-    api_base: apiBase,
+    api_base: toOpenAiV1Base(apiBase),
     api_key: `__MD_SECRET_${keyEnvName}__`,
     temperature: 0.0,
   });
