@@ -97,6 +97,17 @@ describe("readStreamingChatCompletion — reasoning (chain-of-thought)", () => {
     expect(result).toEqual({ content: "Blue.", reasoning: "Let me think.", tool_calls: [] });
   });
 
+  it("captures the terminal usage chunk (empty choices) into the return value", async () => {
+    const res = fakeStreamResponse([
+      'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n',
+      'data: {"choices":[],"usage":{"prompt_tokens":9,"completion_tokens":2,"total_tokens":11}}\n\n',
+      "data: [DONE]\n\n",
+    ]);
+    const result = await readStreamingChatCompletion(res, () => {});
+    expect(result.content).toBe("hi");
+    expect(result.usage).toEqual({ prompt_tokens: 9, completion_tokens: 2, total_tokens: 11 });
+  });
+
   it("also reads the vLLM `reasoning_content` field name", async () => {
     const res = fakeStreamResponse([
       'data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}\n\n',

@@ -373,6 +373,7 @@
       "empty": "Start a conversation, or turn on Tools to run a multi-turn agent.",
       "reasoning": "Reasoning",
       "reasoningActive": "Thinking…",
+      "tokens": "↑{{prompt}} ↓{{completion}} tokens",
       "resultSize": "{{kb}} KB",
       "summaryTools_one": "{{count}} tool call",
       "summaryTools_other": "{{count}} tool calls",
@@ -381,7 +382,11 @@
       "summaryErrors_one": "{{count}} error",
       "summaryErrors_other": "{{count}} errors",
       "elapsedTitle": "total {{elapsed}} elapsed",
-      "planTitle": "Plan"
+      "planTitle": "Plan",
+      "scrollToBottom": "Scroll to bottom",
+      "editMessage": "Edit",
+      "resend": "Resend",
+      "cancelEdit": "Cancel"
     },
     "verdict": {
       "title": "Capability verdict",

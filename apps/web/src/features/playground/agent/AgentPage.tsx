@@ -726,6 +726,36 @@ export function AgentPage() {
     !slice.pendingApproval &&
     slice.conversation.some((m) => m.role === "assistant");
 
+  // Edit the Nth user turn and resend: truncate the transcript + timeline to
+  // BEFORE that turn, then fire a fresh send with the edited text — which
+  // re-appends the (edited) user turn and drops everything that came after.
+  const onEditUserMessage = (userOrdinal: number, newText: string) => {
+    const s = useAgentStore.getState();
+    if (s.running || s.pendingInlineTool || s.pendingApproval) return;
+    if (newText.trim().length === 0) return;
+    // Cut the transcript before the ordinal-th user message.
+    const userMsgIdxs = s.conversation
+      .map((m, i) => (m.role === "user" ? i : -1))
+      .filter((i) => i >= 0);
+    if (userOrdinal >= userMsgIdxs.length) return;
+    s.setConversation(s.conversation.slice(0, userMsgIdxs[userOrdinal]));
+    // Cut the timeline before the ordinal-th user bubble.
+    let seen = -1;
+    let cutIdx = -1;
+    for (let i = 0; i < s.timeline.length; i += 1) {
+      if (s.timeline[i].kind === "user_message") {
+        seen += 1;
+        if (seen === userOrdinal) {
+          cutIdx = i;
+          break;
+        }
+      }
+    }
+    if (cutIdx >= 0) s.setTimeline(s.timeline.slice(0, cutIdx));
+    void startRun(t, { text: newText, attachments: [] });
+  };
+  const canEdit = !slice.running && !slice.pendingInlineTool && !slice.pendingApproval;
+
   // Full-transcript continuation (Task 11 fix pass): resend the exact
   // `continuationMessages` transcript the server handed back on `done` (see
   // `AgentSseEvent`'s `done.messages` doc), plus one more `role: "tool"`
@@ -875,7 +905,7 @@ export function AgentPage() {
       paramsSlot={<AgentConfigPanel />}
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1">
           <Timeline
             timeline={slice.timeline}
             pendingInlineTool={slice.pendingInlineTool}
@@ -885,6 +915,7 @@ export function AgentPage() {
             onApproveMcp={onApproveMcp}
             onRejectMcp={onRejectMcp}
             mcpServerNames={mcpServerNames}
+            onEditUserMessage={canEdit ? onEditUserMessage : undefined}
           />
         </div>
         {slice.error ? (

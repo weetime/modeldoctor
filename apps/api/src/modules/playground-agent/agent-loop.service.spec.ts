@@ -122,7 +122,7 @@ describe("AgentLoopService", () => {
     // mock `callModel` never invokes `onTextDelta`) and closes with
     // `assistant_end`.
     expect(kinds).toEqual(["tool_call", "tool_result"]);
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
     expect(events.at(-1)).toEqual({ type: "done" });
 
     // The tool result was fed back to the model as a `role: "tool"` message
@@ -179,7 +179,7 @@ describe("AgentLoopService", () => {
     // `assistant` step. The plan turn's own `plan` step is unaffected — plan
     // text is never streamed via `text_delta` (see Step 1 assertion above).
     expect(kinds).toEqual(["plan", "tool_call", "tool_result"]);
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
     expect(svc.callModel).toHaveBeenCalledTimes(3);
   });
 
@@ -570,7 +570,7 @@ describe("AgentLoopService", () => {
       .filter((e): e is Extract<AgentSseEvent, { type: "step" }> => e.type === "step")
       .map((e) => e.step.kind);
     expect(kinds).toEqual(["tool_call", "tool_result"]);
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
     expect(events.at(-1)).toEqual({ type: "done" });
 
     const secondCallMessages = lastMessages(svc.callModel as unknown as ReturnType<typeof vi.fn>);
@@ -730,7 +730,7 @@ describe("AgentLoopService", () => {
 
     // The final turn has non-empty content, so it closes with `assistant_end`
     // (no whole-turn `assistant` step any more — Task 3).
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
     expect(events.at(-1)).toEqual({ type: "done" });
   });
 
@@ -870,7 +870,7 @@ describe("AgentLoopService", () => {
         content: "search result text",
       },
     });
-    expect(secondEvents).toContainEqual({ type: "assistant_end" });
+    expect(secondEvents).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
 
     // Normal completion (no further pause) — `done` carries no `messages`.
     expect(secondEvents.at(-1)).toEqual({ type: "done" });
@@ -973,7 +973,7 @@ describe("AgentLoopService", () => {
     });
 
     expect(events).toEqual([
-      { type: "assistant_end" },
+      expect.objectContaining({ type: "assistant_end" }),
       { type: "verdict", verdict: SAMPLE_VERDICT },
       { type: "done" },
     ]);
@@ -1130,7 +1130,7 @@ describe("AgentLoopService", () => {
     expect(events).toEqual([
       { type: "text_delta", delta: "Hel" },
       { type: "text_delta", delta: "lo" },
-      { type: "assistant_end" },
+      expect.objectContaining({ type: "assistant_end" }),
       { type: "done" },
     ]);
     expect(events.some((e) => e.type === "step" && e.step.kind === "assistant")).toBe(false);
@@ -1161,7 +1161,7 @@ describe("AgentLoopService", () => {
     // (undefined) onTextDelta for it, and the loop doesn't stream it either
     // way. Turn 1's completion still ends in assistant_end.
     expect(events.some((e) => e.type === "text_delta")).toBe(false);
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
   });
 
   it("P2: a whitespace-only assistant turn still streams text_delta and closes with assistant_end (no orphan bubble)", async () => {
@@ -1179,7 +1179,7 @@ describe("AgentLoopService", () => {
     // opened a bubble for this turn. `assistant_end` MUST still be emitted
     // to close it, even though `parsed.content.trim()` is empty.
     expect(events).toContainEqual({ type: "text_delta", delta: "  " });
-    expect(events).toContainEqual({ type: "assistant_end" });
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_end" }));
     expect(events.at(-1)).toEqual({ type: "done" });
   });
 
@@ -1237,7 +1237,7 @@ describe("AgentLoopService", () => {
     expect(events).toEqual([
       { type: "text_delta", delta: "Hel" },
       { type: "text_delta", delta: "lo" },
-      { type: "assistant_end" },
+      expect.objectContaining({ type: "assistant_end" }),
       { type: "done" },
     ]);
     expect(svc.callModel).toHaveBeenCalledTimes(1);

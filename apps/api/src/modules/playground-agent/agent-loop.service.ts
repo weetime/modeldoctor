@@ -122,10 +122,9 @@ export class AgentLoopService {
    * via `readStreamingChatCompletion`, forwarding each text fragment to
    * `onTextDelta` as it arrives while still returning the fully assembled
    * `{content, tool_calls}` once the stream ends — the loop still needs the
-   * complete `tool_calls` array before it can dispatch a turn. `usage` isn't
-   * available from a streamed response, so it's always `undefined` here
-   * (kept in the return shape only for `ParsedPlaygroundChatResponse`
-   * compatibility).
+   * complete `tool_calls` array before it can dispatch a turn. `usage` is read
+   * off the terminal streaming chunk (OpenAI emits a final `usage` block with
+   * empty `choices`), so it's populated when the upstream provides it.
    */
   callModel: ModelCaller = async (conn, body, signal, onTextDelta, onReasoningDelta) => {
     const url = buildUrl({
@@ -139,12 +138,12 @@ export class AgentLoopService {
       const text = await res.text().catch(() => "");
       throw new Error(`upstream ${res.status}: ${text || res.statusText}`);
     }
-    const { content, tool_calls } = await readStreamingChatCompletion(
+    const { content, usage, tool_calls } = await readStreamingChatCompletion(
       res,
       onTextDelta ?? (() => {}),
       onReasoningDelta ?? (() => {}),
     );
-    return { content, usage: undefined, tool_calls };
+    return { content, usage, tool_calls };
   };
 
   async run(
@@ -282,7 +281,17 @@ export class AgentLoopService {
       // `assistant_text` timeline item) — this must mirror the same
       // non-empty condition `text_delta` uses.
       if (parsed.content && parsed.content.length > 0) {
-        emit({ type: "assistant_end" });
+        emit({
+          type: "assistant_end",
+          usage: parsed.usage
+            ? {
+                promptTokens: parsed.usage.prompt_tokens,
+                completionTokens: parsed.usage.completion_tokens,
+                totalTokens: parsed.usage.total_tokens,
+              }
+            : undefined,
+          tMs: tMs(),
+        });
       }
 
       const toolCalls = parsed.tool_calls ?? [];

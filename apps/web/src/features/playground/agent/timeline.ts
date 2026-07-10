@@ -15,9 +15,24 @@ import type { AgentSseEvent, AgentStep, AgentVerdict } from "@modeldoctor/contra
  * do NOT produce a timeline item — the store holds those as separate pending /
  * continuation fields (see `store.ts`).
  */
+/** Per-turn token usage, attached to an assistant bubble on `assistant_end`. */
+export interface TurnUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
 export type TimelineItem =
   | { kind: "user_message"; content: string }
-  | { kind: "assistant_text"; content: string; reasoning?: string; closed: boolean }
+  | {
+      kind: "assistant_text";
+      content: string;
+      reasoning?: string;
+      closed: boolean;
+      /** This turn's token usage + elapsed ms, set when the turn closes. */
+      usage?: TurnUsage;
+      tMs?: number;
+    }
   | { kind: "tool_call" | "tool_result" | "plan" | "error"; step: AgentStep }
   | { kind: "verdict"; verdict: AgentVerdict };
 
@@ -53,7 +68,7 @@ export function reduceEvent(items: TimelineItem[], evt: AgentSseEvent): Timeline
     case "assistant_end": {
       const last = items[items.length - 1];
       if (last?.kind === "assistant_text" && !last.closed) {
-        return [...items.slice(0, -1), { ...last, closed: true }];
+        return [...items.slice(0, -1), { ...last, closed: true, usage: evt.usage, tMs: evt.tMs }];
       }
       return items;
     }

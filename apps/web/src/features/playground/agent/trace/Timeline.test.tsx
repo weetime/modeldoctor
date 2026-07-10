@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TimelineItem } from "../timeline";
 import { Timeline } from "./Timeline";
@@ -78,6 +78,24 @@ describe("Timeline assistant bubbles", () => {
     ]);
     expect(screen.getByTestId("user-bubble")).toHaveTextContent("why is the sky blue?");
     expect(screen.getByTestId("assistant-bubble")).toHaveTextContent("Rayleigh scattering.");
+  });
+
+  it("renders a per-turn token/latency footer when usage + tMs are present, none without", () => {
+    renderTimeline([
+      {
+        kind: "assistant_text",
+        content: "done",
+        closed: true,
+        usage: { promptTokens: 9, completionTokens: 30, totalTokens: 39 },
+        tMs: 2300,
+      },
+    ]);
+    // Footer present; elapsed (a non-i18n util) is rendered.
+    expect(screen.getByTestId("turn-meta")).toHaveTextContent("2.3s");
+
+    cleanup();
+    renderTimeline([{ kind: "assistant_text", content: "no meta", closed: true }]);
+    expect(screen.queryByTestId("turn-meta")).not.toBeInTheDocument();
   });
 
   it("does not render a reasoning block when there is no reasoning", () => {

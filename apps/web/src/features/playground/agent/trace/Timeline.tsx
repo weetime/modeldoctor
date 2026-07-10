@@ -1,8 +1,10 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowDown, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { PendingInlineTool, PendingMcpApproval } from "../store";
-import type { TimelineItem } from "../timeline";
+import type { TimelineItem, TurnUsage } from "../timeline";
 import { PlanStrip } from "./PlanStrip";
 import { ApprovalCard, formatElapsed, PendingToolCard, StepCard, VerdictCard } from "./StepCard";
 import { TraceMarkdown } from "./TraceMarkdown";
@@ -17,6 +19,13 @@ export interface TimelineProps {
   onRejectMcp: () => void;
   /** Map of MCP server id → display name, for server badges on MCP tool steps. */
   mcpServerNames?: Record<string, string>;
+  /**
+   * Edit + resend the Nth user turn (0-indexed by user-message order). Called
+   * from the inline editor on a user bubble; the parent truncates everything
+   * after that turn and re-sends the edited text. Absent → bubbles aren't
+   * editable (e.g. while a run is in flight).
+   */
+  onEditUserMessage?: (userOrdinal: number, text: string) => void;
 }
 
 /** The subset of `TimelineItem` that wraps a full `AgentStep` (the trace-card kinds). */
@@ -121,11 +130,28 @@ function AssistantBubble({
   content,
   reasoning,
   thinking,
+  usage,
+  tMs,
 }: {
   content: string;
   reasoning?: string;
   thinking: boolean;
+  usage?: TurnUsage;
+  tMs?: number;
 }) {
+  const { t } = useTranslation("playground");
+  // Per-turn metadata footer: tokens (↑ prompt · ↓ completion) + latency.
+  const metaParts: string[] = [];
+  if (usage?.promptTokens != null || usage?.completionTokens != null) {
+    metaParts.push(
+      t("agent.trace.tokens", {
+        prompt: usage?.promptTokens ?? 0,
+        completion: usage?.completionTokens ?? 0,
+      }),
+    );
+  }
+  if (tMs != null) metaParts.push(formatElapsed(tMs));
+
   return (
     <div
       data-testid="assistant-bubble"
@@ -133,6 +159,14 @@ function AssistantBubble({
     >
       {reasoning ? <ReasoningBlock reasoning={reasoning} thinking={thinking} /> : null}
       {content ? <TraceMarkdown>{content}</TraceMarkdown> : null}
+      {metaParts.length > 0 ? (
+        <div
+          data-testid="turn-meta"
+          className="mt-1.5 border-t border-border/50 pt-1 text-[11px] text-muted-foreground"
+        >
+          {metaParts.join(" · ")}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -156,15 +190,42 @@ export function Timeline({
   onApproveMcp,
   onRejectMcp,
   mcpServerNames,
+  onEditUserMessage,
 }: TimelineProps) {
   const { t } = useTranslation("playground");
 
-  // Keep the newest bubble/card in view as the timeline streams in.
+  // Inline user-message edit state: which user turn (ordinal) is being edited
+  // and its working draft.
+  const [editing, setEditing] = useState<{ ordinal: number; draft: string } | null>(null);
+
+  // Auto-follow the newest content as it streams — but ONLY while the user is
+  // already near the bottom. If they scroll up to read earlier turns, don't
+  // yank them back down; a jump-to-bottom button appears instead.
+  const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on any timeline growth or a pending card appearing
+  const [atBottom, setAtBottom] = useState(true);
+  // Ref mirror so the auto-follow effect reads the latest value without
+  // re-subscribing on every scroll.
+  const atBottomRef = useRef(true);
+  const NEAR_BOTTOM_PX = 80;
+  const updateAtBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+    atBottomRef.current = near;
+    setAtBottom(near);
+  };
+  // Depends on the whole `timeline` array (a new ref on every streamed delta,
+  // since `reduceEvent` is immutable) so streaming text follows smoothly.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: follow on any timeline/pending change; atBottom is read via ref
   useEffect(() => {
+    if (atBottomRef.current) endRef.current?.scrollIntoView({ block: "end" });
+  }, [timeline, pendingInlineTool, pendingApproval]);
+  const scrollToBottom = () => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [timeline.length, pendingInlineTool, pendingApproval]);
+    atBottomRef.current = true;
+    setAtBottom(true);
+  };
 
   if (timeline.length === 0 && !pendingInlineTool && !pendingApproval) {
     return (
@@ -192,65 +253,143 @@ export function Timeline({
   // plain chat (see the module doc comment above).
   const hasTrace = stepItems.length > 0;
 
+  // Map each user_message timeline index → its 0-based ordinal among user
+  // turns, so the inline editor can tell the parent which turn to resend.
+  const userOrdinalByIndex = new Map<number, number>();
+  {
+    let n = 0;
+    timeline.forEach((it, i) => {
+      if (it.kind === "user_message") {
+        userOrdinalByIndex.set(i, n);
+        n += 1;
+      }
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-2 overflow-y-auto px-6 py-4">
-      {planItem?.step.content ? <PlanStrip content={planItem.step.content} /> : null}
-      {hasTrace ? <RunSummary stepItems={stepItems} assistantTurns={assistantTurns} /> : null}
-      {timeline.map((item, idx) => {
-        if (item === planItem) return null;
-        if (item.kind === "user_message") {
+    <div className="relative h-full">
+      <div
+        ref={scrollRef}
+        onScroll={updateAtBottom}
+        className="flex h-full flex-col gap-2 overflow-y-auto px-6 py-4"
+      >
+        {planItem?.step.content ? <PlanStrip content={planItem.step.content} /> : null}
+        {hasTrace ? <RunSummary stepItems={stepItems} assistantTurns={assistantTurns} /> : null}
+        {timeline.map((item, idx) => {
+          if (item === planItem) return null;
+          if (item.kind === "user_message") {
+            const ordinal = userOrdinalByIndex.get(idx) ?? 0;
+            const bubbleContent = item.content;
+            if (editing?.ordinal === ordinal) {
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+                <div key={idx} className="ml-auto w-full max-w-[85%] space-y-1.5">
+                  <Textarea
+                    data-testid="user-edit-textarea"
+                    value={editing.draft}
+                    onChange={(e) => setEditing({ ordinal, draft: e.target.value })}
+                    rows={3}
+                    className="text-sm"
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                      {t("agent.trace.cancelEdit")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={editing.draft.trim().length === 0}
+                      onClick={() => {
+                        onEditUserMessage?.(ordinal, editing.draft);
+                        setEditing(null);
+                      }}
+                    >
+                      {t("agent.trace.resend")}
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+              <div key={idx} className="group ml-auto flex max-w-[85%] items-start gap-1.5">
+                {onEditUserMessage ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing({ ordinal, draft: bubbleContent })}
+                    aria-label={t("agent.trace.editMessage")}
+                    className="mt-1 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                  </button>
+                ) : null}
+                <div
+                  data-testid="user-bubble"
+                  className="whitespace-pre-wrap break-words rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+                >
+                  {bubbleContent}
+                </div>
+              </div>
+            );
+          }
+          if (item.kind === "assistant_text") {
+            return (
+              <AssistantBubble
+                // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+                key={idx}
+                content={item.content}
+                reasoning={item.reasoning}
+                usage={item.usage}
+                tMs={item.tMs}
+                // Still thinking = reasoning has streamed but no answer text yet
+                // and the turn isn't closed.
+                thinking={Boolean(item.reasoning) && item.content.length === 0 && !item.closed}
+              />
+            );
+          }
+          if (item.kind === "verdict") {
+            // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+            return <VerdictCard key={idx} verdict={item.verdict} />;
+          }
+          const stepIdx = stepItems.indexOf(item);
+          const prevTMs = stepIdx > 0 ? stepItems[stepIdx - 1].step.tMs : 0;
           return (
-            <div
+            <StepCard
               // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
               key={idx}
-              data-testid="user-bubble"
-              className="ml-auto max-w-[85%] whitespace-pre-wrap break-words rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
-            >
-              {item.content}
-            </div>
-          );
-        }
-        if (item.kind === "assistant_text") {
-          return (
-            <AssistantBubble
-              // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
-              key={idx}
-              content={item.content}
-              reasoning={item.reasoning}
-              // Still thinking = reasoning has streamed but no answer text yet
-              // and the turn isn't closed.
-              thinking={Boolean(item.reasoning) && item.content.length === 0 && !item.closed}
+              step={item.step}
+              index={stepIdx + 1}
+              prevTMs={prevTMs}
+              mcpServerNames={mcpServerNames}
             />
           );
-        }
-        if (item.kind === "verdict") {
-          // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
-          return <VerdictCard key={idx} verdict={item.verdict} />;
-        }
-        const stepIdx = stepItems.indexOf(item);
-        const prevTMs = stepIdx > 0 ? stepItems[stepIdx - 1].step.tMs : 0;
-        return (
-          <StepCard
-            // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
-            key={idx}
-            step={item.step}
-            index={stepIdx + 1}
-            prevTMs={prevTMs}
-            mcpServerNames={mcpServerNames}
+        })}
+        {pendingInlineTool ? (
+          <PendingToolCard
+            tool={pendingInlineTool}
+            onSubmit={onSubmitToolResult}
+            submitting={submittingToolResult}
           />
-        );
-      })}
-      {pendingInlineTool ? (
-        <PendingToolCard
-          tool={pendingInlineTool}
-          onSubmit={onSubmitToolResult}
-          submitting={submittingToolResult}
-        />
+        ) : null}
+        {pendingApproval ? (
+          <ApprovalCard
+            approval={pendingApproval}
+            onApprove={onApproveMcp}
+            onReject={onRejectMcp}
+          />
+        ) : null}
+        <div ref={endRef} />
+      </div>
+      {!atBottom ? (
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          aria-label={t("agent.trace.scrollToBottom")}
+          className="absolute bottom-3 right-4 flex size-8 items-center justify-center rounded-full border border-border bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"
+        >
+          <ArrowDown className="size-4" aria-hidden="true" />
+        </button>
       ) : null}
-      {pendingApproval ? (
-        <ApprovalCard approval={pendingApproval} onApprove={onApproveMcp} onReject={onRejectMcp} />
-      ) : null}
-      <div ref={endRef} />
     </div>
   );
 }

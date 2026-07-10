@@ -60,8 +60,17 @@ export function accumulateToolCallDelta(acc: StreamingToolCall[], delta: ToolCal
     existing.function.arguments += delta.function.arguments;
 }
 
+/** OpenAI usage block, emitted on the final streaming chunk (choices empty). */
+export interface StreamUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+}
+
 /** Minimal shape read out of each SSE record's parsed JSON payload. */
 interface StreamChunk {
+  /** Present only on the terminal chunk (which has an empty `choices` array). */
+  usage?: StreamUsage;
   choices?: Array<{
     delta?: {
       content?: string;
@@ -100,13 +109,19 @@ export async function readStreamingChatCompletion(
   upstream: Response,
   onTextDelta: (s: string) => void,
   onReasoningDelta: (s: string) => void = () => {},
-): Promise<{ content: string; reasoning: string; tool_calls: ToolCall[] }> {
+): Promise<{
+  content: string;
+  reasoning: string;
+  usage: StreamUsage | undefined;
+  tool_calls: ToolCall[];
+}> {
   if (!upstream.body) throw new Error("streaming response has no body");
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
   const toolCalls: StreamingToolCall[] = [];
   let content = "";
   let reasoning = "";
+  let usage: StreamUsage | undefined;
   let buf = "";
 
   const handleRecord = (record: string): boolean => {
@@ -120,6 +135,9 @@ export async function readStreamingChatCompletion(
       } catch {
         continue;
       }
+      // The terminal usage chunk has `usage` set and an EMPTY `choices` array,
+      // so capture it before the `delta` guard below skips choice-less records.
+      if (parsed.usage) usage = parsed.usage;
       const delta = parsed?.choices?.[0]?.delta;
       if (!delta) continue;
       const reasoningChunk =
@@ -150,14 +168,14 @@ export async function readStreamingChatCompletion(
       const record = buf.slice(0, idx);
       buf = buf.slice(idx + 2);
       if (handleRecord(record))
-        return { content, reasoning, tool_calls: finalizeToolCalls(toolCalls) };
+        return { content, reasoning, usage, tool_calls: finalizeToolCalls(toolCalls) };
       idx = buf.indexOf("\n\n");
     }
   }
   // Flush any trailing record that wasn't terminated by a final \n\n.
   if (buf.trim().length > 0) handleRecord(buf);
 
-  return { content, reasoning, tool_calls: finalizeToolCalls(toolCalls) };
+  return { content, reasoning, usage, tool_calls: finalizeToolCalls(toolCalls) };
 }
 
 /**

@@ -178,8 +178,20 @@ export const AgentSseEventSchema = z.discriminatedUnion("type", [
    * model has finished emitting free text for this turn — it may still go
    * on to request tool calls, or the run may end). Lets the frontend close
    * off the in-progress message bubble without waiting for the terminal
-   * `done` event.
+   * `done` event. Carries this turn's token `usage` (from the upstream's
+   * terminal streaming chunk, when provided) and `tMs` (elapsed ms since the
+   * run started) so the frontend can show a per-turn tokens/latency footer.
    */
-  z.object({ type: z.literal("assistant_end") }),
+  z.object({
+    type: z.literal("assistant_end"),
+    usage: z
+      .object({
+        promptTokens: z.number().optional(),
+        completionTokens: z.number().optional(),
+        totalTokens: z.number().optional(),
+      })
+      .optional(),
+    tMs: z.number().optional(),
+  }),
 ]);
 export type AgentSseEvent = z.infer<typeof AgentSseEventSchema>;

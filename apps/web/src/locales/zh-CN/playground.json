@@ -370,6 +370,7 @@
       "empty": "开始对话，或打开「工具」运行多轮 Agent。",
       "reasoning": "思考过程",
       "reasoningActive": "思考中…",
+      "tokens": "↑{{prompt}} ↓{{completion}} tokens",
       "resultSize": "{{kb}} KB",
       "summaryTools_one": "{{count}} 次工具调用",
       "summaryTools_other": "{{count}} 次工具调用",
@@ -378,7 +379,11 @@
       "summaryErrors_one": "{{count}} 个错误",
       "summaryErrors_other": "{{count}} 个错误",
       "elapsedTitle": "累计 {{elapsed}}",
-      "planTitle": "计划"
+      "planTitle": "计划",
+      "scrollToBottom": "滚动到底部",
+      "editMessage": "编辑",
+      "resend": "重发",
+      "cancelEdit": "取消"
     },
     "verdict": {
       "title": "能力测试评分",

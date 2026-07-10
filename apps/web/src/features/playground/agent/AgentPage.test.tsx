@@ -280,6 +280,57 @@ describe("AgentPage", () => {
       expect(second.body.messages).toEqual([{ role: "user", content: "tell me a joke" }]);
     });
 
+    it("editing a user turn truncates later turns and resends the edited text", async () => {
+      scriptNextRun([
+        { type: "text_delta", delta: "A1" },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await selectConnection(user);
+      await typeTaskAndSend(user, "first question");
+      await waitFor(() => expect(screen.getByText("A1")).toBeInTheDocument());
+
+      scriptNextRun([
+        { type: "text_delta", delta: "A2" },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      await typeTaskAndSend(user, "second question");
+      await waitFor(() => expect(screen.getByText("A2")).toBeInTheDocument());
+      expect(screen.getAllByTestId("user-bubble")).toHaveLength(2);
+
+      // Edit the FIRST user turn → truncates the 2nd turn and resends.
+      scriptNextRun([
+        { type: "text_delta", delta: "A1-new" },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      await user.click(screen.getAllByRole("button", { name: /^edit$|^编辑$/i })[0]);
+      const editor = screen.getByTestId("user-edit-textarea");
+      await user.clear(editor);
+      await user.type(editor, "edited first");
+      await user.click(screen.getByRole("button", { name: /resend|重发/i }));
+      await waitFor(() => expect(screen.getByText("A1-new")).toBeInTheDocument());
+
+      // The 2nd turn is gone; only the edited first turn remains.
+      expect(screen.getAllByTestId("user-bubble")).toHaveLength(1);
+      expect(screen.getByText("edited first")).toBeInTheDocument();
+      expect(screen.queryByText("second question")).not.toBeInTheDocument();
+      expect(screen.queryByText("A2")).not.toBeInTheDocument();
+
+      // Resend of the FIRST turn (transcript truncated to empty) uses the task
+      // path — no prior messages.
+      const last = playgroundFetchStreamMock.mock.calls.at(-1)?.[0] as FakeStreamInput;
+      expect(last.body.task).toBe("edited first");
+      expect(last.body.messages).toBeUndefined();
+    });
+
     it("Reset clears the transcript and the timeline", async () => {
       scriptNextRun([
         { type: "text_delta", delta: "Hi" },
