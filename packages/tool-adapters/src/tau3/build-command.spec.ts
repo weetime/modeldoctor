@@ -51,6 +51,48 @@ describe("buildTau3Command", () => {
     expect(s).not.toContain("sk-agent");
     expect(s).not.toContain("sk-user");
   });
+  it("routes tau2's reward-evaluator LLMs at the workspace-default provider (self-hosted judge)", () => {
+    const withEval = {
+      ...plan,
+      evaluator: { baseUrl: "https://api.deepseek.com", model: "deepseek-chat", apiKey: "sk-eval" },
+    };
+    const r2 = buildTau3Command(withEval as any);
+    const s = r2.argv[2];
+    // A sed patch rewrites tau2's hardcoded gpt-4.1 / claude judges to the
+    // evaluator model, and runs BEFORE `tau2 run`.
+    expect(s).toContain("sed -i");
+    expect(s).toContain("/opt/tau2/src/tau2/config.py");
+    expect(s).toContain('"openai/deepseek-chat"');
+    expect(s.indexOf("sed -i")).toBeLessThan(s.indexOf("tau2 run"));
+    // Credentials for the credential-less evaluator calls go via env, key via
+    // secretEnv only (never argv).
+    expect(r2.env.OPENAI_BASE_URL).toBe("https://api.deepseek.com/v1");
+    expect(r2.secretEnv.OPENAI_API_KEY).toBe("sk-eval");
+    expect(s).not.toContain("sk-eval");
+  });
+
+  it("omits the evaluator patch + OPENAI_* env when no evaluator is resolved", () => {
+    expect(r.argv[2]).not.toContain("config.py");
+    expect(r.env.OPENAI_BASE_URL).toBeUndefined();
+    expect(r.secretEnv.OPENAI_API_KEY).toBeUndefined();
+  });
+
+  it("appends /v1 to a host-root baseUrl (litellm openai/ appends /chat/completions → needs /v1)", () => {
+    // Connection baseUrls follow the app convention of being the host root
+    // (no /v1). Without the prefix, litellm hits {host}/chat/completions → 404
+    // and every episode is an infra error. Idempotent: an already-/v1 base is
+    // left as-is (asserted by the fixtures above).
+    const rootPlan = {
+      ...plan,
+      connection: { ...plan.connection, baseUrl: "http://10.100.121.67:30888" },
+      userSimulator: { ...plan.userSimulator, baseUrl: "http://judge.svc:8080/" },
+    };
+    const s = buildTau3Command(rootPlan as any).argv[2];
+    expect(s).toContain('"api_base":"http://10.100.121.67:30888/v1"');
+    // trailing slash trimmed, then /v1 appended (no `//v1`).
+    expect(s).toContain('"api_base":"http://judge.svc:8080/v1"');
+    expect(s).not.toContain("//v1");
+  });
   it("passes keys via secretEnv, never argv", () => {
     expect(r.secretEnv.MD_AGENT_KEY).toBe("sk-agent");
     expect(r.secretEnv.MD_USER_KEY).toBe("sk-user");

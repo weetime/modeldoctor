@@ -25,6 +25,8 @@
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",
     "connections": "Connections",
+    "mcpServers": "MCP Servers",
+    "skills": "Skills",
     "settings": "Settings",
     "profile": "Profile",
     "logout": "Logout",

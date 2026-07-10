@@ -14,6 +14,7 @@ import enDiagnostics from "@/locales/en-US/diagnostics.json";
 import enEngineMetrics from "@/locales/en-US/engine-metrics.json";
 import enInsights from "@/locales/en-US/insights.json";
 import enLlmJudgeProviders from "@/locales/en-US/llm-judge-providers.json";
+import enMcpServers from "@/locales/en-US/mcp-servers.json";
 import enMe from "@/locales/en-US/me.json";
 import enNotifications from "@/locales/en-US/notifications.json";
 import enPlayground from "@/locales/en-US/playground.json";
@@ -21,6 +22,7 @@ import enPrometheusDatasources from "@/locales/en-US/prometheus-datasources.json
 import enQualityGate from "@/locales/en-US/quality-gate.json";
 import enSettings from "@/locales/en-US/settings.json";
 import enSidebar from "@/locales/en-US/sidebar.json";
+import enSkills from "@/locales/en-US/skills.json";
 import zhAlerts from "@/locales/zh-CN/alerts.json";
 import zhBenchmarkTemplates from "@/locales/zh-CN/benchmark-templates.json";
 import zhBenchmarks from "@/locales/zh-CN/benchmarks.json";
@@ -33,6 +35,7 @@ import zhDiagnostics from "@/locales/zh-CN/diagnostics.json";
 import zhEngineMetrics from "@/locales/zh-CN/engine-metrics.json";
 import zhInsights from "@/locales/zh-CN/insights.json";
 import zhLlmJudgeProviders from "@/locales/zh-CN/llm-judge-providers.json";
+import zhMcpServers from "@/locales/zh-CN/mcp-servers.json";
 import zhMe from "@/locales/zh-CN/me.json";
 import zhNotifications from "@/locales/zh-CN/notifications.json";
 import zhPlayground from "@/locales/zh-CN/playground.json";
@@ -40,6 +43,7 @@ import zhPrometheusDatasources from "@/locales/zh-CN/prometheus-datasources.json
 import zhQualityGate from "@/locales/zh-CN/quality-gate.json";
 import zhSettings from "@/locales/zh-CN/settings.json";
 import zhSidebar from "@/locales/zh-CN/sidebar.json";
+import zhSkills from "@/locales/zh-CN/skills.json";
 
 void i18n.use(initReactI18next).init({
   resources: {
@@ -63,6 +67,8 @@ void i18n.use(initReactI18next).init({
       "quality-gate": enQualityGate,
       "prometheus-datasources": enPrometheusDatasources,
       "llm-judge-providers": enLlmJudgeProviders,
+      "mcp-servers": enMcpServers,
+      skills: enSkills,
     },
     "zh-CN": {
       common: zhCommon,
@@ -84,6 +90,8 @@ void i18n.use(initReactI18next).init({
       "quality-gate": zhQualityGate,
       "prometheus-datasources": zhPrometheusDatasources,
       "llm-judge-providers": zhLlmJudgeProviders,
+      "mcp-servers": zhMcpServers,
+      skills: zhSkills,
     },
   },
   // `lng` is set by main.tsx from the locale store before first render.
@@ -109,6 +117,8 @@ void i18n.use(initReactI18next).init({
     "quality-gate",
     "prometheus-datasources",
     "llm-judge-providers",
+    "mcp-servers",
+    "skills",
   ],
   interpolation: { escapeValue: false },
   returnNull: false,

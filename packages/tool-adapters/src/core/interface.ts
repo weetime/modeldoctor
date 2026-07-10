@@ -75,6 +75,16 @@ export interface BuildCommandPlan<TParams = unknown> {
    * tokenizerHfId): a cross-cutting optional capability, documented here.
    */
   userSimulator?: { baseUrl: string; model: string; apiKey: string } | null;
+  /**
+   * Agent-scenario only (tau3): the workspace-default LLM-judge provider used
+   * for τ³-bench's REWARD-evaluation LLMs (NL-assertion / communicate checks /
+   * env-interface), which tau2 otherwise hardcodes to public `gpt-4.1` /
+   * `claude-opus-4-5` and calls with no credentials → "Missing credentials".
+   * Routing these at the workspace default keeps evaluation self-hosted (no
+   * OpenAI/Anthropic keys). Same trust boundary + secretEnv rule as
+   * `userSimulator`. Null for non-agent tools or when no default is configured.
+   */
+  evaluator?: { baseUrl: string; model: string; apiKey: string } | null;
 }
 
 // ── buildCommand output ───────────────────────────────────────────────

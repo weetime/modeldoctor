@@ -1,0 +1,70 @@
+{
+  "title": "Skills",
+  "subtitle": "Local presets that bundle a system prompt, tools and execution strategy for reuse in the Agent playground.",
+  "table": {
+    "name": "Name",
+    "description": "Description",
+    "maxSteps": "Max steps",
+    "planFirst": "Strategy",
+    "actions": "Actions",
+    "references": "References"
+  },
+  "badges": {
+    "planFirst": "Plan first",
+    "direct": "Direct"
+  },
+  "sheet": {
+    "createTitle": "New skill",
+    "editTitle": "Edit skill",
+    "fields": {
+      "name": {
+        "label": "Name",
+        "placeholder": "e.g. diagnose-vllm"
+      },
+      "maxSteps": {
+        "label": "Max steps"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "What this skill does (optional)"
+      },
+      "systemPrompt": {
+        "label": "System prompt",
+        "placeholder": "Role / instructions for the agent (optional)"
+      },
+      "planFirst": {
+        "label": "Plan before executing",
+        "help": "When enabled, the agent drafts a plan before running tool calls step by step."
+      }
+    }
+  },
+  "toast": {
+    "createSuccess": "Skill created",
+    "updateSuccess": "Skill updated"
+  },
+  "actions": {
+    "new": "New skill",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "delete": {
+    "title": "Delete skill",
+    "body": "Delete \"{{name}}\"? This cannot be undone.",
+    "confirm": "Delete",
+    "success": "Skill deleted",
+    "error": "Failed to delete skill"
+  },
+  "empty": {
+    "title": "No skills yet",
+    "body": "Click New skill to create one.",
+    "create": "New skill"
+  },
+  "references": {
+    "inlineTools_one": "{{count}} inline tool",
+    "inlineTools_other": "{{count}} inline tools",
+    "mcpServers_one": "{{count}} MCP server",
+    "mcpServers_other": "{{count}} MCP servers",
+    "connectionSet": "connection set",
+    "connectionUnset": "no connection"
+  }
+}

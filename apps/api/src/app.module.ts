@@ -25,11 +25,14 @@ import { HealthModule } from "./modules/health/health.module.js";
 import { InsightsModule } from "./modules/insights/insights.module.js";
 import { LlmJudgeModule } from "./modules/llm-judge/llm-judge.module.js";
 import { McpModule } from "./modules/mcp/mcp.module.js";
+import { McpServerModule } from "./modules/mcp-server/mcp-server.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { PlaygroundModule } from "./modules/playground/playground.module.js";
+import { PlaygroundAgentModule } from "./modules/playground-agent/playground-agent.module.js";
 import { PrometheusDatasourceModule } from "./modules/prometheus-datasource/prometheus-datasource.module.js";
 import { QualityGateModule } from "./modules/quality-gate/quality-gate.module.js";
 import { SavedComparesModule } from "./modules/saved-compares/saved-compares.module.js";
+import { SkillModule } from "./modules/skill/skill.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 
 @Module({
@@ -81,6 +84,7 @@ import { UsersModule } from "./modules/users/users.module.js";
     DiagnosticsModule,
     EngineMetricsModule,
     PlaygroundModule,
+    PlaygroundAgentModule,
     BenchmarkModule,
     BenchmarkTemplateModule,
     ConnectionModule,
@@ -92,6 +96,8 @@ import { UsersModule } from "./modules/users/users.module.js";
     NotificationsModule,
     AlertsModule,
     McpModule,
+    McpServerModule,
+    SkillModule,
     ThrottlerModule.forRoot({
       throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
     }),

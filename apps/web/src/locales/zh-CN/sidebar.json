@@ -25,6 +25,8 @@
     "requestDebug": "请求调试",
     "diagnostics": "端点检测",
     "connections": "连接",
+    "mcpServers": "MCP 服务器",
+    "skills": "Skill",
     "settings": "设置",
     "profile": "个人中心",
     "logout": "退出登录",

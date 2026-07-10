@@ -1,0 +1,89 @@
+import {
+  type AgentRunRequest,
+  AgentRunRequestSchema,
+  type AgentSseEvent,
+} from "@modeldoctor/contracts";
+import { Body, Controller, HttpCode, HttpStatus, Post, Res, UseGuards } from "@nestjs/common";
+import { ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
+import { createZodDto } from "nestjs-zod";
+import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import type { JwtPayload } from "../auth/jwt.strategy.js";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { ConnectionService } from "../connection/connection.service.js";
+import { AgentLoopService } from "./agent-loop.service.js";
+
+class AgentRunRequestDto extends createZodDto(AgentRunRequestSchema) {}
+
+/**
+ * `POST /api/playground/agent` — Server-Sent Events stream of one Agent
+ * Playground run (Task 8). Mirrors `ChatController`'s streaming branch:
+ * manual SSE headers (no NestJS interceptor magic), `res.write` per event,
+ * `res.end()` once `AgentLoopService.run` resolves.
+ *
+ * The client closing the connection (nav away, tab close, explicit abort)
+ * aborts a shared `AbortController`: its `signal` cancels any in-flight
+ * upstream fetch (mirrors `pipeUpstreamSseToResponse` in
+ * integrations/openai-client/sse.ts), and its `aborted` flag is polled by
+ * `AgentLoopService.run` between turns/tool calls — and checked again the
+ * instant the upstream call resolves — so the loop never keeps burning
+ * upstream calls, nor writes to the response, for a dead request.
+ */
+@ApiTags("playground")
+@Controller("playground")
+@UseGuards(JwtAuthGuard)
+export class AgentController {
+  constructor(
+    private readonly svc: AgentLoopService,
+    private readonly connections: ConnectionService,
+  ) {}
+
+  @ApiOperation({
+    summary:
+      "Run one Agent Playground turn-loop over SSE (builtin + inline + MCP tools; MCP tools gated by autoRunMcp/tool_approval)",
+  })
+  @ApiBody({ type: AgentRunRequestDto })
+  @Post("agent")
+  @HttpCode(HttpStatus.OK)
+  async run(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(AgentRunRequestSchema)) body: AgentRunRequest,
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    const conn = await this.connections.getOwnedDecrypted(user.sub, body.connectionId);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const abortController = new AbortController();
+    res.on("close", () => {
+      if (!abortController.signal.aborted) abortController.abort();
+    });
+    const isAborted = (): boolean => abortController.signal.aborted;
+
+    const emit = (event: AgentSseEvent): void => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    try {
+      await this.svc.run(conn, body, emit, isAborted, abortController.signal, user.sub);
+    } catch (e) {
+      if (!isAborted()) {
+        emit({
+          type: "step",
+          step: {
+            kind: "error",
+            content: e instanceof Error ? e.message : String(e),
+            tMs: 0,
+          },
+        });
+        emit({ type: "done" });
+      }
+    } finally {
+      if (!isAborted()) res.end();
+    }
+  }
+}

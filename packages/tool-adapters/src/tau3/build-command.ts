@@ -6,11 +6,27 @@ import { type Tau3Domain, type Tau3Params, tau3ParamsSchema } from "./schema.js"
 const FULL_TASK_COUNT: Record<Tau3Domain, number> = { airline: 50, retail: 114, telecom: 114 };
 const SECONDS_PER_EPISODE = 90; // generous per multi-turn episode upper bound
 
+/**
+ * litellm's `openai/` provider POSTs to `{api_base}/chat/completions`, so the
+ * `api_base` it's handed MUST include the OpenAI `/v1` path prefix. Connection
+ * baseUrls follow the app-wide convention of being the host ROOT (no `/v1` —
+ * every other consumer appends the full `/v1/chat/completions` itself via
+ * `buildUrl`/`DEFAULT_PATH`, see `integrations/openai-client/url.ts`). Without
+ * this, litellm hits `{host}/chat/completions` → 404 and every τ³-bench
+ * episode is counted as an infra error (Total Tasks 0). Idempotent: a baseUrl
+ * that already ends in `/v1` is left untouched, and trailing slashes are
+ * trimmed first so we never emit `//v1`.
+ */
+function toOpenAiV1Base(baseUrl: string): string {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  return /\/v1$/.test(trimmed) ? trimmed : `${trimmed}/v1`;
+}
+
 function llmArgs(apiBase: string, keyEnvName: string): string {
   // JSON dict passed to tau2 --*-llm-args (json.loads). api_key is a named-
   // secret sentinel; runner swaps in os.environ[keyEnvName] before spawn.
   return JSON.stringify({
-    api_base: apiBase,
+    api_base: toOpenAiV1Base(apiBase),
     api_key: `__MD_SECRET_${keyEnvName}__`,
     temperature: 0.0,
   });
@@ -22,9 +38,30 @@ function shq(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
+/**
+ * τ³-bench's reward evaluators (NL-assertion / communicate / env-interface)
+ * hardcode public `gpt-4.1` / `claude-opus-4-5` in `tau2/config.py` and call
+ * them with NO credentials → every task fails at scoring with "Missing
+ * credentials". We route them at the workspace-default judge provider
+ * (`plan.evaluator`) instead, self-hosted:
+ *
+ *  - a `sed` prepended to the run script rewrites those hardcoded model
+ *    constants to `openai/<evaluator.model>` (patched on disk BEFORE `tau2
+ *    run` imports the evaluator modules, which bind the constant as a default
+ *    arg at import time), and
+ *  - `OPENAI_BASE_URL` (env) + `OPENAI_API_KEY` (secretEnv) point litellm's
+ *    `openai/` provider at the evaluator endpoint. The agent/user calls carry
+ *    their OWN `api_base` in `--*-llm-args`, which litellm prefers over the
+ *    env, so only the credential-less evaluator calls fall back to it.
+ */
+function evaluatorConfigPatch(evalModel: string): string {
+  const ref = `openai/${evalModel}`;
+  return `sed -i ${shq(`s#"gpt-4.1-2025-04-14"#"${ref}"#g;s#"claude-opus-4-5"#"${ref}"#g`)} /opt/tau2/src/tau2/config.py`;
+}
+
 export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildCommandResult {
   const params = tau3ParamsSchema.parse(plan.params) as Tau3Params;
-  const { runId, connection, userSimulator } = plan;
+  const { runId, connection, userSimulator, evaluator } = plan;
   if (!userSimulator) throw new Error("tau3 requires a resolved userSimulator endpoint");
 
   const agentArgs = llmArgs(connection.baseUrl, "MD_AGENT_KEY");
@@ -58,7 +95,12 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
   });
 
   const summarize = `python /app/tau3_summarize/md_tau3_summarize.py --run-id ${runId} --domains ${params.domains.join(",")} --num-trials ${params.numTrials} --user-sim-model ${shq(userSimulator.model)} --out md_out/summary.json`;
-  const script = [...perDomain, summarize].join(" && ");
+  // Patch tau2's evaluator LLM defaults BEFORE the run (see
+  // `evaluatorConfigPatch`) when an evaluator endpoint is resolved.
+  const steps = evaluator
+    ? [evaluatorConfigPatch(evaluator.model), ...perDomain, summarize]
+    : [...perDomain, summarize];
+  const script = steps.join(" && ");
 
   const outputFiles: Record<string, string> = { summary: "md_out/summary.json" };
   for (const d of params.domains)
@@ -66,8 +108,14 @@ export function buildTau3Command(plan: BuildCommandPlan<Tau3Params>): BuildComma
 
   return {
     argv: ["/bin/sh", "-c", script],
-    env: {},
-    secretEnv: { MD_AGENT_KEY: connection.apiKey, MD_USER_KEY: userSimulator.apiKey },
+    // The evaluator (reward-judge) calls carry no api_base of their own, so
+    // point litellm's openai provider at the evaluator endpoint via env.
+    env: evaluator ? { OPENAI_BASE_URL: toOpenAiV1Base(evaluator.baseUrl) } : {},
+    secretEnv: {
+      MD_AGENT_KEY: connection.apiKey,
+      MD_USER_KEY: userSimulator.apiKey,
+      ...(evaluator ? { OPENAI_API_KEY: evaluator.apiKey } : {}),
+    },
     outputFiles,
   };
 }

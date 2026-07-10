@@ -296,5 +296,106 @@
         "temperature": "Temperature"
       }
     }
+  },
+  "agent": {
+    "title": "Chat",
+    "subtitle": "Chat with a model — attach MCP servers, skills, or tools and the same conversation can call them.",
+    "planFirst": "Plan first",
+    "maxSteps": "Max steps",
+    "builtinTools": {
+      "title": "Builtin tools",
+      "get_current_time": {
+        "label": "get_current_time",
+        "description": "Returns the current ISO-8601 timestamp."
+      },
+      "calculator": {
+        "label": "calculator",
+        "description": "Evaluates a basic arithmetic expression."
+      },
+      "http_get": {
+        "label": "http_get",
+        "description": "Read-only GET request against a public http/https URL."
+      }
+    },
+    "inlineTools": {
+      "title": "Inline tools",
+      "empty": "No inline tools yet.",
+      "namePlaceholder": "Tool name, e.g. lookup_order",
+      "descriptionPlaceholder": "Tool description (optional)",
+      "paramsPlaceholder": "JSON Schema, e.g. {\"type\":\"object\",\"properties\":{...}}",
+      "add": "+ Add tool",
+      "remove": "Remove",
+      "invalidParams": "Params must be a valid JSON object"
+    },
+    "mcpServers": {
+      "title": "MCP Servers",
+      "empty": "No MCP servers registered yet.",
+      "autoRun": "Auto-run MCP tool results"
+    },
+    "skill": {
+      "title": "Skill",
+      "placeholder": "Pick a Skill to apply as a preset",
+      "none": "No skill",
+      "saveAs": "Save as Skill",
+      "saveAsTitle": "Save current config as a Skill",
+      "saveAsFields": {
+        "name": "Name",
+        "description": "Description"
+      },
+      "saveSuccess": "Skill saved",
+      "saveError": "Failed to save skill",
+      "saveAsDescription": "Bundles the current config (system prompt, tools, MCP servers, connection) into a reusable Skill preset."
+    },
+    "reset": "Reset",
+    "regenerate": "Regenerate",
+    "needConnection": "Pick a chat connection first",
+    "errors": {
+      "run": "Run failed: {{message}}"
+    },
+    "steps": {
+      "plan": "Plan",
+      "tool_call": "Tool call",
+      "tool_result": "Tool result",
+      "assistant": "Assistant",
+      "error": "Error"
+    },
+    "pendingTool": {
+      "title": "\"{{name}}\" needs a manually-supplied result",
+      "placeholder": "Paste or type the tool's result…",
+      "submit": "Submit result"
+    },
+    "approval": {
+      "title": "MCP server \"{{server}}\" wants to call {{name}} — approval required",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "trace": {
+      "empty": "Start a conversation, or turn on Tools to run a multi-turn agent.",
+      "reasoning": "Reasoning",
+      "reasoningActive": "Thinking…",
+      "tokens": "↑{{prompt}} ↓{{completion}} tokens",
+      "resultSize": "{{kb}} KB",
+      "summaryTools_one": "{{count}} tool call",
+      "summaryTools_other": "{{count}} tool calls",
+      "summaryTurns_one": "{{count}} turn",
+      "summaryTurns_other": "{{count}} turns",
+      "summaryErrors_one": "{{count}} error",
+      "summaryErrors_other": "{{count}} errors",
+      "elapsedTitle": "total {{elapsed}} elapsed",
+      "planTitle": "Plan",
+      "scrollToBottom": "Scroll to bottom",
+      "editMessage": "Edit",
+      "resend": "Resend",
+      "cancelEdit": "Cancel"
+    },
+    "verdict": {
+      "title": "Capability verdict",
+      "taskCompleted": "Task completed",
+      "toolUseCorrect": "Tool use correct",
+      "extraSteps": "Extra steps: {{count}}"
+    },
+    "toolsMenu": {
+      "title": "Tools"
+    }
   }
 }

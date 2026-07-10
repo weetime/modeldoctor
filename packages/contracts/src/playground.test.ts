@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ChatMessageContentPartSchema,
   ChatMessageSchema,
+  ChatParamsSchema,
   PlaygroundChatRequestSchema,
   PlaygroundChatResponseSchema,
   PlaygroundEmbeddingsRequestSchema,
@@ -83,7 +84,57 @@ describe("ChatMessageSchema", () => {
   });
 
   it("rejects an unknown role", () => {
-    expect(() => ChatMessageSchema.parse({ role: "tool", content: "hi" })).toThrow();
+    expect(() => ChatMessageSchema.parse({ role: "bogus", content: "hi" })).toThrow();
+  });
+
+  it("accepts role 'tool' with a tool_call_id (tool-calling support)", () => {
+    const msg = ChatMessageSchema.parse({
+      role: "tool",
+      content: "42",
+      tool_call_id: "call_1",
+    });
+    expect(msg.role).toBe("tool");
+    expect(msg.tool_call_id).toBe("call_1");
+  });
+
+  it("accepts an assistant message carrying tool_calls", () => {
+    const msg = ChatMessageSchema.parse({
+      role: "assistant",
+      content: "",
+      tool_calls: [
+        {
+          id: "call_1",
+          type: "function",
+          function: { name: "get_weather", arguments: '{"city":"sf"}' },
+        },
+      ],
+    });
+    expect(msg.tool_calls).toHaveLength(1);
+    expect(msg.tool_calls?.[0]?.function.name).toBe("get_weather");
+  });
+});
+
+describe("ChatParamsSchema — tools / tool_choice", () => {
+  it("accepts tools + string tool_choice", () => {
+    const params = ChatParamsSchema.parse({
+      tools: [{ type: "function", function: { name: "t", parameters: {} } }],
+      tool_choice: "auto",
+    });
+    expect(params.tools).toHaveLength(1);
+    expect(params.tool_choice).toBe("auto");
+  });
+
+  it("accepts an explicit tool_choice object", () => {
+    const params = ChatParamsSchema.parse({
+      tool_choice: { type: "function", function: { name: "t" } },
+    });
+    expect(params.tool_choice).toEqual({ type: "function", function: { name: "t" } });
+  });
+
+  it("still parses empty params (regression: no tools/tool_choice required)", () => {
+    const params = ChatParamsSchema.parse({});
+    expect(params.tools).toBeUndefined();
+    expect(params.tool_choice).toBeUndefined();
   });
 });
 

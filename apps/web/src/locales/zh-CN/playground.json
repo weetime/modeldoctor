@@ -293,5 +293,106 @@
         "temperature": "温度"
       }
     }
+  },
+  "agent": {
+    "title": "对话",
+    "subtitle": "与模型对话；挂载 MCP、技能或工具后,同一个对话即可调用它们。",
+    "planFirst": "先写计划",
+    "maxSteps": "最大步数",
+    "builtinTools": {
+      "title": "内置工具",
+      "get_current_time": {
+        "label": "get_current_time",
+        "description": "返回当前 ISO-8601 时间戳。"
+      },
+      "calculator": {
+        "label": "calculator",
+        "description": "计算基础算术表达式。"
+      },
+      "http_get": {
+        "label": "http_get",
+        "description": "对公网 http/https URL 发起只读 GET 请求。"
+      }
+    },
+    "inlineTools": {
+      "title": "手写工具",
+      "empty": "暂无手写工具。",
+      "namePlaceholder": "工具名称，如 lookup_order",
+      "descriptionPlaceholder": "工具描述（可选）",
+      "paramsPlaceholder": "JSON Schema，如 {\"type\":\"object\",\"properties\":{...}}",
+      "add": "+ 添加工具",
+      "remove": "移除",
+      "invalidParams": "参数必须是合法的 JSON 对象"
+    },
+    "mcpServers": {
+      "title": "MCP Server",
+      "empty": "暂无已注册的 MCP Server。",
+      "autoRun": "自动执行 MCP 工具结果"
+    },
+    "skill": {
+      "title": "Skill",
+      "placeholder": "选择一个 Skill 作为预设应用",
+      "none": "不使用 Skill",
+      "saveAs": "存为 Skill",
+      "saveAsTitle": "将当前配置存为 Skill",
+      "saveAsFields": {
+        "name": "名称",
+        "description": "描述"
+      },
+      "saveSuccess": "Skill 已保存",
+      "saveError": "保存 Skill 失败",
+      "saveAsDescription": "将当前配置（系统提示词、工具、MCP Server、连接）打包为可复用的 Skill 预设。"
+    },
+    "reset": "重置",
+    "regenerate": "重新生成",
+    "needConnection": "请先选择一个对话类连接",
+    "errors": {
+      "run": "运行失败：{{message}}"
+    },
+    "steps": {
+      "plan": "计划",
+      "tool_call": "调用工具",
+      "tool_result": "工具结果",
+      "assistant": "助手",
+      "error": "错误"
+    },
+    "pendingTool": {
+      "title": "需要手动提供「{{name}}」的执行结果",
+      "placeholder": "粘贴或输入该工具的执行结果…",
+      "submit": "提交结果"
+    },
+    "approval": {
+      "title": "MCP 服务器「{{server}}」请求调用 {{name}}，需要你的批准",
+      "approve": "批准",
+      "reject": "拒绝"
+    },
+    "trace": {
+      "empty": "开始对话，或打开「工具」运行多轮 Agent。",
+      "reasoning": "思考过程",
+      "reasoningActive": "思考中…",
+      "tokens": "↑{{prompt}} ↓{{completion}} tokens",
+      "resultSize": "{{kb}} KB",
+      "summaryTools_one": "{{count}} 次工具调用",
+      "summaryTools_other": "{{count}} 次工具调用",
+      "summaryTurns_one": "{{count}} 轮",
+      "summaryTurns_other": "{{count}} 轮",
+      "summaryErrors_one": "{{count}} 个错误",
+      "summaryErrors_other": "{{count}} 个错误",
+      "elapsedTitle": "累计 {{elapsed}}",
+      "planTitle": "计划",
+      "scrollToBottom": "滚动到底部",
+      "editMessage": "编辑",
+      "resend": "重发",
+      "cancelEdit": "取消"
+    },
+    "verdict": {
+      "title": "能力测试评分",
+      "taskCompleted": "任务完成",
+      "toolUseCorrect": "工具使用正确",
+      "extraSteps": "多余步骤: {{count}}"
+    },
+    "toolsMenu": {
+      "title": "工具"
+    }
   }
 }

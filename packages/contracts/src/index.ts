@@ -5,6 +5,8 @@
  * the API. Consumers import schemas from here and derive types via z.infer.
  */
 
+export * from "./agent.js";
+export * from "./agent-run.js";
 export * from "./auth.js";
 export * from "./baseline.js";
 export * from "./benchmark.js";
@@ -19,9 +21,11 @@ export * from "./engine-metrics.js";
 export * from "./errors.js";
 export * from "./health.js";
 export * from "./insights/index.js";
+export * from "./mcp-server.js";
 export * from "./modality.js";
 export * from "./notifications.js";
 export * from "./playground.js";
 export * from "./prometheus-datasource.js";
 export * from "./quality-gate/index.js";
 export * from "./saved-compares/index.js";
+export * from "./skill.js";

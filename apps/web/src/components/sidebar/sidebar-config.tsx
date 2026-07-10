@@ -17,9 +17,11 @@ import {
   MessageSquare,
   Mic,
   Network,
+  Plug,
   Rocket,
   Settings,
   ShieldCheck,
+  Wrench,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -40,7 +42,7 @@ export const sidebarGroups: SidebarGroup[] = [
     id: "playground",
     labelKey: "groups.playground",
     items: [
-      { to: "/playground/chat", icon: MessageSquare, labelKey: "items.playgroundChat" },
+      { to: "/playground/agent", icon: MessageSquare, labelKey: "items.playgroundChat" },
       { to: "/playground/image", icon: ImageIcon, labelKey: "items.playgroundImage" },
       { to: "/playground/audio", icon: Mic, labelKey: "items.playgroundAudio" },
       {
@@ -124,6 +126,8 @@ export const sidebarGroups: SidebarGroup[] = [
  * from anywhere in the app. */
 export const sidebarPrimaryItems: SidebarItem[] = [
   { to: "/connections", icon: Database, labelKey: "items.connections" },
+  { to: "/mcp-servers", icon: Plug, labelKey: "items.mcpServers" },
+  { to: "/skills", icon: Wrench, labelKey: "items.skills" },
 ];
 
 export const sidebarUtilityItems: SidebarItem[] = [

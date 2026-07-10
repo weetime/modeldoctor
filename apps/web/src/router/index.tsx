@@ -26,13 +26,14 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
 import { LlmJudgeProvidersPage } from "@/features/llm-judge-providers/LlmJudgeProvidersPage";
+import { McpServersPage } from "@/features/mcp-servers/McpServersPage";
 import { MeLayout } from "@/features/me/MeLayout";
 import { MeNotificationsPage } from "@/features/me/MeNotificationsPage";
 import { ProfilePage } from "@/features/me/ProfilePage";
 import { SecurityPage } from "@/features/me/SecurityPage";
 import { NotFoundPage } from "@/features/not-found/NotFoundPage";
+import { AgentPage } from "@/features/playground/agent/AgentPage";
 import { AudioPage } from "@/features/playground/audio/AudioPage";
-import { ChatPage } from "@/features/playground/chat/ChatPage";
 import { ChatComparePage } from "@/features/playground/chat-compare/ChatComparePage";
 import { EmbeddingsPage } from "@/features/playground/embeddings/EmbeddingsPage";
 import { ImagePage } from "@/features/playground/image/ImagePage";
@@ -46,6 +47,7 @@ import { RunReportPage } from "@/features/quality-gate/RunReportPage";
 import { RunsListPage } from "@/features/quality-gate/RunsListPage";
 import { RequestDebugPage } from "@/features/request-debug/RequestDebugPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { SkillsPage } from "@/features/skills/SkillsPage";
 import { AppShell } from "@/layouts/AppShell";
 
 function RedirectToInsights() {
@@ -121,6 +123,8 @@ export const routes: RouteObject[] = [
           { path: "debug", element: <RequestDebugPage /> },
           { path: "alerts", element: <AlertsPage /> },
           { path: "connections", element: <ConnectionsPage /> },
+          { path: "mcp-servers", element: <McpServersPage /> },
+          { path: "skills", element: <SkillsPage /> },
           {
             path: "me",
             element: <MeLayout />,
@@ -135,13 +139,14 @@ export const routes: RouteObject[] = [
           { path: "settings/notifications", element: <Navigate to="/me/notifications" replace /> },
           { path: "settings/prometheus-datasources", element: <DatasourcesPage /> },
           { path: "settings/llm-judge-providers", element: <LlmJudgeProvidersPage /> },
-          { path: "playground", element: <Navigate to="/playground/chat" replace /> },
-          { path: "playground/chat", element: <ChatPage /> },
+          { path: "playground", element: <Navigate to="/playground/agent" replace /> },
+          { path: "playground/chat", element: <Navigate to="/playground/agent" replace /> },
           { path: "playground/chat/compare", element: <ChatComparePage /> },
           { path: "playground/image", element: <ImagePage /> },
           { path: "playground/audio", element: <AudioPage /> },
           { path: "playground/embeddings", element: <EmbeddingsPage /> },
           { path: "playground/rerank", element: <RerankPage /> },
+          { path: "playground/agent", element: <AgentPage /> },
           { path: "dev/charts", element: <DevChartsPage /> },
           { path: "dev/deployments", element: <DeploymentRecipesPage /> },
           { path: "*", element: <NotFoundPage /> },

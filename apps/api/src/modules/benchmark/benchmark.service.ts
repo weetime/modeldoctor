@@ -214,6 +214,7 @@ export class BenchmarkService {
       const conn = await this.connections.getOwnedDecrypted(row.userId, row.connectionId);
       const adapter = byTool(row.tool as ToolName);
       const userSimulator = await this.resolveUserSimulator(row.scenario, row.tool, row.params);
+      const evaluator = await this.resolveEvaluator(row.scenario, row.tool);
       const buildResult = adapter.buildCommand({
         runId: row.id,
         params: row.params,
@@ -227,6 +228,7 @@ export class BenchmarkService {
           prometheusDatasource: conn.prometheusDatasource,
         },
         ...(userSimulator ? { userSimulator } : {}),
+        ...(evaluator ? { evaluator } : {}),
       });
       const result = await this.runner.start({
         runId: row.id,
@@ -557,6 +559,27 @@ export class BenchmarkService {
           "Agent 评测需要一个默认 LLM judge provider 作为模拟用户(在 设置 → LLM 判官 配置一个默认项)",
       });
     }
+    return { baseUrl: provider.baseUrl, model: provider.model, apiKey: provider.apiKey };
+  }
+
+  /**
+   * Agent-scenario (tau3) only: resolve the endpoint for τ³-bench's REWARD-
+   * evaluation LLMs (NL-assertion / communicate / env-interface judges). tau2
+   * hardcodes these to public `gpt-4.1` / `claude-opus-4-5` and calls them with
+   * no credentials, so every task fails at scoring with "Missing credentials".
+   * We ALWAYS route them at the workspace DEFAULT judge provider (not the
+   * per-run user-sim override) so evaluation stays self-hosted. Returns
+   * undefined (rather than throwing) when no default is configured — the run
+   * still proceeds; `resolveUserSimulator` already guards the default's
+   * existence for the agent/user path.
+   */
+  async resolveEvaluator(
+    scenario: string,
+    tool: string,
+  ): Promise<{ baseUrl: string; model: string; apiKey: string } | undefined> {
+    if (scenario !== "agent" || tool !== "tau3") return undefined;
+    const provider = await this.llmJudge.getDecrypted(undefined);
+    if (!provider) return undefined;
     return { baseUrl: provider.baseUrl, model: provider.model, apiKey: provider.apiKey };
   }
 
