@@ -201,6 +201,71 @@ describe("AgentPage", () => {
     });
   });
 
+  describe("multi-turn chat: sends accumulate + carry context", () => {
+    it("keeps prior turns visible and resends the transcript as messages on the next send", async () => {
+      scriptNextRun([
+        { type: "text_delta", delta: "Blue." },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await selectConnection(user);
+      await typeTaskAndSend(user, "why is the sky blue?");
+      await waitFor(() => expect(screen.getByText("Blue.")).toBeInTheDocument());
+
+      // First send uses the plain task path — no prior context to resend.
+      const first = playgroundFetchStreamMock.mock.calls[0][0] as FakeStreamInput;
+      expect(first.body.task).toBe("why is the sky blue?");
+      expect(first.body.messages).toBeUndefined();
+
+      scriptNextRun([
+        { type: "text_delta", delta: "Longer path." },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      await typeTaskAndSend(user, "and why red at sunset?");
+      await waitFor(() => expect(screen.getByText("Longer path.")).toBeInTheDocument());
+
+      // The prior turn stays on screen — this is one running conversation.
+      expect(screen.getAllByTestId("user-bubble")).toHaveLength(2);
+      expect(screen.getAllByTestId("assistant-bubble")).toHaveLength(2);
+
+      // The 2nd send resends the whole transcript so the model has context.
+      const second = playgroundFetchStreamMock.mock.calls[1][0] as FakeStreamInput;
+      expect(second.body.messages).toEqual([
+        { role: "user", content: "why is the sky blue?" },
+        { role: "assistant", content: "Blue." },
+        { role: "user", content: "and why red at sunset?" },
+      ]);
+    });
+
+    it("Reset clears the transcript and the timeline", async () => {
+      scriptNextRun([
+        { type: "text_delta", delta: "Hi" },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await selectConnection(user);
+      await typeTaskAndSend(user, "hello");
+      await waitFor(() => expect(screen.getByTestId("assistant-bubble")).toBeInTheDocument());
+
+      await user.click(screen.getByRole("button", { name: /^reset$|^重置$/i }));
+      expect(useAgentStore.getState().conversation).toEqual([]);
+      expect(useAgentStore.getState().timeline).toEqual([]);
+    });
+  });
+
   describe("tools-on: interleaved bubbles + trace cards", () => {
     it("renders plan strip, assistant bubbles, tool cards, and verdict in order", async () => {
       scriptNextRun([

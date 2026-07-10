@@ -198,6 +198,18 @@ export function Timeline({
       {hasTrace ? <RunSummary stepItems={stepItems} assistantTurns={assistantTurns} /> : null}
       {timeline.map((item, idx) => {
         if (item === planItem) return null;
+        if (item.kind === "user_message") {
+          return (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: append-only timeline list
+              key={idx}
+              data-testid="user-bubble"
+              className="ml-auto max-w-[85%] whitespace-pre-wrap break-words rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+            >
+              {item.content}
+            </div>
+          );
+        }
         if (item.kind === "assistant_text") {
           return (
             <AssistantBubble

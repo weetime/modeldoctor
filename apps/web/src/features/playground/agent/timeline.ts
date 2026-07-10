@@ -2,7 +2,10 @@ import type { AgentSseEvent, AgentStep, AgentVerdict } from "@modeldoctor/contra
 
 /**
  * A single renderable item in the unified playground timeline (Task 5).
- * Produced from the raw `AgentSseEvent` stream by `reduceEvent` below.
+ * Produced from the raw `AgentSseEvent` stream by `reduceEvent` below —
+ * except `user_message`, which is pushed directly (it's the local user turn,
+ * not a server event; see `store.pushUserMessage`). User bubbles accumulate
+ * across sends so the timeline reads as a running multi-turn conversation.
  *
  * `assistant_text` bubbles are mutable while `closed:false` (still receiving
  * `text_delta` / `reasoning_delta` chunks for the current turn); `assistant_end`
@@ -13,6 +16,7 @@ import type { AgentSseEvent, AgentStep, AgentVerdict } from "@modeldoctor/contra
  * continuation fields (see `store.ts`).
  */
 export type TimelineItem =
+  | { kind: "user_message"; content: string }
   | { kind: "assistant_text"; content: string; reasoning?: string; closed: boolean }
   | { kind: "tool_call" | "tool_result" | "plan" | "error"; step: AgentStep }
   | { kind: "verdict"; verdict: AgentVerdict };

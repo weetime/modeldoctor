@@ -71,6 +71,15 @@ describe("Timeline assistant bubbles", () => {
     expect(screen.getByText("The user asks why the sky is blue.")).toBeInTheDocument();
   });
 
+  it("renders a user_message as a right-aligned user bubble", () => {
+    renderTimeline([
+      { kind: "user_message", content: "why is the sky blue?" },
+      { kind: "assistant_text", content: "Rayleigh scattering.", closed: true },
+    ]);
+    expect(screen.getByTestId("user-bubble")).toHaveTextContent("why is the sky blue?");
+    expect(screen.getByTestId("assistant-bubble")).toHaveTextContent("Rayleigh scattering.");
+  });
+
   it("does not render a reasoning block when there is no reasoning", () => {
     renderTimeline([{ kind: "assistant_text", content: "plain answer", closed: true }]);
     expect(screen.getByText("plain answer")).toBeInTheDocument();

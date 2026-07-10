@@ -50,6 +50,16 @@ export interface AgentStoreState {
    * `steps`: later tasks (7/8) migrate rendering off `steps` onto this.
    */
   timeline: TimelineItem[];
+  /**
+   * The running multi-turn conversation transcript (user + assistant turns),
+   * accumulated across sends so this reads as a real chat with memory: each
+   * new send resends the whole transcript as context, and the timeline keeps
+   * prior turns visible. Cleared only by `reset()` (Reset / new session), NOT
+   * per send. Distinct from `continuationMessages`, which is the WITHIN-a-turn
+   * tool-pause transcript. System prompt is prepended at send time, so it's
+   * not stored here.
+   */
+  conversation: ChatMessage[];
   pendingInlineTool: PendingInlineTool | null;
   pendingApproval: PendingMcpApproval | null;
   /**
@@ -93,6 +103,12 @@ export interface AgentStoreState {
   setSteps: (steps: AgentStep[]) => void;
   /** Replaces the whole timeline — used by history restore (Task 9). */
   setTimeline: (items: TimelineItem[]) => void;
+  /** Appends a right-aligned user bubble to the timeline (not an SSE event). */
+  pushUserMessage: (content: string) => void;
+  /** Appends turn(s) to the running conversation transcript. */
+  appendConversation: (messages: ChatMessage[]) => void;
+  /** Replaces the whole conversation transcript — used by history restore. */
+  setConversation: (messages: ChatMessage[]) => void;
   clearSteps: () => void;
   setPendingInlineTool: (tool: PendingInlineTool | null) => void;
   setPendingApproval: (approval: PendingMcpApproval | null) => void;
@@ -118,6 +134,7 @@ const initial = {
   autoRunMcp: false,
   steps: [] as AgentStep[],
   timeline: [] as TimelineItem[],
+  conversation: [] as ChatMessage[],
   pendingInlineTool: null as PendingInlineTool | null,
   pendingApproval: null as PendingMcpApproval | null,
   continuationMessages: null as ChatMessage[] | null,
@@ -163,6 +180,11 @@ export const useAgentStore = create<AgentStoreState>((set) => ({
   appendStep: (step) => set((s) => ({ steps: [...s.steps, step] })),
   setSteps: (steps) => set({ steps }),
   setTimeline: (items) => set({ timeline: items }),
+  pushUserMessage: (content) =>
+    set((s) => ({ timeline: [...s.timeline, { kind: "user_message", content }] })),
+  appendConversation: (messages) =>
+    set((s) => ({ conversation: [...s.conversation, ...messages] })),
+  setConversation: (messages) => set({ conversation: messages }),
   clearSteps: () =>
     set({
       steps: [],

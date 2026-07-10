@@ -96,12 +96,31 @@ export async function startRun(
   if (!fresh.selectedConnectionId) return;
 
   const isContinuation = "continuation" in args;
+  // The current user turn's content (multimodal-capable) and — for the 2nd+
+  // turn of a conversation — the full transcript to resend as context.
+  let userContent: AgentRunRequest["task"] | undefined;
+  let freshMessages: ChatMessage[] | undefined;
   if (!isContinuation) {
     if (args.text.trim().length === 0 && args.attachments.length === 0) return;
     // Stashed for history preview + as the (ignored) `task` placeholder on a
     // later continuation request — see `CONTINUATION_TASK_PLACEHOLDER`.
     fresh.setTask(args.text);
-    fresh.clearSteps();
+    // Multi-turn chat: do NOT wipe the timeline — this is a running
+    // conversation, not a one-shot task. Just clear the previous run's
+    // mid-turn tool-pause state, then append this user turn to both the
+    // visible timeline (a user bubble) and the transcript.
+    fresh.setContinuationMessages(null);
+    userContent = buildContentParts(args.text, args.attachments);
+    fresh.pushUserMessage(args.text);
+    fresh.appendConversation([{ role: "user", content: userContent }]);
+    // First turn → plain `task` path (keeps plan-first working). 2nd+ turn →
+    // resend the whole transcript (system prepended) as `messages` so the
+    // model actually remembers the prior conversation.
+    const convo = useAgentStore.getState().conversation;
+    if (convo.length > 1) {
+      const sys = fresh.systemPrompt.trim();
+      freshMessages = sys ? [{ role: "system", content: sys }, ...convo] : [...convo];
+    }
   }
   fresh.setPendingInlineTool(null);
   fresh.setPendingApproval(null);
@@ -131,15 +150,17 @@ export async function startRun(
     connectionId: fresh.selectedConnectionId,
     task: isContinuation
       ? fresh.task.trim() || CONTINUATION_TASK_PLACEHOLDER
-      : buildContentParts(args.text, args.attachments),
+      : (userContent ?? CONTINUATION_TASK_PLACEHOLDER),
     systemPrompt: fresh.systemPrompt.trim() || undefined,
     // Always present (contract's `maxSteps` has a default, so the inferred
     // request type requires it). Harmless for a tools-off run — with no tools
     // the loop never iterates past the single streaming turn anyway.
     maxSteps: fresh.maxSteps,
-    // Full-transcript continuation (Task 11 fix pass, carried over): resends
-    // the exact `messages` array the server handed back on `done`.
-    messages: isContinuation ? args.continuation.messages : undefined,
+    // `messages` is sent for: (a) a tool-pause continuation (verbatim from the
+    // server's `done`), or (b) the 2nd+ turn of a conversation (the running
+    // transcript, so the model has prior-turn context). A first turn omits it
+    // and uses `task` (which keeps plan-first working — see `freshMessages`).
+    messages: isContinuation ? args.continuation.messages : freshMessages,
     // Sampling params (temperature/maxTokens/topP/...) apply to BOTH chat
     // and agent runs — model sampling is always relevant, unlike the
     // tool-only fields above. Sent whenever the store has at least one
@@ -184,6 +205,15 @@ export async function startRun(
         // the resend (submit/approve) can hand it straight back verbatim.
         // A normal (non-pausing) `done` clears any stale value.
         s.setContinuationMessages(evt.messages ?? null);
+        // Multi-turn: on a true completion (not a tool pause), fold the
+        // assistant's final answer into the transcript so the NEXT user turn
+        // resends it as context. Uses the last closed assistant bubble's text.
+        if (!evt.messages) {
+          const lastAssistant = [...s.timeline].reverse().find((i) => i.kind === "assistant_text");
+          if (lastAssistant?.kind === "assistant_text" && lastAssistant.content.length > 0) {
+            s.appendConversation([{ role: "assistant", content: lastAssistant.content }]);
+          }
+        }
       }
       // running flips false in `finally`.
     });
@@ -723,6 +753,9 @@ export function AgentPage() {
     // newly-optional fields above (`input`/`task`) instead of handing
     // `Timeline` an `undefined` it can't `.length`/iterate.
     s.setTimeline(snap.timeline ?? []);
+    // Restore the multi-turn transcript so the conversation keeps its memory
+    // (missing on pre-multi-turn entries → empty, like `timeline` above).
+    s.setConversation(snap.conversation ?? []);
     s.setVerdict(snap.verdict);
   };
 
@@ -761,6 +794,7 @@ export function AgentPage() {
       selectedMcpServerIds: slice.selectedMcpServerIds,
       autoRunMcp: slice.autoRunMcp,
       timeline: slice.timeline,
+      conversation: slice.conversation,
       verdict: slice.verdict,
     };
     useAgentHistoryStore.getState().scheduleAutoSave(snap);
@@ -777,6 +811,7 @@ export function AgentPage() {
     slice.selectedMcpServerIds,
     slice.autoRunMcp,
     slice.timeline,
+    slice.conversation,
     slice.verdict,
   ]);
 

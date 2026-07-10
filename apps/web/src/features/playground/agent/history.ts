@@ -1,4 +1,4 @@
-import type { AgentVerdict, ToolDef } from "@modeldoctor/contracts";
+import type { AgentVerdict, ChatMessage, ToolDef } from "@modeldoctor/contracts";
 import { createHistoryStore } from "../history/createHistoryStore";
 import type { TimelineItem } from "./timeline";
 
@@ -56,6 +56,13 @@ export interface AgentHistorySnapshot {
   selectedMcpServerIds: string[];
   autoRunMcp: boolean;
   timeline: TimelineItem[];
+  /**
+   * The running multi-turn transcript (`store.conversation`) — persisted so a
+   * restored conversation keeps its memory (the model still gets prior turns
+   * as context on the next send), not just the rendered bubbles. Optional for
+   * back-compat with entries saved before multi-turn chat landed.
+   */
+  conversation?: ChatMessage[];
   verdict: AgentVerdict | null;
 }
 
@@ -74,6 +81,7 @@ export const useAgentHistoryStore = createHistoryStore<AgentHistorySnapshot>({
     selectedMcpServerIds: [],
     autoRunMcp: false,
     timeline: [],
+    conversation: [],
     verdict: null,
   }),
   preview: (s) => (s.task ?? s.input ?? "").trim().slice(0, 80),
