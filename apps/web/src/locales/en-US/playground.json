@@ -347,6 +347,7 @@
       "saveAsDescription": "Bundles the current config (system prompt, tools, MCP servers, connection) into a reusable Skill preset."
     },
     "reset": "Reset",
+    "regenerate": "Regenerate",
     "needConnection": "Pick a chat connection first",
     "errors": {
       "run": "Run failed: {{message}}"

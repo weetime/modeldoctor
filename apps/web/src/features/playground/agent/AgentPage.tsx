@@ -6,6 +6,7 @@ import type {
   CreateSkill,
   ToolDef,
 } from "@modeldoctor/contracts";
+import { RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -71,7 +72,8 @@ const CONTINUATION_TASK_PLACEHOLDER = "continue";
 
 export type StartRunArgs =
   | { text: string; attachments: AttachedFile[] }
-  | { continuation: { messages: ChatMessage[]; autoRunMcpOverride?: boolean } };
+  | { continuation: { messages: ChatMessage[]; autoRunMcpOverride?: boolean } }
+  | { regenerate: true };
 
 /**
  * Kicks off (or continues) one unified-playground run. Exported for direct
@@ -96,11 +98,23 @@ export async function startRun(
   if (!fresh.selectedConnectionId) return;
 
   const isContinuation = "continuation" in args;
+  const isRegenerate = "regenerate" in args;
   // The current user turn's content (multimodal-capable) and — for the 2nd+
-  // turn of a conversation — the full transcript to resend as context.
+  // turn of a conversation, or a regenerate — the full transcript to resend
+  // as context.
   let userContent: AgentRunRequest["task"] | undefined;
   let freshMessages: ChatMessage[] | undefined;
-  if (!isContinuation) {
+  if (isRegenerate) {
+    // Retry the last answer: the caller (`onRegenerate`) already trimmed the
+    // previous assistant reply off `conversation` + the timeline, so the
+    // transcript now ends at the last user turn. Resend it verbatim (system
+    // prepended) so the model answers that same turn afresh.
+    const convo = useAgentStore.getState().conversation;
+    if (convo.length === 0) return;
+    fresh.setContinuationMessages(null);
+    const sys = fresh.systemPrompt.trim();
+    freshMessages = sys ? [{ role: "system", content: sys }, ...convo] : [...convo];
+  } else if (!isContinuation) {
     if (args.text.trim().length === 0 && args.attachments.length === 0) return;
     // Stashed for history preview + as the (ignored) `task` placeholder on a
     // later continuation request — see `CONTINUATION_TASK_PLACEHOLDER`.
@@ -133,9 +147,9 @@ export async function startRun(
         inlineTools: fresh.inlineTools.length > 0 ? fresh.inlineTools : undefined,
         mcpServerIds:
           fresh.selectedMcpServerIds.length > 0 ? fresh.selectedMcpServerIds : undefined,
-        // A continuation resumes the loop at turn 0 again — force planFirst off
-        // so the first assistant turn of the continuation isn't mislabeled "plan".
-        planFirst: isContinuation ? false : fresh.planFirst,
+        // A continuation/regenerate resends `messages` (server resumes at turn
+        // 0) — force planFirst off so the resent turn isn't mislabeled "plan".
+        planFirst: isContinuation || isRegenerate ? false : fresh.planFirst,
         // Approve is a PER-CONTINUATION override (`autoRunMcpOverride`), not a
         // mutation of the persistent `autoRunMcp` toggle — see `onApproveMcp`'s
         // doc comment. Only this one resume request runs with the gate open;
@@ -679,6 +693,39 @@ export function AgentPage() {
     useAgentStore.getState().reset();
   };
 
+  // Retry the last answer ("Regenerate"): drop the previous assistant reply
+  // from both the transcript and the visible timeline (back to the last user
+  // bubble), then re-run that same user turn so the model answers afresh.
+  const onRegenerate = () => {
+    const s = useAgentStore.getState();
+    if (s.running || s.pendingInlineTool || s.pendingApproval) return;
+    // Trim trailing assistant turn(s) off the transcript so it ends at the
+    // last user turn.
+    const convo = [...s.conversation];
+    while (convo.length > 0 && convo[convo.length - 1].role !== "user") convo.pop();
+    if (convo.length === 0) return;
+    s.setConversation(convo);
+    // Trim the timeline back to (and including) the last user bubble.
+    const tl = s.timeline;
+    let lastUserIdx = -1;
+    for (let i = tl.length - 1; i >= 0; i--) {
+      if (tl[i].kind === "user_message") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx >= 0) s.setTimeline(tl.slice(0, lastUserIdx + 1));
+    void startRun(t, { regenerate: true });
+  };
+
+  // Regenerate is available once there's a completed answer to retry and
+  // nothing is in flight.
+  const canRegenerate =
+    !slice.running &&
+    !slice.pendingInlineTool &&
+    !slice.pendingApproval &&
+    slice.conversation.some((m) => m.role === "assistant");
+
   // Full-transcript continuation (Task 11 fix pass): resend the exact
   // `continuationMessages` transcript the server handed back on `done` (see
   // `AgentSseEvent`'s `done.messages` doc), plus one more `role: "tool"`
@@ -861,11 +908,23 @@ export function AgentPage() {
             picking none leaves it a plain streaming chat. No "agent mode". */}
         <div className="flex flex-wrap items-center gap-3 px-6 pb-2 pt-1">
           <AgentComposerControls />
+          {canRegenerate ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto shrink-0 gap-1.5"
+              onClick={onRegenerate}
+            >
+              <RotateCcw className="size-3.5" aria-hidden="true" />
+              {t("agent.regenerate")}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="ml-auto shrink-0"
+            className={canRegenerate ? "shrink-0" : "ml-auto shrink-0"}
             onClick={onReset}
             disabled={slice.running}
           >

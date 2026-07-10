@@ -344,6 +344,7 @@
       "saveAsDescription": "将当前配置（系统提示词、工具、MCP Server、连接）打包为可复用的 Skill 预设。"
     },
     "reset": "重置",
+    "regenerate": "重新生成",
     "needConnection": "请先选择一个对话类连接",
     "errors": {
       "run": "运行失败：{{message}}"

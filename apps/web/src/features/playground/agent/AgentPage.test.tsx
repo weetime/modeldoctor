@@ -244,6 +244,42 @@ describe("AgentPage", () => {
       ]);
     });
 
+    it("Regenerate drops the last answer and re-runs the last user turn", async () => {
+      scriptNextRun([
+        { type: "text_delta", delta: "First answer." },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <AgentPage />
+        </MemoryRouter>,
+      );
+      await selectConnection(user);
+      await typeTaskAndSend(user, "tell me a joke");
+      await waitFor(() => expect(screen.getByText("First answer.")).toBeInTheDocument());
+
+      // A Regenerate control appears once there's an answer to retry.
+      scriptNextRun([
+        { type: "text_delta", delta: "Second answer." },
+        { type: "assistant_end" },
+        { type: "done" },
+      ]);
+      await user.click(screen.getByRole("button", { name: /regenerate|重新生成/i }));
+      await waitFor(() => expect(screen.getByText("Second answer.")).toBeInTheDocument());
+
+      // Still ONE user turn (not duplicated) and the old answer is gone.
+      expect(screen.getAllByTestId("user-bubble")).toHaveLength(1);
+      expect(screen.queryByText("First answer.")).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("assistant-bubble")).toHaveLength(1);
+
+      // The regenerate resends the transcript ending at the last user turn
+      // (the previous assistant reply was trimmed off).
+      const second = playgroundFetchStreamMock.mock.calls[1][0] as FakeStreamInput;
+      expect(second.body.messages).toEqual([{ role: "user", content: "tell me a joke" }]);
+    });
+
     it("Reset clears the transcript and the timeline", async () => {
       scriptNextRun([
         { type: "text_delta", delta: "Hi" },
