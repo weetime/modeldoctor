@@ -213,6 +213,9 @@ importers:
       '@modeldoctor/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@modeldoctor/insights-scoring':
+        specifier: workspace:*
+        version: link:../../packages/insights-scoring
       '@modeldoctor/tool-adapters':
         specifier: workspace:*
         version: link:../../packages/tool-adapters

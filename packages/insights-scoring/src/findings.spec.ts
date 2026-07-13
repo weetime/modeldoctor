@@ -1,6 +1,11 @@
 import type { ProfileRules } from "@modeldoctor/contracts";
 import { describe, expect, it } from "vitest";
-import { bandFromScore, buildFindingsCore, type RunLike } from "./findings.js";
+import {
+  aggregateCheckDetailed,
+  bandFromScore,
+  buildFindingsCore,
+  type RunLike,
+} from "./findings.js";
 
 const rules: ProfileRules = {
   checks: { "inference.ttft.p95.ms": { warn: 100, crit: 300, weight: 1 } },
@@ -23,6 +28,54 @@ describe("buildFindingsCore", () => {
     expect(ttft?.recommendation).toBe("");
   });
 });
+describe("aggregateCheckDetailed", () => {
+  const check = { metricKind: "ttft.p95" as const, scenario: "inference", toolFilter: undefined };
+
+  it("returns null value and no contributing runs when nothing matches", () => {
+    const result = aggregateCheckDetailed(check, [], reader as never);
+    expect(result).toEqual({ value: null, contributingRunIds: [] });
+  });
+
+  it("returns median value and contributing run ids across matching runs", () => {
+    const runs: RunLike[] = [
+      {
+        id: "r1",
+        scenario: "inference",
+        status: "completed",
+        tool: "guidellm",
+        summaryMetrics: {},
+      },
+      {
+        id: "r2",
+        scenario: "inference",
+        status: "completed",
+        tool: "guidellm",
+        summaryMetrics: {},
+      },
+    ];
+    // reader always returns 50 here, so median is 50 and both runs contribute.
+    const result = aggregateCheckDetailed(check, runs, reader as never);
+    expect(result).toEqual({ value: 50, contributingRunIds: ["r1", "r2"] });
+  });
+
+  it("respects toolFilter", () => {
+    const vegetaOnly = { ...check, toolFilter: ["vegeta"] };
+    const runs: RunLike[] = [
+      {
+        id: "r1",
+        scenario: "inference",
+        status: "completed",
+        tool: "guidellm",
+        summaryMetrics: {},
+      },
+    ];
+    expect(aggregateCheckDetailed(vegetaOnly, runs, reader as never)).toEqual({
+      value: null,
+      contributingRunIds: [],
+    });
+  });
+});
+
 describe("bandFromScore", () => {
   it("bands by threshold", () => {
     expect(bandFromScore(90)).toBe("recommended");

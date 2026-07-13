@@ -18,6 +18,21 @@ function median(v: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
+export interface AggregateResult {
+  value: number | null;
+  contributingRunIds: string[];
+}
+
+/** Minimal shape a check descriptor must have to be aggregated — deliberately
+ * narrower than the full `CheckDescriptor` so callers (web's `CheckDescriptor`
+ * with its extra `recommendationKey`) can pass their own descriptor type
+ * through structurally. */
+export interface AggregatableCheck {
+  metricKind: MetricKind;
+  scenario: string;
+  toolFilter?: string[];
+}
+
 function aggregate(
   kind: MetricKind,
   scenario: string,
@@ -40,6 +55,19 @@ function aggregate(
   return { value: median(samples.map((s) => s.v)), ids: samples.map((s) => s.id) };
 }
 
+/** Single-check aggregator, exported so environment-specific callers (e.g.
+ * web's `buildFindings.ts`) can re-derive one check's value/contributing runs
+ * with their own `MetricReader`, without duplicating the filter+median logic
+ * that `buildFindingsCore` also relies on below. */
+export function aggregateCheckDetailed(
+  check: AggregatableCheck,
+  runs: RunLike[],
+  read: MetricReader,
+): AggregateResult {
+  const { value, ids } = aggregate(check.metricKind, check.scenario, check.toolFilter, runs, read);
+  return { value, contributingRunIds: ids };
+}
+
 export function buildFindingsCore(
   runs: RunLike[],
   rules: ProfileRules,
@@ -48,13 +76,7 @@ export function buildFindingsCore(
   const out: Finding[] = [];
   for (const check of ALL_CHECKS) {
     const rule = rules.checks[check.id];
-    const { value, ids } = aggregate(
-      check.metricKind,
-      check.scenario,
-      check.toolFilter,
-      runs,
-      read,
-    );
+    const { value, contributingRunIds } = aggregateCheckDetailed(check, runs, read);
     out.push({
       checkId: check.id,
       scenario: check.scenario,
@@ -64,7 +86,7 @@ export function buildFindingsCore(
       threshold: rule ?? { warn: 0, crit: 0 },
       weight: rule?.weight ?? check.defaultWeight,
       recommendation: "",
-      contributingRunIds: ids,
+      contributingRunIds,
     });
   }
   return out;
