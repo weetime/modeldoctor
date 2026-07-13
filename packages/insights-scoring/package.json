@@ -32,6 +32,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@modeldoctor/contracts": "workspace:*"
+    "@modeldoctor/contracts": "workspace:*",
+    "@modeldoctor/tool-adapters": "workspace:*"
   }
 }

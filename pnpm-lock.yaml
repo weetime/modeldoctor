@@ -388,6 +388,9 @@ importers:
       '@modeldoctor/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@modeldoctor/tool-adapters':
+        specifier: workspace:*
+        version: link:../tool-adapters
 
   packages/tool-adapters:
     dependencies:
