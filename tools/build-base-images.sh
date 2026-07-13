@@ -114,7 +114,14 @@ build_and_push() {
 # Cleanup on exit (trap accumulates paths as downloads proceed)
 # ---------------------------------------------------------------------------
 CLEANUP_DIRS=()
-cleanup() { for d in "${CLEANUP_DIRS[@]}"; do rm -rf "$d"; done; }
+# Guard the expansion: under `set -u` on bash 3.2 (macOS default), expanding an
+# empty array as "${CLEANUP_DIRS[@]}" is an unbound-variable error, which fires
+# in the EXIT trap and makes the script exit 1 even after a successful push
+# (e.g. when building only evalscope, which never appends a cleanup dir).
+cleanup() {
+  [[ ${#CLEANUP_DIRS[@]} -gt 0 ]] || return 0
+  for d in "${CLEANUP_DIRS[@]}"; do rm -rf "$d"; done
+}
 trap cleanup EXIT
 
 # ---------------------------------------------------------------------------
