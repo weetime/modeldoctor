@@ -66,6 +66,50 @@
     "code-completion": { "name": "Code Completion" },
     "long-form": { "name": "Long-Form 长文生成" }
   },
+  "matrix": {
+    "aggregate": {
+      "scenario": "场景",
+      "tool": "工具",
+      "engine": "引擎"
+    },
+    "band": {
+      "recommended": "推荐",
+      "usable": "可用",
+      "not-recommended": "不推荐"
+    },
+    "columns": {
+      "endpoint": "端点"
+    },
+    "filters": {
+      "category": "类别",
+      "categoryAll": "全部类别",
+      "searchPlaceholder": "搜索模型或连接…"
+    },
+    "map": {
+      "categoryDimension": "维度",
+      "categoryEndpoint": "端点",
+      "empty": "暂无数据",
+      "title": "端点关系图",
+      "tooltipCount": "格子数",
+      "tooltipRuns": "测试次数",
+      "tooltipScore": "评分",
+      "tooltipUnscored": "未评分"
+    },
+    "scatter": {
+      "bandLabel": "评级",
+      "bandUnknown": "未评分",
+      "empty": "暂无评分数据",
+      "noLatency": "{{count}} 项无延迟数据",
+      "score": "评分",
+      "unscoredNote": "{{count}} 项未评分",
+      "xAxis": "评分",
+      "yAxisLatency": "延迟 (ms)"
+    },
+    "view": {
+      "grid": "网格",
+      "map": "关系图"
+    }
+  },
   "checks": {
     "inference": {
       "ttft": {
