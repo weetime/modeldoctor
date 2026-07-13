@@ -4,6 +4,7 @@ import type {
   MatrixAggregate,
   ModalityCategory,
 } from "@modeldoctor/contracts";
+import { LayoutGrid, Share2 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ForceMap } from "./ForceMap";
 import { MatrixGrid } from "./MatrixGrid";
 import { useInsightsMatrix } from "./matrix-queries";
 import { ProfileSelector } from "./ProfileSelector";
@@ -27,9 +29,15 @@ import { ScatterPanel } from "./ScatterPanel";
 const AGGREGATES: MatrixAggregate[] = ["scenario", "tool", "engine"];
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
 const CATEGORIES: ModalityCategory[] = ["chat", "audio", "embeddings", "rerank", "image"];
+const VIEWS = ["grid", "map"] as const;
+type MatrixView = (typeof VIEWS)[number];
 
 function getValidatedAggregate(raw: string | null): MatrixAggregate {
   return raw === "tool" || raw === "engine" ? raw : "scenario";
+}
+
+function getValidatedView(raw: string | null): MatrixView {
+  return raw === "map" ? "map" : "grid";
 }
 
 export function InsightsMatrixPage() {
@@ -48,6 +56,7 @@ export function InsightsMatrixPage() {
       ? (categoryRaw as ModalityCategory)
       : "all";
   const dimKey = searchParams.get("dim");
+  const view = getValidatedView(searchParams.get("view"));
 
   const matrix = useInsightsMatrix({ aggregate, range, profile: profileSlug });
   const profiles = useEvaluationProfiles();
@@ -78,6 +87,12 @@ export function InsightsMatrixPage() {
     const sp = new URLSearchParams(searchParams);
     if (next === "all") sp.delete("category");
     else sp.set("category", next);
+    setSearchParams(sp);
+  }
+  function setView(next: string) {
+    const sp = new URLSearchParams(searchParams);
+    if (next === "grid") sp.delete("view");
+    else sp.set("view", next);
     setSearchParams(sp);
   }
   function openDim(key: string) {
@@ -190,20 +205,41 @@ export function InsightsMatrixPage() {
               options={profiles.data.items}
               onChange={setProfile}
             />
+            <Tabs value={view} onValueChange={setView}>
+              <TabsList>
+                <TabsTrigger value="grid" className="gap-1.5">
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  {t("matrix.view.grid", { defaultValue: "Grid" })}
+                </TabsTrigger>
+                <TabsTrigger value="map" className="gap-1.5">
+                  <Share2 className="h-3.5 w-3.5" />
+                  {t("matrix.view.map", { defaultValue: "Map" })}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
-        <MatrixGrid data={filteredData} onDimClick={openDim} />
-
-        {activeDim ? (
-          <ScatterPanel
-            dimKey={activeDim.key}
-            dimLabel={activeDimLabel}
+        {view === "map" ? (
+          <ForceMap
             data={filteredData}
-            onClose={closeDim}
-            onPointClick={(id) => navigate(`/insights/${id}?range=${range}`)}
+            onNodeClick={(id) => navigate(`/insights/${id}?range=${range}`)}
           />
-        ) : null}
+        ) : (
+          <>
+            <MatrixGrid data={filteredData} onDimClick={openDim} />
+
+            {activeDim ? (
+              <ScatterPanel
+                dimKey={activeDim.key}
+                dimLabel={activeDimLabel}
+                data={filteredData}
+                onClose={closeDim}
+                onPointClick={(id) => navigate(`/insights/${id}?range=${range}`)}
+              />
+            ) : null}
+          </>
+        )}
       </div>
     </>
   );

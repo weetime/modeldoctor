@@ -136,4 +136,34 @@ describe("InsightsMatrixPage", () => {
     expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
     expect(screen.getByText(/1 without latency data/i)).toBeInTheDocument();
   });
+
+  it("switches to the map view and hides the grid table", async () => {
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /map/i }));
+
+    expect(await screen.findByTestId("echart")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("does not render a stale scatter panel when the URL already has both dim and map view", async () => {
+    // Covers switching to map while a dim was open: the ScatterPanel is only
+    // ever rendered in the grid branch, so a `view=map` URL with `dim` still
+    // set must show the map, not a leftover scatter panel.
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    renderPage("/insights?dim=inference&view=map");
+
+    expect(await screen.findByTestId("echart")).toBeInTheDocument();
+    expect(screen.queryByTestId("scatter-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
 });
