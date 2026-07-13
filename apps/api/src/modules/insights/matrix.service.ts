@@ -1,11 +1,12 @@
 // apps/api/src/modules/insights/matrix.service.ts
-import type {
-  EndpointReportRange,
-  InsightsMatrixResponse,
-  MatrixAggregate,
-  MatrixCell,
-  MatrixDimension,
-  MatrixEndpoint,
+import {
+  ModalityCategorySchema,
+  type EndpointReportRange,
+  type InsightsMatrixResponse,
+  type MatrixAggregate,
+  type MatrixCell,
+  type MatrixDimension,
+  type MatrixEndpoint,
 } from "@modeldoctor/contracts";
 import {
   bandFromScore,
@@ -153,14 +154,17 @@ export class MatrixService {
       }),
     );
 
-    const endpoints: MatrixEndpoint[] = Array.from(connections.values()).map((c) => ({
-      id: c.id,
-      name: c.name,
-      model: c.model,
-      baseUrl: c.baseUrl,
-      category: (c.category ?? "chat") as MatrixEndpoint["category"],
-      serverKind: c.serverKind ?? null,
-    }));
+    const endpoints: MatrixEndpoint[] = Array.from(connections.values()).map((c) => {
+      const cat = ModalityCategorySchema.safeParse(c.category);
+      return {
+        id: c.id,
+        name: c.name,
+        model: c.model,
+        baseUrl: c.baseUrl,
+        category: cat.success ? cat.data : "chat",
+        serverKind: c.serverKind ?? null,
+      };
+    });
 
     return {
       aggregate,
