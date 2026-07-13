@@ -2,9 +2,10 @@
 # evalscope runner — our thin wrapper on top of the stable base image.
 # Rebuild whenever runner/ changes; the base (evalscope + datasets) is pulled
 # from the registry cache.
-# To bump evalscope: run `./tools/build-base-images.sh evalscope`, then update
-# the tag below and EVALSCOPE_VERSION in build-base-images.sh.
-FROM ghcr.io/weetime/md-base-evalscope:1.7.0
+# To bump the base (new evalscope version or changed baked datasets): run
+# `./tools/build-base-images.sh evalscope`, then update the tag below to match
+# EVALSCOPE_IMAGE_TAG in build-base-images.sh.
+FROM ghcr.io/weetime/md-base-evalscope:1.7.1
 
 WORKDIR /app
 

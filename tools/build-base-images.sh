@@ -28,7 +28,12 @@ CONTEXT="apps/benchmark-runner"
 VEGETA_VERSION=12.13.0
 VEGETA_SHA256_AMD64=e8759ce45c14e18374bdccd3ba6068197bc3a9f9b7e484db3837f701b9d12e61
 VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e4133bba
+# evalscope pip version (baked via the Dockerfile ARG default) is decoupled from
+# the base image TAG: bump EVALSCOPE_IMAGE_TAG whenever the baked datasets change
+# even if the evalscope pip version stays put. 1.7.1 added the swift/sharegpt
+# EN+ZH corpora on top of evalscope 1.7.0.
 EVALSCOPE_VERSION=1.7.0
+EVALSCOPE_IMAGE_TAG=1.7.1
 AIPERF_VERSION=0.10.0
 SHAREGPT_URL="https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
 MOONCAKE_TRACE_BASEURL="https://raw.githubusercontent.com/kvcache-ai/Mooncake/main/FAST25-release/traces"
@@ -109,7 +114,14 @@ build_and_push() {
 # Cleanup on exit (trap accumulates paths as downloads proceed)
 # ---------------------------------------------------------------------------
 CLEANUP_DIRS=()
-cleanup() { for d in "${CLEANUP_DIRS[@]}"; do rm -rf "$d"; done; }
+# Guard the expansion: under `set -u` on bash 3.2 (macOS default), expanding an
+# empty array as "${CLEANUP_DIRS[@]}" is an unbound-variable error, which fires
+# in the EXIT trap and makes the script exit 1 even after a successful push
+# (e.g. when building only evalscope, which never appends a cleanup dir).
+cleanup() {
+  [[ ${#CLEANUP_DIRS[@]} -gt 0 ]] || return 0
+  for d in "${CLEANUP_DIRS[@]}"; do rm -rf "$d"; done
+}
 trap cleanup EXIT
 
 # ---------------------------------------------------------------------------
@@ -178,13 +190,13 @@ fi
 # Build
 # ---------------------------------------------------------------------------
 contains vegeta    "${TOOLS[@]}" && build_and_push vegeta    "$VEGETA_VERSION"
-contains evalscope "${TOOLS[@]}" && build_and_push evalscope "$EVALSCOPE_VERSION"
+contains evalscope "${TOOLS[@]}" && build_and_push evalscope "$EVALSCOPE_IMAGE_TAG"
 contains aiperf    "${TOOLS[@]}" && build_and_push aiperf    "$AIPERF_VERSION"
 
 echo
 echo "==> Done. Base images in ${REGISTRY}:"
 contains vegeta    "${TOOLS[@]}" && echo "    md-base-vegeta:${VEGETA_VERSION}"
-contains evalscope "${TOOLS[@]}" && echo "    md-base-evalscope:${EVALSCOPE_VERSION}"
+contains evalscope "${TOOLS[@]}" && echo "    md-base-evalscope:${EVALSCOPE_IMAGE_TAG}"
 contains aiperf    "${TOOLS[@]}" && echo "    md-base-aiperf:${AIPERF_VERSION}"
 echo
 echo "Next: run ./tools/build-runner-images.sh to build + import the runner images."

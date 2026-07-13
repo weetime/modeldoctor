@@ -1,11 +1,14 @@
 # syntax=docker/dockerfile:1.6
 # Base image for the evalscope runner.
 # Contains evalscope + modelscope + baked datasets — NO ModelDoctor runner scripts.
-# Rebuild and push only when bumping tool versions; tag matches EVALSCOPE_VERSION.
+# Rebuild and push only when the tool version or the baked datasets change.
 #
 #   ./tools/build-base-images.sh evalscope
 #
-# Then update evalscope.Dockerfile's FROM line to the new tag.
+# The image TAG (EVALSCOPE_IMAGE_TAG in build-base-images.sh) tracks the base
+# *content* version and is decoupled from the evalscope pip version below: bump
+# the tag whenever a baked dataset is added/changed even if evalscope itself is
+# unchanged. Then update evalscope.Dockerfile's FROM line to the new tag.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -56,6 +59,33 @@ with open(src, encoding='utf-8') as f, open(dst, 'w', encoding='utf-8') as out:
             n += 1
 shutil.rmtree('/opt/evalscope-datasets/longalpaca')
 print('longalpaca.txt lines:', n)
+PY
+
+# Bake swift/sharegpt multi-turn conversations (~406 MB EN + ~460 MB ZH) for the
+# share_gpt_en / share_gpt_zh datasets. evalscope's share_gpt plugin reads the
+# jsonl directly via --dataset-path (see packages/tool-adapters/src/evalscope/
+# runtime.ts), skipping the modelscope auto-download the cluster can't reach.
+# Only these two files are needed; the repo also ships computer_*/unknow_* which
+# allow_patterns filters out. Downloaded straight into local_dir (no cache copy)
+# and asserted non-empty — the modelscope CLI silently exits 0 with 0 files on a
+# name typo, so we guard against baking an empty dataset.
+RUN python3 <<'PY'
+from modelscope import dataset_snapshot_download
+import os, shutil
+d = '/opt/evalscope-datasets/sharegpt'
+keep = ('common_en_70k.jsonl', 'common_zh_70k.jsonl')
+dataset_snapshot_download('swift/sharegpt', local_dir=d, allow_patterns=list(keep))
+for f in keep:
+    sz = os.path.getsize(os.path.join(d, f))
+    if sz == 0:
+        raise SystemExit(f'sharegpt bake failed: {f} is empty')
+    print(f'{f}: {sz} bytes')
+# Drop modelscope's download metadata (.msc/.mv/._____temp) — evalscope reads the
+# jsonl by explicit --dataset-path, so only the two corpora need to persist.
+for name in os.listdir(d):
+    if name not in keep:
+        p = os.path.join(d, name)
+        shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
 PY
 
 # evalscope LAST, with the [perf] extra — `evalscope perf` imports uvicorn via
