@@ -81,10 +81,17 @@ export function ScatterPanel({ dimKey, dimLabel, data, onClose, onPointClick }: 
 
   // Only scored cells become scatter points — unscored (score == null) cells
   // are surfaced as a count in the header, never plotted.
-  const { points, hasRealY, frontierIds } = useMemo(() => {
+  const { points, hasRealY, frontierIds, noLatencyCount } = useMemo(() => {
     const scoredCells = dimCells.filter((c) => c.score != null);
     const hasReal = scoredCells.some((c) => c.nativeMetric != null);
-    const pts: ScatterPoint[] = scoredCells.map((c, i) => {
+    // In real-latency mode, scored cells WITHOUT a nativeMetric latency must
+    // be excluded from the plotted series entirely — mixing a fabricated
+    // `i % 5` y (0-4) among real millisecond latencies (hundreds/thousands)
+    // would read as a false "very fast" outlier. They're surfaced as a count
+    // in the header instead. In the degraded 1D-strip mode (no scored cell
+    // has a latency at all) every point goes on the strip, unambiguously.
+    const plottedCells = hasReal ? scoredCells.filter((c) => c.nativeMetric != null) : scoredCells;
+    const pts: ScatterPoint[] = plottedCells.map((c, i) => {
       const endpoint = endpointsById.get(c.endpointId);
       const latency = c.nativeMetric?.value ?? null;
       return {
@@ -109,7 +116,12 @@ export function ScatterPanel({ dimKey, dimLabel, data, onClose, onPointClick }: 
             .map((p) => ({ id: p.endpointId, x: p.score, y: p.latency as number })),
         )
       : new Set<string>();
-    return { points: pts, hasRealY: hasReal, frontierIds: frontier };
+    return {
+      points: pts,
+      hasRealY: hasReal,
+      frontierIds: frontier,
+      noLatencyCount: scoredCells.length - plottedCells.length,
+    };
   }, [dimCells, endpointsById]);
 
   const option = useMemo<EChartsOption>(() => {
@@ -204,6 +216,14 @@ export function ScatterPanel({ dimKey, dimLabel, data, onClose, onPointClick }: 
               {t("matrix.scatter.unscoredNote", {
                 defaultValue: "{{count}} unscored",
                 count: unscoredCount,
+              })}
+            </p>
+          ) : null}
+          {noLatencyCount > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("matrix.scatter.noLatency", {
+                defaultValue: "{{count}} without latency data",
+                count: noLatencyCount,
               })}
             </p>
           ) : null}

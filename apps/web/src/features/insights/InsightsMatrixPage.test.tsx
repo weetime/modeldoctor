@@ -93,4 +93,47 @@ describe("InsightsMatrixPage", () => {
     expect(await screen.findByTestId("scatter-panel")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
   });
+
+  it("excludes scored points without a native-metric latency and notes their count, in a mixed dimension", async () => {
+    const PARTIAL_FIXTURE: InsightsMatrixResponse = {
+      ...MATRIX_FIXTURE,
+      endpoints: [
+        ...MATRIX_FIXTURE.endpoints,
+        {
+          id: "c2",
+          name: "n2",
+          model: "m2",
+          baseUrl: "http://x2",
+          category: "chat",
+          serverKind: "vllm",
+        },
+      ],
+      cells: [
+        // c1: scored + has a real latency — stays plotted.
+        MATRIX_FIXTURE.cells[0],
+        // c2: scored but no nativeMetric — must be excluded from the plotted
+        // series (not given a fabricated y) and counted separately.
+        {
+          endpointId: "c2",
+          dimKey: "inference",
+          runs: 2,
+          score: 60,
+          band: "usable",
+          nativeMetric: null,
+        },
+      ],
+    };
+    matrixQueryRef.current = { data: PARTIAL_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /inference/i }));
+
+    expect(await screen.findByTestId("scatter-panel")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
+    expect(screen.getByText(/1 without latency data/i)).toBeInTheDocument();
+  });
 });
