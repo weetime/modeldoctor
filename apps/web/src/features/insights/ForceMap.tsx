@@ -8,10 +8,15 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChartFrame, themed, useChartTokens } from "@/components/charts/_shared";
 
-// Chart.tsx (imported app-wide) already registers TooltipComponent /
-// LegendComponent / CanvasRenderer — but not GraphChart, since no other
-// chart in the app uses the `graph` series type. Register it here,
-// independently, following the same per-module precedent as ScatterPanel.tsx.
+// The `_shared` import below (ChartFrame/themed/useChartTokens) already
+// registers TooltipComponent / LegendComponent / CanvasRenderer as a module
+// side effect — NOT Chart.tsx, which ForceMap doesn't import at all. Only
+// GraphChart is missing, since no other chart in the app uses the `graph`
+// series type. Register it here, independently, following the same
+// per-module precedent as ScatterPanel.tsx. If `_shared` is ever refactored
+// to drop that import, or its own registration set narrows, this graph will
+// silently stop rendering tooltips/legend — keep this comment (and the
+// import) in sync.
 echarts.use([GraphChart]);
 
 export interface ForceMapProps {

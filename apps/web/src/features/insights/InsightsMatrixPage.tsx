@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ForceMap } from "./ForceMap";
+import { filterMatrixData } from "./matrix-filter";
 import { MatrixGrid } from "./MatrixGrid";
 import { useInsightsMatrix } from "./matrix-queries";
 import { ProfileSelector } from "./ProfileSelector";
@@ -108,16 +109,7 @@ export function InsightsMatrixPage() {
 
   const filteredData = useMemo(() => {
     if (!matrix.data) return undefined;
-    const needle = q.trim().toLowerCase();
-    const endpoints = matrix.data.endpoints.filter((endpoint) => {
-      if (category !== "all" && endpoint.category !== category) return false;
-      if (needle) {
-        const haystack = `${endpoint.model} ${endpoint.name}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-    return { ...matrix.data, endpoints };
+    return filterMatrixData(matrix.data, { q, category: category === "all" ? null : category });
   }, [matrix.data, category, q]);
 
   if (matrix.isLoading || profiles.isLoading) {

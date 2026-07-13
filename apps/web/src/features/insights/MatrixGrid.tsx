@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 
 interface Props {
   data: InsightsMatrixResponse;
-  onRowClick?: (endpointId: string) => void;
   onDimClick?: (dimKey: string) => void;
 }
 
@@ -32,7 +31,7 @@ function cellTitle(cell: MatrixCell): string | undefined {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function MatrixGrid({ data, onRowClick, onDimClick }: Props) {
+export function MatrixGrid({ data, onDimClick }: Props) {
   const { t } = useTranslation("insights");
 
   const cellsByKey = new Map<string, MatrixCell>();
@@ -85,7 +84,6 @@ export function MatrixGrid({ data, onRowClick, onDimClick }: Props) {
             <tr
               key={endpoint.id}
               className="border-b border-border/60 last:border-b-0 hover:bg-accent/40"
-              onClick={() => onRowClick?.(endpoint.id)}
             >
               <td className="p-2 align-top">
                 <Link
