@@ -20,10 +20,7 @@ export interface ParetoFrontierOptions {
  * Defaults match the quadrant scatter's score/latency semantics:
  * x (score) higher is better, y (latency) lower is better.
  */
-export function paretoFrontier(
-  points: ParetoPoint[],
-  opts?: ParetoFrontierOptions,
-): Set<string> {
+export function paretoFrontier(points: ParetoPoint[], opts?: ParetoFrontierOptions): Set<string> {
   const xBetter = opts?.xBetter ?? "higher";
   const yBetter = opts?.yBetter ?? "lower";
 
@@ -42,11 +39,7 @@ export function paretoFrontier(
       const qStrictlyBetterX = (q.x - p.x) * xSign > 0;
       const qStrictlyBetterY = (q.y - p.y) * ySign > 0;
 
-      if (
-        qBetterOrEqualX &&
-        qBetterOrEqualY &&
-        (qStrictlyBetterX || qStrictlyBetterY)
-      ) {
+      if (qBetterOrEqualX && qBetterOrEqualY && (qStrictlyBetterX || qStrictlyBetterY)) {
         dominated = true;
         break;
       }

@@ -1,22 +1,22 @@
 // apps/api/src/modules/insights/matrix.service.ts
 import {
-  ModalityCategorySchema,
   type EndpointReportRange,
   type InsightsMatrixResponse,
   type MatrixAggregate,
   type MatrixCell,
   type MatrixDimension,
   type MatrixEndpoint,
+  ModalityCategorySchema,
 } from "@modeldoctor/contracts";
 import {
   bandFromScore,
   buildFindingsCore,
   nativeMetric,
-  scenarioScore,
   type RunLike,
+  scenarioScore,
 } from "@modeldoctor/insights-scoring";
-import { Injectable } from "@nestjs/common";
 import { readMetricSafe } from "@modeldoctor/tool-adapters";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service.js";
 import { EvaluationProfileService } from "./evaluation-profile.service.js";
 
@@ -62,7 +62,14 @@ export class MatrixService {
       where: { userId, createdAt: { gte: since } },
       include: {
         connection: {
-          select: { id: true, name: true, model: true, baseUrl: true, category: true, serverKind: true },
+          select: {
+            id: true,
+            name: true,
+            model: true,
+            baseUrl: true,
+            category: true,
+            serverKind: true,
+          },
         },
       },
       take: 5000,
@@ -129,7 +136,11 @@ export class MatrixService {
           aggregate === "scenario" ? findings.filter((f) => f.scenario === dimKey) : findings,
         );
         const band = bandFromScore(score);
-        const nm = nativeMetric(aggregate === "scenario" ? dimKey : "inference", groupRuns, apiReader);
+        const nm = nativeMetric(
+          aggregate === "scenario" ? dimKey : "inference",
+          groupRuns,
+          apiReader,
+        );
 
         cells.push({
           endpointId: connectionId,

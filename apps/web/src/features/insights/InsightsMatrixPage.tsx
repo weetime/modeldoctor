@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ForceMap } from "./ForceMap";
-import { filterMatrixData } from "./matrix-filter";
 import { MatrixGrid } from "./MatrixGrid";
+import { filterMatrixData } from "./matrix-filter";
 import { useInsightsMatrix } from "./matrix-queries";
 import { ProfileSelector } from "./ProfileSelector";
 import { useEvaluationProfiles } from "./queries";

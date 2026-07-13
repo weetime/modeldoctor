@@ -2,11 +2,11 @@
 
 export { aiperfAdapter, aiperfReadMetric } from "./aiperf/index.js";
 export * from "./core/interface.js";
-export * from "./core/progress-event.js";
 // Shared readMetricSafe — api side resolves adapters via the registry,
 // so a future tool registration is picked up automatically without a
 // parallel table.
 export type { MetricKind } from "./core/metric-extractor.js";
+export * from "./core/progress-event.js";
 export { readMetricSafe } from "./core/read-metric-safe.runtime.js";
 export * from "./core/registry.js";
 export { evalscopeAdapter, evalscopeReadMetric } from "./evalscope/index.js";
