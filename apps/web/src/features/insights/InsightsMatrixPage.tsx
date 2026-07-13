@@ -6,7 +6,7 @@ import type {
 } from "@modeldoctor/contracts";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/page-header";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +22,7 @@ import { useInsightsMatrix } from "./matrix-queries";
 import { ProfileSelector } from "./ProfileSelector";
 import { useEvaluationProfiles } from "./queries";
 import { getValidatedRange } from "./range";
+import { ScatterPanel } from "./ScatterPanel";
 
 const AGGREGATES: MatrixAggregate[] = ["scenario", "tool", "engine"];
 const RANGES: EndpointReportRange[] = ["7d", "30d", "90d"];
@@ -35,6 +36,7 @@ export function InsightsMatrixPage() {
   const { t } = useTranslation("insights");
   const { t: tConn } = useTranslation("connections");
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const aggregate = getValidatedAggregate(searchParams.get("aggregate"));
   const range = getValidatedRange(searchParams.get("range"));
@@ -45,6 +47,7 @@ export function InsightsMatrixPage() {
     categoryRaw && (CATEGORIES as string[]).includes(categoryRaw)
       ? (categoryRaw as ModalityCategory)
       : "all";
+  const dimKey = searchParams.get("dim");
 
   const matrix = useInsightsMatrix({ aggregate, range, profile: profileSlug });
   const profiles = useEvaluationProfiles();
@@ -75,6 +78,16 @@ export function InsightsMatrixPage() {
     const sp = new URLSearchParams(searchParams);
     if (next === "all") sp.delete("category");
     else sp.set("category", next);
+    setSearchParams(sp);
+  }
+  function openDim(key: string) {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("dim", key);
+    setSearchParams(sp);
+  }
+  function closeDim() {
+    const sp = new URLSearchParams(searchParams);
+    sp.delete("dim");
     setSearchParams(sp);
   }
 
@@ -108,6 +121,13 @@ export function InsightsMatrixPage() {
   }
 
   if (!filteredData || !profiles.data) return null;
+
+  const activeDim = dimKey ? filteredData.dimensions.find((d) => d.key === dimKey) : undefined;
+  const activeDimLabel = activeDim
+    ? aggregate === "scenario"
+      ? t(`detail.scenario.${activeDim.key}`, { defaultValue: activeDim.label })
+      : activeDim.label
+    : "";
 
   return (
     <>
@@ -173,7 +193,17 @@ export function InsightsMatrixPage() {
           </div>
         </div>
 
-        <MatrixGrid data={filteredData} />
+        <MatrixGrid data={filteredData} onDimClick={openDim} />
+
+        {activeDim ? (
+          <ScatterPanel
+            dimKey={activeDim.key}
+            dimLabel={activeDimLabel}
+            data={filteredData}
+            onClose={closeDim}
+            onPointClick={(id) => navigate(`/insights/${id}?range=${range}`)}
+          />
+        ) : null}
       </div>
     </>
   );

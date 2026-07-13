@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 interface Props {
   data: InsightsMatrixResponse;
   onRowClick?: (endpointId: string) => void;
+  onDimClick?: (dimKey: string) => void;
 }
 
 // Same numeric thresholds as InsightsDetailPage's severityClass (>=85 emerald,
@@ -31,7 +32,7 @@ function cellTitle(cell: MatrixCell): string | undefined {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function MatrixGrid({ data, onRowClick }: Props) {
+export function MatrixGrid({ data, onRowClick, onDimClick }: Props) {
   const { t } = useTranslation("insights");
 
   const cellsByKey = new Map<string, MatrixCell>();
@@ -65,7 +66,13 @@ export function MatrixGrid({ data, onRowClick }: Props) {
                 key={dim.key}
                 className="whitespace-nowrap p-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground"
               >
-                {dimLabel(dim.key, dim.label)}
+                <button
+                  type="button"
+                  onClick={() => onDimClick?.(dim.key)}
+                  className="hover:text-foreground hover:underline focus:outline-none focus-visible:underline"
+                >
+                  {dimLabel(dim.key, dim.label)}
+                </button>
                 <sub className="ml-1 text-[10px] font-normal normal-case text-muted-foreground/70">
                   {dim.count}
                 </sub>

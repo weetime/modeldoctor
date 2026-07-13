@@ -2,6 +2,7 @@
 import type { InsightsMatrixResponse } from "@modeldoctor/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -75,5 +76,21 @@ describe("InsightsMatrixPage", () => {
 
     expect(await screen.findByText("m")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /inference/i })).toBeInTheDocument();
+  });
+
+  it("opens the scatter panel when a column header is clicked", async () => {
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(screen.queryByTestId("scatter-panel")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /inference/i }));
+
+    expect(await screen.findByTestId("scatter-panel")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
   });
 });
