@@ -484,6 +484,72 @@ def test_injected_api_key_is_redacted_in_log(
     assert "sk-from-env-secret" not in log_text
 
 
+class TestSelectSink:
+    """S3 when S3_ENDPOINT is set (online); else LocalWriter when
+    MD_OUTPUT_DIR is set (offline); else fail-fast."""
+
+    def test_prefers_s3_when_endpoint_set(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict(
+            "os.environ",
+            {"S3_ENDPOINT": "http://x", "MD_OUTPUT_DIR": "/out"},
+            clear=True,
+        )
+        with (
+            patch("runner.main.S3Writer") as MockS3,
+            patch("runner.main.LocalWriter") as MockLocal,
+        ):
+            sink = main_mod.select_sink()
+        MockS3.from_env.assert_called_once()
+        MockLocal.from_env.assert_not_called()
+        assert sink is MockS3.from_env.return_value
+
+    def test_local_when_only_output_dir(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"MD_OUTPUT_DIR": "/out"}, clear=True)
+        with (
+            patch("runner.main.S3Writer") as MockS3,
+            patch("runner.main.LocalWriter") as MockLocal,
+        ):
+            sink = main_mod.select_sink()
+        MockLocal.from_env.assert_called_once()
+        MockS3.from_env.assert_not_called()
+        assert sink is MockLocal.from_env.return_value
+
+    def test_raises_system_exit_when_neither(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {}, clear=True)
+        with pytest.raises(SystemExit):
+            main_mod.select_sink()
+
+
+def test_main_writes_to_local_dir_when_offline(
+    md_env_minimal: dict[str, str],
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Offline: no S3 env, MD_OUTPUT_DIR set → the full <id>/... layout lands
+    on disk (meta.json → stdout.log → result.json sentinel)."""
+    out = tmp_path / "out"
+    work = tmp_path / "work"
+    work.mkdir()
+    mocker.patch.dict(
+        "os.environ",
+        {**md_env_minimal, "MD_OUTPUT_DIR": str(out)},
+        clear=True,
+    )
+    mocker.patch("runner.main.Path.cwd", return_value=work)
+    mocker.patch("runner.main.os.getcwd", return_value=str(work))
+    proc = _fake_proc(stdout=b"hi\n", stderr=b"", returncode=0)
+    mocker.patch("runner.main.subprocess.Popen", return_value=proc)
+    mocker.patch("runner.main.detect_tool_version", return_value=None)
+
+    rc = main_mod.main()
+
+    assert rc == 0
+    result = json.loads((out / "b-test" / "result.json").read_text())
+    assert result["exitCode"] == 0
+    assert (out / "b-test" / "meta.json").exists()
+    assert (out / "b-test" / "stdout.log").read_text().strip() == "hi"
+
+
 def test_missing_required_env_raises_key_error(
     md_env_minimal: dict[str, str],
     mocker: MockerFixture,

@@ -76,15 +76,16 @@ env) before launching the container.
 | `MD_OUTPUT_FILES` | yes | JSON object mapping alias → relative file path (e.g. `{"result":"result.json"}`). After the tool exits the wrapper uploads each existing file to `<id>/files/<alias>` in the shared report-storage bucket. |
 | `MD_INPUT_FILE_PATHS` | no | JSON object mapping alias → absolute mount path. K8s mode only — the wrapper symlinks each source path into cwd so the tool's relative argv paths resolve correctly. Subprocess driver writes files directly to cwd and omits this var. |
 
-**Report-storage credentials (shared across runs; injected via the `md-benchmark-storage` Secret in K8s mode):**
+**Output sink (pick one; injected via the `md-benchmark-storage` Secret in K8s mode).** The wrapper writes the same `<id>/...` layout either way. Selection: `S3_ENDPOINT` set → S3 (online / k8s); else `MD_OUTPUT_DIR` set → local mount (offline / air-gapped); else fail-fast.
 
 | Variable | Required | Description |
 |---|---|---|
-| `S3_ENDPOINT` | yes | Endpoint URL of the shared object store (e.g. `http://minio:9000`). |
-| `S3_ACCESS_KEY` | yes | Access key id for the object store. |
-| `S3_SECRET_KEY` | yes | Secret access key for the object store. |
-| `S3_BUCKET` | yes | Bucket the wrapper writes into. Same bucket the API reads from. |
+| `S3_ENDPOINT` | when online | Endpoint URL of the shared object store (e.g. `http://minio:9000`). Its presence selects the S3 sink. |
+| `S3_ACCESS_KEY` | with S3 | Access key id for the object store. |
+| `S3_SECRET_KEY` | with S3 | Secret access key for the object store. |
+| `S3_BUCKET` | with S3 | Bucket the wrapper writes into. Same bucket the API reads from. |
 | `S3_REGION` | no | Defaults to `us-east-1` — harmless against MinIO, but required by the boto3 client. |
+| `MD_OUTPUT_DIR` | when offline | Local output root (a mounted path). Used **when `S3_ENDPOINT` is unset** — the wrapper writes here instead of S3, same `<id>/...` layout, no S3 client or MinIO needed. `S3_ENDPOINT` wins if both are set. Offline usage: `-v "$PWD/out:/out" -e MD_OUTPUT_DIR=/out`. |
 
 **Tool API keys (forwarded into argv at exec time):**
 
@@ -143,6 +144,24 @@ aws --endpoint-url http://localhost:9000 s3 cp s3://modeldoctor-dev/smoke-01/res
 
 (Linux Docker without Desktop: replace `host.docker.internal` with
 `172.17.0.1`, or pass `--add-host=host.docker.internal:host-gateway`.)
+
+### Offline / air-gapped — no object store
+
+Drop the `S3_*` vars and mount a local output dir instead. Same image, same
+entrypoint, same `<id>/...` layout — results land on the host directly.
+
+```bash
+docker run --rm \
+  -e MD_BENCHMARK_ID=smoke-offline \
+  -e MD_ARGV='["echo","hello from runner"]' \
+  -e MD_OUTPUT_FILES='{}' \
+  -e MD_OUTPUT_DIR=/out -v "$PWD/out:/out" \
+  md-runner-vegeta:dev3
+
+# results are on the host, no S3 client needed:
+cat out/smoke-offline/result.json   # {"exitCode": 0, "finishTimeIso": "...", "files": {}}
+ls  out/smoke-offline/              # meta.json  stdout.log  stderr.log  result.json
+```
 
 ### Real vegeta run
 
