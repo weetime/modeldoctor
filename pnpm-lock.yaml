@@ -50,6 +50,9 @@ importers:
       '@modeldoctor/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@modeldoctor/insights-scoring':
+        specifier: workspace:*
+        version: link:../../packages/insights-scoring
       '@modeldoctor/tool-adapters':
         specifier: workspace:*
         version: link:../../packages/tool-adapters
@@ -213,6 +216,9 @@ importers:
       '@modeldoctor/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@modeldoctor/insights-scoring':
+        specifier: workspace:*
+        version: link:../../packages/insights-scoring
       '@modeldoctor/tool-adapters':
         specifier: workspace:*
         version: link:../../packages/tool-adapters
@@ -382,6 +388,15 @@ importers:
       zod:
         specifier: ^3.23
         version: 3.25.76
+
+  packages/insights-scoring:
+    dependencies:
+      '@modeldoctor/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@modeldoctor/tool-adapters':
+        specifier: workspace:*
+        version: link:../tool-adapters
 
   packages/tool-adapters:
     dependencies:

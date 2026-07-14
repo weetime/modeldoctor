@@ -18,13 +18,13 @@ import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCom
 import { ReportDetailPage } from "@/features/benchmarks/compare/ReportDetailPage";
 import { ReportPreviewPage } from "@/features/benchmarks/compare/ReportPreviewPage";
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
-import { EndpointReportsPage } from "@/features/benchmarks/EndpointReportsPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DeploymentRecipesPage } from "@/features/deployment-recipes";
 import { DevChartsPage } from "@/features/dev-charts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { ErrorPage } from "@/features/error/ErrorPage";
 import { InsightsDetailPage } from "@/features/insights/InsightsDetailPage";
+import { InsightsMatrixPage } from "@/features/insights/InsightsMatrixPage";
 import { LlmJudgeProvidersPage } from "@/features/llm-judge-providers/LlmJudgeProvidersPage";
 import { McpServersPage } from "@/features/mcp-servers/McpServersPage";
 import { MeLayout } from "@/features/me/MeLayout";
@@ -101,7 +101,7 @@ export const routes: RouteObject[] = [
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
           { path: "reports/:id", element: <ReportDetailRoute /> },
-          { path: "benchmarks/reports", element: <EndpointReportsPage /> },
+          { path: "benchmarks/reports", element: <InsightsMatrixPage /> },
           { path: "benchmarks/reports/:connectionId", element: <RedirectToInsights /> },
           { path: "insights/:connectionId", element: <InsightsDetailPage /> },
           { path: "benchmarks/new", element: <BenchmarkCreatePage /> },

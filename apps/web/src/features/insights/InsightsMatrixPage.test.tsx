@@ -1,0 +1,169 @@
+// apps/web/src/features/insights/InsightsMatrixPage.test.tsx
+import type { InsightsMatrixResponse } from "@modeldoctor/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+import i18n from "@/lib/i18n";
+
+const { matrixQueryRef, profilesQueryRef } = vi.hoisted(() => ({
+  matrixQueryRef: { current: { data: undefined, isLoading: true } } as {
+    current: { data: unknown; isLoading: boolean };
+  },
+  profilesQueryRef: { current: { data: undefined, isLoading: true } } as {
+    current: { data: unknown; isLoading: boolean };
+  },
+}));
+
+vi.mock("./matrix-queries", () => ({
+  useInsightsMatrix: () => matrixQueryRef.current,
+}));
+
+vi.mock("./queries", () => ({
+  useEvaluationProfiles: () => profilesQueryRef.current,
+}));
+
+import { InsightsMatrixPage } from "./InsightsMatrixPage";
+
+const MATRIX_FIXTURE: InsightsMatrixResponse = {
+  aggregate: "scenario",
+  range: "30d",
+  generatedAt: "2026-07-01T00:00:00Z",
+  dimensions: [{ key: "inference", label: "Inference", count: 1 }],
+  endpoints: [
+    {
+      id: "c1",
+      name: "n",
+      model: "m",
+      baseUrl: "http://x",
+      category: "chat",
+      serverKind: "vllm",
+    },
+  ],
+  cells: [
+    {
+      endpointId: "c1",
+      dimKey: "inference",
+      runs: 3,
+      score: 80,
+      band: "usable",
+      nativeMetric: { kind: "e2e.p95", value: 1200, unit: "ms" },
+    },
+  ],
+};
+
+function renderPage(initialUrl = "/insights") {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter initialEntries={[initialUrl]}>
+          <InsightsMatrixPage />
+        </MemoryRouter>
+      </I18nextProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("InsightsMatrixPage", () => {
+  it("renders endpoint row and scenario column header", async () => {
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /inference/i })).toBeInTheDocument();
+  });
+
+  it("opens the scatter panel when a column header is clicked", async () => {
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(screen.queryByTestId("scatter-panel")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /inference/i }));
+
+    expect(await screen.findByTestId("scatter-panel")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
+  });
+
+  it("excludes scored points without a native-metric latency and notes their count, in a mixed dimension", async () => {
+    const PARTIAL_FIXTURE: InsightsMatrixResponse = {
+      ...MATRIX_FIXTURE,
+      endpoints: [
+        ...MATRIX_FIXTURE.endpoints,
+        {
+          id: "c2",
+          name: "n2",
+          model: "m2",
+          baseUrl: "http://x2",
+          category: "chat",
+          serverKind: "vllm",
+        },
+      ],
+      cells: [
+        // c1: scored + has a real latency — stays plotted.
+        MATRIX_FIXTURE.cells[0],
+        // c2: scored but no nativeMetric — must be excluded from the plotted
+        // series (not given a fabricated y) and counted separately.
+        {
+          endpointId: "c2",
+          dimKey: "inference",
+          runs: 2,
+          score: 60,
+          band: "usable",
+          nativeMetric: null,
+        },
+      ],
+    };
+    matrixQueryRef.current = { data: PARTIAL_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /inference/i }));
+
+    expect(await screen.findByTestId("scatter-panel")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /inference/i })).toBeInTheDocument();
+    expect(screen.getByText(/1 without latency data/i)).toBeInTheDocument();
+  });
+
+  it("switches to the map view and hides the grid table", async () => {
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /map/i }));
+
+    expect(await screen.findByTestId("force-map")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("does not render a stale scatter panel when the URL already has both dim and map view", async () => {
+    // Covers switching to map while a dim was open: the ScatterPanel is only
+    // ever rendered in the grid branch, so a `view=map` URL with `dim` still
+    // set must show the map, not a leftover scatter panel.
+    matrixQueryRef.current = { data: MATRIX_FIXTURE, isLoading: false };
+    profilesQueryRef.current = { data: { items: [] }, isLoading: false };
+
+    renderPage("/insights?dim=inference&view=map");
+
+    expect(await screen.findByTestId("force-map")).toBeInTheDocument();
+    expect(screen.queryByTestId("scatter-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+});

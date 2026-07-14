@@ -66,6 +66,56 @@
     "code-completion": { "name": "Code Completion" },
     "long-form": { "name": "Long-Form Generation" }
   },
+  "matrix": {
+    "aggregate": {
+      "scenario": "Scenario",
+      "tool": "Tool",
+      "engine": "Engine"
+    },
+    "band": {
+      "recommended": "Recommended",
+      "usable": "Usable",
+      "not-recommended": "Not recommended"
+    },
+    "columns": {
+      "endpoint": "Endpoint"
+    },
+    "filters": {
+      "category": "Category",
+      "categoryAll": "All categories",
+      "searchPlaceholder": "Search model or connection…"
+    },
+    "map": {
+      "categoryDimension": "Dimension",
+      "categoryEndpoint": "Endpoint",
+      "empty": "No data",
+      "title": "Endpoint map",
+      "tooltipCount": "Cells",
+      "tooltipRuns": "Runs",
+      "tooltipScore": "Score",
+      "tooltipUnscored": "Unscored",
+      "thesis": "Dimensions in the center, endpoints around — colored by health.",
+      "legendHint": "Click a color to filter",
+      "guide": "Drag to move · scroll to zoom · click a node to inspect.",
+      "viewDetail": "View detail",
+      "close": "Close",
+      "reheat": "Re-layout"
+    },
+    "scatter": {
+      "bandLabel": "Band",
+      "bandUnknown": "Unscored",
+      "empty": "No scored data",
+      "noLatency": "{{count}} without latency data",
+      "score": "Score",
+      "unscoredNote": "{{count}} unscored",
+      "xAxis": "Score",
+      "yAxisLatency": "Latency (ms)"
+    },
+    "view": {
+      "grid": "Grid",
+      "map": "Map"
+    }
+  },
   "checks": {
     "inference": {
       "ttft": {

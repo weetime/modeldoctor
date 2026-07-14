@@ -10,6 +10,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json biome.js
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/insights-scoring/package.json ./packages/insights-scoring/
 COPY packages/tool-adapters/package.json ./packages/tool-adapters/
 
 RUN pnpm install --frozen-lockfile
@@ -23,6 +24,7 @@ COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /repo/packages/contracts/node_modules ./packages/contracts/node_modules
+COPY --from=deps /repo/packages/insights-scoring/node_modules ./packages/insights-scoring/node_modules
 COPY --from=deps /repo/packages/tool-adapters/node_modules ./packages/tool-adapters/node_modules
 COPY . .
 
@@ -49,6 +51,8 @@ COPY --from=build /repo/apps/web/package.json ./apps/web/
 COPY --from=build /repo/apps/web/dist ./apps/web/dist
 COPY --from=build /repo/packages/contracts/package.json ./packages/contracts/
 COPY --from=build /repo/packages/contracts/dist ./packages/contracts/dist
+COPY --from=build /repo/packages/insights-scoring/package.json ./packages/insights-scoring/
+COPY --from=build /repo/packages/insights-scoring/dist ./packages/insights-scoring/dist
 COPY --from=build /repo/packages/tool-adapters/package.json ./packages/tool-adapters/
 COPY --from=build /repo/packages/tool-adapters/dist ./packages/tool-adapters/dist
 

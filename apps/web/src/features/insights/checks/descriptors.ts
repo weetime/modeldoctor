@@ -1,27 +1,22 @@
-import type { BenchmarkTool, RadarAxisId, ScenarioId } from "@modeldoctor/contracts";
-import type { Direction } from "../evaluate";
-import { capacityChecks } from "./capacity";
-import { gatewayChecks } from "./gateway";
-import { inferenceChecks } from "./inference";
+import {
+  ALL_CHECKS as CORE_CHECKS,
+  type CheckDescriptor as CoreCheckDescriptor,
+} from "@modeldoctor/insights-scoring";
 
-type SummaryMetrics = unknown;
-
-export interface CheckDescriptor {
-  id: string;
-  scenario: ScenarioId;
-  toolFilter?: BenchmarkTool[];
-  axis: RadarAxisId;
-  defaultWeight: number;
-  read: (m: SummaryMetrics) => number | null;
-  direction: Direction;
+// Web keeps a `recommendationKey` field on its check descriptors purely as a
+// derived convenience (all 13 checks follow `checks.<checkId>.recommendation`
+// — see buildFindings.ts, which actually resolves the i18n key straight from
+// `checkId` rather than reading this field). The shared package's
+// `CheckDescriptor` dropped `.read`/`recommendationKey` in favor of
+// `metricKind` (resolved by an environment-specific `MetricReader`).
+export interface CheckDescriptor extends CoreCheckDescriptor {
   recommendationKey: string;
 }
 
-export const ALL_CHECKS: CheckDescriptor[] = [
-  ...inferenceChecks,
-  ...capacityChecks,
-  ...gatewayChecks,
-];
+export const ALL_CHECKS: CheckDescriptor[] = CORE_CHECKS.map((c) => ({
+  ...c,
+  recommendationKey: `checks.${c.id}.recommendation`,
+}));
 
 const byId = new Map(ALL_CHECKS.map((c) => [c.id, c]));
 

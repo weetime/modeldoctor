@@ -25,6 +25,7 @@
     "sourceMap": true,
     "paths": {
       "@modeldoctor/contracts": ["../../packages/contracts/src"],
+      "@modeldoctor/insights-scoring": ["../../packages/insights-scoring/src"],
       "@modeldoctor/tool-adapters": ["../../packages/tool-adapters/src"],
       "@modeldoctor/tool-adapters/schemas": ["../../packages/tool-adapters/src/schemas-entry.ts"]
     }
