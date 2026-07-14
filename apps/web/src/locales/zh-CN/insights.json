@@ -93,7 +93,13 @@
       "tooltipCount": "格子数",
       "tooltipRuns": "测试次数",
       "tooltipScore": "评分",
-      "tooltipUnscored": "未评分"
+      "tooltipUnscored": "未评分",
+      "thesis": "维度在中心,端点在四周 —— 颜色表示健康度。",
+      "legendHint": "点击色块可筛选",
+      "guide": "拖拽移动 · 滚轮缩放 · 点节点看定位。",
+      "viewDetail": "查看详情",
+      "close": "关闭",
+      "reheat": "重排布局"
     },
     "scatter": {
       "bandLabel": "评级",

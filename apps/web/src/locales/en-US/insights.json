@@ -93,7 +93,13 @@
       "tooltipCount": "Cells",
       "tooltipRuns": "Runs",
       "tooltipScore": "Score",
-      "tooltipUnscored": "Unscored"
+      "tooltipUnscored": "Unscored",
+      "thesis": "Dimensions in the center, endpoints around — colored by health.",
+      "legendHint": "Click a color to filter",
+      "guide": "Drag to move · scroll to zoom · click a node to inspect.",
+      "viewDetail": "View detail",
+      "close": "Close",
+      "reheat": "Re-layout"
     },
     "scatter": {
       "bandLabel": "Band",

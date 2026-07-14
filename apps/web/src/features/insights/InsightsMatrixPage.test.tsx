@@ -149,7 +149,7 @@ describe("InsightsMatrixPage", () => {
 
     await user.click(screen.getByRole("tab", { name: /map/i }));
 
-    expect(await screen.findByTestId("echart")).toBeInTheDocument();
+    expect(await screen.findByTestId("force-map")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -162,7 +162,7 @@ describe("InsightsMatrixPage", () => {
 
     renderPage("/insights?dim=inference&view=map");
 
-    expect(await screen.findByTestId("echart")).toBeInTheDocument();
+    expect(await screen.findByTestId("force-map")).toBeInTheDocument();
     expect(screen.queryByTestId("scatter-panel")).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });

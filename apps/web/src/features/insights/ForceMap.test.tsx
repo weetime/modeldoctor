@@ -42,15 +42,24 @@ function renderMap(data: InsightsMatrixResponse) {
 }
 
 describe("ForceMap", () => {
-  it("renders the (mocked) chart container without throwing", () => {
-    renderMap(MATRIX_FIXTURE);
+  it("renders the canvas graph + legend chrome without throwing", () => {
+    const { container } = renderMap(MATRIX_FIXTURE);
 
-    expect(screen.getByTestId("echart")).toBeInTheDocument();
+    // The bespoke canvas engine mounts a <canvas>; jsdom returns a null 2d
+    // context so the sim is skipped, but the DOM chrome (canvas + legend)
+    // still renders. A search input is part of the left drawer.
+    expect(container.querySelector("canvas")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
-  it("renders an empty state when there are no dimensions or endpoints", () => {
-    renderMap({ ...MATRIX_FIXTURE, dimensions: [], endpoints: [], cells: [] });
+  it("renders an empty state (no canvas) when there are no dimensions or endpoints", () => {
+    const { container } = renderMap({
+      ...MATRIX_FIXTURE,
+      dimensions: [],
+      endpoints: [],
+      cells: [],
+    });
 
-    expect(screen.queryByTestId("echart")).not.toBeInTheDocument();
+    expect(container.querySelector("canvas")).not.toBeInTheDocument();
   });
 });
