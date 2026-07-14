@@ -18,10 +18,36 @@ import threading
 from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TextIO
+from typing import Protocol, TextIO
 
+from runner.local_writer import LocalWriter
 from runner.s3_writer import S3Writer
 from runner.storage_keys import checkpoint_prefix, file_key, keys_for
+
+
+class Writer(Protocol):
+    """The output sink surface main() + checkpointing depend on.
+
+    Both S3Writer (online / k8s) and LocalWriter (offline mount) satisfy it,
+    producing the identical <id>/... key layout.
+    """
+
+    def put_json(self, key: str, obj: object) -> None: ...
+    def put_text(self, key: str, text: str) -> None: ...
+    def put_file(self, key: str, local_path: str) -> None: ...
+    def list_keys(self, prefix: str) -> list[str]: ...
+    def download_prefix(self, prefix: str, local_dir: str) -> int: ...
+
+
+def select_sink() -> Writer:
+    """Pick the output sink: S3 when configured (online / k8s, zero change),
+    else a local mount (offline), else fail-fast."""
+    if os.environ.get("S3_ENDPOINT"):
+        return S3Writer.from_env()
+    if os.environ.get("MD_OUTPUT_DIR"):
+        return LocalWriter.from_env()
+    raise SystemExit("no output sink: set S3_* (online) or MD_OUTPUT_DIR (offline)")
+
 
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
@@ -282,7 +308,7 @@ def _checkpoint_dir_abs() -> str | None:
     return str(Path.cwd() / rel)
 
 
-def _upload_checkpoint_once(s3: S3Writer, run_id: str, dir_abs: str) -> None:
+def _upload_checkpoint_once(s3: Writer, run_id: str, dir_abs: str) -> None:
     """Walk dir_abs and put_file every file under <run_id>/checkpoint/<rel>."""
     if not os.path.isdir(dir_abs):
         return
@@ -303,7 +329,7 @@ class _CheckpointUploader(threading.Thread):
     benchmark itself).
     """
 
-    def __init__(self, s3: S3Writer, run_id: str, dir_abs: str, interval: float):
+    def __init__(self, s3: Writer, run_id: str, dir_abs: str, interval: float):
         super().__init__(daemon=True)
         self._s3, self._run_id, self._dir, self._interval = s3, run_id, dir_abs, interval
         # NOTE: named _stop_event, NOT _stop — threading.Thread already owns a
@@ -338,12 +364,12 @@ def main() -> int:
     if tool_version is None and tool_name:
         log.warning("detect_tool_version(%s) returned None", tool_name)
 
-    # S3 writer — fail-fast if env is misconfigured.
-    s3 = S3Writer.from_env()
+    # Output sink — S3 online, local mount offline; fail-fast if neither set.
+    sink = select_sink()
     keys = keys_for(benchmark_id)
 
     # 1. Write meta.json — runner has started, tool version known.
-    s3.put_json(
+    sink.put_json(
         keys.meta,
         {
             "toolVersion": tool_version or "",
@@ -362,7 +388,7 @@ def main() -> int:
     ckpt_dir = _checkpoint_dir_abs()
     if ckpt_dir and os.environ.get("MD_RESUME") == "1":
         try:
-            n = s3.download_prefix(checkpoint_prefix(benchmark_id), ckpt_dir)
+            n = sink.download_prefix(checkpoint_prefix(benchmark_id), ckpt_dir)
             log.info("restored %d checkpoint file(s) into %s", n, ckpt_dir)
         except Exception as e:  # noqa: BLE001 - restore is best-effort; proceed with a clean run
             log.warning("checkpoint restore failed, continuing without prior state: %s", e)
@@ -387,7 +413,7 @@ def main() -> int:
     uploader = None
     if ckpt_dir:
         interval = float(os.environ.get("MD_CHECKPOINT_INTERVAL_SEC", "60"))
-        uploader = _CheckpointUploader(s3, benchmark_id, ckpt_dir, interval)
+        uploader = _CheckpointUploader(sink, benchmark_id, ckpt_dir, interval)
         uploader.start()
 
     proc.wait()
@@ -398,7 +424,7 @@ def main() -> int:
         uploader.stop()
         uploader.join(timeout=10)
         try:
-            _upload_checkpoint_once(s3, benchmark_id, ckpt_dir)  # final flush — best-effort
+            _upload_checkpoint_once(sink, benchmark_id, ckpt_dir)  # final flush — best-effort
         except Exception as e:  # noqa: BLE001 - checkpoint is best-effort, must not crash the run
             log.warning("final checkpoint flush failed: %s", e)
 
@@ -409,18 +435,18 @@ def main() -> int:
         if not full.exists():
             continue
         rel = f"files/{alias}"
-        s3.put_file(file_key(benchmark_id, alias), str(full))
+        sink.put_file(file_key(benchmark_id, alias), str(full))
         files_map[alias] = rel
 
     # 3. Upload stdout/stderr (tailed buffer from StreamPump).
     # snapshot() copies under the pump's lock so a daemon pump thread still
     # alive after join(timeout=5) (unusual EOF behavior) can't trigger a
     # "deque mutated during iteration" RuntimeError mid-read.
-    s3.put_text(keys.stdout, "\n".join(out_pump.snapshot()))
-    s3.put_text(keys.stderr, "\n".join(err_pump.snapshot()))
+    sink.put_text(keys.stdout, "\n".join(out_pump.snapshot()))
+    sink.put_text(keys.stderr, "\n".join(err_pump.snapshot()))
 
     # 4. Sentinel — result.json LAST. API uses this to determine "storage complete".
-    s3.put_json(
+    sink.put_json(
         keys.result,
         {
             "exitCode": proc.returncode,
