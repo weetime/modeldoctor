@@ -71,38 +71,35 @@ interface SimEdge {
 
 interface Palette {
   dark: boolean;
-  bg: string;
   edge: string;
+  edgeFaint: string;
   edgeHi: string;
   label: string;
   labelDim: string;
 }
 
+// Read the app's LIVE theme colors from its CSS custom properties so the
+// canvas matches whatever theme + palette is active (the app toggles dark via
+// `<html class="dark">` and swaps palettes via `data-palette`, NOT data-theme).
+// The vars are shadcn HSL triples like "220 14% 96%" → wrap as hsl(...).
 function readPalette(): Palette {
-  const attr =
-    typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
-  const dark =
-    attr === "dark" ||
-    (attr == null &&
-      typeof matchMedia !== "undefined" &&
-      matchMedia("(prefers-color-scheme: dark)").matches);
-  return dark
-    ? {
-        dark,
-        bg: "#0f1117",
-        edge: "rgba(160,174,208,.4)",
-        edgeHi: "rgba(129,140,248,.85)",
-        label: "#e7eaf3",
-        labelDim: "rgba(231,234,243,.5)",
-      }
-    : {
-        dark: false,
-        bg: "#ffffff",
-        edge: "rgba(40,52,84,.32)",
-        edgeHi: "rgba(99,102,241,.7)",
-        label: "#181d2c",
-        labelDim: "rgba(24,29,44,.55)",
-      };
+  const cs = typeof document !== "undefined" ? getComputedStyle(document.documentElement) : null;
+  const v = (name: string, fallback: string) => {
+    const raw = cs?.getPropertyValue(name).trim();
+    return raw ? `hsl(${raw})` : fallback;
+  };
+  const va = (name: string, alpha: number, fallback: string) => {
+    const raw = cs?.getPropertyValue(name).trim();
+    return raw ? `hsl(${raw} / ${alpha})` : fallback;
+  };
+  return {
+    dark: typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
+    label: v("--foreground", "#181d2c"),
+    labelDim: v("--muted-foreground", "rgba(24,29,44,.55)"),
+    edge: va("--muted-foreground", 0.45, "rgba(40,52,84,.32)"),
+    edgeFaint: va("--muted-foreground", 0.12, "rgba(40,52,84,.08)"),
+    edgeHi: v("--primary", "rgba(99,102,241,.9)"),
+  };
 }
 
 // Physics constants (from the graph-tour engine, tuned for ~20-40 nodes).
@@ -374,11 +371,7 @@ export function ForceMap({ data, onNodeClick }: ForceMapProps) {
           ctx.strokeStyle = pal.edgeHi;
           ctx.lineWidth = Math.min(3, e.w);
         } else {
-          ctx.strokeStyle = focus
-            ? pal.dark
-              ? "rgba(150,163,196,.06)"
-              : "rgba(40,52,84,.07)"
-            : pal.edge;
+          ctx.strokeStyle = focus ? pal.edgeFaint : pal.edge;
           ctx.lineWidth = 1;
         }
         ctx.stroke();
@@ -547,7 +540,7 @@ export function ForceMap({ data, onNodeClick }: ForceMapProps) {
     });
     themeObs.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-theme"],
+      attributeFilter: ["class", "data-palette"],
     });
 
     return () => {
