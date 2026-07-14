@@ -90,23 +90,19 @@ function readPalette(): Palette {
     ? {
         dark,
         bg: "#0f1117",
-        edge: "rgba(150,163,196,.16)",
-        edgeHi: "rgba(129,140,248,.6)",
+        edge: "rgba(160,174,208,.4)",
+        edgeHi: "rgba(129,140,248,.85)",
         label: "#e7eaf3",
         labelDim: "rgba(231,234,243,.5)",
       }
     : {
         dark: false,
         bg: "#ffffff",
-        edge: "rgba(40,52,84,.18)",
-        edgeHi: "rgba(99,102,241,.55)",
+        edge: "rgba(40,52,84,.32)",
+        edgeHi: "rgba(99,102,241,.7)",
         label: "#181d2c",
         labelDim: "rgba(24,29,44,.55)",
       };
-}
-
-function truncate(s: string, n: number): string {
-  return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }
 
 // Physics constants (from the graph-tour engine, tuned for ~20-40 nodes).
@@ -207,7 +203,7 @@ export function ForceMap({ data, onNodeClick }: ForceMapProps) {
       const n: SimNode = {
         id: `ep:${e.id}`,
         kind: "endpoint",
-        label: truncate(e.model, 22),
+        label: e.model,
         full: `${e.model} · ${e.name}`,
         color: BAND_COLOR[band],
         r: 6 + (runs / maxRuns) * 10,
@@ -395,17 +391,11 @@ export function ForceMap({ data, onNodeClick }: ForceMapProps) {
         const dim = focus && n !== focus && !nb?.has(n.id);
         ctx.globalAlpha = dim ? 0.26 : 1;
 
-        if (n === focus && !dim) {
-          ctx.shadowColor = n.color;
-          ctx.shadowBlur = 22 * (pal.dark ? 0.9 : 0.4);
-        } else {
-          ctx.shadowBlur = 0;
-        }
+        // Flat fills — no glow (keep it clean per design).
         ctx.beginPath();
         ctx.arc(sx, sy, r, 0, 7);
         ctx.fillStyle = n.color;
         ctx.fill();
-        ctx.shadowBlur = 0;
         if (n === focus) {
           ctx.beginPath();
           ctx.arc(sx, sy, r + 4, 0, 7);
@@ -423,11 +413,9 @@ export function ForceMap({ data, onNodeClick }: ForceMapProps) {
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
           const ly = sy + r + 5;
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = pal.bg;
-          ctx.lineJoin = "round";
-          ctx.strokeText(n.label, sx, ly);
-          ctx.fillStyle = n === focus || big ? pal.label : pal.labelDim;
+          // No halo/stroke — plain fill for a clean look. Full label text
+          // (no truncation); dimmed only when another node is focused.
+          ctx.fillStyle = dim ? pal.labelDim : pal.label;
           ctx.fillText(n.label, sx, ly);
         }
         ctx.globalAlpha = 1;
