@@ -87,6 +87,18 @@ def test_download_prefix_empty_returns_zero(tmp_path: Path) -> None:
     assert writer.download_prefix("nope/", str(tmp_path / "restore")) == 0
 
 
+def test_put_leaves_no_tmp_sibling(tmp_path: Path) -> None:
+    """Atomic write cleans up: no <key>.tmp remains after a successful put."""
+    writer = LocalWriter(root=str(tmp_path))
+    writer.put_json("r1/meta.json", {"a": 1})
+    writer.put_text("r1/stdout.log", "x")
+    src = tmp_path / "src.bin"
+    src.write_text("y")
+    writer.put_file("r1/files/f", str(src))
+    leftovers = [p.name for p in (tmp_path / "r1").rglob("*.tmp")]
+    assert leftovers == []
+
+
 def test_put_rejects_parent_traversal_key(tmp_path: Path) -> None:
     writer = LocalWriter(root=str(tmp_path / "sink"))
     with pytest.raises(ValueError):

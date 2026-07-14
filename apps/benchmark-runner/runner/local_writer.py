@@ -9,9 +9,11 @@ is byte-for-byte the S3 layout (`<id>/meta.json`, `<id>/files/<alias>`,
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
+from collections.abc import Callable
 
 
 def _key_to_relpath(key: str) -> str:
@@ -40,20 +42,46 @@ class LocalWriter:
         self.root = root
 
     def _dest(self, key: str) -> str:
-        dest = os.path.join(self.root, _key_to_relpath(key))
+        dest = os.path.abspath(os.path.join(self.root, _key_to_relpath(key)))
+        # Belt-and-suspenders atop _key_to_relpath: resolve and assert the
+        # destination stays under root, so no key can ever escape the mount.
+        root_abs = os.path.abspath(self.root)
+        if dest != root_abs and not dest.startswith(root_abs + os.sep):
+            raise ValueError(f"key escapes output root: {key!r}")
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         return dest
 
+    def _write_atomic(self, key: str, write_fn: Callable[[str], None]) -> None:
+        """Write via a sibling .tmp then os.replace, so a reader (or the
+        API sentinel check) never sees a partial file — mirrors S3's atomic
+        put_object/upload_file. A crash mid-write leaves no <key>, not a
+        truncated one."""
+        dest = self._dest(key)
+        tmp = dest + ".tmp"
+        try:
+            write_fn(tmp)
+            os.replace(tmp, dest)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.remove(tmp)
+            raise
+
     def put_json(self, key: str, obj: object) -> None:
-        with open(self._dest(key), "w", encoding="utf-8") as f:
-            json.dump(obj, f)
+        def _write(tmp: str) -> None:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(obj, f)
+
+        self._write_atomic(key, _write)
 
     def put_text(self, key: str, text: str) -> None:
-        with open(self._dest(key), "w", encoding="utf-8") as f:
-            f.write(text)
+        def _write(tmp: str) -> None:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self._write_atomic(key, _write)
 
     def put_file(self, key: str, local_path: str) -> None:
-        shutil.copyfile(local_path, self._dest(key))
+        self._write_atomic(key, lambda tmp: shutil.copyfile(local_path, tmp))
 
     def list_keys(self, prefix: str) -> list[str]:
         keys: list[str] = []
