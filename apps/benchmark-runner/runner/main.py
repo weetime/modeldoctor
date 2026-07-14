@@ -48,6 +48,7 @@ def select_sink() -> Writer:
         return LocalWriter.from_env()
     raise SystemExit("no output sink: set S3_* (online) or MD_OUTPUT_DIR (offline)")
 
+
 LOG_LINE_MAX_BYTES = 64 * 1024
 # Bounds the S3 stdout/stderr objects and runner RSS for long-running benchmarks.
 # stdout.log/stderr.log are post-mortem only (the live stream is the pod log,
