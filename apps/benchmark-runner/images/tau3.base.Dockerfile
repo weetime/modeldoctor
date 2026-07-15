@@ -29,8 +29,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 #    headers + a C compiler to build. We run text-only but must satisfy the
 #    eager import chain; libportaudio (pulled by portaudio19-dev) must remain at
 #    runtime since pyaudio loads it at import. See task-17b image-fix report.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git gcc python3-dev portaudio19-dev \
+# Acquire::Retries — the Debian mirror is reached through a transparent proxy
+# that intermittently 502s; apt hard-fails (exit 100) on the first failed fetch
+# unless told to retry. 5 retries with apt's built-in backoff rides out the
+# transient 502s so the base build is reproducible off a flaky mirror.
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
+        git gcc python3-dev portaudio19-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Pin the τ³-bench release tag for reproducibility.
