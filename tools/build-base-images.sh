@@ -35,6 +35,11 @@ VEGETA_SHA256_ARM64=950381173a5575e25e8e086f36fc03bf65d61a2433329b48e41e1cb5e413
 EVALSCOPE_VERSION=1.7.0
 EVALSCOPE_IMAGE_TAG=1.7.1
 AIPERF_VERSION=0.10.0
+# tau3: TAU3_REF (tau2 git tag, baked via the Dockerfile ARG default) is
+# decoupled from the base image TAG: bump TAU3_IMAGE_TAG whenever the baked
+# content changes even if the tau2 ref stays put, then update tau3.Dockerfile's
+# FROM line to match.
+TAU3_IMAGE_TAG=1.0.0
 SHAREGPT_URL="https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
 MOONCAKE_TRACE_BASEURL="https://raw.githubusercontent.com/kvcache-ai/Mooncake/main/FAST25-release/traces"
 
@@ -48,12 +53,12 @@ for arg in "$@"; do
   case "$arg" in
     --no-push) PUSH=false ;;
     --force)   FORCE=true ;;
-    vegeta|evalscope|aiperf) TOOLS+=("$arg") ;;
+    vegeta|evalscope|aiperf|tau3) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 if [[ ${#TOOLS[@]} -eq 0 ]]; then
-  TOOLS=(vegeta evalscope aiperf)
+  TOOLS=(vegeta evalscope aiperf tau3)
 fi
 
 # ---------------------------------------------------------------------------
@@ -192,11 +197,13 @@ fi
 contains vegeta    "${TOOLS[@]}" && build_and_push vegeta    "$VEGETA_VERSION"
 contains evalscope "${TOOLS[@]}" && build_and_push evalscope "$EVALSCOPE_IMAGE_TAG"
 contains aiperf    "${TOOLS[@]}" && build_and_push aiperf    "$AIPERF_VERSION"
+contains tau3      "${TOOLS[@]}" && build_and_push tau3      "$TAU3_IMAGE_TAG"
 
 echo
 echo "==> Done. Base images in ${REGISTRY}:"
 contains vegeta    "${TOOLS[@]}" && echo "    md-base-vegeta:${VEGETA_VERSION}"
 contains evalscope "${TOOLS[@]}" && echo "    md-base-evalscope:${EVALSCOPE_IMAGE_TAG}"
 contains aiperf    "${TOOLS[@]}" && echo "    md-base-aiperf:${AIPERF_VERSION}"
+contains tau3      "${TOOLS[@]}" && echo "    md-base-tau3:${TAU3_IMAGE_TAG}"
 echo
 echo "Next: run ./tools/build-runner-images.sh to build + import the runner images."
