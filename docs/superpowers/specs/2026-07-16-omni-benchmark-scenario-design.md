@@ -229,3 +229,19 @@ omni: {
 - **功能门禁**:E2E Smoke 加 omni probe(每模态一发 + audio choice 可解码校验),对应文章 EXP-1;
 - **静态容量**:读启动日志(KV tokens / Maximum concurrency)的轻量场景,对应 EXP-2;
 - **WS 实时链路**:`/v1/realtime`、`/v1/audio/speech/stream` 的 TTFP 压测(文章 C6,协议未定型,观望)。
+
+---
+
+## 附:v1 落地对账(2026-07-16,随 feat/omni-benchmark-scenario 合入)
+
+实现与本 spec 的偏差记录(均经终审确认为有意取舍,非遗漏):
+
+| spec 条目 | v1 实际 | 处置 |
+|---|---|---|
+| §4.1 `extraArgs` 逃生舱 | 未实现 | descope:driver 循环拼 argv,透传逃生舱等有真实需求再加 |
+| §4.2 `--save-result` 优先 | 仅 stdout 正则(fixture 验证) | 实测 v0.24.0 支持 `--save-result` → 已立 follow-up 换 JSON 解析 |
+| §4.8 逐点明细表 / RTF 图天花板标注 / text 臂 E2EL 叠加 | 未实现(warnings 卡部分替代明细表) | descope 到 v1.x,报告组件已留数据(curve 全量在 summaryMetrics) |
+| §5 result.json `toolVersion` 字段 | 不在 result.json;经通用 wrapper 的 `MD_TOOL_VERSION_ARGV` 机制写入 meta.json(实测 `vllm-omni --version` → `0.24.0`) | 方案优于原设计(wrapper 保持工具无关) |
+| §6 customHeaders/queryParams 校验 | create 阶段 400(`BENCHMARK_OMNI_CONNECTION_UNSUPPORTED`)+ buildCommand 兜底 | 按 spec 修正(计划稿曾漂移到仅 buildCommand) |
+
+已验证的 §8 待验证项:#1 `--save-result` 支持(见上);driver 容错路径在真实上游故障下端到端验证(全失败 result.json 符合 schema、exit 1、单 summary 块)。遗留 follow-up:run_bench 进程组超时清理、realtime_ceiling 阈值与扫描范围耦合(quick 模板恒 warn)、两处文档漂移(build-base-images.sh 用法注释、deploy/k8s README env 清单)。
