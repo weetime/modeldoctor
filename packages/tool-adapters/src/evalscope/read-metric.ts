@@ -50,6 +50,16 @@ export function evalscopeReadMetric(
       const p99 = dist(data, "e2eLatency", "p99");
       return p50 === null || p99 === null || p50 === 0 ? null : p99 / p50;
     }
+    // Omni-only kinds — 本工具不产出。
+    case "realtimeCeiling":
+    case "audioTtfpC1.mean":
+    case "audioTtfpPeak.p50":
+    case "audioTtfpPeak.p99":
+    case "audioRtfPeak.mean":
+    case "audioRtfPeak.p50":
+    case "audioRtfPeak.p99":
+    case "voiceTax.ms":
+      return null;
     default: {
       const _exhaustive: never = kind;
       void _exhaustive;
