@@ -5,6 +5,7 @@ import {
 } from "@modeldoctor/tool-adapters/schemas";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChartFrame, themed, useChartTokens } from "@/components/charts/_shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,78 +56,106 @@ export function OmniReport({ benchmark }: OmniReportProps) {
   const tokens = useChartTokens();
   const tagged = benchmark.summaryMetrics as { tool?: string; data?: unknown } | null;
   const parsed = vllmOmniBenchReportSchema.safeParse(tagged?.data);
+  // Nullable pre-guard view of the parsed report, so the useMemo hooks below can
+  // be called unconditionally (rules-of-hooks) — the real, narrowed `r` is
+  // derived after the early-return once `parsed.success` is known.
+  const parsedReport: VllmOmniBenchReport | null = parsed.success ? parsed.data : null;
+
+  const points = useMemo(() => (parsedReport ? audioOkPoints(parsedReport) : []), [parsedReport]);
+  const taxLevels = useMemo(
+    () =>
+      parsedReport
+        ? Object.keys(parsedReport.derived.voiceTaxMsByLevel).sort((a, b) => Number(a) - Number(b))
+        : [],
+    [parsedReport],
+  );
+
+  const rtfOption = useMemo<EChartsOption>(
+    () =>
+      themed(
+        {
+          grid: { top: 24, right: 16, bottom: 32, left: 48 },
+          xAxis: { type: "value", name: t("reports.omni.concurrency"), minInterval: 1 },
+          yAxis: { type: "value", name: "RTF" },
+          tooltip: { trigger: "axis" },
+          series: [
+            {
+              name: "AUDIO_RTF (mean)",
+              type: "line",
+              data: curveSeries(points, (p) => p.audioRtf?.mean ?? null),
+              markLine: {
+                silent: true,
+                symbol: "none",
+                // ChartTokens (components/charts/theme.ts) doesn't expose a
+                // danger/destructive color — this dashed line marks the fixed
+                // realtime=1 threshold, so it intentionally stays a constant red
+                // rather than following the theme palette.
+                lineStyle: { type: "dashed", color: "#ef4444" },
+                data: [{ yAxis: 1, label: { formatter: t("reports.omni.realtimeLine") } }],
+              },
+            },
+          ],
+        },
+        tokens,
+      ),
+    [points, t, tokens],
+  );
+
+  const ttfpOption = useMemo<EChartsOption>(
+    () =>
+      themed(
+        {
+          grid: { top: 24, right: 16, bottom: 32, left: 56 },
+          xAxis: { type: "value", name: t("reports.omni.concurrency"), minInterval: 1 },
+          yAxis: { type: "value", name: "TTFP (ms)" },
+          tooltip: { trigger: "axis" },
+          legend: { top: 0 },
+          series: [
+            {
+              name: "mean",
+              type: "line",
+              data: curveSeries(points, (p) => p.audioTtfpMs?.mean ?? null),
+            },
+            {
+              name: "p99",
+              type: "line",
+              data: curveSeries(points, (p) => p.audioTtfpMs?.p99 ?? null),
+            },
+          ],
+        },
+        tokens,
+      ),
+    [points, t, tokens],
+  );
+
+  const taxOption = useMemo<EChartsOption>(
+    () =>
+      themed(
+        {
+          grid: { top: 24, right: 16, bottom: 32, left: 56 },
+          xAxis: { type: "category", data: taxLevels, name: t("reports.omni.concurrency") },
+          yAxis: { type: "value", name: "Δ E2EL (ms)" },
+          tooltip: { trigger: "axis" },
+          series: [
+            {
+              name: t("reports.omni.voiceTax"),
+              type: "bar",
+              data: taxLevels.map((k) => parsedReport?.derived.voiceTaxMsByLevel[k] ?? 0),
+            },
+          ],
+        },
+        tokens,
+      ),
+    [taxLevels, parsedReport, t, tokens],
+  );
+
   if (!parsed.success) {
     return <UnknownReport benchmark={benchmark} reason={parsed.error.message} />;
   }
   const r: VllmOmniBenchReport = parsed.data;
 
-  const points = audioOkPoints(r);
   const peak = points.find((p) => p.concurrency === r.derived.peakConcurrency);
   const c1 = points[0];
-
-  const rtfOption: EChartsOption = themed(
-    {
-      grid: { top: 24, right: 16, bottom: 32, left: 48 },
-      xAxis: { type: "value", name: t("reports.omni.concurrency"), minInterval: 1 },
-      yAxis: { type: "value", name: "RTF" },
-      tooltip: { trigger: "axis" },
-      series: [
-        {
-          name: "AUDIO_RTF (mean)",
-          type: "line",
-          data: curveSeries(points, (p) => p.audioRtf?.mean ?? null),
-          markLine: {
-            silent: true,
-            symbol: "none",
-            lineStyle: { type: "dashed", color: "#ef4444" },
-            data: [{ yAxis: 1, label: { formatter: t("reports.omni.realtimeLine") } }],
-          },
-        },
-      ],
-    },
-    tokens,
-  );
-
-  const ttfpOption: EChartsOption = themed(
-    {
-      grid: { top: 24, right: 16, bottom: 32, left: 56 },
-      xAxis: { type: "value", name: t("reports.omni.concurrency"), minInterval: 1 },
-      yAxis: { type: "value", name: "TTFP (ms)" },
-      tooltip: { trigger: "axis" },
-      legend: { top: 0 },
-      series: [
-        {
-          name: "mean",
-          type: "line",
-          data: curveSeries(points, (p) => p.audioTtfpMs?.mean ?? null),
-        },
-        {
-          name: "p99",
-          type: "line",
-          data: curveSeries(points, (p) => p.audioTtfpMs?.p99 ?? null),
-        },
-      ],
-    },
-    tokens,
-  );
-
-  const taxLevels = Object.keys(r.derived.voiceTaxMsByLevel).sort((a, b) => Number(a) - Number(b));
-  const taxOption: EChartsOption = themed(
-    {
-      grid: { top: 24, right: 16, bottom: 32, left: 56 },
-      xAxis: { type: "category", data: taxLevels, name: t("reports.omni.concurrency") },
-      yAxis: { type: "value", name: "Δ E2EL (ms)" },
-      tooltip: { trigger: "axis" },
-      series: [
-        {
-          name: t("reports.omni.voiceTax"),
-          type: "bar",
-          data: taxLevels.map((k) => r.derived.voiceTaxMsByLevel[k]),
-        },
-      ],
-    },
-    tokens,
-  );
 
   return (
     <div className="space-y-4">

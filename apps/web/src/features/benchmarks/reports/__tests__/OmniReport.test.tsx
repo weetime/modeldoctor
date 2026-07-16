@@ -120,4 +120,117 @@ describe("OmniReport", () => {
     render(<OmniReport benchmark={bm} />);
     expect(screen.getByText(/Report shape not recognized/i)).toBeInTheDocument();
   });
+
+  it("renders all-'—' tiles and hides the tax/warnings cards when every audio point failed", () => {
+    const allFailedReport: VllmOmniBenchReport = {
+      curve: [
+        {
+          arm: "audio",
+          concurrency: 1,
+          status: "failed",
+          reqPerSec: null,
+          outTokPerSec: null,
+          ttftMs: null,
+          e2elMs: null,
+          audioTtfpMs: null,
+          audioRtf: null,
+        },
+        {
+          arm: "audio",
+          concurrency: 8,
+          status: "failed",
+          reqPerSec: null,
+          outTokPerSec: null,
+          ttftMs: null,
+          e2elMs: null,
+          audioTtfpMs: null,
+          audioRtf: null,
+        },
+      ],
+      derived: {
+        realtimeCeiling: 0,
+        peakConcurrency: 0,
+        voiceTaxMsByLevel: {},
+        voiceTaxMs: null,
+      },
+      warnings: [],
+    };
+    const bm = {
+      ...omniBenchmarkFixture,
+      summaryMetrics: { tool: "vllm-omni-bench", data: allFailedReport },
+    } as unknown as Benchmark;
+
+    render(<OmniReport benchmark={bm} />);
+
+    // Ceiling / TTFP / RTF / voice-tax tiles all fall back to "—" — no ok
+    // audio points to derive a value from.
+    expect(screen.getAllByText("—")).toHaveLength(4);
+
+    // The RTF/TTFP charts still render (as ChartFrame empty-state), but the
+    // voice-tax chart card and the warnings card are conditionally omitted.
+    expect(screen.queryByText("语音税(按档 ΔE2EL)")).not.toBeInTheDocument();
+    expect(screen.queryByText("警告")).not.toBeInTheDocument();
+    expect(screen.getByText("AUDIO_RTF - 并发曲线")).toBeInTheDocument();
+    expect(screen.getByText("AUDIO_TTFP - 并发曲线")).toBeInTheDocument();
+  });
+
+  it("hides the voice-tax card but still populates the other tiles when voiceTaxMsByLevel is empty", () => {
+    const noTaxReport: VllmOmniBenchReport = {
+      curve: [
+        {
+          arm: "audio",
+          concurrency: 1,
+          status: "ok",
+          reqPerSec: 1.2,
+          outTokPerSec: 30,
+          ttftMs: stat(120, 110, 200),
+          e2elMs: stat(2500, 2400, 3000),
+          audioTtfpMs: stat(300, 280, 450),
+          audioRtf: stat(0.4, 0.38, 0.6),
+        },
+        {
+          arm: "audio",
+          concurrency: 8,
+          status: "ok",
+          reqPerSec: 6.5,
+          outTokPerSec: 180,
+          ttftMs: stat(200, 190, 320),
+          e2elMs: stat(3200, 3000, 4200),
+          audioTtfpMs: stat(500, 470, 700),
+          audioRtf: stat(0.9, 0.85, 1.1),
+        },
+      ],
+      derived: {
+        realtimeCeiling: 8,
+        peakConcurrency: 8,
+        voiceTaxMsByLevel: {},
+        voiceTaxMs: null,
+      },
+      warnings: [],
+    };
+    const bm = {
+      ...omniBenchmarkFixture,
+      summaryMetrics: { tool: "vllm-omni-bench", data: noTaxReport },
+    } as unknown as Benchmark;
+
+    render(<OmniReport benchmark={bm} />);
+
+    // Ceiling / TTFP / RTF tiles are populated from the happy audio curve.
+    expect(screen.getByText("c=8")).toBeInTheDocument();
+    expect(screen.getByText("300 ms")).toBeInTheDocument();
+    expect(screen.getByText("0.90")).toBeInTheDocument();
+    // Voice-tax tile falls back to "—" (no text-arm run), and the tax chart
+    // card is omitted entirely since there are no levels to plot.
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText("语音税(按档 ΔE2EL)")).not.toBeInTheDocument();
+  });
+
+  it("falls back to UnknownReport when summaryMetrics.data is a well-formed but unrelated object", () => {
+    const bm = {
+      ...omniBenchmarkFixture,
+      summaryMetrics: { tool: "vllm-omni-bench", data: { bogus: true } },
+    } as unknown as Benchmark;
+    render(<OmniReport benchmark={bm} />);
+    expect(screen.getByText(/Report shape not recognized/i)).toBeInTheDocument();
+  });
 });
