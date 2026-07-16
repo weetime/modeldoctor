@@ -184,3 +184,29 @@ def test_resolve_tokenizer_fails_fast_with_guidance(monkeypatch, tmp_path):
         omni_driver.resolve_tokenizer("Qwen/X")
     with pytest.raises(SystemExit, match="tokenizerHfId"):
         omni_driver.resolve_tokenizer(None)
+
+
+# ── tokenizerHfId path-traversal guard (M-3) ───────────────────────────
+def test_resolve_tokenizer_rejects_relative_traversal(monkeypatch, tmp_path):
+    monkeypatch.setattr(omni_driver, "TOKENIZERS_ROOT", tmp_path / "tokenizers")
+    with pytest.raises(SystemExit, match="not a valid"):
+        omni_driver.resolve_tokenizer("../etc")
+
+
+def test_resolve_tokenizer_rejects_absolute_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(omni_driver, "TOKENIZERS_ROOT", tmp_path / "tokenizers")
+    with pytest.raises(SystemExit, match="not a valid"):
+        omni_driver.resolve_tokenizer("/abs/path")
+
+
+def test_resolve_tokenizer_rejects_deeper_traversal_after_org_segment(monkeypatch, tmp_path):
+    monkeypatch.setattr(omni_driver, "TOKENIZERS_ROOT", tmp_path / "tokenizers")
+    with pytest.raises(SystemExit, match="not a valid"):
+        omni_driver.resolve_tokenizer("org/../../etc/passwd")
+
+
+def test_resolve_tokenizer_accepts_well_formed_org_name(monkeypatch, tmp_path):
+    baked = tmp_path / "tokenizers" / "Qwen" / "Qwen2.5-Omni-7B"
+    baked.mkdir(parents=True)
+    monkeypatch.setattr(omni_driver, "TOKENIZERS_ROOT", tmp_path / "tokenizers")
+    assert omni_driver.resolve_tokenizer("Qwen/Qwen2.5-Omni-7B") == str(baked)

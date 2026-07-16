@@ -28,6 +28,12 @@ log = logging.getLogger("omni-driver")
 OUT_DIR = Path("out")
 RESULT_FILE = OUT_DIR / "omni_result.json"
 TOKENIZERS_ROOT = Path("/tokenizers")
+# HF repo id shape: "<org>/<name>", each segment word-chars/dot/dash, org
+# can't start with those (blocks a leading "." or "-" segment while still
+# allowing e.g. "Qwen2.5-Omni-7B" style names). Rejects "../etc", "/abs/path"
+# etc. before they're joined onto TOKENIZERS_ROOT (M-3: path traversal).
+HF_ID_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
+
 
 # 数值行:标签允许 (ms) 等单位尾缀,冒号后取第一个浮点。
 def _rx(label: str) -> re.Pattern[str]:
@@ -135,6 +141,11 @@ def resolve_tokenizer(hf_id: str | None) -> str:
         raise SystemExit(
             "tokenizer required: set tokenizerHfId on the Connection "
             "(baked under /tokenizers/<org>/<name>) or provide HF_ENDPOINT"
+        )
+    if not HF_ID_RE.match(hf_id):
+        raise SystemExit(
+            f"tokenizerHfId '{hf_id}' is not a valid 'org/name' HF repo id "
+            "(rejecting to avoid escaping /tokenizers via '..' or an absolute path)"
         )
     baked = TOKENIZERS_ROOT / hf_id
     if baked.is_dir():
