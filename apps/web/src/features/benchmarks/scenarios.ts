@@ -1,5 +1,14 @@
 import { SCENARIOS, type ScenarioId } from "@modeldoctor/tool-adapters/schemas";
-import { Activity, Bot, Database, Gauge, Layers, type LucideIcon, Network } from "lucide-react";
+import {
+  Activity,
+  AudioWaveform,
+  Bot,
+  Database,
+  Gauge,
+  Layers,
+  type LucideIcon,
+  Network,
+} from "lucide-react";
 
 /**
  * Lucide icon for each scenario, consumed by the sidebar in Phase 14.
@@ -12,6 +21,7 @@ export const SCENARIO_ICONS: Record<ScenarioId, LucideIcon> = {
   "lb-strategy": Layers,
   "engine-kv-cache": Database,
   agent: Bot,
+  omni: AudioWaveform,
 };
 
 export { SCENARIOS, type ScenarioId };

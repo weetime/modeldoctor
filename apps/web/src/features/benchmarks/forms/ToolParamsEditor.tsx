@@ -9,7 +9,9 @@ import {
   guidellmParamDefaults,
   tau3ParamDefaults,
   VEGETA_CATEGORY_DEFAULTS,
+  VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
   vegetaParamDefaults,
+  vllmOmniBenchParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -48,6 +50,7 @@ const TOOL_CATEGORY_DEFAULTS = {
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
   tau3: TAU3_CATEGORY_DEFAULTS,
+  "vllm-omni-bench": VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
 } as const;
 
 import { AgentParamsForm } from "./AgentParamsForm";
@@ -56,6 +59,7 @@ import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
+import { VllmOmniBenchParamsForm } from "./VllmOmniBenchParamsForm";
 
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
@@ -63,6 +67,7 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   evalscope: evalscopeParamDefaults,
   aiperf: aiperfParamDefaults,
   tau3: tau3ParamDefaults,
+  "vllm-omni-bench": vllmOmniBenchParamDefaults,
 };
 
 /**
@@ -83,6 +88,8 @@ function pickParamsForm(tool: ToolName) {
       return AiperfParamsForm;
     case "tau3":
       return AgentParamsForm;
+    case "vllm-omni-bench":
+      return VllmOmniBenchParamsForm;
     default: {
       const _exhaustive: never = tool;
       throw new Error(`Unhandled tool in ToolParamsEditor: ${String(_exhaustive)}`);
@@ -104,14 +111,8 @@ export interface ToolEditorProps {
 
 function useToolFromForm(scenario: ScenarioId, displayTool?: ToolName): ToolName {
   const { control } = useFormContext();
-  // NOTE: `scenario` is contracts' ScenarioId (includes "omni" as of the
-  // omni-benchmark-scenario work); SCENARIOS is still keyed by
-  // tool-adapters' own (narrower) ScenarioId until the omni scenario is
-  // registered there (see packages/tool-adapters/src/scenarios.ts). The
-  // cast is safe today because no caller can reach this hook with
-  // scenario === "omni" yet (no such option is offered in any picker).
   const formTool = (useWatch({ control, name: "tool" }) ??
-    SCENARIOS[scenario as keyof typeof SCENARIOS].tools[0]) as ToolName;
+    SCENARIOS[scenario].tools[0]) as ToolName;
   return displayTool ?? formTool;
 }
 
@@ -132,8 +133,7 @@ export function ToolSelectorField({
   const id = useId();
   const toolFieldId = `${id}-tool`;
 
-  // See boundary-gap note in useToolFromForm above.
-  const availableTools = SCENARIOS[scenario as keyof typeof SCENARIOS].tools;
+  const availableTools = SCENARIOS[scenario].tools;
 
   // Watch the form's connectionId so we can mark tools that don't speak the
   // picked connection's modality as disabled. When no connection is picked
@@ -257,8 +257,7 @@ export function useToolUnsupported(
   const def = TOOL_CATEGORY_DEFAULTS[tool][connection.category];
   if (!("unsupported" in def)) return null;
   const cat = connection.category;
-  // See boundary-gap note in useToolFromForm above.
-  const alternatives = SCENARIOS[scenario as keyof typeof SCENARIOS].tools.filter(
+  const alternatives = SCENARIOS[scenario].tools.filter(
     (t) => !("unsupported" in TOOL_CATEGORY_DEFAULTS[t][cat]),
   );
   return { tool, category: cat, alternatives };

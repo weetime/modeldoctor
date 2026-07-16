@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  AudioWaveform,
   BarChart3,
   Bot,
   Boxes,
@@ -71,6 +72,7 @@ export const sidebarGroups: SidebarGroup[] = [
         labelKey: "items.benchmarkKvCacheStress",
       },
       { to: "/benchmarks/agent", icon: Bot, labelKey: "items.benchmarkAgent" },
+      { to: "/benchmarks/omni", icon: AudioWaveform, labelKey: "items.benchmarkOmni" },
       { to: "/benchmarks/reports", icon: BarChart3, labelKey: "items.endpointReports" },
       {
         to: "/benchmarks/compare/saved",

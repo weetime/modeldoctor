@@ -33,6 +33,7 @@
     "devCharts": "Dev Charts",
     "deploymentRecipes": "Deployment Recipes",
     "benchmarkKvCacheStress": "Engine KV / Prefix Cache",
-    "benchmarkAgent": "Agent Scenario Eval"
+    "benchmarkAgent": "Agent Scenario Eval",
+    "benchmarkOmni": "Omni Realtime"
   }
 }
