@@ -59,6 +59,13 @@ export {
   vegetaParamDefaults,
   vegetaParamsSchema,
   vegetaReportSchema,
+  VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
+  type VllmOmniBenchParams,
+  type VllmOmniBenchReport,
+  vllmOmniBenchParamDefaults,
+  vllmOmniBenchParamsSchema,
+  vllmOmniBenchReportSchema,
 } from "./schemas-entry.js";
 export { computeGate, type GateResult, tau3Adapter, tau3ReadMetric } from "./tau3/index.js";
 export { vegetaAdapter, vegetaReadMetric } from "./vegeta/index.js";
+export { vllmOmniBenchAdapter, vllmOmniBenchReadMetric } from "./vllm-omni-bench/index.js";

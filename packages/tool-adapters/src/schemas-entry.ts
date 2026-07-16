@@ -19,6 +19,7 @@ export {
   EVALSCOPE_CATEGORY_DEFAULTS,
   GUIDELLM_CATEGORY_DEFAULTS,
   VEGETA_CATEGORY_DEFAULTS,
+  VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
 } from "./category-defaults.js";
 export type { ProgressEvent, ToolName, ToolReport } from "./core/interface.js";
 // Metric kinds + pure per-tool extractors. These files have NO runtime
@@ -86,3 +87,11 @@ export {
   vegetaParamsSchema,
   vegetaReportSchema,
 } from "./vegeta/schema.js";
+export { vllmOmniBenchReadMetric } from "./vllm-omni-bench/read-metric.js";
+export {
+  type VllmOmniBenchParams,
+  type VllmOmniBenchReport,
+  vllmOmniBenchParamDefaults,
+  vllmOmniBenchParamsSchema,
+  vllmOmniBenchReportSchema,
+} from "./vllm-omni-bench/schema.js";

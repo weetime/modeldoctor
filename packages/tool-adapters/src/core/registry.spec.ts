@@ -24,11 +24,15 @@ describe("registry", () => {
     expect(byTool("tau3").name).toBe("tau3");
   });
 
-  it("allAdapters returns five adapters", () => {
+  it("byTool('vllm-omni-bench') returns the vllm-omni-bench adapter", () => {
+    expect(byTool("vllm-omni-bench").name).toBe("vllm-omni-bench");
+  });
+
+  it("allAdapters returns six adapters", () => {
     const all = allAdapters();
-    expect(all).toHaveLength(5);
+    expect(all).toHaveLength(6);
     expect(all.map((a) => a.name).sort()).toEqual(
-      ["aiperf", "evalscope", "guidellm", "tau3", "vegeta"].sort(),
+      ["aiperf", "evalscope", "guidellm", "tau3", "vegeta", "vllm-omni-bench"].sort(),
     );
   });
 });

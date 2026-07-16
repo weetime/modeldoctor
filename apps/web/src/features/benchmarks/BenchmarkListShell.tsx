@@ -89,6 +89,10 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   "lb-strategy": "benchmarkPrefixCache",
   "engine-kv-cache": "benchmarkKvCacheStress",
   agent: "benchmarkAgent",
+  // Sidebar copy for the omni scenario lands with the UI work (Task 10);
+  // key follows the existing naming convention (same as the other
+  // SCENARIO_SIDEBAR_KEY copies in BenchmarkDetailPage/BenchmarkComparePage).
+  omni: "benchmarkOmni",
 };
 
 export function BenchmarkListShell({ scenario }: BenchmarkListShellProps) {

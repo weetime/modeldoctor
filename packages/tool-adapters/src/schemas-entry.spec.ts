@@ -6,6 +6,7 @@ import {
   VEGETA_API_TYPE_TO_BODY,
   VEGETA_API_TYPE_TO_PATH,
   VEGETA_CATEGORY_DEFAULTS,
+  VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
 } from "./schemas-entry.js";
 
 describe("schemas-entry", () => {
@@ -39,5 +40,12 @@ describe("schemas-entry — task 5 re-exports", () => {
   it("re-exports the CATEGORY_DEFAULTS maps", () => {
     expect(VEGETA_CATEGORY_DEFAULTS.embeddings).toEqual({ apiType: "embeddings" });
     expect(GUIDELLM_CATEGORY_DEFAULTS.image).toEqual({ unsupported: true });
+  });
+  it("re-exports vllm-omni-bench schemas + category defaults", () => {
+    expect(schemas.vllmOmniBenchParamsSchema).toBeDefined();
+    expect(schemas.vllmOmniBenchReportSchema).toBeDefined();
+    expect(schemas.vllmOmniBenchReadMetric).toBeDefined();
+    expect(VLLM_OMNI_BENCH_CATEGORY_DEFAULTS.omni).toEqual({});
+    expect(VLLM_OMNI_BENCH_CATEGORY_DEFAULTS.chat).toEqual({ unsupported: true });
   });
 });

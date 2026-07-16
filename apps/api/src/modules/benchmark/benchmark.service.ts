@@ -9,12 +9,7 @@ import {
   type ListBenchmarksQuery,
   type ListBenchmarksResponse,
 } from "@modeldoctor/contracts";
-import {
-  applyScenarioConstraints,
-  byTool,
-  type ScenarioId as AdapterScenarioId,
-  type ToolName,
-} from "@modeldoctor/tool-adapters";
+import { applyScenarioConstraints, byTool, type ToolName } from "@modeldoctor/tool-adapters";
 import {
   BadRequestException,
   ConflictException,
@@ -113,13 +108,11 @@ export class BenchmarkService {
 
     // 1. Validate scenario × tool compatibility before zod parse — gives a
     //    crisper error than "rateType not allowed".
-    // NOTE: contracts' scenarioIdSchema includes "omni" (added ahead of the
-    // vllm-omni-bench adapter landing); tool-adapters' own ScenarioId union
-    // is widened separately once that adapter registers itself in
-    // packages/tool-adapters/src/scenarios.ts. Until then this cast is safe:
-    // no adapter.scenarios array can contain "omni", so the mismatch check
-    // below still correctly rejects it with BENCHMARK_SCENARIO_TOOL_MISMATCH.
-    if (!adapter.scenarios.includes(req.scenario as AdapterScenarioId)) {
+    // NOTE: contracts' scenarioIdSchema and tool-adapters' own ScenarioId
+    // (packages/tool-adapters/src/scenarios.ts) are the same 7-value union
+    // as of the omni scenario's registration there — no cast needed here
+    // anymore (was required transiently before that registration landed).
+    if (!adapter.scenarios.includes(req.scenario)) {
       throw new BadRequestException({
         code: "BENCHMARK_SCENARIO_TOOL_MISMATCH",
         message: `scenario '${req.scenario}' does not support tool '${req.tool}'`,
@@ -134,13 +127,7 @@ export class BenchmarkService {
     //    datasetOutputTokens"). See JSDoc on applyScenarioConstraints.
     let params: unknown;
     try {
-      // Same "omni" gap as above — unreachable at runtime until the
-      // vllm-omni-bench adapter lands (Task 4/5), since step 1 above
-      // already throws before we get here for scenario === "omni".
-      const merged = applyScenarioConstraints(
-        req.scenario as AdapterScenarioId,
-        req.tool as ToolName,
-      );
+      const merged = applyScenarioConstraints(req.scenario, req.tool as ToolName);
       // First: scenario-narrowed shape (rateType narrowing).
       merged.parse(req.params);
       // Second: full base schema including superRefine cross-field checks.

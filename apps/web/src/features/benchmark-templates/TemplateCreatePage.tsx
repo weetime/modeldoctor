@@ -31,11 +31,11 @@ export function TemplateCreatePage() {
   const scenarioParam = params.get("scenario");
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
-  // NOTE: `scenario` is contracts' ScenarioId (includes "omni"); SCENARIOS
-  // (from @modeldoctor/tool-adapters) is still keyed by its own narrower
-  // ScenarioId until the omni scenario is registered there. Safe today:
-  // no picker offers "omni" yet, so this key is never actually "omni".
-  const tool = SCENARIOS[scenario as keyof typeof SCENARIOS].tools[0];
+  // `scenario` is contracts' ScenarioId; SCENARIOS (from
+  // @modeldoctor/tool-adapters) is keyed by tool-adapters' own ScenarioId,
+  // which is the same 7-value union as of the omni scenario's registration
+  // there — no cast needed.
+  const tool = SCENARIOS[scenario].tools[0];
 
   const form = useForm<CreateBenchmarkTemplateRequest>({
     resolver: zodResolver(createBenchmarkTemplateRequestSchema),

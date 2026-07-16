@@ -4,17 +4,19 @@ import { evalscopeRowDescriptors } from "../../evalscope/row-descriptors.js";
 import { guidellmRowDescriptors } from "../../guidellm/row-descriptors.js";
 import { tau3RowDescriptors } from "../../tau3/row-descriptors.js";
 import { vegetaRowDescriptors } from "../../vegeta/row-descriptors.js";
+import { vllmOmniBenchRowDescriptors } from "../../vllm-omni-bench/row-descriptors.js";
 import { SHARED_INFERENCE_ROWS } from "../row-descriptor.js";
 import { rowDescriptorsByTool } from "../row-descriptors.fe.js";
 
 describe("rowDescriptorsByTool", () => {
-  it("covers exactly the 5 known tools", () => {
+  it("covers exactly the 6 known tools", () => {
     expect(Object.keys(rowDescriptorsByTool).sort()).toEqual([
       "aiperf",
       "evalscope",
       "guidellm",
       "tau3",
       "vegeta",
+      "vllm-omni-bench",
     ]);
   });
 
@@ -32,6 +34,12 @@ describe("rowDescriptorsByTool", () => {
     expect(vegetaRowDescriptors).not.toBe(SHARED_INFERENCE_ROWS);
     expect(vegetaRowDescriptors.find((r) => r.labelKey.startsWith("ttft"))).toBeUndefined();
     expect(vegetaRowDescriptors.find((r) => r.labelKey.startsWith("itl"))).toBeUndefined();
+  });
+
+  it("vllm-omni-bench uses its own row set (voice-realtime metrics, not inference-shaped)", () => {
+    expect(vllmOmniBenchRowDescriptors).not.toBe(SHARED_INFERENCE_ROWS);
+    expect(vllmOmniBenchRowDescriptors.length).toBeGreaterThan(0);
+    expect(vllmOmniBenchRowDescriptors.find((r) => r.labelKey === "realtimeCeiling")).toBeDefined();
   });
 
   it("every spec is well-formed (metric or raw branch)", () => {

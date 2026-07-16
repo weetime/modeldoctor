@@ -6,7 +6,6 @@ import {
   type ScenarioId,
   scenarioIdSchema,
 } from "@modeldoctor/contracts";
-import type { ToolName as AdapterToolName } from "@modeldoctor/tool-adapters/schemas";
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useForm, useFormContext } from "react-hook-form";
@@ -77,11 +76,11 @@ export function BenchmarkCreatePage() {
   const scenarioParam = params.get("scenario");
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
-  // NOTE: `scenario` is contracts' ScenarioId (includes "omni"); SCENARIOS
-  // (from @modeldoctor/tool-adapters) is still keyed by its own narrower
-  // ScenarioId until the omni scenario is registered there. Safe today:
-  // no picker offers "omni" yet, so this key is never actually "omni".
-  const defaultTool = SCENARIOS[scenario as keyof typeof SCENARIOS].tools[0];
+  // `scenario` is contracts' ScenarioId; SCENARIOS (from
+  // @modeldoctor/tool-adapters) is keyed by tool-adapters' own ScenarioId,
+  // which is the same 7-value union as of the omni scenario's registration
+  // there — no cast needed.
+  const defaultTool = SCENARIOS[scenario].tools[0];
   const templateIdParam = params.get("templateId");
 
   const form = useForm<CreateBenchmarkRequest>({
@@ -189,11 +188,9 @@ export function BenchmarkCreatePage() {
         connectionId: form.getValues("connectionId") ?? "",
         name: "",
         description: undefined,
-        // currentTool is contracts' (widened) BenchmarkTool; TOOL_DEFAULTS is
-        // still keyed by tool-adapters' narrower ToolName until
-        // vllm-omni-bench registers there. Safe today: this form never
-        // reaches "vllm-omni-bench" (not offered in any tool picker yet).
-        params: TOOL_DEFAULTS[currentTool as AdapterToolName] as Record<string, unknown>,
+        // currentTool is contracts' BenchmarkTool; TOOL_DEFAULTS is keyed by
+        // tool-adapters' ToolName, the same 6-value union — no cast needed.
+        params: TOOL_DEFAULTS[currentTool] as Record<string, unknown>,
         templateId: undefined,
       });
       if (params.get("templateId")) {

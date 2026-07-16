@@ -69,3 +69,16 @@ export const AIPERF_CATEGORY_DEFAULTS = {
   ModalityCategory,
   { endpointType: AiperfParams["endpointType"] } | { unsupported: true }
 >;
+
+/**
+ * vllm-omni-bench 只对 omni 端点有意义(要解析响应音频);其余 category
+ * 一律 unsupported。omni 无 connection-shaped 参数字段 → 空对象。
+ */
+export const VLLM_OMNI_BENCH_CATEGORY_DEFAULTS = {
+  chat: { unsupported: true },
+  omni: {},
+  audio: { unsupported: true },
+  embeddings: { unsupported: true },
+  rerank: { unsupported: true },
+  image: { unsupported: true },
+} as const satisfies Record<ModalityCategory, Record<string, never> | { unsupported: true }>;
