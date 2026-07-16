@@ -50,12 +50,12 @@ for arg in "$@"; do
   case "$arg" in
     --no-import) IMPORT=false ;;
     --push)      PUSH=true; IMPORT=false ;;  # multi-arch push can't be k3d-imported
-    guidellm|vegeta|evalscope|aiperf|tau3) TOOLS+=("$arg") ;;
+    guidellm|vegeta|evalscope|aiperf|tau3|vllm-omni-bench) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 if [[ ${#TOOLS[@]} -eq 0 ]]; then
-  TOOLS=(guidellm vegeta evalscope aiperf tau3)
+  TOOLS=(guidellm vegeta evalscope aiperf tau3 vllm-omni-bench)
 fi
 
 echo "==> Runner images at tag :$TAG (tools: ${TOOLS[*]})"

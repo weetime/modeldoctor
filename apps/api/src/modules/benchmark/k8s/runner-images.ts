@@ -8,6 +8,7 @@ const TOOL_TO_IMAGE_ENV: Record<ToolName, keyof Env> = {
   evalscope: "RUNNER_IMAGE_EVALSCOPE",
   aiperf: "RUNNER_IMAGE_AIPERF",
   tau3: "RUNNER_IMAGE_TAU3",
+  "vllm-omni-bench": "RUNNER_IMAGE_VLLM_OMNI_BENCH",
 };
 
 /**
