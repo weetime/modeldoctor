@@ -30,6 +30,10 @@ describe("buildCommand", () => {
     expect(JSON.stringify(r.argv)).not.toContain("sk-secret");
     expect(r.outputFiles).toEqual({ report: "out/omni_result.json" });
   });
+  it("sets MD_TOOL_VERSION_ARGV so the wrapper probes vllm-omni, not python (I-2)", () => {
+    const r = buildCommand(plan());
+    expect(JSON.parse(r.env.MD_TOOL_VERSION_ARGV)).toEqual(["vllm-omni", "--version"]);
+  });
   it("rejects customHeaders/queryParams (v1 cannot forward them to vllm bench)", () => {
     expect(() => buildCommand(plan({ customHeaders: '{"X-A":"1"}' }))).toThrow(/customHeaders/);
     expect(() => buildCommand(plan({ queryParams: "a=b" }))).toThrow(/queryParams/);

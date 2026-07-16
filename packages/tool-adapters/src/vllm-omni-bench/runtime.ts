@@ -25,6 +25,19 @@ export function buildCommand(plan: BuildCommandPlan<VllmOmniBenchParams>): Build
     MD_OMNI_PARAMS: JSON.stringify(params),
     MD_OMNI_BASE_URL: connection.baseUrl.replace(/\/+$/, ""),
     MD_OMNI_MODEL: connection.model,
+    // argv[0] of the driven command is "python" (see argv below), so the
+    // generic wrapper's default `<argv[0]> --version` probe would report
+    // the Python interpreter version, not vllm-omni's — wrong toolVersion
+    // in meta.json. MD_TOOL_VERSION_ARGV is main.py's GENERIC, opt-in
+    // override (main.py stays zero-tool-specific-knowledge): when set, the
+    // wrapper probes this argv instead. NOTE: ["vllm-omni", "--version"] is
+    // inferred by analogy with `vllm --version` (vllm-omni's CLI is built
+    // the same way, see bench_argv()'s "vllm-omni bench serve" argv in
+    // omni_driver.py) — unverified against the real CLI (not available
+    // locally); needs a smoke check against the actual image. If wrong,
+    // detect_tool_version() already degrades gracefully to None/"" rather
+    // than a bogus version string.
+    MD_TOOL_VERSION_ARGV: JSON.stringify(["vllm-omni", "--version"]),
   };
   if (connection.tokenizerHfId) env.MD_OMNI_TOKENIZER_HF_ID = connection.tokenizerHfId;
   return {
