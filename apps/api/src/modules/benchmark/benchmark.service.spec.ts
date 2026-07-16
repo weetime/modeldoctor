@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
 import { Prisma, type Benchmark as PrismaBenchmark } from "@prisma/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BaselineService } from "../baseline/baseline.service.js";
 import { BenchmarkTemplateRepository } from "../benchmark-template/benchmark-template.repository.js";
 import type { ConnectionService } from "../connection/connection.service.js";
@@ -65,6 +65,7 @@ const ENV_DEFAULTS: Record<string, unknown> = {
   RUNNER_IMAGE_GUIDELLM: "md-runner-guidellm:test",
   RUNNER_IMAGE_VEGETA: "md-runner-vegeta:test",
   RUNNER_IMAGE_TAU3: "md-runner-tau3:test",
+  RUNNER_IMAGE_VLLM_OMNI_BENCH: "md-runner-vllm-omni-bench:test",
 };
 
 function mockConfig(overrides: Record<string, unknown> = {}): ConfigService {
@@ -538,6 +539,128 @@ describe("BenchmarkService.create — failure paths", () => {
     } finally {
       (adapters as { byTool: typeof orig }).byTool = orig;
     }
+  });
+});
+
+// I-1: customHeaders/queryParams on the connection must be rejected at
+// CREATE time for vllm-omni-bench (clean 400, no orphan row) — NOT
+// discovered later inside adapter.buildCommand() during start(), which
+// would otherwise surface as a 500 + an orphaned `status:"failed"` row +
+// a spurious `benchmark.failed` notification.
+describe("BenchmarkService.create — vllm-omni-bench connection preflight (I-1)", () => {
+  let repo: MockRepo;
+  let svc: BenchmarkService;
+  let origByTool: Awaited<typeof import("@modeldoctor/tool-adapters")>["byTool"];
+
+  const omniAdapterStub = () => ({
+    name: "vllm-omni-bench",
+    scenarios: ["omni"],
+    paramsSchema: { parse: (x: unknown) => x },
+    reportSchema: { parse: (x: unknown) => x },
+    paramDefaults: {},
+    buildCommand: vi.fn(() => ({
+      argv: ["python", "-m", "runner.tools.omni_driver"],
+      env: {},
+      secretEnv: {},
+      outputFiles: { report: "out/omni_result.json" },
+    })),
+    parseProgress: () => null,
+    parseFinalReport: () => ({ tool: "vllm-omni-bench" as const, data: {} }),
+    getMaxDurationSeconds: () => 1800,
+  });
+
+  function connectionWith(over: { customHeaders?: string; queryParams?: string }) {
+    return {
+      id: "c1",
+      name: "conn",
+      baseUrl: "http://upstream/",
+      apiKey: "k",
+      model: "m",
+      customHeaders: "",
+      queryParams: "",
+      tokenizerHfId: null,
+      prometheusDatasource: null,
+      prometheusDatasourceId: null,
+      serverKind: null,
+      category: "text" as const,
+      ...over,
+    };
+  }
+
+  beforeEach(async () => {
+    repo = new MockRepo();
+    svc = build(repo);
+    vi.clearAllMocks();
+    const adapters = await import("@modeldoctor/tool-adapters");
+    origByTool = adapters.byTool;
+    (adapters as { byTool: typeof origByTool }).byTool =
+      omniAdapterStub as unknown as typeof origByTool;
+  });
+
+  afterEach(async () => {
+    const adapters = await import("@modeldoctor/tool-adapters");
+    (adapters as { byTool: typeof origByTool }).byTool = origByTool;
+  });
+
+  it("rejects BEFORE persisting a row when connection.customHeaders is set", async () => {
+    (mockConnections.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      connectionWith({ customHeaders: "X-Foo: bar" }),
+    );
+    let err: unknown;
+    try {
+      await svc.create("u1", {
+        tool: "vllm-omni-bench",
+        scenario: "omni",
+        connectionId: "c1",
+        name: "omni-run",
+        params: {},
+      });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect((err as BadRequestException).getResponse()).toMatchObject({
+      code: "BENCHMARK_OMNI_CONNECTION_UNSUPPORTED",
+    });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects BEFORE persisting a row when connection.queryParams is set", async () => {
+    (mockConnections.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      connectionWith({ queryParams: "trace=1" }),
+    );
+    let err: unknown;
+    try {
+      await svc.create("u1", {
+        tool: "vllm-omni-bench",
+        scenario: "omni",
+        connectionId: "c1",
+        name: "omni-run",
+        params: {},
+      });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect((err as BadRequestException).getResponse()).toMatchObject({
+      code: "BENCHMARK_OMNI_CONNECTION_UNSUPPORTED",
+    });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("proceeds to create → start when the connection has neither customHeaders nor queryParams", async () => {
+    (mockConnections.getOwnedDecrypted as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      connectionWith({}),
+    );
+    const dto = await svc.create("u1", {
+      tool: "vllm-omni-bench",
+      scenario: "omni",
+      connectionId: "c1",
+      name: "omni-run",
+      params: {},
+    });
+    expect(repo.create).toHaveBeenCalledTimes(1);
+    expect(dto.status).toBe("submitted");
   });
 });
 

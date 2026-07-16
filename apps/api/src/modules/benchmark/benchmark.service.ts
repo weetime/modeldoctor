@@ -119,6 +119,30 @@ export class BenchmarkService {
       });
     }
 
+    // 1a. vllm-omni-bench (v1) only: the vllm bench `openai` backend reads
+    //     auth SOLELY from OPENAI_API_KEY — there is no custom header /
+    //     query-param channel. Silently dropping a configured customHeaders
+    //     or queryParams would point the run at an auth gateway with no
+    //     credentials and 100%-fail every request. Reject here, at CREATE
+    //     time, so the caller gets a clean 400 with no row persisted —
+    //     mirrors the agent-scenario preflight in step 5 below. Without this,
+    //     the same check inside adapter.buildCommand() only runs from
+    //     start() (AFTER repo.create), producing a 500 + an orphan
+    //     `status:"failed"` row + a spurious `benchmark.failed` notification.
+    //     buildCommand()'s throw stays in place as belt-and-braces defense
+    //     in depth (e.g. if start() is ever reached without going through
+    //     create(), such as resume()).
+    if (
+      req.tool === "vllm-omni-bench" &&
+      (conn.customHeaders?.trim() || conn.queryParams?.trim())
+    ) {
+      throw new BadRequestException({
+        code: "BENCHMARK_OMNI_CONNECTION_UNSUPPORTED",
+        message:
+          "vllm-omni-bench does not support connection customHeaders/queryParams (v1) — the vllm bench openai backend only supports Bearer auth via the API key",
+      });
+    }
+
     // 2. Apply scenario-specific overlays (e.g. force rateType=sweep for
     //    capacity). NOTE: applyScenarioConstraints unwraps ZodEffects, so any
     //    superRefine on adapter.paramsSchema is DROPPED by the merge. We MUST
