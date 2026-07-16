@@ -3,6 +3,7 @@ import type { MetricKind } from "@modeldoctor/tool-adapters";
 import { capacityChecks } from "./checks/capacity.js";
 import { gatewayChecks } from "./checks/gateway.js";
 import { inferenceChecks } from "./checks/inference.js";
+import { omniChecks } from "./checks/omni.js";
 import type { Direction } from "./evaluate.js";
 
 export interface CheckDescriptor {
@@ -19,6 +20,7 @@ export const ALL_CHECKS: CheckDescriptor[] = [
   ...inferenceChecks,
   ...capacityChecks,
   ...gatewayChecks,
+  ...omniChecks,
 ];
 
 const byId = new Map(ALL_CHECKS.map((c) => [c.id, c]));

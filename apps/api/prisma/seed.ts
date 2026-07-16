@@ -37,6 +37,7 @@ import {
   guidellmParamsSchema,
   tau3ParamsSchema,
   vegetaParamsSchema,
+  vllmOmniBenchParamsSchema,
 } from "@modeldoctor/tool-adapters";
 import { Prisma, PrismaClient } from "@prisma/client";
 
@@ -126,6 +127,16 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
         "inference.e2e.p99.ms": { warn: 5000, crit: 15000, weight: 0.5 },
         "inference.error_rate": { warn: 0.01, crit: 0.05, weight: 1.0 },
         ...COMMON_THROUGHPUT_AND_CAPACITY_CHECKS,
+        // Omni (vllm-omni-bench) 实时性阈值 — spec §4.7。realtime_ceiling 是
+        // higher_is_better,warn/crit 是"地板"值:evaluate.ts 里 value<=crit
+        // 记 crit、value<=warn 记 warn(同 capacity.max_qps 的 warn>crit 惯例,
+        // 已用 omni.spec.ts 的 evaluateSeverity 单测钉死语义)。
+        "omni.audio_ttfp.c1.mean.ms": { warn: 1000, crit: 3000, weight: 1.0 },
+        "omni.audio_ttfp.peak.p99.ms": { warn: 3000, crit: 8000, weight: 0.5 },
+        "omni.audio_rtf.peak.mean": { warn: 0.7, crit: 1.0, weight: 1.0 },
+        "omni.voice_tax.ms": { warn: 4000, crit: 10000, weight: 0.5 },
+        "omni.error_rate": { warn: 0.01, crit: 0.05, weight: 1.0 },
+        "omni.realtime_ceiling": { warn: 16, crit: 4, weight: 1.0 },
       },
     },
     source:
@@ -226,14 +237,15 @@ const EVALUATION_PROFILES: EvaluationProfileSeed[] = [
 //   - applyScenarioConstraints(scenario, tool)  (narrows rateType etc.)
 // ---------------------------------------------------------------------------
 
-type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau3";
+type Tool = "guidellm" | "evalscope" | "aiperf" | "vegeta" | "tau3" | "vllm-omni-bench";
 type SeedScenario =
   | "inference"
   | "engine-kv-cache"
   | "capacity"
   | "gateway"
   | "lb-strategy"
-  | "agent";
+  | "agent"
+  | "omni";
 interface BenchmarkTemplateSeed {
   id: string;
   name: string;
@@ -1017,6 +1029,45 @@ export const BENCHMARK_TEMPLATES: BenchmarkTemplateSeed[] = [
     tags: ["agent", "tau3", "full"],
     categories: ["chat"],
   },
+  // -------------------------------------------------------------------------
+  // Omni 实时性(vllm-omni-bench):双臂 × 并发档扫描,出 AUDIO_TTFP/RTF 曲线、
+  // 实时天花板、语音税。方法学 = 2026-07 Qwen3-Omni 实验(spec 2026-07-16)。
+  // -------------------------------------------------------------------------
+  {
+    id: "tpl_official_omni_realtime_standard",
+    name: "Omni 实时性 · 标准扫描",
+    description:
+      "500in/300out,并发 1/8/16/32 双臂(text+audio vs text)扫描;产出实时天花板 + 语音税。全程约 30-60 分钟。",
+    scenario: "omni",
+    tool: "vllm-omni-bench",
+    config: {
+      concurrencyLevels: [1, 8, 16, 32],
+      inputTokens: 500,
+      outputTokens: 300,
+      voiceTax: true,
+      numWarmups: 1,
+      perPointTimeoutSeconds: 900,
+    },
+    tags: ["omni", "realtime", "voice"],
+    categories: ["omni"],
+  },
+  {
+    id: "tpl_official_omni_realtime_quick",
+    name: "Omni 实时性 · 快检",
+    description: "并发 1/8 单臂(text+audio),验证链路 + 基线 TTFP/RTF,约 10 分钟。",
+    scenario: "omni",
+    tool: "vllm-omni-bench",
+    config: {
+      concurrencyLevels: [1, 8],
+      inputTokens: 500,
+      outputTokens: 300,
+      voiceTax: false,
+      numWarmups: 1,
+      perPointTimeoutSeconds: 900,
+    },
+    tags: ["omni", "smoke"],
+    categories: ["omni"],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1072,7 +1123,9 @@ async function seedBenchmarkTemplates(): Promise<void> {
             ? vegetaParamsSchema
             : t.tool === "tau3"
               ? tau3ParamsSchema
-              : evalscopeParamsSchema;
+              : t.tool === "vllm-omni-bench"
+                ? vllmOmniBenchParamsSchema
+                : evalscopeParamsSchema;
     const validatedBase = base.parse(t.config);
     // Apply scenario-level constraints uniformly across tools. For
     // (inference, evalscope) and (engine-kv-cache, evalscope) this is
