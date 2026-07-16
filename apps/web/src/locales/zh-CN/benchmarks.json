@@ -669,6 +669,19 @@
         }
       }
     },
+    "omni": {
+      "concurrency": "并发",
+      "realtimeLine": "实时线 RTF=1",
+      "realtimeCeiling": "实时天花板",
+      "realtimeCeilingSub": "RTF(mean)<1 的最大并发档",
+      "ttfpC1": "TTFP @ 最低档 (mean)",
+      "rtfPeak": "RTF @ 天花板档 (mean)",
+      "voiceTax": "语音税",
+      "rtfChart": "AUDIO_RTF - 并发曲线",
+      "ttfpChart": "AUDIO_TTFP - 并发曲线",
+      "taxChart": "语音税(按档 ΔE2EL)",
+      "warnings": "警告"
+    },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",
     "rangeLabel": "时间范围",

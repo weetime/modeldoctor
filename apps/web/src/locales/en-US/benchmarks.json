@@ -669,6 +669,19 @@
         }
       }
     },
+    "omni": {
+      "concurrency": "Concurrency",
+      "realtimeLine": "Realtime line RTF=1",
+      "realtimeCeiling": "Realtime ceiling",
+      "realtimeCeilingSub": "Highest concurrency level with RTF (mean) < 1",
+      "ttfpC1": "TTFP @ lowest level (mean)",
+      "rtfPeak": "RTF @ ceiling level (mean)",
+      "voiceTax": "Voice tax",
+      "rtfChart": "AUDIO_RTF vs. concurrency",
+      "ttfpChart": "AUDIO_TTFP vs. concurrency",
+      "taxChart": "Voice tax (ΔE2EL per level)",
+      "warnings": "Warnings"
+    },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",
     "rangeLabel": "Range",
