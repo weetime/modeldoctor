@@ -1,3 +1,6 @@
+import type { ComponentPropsWithoutRef } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { FormSection } from "@/components/common/form-section";
@@ -14,6 +17,69 @@ function parseLevels(text: string): number[] {
     .map((s) => Number.parseInt(s.trim(), 10))
     .filter((n) => Number.isFinite(n) && n > 0);
 }
+
+/**
+ * Fully-controlled `value={levels.join(",")}` + parse-on-change made
+ * hand-typing impossible: parseLevels drops the trailing comma so a
+ * controlled re-render collapses "1," back to "1" before the next digit
+ * lands, merging "1,8" into "18". Instead we keep the raw text as local
+ * state while the input is focused and only parse-and-commit to RHF on
+ * blur, resyncing the local text from the external field value (template
+ * prefill, tool switch, form reset) whenever the input isn't focused.
+ */
+interface ConcurrencyLevelsInputProps
+  extends Omit<
+    ComponentPropsWithoutRef<typeof Input>,
+    "value" | "onChange" | "onFocus" | "onBlur"
+  > {
+  field: ControllerRenderProps<FieldValues, string>;
+}
+
+// forwardRef + rest-prop passthrough so FormControl's Radix Slot can still
+// inject id / aria-describedby / aria-invalid / ref onto the underlying
+// <input>, exactly as it did when this was a plain <Input> child.
+const ConcurrencyLevelsInput = forwardRef<HTMLInputElement, ConcurrencyLevelsInputProps>(
+  ({ field, ...rest }, forwardedRef) => {
+    const committed = ((field.value as number[] | undefined) ?? []).join(",");
+    const [text, setText] = useState(committed);
+    const isFocused = useRef(false);
+
+    useEffect(() => {
+      if (!isFocused.current) {
+        setText(committed);
+      }
+    }, [committed]);
+
+    return (
+      <Input
+        {...rest}
+        name={field.name}
+        ref={(node) => {
+          field.ref(node);
+          if (typeof forwardedRef === "function") {
+            forwardedRef(node);
+          } else if (forwardedRef) {
+            forwardedRef.current = node;
+          }
+        }}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onFocus={() => {
+          isFocused.current = true;
+        }}
+        onBlur={() => {
+          isFocused.current = false;
+          const parsed = parseLevels(text);
+          field.onChange(parsed);
+          setText(parsed.join(","));
+          field.onBlur();
+        }}
+        placeholder="1,8,16,32"
+      />
+    );
+  },
+);
+ConcurrencyLevelsInput.displayName = "ConcurrencyLevelsInput";
 
 interface VllmOmniBenchParamsFormProps {
   fieldPrefix?: "params" | "config";
@@ -35,11 +101,7 @@ export function VllmOmniBenchParamsForm({
             <FormItem>
               <FormLabel>{t("forms.omni.concurrencyLevels")}</FormLabel>
               <FormControl>
-                <Input
-                  value={((field.value as number[] | undefined) ?? []).join(",")}
-                  onChange={(e) => field.onChange(parseLevels(e.target.value))}
-                  placeholder="1,8,16,32"
-                />
+                <ConcurrencyLevelsInput field={field} />
               </FormControl>
               <p className="text-xs text-muted-foreground">
                 {t("forms.omni.concurrencyLevelsHint")}
