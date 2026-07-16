@@ -148,7 +148,7 @@ omni: {
 | `omni.realtime_ceiling` | throughput | higher_is_better | `realtimeCeiling` | 1.0 |
 | `omni.audio_ttfp.c1.mean.ms` | responsiveness | lower_is_better | `audioTtfpC1.mean` | 1.0 |
 | `omni.audio_ttfp.peak.p99.ms` | tail | lower_is_better | `audioTtfpPeak.p99` | 0.5 |
-| `omni.audio_rtf.peak.mean` | smoothness | lower_is_better | `audioRtfPeak.mean` | 0.7 |
+| `omni.audio_rtf.peak.mean` | smoothness | lower_is_better | `audioRtfPeak.mean` | 1.0 |
 | `omni.voice_tax.ms` | efficiency | lower_is_better | `voiceTax.ms` | 0.5 |
 | `omni.error_rate` | stability | lower_is_better | `errorRate` | 1.0 |
 
