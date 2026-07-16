@@ -3,6 +3,7 @@ import {
   type PatchBenchmarkTemplateRequest,
   patchBenchmarkTemplateRequestSchema,
 } from "@modeldoctor/contracts";
+import type { ToolName as AdapterToolName } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { FormActions } from "@/components/common/form-actions";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import type { ScenarioId as AdapterScenarioId } from "@/features/benchmarks/scenarios";
 import { useAuthStore } from "@/stores/auth-store";
 import { DeleteTemplateDialog } from "./DeleteTemplateDialog";
 import { useDeleteTemplate, useTemplate, useUpdateTemplate } from "./queries";
@@ -122,8 +124,14 @@ export function TemplateEditPage() {
             <TemplateForm
               mode={mode}
               isAdmin={isAdmin}
-              displayScenario={tpl.scenario}
-              displayTool={tpl.tool}
+              // NOTE: tpl.scenario/tpl.tool are contracts' (widened)
+              // ScenarioId/BenchmarkTool, which now include "omni" /
+              // "vllm-omni-bench". TemplateForm's display props are still
+              // typed against tool-adapters' narrower unions until the omni
+              // scenario + tool are registered there. Safe today: no
+              // existing template can carry those values yet.
+              displayScenario={tpl.scenario as AdapterScenarioId}
+              displayTool={tpl.tool as AdapterToolName}
             />
             <FormActions
               onCancel={() => navigate("/benchmark-templates")}

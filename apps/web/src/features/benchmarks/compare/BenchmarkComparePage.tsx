@@ -28,6 +28,10 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   // breadcrumb label lookup so tsc stays green if a compare URL ever carries
   // ids for agent-scenario benchmarks.
   agent: "benchmarkAgent",
+  // Omni-scenario compare isn't a defined product surface yet either (same
+  // reasoning as agent above); this key only feeds the breadcrumb label
+  // lookup so tsc stays green if a compare URL ever carries omni ids.
+  omni: "benchmarkOmni",
 };
 
 function parseIds(searchParams: URLSearchParams): string[] {

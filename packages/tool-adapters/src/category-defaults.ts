@@ -16,6 +16,7 @@ import type { VegetaParams } from "./vegeta/schema.js";
  */
 export const VEGETA_CATEGORY_DEFAULTS = {
   chat: { apiType: "chat" },
+  omni: { apiType: "chat" },
   audio: { apiType: "chat-audio" },
   embeddings: { apiType: "embeddings" },
   rerank: { apiType: "rerank" },
@@ -24,6 +25,7 @@ export const VEGETA_CATEGORY_DEFAULTS = {
 
 export const GUIDELLM_CATEGORY_DEFAULTS = {
   chat: { apiType: "chat" },
+  omni: { apiType: "chat" },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },
@@ -41,6 +43,7 @@ export const GUIDELLM_CATEGORY_DEFAULTS = {
  */
 export const EVALSCOPE_CATEGORY_DEFAULTS = {
   chat: { apiPath: "/v1/chat/completions" },
+  omni: { apiPath: "/v1/chat/completions" },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },
@@ -57,6 +60,7 @@ export const EVALSCOPE_CATEGORY_DEFAULTS = {
  */
 export const AIPERF_CATEGORY_DEFAULTS = {
   chat: { endpointType: "chat" },
+  omni: { endpointType: "chat" },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },

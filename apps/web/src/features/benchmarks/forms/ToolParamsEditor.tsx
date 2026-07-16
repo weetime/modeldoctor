@@ -35,6 +35,7 @@ import { SCENARIOS } from "../scenarios";
  */
 const TAU3_CATEGORY_DEFAULTS = {
   chat: {},
+  omni: { unsupported: true },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },
@@ -103,8 +104,14 @@ export interface ToolEditorProps {
 
 function useToolFromForm(scenario: ScenarioId, displayTool?: ToolName): ToolName {
   const { control } = useFormContext();
+  // NOTE: `scenario` is contracts' ScenarioId (includes "omni" as of the
+  // omni-benchmark-scenario work); SCENARIOS is still keyed by
+  // tool-adapters' own (narrower) ScenarioId until the omni scenario is
+  // registered there (see packages/tool-adapters/src/scenarios.ts). The
+  // cast is safe today because no caller can reach this hook with
+  // scenario === "omni" yet (no such option is offered in any picker).
   const formTool = (useWatch({ control, name: "tool" }) ??
-    SCENARIOS[scenario].tools[0]) as ToolName;
+    SCENARIOS[scenario as keyof typeof SCENARIOS].tools[0]) as ToolName;
   return displayTool ?? formTool;
 }
 
@@ -125,7 +132,8 @@ export function ToolSelectorField({
   const id = useId();
   const toolFieldId = `${id}-tool`;
 
-  const availableTools = SCENARIOS[scenario].tools;
+  // See boundary-gap note in useToolFromForm above.
+  const availableTools = SCENARIOS[scenario as keyof typeof SCENARIOS].tools;
 
   // Watch the form's connectionId so we can mark tools that don't speak the
   // picked connection's modality as disabled. When no connection is picked
@@ -249,7 +257,8 @@ export function useToolUnsupported(
   const def = TOOL_CATEGORY_DEFAULTS[tool][connection.category];
   if (!("unsupported" in def)) return null;
   const cat = connection.category;
-  const alternatives = SCENARIOS[scenario].tools.filter(
+  // See boundary-gap note in useToolFromForm above.
+  const alternatives = SCENARIOS[scenario as keyof typeof SCENARIOS].tools.filter(
     (t) => !("unsupported" in TOOL_CATEGORY_DEFAULTS[t][cat]),
   );
   return { tool, category: cat, alternatives };

@@ -11,4 +11,8 @@ describe("ModalityCategorySchema", () => {
   it("rejects unknown values", () => {
     expect(() => ModalityCategorySchema.parse("video")).toThrow();
   });
+
+  it("includes omni as the 6th category", () => {
+    expect(ModalityCategorySchema.options).toContain("omni");
+  });
 });
