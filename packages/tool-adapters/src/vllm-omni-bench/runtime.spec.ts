@@ -26,23 +26,19 @@ describe("buildCommand", () => {
     expect(r.argv).toEqual(["python", "-m", "runner.tools.omni_driver"]);
     expect(r.env.MD_OMNI_BASE_URL).toBe("http://10.100.121.67:30888"); // 尾斜杠剥掉
     expect(r.env.MD_OMNI_MODEL).toBe("gen-studio_Qwen2.5-Omni-7B-OFEd");
-    expect(r.env.MD_OMNI_TOKENIZER_HF_ID).toBe("Qwen/Qwen2.5-Omni-7B");
     expect(JSON.parse(r.env.MD_OMNI_PARAMS).concurrencyLevels).toEqual([1, 8, 16, 32]);
     expect(r.secretEnv).toEqual({ OPENAI_API_KEY: "sk-secret" });
     expect(JSON.stringify(r.argv)).not.toContain("sk-secret");
     expect(r.outputFiles).toEqual({ report: "out/omni_result.json" });
   });
-  it("sets MD_TOOL_VERSION_ARGV so the wrapper probes vllm-omni, not python (I-2)", () => {
+  it("emits no tokenizer env (thin client sends fixed prompts, needs no tokenizer)", () => {
     const r = buildCommand(plan());
-    expect(JSON.parse(r.env.MD_TOOL_VERSION_ARGV)).toEqual(["vllm-omni", "--version"]);
+    expect(r.env.MD_OMNI_TOKENIZER_HF_ID).toBeUndefined();
+    expect(r.env.MD_TOOL_VERSION_ARGV).toBeUndefined();
   });
-  it("rejects customHeaders/queryParams (v1 cannot forward them to vllm bench)", () => {
+  it("rejects customHeaders/queryParams (driver can't forward them to the endpoint)", () => {
     expect(() => buildCommand(plan({ customHeaders: '{"X-A":"1"}' }))).toThrow(/customHeaders/);
     expect(() => buildCommand(plan({ queryParams: "a=b" }))).toThrow(/queryParams/);
-  });
-  it("omits MD_OMNI_TOKENIZER_HF_ID when connection has none (driver fails fast with guidance)", () => {
-    const r = buildCommand(plan({ tokenizerHfId: null }));
-    expect(r.env.MD_OMNI_TOKENIZER_HF_ID).toBeUndefined();
   });
 });
 

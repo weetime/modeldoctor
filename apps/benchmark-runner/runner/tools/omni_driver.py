@@ -1,25 +1,33 @@
-"""Omni sweep driver: 循环 `vllm-omni bench serve --omni` 扫 双臂 × 并发档,
-逐点解析 stdout 汇总,聚合写 out/omni_result.json(形状 = vllmOmniBenchReportSchema)。
+"""Omni sweep driver: 瘦客户端直接压全模态端点,扫 双臂 × 并发档,聚合写
+out/omni_result.json(形状 = vllmOmniBenchReportSchema)。
+
+**不依赖 vllm-omni bench**:业内压语音输出(TTFA/RTF)本就是客户端从流式响应
+直接算的(Gladia/Picovoice/GIGAGPU 均如此),无需 20GiB 重镜像、无需 tokenizer。
+本 driver 用 httpx 发 OpenAI chat completions 流式请求,从 delta 首包 + base64
+WAV 时长算指标,asyncio 做并发。
 
 由通用 wrapper 以工具 argv 启动: python -m runner.tools.omni_driver
 契约(packages/tool-adapters/src/vllm-omni-bench/runtime.ts 写入):
-  MD_OMNI_PARAMS            params JSON(concurrencyLevels/inputTokens/outputTokens/
-                            voiceTax/numWarmups/perPointTimeoutSeconds)
-  MD_OMNI_BASE_URL          上游 base URL(无尾斜杠)
-  MD_OMNI_MODEL             served model 名
-  MD_OMNI_TOKENIZER_HF_ID   可选 HF tokenizer repo id
-  OPENAI_API_KEY            (secretEnv) vllm bench openai 后端自取作 Bearer
-方法学纪律(写死): 双臂同 max_tokens、--ignore-eos、num-prompts = max(4, 2×c)。
+  MD_OMNI_PARAMS   params JSON(concurrencyLevels/inputTokens/outputTokens/
+                   voiceTax/numWarmups/perPointTimeoutSeconds)
+  MD_OMNI_BASE_URL 上游 base URL(无尾斜杠)
+  MD_OMNI_MODEL    served model 名
+  OPENAI_API_KEY   (secretEnv) Bearer token
+方法学纪律(写死): 双臂同 prompt + max_tokens、ignore_eos、每档 max(4, 2×c) 个测量请求。
 """
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import io
 import json
 import logging
 import os
-import re
-import subprocess
+import statistics
 import sys
+import time
+import wave
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="[omni-driver] %(message)s")
@@ -27,151 +35,182 @@ log = logging.getLogger("omni-driver")
 
 OUT_DIR = Path("out")
 RESULT_FILE = OUT_DIR / "omni_result.json"
-TOKENIZERS_ROOT = Path("/tokenizers")
-# HF repo id shape: "<org>/<name>", each segment word-chars/dot/dash, org
-# can't start with those (blocks a leading "." or "-" segment while still
-# allowing e.g. "Qwen2.5-Omni-7B" style names). Rejects "../etc", "/abs/path"
-# etc. before they're joined onto TOKENIZERS_ROOT (M-3: path traversal).
-HF_ID_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
+ENDPOINT = "/v1/chat/completions"
+
+# 固定朗读 prompt(音频臂让模型出语音;双臂共用以保证公平)。inputTokens 用
+# 填充词近似放大输入体量(无 tokenizer,不追求精确 token 数——RTF 只与输出音频
+# 时长相关,输入长度主要影响 TTFT/prefill)。
+_BASE_PROMPT = "请朗读下面这段话,用自然的语气:人工智能正在改变世界。"
+_FILLER = "这是一段用于填充输入长度的中性文本。"
 
 
-# 数值行:标签允许 (ms) 等单位尾缀,冒号后取第一个浮点。
-def _rx(label: str) -> re.Pattern[str]:
-    return re.compile(rf"^{re.escape(label)}[^:]*:\s*([\d.]+)\s*$", re.MULTILINE)
+def build_prompt(input_tokens: int) -> str:
+    """近似 input_tokens 规模的 prompt(CJK ~1 token/char)。"""
+    if input_tokens <= len(_BASE_PROMPT):
+        return _BASE_PROMPT
+    pad_chars = input_tokens - len(_BASE_PROMPT)
+    reps = pad_chars // len(_FILLER) + 1
+    return _BASE_PROMPT + (_FILLER * reps)[:pad_chars]
 
 
-_PATTERNS = {
-    "reqPerSec": _rx("Request throughput (req/s)"),
-    "outTokPerSec": _rx("Output token throughput (tok/s)"),
-    "ttft_mean": _rx("Mean TTFT"),
-    "ttft_p50": _rx("Median TTFT"),
-    "ttft_p99": _rx("P99 TTFT"),
-    "e2el_mean": _rx("Mean E2EL"),
-    "e2el_p50": _rx("Median E2EL"),
-    "e2el_p99": _rx("P99 E2EL"),
-    "audio_ttfp_mean": _rx("Mean AUDIO_TTFP"),
-    "audio_ttfp_p50": _rx("Median AUDIO_TTFP"),
-    "audio_ttfp_p99": _rx("P99 AUDIO_TTFP"),
-    "audio_rtf_mean": _rx("Mean AUDIO_RTF"),
-    "audio_rtf_p50": _rx("Median AUDIO_RTF"),
-    "audio_rtf_p99": _rx("P99 AUDIO_RTF"),
-}
+def _wav_duration_seconds(b64: str) -> float:
+    """解 base64 WAV,返回时长秒。非法/非 WAV 返回 0。"""
+    try:
+        raw = base64.b64decode(b64)
+        with wave.open(io.BytesIO(raw)) as w:
+            return w.getnframes() / float(w.getframerate())
+    except Exception:
+        return 0.0
 
 
-def _grab(stdout: str, key: str) -> float | None:
-    m = _PATTERNS[key].search(stdout)
-    return float(m.group(1)) if m else None
-
-
-def _stat(stdout: str, prefix: str) -> dict[str, float] | None:
-    mean = _grab(stdout, f"{prefix}_mean")
-    p50 = _grab(stdout, f"{prefix}_p50")
-    p99 = _grab(stdout, f"{prefix}_p99")
-    if mean is None or p50 is None or p99 is None:
+def _pct(values: list[float]) -> dict[str, float] | None:
+    """mean/p50/p99 三件套(与 bench 的 --percentile-metrics 口径对齐)。"""
+    if not values:
         return None
-    return {"mean": mean, "p50": p50, "p99": p99}
-
-
-def parse_point(stdout: str, arm: str) -> dict | None:
-    """一档 bench stdout → curve point 数值部分;缺必要指标返回 None(判失败点)。
-
-    必要指标: reqPerSec + ttft + e2el;audio 臂还必须有 audio_ttfp + audio_rtf
-    (端点没回音频时 bench 的 AUDIO_* 段缺失 → 判失败,warning 提示查 modalities)。
-    """
-    req = _grab(stdout, "reqPerSec")
-    ttft = _stat(stdout, "ttft")
-    e2el = _stat(stdout, "e2el")
-    if req is None or ttft is None or e2el is None:
-        return None
-    audio_ttfp = _stat(stdout, "audio_ttfp")
-    audio_rtf = _stat(stdout, "audio_rtf")
-    if arm == "audio" and (audio_ttfp is None or audio_rtf is None):
-        return None
+    s = sorted(values)
     return {
-        "reqPerSec": req,
-        "outTokPerSec": _grab(stdout, "outTokPerSec") or 0.0,
-        "ttftMs": ttft,
-        "e2elMs": e2el,
-        "audioTtfpMs": audio_ttfp if arm == "audio" else None,
-        "audioRtf": audio_rtf if arm == "audio" else None,
+        "mean": round(statistics.fmean(s), 2),
+        "p50": round(_percentile(s, 0.50), 2),
+        "p99": round(_percentile(s, 0.99), 2),
     }
 
 
-def bench_argv(
-    *, base_url: str, model: str, tokenizer: str, arm: str, concurrency: int, params: dict
-) -> list[str]:
+def _percentile(sorted_vals: list[float], q: float) -> float:
+    if not sorted_vals:
+        return 0.0
+    if len(sorted_vals) == 1:
+        return sorted_vals[0]
+    idx = q * (len(sorted_vals) - 1)
+    lo = int(idx)
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    frac = idx - lo
+    return sorted_vals[lo] * (1 - frac) + sorted_vals[hi] * frac
+
+
+def build_body(model: str, arm: str, params: dict) -> dict:
+    """一次请求的 JSON body。音频臂 modalities=[text,audio],文本臂 [text]。"""
     modalities = ["text", "audio"] if arm == "audio" else ["text"]
-    pct = "ttft,e2el,audio_ttfp,audio_rtf" if arm == "audio" else "ttft,e2el"
-    return [
-        "vllm-omni",
-        "bench",
-        "serve",
-        "--omni",
-        "--backend",
-        "openai-chat-omni",
-        "--base-url",
-        base_url,
-        "--endpoint",
-        "/v1/chat/completions",
-        "--model",
-        model,
-        "--tokenizer",
-        tokenizer,
-        "--dataset-name",
-        "random",
-        "--random-input-len",
-        str(params["inputTokens"]),
-        "--random-output-len",
-        str(params["outputTokens"]),
-        "--num-prompts",
-        str(max(4, 2 * concurrency)),
-        "--max-concurrency",
-        str(concurrency),
-        "--num-warmups",
-        str(params["numWarmups"]),
-        "--ignore-eos",
-        "--extra-body",
-        json.dumps({"modalities": modalities}),
-        "--percentile-metrics",
-        pct,
-    ]
+    return {
+        "model": model,
+        "messages": [{"role": "user", "content": build_prompt(params["inputTokens"])}],
+        "max_tokens": params["outputTokens"],
+        "stream": True,
+        "stream_options": {"include_usage": True},
+        "modalities": modalities,
+        "ignore_eos": True,
+    }
 
 
-def run_bench(argv: list[str], timeout: int) -> tuple[int, str]:
-    """跑一档 bench;返回 (returncode, stdout+stderr 合流文本)。
+async def one_request(client, base_url: str, headers: dict, body: dict, arm: str) -> dict | None:
+    """发一次流式请求,算单请求指标;失败(HTTP 错/异常/音频臂无音频)返回 None。
 
-    测试通过 monkeypatch 替换本函数注入假输出。stdout 事后整体打印(tee 到
-    pod log),不做流式 —— bench 的 Rich 进度条本就不适合逐行转发。
+    返回 {ttftMs, e2elMs, audioTtfpMs|None, audioRtfSec|None, completionTokens|None}。
     """
+    t0 = time.perf_counter()
+    ttft = None
+    ttfa = None
+    audio_dur = 0.0
+    completion_tokens = None
     try:
-        proc = subprocess.run(  # noqa: S603 - argv 内部构造
-            argv, capture_output=True, text=True, timeout=timeout
-        )
-    except subprocess.TimeoutExpired:
-        return (124, f"bench timed out after {timeout}s")
-    return (proc.returncode, (proc.stdout or "") + "\n" + (proc.stderr or ""))
+        async with client.stream("POST", base_url + ENDPOINT, headers=headers, json=body) as resp:
+            if resp.status_code != 200:
+                await resp.aread()
+                return None
+            async for line in resp.aiter_lines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                usage = obj.get("usage")
+                if usage and usage.get("completion_tokens") is not None:
+                    completion_tokens = usage["completion_tokens"]
+                choices = obj.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content")
+                if not content:
+                    continue
+                modality = obj.get("modality")
+                if modality == "audio":
+                    if ttfa is None:
+                        ttfa = time.perf_counter() - t0
+                    audio_dur += _wav_duration_seconds(content)
+                else:  # text (modality 缺省也当文本)
+                    if ttft is None:
+                        ttft = time.perf_counter() - t0
+    except Exception as e:  # noqa: BLE001 - 单请求失败判失败点,不炸整档
+        log.debug("request failed: %s", e)
+        return None
+
+    e2el = time.perf_counter() - t0
+    if ttft is None:
+        return None  # 连文本都没出 → 判失败
+    if arm == "audio" and (ttfa is None or audio_dur <= 0):
+        return None  # 音频臂但没解出音频 → 判失败(端点没回音频)
+    return {
+        "ttftMs": ttft * 1000.0,
+        "e2elMs": e2el * 1000.0,
+        "audioTtfpMs": (ttfa * 1000.0) if ttfa is not None else None,
+        "audioRtfSec": (e2el / audio_dur) if audio_dur > 0 else None,
+        "completionTokens": completion_tokens,
+    }
 
 
-def resolve_tokenizer(hf_id: str | None) -> str:
-    if not hf_id:
-        raise SystemExit(
-            "tokenizer required: set tokenizerHfId on the Connection "
-            "(baked under /tokenizers/<org>/<name>) or provide HF_ENDPOINT"
+def aggregate_point(reqs: list[dict], arm: str, batch_wall: float) -> dict:
+    """一档的 ok 单请求列表 → curve point 数值部分。"""
+    n = len(reqs)
+    tok = [r["completionTokens"] for r in reqs if r["completionTokens"] is not None]
+    return {
+        "reqPerSec": round(n / batch_wall, 4) if batch_wall > 0 else 0.0,
+        "outTokPerSec": round(sum(tok) / batch_wall, 2) if tok and batch_wall > 0 else 0.0,
+        "ttftMs": _pct([r["ttftMs"] for r in reqs]),
+        "e2elMs": _pct([r["e2elMs"] for r in reqs]),
+        "audioTtfpMs": _pct([r["audioTtfpMs"] for r in reqs if r["audioTtfpMs"] is not None])
+        if arm == "audio"
+        else None,
+        "audioRtf": _pct([r["audioRtfSec"] for r in reqs if r["audioRtfSec"] is not None])
+        if arm == "audio"
+        else None,
+    }
+
+
+async def run_point(client, base_url, headers, model, arm, concurrency, params) -> dict | None:
+    """跑一档(warmup + 测量),聚合;全失败返回 None。"""
+    body = build_body(model, arm, params)
+    sem = asyncio.Semaphore(concurrency)
+
+    async def guarded():
+        async with sem:
+            return await one_request(client, base_url, headers, body, arm)
+
+    # warmup(不计入指标)
+    if params["numWarmups"] > 0:
+        await asyncio.gather(
+            *[guarded() for _ in range(params["numWarmups"])], return_exceptions=True
         )
-    if not HF_ID_RE.match(hf_id):
-        raise SystemExit(
-            f"tokenizerHfId '{hf_id}' is not a valid 'org/name' HF repo id "
-            "(rejecting to avoid escaping /tokenizers via '..' or an absolute path)"
-        )
-    baked = TOKENIZERS_ROOT / hf_id
-    if baked.is_dir():
-        return str(baked)
-    if os.environ.get("HF_ENDPOINT"):
-        return hf_id  # bench 自行从内网镜像源拉
-    raise SystemExit(
-        f"tokenizer '{hf_id}' not baked into the image ({TOKENIZERS_ROOT}) and "
-        "HF_ENDPOINT is unset — bake it or point HF_ENDPOINT at an internal mirror"
-    )
+
+    n_measured = max(4, 2 * concurrency)
+    t_batch = time.perf_counter()
+    results = await asyncio.gather(*[guarded() for _ in range(n_measured)], return_exceptions=True)
+    batch_wall = time.perf_counter() - t_batch
+    ok = [r for r in results if isinstance(r, dict)]
+    if not ok:
+        return None
+    return aggregate_point(ok, arm, batch_wall)
+
+
+def _make_client(timeout: int):
+    """httpx.AsyncClient(懒导入,单测 mock one_request 时无需装 httpx)。"""
+    import httpx
+
+    return httpx.AsyncClient(timeout=httpx.Timeout(timeout))
 
 
 def compute_derived(points: list[dict]) -> dict:
@@ -193,53 +232,66 @@ def compute_derived(points: list[dict]) -> dict:
     }
 
 
-def main() -> int:
-    params = json.loads(os.environ["MD_OMNI_PARAMS"])
-    base_url = os.environ["MD_OMNI_BASE_URL"]
-    model = os.environ["MD_OMNI_MODEL"]
-    tokenizer = resolve_tokenizer(os.environ.get("MD_OMNI_TOKENIZER_HF_ID"))
+def _failed_point(arm: str, c: int) -> dict:
+    return {
+        "arm": arm,
+        "concurrency": c,
+        "status": "failed",
+        "reqPerSec": None,
+        "outTokPerSec": None,
+        "ttftMs": None,
+        "e2elMs": None,
+        "audioTtfpMs": None,
+        "audioRtf": None,
+    }
 
+
+async def _run(
+    params: dict, base_url: str, model: str, api_key: str
+) -> tuple[list[dict], list[str]]:
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     arms = ["audio"] + (["text"] if params.get("voiceTax") else [])
     plan = [(arm, c) for arm in arms for c in params["concurrencyLevels"]]
     timeout = int(params["perPointTimeoutSeconds"])
 
     points: list[dict] = []
     warnings: list[str] = []
-    for i, (arm, c) in enumerate(plan, start=1):
-        argv = bench_argv(
-            base_url=base_url,
-            model=model,
-            tokenizer=tokenizer,
-            arm=arm,
-            concurrency=c,
-            params=params,
-        )
-        log.info("bench start arm=%s c=%d (%d/%d)", arm, c, i, len(plan))
-        rc, output = run_bench(argv, timeout)
-        print(output, flush=True)  # tee 到 pod log,事后可查每档原始汇总
-        parsed = parse_point(output, arm) if rc == 0 else None
-        if parsed is None:
-            reason = f"bench exited {rc}" if rc != 0 else "summary metrics missing from output"
-            if rc == 0 and arm == "audio":
-                reason += " (no AUDIO_* section — endpoint may not return audio; check modalities)"
-            warnings.append(f"arm={arm} c={c}: {reason}, point skipped")
-            points.append(
-                {
-                    "arm": arm,
-                    "concurrency": c,
-                    "status": "failed",
-                    "reqPerSec": None,
-                    "outTokPerSec": None,
-                    "ttftMs": None,
-                    "e2elMs": None,
-                    "audioTtfpMs": None,
-                    "audioRtf": None,
-                }
-            )
-        else:
-            points.append({"arm": arm, "concurrency": c, "status": "ok", **parsed})
-        # 进度行 —— adapter parseProgress 的契约格式,勿改。
-        log.info("point arm=%s c=%d done (%d/%d)", arm, c, i, len(plan))
+    async with _make_client(timeout) as client:
+        for i, (arm, c) in enumerate(plan, start=1):
+            log.info("point start arm=%s c=%d (%d/%d)", arm, c, i, len(plan))
+            timed_out = False
+            try:
+                agg = await asyncio.wait_for(
+                    run_point(client, base_url, headers, model, arm, c, params),
+                    timeout=timeout,
+                )
+            except TimeoutError:
+                agg = None
+                timed_out = True
+                warnings.append(f"arm={arm} c={c}: point timed out after {timeout}s, skipped")
+            if agg is None:
+                if not timed_out:
+                    reason = "all requests failed"
+                    if arm == "audio":
+                        reason += " (no decodable audio; endpoint may not return audio)"
+                    warnings.append(f"arm={arm} c={c}: {reason}, point skipped")
+                points.append(_failed_point(arm, c))
+            else:
+                points.append({"arm": arm, "concurrency": c, "status": "ok", **agg})
+            # 进度行 —— adapter parseProgress 契约格式,勿改。
+            log.info("point arm=%s c=%d done (%d/%d)", arm, c, i, len(plan))
+    return points, warnings
+
+
+def main() -> int:
+    params = json.loads(os.environ["MD_OMNI_PARAMS"])
+    base_url = os.environ["MD_OMNI_BASE_URL"]
+    model = os.environ["MD_OMNI_MODEL"]
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+
+    points, warnings = asyncio.run(_run(params, base_url, model, api_key))
 
     result = {"curve": points, "derived": compute_derived(points), "warnings": warnings}
     OUT_DIR.mkdir(parents=True, exist_ok=True)

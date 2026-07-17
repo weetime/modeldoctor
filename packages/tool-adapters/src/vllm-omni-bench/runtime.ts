@@ -9,12 +9,12 @@ import { type VllmOmniBenchParams, vllmOmniBenchReportSchema } from "./schema.js
 const OUTPUTS_DIR = "out";
 const RESULT_FILE = "omni_result.json";
 
-// argv 是 runner 内驱动脚本,不是 bench 本体 —— bench 的循环调用、stdout
-// 解析、聚合都在 runner.tools.omni_driver(Python)里,契约见其 docstring。
+// argv 是 runner 内驱动脚本,不是 bench 本体 —— 双臂×并发档扫描、流式请求、
+// 指标聚合都在 runner.tools.omni_driver(瘦 httpx 客户端),契约见其 docstring。
 export function buildCommand(plan: BuildCommandPlan<VllmOmniBenchParams>): BuildCommandResult {
   const { params, connection } = plan;
-  // vllm bench 的 openai 后端只从 OPENAI_API_KEY env 取 Bearer,没有自定义
-  // header / query 通道;静默丢弃会导致对着鉴权网关 100% 401,故 fail fast。
+  // driver 只把 OPENAI_API_KEY 拼进 Authorization header,不透传自定义
+  // header / query;静默丢弃会导致对着鉴权网关 100% 401,故 fail fast。
   if (connection.customHeaders?.trim()) {
     throw new Error("vllm-omni-bench does not support connection customHeaders (v1)");
   }
@@ -25,21 +25,11 @@ export function buildCommand(plan: BuildCommandPlan<VllmOmniBenchParams>): Build
     MD_OMNI_PARAMS: JSON.stringify(params),
     MD_OMNI_BASE_URL: connection.baseUrl.replace(/\/+$/, ""),
     MD_OMNI_MODEL: connection.model,
-    // argv[0] of the driven command is "python" (see argv below), so the
-    // generic wrapper's default `<argv[0]> --version` probe would report
-    // the Python interpreter version, not vllm-omni's — wrong toolVersion
-    // in meta.json. MD_TOOL_VERSION_ARGV is main.py's GENERIC, opt-in
-    // override (main.py stays zero-tool-specific-knowledge): when set, the
-    // wrapper probes this argv instead. NOTE: ["vllm-omni", "--version"] is
-    // inferred by analogy with `vllm --version` (vllm-omni's CLI is built
-    // the same way, see bench_argv()'s "vllm-omni bench serve" argv in
-    // omni_driver.py) — unverified against the real CLI (not available
-    // locally); needs a smoke check against the actual image. If wrong,
-    // detect_tool_version() already degrades gracefully to None/"" rather
-    // than a bogus version string.
-    MD_TOOL_VERSION_ARGV: JSON.stringify(["vllm-omni", "--version"]),
+    // 瘦客户端发固定 prompt,不需要 tokenizer(合成数据集才需要)——tokenizer
+    // 相关 env 全部移除,镜像也不烤 tokenizer(平台压很多模型,不可能都塞进去)。
+    // toolVersion:argv[0] 是 "python",wrapper 默认探 `python --version` 即客户端
+    // 运行时版本,语义正确,无需 MD_TOOL_VERSION_ARGV override。
   };
-  if (connection.tokenizerHfId) env.MD_OMNI_TOKENIZER_HF_ID = connection.tokenizerHfId;
   return {
     argv: ["python", "-m", "runner.tools.omni_driver"],
     env,
