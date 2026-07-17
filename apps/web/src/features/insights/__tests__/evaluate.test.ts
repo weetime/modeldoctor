@@ -91,6 +91,7 @@ describe("compositeScore", () => {
         "lb-strategy": null,
         "engine-kv-cache": null,
         agent: null,
+        omni: null,
       }),
     ).toBeNull();
   });
@@ -104,6 +105,7 @@ describe("compositeScore", () => {
         "lb-strategy": null,
         "engine-kv-cache": null,
         agent: null,
+        omni: null,
       }),
     ).toBe(80);
   });
@@ -117,6 +119,7 @@ describe("compositeScore", () => {
         "lb-strategy": null,
         "engine-kv-cache": null,
         agent: null,
+        omni: null,
       }),
     ).toBe(80);
   });

@@ -76,6 +76,10 @@ export function BenchmarkCreatePage() {
   const scenarioParam = params.get("scenario");
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
+  // `scenario` is contracts' ScenarioId; SCENARIOS (from
+  // @modeldoctor/tool-adapters) is keyed by tool-adapters' own ScenarioId,
+  // which is the same 7-value union as of the omni scenario's registration
+  // there — no cast needed.
   const defaultTool = SCENARIOS[scenario].tools[0];
   const templateIdParam = params.get("templateId");
 
@@ -184,6 +188,8 @@ export function BenchmarkCreatePage() {
         connectionId: form.getValues("connectionId") ?? "",
         name: "",
         description: undefined,
+        // currentTool is contracts' BenchmarkTool; TOOL_DEFAULTS is keyed by
+        // tool-adapters' ToolName, the same 6-value union — no cast needed.
         params: TOOL_DEFAULTS[currentTool] as Record<string, unknown>,
         templateId: undefined,
       });
@@ -219,6 +225,9 @@ export function BenchmarkCreatePage() {
     "lb-strategy": "benchmarkPrefixCache",
     "engine-kv-cache": "benchmarkKvCacheStress",
     agent: "benchmarkAgent",
+    // Sidebar copy for the omni scenario lands with the UI work
+    // (later tasks); key follows the existing naming convention.
+    omni: "benchmarkOmni",
   };
   const breadcrumbs = [
     { label: tSidebar("groups.benchmarks") },

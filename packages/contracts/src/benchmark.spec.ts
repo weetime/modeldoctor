@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   benchmarkSchema,
+  benchmarkToolSchema,
   listBenchmarksQuerySchema,
   prefixCacheAnnotationSchema,
   reportMetaSchema,
   reportResultSchema,
   reportStorageKeys,
+  scenarioIdSchema,
 } from "./benchmark.js";
 
 describe("prefixCacheAnnotationSchema", () => {
@@ -106,6 +108,15 @@ describe("reportResultSchema", () => {
         files: { "report-json": "files/report.json" },
       }),
     ).toBeTruthy();
+  });
+});
+
+describe("omni enum widening", () => {
+  it("scenarioIdSchema includes omni", () => {
+    expect(scenarioIdSchema.options).toContain("omni");
+  });
+  it("benchmarkToolSchema includes vllm-omni-bench", () => {
+    expect(benchmarkToolSchema.options).toContain("vllm-omni-bench");
   });
 });
 

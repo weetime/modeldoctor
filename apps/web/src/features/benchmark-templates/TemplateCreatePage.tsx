@@ -31,6 +31,10 @@ export function TemplateCreatePage() {
   const scenarioParam = params.get("scenario");
   const scenarioParse = scenarioIdSchema.safeParse(scenarioParam);
   const scenario: ScenarioId = scenarioParse.success ? scenarioParse.data : "inference";
+  // `scenario` is contracts' ScenarioId; SCENARIOS (from
+  // @modeldoctor/tool-adapters) is keyed by tool-adapters' own ScenarioId,
+  // which is the same 7-value union as of the omni scenario's registration
+  // there — no cast needed.
   const tool = SCENARIOS[scenario].tools[0];
 
   const form = useForm<CreateBenchmarkTemplateRequest>({

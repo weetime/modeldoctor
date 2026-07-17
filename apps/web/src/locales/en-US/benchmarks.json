@@ -14,7 +14,8 @@
       "gateway": "New Gateway Test",
       "lb-strategy": "New LB-strategy Validation",
       "engine-kv-cache": "New Engine KV / Prefix Cache Test",
-      "agent": "New Agent Scenario Eval"
+      "agent": "New Agent Scenario Eval",
+      "omni": "New Omni Realtime Benchmark"
     },
     "subtitle": "Configure parameters, then submit",
     "sections": {
@@ -37,14 +38,16 @@
       "vegeta": "vegeta",
       "evalscope": "evalscope",
       "aiperf": "aiperf",
-      "tau3": "tau3"
+      "tau3": "tau3",
+      "vllm-omni-bench": "vllm-omni-bench"
     },
     "toolDescriptions": {
       "guidellm": "Text-generation benchmark (chat / completion); inference perf + capacity planning",
       "vegeta": "Generic HTTP load tester with custom path + body; gateway / route testing",
       "evalscope": "Modelscope perf tool; chat / completions with prefix-cache hit-rate stats",
       "aiperf": "NVIDIA AIPerf: modern LLM inference benchmark",
-      "tau3": "τ³-bench: multi-turn tool-calling agent eval (airline/retail/telecom customer-service scenarios)"
+      "tau3": "τ³-bench: multi-turn tool-calling agent eval (airline/retail/telecom customer-service scenarios)",
+      "vllm-omni-bench": "vLLM-Omni Bench: official omni-modal load test (AUDIO_TTFP/RTF)"
     },
     "errors": {
       "submitFailed": "Failed to submit benchmark"
@@ -140,7 +143,8 @@
     "gateway": "Higress / API path HTTP performance",
     "lb-strategy": "Validate LB routing strategies (currently ai-load-balancer prefix_cache) pin same-prefix requests to one replica",
     "engine-kv-cache": "Single-instance / engine-level cache effectiveness (vanilla / LMCache / YRCache, mooncake trace block-level prefix reuse)",
-    "agent": "τ³-bench multi-turn tool calling: airline/retail/telecom customer-service scenarios, testing policy adherence + correct domain-tool calls"
+    "agent": "τ³-bench multi-turn tool calling: airline/retail/telecom customer-service scenarios, testing policy adherence + correct domain-tool calls",
+    "omni": "Omni-modal speech-output realtime load test: vllm-omni bench sweeps both arms × concurrency levels, producing AUDIO_TTFP / AUDIO_RTF curves, a realtime ceiling, and a voice tax"
   },
   "compareButton": "Compare ({{n}})",
   "compareDisabledNeedTwo": "Select at least 2 benchmarks to compare",
@@ -373,7 +377,11 @@
       "latencyP99": "Latency p99 (ms)",
       "latencyMax": "Latency max (ms)",
       "errorRate": "Error rate",
-      "throughput": "Throughput (req/s)"
+      "throughput": "Throughput (req/s)",
+      "realtimeCeiling": "Realtime ceiling (concurrency)",
+      "audioTtfpC1Mean": "TTFP@c1 (mean)",
+      "audioRtfPeakMean": "RTF@peak (mean)",
+      "voiceTaxMs": "Voice tax (ms)"
     },
     "dragHandle": "Drag to reorder",
     "matrixCol": {
@@ -545,6 +553,17 @@
       "userSimProviderId": "User-simulator provider (optional)",
       "userSimProviderDefault": "Use default LLM provider",
       "userSimProviderHint": "LLM that simulates the user's turns; leave blank to use the default provider (Settings → LLM Provider)"
+    },
+    "omni": {
+      "section": "Omni realtime parameters",
+      "concurrencyLevels": "Concurrency levels (comma-separated)",
+      "concurrencyLevelsHint": "Swept level-by-level within one run; up to 10 levels",
+      "inputTokens": "Input length (tokens)",
+      "outputTokens": "Output length (tokens)",
+      "outputTokensHint": "Shared by both arms; RTF is tightly coupled to audio duration — don't vary this between comparison arms",
+      "perPointTimeout": "Per-level timeout (s)",
+      "voiceTax": "Voice-tax control arm",
+      "voiceTaxHint": "Adds a text-only arm with matching params, producing ΔE2EL between text+audio and text"
     }
   },
   "reports": {
@@ -649,6 +668,19 @@
           "other": "Other"
         }
       }
+    },
+    "omni": {
+      "concurrency": "Concurrency",
+      "realtimeLine": "Realtime line RTF=1",
+      "realtimeCeiling": "Realtime ceiling",
+      "realtimeCeilingSub": "Highest concurrency level with RTF (mean) < 1",
+      "ttfpC1": "TTFP @ lowest level (mean)",
+      "rtfPeak": "RTF @ ceiling level (mean)",
+      "voiceTax": "Voice tax",
+      "rtfChart": "AUDIO_RTF vs. concurrency",
+      "ttfpChart": "AUDIO_TTFP vs. concurrency",
+      "taxChart": "Voice tax (ΔE2EL per level)",
+      "warnings": "Warnings"
     },
     "title": "Test Insights",
     "subtitle": "Per-connection benchmark aggregates — p95 + success rate over a recent window",

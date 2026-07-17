@@ -4,6 +4,7 @@ import { guidellmAdapter } from "../guidellm/index.js";
 import type { ScenarioId } from "../scenarios.js";
 import { tau3Adapter } from "../tau3/index.js";
 import { vegetaAdapter } from "../vegeta/index.js";
+import { vllmOmniBenchAdapter } from "../vllm-omni-bench/index.js";
 import type { ToolAdapter, ToolName } from "./interface.js";
 
 const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
@@ -12,6 +13,7 @@ const ADAPTERS: Readonly<Record<ToolName, ToolAdapter>> = {
   evalscope: evalscopeAdapter,
   aiperf: aiperfAdapter,
   tau3: tau3Adapter,
+  "vllm-omni-bench": vllmOmniBenchAdapter,
 };
 
 export function byTool(tool: ToolName): ToolAdapter {

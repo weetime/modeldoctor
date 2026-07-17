@@ -19,6 +19,9 @@ export type ProbeCategory = ModalityCategory;
 
 export const PROBES_BY_CATEGORY: Record<ProbeCategory, readonly ProbeName[]> = {
   chat: ["chat-text", "chat-vision"],
+  // Full-modality endpoints speak chat completions plus audio-in-audio-out —
+  // treat as chat's probes plus the existing omni-capable chat-audio probe.
+  omni: ["chat-text", "chat-vision", "chat-audio-omni"],
   audio: ["tts", "asr", "chat-audio-omni"],
   embeddings: ["embeddings-openai", "embeddings-tei"],
   rerank: ["rerank-tei", "rerank-cohere"],

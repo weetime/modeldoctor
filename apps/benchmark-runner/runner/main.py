@@ -71,15 +71,39 @@ def _iso_now() -> str:
 
 
 def detect_tool_version(tool: str) -> str | None:
-    """Run ``<tool> --version`` and return the first stdout line stripped.
+    """Run a --version probe and return the first stdout line stripped.
 
-    Returns None if the tool is missing, the call times out, or it exits
-    non-zero. Truncates to ``TOOL_VERSION_MAX_CHARS`` so a verbose banner
-    can never violate the contract's ``z.string().max(50)``.
+    Probes ``[tool, "--version"]`` by default. An adapter whose argv[0]
+    isn't the tool's own version-reporting binary (e.g. vllm-omni-bench
+    runs as ``python -m runner.tools.omni_driver`` — argv[0] is "python",
+    whose ``--version`` reports the interpreter, not the tool) can set the
+    ``MD_TOOL_VERSION_ARGV`` env var to a JSON argv array to probe instead.
+    This is a GENERIC escape hatch: main.py stays zero-tool-specific-
+    knowledge — the override is opt-in, supplied by the adapter's
+    buildCommand(), never hardcoded here. Unset (the common case): behavior
+    is unchanged.
+
+    Returns None if the tool/override is missing, the call times out, or it
+    exits non-zero. Truncates to ``TOOL_VERSION_MAX_CHARS`` so a verbose
+    banner can never violate the contract's ``z.string().max(50)``.
     """
+    probe_argv = [tool, "--version"]
+    override = os.environ.get("MD_TOOL_VERSION_ARGV")
+    if override:
+        try:
+            parsed = json.loads(override)
+            if (
+                not isinstance(parsed, list)
+                or not parsed
+                or not all(isinstance(a, str) for a in parsed)
+            ):
+                raise ValueError("MD_TOOL_VERSION_ARGV must be a non-empty JSON array of strings")
+            probe_argv = parsed
+        except (json.JSONDecodeError, ValueError) as e:
+            log.warning("ignoring malformed MD_TOOL_VERSION_ARGV=%r: %s", override, e)
     try:
         result = subprocess.run(  # noqa: S603 - argv is internal, not user-supplied
-            [tool, "--version"],
+            probe_argv,
             capture_output=True,
             text=True,
             timeout=TOOL_VERSION_TIMEOUT_SEC,

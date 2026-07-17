@@ -33,6 +33,7 @@
     "devCharts": "图表调试",
     "deploymentRecipes": "部署示例",
     "benchmarkKvCacheStress": "引擎 KV / 前缀缓存",
-    "benchmarkAgent": "Agent 场景评测"
+    "benchmarkAgent": "Agent 场景评测",
+    "benchmarkOmni": "Omni 实时性"
   }
 }

@@ -47,6 +47,7 @@ import { CapacityReport } from "./reports/CapacityReport";
 import { GatewayReport } from "./reports/GatewayReport";
 import { InferenceReport } from "./reports/InferenceReport";
 import { KvCacheStressReport } from "./reports/KvCacheStressReport";
+import { OmniReport } from "./reports/OmniReport";
 import { PrefixCachePanel } from "./reports/PrefixCachePanel";
 import { UnknownReport } from "./reports/UnknownReport";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
@@ -188,6 +189,8 @@ function ReportSection({ benchmark }: { benchmark: Benchmark }) {
       );
     case "agent":
       return <AgentReport benchmark={benchmark} />;
+    case "omni":
+      return <OmniReport benchmark={benchmark} />;
     default:
       return <UnknownReport benchmark={benchmark} />;
   }
@@ -290,6 +293,8 @@ const SCENARIO_SIDEBAR_KEY: Record<ScenarioId, string> = {
   "lb-strategy": "benchmarkPrefixCache",
   "engine-kv-cache": "benchmarkKvCacheStress",
   agent: "benchmarkAgent",
+  // Sidebar copy for the omni scenario lands with the UI work (later tasks).
+  omni: "benchmarkOmni",
 };
 
 export function BenchmarkDetailPage() {

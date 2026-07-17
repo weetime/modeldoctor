@@ -13,6 +13,7 @@ import { BenchmarkDetailPage } from "@/features/benchmarks/BenchmarkDetailPage";
 import { BenchmarkGatewayPage } from "@/features/benchmarks/BenchmarkGatewayPage";
 import { BenchmarkInferencePage } from "@/features/benchmarks/BenchmarkInferencePage";
 import { BenchmarkKvCacheStressPage } from "@/features/benchmarks/BenchmarkKvCacheStressPage";
+import { BenchmarkOmniPage } from "@/features/benchmarks/BenchmarkOmniPage";
 import { BenchmarkPrefixCachePage } from "@/features/benchmarks/BenchmarkPrefixCachePage";
 import { BenchmarkCompareGate } from "@/features/benchmarks/compare/BenchmarkCompareGate";
 import { ReportDetailPage } from "@/features/benchmarks/compare/ReportDetailPage";
@@ -98,6 +99,7 @@ export const routes: RouteObject[] = [
             element: <BenchmarkKvCacheStressPage />,
           },
           { path: "benchmarks/agent", element: <BenchmarkAgentPage /> },
+          { path: "benchmarks/omni", element: <BenchmarkOmniPage /> },
           { path: "benchmarks/compare", element: <BenchmarkCompareGate /> },
           { path: "benchmarks/compare/saved", element: <SavedComparesListPage /> },
           { path: "reports/:id", element: <ReportDetailRoute /> },

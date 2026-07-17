@@ -18,6 +18,7 @@ describe("SCENARIOS constant", () => {
       "gateway",
       "inference",
       "lb-strategy",
+      "omni",
     ]);
   });
 

@@ -8,7 +8,8 @@ export type ScenarioId =
   | "gateway"
   | "lb-strategy"
   | "engine-kv-cache"
-  | "agent";
+  | "agent"
+  | "omni";
 
 export const scenarioIdSchema = z.enum([
   "inference",
@@ -17,6 +18,7 @@ export const scenarioIdSchema = z.enum([
   "lb-strategy",
   "engine-kv-cache",
   "agent",
+  "omni",
 ]);
 
 export interface ScenarioConfig {
@@ -30,7 +32,8 @@ export interface ScenarioConfig {
     | "GatewayReport"
     | "KvCacheStressReport"
     | "PrefixCachePanel"
-    | "AgentReport";
+    | "AgentReport"
+    | "OmniReport";
 }
 
 export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
@@ -86,6 +89,15 @@ export const SCENARIOS: Record<ScenarioId, ScenarioConfig> = {
     tools: ["tau3"],
     paramsConstraints: {},
     reportComponent: "AgentReport",
+  },
+  omni: {
+    label: "Omni 实时性",
+    description:
+      "全模态模型语音输出实时性压测:vllm-omni bench 双臂 × 并发档扫描,出 AUDIO_TTFP / " +
+      "AUDIO_RTF 曲线、实时天花板(RTF<1 最大并发)与语音税(text vs text+audio ΔE2EL)。",
+    tools: ["vllm-omni-bench"],
+    paramsConstraints: {},
+    reportComponent: "OmniReport",
   },
 };
 

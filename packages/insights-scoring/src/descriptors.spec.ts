@@ -6,7 +6,7 @@ describe("descriptors", () => {
     expect(ALL_CHECKS.length).toBeGreaterThan(0);
     for (const c of ALL_CHECKS) {
       expect(c.metricKind).toBeTruthy();
-      expect(["inference", "capacity", "gateway"]).toContain(c.scenario);
+      expect(["inference", "capacity", "gateway", "omni"]).toContain(c.scenario);
     }
   });
 

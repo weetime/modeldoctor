@@ -14,7 +14,8 @@
       "gateway": "新建网关压测",
       "lb-strategy": "新建 负载均衡策略验证",
       "engine-kv-cache": "新建引擎 KV / 前缀缓存测试",
-      "agent": "新建 Agent 能力评测"
+      "agent": "新建 Agent 能力评测",
+      "omni": "新建 Omni 实时性压测"
     },
     "subtitle": "配置参数后提交",
     "sections": {
@@ -37,14 +38,16 @@
       "vegeta": "vegeta",
       "evalscope": "evalscope",
       "aiperf": "aiperf",
-      "tau3": "tau3"
+      "tau3": "tau3",
+      "vllm-omni-bench": "vllm-omni-bench"
     },
     "toolDescriptions": {
       "guidellm": "文本生成基准（chat / completion），用于推理性能与容量评估",
       "vegeta": "通用 HTTP 压测，可自定义请求 path 与 body，适合网关链路测试",
       "evalscope": "Modelscope 出品的推理性能工具，支持 chat / completions 与 prefix-cache 命中率统计",
       "aiperf": "NVIDIA AIPerf：主流 LLM 推理性能基准",
-      "tau3": "τ³-bench：多轮工具调用 agent 评测(航空/零售/电信客服场景)"
+      "tau3": "τ³-bench：多轮工具调用 agent 评测(航空/零售/电信客服场景)",
+      "vllm-omni-bench": "vLLM-Omni Bench:官方全模态压测(AUDIO_TTFP/RTF)"
     },
     "errors": {
       "submitFailed": "提交基准测试失败"
@@ -140,7 +143,8 @@
     "gateway": "Higress / API 链路 HTTP 性能",
     "lb-strategy": "验证不同负载均衡策略(当前 ai-load-balancer prefix_cache)下相同前缀请求是否粘到同一副本",
     "engine-kv-cache": "单实例 / 引擎级缓存有效性对比(vanilla / LMCache / YRCache,mooncake trace 块级前缀复用)",
-    "agent": "τ³-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力"
+    "agent": "τ³-bench 多轮工具调用:航空/零售/电信客服场景,测 agent 守政策 + 正确调用领域工具的能力",
+    "omni": "全模态模型语音输出实时性压测:vllm-omni bench 双臂 × 并发档扫描,出 AUDIO_TTFP / AUDIO_RTF 曲线、实时天花板与语音税"
   },
   "compareButton": "对比 ({{n}})",
   "compareDisabledNeedTwo": "至少选 2 个基准测试才能对比",
@@ -373,7 +377,11 @@
       "latencyP99": "延迟 p99 (ms)",
       "latencyMax": "延迟最大 (ms)",
       "errorRate": "错误率",
-      "throughput": "吞吐 (req/s)"
+      "throughput": "吞吐 (req/s)",
+      "realtimeCeiling": "实时天花板(并发)",
+      "audioTtfpC1Mean": "TTFP@c1 (mean)",
+      "audioRtfPeakMean": "RTF@峰值 (mean)",
+      "voiceTaxMs": "语音税 (ms)"
     },
     "dragHandle": "拖拽调整顺序",
     "matrixCol": {
@@ -545,6 +553,17 @@
       "userSimProviderId": "用户模拟器 Provider(可选)",
       "userSimProviderDefault": "使用默认 LLM Provider",
       "userSimProviderHint": "模拟用户对话的 LLM;留空使用默认 Provider(设置 → LLM Provider)"
+    },
+    "omni": {
+      "section": "Omni 实时性参数",
+      "concurrencyLevels": "并发档(逗号分隔)",
+      "concurrencyLevelsHint": "一个 run 内逐档扫描,最多 10 档",
+      "inputTokens": "输入长度 (tokens)",
+      "outputTokens": "输出长度 (tokens)",
+      "outputTokensHint": "双臂共用;RTF 与音频时长强相关,勿在对比臂间改动",
+      "perPointTimeout": "单档超时 (秒)",
+      "voiceTax": "语音税对照臂",
+      "voiceTaxHint": "追加 text-only 同参臂,产出 text+audio 与 text 的 ΔE2EL"
     }
   },
   "reports": {
@@ -649,6 +668,19 @@
           "other": "其他"
         }
       }
+    },
+    "omni": {
+      "concurrency": "并发",
+      "realtimeLine": "实时线 RTF=1",
+      "realtimeCeiling": "实时天花板",
+      "realtimeCeilingSub": "RTF(mean)<1 的最大并发档",
+      "ttfpC1": "TTFP @ 最低档 (mean)",
+      "rtfPeak": "RTF @ 天花板档 (mean)",
+      "voiceTax": "语音税",
+      "rtfChart": "AUDIO_RTF - 并发曲线",
+      "ttfpChart": "AUDIO_TTFP - 并发曲线",
+      "taxChart": "语音税(按档 ΔE2EL)",
+      "warnings": "警告"
     },
     "title": "测试洞察",
     "subtitle": "按连接聚合最近 N 天的基准测试，跟踪 p95 与成功率随时间的变化",

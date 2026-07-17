@@ -668,3 +668,67 @@ class TestDetectToolVersion:
         out = main_mod.detect_tool_version("guidellm")
         assert out is not None
         assert len(out) == main_mod.TOOL_VERSION_MAX_CHARS
+
+    # ── MD_TOOL_VERSION_ARGV override (I-2) ─────────────────────────────
+    # Generic escape hatch: an adapter whose argv[0] isn't its own
+    # version-reporting binary (vllm-omni-bench runs as `python -m
+    # runner.tools.omni_driver`) can set MD_TOOL_VERSION_ARGV to a JSON argv
+    # array to probe instead. main.py stays zero-tool-specific-knowledge —
+    # this is opt-in via env, not a tool-name branch.
+
+    def test_unset_env_probes_argv0_dashdash_version_unchanged(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {}, clear=True)
+        run = mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="python 3.11.4\n"),
+        )
+        assert main_mod.detect_tool_version("python") == "python 3.11.4"
+        run.assert_called_once()
+        assert run.call_args.args[0] == ["python", "--version"]
+
+    def test_override_argv_is_probed_instead_of_argv0(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict(
+            "os.environ",
+            {"MD_TOOL_VERSION_ARGV": json.dumps(["vllm-omni", "--version"])},
+            clear=True,
+        )
+        run = mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="vllm-omni 0.24.0\n"),
+        )
+        assert main_mod.detect_tool_version("python") == "vllm-omni 0.24.0"
+        run.assert_called_once()
+        assert run.call_args.args[0] == ["vllm-omni", "--version"]
+
+    def test_malformed_override_json_falls_back_to_default_probe(
+        self, mocker: MockerFixture
+    ) -> None:
+        mocker.patch.dict("os.environ", {"MD_TOOL_VERSION_ARGV": "not json"}, clear=True)
+        run = mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="python 3.11.4\n"),
+        )
+        assert main_mod.detect_tool_version("python") == "python 3.11.4"
+        assert run.call_args.args[0] == ["python", "--version"]
+
+    def test_non_list_override_falls_back_to_default_probe(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict(
+            "os.environ",
+            {"MD_TOOL_VERSION_ARGV": json.dumps({"not": "a list"})},
+            clear=True,
+        )
+        run = mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="python 3.11.4\n"),
+        )
+        assert main_mod.detect_tool_version("python") == "python 3.11.4"
+        assert run.call_args.args[0] == ["python", "--version"]
+
+    def test_empty_list_override_falls_back_to_default_probe(self, mocker: MockerFixture) -> None:
+        mocker.patch.dict("os.environ", {"MD_TOOL_VERSION_ARGV": json.dumps([])}, clear=True)
+        run = mocker.patch(
+            "runner.main.subprocess.run",
+            return_value=_fake_completed(stdout="python 3.11.4\n"),
+        )
+        assert main_mod.detect_tool_version("python") == "python 3.11.4"
+        assert run.call_args.args[0] == ["python", "--version"]

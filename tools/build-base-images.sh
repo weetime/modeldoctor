@@ -40,6 +40,13 @@ AIPERF_VERSION=0.10.0
 # content changes even if the tau2 ref stays put, then update tau3.Dockerfile's
 # FROM line to match.
 TAU3_IMAGE_TAG=1.0.0
+# vllm-omni-bench: VLLM_OMNI_VERSION (upstream vllm-omni image tag, baked via
+# the Dockerfile ARG default) is decoupled from the base image TAG — bump
+# VLLM_OMNI_BENCH_IMAGE_TAG whenever the baked tokenizers change even if the
+# upstream vllm-omni version stays put, then update vllm-omni-bench.Dockerfile's
+# FROM line to match.
+VLLM_OMNI_VERSION=v0.24.0
+VLLM_OMNI_BENCH_IMAGE_TAG=0.24.0
 SHAREGPT_URL="https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
 MOONCAKE_TRACE_BASEURL="https://raw.githubusercontent.com/kvcache-ai/Mooncake/main/FAST25-release/traces"
 
@@ -53,12 +60,12 @@ for arg in "$@"; do
   case "$arg" in
     --no-push) PUSH=false ;;
     --force)   FORCE=true ;;
-    vegeta|evalscope|aiperf|tau3) TOOLS+=("$arg") ;;
+    vegeta|evalscope|aiperf|tau3|vllm-omni-bench) TOOLS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 if [[ ${#TOOLS[@]} -eq 0 ]]; then
-  TOOLS=(vegeta evalscope aiperf tau3)
+  TOOLS=(vegeta evalscope aiperf tau3 vllm-omni-bench)
 fi
 
 # ---------------------------------------------------------------------------
@@ -192,18 +199,45 @@ if contains aiperf "${TOOLS[@]}"; then
 fi
 
 # ---------------------------------------------------------------------------
+# vllm-omni-bench: pre-download known omni models' tokenizer files on host.
+# Same TLS-workaround rationale as ShareGPT/vegeta (Docker Desktop for Mac
+# fails TLS handshakes to huggingface.co inside the builder). Only tokenizer
+# files (a few tens of MB each) are fetched — weights are excluded.
+# ---------------------------------------------------------------------------
+if contains vllm-omni-bench "${TOOLS[@]}"; then
+  TOKENIZER_DIR="${CONTEXT}/images/.tokenizers"
+  mkdir -p "$TOKENIZER_DIR"
+  CLEANUP_DIRS+=("$TOKENIZER_DIR")
+
+  for REPO in Qwen/Qwen2.5-Omni-7B Qwen/Qwen3-Omni-30B-A3B-Instruct; do
+    DEST="${TOKENIZER_DIR}/${REPO}"
+    if [[ -d "$DEST" && -n "$(ls -A "$DEST" 2>/dev/null)" ]]; then
+      echo "==> tokenizer ${REPO} already present, skipping download"
+      continue
+    fi
+    echo "==> Downloading tokenizer for ${REPO}"
+    huggingface-cli download "$REPO" \
+      --include "tokenizer*" "*.json" \
+      --exclude "*.safetensors*" \
+      --local-dir "$DEST"
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-contains vegeta    "${TOOLS[@]}" && build_and_push vegeta    "$VEGETA_VERSION"
-contains evalscope "${TOOLS[@]}" && build_and_push evalscope "$EVALSCOPE_IMAGE_TAG"
-contains aiperf    "${TOOLS[@]}" && build_and_push aiperf    "$AIPERF_VERSION"
-contains tau3      "${TOOLS[@]}" && build_and_push tau3      "$TAU3_IMAGE_TAG"
+contains vegeta          "${TOOLS[@]}" && build_and_push vegeta          "$VEGETA_VERSION"
+contains evalscope       "${TOOLS[@]}" && build_and_push evalscope       "$EVALSCOPE_IMAGE_TAG"
+contains aiperf          "${TOOLS[@]}" && build_and_push aiperf          "$AIPERF_VERSION"
+contains tau3            "${TOOLS[@]}" && build_and_push tau3            "$TAU3_IMAGE_TAG"
+contains vllm-omni-bench "${TOOLS[@]}" && build_and_push vllm-omni-bench "$VLLM_OMNI_BENCH_IMAGE_TAG"
 
 echo
 echo "==> Done. Base images in ${REGISTRY}:"
-contains vegeta    "${TOOLS[@]}" && echo "    md-base-vegeta:${VEGETA_VERSION}"
-contains evalscope "${TOOLS[@]}" && echo "    md-base-evalscope:${EVALSCOPE_IMAGE_TAG}"
-contains aiperf    "${TOOLS[@]}" && echo "    md-base-aiperf:${AIPERF_VERSION}"
-contains tau3      "${TOOLS[@]}" && echo "    md-base-tau3:${TAU3_IMAGE_TAG}"
+contains vegeta          "${TOOLS[@]}" && echo "    md-base-vegeta:${VEGETA_VERSION}"
+contains evalscope       "${TOOLS[@]}" && echo "    md-base-evalscope:${EVALSCOPE_IMAGE_TAG}"
+contains aiperf          "${TOOLS[@]}" && echo "    md-base-aiperf:${AIPERF_VERSION}"
+contains tau3            "${TOOLS[@]}" && echo "    md-base-tau3:${TAU3_IMAGE_TAG}"
+contains vllm-omni-bench "${TOOLS[@]}" && echo "    md-base-vllm-omni-bench:${VLLM_OMNI_BENCH_IMAGE_TAG}"
 echo
 echo "Next: run ./tools/build-runner-images.sh to build + import the runner images."

@@ -9,6 +9,7 @@ const IMAGES: Record<string, string> = {
   RUNNER_IMAGE_EVALSCOPE: "md-runner-evalscope:test",
   RUNNER_IMAGE_AIPERF: "md-runner-aiperf:test",
   RUNNER_IMAGE_TAU3: "md-runner-tau3:test",
+  RUNNER_IMAGE_VLLM_OMNI_BENCH: "md-runner-vllm-omni-bench:test",
 };
 
 function makeConfig(overrides: Record<string, string | undefined> = {}) {
@@ -25,6 +26,7 @@ describe("imageForTool", () => {
     ["evalscope", "md-runner-evalscope:test"],
     ["aiperf", "md-runner-aiperf:test"],
     ["tau3", "md-runner-tau3:test"],
+    ["vllm-omni-bench", "md-runner-vllm-omni-bench:test"],
   ] as const)("resolves %s -> %s", (tool, expected) => {
     expect(imageForTool(tool, makeConfig())).toBe(expected);
   });

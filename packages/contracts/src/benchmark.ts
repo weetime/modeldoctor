@@ -11,10 +11,18 @@ export const scenarioIdSchema = z.enum([
   "lb-strategy",
   "engine-kv-cache",
   "agent",
+  "omni",
 ]);
 export type ScenarioId = z.infer<typeof scenarioIdSchema>;
 
-export const benchmarkToolSchema = z.enum(["guidellm", "vegeta", "evalscope", "aiperf", "tau3"]);
+export const benchmarkToolSchema = z.enum([
+  "guidellm",
+  "vegeta",
+  "evalscope",
+  "aiperf",
+  "tau3",
+  "vllm-omni-bench",
+]);
 export type BenchmarkTool = z.infer<typeof benchmarkToolSchema>;
 
 export const benchmarkStatusSchema = z.enum([

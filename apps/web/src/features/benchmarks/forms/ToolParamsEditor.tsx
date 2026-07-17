@@ -9,7 +9,9 @@ import {
   guidellmParamDefaults,
   tau3ParamDefaults,
   VEGETA_CATEGORY_DEFAULTS,
+  VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
   vegetaParamDefaults,
+  vllmOmniBenchParamDefaults,
 } from "@modeldoctor/tool-adapters/schemas";
 import { useEffect, useId, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -35,6 +37,7 @@ import { SCENARIOS } from "../scenarios";
  */
 const TAU3_CATEGORY_DEFAULTS = {
   chat: {},
+  omni: { unsupported: true },
   audio: { unsupported: true },
   embeddings: { unsupported: true },
   rerank: { unsupported: true },
@@ -47,6 +50,7 @@ const TOOL_CATEGORY_DEFAULTS = {
   evalscope: EVALSCOPE_CATEGORY_DEFAULTS,
   aiperf: AIPERF_CATEGORY_DEFAULTS,
   tau3: TAU3_CATEGORY_DEFAULTS,
+  "vllm-omni-bench": VLLM_OMNI_BENCH_CATEGORY_DEFAULTS,
 } as const;
 
 import { AgentParamsForm } from "./AgentParamsForm";
@@ -55,6 +59,7 @@ import { EvalscopeParamsForm } from "./EvalscopeParamsForm";
 import { GuidellmParamsForm } from "./GuidellmParamsForm";
 import { ToolUnsupportedNotice } from "./ToolUnsupportedNotice";
 import { VegetaParamsForm } from "./VegetaParamsForm";
+import { VllmOmniBenchParamsForm } from "./VllmOmniBenchParamsForm";
 
 export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   guidellm: guidellmParamDefaults,
@@ -62,6 +67,7 @@ export const TOOL_DEFAULTS: Record<ToolName, unknown> = {
   evalscope: evalscopeParamDefaults,
   aiperf: aiperfParamDefaults,
   tau3: tau3ParamDefaults,
+  "vllm-omni-bench": vllmOmniBenchParamDefaults,
 };
 
 /**
@@ -82,6 +88,8 @@ function pickParamsForm(tool: ToolName) {
       return AiperfParamsForm;
     case "tau3":
       return AgentParamsForm;
+    case "vllm-omni-bench":
+      return VllmOmniBenchParamsForm;
     default: {
       const _exhaustive: never = tool;
       throw new Error(`Unhandled tool in ToolParamsEditor: ${String(_exhaustive)}`);
