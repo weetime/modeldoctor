@@ -33,11 +33,11 @@
 | 决策点 | 结论 | 理由 |
 |---|---|---|
 | v1 测什么 | 负载/RTF(并发扫描) | 文章核心,现有工具做不了;功能门禁后置挂 E2E Smoke,静态容量后置 |
-| 压测客户端 | 包官方 `vllm-omni bench serve --omni` | 口径权威、与官方 blog 可比;自建脚本仅作对标参考 |
+| 压测客户端 | ~~包官方 `vllm-omni bench serve --omni`~~ → **瘦 async 客户端**(v2 pivot,见文末附录) | 官方 bench 强绑 20GiB serving 镜像 + tokenizer;TTFA/RTF 本就是客户端从流式响应直接算(业内通行),自建瘦客户端镜像 154MB、无 tokenizer |
 | 产品挂载 | 新 `ScenarioId "omni"` + 独立 tab | 指标体系与 inference 完全不同;与 agent 场景同模式扩展 |
 | sweep 组织 | **一个 run 内扫完 双臂 × 并发档**(方案 A) | 实时天花板/语音税是跨档跨臂派生指标,一 run 一档无载体;修正现状「sweep 只在 guidellm 原生支持时存在」的缺口 |
 | sweep 实现位置 | runner 内新增 **omni driver 脚本**,通用 wrapper 零改动 | wrapper 眼里 driver 就是普通工具命令;循环/双臂/逐点容错内聚 |
-| Runner 镜像 | `FROM vllm-omni:v0.24.0`(实测节点占 8 GiB)+ COPY wrapper | bench CLI import vllm 内部模块,瘦身需手工摘抄、跨版本脆弱,v1 不做;`IfNotPresent` + 内网 registry 缓解拉取成本 |
+| Runner 镜像 | ~~`FROM vllm-omni:v0.24.0`(20GiB)~~ → **`python:3.11-slim + httpx`(154MB)** | 20GiB 镜像 k3d import 卡死开发机、生产跨网拉取昂贵;瘦客户端只需 httpx + stdlib,秒级 import |
 | 配套扩展 | `omni` ModalityCategory + 官方模板 ×2 + Insights omni 规则,v1 全做 | 用户明确要求 Test Insights / Test Templates 同步扩展 |
 | aiperf 多模态输入臂 | v2 | 复用现有 adapter 测「图/音输入→文本输出」,与本工具互补 |
 
@@ -98,13 +98,13 @@ Web 报告页: OmniReport (曲线 + tiles) · Insights: checks/omni.ts 打分
 - 纯 stdlib + 镜像内已有依赖,不新增 pip 包;
 - 逐点解析优先级:`--save-result` JSON(**待验证** vllm-omni 是否继承该 flag)→ 回退 stdout 正则(`Mean TTFT`、`Mean/Median/P99 AUDIO_TTFP`、`Mean/Median/P99 AUDIO_RTF`、`Request throughput`、`Output token throughput`、E2EL 各分位——正则以 `repots` 实验 `obench.sh` 真实输出为 fixture);
 - 单点失败(子进程非零退出/超时/解析不出指标):记入 `warnings[]`,该点 `status:"failed"`,继续后续点;全部点失败才整体失败;
-- Tokenizer 解析顺序:`MD_TOKENIZER_HF_ID` → 镜像内预置目录 `/tokenizers/<hfId>`;未预置且设置了 `HF_ENDPOINT`(内网镜像源)则透传给 bench 自行下载;两者皆不可用 → 启动即失败并报明确错误(不空转)。
+- Tokenizer 解析(**不烤进镜像**——测试平台会压很多模型,不可能把所有 tokenizer 放进镜像):`MD_OMNI_TOKENIZER_HF_ID`(hf_id,格式校验防路径穿越)→ ① 外部挂载 `MD_OMNI_TOKENIZER_DIR/<org>/<name>` 若存在则用;② 否则返回 hf_id 交 bench **运行时下载**(HF 直连,或 `HF_ENDPOINT` 内网镜像源自动生效,复用 #339 的全局注入);hf_id 缺失/非法 → 启动即失败。
 
 ### 4.3 Runner 镜像
 
-- `apps/benchmark-runner/images/vllm-omni-bench.Dockerfile`:`FROM` vllm-omni v0.24.0 基础镜像 + `COPY runner/` + 预置 tokenizer 层(Qwen2.5-Omni-7B、Qwen3-Omni-30B-A3B-Instruct 的 tokenizer 文件,~几十 MB);
+- `apps/benchmark-runner/images/vllm-omni-bench.Dockerfile`:`FROM` vllm-omni v0.24.0 基础镜像 + `COPY runner/`(**不含 tokenizer**,镜像只留 bench CLI,对任意 omni 模型通用);
 - 纳入 `tools/build-runner-images.sh` / `build-base-images.sh` 既有流程;`runner-images.ts` 加 `vllm-omni-bench: "RUNNER_IMAGE_VLLM_OMNI_BENCH"`,env-schema 同步;
-- 部署注意:生产集群(67)应从内网 SWR registry 引用,避免 8 GiB 跨网拉取;`imagePullPolicy: IfNotPresent`。
+- 部署注意:生产集群(67)应从内网 SWR registry 引用,避免 8 GiB 跨网拉取;`imagePullPolicy: IfNotPresent`;离线集群配 `HF_ENDPOINT` 内网镜像源或挂 `MD_OMNI_TOKENIZER_DIR` PVC。
 
 ### 4.4 场景注册:`scenarios.ts`
 
@@ -204,7 +204,7 @@ omni: {
 |---|---|
 | 单点 bench 失败/超时/解析失败 | 该点 `status:"failed"` + warning,继续扫描 |
 | 全部点失败 | run FAILED,stderr 尾部进 logs |
-| tokenizer 不可解析 | 启动即 FAILED,错误信息指明「预置列表 / HF_ENDPOINT」两条出路 |
+| tokenizer 不可解析 | hf_id 缺失/非法 → 启动即 FAILED;运行时下载失败(无外网无 HF_ENDPOINT)由 bench 自身报错,该点判 failed |
 | connection 带 customHeaders/queryParams | v1 不支持透传给 bench → create 阶段校验拒绝并提示(避免静默丢头) |
 | 端点不返回音频(如误选纯文本模型) | AUDIO_* 指标缺失 → 该点解析失败路径,warning 明示「响应无 audio choice」 |
 
@@ -245,3 +245,20 @@ omni: {
 | §6 customHeaders/queryParams 校验 | create 阶段 400(`BENCHMARK_OMNI_CONNECTION_UNSUPPORTED`)+ buildCommand 兜底 | 按 spec 修正(计划稿曾漂移到仅 buildCommand) |
 
 已验证的 §8 待验证项:#1 `--save-result` 支持(见上);driver 容错路径在真实上游故障下端到端验证(全失败 result.json 符合 schema、exit 1、单 summary 块)。遗留 follow-up:run_bench 进程组超时清理、realtime_ceiling 阈值与扫描范围耦合(quick 模板恒 warn)、两处文档漂移(build-base-images.sh 用法注释、deploy/k8s README env 清单)。
+
+---
+
+## 附:v2 pivot — 瘦客户端替代 vllm-omni bench(2026-07-17,feat/omni-thin-client)
+
+v1 合入后发现 `FROM vllm-omni:v0.24.0` 的 runner 镜像 **20GiB**:k3d import 卡死开发机、生产跨网拉取昂贵,且逼出一堆 tokenizer 烤录/挂载/下载的麻烦(合成数据集才需要 tokenizer)。
+
+**根因判断**:业内压语音输出(TTFA/RTF)从来不用重型框架——Gladia / Picovoice / GIGAGPU 的 TTS 延迟 benchmark 全是客户端从流式响应直接算;Qwen3-Omni 技术报告的 RTF 代码也没开源。vllm-omni bench 之所以 20GiB,是因为它把整个推理栈打包进来了。
+
+**pivot**:`omni_driver.py` 从"subprocess 调 vllm-omni bench + 解析 stdout"改成**瘦 async 客户端**(httpx + stdlib `wave`):
+
+- 发 OpenAI chat completions 流式请求,从 `delta` 首个 text/audio chunk 算 TTFT/TTFA,解 base64 WAV 累加时长算 RTF=wall/audio_dur,`asyncio.Semaphore(concurrency)` 做并发扫描;
+- **不需要 tokenizer**(发固定 prompt)——tokenizer 相关 env / 挂载 / 烤录**全部移除**;
+- 镜像 `python:3.11-slim + httpx` = base 154MB / runner 182MB(vs 20GiB),k3d import 6 秒;
+- **输出形状(result.json / schema / adapter / report / insights)完全不变**,改动只在 driver 内部 + 镜像 + adapter 去 tokenizer env。
+
+代价:丢掉"与官方 blog 数字逐字可比"——但 TTFA/RTF 定义与业内一致,原实验的 `audio_rtf.py`/`b2_tax.py` 本就是自建口径。§4.1/§4.2 里 `--save-result`/stdout 正则/obench fixture 相关内容随之作废。
