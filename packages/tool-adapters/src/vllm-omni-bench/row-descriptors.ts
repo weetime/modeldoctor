@@ -9,9 +9,39 @@ import type { MetricRowSpec } from "../core/row-descriptor.js";
 // "compare.rows.*")。Task 11 在 apps/web 两份 locale 的
 // `compare.metricRowLabel` 下补齐这几个新 key。
 export const vllmOmniBenchRowDescriptors: readonly MetricRowSpec[] = [
-  { source: "metric", labelKey: "realtimeCeiling", metric: "realtimeCeiling", verdictKind: "throughput", digits: 0 },
-  { source: "metric", labelKey: "audioTtfpC1Mean", metric: "audioTtfpC1.mean", verdictKind: "latency", format: "latencyMs" },
-  { source: "metric", labelKey: "audioRtfPeakMean", metric: "audioRtfPeak.mean", verdictKind: "latency", digits: 2 },
-  { source: "metric", labelKey: "voiceTaxMs", metric: "voiceTax.ms", verdictKind: "latency", format: "latencyMs" },
-  { source: "metric", labelKey: "errorRate", metric: "errorRate", verdictKind: "errorRate", format: "percent" },
+  {
+    source: "metric",
+    labelKey: "realtimeCeiling",
+    metric: "realtimeCeiling",
+    verdictKind: "throughput",
+    digits: 0,
+  },
+  {
+    source: "metric",
+    labelKey: "audioTtfpC1Mean",
+    metric: "audioTtfpC1.mean",
+    verdictKind: "latency",
+    format: "latencyMs",
+  },
+  {
+    source: "metric",
+    labelKey: "audioRtfPeakMean",
+    metric: "audioRtfPeak.mean",
+    verdictKind: "latency",
+    digits: 2,
+  },
+  {
+    source: "metric",
+    labelKey: "voiceTaxMs",
+    metric: "voiceTax.ms",
+    verdictKind: "latency",
+    format: "latencyMs",
+  },
+  {
+    source: "metric",
+    labelKey: "errorRate",
+    metric: "errorRate",
+    verdictKind: "errorRate",
+    format: "percent",
+  },
 ];

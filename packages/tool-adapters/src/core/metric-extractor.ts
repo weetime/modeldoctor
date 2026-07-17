@@ -25,14 +25,14 @@ export type MetricKind =
   | "outputTokensPerSec"
   | "tailRatio" // e2e.p99 / e2e.p50
   // ── Omni (vllm-omni-bench) — 语音输出实时性指标。非 omni 工具一律返回 null。
-  | "realtimeCeiling"      // RTF(mean)<1 的最大并发档
-  | "audioTtfpC1.mean"     // 最低并发档的首包均值 (ms)
+  | "realtimeCeiling" // RTF(mean)<1 的最大并发档
+  | "audioTtfpC1.mean" // 最低并发档的首包均值 (ms)
   | "audioTtfpPeak.p50"
   | "audioTtfpPeak.p99"
   | "audioRtfPeak.mean"
   | "audioRtfPeak.p50"
   | "audioRtfPeak.p99"
-  | "voiceTax.ms";         // 最高共档 ΔE2EL(mean), text+audio − text
+  | "voiceTax.ms"; // 最高共档 ΔE2EL(mean), text+audio − text
 
 export interface ToolMetricExtractor {
   /**

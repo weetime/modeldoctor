@@ -1,8 +1,7 @@
 import type { MetricKind } from "../core/metric-extractor.js";
 import type { VllmOmniBenchReport } from "./schema.js";
 
-const fin = (v: unknown): number | null =>
-  typeof v === "number" && Number.isFinite(v) ? v : null;
+const fin = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 type Curve = VllmOmniBenchReport["curve"];
 type Point = Curve[number];

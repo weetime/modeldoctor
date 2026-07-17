@@ -49,13 +49,19 @@ describe("buildCommand", () => {
 describe("parseFinalReport", () => {
   it("parses the driver result file into the report union", () => {
     const data = {
-      curve: [{
-        arm: "audio", concurrency: 1, status: "ok", reqPerSec: 0.5, outTokPerSec: 100,
-        ttftMs: { mean: 66, p50: 60, p99: 120 },
-        e2elMs: { mean: 8000, p50: 7900, p99: 9000 },
-        audioTtfpMs: { mean: 511, p50: 490, p99: 900 },
-        audioRtf: { mean: 0.19, p50: 0.18, p99: 0.3 },
-      }],
+      curve: [
+        {
+          arm: "audio",
+          concurrency: 1,
+          status: "ok",
+          reqPerSec: 0.5,
+          outTokPerSec: 100,
+          ttftMs: { mean: 66, p50: 60, p99: 120 },
+          e2elMs: { mean: 8000, p50: 7900, p99: 9000 },
+          audioTtfpMs: { mean: 511, p50: 490, p99: 900 },
+          audioRtf: { mean: 0.19, p50: 0.18, p99: 0.3 },
+        },
+      ],
       derived: { realtimeCeiling: 1, peakConcurrency: 1, voiceTaxMsByLevel: {}, voiceTaxMs: null },
       warnings: [],
     };
