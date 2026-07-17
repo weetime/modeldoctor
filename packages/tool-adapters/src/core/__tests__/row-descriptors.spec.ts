@@ -38,7 +38,7 @@ describe("rowDescriptorsByTool", () => {
 
   it("vllm-omni-bench uses its own row set (voice-realtime metrics, not inference-shaped)", () => {
     expect(vllmOmniBenchRowDescriptors).not.toBe(SHARED_INFERENCE_ROWS);
-    expect(vllmOmniBenchRowDescriptors.length).toBeGreaterThan(0);
+    expect(vllmOmniBenchRowDescriptors).toHaveLength(5);
     expect(vllmOmniBenchRowDescriptors.find((r) => r.labelKey === "realtimeCeiling")).toBeDefined();
   });
 

@@ -20,9 +20,7 @@ def test_parse_point_audio_arm():
 
 
 def test_parse_point_text_arm_has_null_audio():
-    text_out = "\n".join(
-        line for line in FIXTURE.splitlines() if "AUDIO" not in line
-    )
+    text_out = "\n".join(line for line in FIXTURE.splitlines() if "AUDIO" not in line)
     p = omni_driver.parse_point(text_out, arm="text")
     assert p["audioTtfpMs"] is None and p["audioRtf"] is None
     assert p["reqPerSec"] == 0.11
@@ -38,30 +36,36 @@ def test_parse_point_missing_required_metric_returns_none():
 # ── bench argv ────────────────────────────────────────────────────────
 def test_bench_argv_audio_arm_locks_methodology():
     argv = omni_driver.bench_argv(
-        base_url="http://h:30888", model="m", tokenizer="/tokenizers/Qwen/Qwen2.5-Omni-7B",
-        arm="audio", concurrency=8,
+        base_url="http://h:30888",
+        model="m",
+        tokenizer="/tokenizers/Qwen/Qwen2.5-Omni-7B",
+        arm="audio",
+        concurrency=8,
         params={"inputTokens": 500, "outputTokens": 300, "numWarmups": 1},
     )
     joined = " ".join(argv)
     assert argv[:4] == ["vllm-omni", "bench", "serve", "--omni"]
-    assert "--num-prompts 16" in joined          # max(4, 2×8)
+    assert "--num-prompts 16" in joined  # max(4, 2×8)
     assert "--max-concurrency 8" in joined
     assert "--ignore-eos" in joined
     assert '"modalities": ["text", "audio"]' in joined
-    assert "audio_ttfp" in joined                 # percentile-metrics 带 audio
-    assert "--api-key" not in joined              # 秘密只走 env
+    assert "audio_ttfp" in joined  # percentile-metrics 带 audio
+    assert "--api-key" not in joined  # 秘密只走 env
 
 
 def test_bench_argv_text_arm_no_audio_metrics():
     argv = omni_driver.bench_argv(
-        base_url="http://h:30888", model="m", tokenizer="/t",
-        arm="text", concurrency=1,
+        base_url="http://h:30888",
+        model="m",
+        tokenizer="/t",
+        arm="text",
+        concurrency=1,
         params={"inputTokens": 500, "outputTokens": 300, "numWarmups": 1},
     )
     joined = " ".join(argv)
     assert '"modalities": ["text"]' in joined
     assert "audio_ttfp" not in joined
-    assert "--num-prompts 4" in joined            # max(4, 2×1)
+    assert "--num-prompts 4" in joined  # max(4, 2×1)
 
 
 # ── 派生指标 ──────────────────────────────────────────────────────────
@@ -75,7 +79,9 @@ def _pt(arm, c, status="ok", rtf_mean=0.5, e2el_mean=9000.0):
         else None
     )
     return {
-        "arm": arm, "concurrency": c, "status": status,
+        "arm": arm,
+        "concurrency": c,
+        "status": status,
         "reqPerSec": 0.5 if ok else None,
         "outTokPerSec": 100.0 if ok else None,
         "ttftMs": {"mean": 66.0, "p50": 60.0, "p99": 120.0} if ok else None,
@@ -94,10 +100,10 @@ def test_compute_derived_ceiling_and_voice_tax():
         _pt("text", 32, e2el_mean=5000),
     ]
     d = omni_driver.compute_derived(points)
-    assert d["realtimeCeiling"] == 32           # 64 档 RTF≥1 不算
+    assert d["realtimeCeiling"] == 32  # 64 档 RTF≥1 不算
     assert d["peakConcurrency"] == 32
     assert d["voiceTaxMsByLevel"] == {"1": 3000.0, "32": 4800.0}
-    assert d["voiceTaxMs"] == 4800.0            # 最高共档
+    assert d["voiceTaxMs"] == 4800.0  # 最高共档
 
 
 def test_compute_derived_all_over_realtime_gives_zero_ceiling():
@@ -109,10 +115,19 @@ def test_compute_derived_all_over_realtime_gives_zero_ceiling():
 # ── 主循环容错(subprocess 注入)────────────────────────────────────
 def _env(monkeypatch, tmp_path, voice_tax=True, levels=(1, 8)):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("MD_OMNI_PARAMS", json.dumps({
-        "concurrencyLevels": list(levels), "inputTokens": 500, "outputTokens": 300,
-        "voiceTax": voice_tax, "numWarmups": 1, "perPointTimeoutSeconds": 60,
-    }))
+    monkeypatch.setenv(
+        "MD_OMNI_PARAMS",
+        json.dumps(
+            {
+                "concurrencyLevels": list(levels),
+                "inputTokens": 500,
+                "outputTokens": 300,
+                "voiceTax": voice_tax,
+                "numWarmups": 1,
+                "perPointTimeoutSeconds": 60,
+            }
+        ),
+    )
     monkeypatch.setenv("MD_OMNI_BASE_URL", "http://h:30888")
     monkeypatch.setenv("MD_OMNI_MODEL", "m")
     monkeypatch.setenv("MD_OMNI_TOKENIZER_HF_ID", "Qwen/Qwen2.5-Omni-7B")
@@ -126,12 +141,12 @@ def test_main_continues_after_single_point_failure(monkeypatch, tmp_path):
     def fake_run_bench(argv, timeout):
         calls.append(argv)
         if "--max-concurrency 8" in " ".join(argv):
-            return (1, "boom")                   # c=8 失败
+            return (1, "boom")  # c=8 失败
         return (0, FIXTURE)
 
     monkeypatch.setattr(omni_driver, "run_bench", fake_run_bench)
     rc = omni_driver.main()
-    assert rc == 0                               # 有 ok 点 → 整体成功
+    assert rc == 0  # 有 ok 点 → 整体成功
     result = json.loads((tmp_path / "out" / "omni_result.json").read_text())
     assert len(result["curve"]) == 2
     statuses = {p["concurrency"]: p["status"] for p in result["curve"]}
@@ -160,7 +175,7 @@ def test_main_runs_both_arms_when_voice_tax(monkeypatch, tmp_path):
 
     monkeypatch.setattr(omni_driver, "run_bench", fake_run_bench)
     assert omni_driver.main() == 0
-    assert len(seen_modalities) == 2             # audio 臂 + text 臂
+    assert len(seen_modalities) == 2  # audio 臂 + text 臂
 
 
 # ── tokenizer 解析 ────────────────────────────────────────────────────

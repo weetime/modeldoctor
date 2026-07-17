@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { BuildCommandPlan } from "../core/interface.js";
 import { buildCommand, getMaxDurationSeconds, parseFinalReport, parseProgress } from "./runtime.js";
-import { vllmOmniBenchParamsSchema } from "./schema.js";
+import { type VllmOmniBenchParams, vllmOmniBenchParamsSchema } from "./schema.js";
 
-const plan = (over: Partial<BuildCommandPlan["connection"]> = {}): BuildCommandPlan => ({
+const plan = (
+  over: Partial<BuildCommandPlan["connection"]> = {},
+): BuildCommandPlan<VllmOmniBenchParams> => ({
   runId: "bm-1",
   params: vllmOmniBenchParamsSchema.parse({}),
   connection: {

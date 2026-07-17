@@ -103,21 +103,37 @@ def bench_argv(
     modalities = ["text", "audio"] if arm == "audio" else ["text"]
     pct = "ttft,e2el,audio_ttfp,audio_rtf" if arm == "audio" else "ttft,e2el"
     return [
-        "vllm-omni", "bench", "serve", "--omni",
-        "--backend", "openai-chat-omni",
-        "--base-url", base_url,
-        "--endpoint", "/v1/chat/completions",
-        "--model", model,
-        "--tokenizer", tokenizer,
-        "--dataset-name", "random",
-        "--random-input-len", str(params["inputTokens"]),
-        "--random-output-len", str(params["outputTokens"]),
-        "--num-prompts", str(max(4, 2 * concurrency)),
-        "--max-concurrency", str(concurrency),
-        "--num-warmups", str(params["numWarmups"]),
+        "vllm-omni",
+        "bench",
+        "serve",
+        "--omni",
+        "--backend",
+        "openai-chat-omni",
+        "--base-url",
+        base_url,
+        "--endpoint",
+        "/v1/chat/completions",
+        "--model",
+        model,
+        "--tokenizer",
+        tokenizer,
+        "--dataset-name",
+        "random",
+        "--random-input-len",
+        str(params["inputTokens"]),
+        "--random-output-len",
+        str(params["outputTokens"]),
+        "--num-prompts",
+        str(max(4, 2 * concurrency)),
+        "--max-concurrency",
+        str(concurrency),
+        "--num-warmups",
+        str(params["numWarmups"]),
         "--ignore-eos",
-        "--extra-body", json.dumps({"modalities": modalities}),
-        "--percentile-metrics", pct,
+        "--extra-body",
+        json.dumps({"modalities": modalities}),
+        "--percentile-metrics",
+        pct,
     ]
 
 
@@ -162,9 +178,7 @@ def compute_derived(points: list[dict]) -> dict:
     audio_ok = [p for p in points if p["arm"] == "audio" and p["status"] == "ok"]
     realtime = [p["concurrency"] for p in audio_ok if p["audioRtf"] and p["audioRtf"]["mean"] < 1.0]
     ceiling = max(realtime) if realtime else 0
-    text_by_c = {
-        p["concurrency"]: p for p in points if p["arm"] == "text" and p["status"] == "ok"
-    }
+    text_by_c = {p["concurrency"]: p for p in points if p["arm"] == "text" and p["status"] == "ok"}
     tax: dict[str, float] = {}
     for p in audio_ok:
         t = text_by_c.get(p["concurrency"])
@@ -193,8 +207,12 @@ def main() -> int:
     warnings: list[str] = []
     for i, (arm, c) in enumerate(plan, start=1):
         argv = bench_argv(
-            base_url=base_url, model=model, tokenizer=tokenizer,
-            arm=arm, concurrency=c, params=params,
+            base_url=base_url,
+            model=model,
+            tokenizer=tokenizer,
+            arm=arm,
+            concurrency=c,
+            params=params,
         )
         log.info("bench start arm=%s c=%d (%d/%d)", arm, c, i, len(plan))
         rc, output = run_bench(argv, timeout)
@@ -205,11 +223,19 @@ def main() -> int:
             if rc == 0 and arm == "audio":
                 reason += " (no AUDIO_* section — endpoint may not return audio; check modalities)"
             warnings.append(f"arm={arm} c={c}: {reason}, point skipped")
-            points.append({
-                "arm": arm, "concurrency": c, "status": "failed",
-                "reqPerSec": None, "outTokPerSec": None,
-                "ttftMs": None, "e2elMs": None, "audioTtfpMs": None, "audioRtf": None,
-            })
+            points.append(
+                {
+                    "arm": arm,
+                    "concurrency": c,
+                    "status": "failed",
+                    "reqPerSec": None,
+                    "outTokPerSec": None,
+                    "ttftMs": None,
+                    "e2elMs": None,
+                    "audioTtfpMs": None,
+                    "audioRtf": None,
+                }
+            )
         else:
             points.append({"arm": arm, "concurrency": c, "status": "ok", **parsed})
         # 进度行 —— adapter parseProgress 的契约格式,勿改。

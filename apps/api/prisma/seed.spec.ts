@@ -33,10 +33,10 @@ describe("BENCHMARK_TEMPLATES — official omni realtime templates", () => {
     it(`omni template ${name} validates`, () => {
       const tpl = BENCHMARK_TEMPLATES.find((t) => t.id === `tpl_official_omni_realtime_${name}`);
       expect(tpl).toBeDefined();
-      expect(tpl?.scenario).toBe("omni");
-      expect(tpl?.tool).toBe("vllm-omni-bench");
-      expect(tpl?.categories).toEqual(["omni"]);
-      const p = vllmOmniBenchParamsSchema.parse(tpl?.config);
+      expect(tpl!.scenario).toBe("omni");
+      expect(tpl!.tool).toBe("vllm-omni-bench");
+      expect(tpl!.categories).toEqual(["omni"]);
+      const p = vllmOmniBenchParamsSchema.parse(tpl!.config);
       expect(p.concurrencyLevels).toEqual(expected.concurrencyLevels);
       expect(p.voiceTax).toBe(expected.voiceTax);
     });
