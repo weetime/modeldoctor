@@ -114,7 +114,8 @@ async def one_request(client, base_url: str, headers: dict, body: dict, arm: str
     try:
         async with client.stream("POST", base_url + ENDPOINT, headers=headers, json=body) as resp:
             if resp.status_code != 200:
-                await resp.aread()
+                body = (await resp.aread()).decode(errors="replace")[:200]
+                log.warning("HTTP %d from endpoint: %s", resp.status_code, body)
                 return None
             async for line in resp.aiter_lines():
                 line = line.strip()
@@ -207,10 +208,16 @@ async def run_point(client, base_url, headers, model, arm, concurrency, params) 
 
 
 def _make_client(timeout: int):
-    """httpx.AsyncClient(懒导入,单测 mock one_request 时无需装 httpx)。"""
+    """httpx.AsyncClient(懒导入,单测 mock one_request 时无需装 httpx)。
+
+    连接池必须无上限:并发档可达 512,而 httpx 默认 max_connections=100 会让
+    超出的请求在客户端排队;t0 在 client.stream 之前打,排队时间会算进
+    TTFT/e2el,恰在高并发区(找实时天花板的关键)扭曲结果。
+    """
     import httpx
 
-    return httpx.AsyncClient(timeout=httpx.Timeout(timeout))
+    limits = httpx.Limits(max_connections=None, max_keepalive_connections=None)
+    return httpx.AsyncClient(timeout=httpx.Timeout(timeout), limits=limits)
 
 
 def compute_derived(points: list[dict]) -> dict:
