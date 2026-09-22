@@ -115,7 +115,10 @@ export function RevisionTimeline({
               {t("detail.firstSeen")} <RelativeTime date={rev.firstSeenAt} />
             </span>
           </div>
-          {idx === revisions.length - 1 && rev.diff.length === 0 ? (
+          {/* Oldest revision: `listRevisions` diffs it against `null`, so its
+              diff lists every non-null snapshot field as `null → value`.
+              That table is noise, not a change — label it instead. */}
+          {idx === revisions.length - 1 && rev.diff.length > 0 ? (
             <p className="text-xs text-muted-foreground">{t("detail.initialRevision")}</p>
           ) : rev.diff.length > 0 ? (
             <table className="text-xs">

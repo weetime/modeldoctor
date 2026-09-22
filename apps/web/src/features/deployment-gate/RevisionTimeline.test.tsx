@@ -57,10 +57,17 @@ const revisions: DeploymentRevisionPublic[] = [
   {
     id: "r1",
     fingerprint: "aaaaaaaaaaaa",
-    snapshot: {},
+    snapshot: { backend: "vLLM", backend_version: "0.10.1" },
     firstSeenAt: "2026-09-20T00:00:00Z",
     readyAt: null,
-    diff: [],
+    // The oldest revision is diffed against `null` by
+    // DiscoveredModelsService.listRevisions, so the API returns a FULL diff
+    // here (one `null -> value` entry per non-null snapshot field), never an
+    // empty one. The UI must recognise it by position, not by diff length.
+    diff: [
+      { field: "backend", before: null, after: "vLLM" },
+      { field: "backend_version", before: null, after: "0.10.1" },
+    ],
     runs: [],
   },
 ];
@@ -194,8 +201,12 @@ describe("RevisionTimeline", () => {
     expect(screen.getByText(/尚无部署版本|No revisions yet/)).toBeInTheDocument();
   });
 
-  it("(e) labels the oldest revision (empty diff) as the initial revision", () => {
+  it("(e) labels the oldest revision as the initial revision instead of rendering its null→value diff", () => {
     renderTimeline();
     expect(screen.getByText(/初始版本|Initial revision/)).toBeInTheDocument();
+    // Only the newer revision's real diff is tabulated; the oldest
+    // revision's `null -> value` dump must not be shown.
+    expect(screen.queryByText("backend")).not.toBeInTheDocument();
+    expect(screen.getAllByText("backend_version")).toHaveLength(1);
   });
 });
