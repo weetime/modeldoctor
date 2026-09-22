@@ -768,5 +768,11 @@ model AutomationRun {
 
   @@index([discoveredModelId, createdAt])
   @@index([sourceId, status, createdAt])
+  // tick() scans `status: "running"` and promotePending() scans
+  // `status: "pending"` every 10s per replica; the composite above leads with
+  // source_id so neither predicate can use it. Leading with status serves
+  // both, and the trailing source_id also covers promotePending's
+  // DISTINCT ON (source_id).
+  @@index([status, sourceId])
   @@map("automation_runs")
 }
