@@ -23,6 +23,8 @@ import { CurrentUser } from "../../../common/decorators/current-user.decorator.j
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
+import type { ReconcileResult } from "../sync/source-sync.service.js";
+import { SourceSyncService } from "../sync/source-sync.service.js";
 import { PlatformSourcesService } from "./platform-sources.service.js";
 
 const testBodySchema = z.object({ baseUrl: z.string().url(), apiKey: z.string().min(1) });
@@ -32,7 +34,10 @@ const testBodySchema = z.object({ baseUrl: z.string().url(), apiKey: z.string().
 @Controller("platform-sources")
 @UseGuards(JwtAuthGuard)
 export class PlatformSourcesController {
-  constructor(private readonly service: PlatformSourcesService) {}
+  constructor(
+    private readonly service: PlatformSourcesService,
+    private readonly syncService: SourceSyncService,
+  ) {}
 
   @Get()
   list(@CurrentUser() user: JwtPayload): Promise<PlatformSource[]> {
@@ -82,5 +87,12 @@ export class PlatformSourcesController {
     @Param("id") id: string,
   ): Promise<TestPlatformSourceResponse> {
     return this.service.testSaved(user.sub, id);
+  }
+
+  @Post(":id/sync")
+  @HttpCode(200)
+  async sync(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ReconcileResult> {
+    await this.service.get(user.sub, id); // owner check
+    return this.syncService.reconcile(id);
   }
 }
