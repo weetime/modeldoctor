@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GpustackClient, GpustackError } from "./gpustack-client.js";
+import { GpustackClient, GpustackError, type SafeFetch } from "./gpustack-client.js";
 
 function jsonRes(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -21,14 +21,21 @@ function streamRes(chunks: string[], { hang = false } = {}) {
 
 describe("GpustackClient", () => {
   const fetchMock = vi.fn();
+  const safeFetchMock = vi.fn();
   let client: GpustackClient;
   beforeEach(() => {
     fetchMock.mockReset();
-    client = new GpustackClient("http://gs", "key", fetchMock as unknown as typeof fetch);
+    safeFetchMock.mockReset();
+    client = new GpustackClient(
+      "http://gs",
+      "key",
+      fetchMock as unknown as typeof fetch,
+      safeFetchMock as unknown as SafeFetch,
+    );
   });
 
-  it("listModels walks all pages with bearer auth", async () => {
-    fetchMock
+  it("listModels walks all pages through safeFetch with bearer auth and a raised body cap", async () => {
+    safeFetchMock
       .mockResolvedValueOnce(
         jsonRes({
           items: [{ id: 1, name: "a" }],
@@ -43,24 +50,62 @@ describe("GpustackClient", () => {
       );
     const models = await client.listModels();
     expect(models.map((m) => m.id)).toEqual([1, 2]);
-    expect(fetchMock.mock.calls[0][0]).toBe("http://gs/v2/models?page=1&perPage=100");
-    expect(fetchMock.mock.calls[1][0]).toBe("http://gs/v2/models?page=2&perPage=100");
-    expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({
-      Authorization: "Bearer key",
+    expect(safeFetchMock.mock.calls[0][0]).toBe("http://gs/v2/models?page=1&perPage=100");
+    expect(safeFetchMock.mock.calls[1][0]).toBe("http://gs/v2/models?page=2&perPage=100");
+    // The whole point of routing through safeFetch: `redirect: "manual"` +
+    // per-hop assertSafeUrl + a response size cap, none of which raw fetch has.
+    expect(safeFetchMock.mock.calls[0][1]).toMatchObject({
+      apiKey: "key",
+      maxBytes: 8 * 1024 * 1024,
+    });
+    // Raw fetch must not be used for list calls at all.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("list calls never bypass safeFetch — every paginated endpoint goes through it", async () => {
+    const page = () =>
+      jsonRes({ items: [], pagination: { page: 1, perPage: 100, total: 0, totalPage: 1 } });
+    safeFetchMock.mockImplementation(async () => page());
+    await client.listRoutes();
+    await client.listInstances();
+    await client.countModels();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(safeFetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("surfaces a safeFetch SSRF rejection as GpustackError instead of leaking the hop", async () => {
+    safeFetchMock.mockRejectedValueOnce(
+      new Error("Blocked host: 169.254.169.254 resolves to a private address"),
+    );
+    await expect(client.listModels()).rejects.toMatchObject({
+      name: "GpustackError",
+      message: expect.stringContaining("169.254.169.254"),
     });
   });
 
   it("throws GpustackError with status on 401", async () => {
-    fetchMock.mockResolvedValueOnce(jsonRes({ detail: "unauthorized" }, 401));
+    safeFetchMock.mockResolvedValueOnce(jsonRes({ detail: "unauthorized" }, 401));
     await expect(client.listRoutes()).rejects.toMatchObject({ name: "GpustackError", status: 401 });
   });
 
   it("countModels reads pagination.total", async () => {
-    fetchMock.mockResolvedValueOnce(
+    safeFetchMock.mockResolvedValueOnce(
       jsonRes({ items: [], pagination: { page: 1, perPage: 1, total: 7, totalPage: 7 } }),
     );
     expect(await client.countModels()).toBe(7);
-    expect(fetchMock.mock.calls[0][0]).toBe("http://gs/v2/models?page=1&perPage=1");
+    expect(safeFetchMock.mock.calls[0][0]).toBe("http://gs/v2/models?page=1&perPage=1");
+  });
+
+  it("watchModels sends redirect:manual and refuses to follow a 3xx", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(null, { status: 302, headers: { location: "http://169.254.169.254/latest" } }),
+    );
+    await expect(
+      client.watchModels({ signal: new AbortController().signal, onEvent: vi.fn() }),
+    ).rejects.toMatchObject({ name: "GpustackError", status: 302 });
+    expect((fetchMock.mock.calls[0][1] as RequestInit).redirect).toBe("manual");
+    // Exactly one request: the redirect target was never fetched.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("watchModels calls onEvent per JSON event, ignores heartbeats, resolves on stream end", async () => {
