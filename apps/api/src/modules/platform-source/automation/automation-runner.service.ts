@@ -104,10 +104,20 @@ export class AutomationRunnerService implements OnModuleInit {
       where: { id: runId },
       data: { status: "cancelled", verdict, finishedAt: new Date(), lockedUntil: null },
     });
-    if (run.benchmarkId)
-      await this.benchmarks.cancel(run.benchmarkId, userId).catch(() => undefined);
-    if (run.evaluationRunId)
-      await this.runs.cancel(userId, run.evaluationRunId).catch(() => undefined);
+    if (run.benchmarkId) {
+      await this.benchmarks.cancel(run.benchmarkId, userId).catch((e) => {
+        this.log.warn(
+          `cancel benchmark ${run.benchmarkId} for automation run ${runId} failed: ${(e as Error).message}`,
+        );
+      });
+    }
+    if (run.evaluationRunId) {
+      await this.runs.cancel(userId, run.evaluationRunId).catch((e) => {
+        this.log.warn(
+          `cancel evaluation run ${run.evaluationRunId} for automation run ${runId} failed: ${(e as Error).message}`,
+        );
+      });
+    }
   }
 
   // ---------- tick ----------
@@ -225,10 +235,23 @@ export class AutomationRunnerService implements OnModuleInit {
             endpointAId: connectionId,
             gateConfig: (run.model.gateConfig as GateConfig | null) ?? { ...DEFAULT_GATE_CONFIG },
           });
-          await this.prisma.automationRun.update({
-            where: { id },
+          // Guard against a revision trigger's cancel() having superseded this
+          // run in the window while runs.create() was in flight: cancel() reads
+          // evaluationRunId before it exists, so it can't cancel the run it just
+          // launched. If the row is no longer "running" by the time we get here,
+          // the run we just created is orphaned — cancel it ourselves rather than
+          // silently recording it onto a dead automation run.
+          const { count } = await this.prisma.automationRun.updateMany({
+            where: { id, status: "running" },
             data: { evaluationRunId: created.id },
           });
+          if (count === 0) {
+            await this.runs.cancel(userId, created.id).catch((e) => {
+              this.log.warn(
+                `orphaned evaluation run ${created.id} for superseded automation run ${id}: ${(e as Error).message}`,
+              );
+            });
+          }
           return;
         }
         const er = await this.prisma.evaluationRun.findUniqueOrThrow({
@@ -263,7 +286,24 @@ export class AutomationRunnerService implements OnModuleInit {
             params: tpl.config as Record<string, unknown>,
             templateId: tpl.id,
           });
-          await this.prisma.automationRun.update({ where: { id }, data: { benchmarkId: b.id } });
+          // Same orphan guard as quality_gate above: benchmarks.create() just
+          // launched a real K8s job. If a revision trigger's cancel() ran while
+          // that create() was in flight, it read benchmarkId as still null and
+          // couldn't cancel the job it doesn't know about yet — so if the row
+          // is no longer "running", cancel the job ourselves instead of wiring
+          // its id onto a dead automation run (which no cancel()/tick() would
+          // ever reach again, since both filter on status: "running").
+          const { count } = await this.prisma.automationRun.updateMany({
+            where: { id, status: "running" },
+            data: { benchmarkId: b.id },
+          });
+          if (count === 0) {
+            await this.benchmarks.cancel(b.id, userId).catch((e) => {
+              this.log.warn(
+                `orphaned benchmark ${b.id} for superseded automation run ${id}: ${(e as Error).message}`,
+              );
+            });
+          }
           return;
         }
         const b = await this.prisma.benchmark.findUniqueOrThrow({ where: { id: run.benchmarkId } });
@@ -286,10 +326,16 @@ export class AutomationRunnerService implements OnModuleInit {
     const next = steps[steps.indexOf(done) + 1] ?? null;
     const summary = this.appendStep(run.summary, entry);
     if (entry.gateWarning) summary.gateWarning = true;
-    await this.prisma.automationRun.update({
-      where: { id: run.id },
+    // Same status guard as the create-then-record paths above: if this run
+    // was superseded/cancelled underneath us while the just-finished step's
+    // async work was in flight, don't resurrect it with a fresh currentStep —
+    // and don't fall through to finish(), which would otherwise be a no-op
+    // (finishWithSummary has its own guard) but is worth skipping outright.
+    const { count } = await this.prisma.automationRun.updateMany({
+      where: { id: run.id, status: "running" },
       data: { currentStep: next, summary: summary as Prisma.InputJsonValue },
     });
+    if (count === 0) return;
     if (!next) await this.finish(run.id, "passed", {});
   }
 

@@ -386,4 +386,182 @@ describe("AutomationRunnerService", () => {
       }),
     ).toBe(1);
   });
+
+  it("revision trigger racing an in-flight benchmark create cancels the orphaned benchmark", async () => {
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:race",
+    }))!;
+    // Drive ticks until the run is sitting at the benchmark step, still running
+    // (diagnostics + quality_gate resolve immediately against the default mocks).
+    for (let i = 0; i < 10; i++) {
+      const cur = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+      if (cur.currentStep === "benchmark" && cur.status === "running") break;
+      await prisma.automationRun.updateMany({ where: { id }, data: { lockedUntil: null } });
+      await s.tick();
+    }
+    const before = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(before.currentStep).toBe("benchmark");
+    expect(before.benchmarkId).toBeNull();
+
+    // Make the next benchmarks.create() call controllable: it signals
+    // `started` synchronously (so the test knows advance() has reached the
+    // call) and then hangs on `pending` until the test resolves it.
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let resolveCreate!: (b: { id: string }) => void;
+    const pending = new Promise<{ id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
+    deps.benchmarks.create.mockImplementationOnce(async () => {
+      started();
+      return pending;
+    });
+
+    await prisma.automationRun.updateMany({ where: { id }, data: { lockedUntil: null } });
+    const tickPromise = s.tick();
+    await startedPromise; // advance() has called benchmarks.create(); its promise is still unresolved
+
+    // Race: a revision trigger supersedes this run while the create() call
+    // above is in flight. cancel() reads benchmarkId as still null at this
+    // instant, so it cannot cancel the job it doesn't know exists yet.
+    const rev2 = await prisma.deploymentRevision.create({
+      data: { discoveredModelId: modelId, fingerprint: "race2", snapshot: {}, readyAt: new Date() },
+    });
+    await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: rev2.id,
+      trigger: "revision",
+      triggerKey: `revision:${rev2.id}`,
+    });
+    expect(deps.benchmarks.cancel).not.toHaveBeenCalled();
+
+    const b = await prisma.benchmark.create({
+      data: {
+        userId,
+        connectionId: connId,
+        name: "race-b",
+        scenario: "inference",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+        summaryMetrics: summary(1000),
+        templateId,
+      },
+    });
+    resolveCreate({ id: b.id });
+    await tickPromise;
+
+    const after = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(after.status).toBe("cancelled");
+    expect(after.verdict).toBe("superseded");
+    // The benchmark that was created after supersession is orphaned unless
+    // advance() notices its own row is no longer "running" and cancels it.
+    expect(deps.benchmarks.cancel).toHaveBeenCalledWith(b.id, userId);
+    // No verdict was ever (re)written by the in-flight advance(), so no
+    // automation.* notification fires for this run.
+    expect(deps.notify.emit).not.toHaveBeenCalled();
+  });
+
+  it("benchmark ending failed yields error verdict and finishes the run", async () => {
+    deps.benchmarks.create.mockImplementationOnce(async () =>
+      prisma.benchmark.create({
+        data: {
+          userId,
+          connectionId: connId,
+          name: "failed-b",
+          scenario: "inference",
+          tool: "guidellm",
+          params: {},
+          status: "failed",
+          templateId,
+        },
+      }),
+    );
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:bfail",
+    }))!;
+    const r = await tickUntilDone(s, id);
+    expect(r.verdict).toBe("error");
+    expect(r.status).toBe("completed");
+  });
+
+  it("quality gate evaluation run FAILED yields error verdict", async () => {
+    deps.runs.create.mockImplementationOnce(async () =>
+      prisma.evaluationRun.create({
+        data: {
+          userId,
+          evaluationId,
+          evaluationVersion: 1,
+          evaluationSnapshot: {},
+          endpointAId: connId,
+          gateConfig: {},
+          status: "FAILED",
+          totalSamples: 0,
+        },
+      }),
+    );
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:qgfail",
+    }))!;
+    const r = await tickUntilDone(s, id);
+    expect(r.verdict).toBe("error");
+  });
+
+  it("quality gate WARNING passes with the warning recorded", async () => {
+    deps.runs.create.mockImplementationOnce(async () =>
+      prisma.evaluationRun.create({
+        data: {
+          userId,
+          evaluationId,
+          evaluationVersion: 1,
+          evaluationSnapshot: {},
+          endpointAId: connId,
+          gateConfig: {},
+          status: "COMPLETED",
+          gateResult: "WARNING",
+          totalSamples: 0,
+        },
+      }),
+    );
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:warn",
+    }))!;
+    const r = await tickUntilDone(s, id);
+    expect(r.verdict).toBe("passed");
+    expect((r.summary as { gateWarning?: boolean }).gateWarning).toBe(true);
+  });
+
+  it("a step throwing finishes the run with error and frees the source's running slot", async () => {
+    deps.benchmarks.create.mockImplementationOnce(async () => {
+      throw new Error("k8s exploded");
+    });
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:throw",
+    }))!;
+    const r = await tickUntilDone(s, id);
+    expect(r.verdict).toBe("error");
+    expect(await prisma.automationRun.count({ where: { sourceId, status: "running" } })).toBe(0);
+  });
 });
