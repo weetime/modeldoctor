@@ -41,6 +41,8 @@ GPUStack 自带 guidellm 压测，但没有：质量评测、部署变更自动�
 
 ## 4. 数据模型（Prisma，新增 4 表 + Connection 1 字段）
 
+所有权：`PlatformSource.userId` 是 owner；自动生成的 Connection、Benchmark、EvaluationRun、Baseline 均以该 userId 创建（沿用现有 user-scoped service）。
+
 迁移用 `prisma migrate dev --create-only` 生成，不手写 SQL。
 
 ```prisma
@@ -77,6 +79,7 @@ model DiscoveredModel {
   automationEnabled Boolean  @default(false) @map("automation_enabled")
   steps             String[] @default(["diagnostics","quality_gate","benchmark"])
   evaluationId      String?  @map("evaluation_id")          // quality-gate Evaluation
+  gateConfig        Json?    @map("gate_config")            // quality-gate 阈值；服务端无默认，开启时默认 {passRateMin:0.9}
   benchmarkTemplateId String? @map("benchmark_template_id")
   schedule          String   @default("off")                // 'off' | 'daily' | 'weekly'
   nextScheduledAt   DateTime? @map("next_scheduled_at") @db.Timestamptz(3)
@@ -111,6 +114,7 @@ model AutomationRun {
   evaluationRunId   String?  @map("evaluation_run_id")
   benchmarkId       String?  @map("benchmark_id")
   summary           Json?                           // 每步结果 + 退化对比明细
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz(3) // 多副本 tick 的乐观租约
   startedAt / finishedAt / createdAt
   @@unique([triggerKey])
   @@index([discoveredModelId, createdAt])
@@ -160,8 +164,8 @@ model AutomationRun {
 
 步骤按序执行，全部**调用现有 service**，AutomationRun 只存关联 id 与编排状态：
 
-1. `diagnostics`：`DiagnosticsService` 连通性探测。失败 → `verdict='failed'`，停止。
-2. `quality_gate`：以 Connection 为 endpointA、选定 `Evaluation` 发起 `EvaluationRun`，等待完成，用现有 `compute-gate-result` 结论。不通过 → `failed`，停止。
+1. `diagnostics`：`DiagnosticsService.run()`（同步返回）。探针按 GPUStack category 选：`llm→chat-text`、`embedding→embeddings-openai`、`reranker→rerank-cohere`、`image→image-gen`、`text_to_speech→tts`、`speech_to_text→asr`，未知→`chat-text`。失败 → `verdict='failed'`，停止。
+2. `quality_gate`：`RunsService.create()` 以 Connection 为 endpointA、选定 `Evaluation` + `DiscoveredModel.gateConfig` 发起 `EvaluationRun`，轮询其终态。`gateResult=FAILED` → `failed` 停止；`WARNING` 视为通过（summary 标注）；run 本身 `FAILED/CANCELLED` → `error`。
 3. `benchmark`：以选定 `BenchmarkTemplate` + Connection 创建 `Benchmark`，等待终态。执行失败 → `error`。
 4. `compare`（随 benchmark 自动进行）：见 §6.4。退化 → `regressed`；否则 `passed`。
 
@@ -173,7 +177,8 @@ model AutomationRun {
 
 - `triggerKey`：`revision:<revisionId>`、`enable:<revisionId>`、`schedule:<modelId>:<slot 时间>`、`manual:<uuid>`，唯一约束保证多副本只插入一次。
 - **同模型串行**：同一 `DiscoveredModel` 至多 1 个 running。新 `revision` 触发到来时，进行中的 run 置 `cancelled / superseded` 并取消其子任务（Benchmark 走现有取消接口），再执行新的。`schedule` 触发遇到 running 则跳过本轮。
-- **同源限流**：每个 `PlatformSource` 同时至多 1 个 benchmark 步骤在跑（压测占 GPU、互相干扰结果），其余 run 在 `pending` 排队，FIFO。
+- **同源串行**：每个 `PlatformSource` 同时至多 1 个 `running` 的 AutomationRun（压测占 GPU、互相干扰结果；诊断与质量门禁很短，整轮串行换来实现简单），其余 `pending` 排队，FIFO。
+- **多副本 tick**：推进某个 run 前先 `updateMany({where:{id, OR:[{lockedUntil:null},{lockedUntil:{lt:now}}]}, data:{lockedUntil: now+60s}})`，count=1 才处理。
 
 ### 6.4 Baseline 对比（新增纯函数 `detectRegression(baseline, candidate, thresholds)`）
 
