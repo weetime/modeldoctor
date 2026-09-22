@@ -9,6 +9,7 @@ import enCommands from "@/locales/en-US/commands.json";
 import enCommon from "@/locales/en-US/common.json";
 import enConnections from "@/locales/en-US/connections.json";
 import enDebug from "@/locales/en-US/debug.json";
+import enDeploymentGate from "@/locales/en-US/deployment-gate.json";
 import enDeploymentRecipes from "@/locales/en-US/deployment-recipes.json";
 import enDiagnostics from "@/locales/en-US/diagnostics.json";
 import enEngineMetrics from "@/locales/en-US/engine-metrics.json";
@@ -30,6 +31,7 @@ import zhCommands from "@/locales/zh-CN/commands.json";
 import zhCommon from "@/locales/zh-CN/common.json";
 import zhConnections from "@/locales/zh-CN/connections.json";
 import zhDebug from "@/locales/zh-CN/debug.json";
+import zhDeploymentGate from "@/locales/zh-CN/deployment-gate.json";
 import zhDeploymentRecipes from "@/locales/zh-CN/deployment-recipes.json";
 import zhDiagnostics from "@/locales/zh-CN/diagnostics.json";
 import zhEngineMetrics from "@/locales/zh-CN/engine-metrics.json";
@@ -61,6 +63,7 @@ void i18n.use(initReactI18next).init({
       insights: enInsights,
       commands: enCommands,
       "deployment-recipes": enDeploymentRecipes,
+      "deployment-gate": enDeploymentGate,
       "engine-metrics": enEngineMetrics,
       notifications: enNotifications,
       me: enMe,
@@ -84,6 +87,7 @@ void i18n.use(initReactI18next).init({
       insights: zhInsights,
       commands: zhCommands,
       "deployment-recipes": zhDeploymentRecipes,
+      "deployment-gate": zhDeploymentGate,
       "engine-metrics": zhEngineMetrics,
       notifications: zhNotifications,
       me: zhMe,
@@ -111,6 +115,7 @@ void i18n.use(initReactI18next).init({
     "insights",
     "commands",
     "deployment-recipes",
+    "deployment-gate",
     "engine-metrics",
     "notifications",
     "me",

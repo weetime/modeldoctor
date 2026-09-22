@@ -3,6 +3,7 @@
     "playground": "Playground",
     "benchmarks": "Benchmarks",
     "qualityGate": "Quality Gate",
+    "deploymentGate": "Deployment Gate",
     "diagnostics": "Diagnostics",
     "dev": "Developer"
   },
@@ -21,6 +22,8 @@
     "benchmarkTemplates": "Test Templates",
     "qualityGateEvaluations": "Evaluations",
     "qualityGateRuns": "Runs",
+    "deploymentGateModels": "Models",
+    "deploymentGateSources": "GPUStack Sources",
     "alerts": "Alerts",
     "requestDebug": "Request Debug",
     "diagnostics": "Endpoint Health",

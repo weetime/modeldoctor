@@ -3,6 +3,7 @@
     "playground": "Playground",
     "benchmarks": "基准测试",
     "qualityGate": "质量门",
+    "deploymentGate": "部署门禁",
     "diagnostics": "诊断",
     "dev": "开发工具"
   },
@@ -21,6 +22,8 @@
     "benchmarkTemplates": "测试模板",
     "qualityGateEvaluations": "评测方案",
     "qualityGateRuns": "评测运行",
+    "deploymentGateModels": "模型验收",
+    "deploymentGateSources": "GPUStack 数据源",
     "alerts": "告警",
     "requestDebug": "请求调试",
     "diagnostics": "端点检测",

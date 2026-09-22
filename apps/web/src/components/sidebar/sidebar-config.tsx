@@ -20,8 +20,10 @@ import {
   Network,
   Plug,
   Rocket,
+  Server,
   Settings,
   ShieldCheck,
+  ShieldHalf,
   Wrench,
 } from "lucide-react";
 
@@ -92,6 +94,14 @@ export const sidebarGroups: SidebarGroup[] = [
         labelKey: "items.qualityGateEvaluations",
       },
       { to: "/quality-gate/runs", icon: CheckCircle2, labelKey: "items.qualityGateRuns" },
+    ],
+  },
+  {
+    id: "deployment-gate",
+    labelKey: "groups.deploymentGate",
+    items: [
+      { to: "/deployment-gate", icon: ShieldHalf, labelKey: "items.deploymentGateModels" },
+      { to: "/deployment-gate/sources", icon: Server, labelKey: "items.deploymentGateSources" },
     ],
   },
   {
