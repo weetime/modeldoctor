@@ -2,7 +2,7 @@ import { NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { decodeKey, decrypt } from "../../../common/crypto/aes-gcm.js";
+import { decodeKey, decrypt, encrypt } from "../../../common/crypto/aes-gcm.js";
 import { PrismaService } from "../../../database/prisma.service.js";
 import { GpustackClientFactory } from "../gpustack/gpustack-client.js";
 import { PlatformSourcesService } from "./platform-sources.service.js";
@@ -105,5 +105,109 @@ describe("PlatformSourcesService", () => {
     service.onChange(l);
     await service.create("u1", { kind: "gpustack", name: "p", baseUrl: "http://gs", apiKey: "k" });
     expect(l).toHaveBeenCalledWith("s1", "upsert");
+  });
+
+  it("update throws 404 for other user's source and never reaches prisma.update", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(null);
+    await expect(service.update("u2", "s1", { name: "x" })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.platformSource.update).not.toHaveBeenCalled();
+  });
+
+  it("delete throws 404 for other user's source and never reaches prisma.delete", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(null);
+    await expect(service.delete("u2", "s1")).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.platformSource.delete).not.toHaveBeenCalled();
+  });
+
+  it("update without apiKey leaves the stored cipher untouched", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.update.mockResolvedValue(row({ name: "renamed" }));
+    await service.update("u1", "s1", { name: "renamed" });
+    const data = prisma.platformSource.update.mock.calls[0][0].data;
+    expect(data.apiKeyCipher).toBeUndefined();
+  });
+
+  it("update with apiKey re-encrypts and round-trips via decrypt", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.update.mockImplementation(async ({ data }) =>
+      row({ apiKeyCipher: data.apiKeyCipher }),
+    );
+    await service.update("u1", "s1", { apiKey: "new-secret" });
+    const data = prisma.platformSource.update.mock.calls[0][0].data;
+    expect(decrypt(data.apiKeyCipher, decodeKey(KEY_B64))).toBe("new-secret");
+  });
+
+  it("update with clusterId: null explicitly clears it", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row({ clusterId: "c1" }));
+    prisma.platformSource.update.mockResolvedValue(row({ clusterId: null }));
+    await service.update("u1", "s1", { clusterId: null });
+    const data = prisma.platformSource.update.mock.calls[0][0].data;
+    expect(data.clusterId).toBeNull();
+  });
+
+  it("update with clusterId omitted leaves it unchanged", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row({ clusterId: "c1" }));
+    prisma.platformSource.update.mockResolvedValue(row({ clusterId: "c1" }));
+    await service.update("u1", "s1", { name: "renamed" });
+    const data = prisma.platformSource.update.mock.calls[0][0].data;
+    expect(data.clusterId).toBeUndefined();
+  });
+
+  it("listEnabledIds returns only enabled sources' ids", async () => {
+    prisma.platformSource.findMany.mockResolvedValue([{ id: "a" }, { id: "b" }]);
+    expect(await service.listEnabledIds()).toEqual(["a", "b"]);
+    expect(prisma.platformSource.findMany).toHaveBeenCalledWith({
+      where: { enabled: true },
+      select: { id: true },
+    });
+  });
+
+  it("testSaved uses the stored decrypted key and returns ok on success", async () => {
+    const cipher = encrypt("stored-secret", decodeKey(KEY_B64));
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.findUnique.mockResolvedValue(
+      row({ baseUrl: "http://gs-saved", apiKeyCipher: cipher }),
+    );
+    factory.create.mockResolvedValue({ countModels: vi.fn().mockResolvedValue(7) });
+
+    const out = await service.testSaved("u1", "s1");
+
+    expect(out).toEqual({ ok: true, modelCount: 7, error: null });
+    expect(factory.create).toHaveBeenCalledWith("http://gs-saved", "stored-secret");
+  });
+
+  it("testSaved returns error instead of throwing on failure", async () => {
+    const cipher = encrypt("stored-secret", decodeKey(KEY_B64));
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.findUnique.mockResolvedValue(row({ apiKeyCipher: cipher }));
+    factory.create.mockResolvedValue({
+      countModels: vi.fn().mockRejectedValue(new Error("boom")),
+    });
+
+    expect(await service.testSaved("u1", "s1")).toEqual({
+      ok: false,
+      modelCount: null,
+      error: "boom",
+    });
+  });
+
+  it("notifies change listeners on update with kind upsert", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.update.mockResolvedValue(row());
+    const l = vi.fn();
+    service.onChange(l);
+    await service.update("u1", "s1", { name: "renamed" });
+    expect(l).toHaveBeenCalledWith("s1", "upsert");
+  });
+
+  it("notifies change listeners on delete with kind delete", async () => {
+    prisma.platformSource.findFirst.mockResolvedValue(row());
+    prisma.platformSource.delete.mockResolvedValue(row());
+    const l = vi.fn();
+    service.onChange(l);
+    await service.delete("u1", "s1");
+    expect(l).toHaveBeenCalledWith("s1", "delete");
   });
 });
