@@ -155,7 +155,19 @@ export class DiscoveredModelsService {
     if (patch.gateConfig !== undefined) data.gateConfig = patch.gateConfig ?? Prisma.DbNull;
     if (patch.benchmarkTemplateId !== undefined)
       data.benchmarkTemplateId = patch.benchmarkTemplateId;
-    if (patch.baselineId !== undefined) data.baselineId = patch.baselineId;
+    if (patch.baselineId !== undefined) {
+      // Ownership check: without it a user can point their model at another
+      // user's baseline and read that user's summaryMetrics back out of the
+      // run summary, the timeline UI and the automation.* webhook payload.
+      if (patch.baselineId !== null) {
+        const owned = await this.prisma.baseline.findFirst({
+          where: { id: patch.baselineId, userId },
+          select: { id: true },
+        });
+        if (!owned) throw new NotFoundException(`Baseline ${patch.baselineId} not found`);
+      }
+      data.baselineId = patch.baselineId;
+    }
     if (patch.regressionThresholds !== undefined)
       data.regressionThresholds = patch.regressionThresholds ?? Prisma.DbNull;
     if (patch.schedule !== undefined) {

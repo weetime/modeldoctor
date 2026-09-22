@@ -56,6 +56,16 @@ export class AutomationRunnerService implements OnModuleInit {
         triggerKey: `revision:${revisionId}`,
       });
     });
+    // Sync must not import the runner (spec: one-way dependency), so it hands
+    // removed models back here instead of writing the cancellation itself —
+    // only cancel() also cancels the child Benchmark / EvaluationRun.
+    this.sync.setCancelRunsListener(async (discoveredModelId, reason) => {
+      const active = await this.prisma.automationRun.findMany({
+        where: { discoveredModelId, status: { in: ["pending", "running"] } },
+        select: { id: true },
+      });
+      for (const r of active) await this.cancel(r.id, null, reason);
+    });
   }
 
   // ---------- enqueue / cancel ----------
@@ -93,17 +103,29 @@ export class AutomationRunnerService implements OnModuleInit {
     }
   }
 
-  async cancel(runId: string, verdict: "superseded" | null): Promise<void> {
+  async cancel(runId: string, verdict: "superseded" | null, reason?: string): Promise<void> {
     const run = await this.prisma.automationRun.findUnique({
       where: { id: runId },
       include: { model: { include: { source: { select: { userId: true } } } } },
     });
     if (!run || run.status === "completed" || run.status === "cancelled") return;
     const userId = run.model.source.userId;
-    await this.prisma.automationRun.update({
-      where: { id: runId },
-      data: { status: "cancelled", verdict, finishedAt: new Date(), lockedUntil: null },
+    // The read above is not the decision: a run that reaches "completed" in
+    // the window between it and this write has already fired its
+    // automation.* notification, and flipping it to cancelled afterwards
+    // would leave the row contradicting the notification the user received.
+    const summary = (run.summary as AutomationSummary | null) ?? { steps: [] };
+    const { count } = await this.prisma.automationRun.updateMany({
+      where: { id: runId, status: { in: ["pending", "running"] } },
+      data: {
+        status: "cancelled",
+        verdict,
+        finishedAt: new Date(),
+        lockedUntil: null,
+        ...(reason ? { summary: { ...summary, reason } as Prisma.InputJsonValue } : {}),
+      },
     });
+    if (count === 0) return;
     if (run.benchmarkId) {
       await this.benchmarks.cancel(run.benchmarkId, userId).catch((e) => {
         this.log.warn(
@@ -144,10 +166,15 @@ export class AutomationRunnerService implements OnModuleInit {
     }
   }
 
-  /** 每个源至多 1 个 running：行锁 platform_sources 后再检查并提升。 */
+  /**
+   * 每个源至多 1 个 running：行锁 platform_sources 后再检查并提升。
+   * A disabled source is skipped entirely — disabling it (e.g. for a cluster
+   * maintenance window) must stop launching work against a dead endpoint,
+   * not just stop the watcher and the 5-minute reconcile.
+   */
   private async promotePending(): Promise<void> {
     const sources = await this.prisma.automationRun.findMany({
-      where: { status: "pending" },
+      where: { status: "pending", model: { source: { enabled: true } } },
       distinct: ["sourceId"],
       select: { sourceId: true },
     });
@@ -157,7 +184,7 @@ export class AutomationRunnerService implements OnModuleInit {
         const running = await tx.automationRun.count({ where: { sourceId, status: "running" } });
         if (running > 0) return;
         const next = await tx.automationRun.findFirst({
-          where: { sourceId, status: "pending" },
+          where: { sourceId, status: "pending", model: { source: { enabled: true } } },
           orderBy: { createdAt: "asc" },
           include: { model: true },
         });
@@ -241,8 +268,14 @@ export class AutomationRunnerService implements OnModuleInit {
           // launched. If the row is no longer "running" by the time we get here,
           // the run we just created is orphaned — cancel it ourselves rather than
           // silently recording it onto a dead automation run.
+          //
+          // `evaluationRunId: null` is part of the guard, not decoration: the
+          // lease is 60s, and runs.create() can outlive it. A second replica
+          // then re-enters advance(), still sees evaluationRunId === null and
+          // creates its own run. Without this clause BOTH conditional writes
+          // report count === 1 and the first run is orphaned uncancelled.
           const { count } = await this.prisma.automationRun.updateMany({
-            where: { id, status: "running" },
+            where: { id, status: "running", evaluationRunId: null },
             data: { evaluationRunId: created.id },
           });
           if (count === 0) {
@@ -293,8 +326,14 @@ export class AutomationRunnerService implements OnModuleInit {
           // is no longer "running", cancel the job ourselves instead of wiring
           // its id onto a dead automation run (which no cancel()/tick() would
           // ever reach again, since both filter on status: "running").
+          //
+          // `benchmarkId: null` covers the second race: benchmarks.create() is
+          // a real K8s submit and can outrun the 60s lease, letting another
+          // replica re-enter advance(), see benchmarkId still null and submit
+          // a SECOND benchmark. Without this clause both writes report
+          // count === 1 and the first job is orphaned uncancelled.
           const { count } = await this.prisma.automationRun.updateMany({
-            where: { id, status: "running" },
+            where: { id, status: "running", benchmarkId: null },
             data: { benchmarkId: b.id },
           });
           if (count === 0) {
@@ -380,8 +419,12 @@ export class AutomationRunnerService implements OnModuleInit {
       return this.finishWithSummary(run.id, "passed", summary);
     }
 
-    const baseline = await this.prisma.baseline.findUnique({
-      where: { id: baselineId },
+    // Scoped to the run's owner as defence in depth: `baselineId` is
+    // validated on write (DiscoveredModelsService.update), but an unscoped
+    // read here would surface another user's summaryMetrics in this run's
+    // summary, UI and webhook payload if that validation were ever bypassed.
+    const baseline = await this.prisma.baseline.findFirst({
+      where: { id: baselineId, userId },
       include: { benchmark: true },
     });
     if (!baseline) {
@@ -478,6 +521,9 @@ export class AutomationRunnerService implements OnModuleInit {
         nextScheduledAt: { lte: now },
         status: { in: ["new", "active"] },
         currentRevisionId: { not: null },
+        // A disabled source must not keep submitting GPU benchmarks against
+        // an endpoint the user took offline (and emitting automation.failed).
+        source: { enabled: true },
       },
     });
     let enqueued = 0;

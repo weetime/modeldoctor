@@ -10,6 +10,7 @@ import { AutomationRunnerService } from "../automation-runner.service.js";
 let db: TestDatabase;
 let prisma: PrismaClient;
 let userId: string;
+let otherUserId: string;
 let sourceId: string;
 let connId: string;
 let modelId: string;
@@ -32,7 +33,7 @@ const deps = {
   },
   baselines: { create: vi.fn() },
   notify: { emit: vi.fn(async () => {}) },
-  sync: { setReadyListener: vi.fn() },
+  sync: { setReadyListener: vi.fn(), setCancelRunsListener: vi.fn() },
 };
 
 function svc() {
@@ -71,6 +72,11 @@ beforeAll(async () => {
     data: { email: `auto-${Date.now()}@t`, passwordHash: "x", roles: [] },
   });
   userId = u.id;
+  otherUserId = (
+    await prisma.user.create({
+      data: { email: `auto-other-${Date.now()}@t`, passwordHash: "x", roles: [] },
+    })
+  ).id;
   const ev = await prisma.evaluation.create({
     data: { userId, name: "smoke", samples: [], totalSamples: 0 },
   });
@@ -547,6 +553,237 @@ describe("AutomationRunnerService", () => {
     const r = await tickUntilDone(s, id);
     expect(r.verdict).toBe("passed");
     expect((r.summary as { gateWarning?: boolean }).gateWarning).toBe(true);
+  });
+
+  // --- Important 3: lease expiry must not launch a second benchmark ---
+
+  it("lease expiry cannot launch a second benchmark: the late one is cancelled, not recorded", async () => {
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:lease",
+    }))!;
+    for (let i = 0; i < 10; i++) {
+      const cur = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+      if (cur.currentStep === "benchmark" && cur.status === "running") break;
+      await prisma.automationRun.updateMany({ where: { id }, data: { lockedUntil: null } });
+      await s.tick();
+    }
+    expect(
+      (await prisma.automationRun.findUniqueOrThrow({ where: { id } })).benchmarkId,
+    ).toBeNull();
+
+    // Replica A's benchmarks.create() (a real K8s submit) hangs past the 60s lease.
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let resolveCreate!: (b: { id: string }) => void;
+    const pending = new Promise<{ id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
+    deps.benchmarks.create.mockImplementationOnce(async () => {
+      started();
+      return pending;
+    });
+
+    await prisma.automationRun.updateMany({ where: { id }, data: { lockedUntil: null } });
+    const tickA = s.tick();
+    await startedPromise;
+
+    // Lease expires; replica B re-enters advance(), still sees benchmarkId
+    // null, and submits its own benchmark — which it does record.
+    await prisma.automationRun.updateMany({ where: { id }, data: { lockedUntil: null } });
+    await s.tick();
+    const mid = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(mid.benchmarkId).not.toBeNull();
+    const keptId = mid.benchmarkId!;
+
+    // A's submit finally returns. Without `benchmarkId: null` in the guard its
+    // conditional write also reports count === 1 and B's job is orphaned.
+    const late = await prisma.benchmark.create({
+      data: {
+        userId,
+        connectionId: connId,
+        name: "late-b",
+        scenario: "inference",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+        summaryMetrics: summary(1000),
+        templateId,
+      },
+    });
+    resolveCreate({ id: late.id });
+    await tickA;
+
+    const after = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(after.benchmarkId).toBe(keptId);
+    expect(deps.benchmarks.cancel).toHaveBeenCalledWith(late.id, userId);
+  });
+
+  // --- Important 5: another user's baseline must never be read ---
+
+  it("compare() ignores a baseline owned by another user instead of leaking its metrics", async () => {
+    const otherConn = await prisma.connection.create({
+      data: {
+        userId: otherUserId,
+        name: `other-${Date.now()}-${Math.random()}`,
+        baseUrl: "http://x",
+        apiKeyCipher: "",
+        model: "m",
+        category: "chat",
+      },
+    });
+    const otherBench = await prisma.benchmark.create({
+      data: {
+        userId: otherUserId,
+        connectionId: otherConn.id,
+        name: `secret-${Math.random()}`,
+        scenario: "inference",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+        summaryMetrics: summary(9999),
+        templateId,
+      },
+    });
+    const otherBaseline = await prisma.baseline.create({
+      data: { userId: otherUserId, benchmarkId: otherBench.id, name: "secret", templateId },
+    });
+    await prisma.discoveredModel.update({
+      where: { id: modelId },
+      data: { baselineId: otherBaseline.id },
+    });
+
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "schedule",
+      triggerKey: "schedule:xuser",
+    }))!;
+    const r = await tickUntilDone(s, id);
+
+    const sum = r.summary as { regression?: { compared: boolean; reason?: string } };
+    expect(sum.regression?.compared).toBe(false);
+    expect(sum.regression?.reason).toBe("baseline missing");
+    // The foreign benchmark's metrics never reach the summary / webhook payload.
+    expect(JSON.stringify(r.summary)).not.toContain("9999");
+  });
+
+  // --- Important 6: a disabled source must stop launching work ---
+
+  it("scanSchedules skips models whose platform source is disabled", async () => {
+    const now = new Date("2026-09-22T00:00:00Z");
+    await prisma.discoveredModel.update({
+      where: { id: modelId },
+      data: { schedule: "daily", nextScheduledAt: new Date("2026-09-21T23:59:00Z") },
+    });
+    await prisma.platformSource.update({ where: { id: sourceId }, data: { enabled: false } });
+
+    expect(await svc().scanSchedules(now)).toBe(0);
+    expect(await prisma.automationRun.count({ where: { discoveredModelId: modelId } })).toBe(0);
+
+    // Re-enabling the source resumes the schedule.
+    await prisma.platformSource.update({ where: { id: sourceId }, data: { enabled: true } });
+    expect(await svc().scanSchedules(now)).toBe(1);
+  });
+
+  it("promotePending leaves pending runs pending while the source is disabled", async () => {
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:srcoff",
+    }))!;
+    await prisma.platformSource.update({ where: { id: sourceId }, data: { enabled: false } });
+
+    await s.tick();
+
+    expect((await prisma.automationRun.findUniqueOrThrow({ where: { id } })).status).toBe(
+      "pending",
+    );
+    expect(deps.diagnostics.run).not.toHaveBeenCalled();
+  });
+
+  // --- Minor 7: cancel() must not overwrite a run that just completed ---
+
+  it("cancel() leaves a run that completes inside its read-then-write window alone", async () => {
+    const s = svc();
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:cancelrace",
+    }))!;
+    await prisma.automationRun.update({
+      where: { id },
+      data: { status: "running", currentStep: "benchmark", benchmarkId: "bx" },
+    });
+
+    // Patch the delegate directly (vi.spyOn(...).mockRestore() leaves a Prisma
+    // delegate method undefined for later tests) so the row completes in the
+    // window between cancel()'s read and its write.
+    const delegate = prisma.automationRun as unknown as Record<string, unknown>;
+    const real = prisma.automationRun.findUnique.bind(prisma.automationRun);
+    delegate.findUnique = async (args: unknown) => {
+      const row = await real(args as never);
+      // The run finishes (and fires its automation.passed notification) here.
+      await prisma.automationRun.update({
+        where: { id },
+        data: { status: "completed", verdict: "passed", finishedAt: new Date() },
+      });
+      delegate.findUnique = real;
+      return row;
+    };
+
+    try {
+      await s.cancel(id, "superseded");
+    } finally {
+      delegate.findUnique = real;
+    }
+
+    const after = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(after.status).toBe("completed");
+    expect(after.verdict).toBe("passed");
+    // …and its already-finished child job was not cancelled behind its back.
+    expect(deps.benchmarks.cancel).not.toHaveBeenCalled();
+  });
+
+  // --- Important 2: sync's removed-model cancellation goes through cancel() ---
+
+  it("registers a cancel-runs listener that cancels the run and its child benchmark", async () => {
+    const s = svc();
+    s.onModuleInit();
+    const listener = deps.sync.setCancelRunsListener.mock.calls[0]?.[0] as (
+      discoveredModelId: string,
+      reason: string,
+    ) => Promise<void>;
+    expect(listener).toBeTypeOf("function");
+
+    const id = (await s.enqueue({
+      discoveredModelId: modelId,
+      revisionId: revId,
+      trigger: "manual",
+      triggerKey: "manual:removed",
+    }))!;
+    await prisma.automationRun.update({
+      where: { id },
+      data: { status: "running", currentStep: "benchmark", benchmarkId: "b-removed" },
+    });
+
+    await listener(modelId, "model removed from GPUStack");
+
+    const after = await prisma.automationRun.findUniqueOrThrow({ where: { id } });
+    expect(after.status).toBe("cancelled");
+    expect((after.summary as { reason?: string }).reason).toBe("model removed from GPUStack");
+    // The whole point: the child GPU job is cancelled, which a raw
+    // updateMany inside SourceSyncService could never do.
+    expect(deps.benchmarks.cancel).toHaveBeenCalledWith("b-removed", userId);
   });
 
   it("a step throwing finishes the run with error and frees the source's running slot", async () => {

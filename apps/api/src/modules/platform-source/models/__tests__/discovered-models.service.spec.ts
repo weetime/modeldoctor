@@ -121,6 +121,62 @@ describe("DiscoveredModelsService", () => {
     await expect(svc().get(otherUserId, modelId)).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it("rejects a baselineId owned by another user", async () => {
+    const otherConn = await prisma.connection.create({
+      data: {
+        userId: otherUserId,
+        name: `other-${Date.now()}-${Math.random()}`,
+        baseUrl: "http://x",
+        apiKeyCipher: "",
+        model: "m",
+        category: "chat",
+      },
+    });
+    const otherBench = await prisma.benchmark.create({
+      data: {
+        userId: otherUserId,
+        connectionId: otherConn.id,
+        name: `secret-${Math.random()}`,
+        scenario: "inference",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+        summaryMetrics: { tool: "guidellm", data: {} },
+      },
+    });
+    const foreign = await prisma.baseline.create({
+      data: { userId: otherUserId, benchmarkId: otherBench.id, name: "secret" },
+    });
+
+    await expect(svc().update(userId, modelId, { baselineId: foreign.id })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    // Nothing was written.
+    expect(
+      (await prisma.discoveredModel.findUniqueOrThrow({ where: { id: modelId } })).baselineId,
+    ).toBeNull();
+  });
+
+  it("accepts a baselineId the acting user owns, and clearing it", async () => {
+    const own = await prisma.benchmark.create({
+      data: {
+        userId,
+        connectionId: (await prisma.connection.findFirstOrThrow({ where: { userId } })).id,
+        name: `mine-${Math.random()}`,
+        scenario: "inference",
+        tool: "guidellm",
+        params: {},
+        status: "completed",
+        summaryMetrics: { tool: "guidellm", data: {} },
+      },
+    });
+    const bl = await prisma.baseline.create({
+      data: { userId, benchmarkId: own.id, name: "mine" },
+    });
+    expect((await svc().update(userId, modelId, { baselineId: bl.id })).baselineId).toBe(bl.id);
+    expect((await svc().update(userId, modelId, { baselineId: null })).baselineId).toBeNull();
+  });
+
   it("enabling requires evaluation when quality_gate step selected", async () => {
     await expect(
       svc().update(userId, modelId, { automationEnabled: true, benchmarkTemplateId: "t" }),

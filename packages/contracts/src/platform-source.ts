@@ -117,6 +117,8 @@ export const automationSummarySchema = z.object({
     .optional(),
   baselineEstablished: z.boolean().optional(),
   gateWarning: z.boolean().optional(),
+  /** Why the run was cancelled, e.g. its model vanished from GPUStack. */
+  reason: z.string().optional(),
 });
 export type AutomationSummary = z.infer<typeof automationSummarySchema>;
 
