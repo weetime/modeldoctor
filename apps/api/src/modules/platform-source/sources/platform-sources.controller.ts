@@ -1,6 +1,7 @@
 import {
   type CreatePlatformSource,
   createPlatformSourceSchema,
+  type GpustackRouteOption,
   type PlatformSource,
   type TestPlatformSourceResponse,
   type UpdatePlatformSource,
@@ -23,6 +24,7 @@ import { CurrentUser } from "../../../common/decorators/current-user.decorator.j
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe.js";
 import type { JwtPayload } from "../../auth/jwt.strategy.js";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard.js";
+import { DiscoveredModelsService } from "../models/discovered-models.service.js";
 import type { ReconcileResult } from "../sync/source-sync.service.js";
 import { SourceSyncService } from "../sync/source-sync.service.js";
 import { PlatformSourcesService } from "./platform-sources.service.js";
@@ -37,6 +39,7 @@ export class PlatformSourcesController {
   constructor(
     private readonly service: PlatformSourcesService,
     private readonly syncService: SourceSyncService,
+    private readonly models: DiscoveredModelsService,
   ) {}
 
   @Get()
@@ -94,5 +97,10 @@ export class PlatformSourcesController {
   async sync(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<ReconcileResult> {
     await this.service.get(user.sub, id); // owner check
     return this.syncService.reconcile(id);
+  }
+
+  @Get(":id/routes")
+  routes(@CurrentUser() user: JwtPayload, @Param("id") id: string): Promise<GpustackRouteOption[]> {
+    return this.models.listRoutes(user.sub, id);
   }
 }

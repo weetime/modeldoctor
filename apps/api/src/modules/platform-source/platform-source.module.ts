@@ -10,6 +10,8 @@ import { QualityGateModule } from "../quality-gate/quality-gate.module.js";
 import { AutomationRunnerService } from "./automation/automation-runner.service.js";
 import { PlatformSourceCron } from "./automation/platform-source.cron.js";
 import { GpustackClientFactory } from "./gpustack/gpustack-client.js";
+import { DiscoveredModelsController } from "./models/discovered-models.controller.js";
+import { DiscoveredModelsService } from "./models/discovered-models.service.js";
 import { PlatformSourcesController } from "./sources/platform-sources.controller.js";
 import { PlatformSourcesService } from "./sources/platform-sources.service.js";
 import { SourceSyncService } from "./sync/source-sync.service.js";
@@ -25,7 +27,7 @@ import { SourceWatcherService } from "./sync/source-watcher.service.js";
     BaselineModule,
     NotificationsModule,
   ],
-  controllers: [PlatformSourcesController],
+  controllers: [PlatformSourcesController, DiscoveredModelsController],
   providers: [
     PrismaService,
     GpustackClientFactory,
@@ -34,6 +36,7 @@ import { SourceWatcherService } from "./sync/source-watcher.service.js";
     SourceWatcherService,
     AutomationRunnerService,
     PlatformSourceCron,
+    DiscoveredModelsService,
   ],
   exports: [PlatformSourcesService, SourceSyncService, AutomationRunnerService],
 })
