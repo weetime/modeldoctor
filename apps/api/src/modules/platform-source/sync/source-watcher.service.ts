@@ -69,15 +69,30 @@ export class SourceWatcherService implements OnApplicationBootstrap, OnModuleDes
       .catch((e) => this.log.warn(`reconcile ${sourceId} failed: ${(e as Error).message}`));
   }
 
+  /**
+   * A `loop()` invocation is only "current" while it is the one registered
+   * for `sourceId` and its own controller hasn't been aborted. `stop()` +
+   * `start()` (e.g. triggered by `onChange` during an upsert) replaces the
+   * map entry and aborts the old controller, but a suspended `await` in the
+   * old invocation only observes that on its next resumption — check after
+   * every intermediate await so a stale invocation never reconciles or
+   * calls `watchModels` on behalf of a source it no longer owns.
+   */
+  private isCurrent(sourceId: string, state: WatchState): boolean {
+    return !state.abort.signal.aborted && this.states.get(sourceId) === state;
+  }
+
   private async loop(sourceId: string, state: WatchState): Promise<void> {
-    if (state.abort.signal.aborted) return;
+    if (!this.isCurrent(sourceId, state)) return;
     try {
       const src = await this.sources.getDecrypted(sourceId);
+      if (!this.isCurrent(sourceId, state)) return;
       if (!src.enabled) {
         this.stop(sourceId);
         return;
       }
       const client = await this.clients.create(src.baseUrl, src.apiKey);
+      if (!this.isCurrent(sourceId, state)) return;
       this.reconcileSafe(sourceId); // 连上（或重连）先全量对账，补上断线期间的变更
       await client.watchModels({
         signal: state.abort.signal,
@@ -90,7 +105,7 @@ export class SourceWatcherService implements OnApplicationBootstrap, OnModuleDes
     } catch (e) {
       this.log.warn(`watch ${sourceId} error: ${(e as Error).message}`);
     }
-    if (state.abort.signal.aborted || this.states.get(sourceId) !== state) return;
+    if (!this.isCurrent(sourceId, state)) return;
     const delay = state.backoffMs;
     state.backoffMs = Math.min(state.backoffMs * 2, BACKOFF_MAX_MS);
     state.retry = setTimeout(() => void this.loop(sourceId, state), delay);
