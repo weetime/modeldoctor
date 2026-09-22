@@ -28,6 +28,7 @@ function isNonEmptyString(v: unknown): v is string {
  *   alert.explained     — `[ModelDoctor] alert <alertName> severity=<sev> connection=<name|id>`
  *   benchmark.*         — `[ModelDoctor] <eventType> <name|runId> [status=<s>] [connection=<id>]`
  *   diagnostics.failed  — same fallback as benchmark.*
+ *   automation.*        — `[Deployment gate] <modelName> — <verdict> (trigger: <trigger>)`
  *
  * The fallback for unknown eventTypes mirrors the benchmark shape (name +
  * status + connection), since most workflow events follow that pattern.
@@ -39,6 +40,13 @@ export function formatText(body: DeliveryPayload): string {
   if (ev === "test") {
     const message = isNonEmptyString(p.message) ? p.message : "(no message)";
     return `[ModelDoctor] test: ${message}`;
+  }
+
+  if (ev === "automation.passed" || ev === "automation.failed" || ev === "automation.regressed") {
+    const modelName = isNonEmptyString(p.modelName) ? p.modelName : "(unknown model)";
+    const verdict = isNonEmptyString(p.verdict) ? p.verdict : "unknown";
+    const trigger = isNonEmptyString(p.trigger) ? p.trigger : "unknown";
+    return `[Deployment gate] ${modelName} — ${verdict} (trigger: ${trigger})`;
   }
 
   if (ev === "alert.explained") {

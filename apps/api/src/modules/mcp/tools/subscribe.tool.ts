@@ -5,7 +5,13 @@ import { registerTool } from "./_register.js";
 
 type SubscribeInput = {
   channelId: string;
-  eventType: "benchmark.completed" | "benchmark.failed" | "diagnostics.failed";
+  eventType:
+    | "benchmark.completed"
+    | "benchmark.failed"
+    | "diagnostics.failed"
+    | "automation.passed"
+    | "automation.failed"
+    | "automation.regressed";
   connectionId?: string;
 };
 
@@ -20,7 +26,14 @@ export function registerSubscribe(server: McpServer, deps: McpToolDeps): void {
       inputShape: {
         channelId: z.string().describe("Channel id from list_channels."),
         eventType: z
-          .enum(["benchmark.completed", "benchmark.failed", "diagnostics.failed"])
+          .enum([
+            "benchmark.completed",
+            "benchmark.failed",
+            "diagnostics.failed",
+            "automation.passed",
+            "automation.failed",
+            "automation.regressed",
+          ])
           .describe("Event type to subscribe to."),
         connectionId: z
           .string()

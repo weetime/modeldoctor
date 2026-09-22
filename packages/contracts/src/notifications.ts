@@ -2,7 +2,10 @@ export type ChannelType = "slack" | "webhook" | "feishu" | "dingtalk";
 export type NotificationEventType =
   | "benchmark.completed"
   | "benchmark.failed"
-  | "diagnostics.failed";
+  | "diagnostics.failed"
+  | "automation.passed"
+  | "automation.failed"
+  | "automation.regressed";
 
 export interface Channel {
   id: string;

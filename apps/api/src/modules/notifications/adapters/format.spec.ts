@@ -99,6 +99,20 @@ describe("formatText — per-eventType shapes", () => {
     });
     expect(out).toBe("[ModelDoctor] diagnostics.failed endpoint-health status=failed");
   });
+
+  it("formats automation.regressed with model name and verdict", () => {
+    const text = formatText({
+      eventType: "automation.regressed",
+      payload: {
+        modelName: "qwen",
+        verdict: "regressed",
+        trigger: "revision",
+        automationRunId: "r1",
+      },
+    });
+    expect(text).toContain("qwen");
+    expect(text).toContain("regressed");
+  });
 });
 
 describe("formatDingtalkAlertMarkdown", () => {

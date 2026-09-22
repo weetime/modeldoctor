@@ -37,7 +37,14 @@ import {
 } from "./queries";
 import { type ChannelForm, channelFormCreateSchema, channelFormEditSchema } from "./schemas";
 
-const EVENTS = ["benchmark.completed", "benchmark.failed", "diagnostics.failed"] as const;
+const EVENTS = [
+  "benchmark.completed",
+  "benchmark.failed",
+  "diagnostics.failed",
+  "automation.passed",
+  "automation.failed",
+  "automation.regressed",
+] as const;
 type EventType = (typeof EVENTS)[number];
 
 interface Props {
