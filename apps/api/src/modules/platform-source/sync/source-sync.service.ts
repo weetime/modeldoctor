@@ -91,6 +91,29 @@ export class SourceSyncService {
       readyRevisions: [],
       removed: 0,
     };
+
+    // Guard against mass-removal: a 200 with `items: []` (tenant-visibility
+    // change, wrong cluster filter, mis-scoped API key) is indistinguishable
+    // from a genuine full drain. If GPUStack reports zero models while this
+    // source still has known (non-removed) DiscoveredModel rows, refuse to
+    // run markRemoved — leave every model untouched and surface the
+    // ambiguity via lastSyncError instead of silently disabling everything.
+    if (models.length === 0) {
+      const knownCount = await this.prisma.discoveredModel.count({
+        where: { sourceId: src.id, status: { not: "removed" } },
+      });
+      if (knownCount > 0) {
+        await this.prisma.platformSource.update({
+          where: { id: sourceId },
+          data: {
+            lastSyncAt: new Date(),
+            lastSyncError: `GPUStack returned 0 models while ${knownCount} are known — refusing to mass-remove; check the API key scope and cluster filter`,
+          },
+        });
+        return result;
+      }
+    }
+
     const seen: string[] = [];
     for (const m of models) {
       seen.push(String(m.id));
@@ -140,10 +163,11 @@ export class SourceSyncService {
     });
 
     // 1) Route
+    const previousStatus = dm.status;
     const routeName = dm.routeOverride ? dm.routeName : resolveDedicatedRoute(m.id, routes);
-    let status = dm.status;
+    let status = previousStatus;
     if (!routeName) status = "unroutable";
-    else if (status === "unroutable" || status === "removed")
+    else if (previousStatus === "unroutable" || previousStatus === "removed")
       status = dm.automationEnabled ? "active" : "new";
 
     // 2) Connection
@@ -165,12 +189,21 @@ export class SourceSyncService {
     } else if (
       routeName &&
       connectionId &&
-      (routeName !== dm.routeName || dm.status === "removed")
+      (routeName !== dm.routeName ||
+        previousStatus === "removed" ||
+        previousStatus === "unroutable")
     ) {
       await this.connections.update(src.userId, connectionId, {
         ...(routeName !== dm.routeName ? { model: routeName } : {}),
-        ...(dm.status === "removed" ? { enabled: true } : {}),
+        ...(previousStatus === "removed" || previousStatus === "unroutable"
+          ? { enabled: true }
+          : {}),
       });
+    } else if (!routeName && connectionId && previousStatus !== "unroutable") {
+      // Route deleted or became multi-target: disable the Connection so it
+      // doesn't keep pointing at a route name GPUStack may reuse for a
+      // different model. Re-enabled above once a dedicated route reappears.
+      await this.connections.update(src.userId, connectionId, { enabled: false });
     }
 
     // 3) Revision
