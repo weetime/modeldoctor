@@ -199,4 +199,114 @@ describe("DiscoveredModelsService", () => {
   it("runNow requires automation config and current revision", async () => {
     await expect(svc().runNow(userId, modelId)).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it("runNow rejects an enabled model with no current revision", async () => {
+    await prisma.discoveredModel.update({
+      where: { id: modelId },
+      data: { automationEnabled: true, currentRevisionId: null },
+    });
+    await expect(svc().runNow(userId, modelId)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("cancelRun 404s for another user's run and never calls runner.cancel", async () => {
+    const run = await prisma.automationRun.create({
+      data: {
+        discoveredModelId: modelId,
+        sourceId: (await prisma.platformSource.findFirstOrThrow()).id,
+        revisionId: revId,
+        trigger: "manual",
+        triggerKey: "k-cancel-ownership",
+        status: "pending",
+      },
+    });
+    await expect(svc().cancelRun(otherUserId, run.id)).rejects.toBeInstanceOf(NotFoundException);
+    expect(runner.cancel).not.toHaveBeenCalled();
+  });
+
+  it("cancelRun calls runner.cancel for an owned run", async () => {
+    const run = await prisma.automationRun.create({
+      data: {
+        discoveredModelId: modelId,
+        sourceId: (await prisma.platformSource.findFirstOrThrow()).id,
+        revisionId: revId,
+        trigger: "manual",
+        triggerKey: "k-cancel-success",
+        status: "running",
+      },
+    });
+    await svc().cancelRun(userId, run.id);
+    expect(runner.cancel).toHaveBeenCalledWith(run.id, null);
+  });
+
+  it("listRoutes 404s for another user's source and never constructs the GPUStack client", async () => {
+    const s = await prisma.platformSource.findFirstOrThrow();
+    await expect(svc().listRoutes(otherUserId, s.id)).rejects.toBeInstanceOf(NotFoundException);
+    expect(factory.create).not.toHaveBeenCalled();
+    expect(sources.getDecrypted).not.toHaveBeenCalled();
+  });
+
+  it("listRoutes maps GpustackRoute to GpustackRouteOption", async () => {
+    const s = await prisma.platformSource.findFirstOrThrow();
+    sources.getDecrypted.mockResolvedValue({
+      id: s.id,
+      userId,
+      baseUrl: "http://gs",
+      apiKey: "secret",
+      clusterId: null,
+      enabled: true,
+    });
+    const client = {
+      listRoutes: vi.fn(async () => [
+        { id: 1, name: "route-a", targets: 2, created_model_id: 42 },
+        {
+          id: 2,
+          name: "route-b",
+          effective_name: "route-b-eff",
+          targets: 0,
+          created_model_id: null,
+        },
+      ]),
+    };
+    factory.create.mockResolvedValue(client);
+
+    const out = await svc().listRoutes(userId, s.id);
+
+    expect(out).toEqual([
+      { name: "route-a", targets: 2, createdModelId: "42" },
+      { name: "route-b-eff", targets: 0, createdModelId: null },
+    ]);
+  });
+
+  it("routeName:null restores automatic resolution without touching the Connection", async () => {
+    await prisma.discoveredModel.update({ where: { id: modelId }, data: { routeOverride: true } });
+    const out = await svc().update(userId, modelId, { routeName: null });
+    expect(out.routeOverride).toBe(false);
+    expect(connections.update).not.toHaveBeenCalled();
+  });
+
+  it("routeName override on a model with no connection succeeds without touching connections", async () => {
+    await prisma.discoveredModel.update({ where: { id: modelId }, data: { connectionId: null } });
+    const out = await svc().update(userId, modelId, { routeName: "manual-route-2" });
+    expect(out).toMatchObject({ routeName: "manual-route-2", routeOverride: true });
+    expect(connections.update).not.toHaveBeenCalled();
+  });
+
+  it("listRevisions with a single revision diffs against null", async () => {
+    const s = await prisma.platformSource.findFirstOrThrow();
+    const solo = await prisma.discoveredModel.create({
+      data: { sourceId: s.id, externalId: "solo", name: "solo", categories: [], status: "new" },
+    });
+    await prisma.deploymentRevision.create({
+      data: {
+        discoveredModelId: solo.id,
+        fingerprint: "solo-a",
+        snapshot: { backend_version: "1.0.0" },
+        firstSeenAt: new Date(),
+        readyAt: new Date(),
+      },
+    });
+    const revs = await svc().listRevisions(userId, solo.id);
+    expect(revs).toHaveLength(1);
+    expect(revs[0].diff).toEqual([{ field: "backend_version", before: null, after: "1.0.0" }]);
+  });
 });
