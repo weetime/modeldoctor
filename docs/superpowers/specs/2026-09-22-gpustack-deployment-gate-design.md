@@ -36,7 +36,7 @@ GPUStack 自带 guidellm 压测，但没有：质量评测、部署变更自动�
   - `GET /v2/models` 分页列表；`?watch=true` 返回 `text/event-stream`，事件 `{type, data, changed_fields, id}`，心跳为空行（`mixins/active_record.py:873`）。**订阅从连接时刻开始，不推送存量、无断点续传。**
   - `GET /v2/model-instances`（同样支持 `watch`）：实例 `state` ∈ `pending → analyzing → scheduled → initializing → downloading → starting → running`，以及 `error / unreachable`。
   - `GET /v2/model-routes`：路由列表，含 `name`、`effective_name`（非平台 Org 为 `<owner>/<name>`）、`created_model_id`、`targets`（目标数）。
-- **推理 API**：`/v1`（OpenAI 兼容；`/v1-openai` 为旧别名）。**请求体里的 `model` 按 ModelRoute 名解析**（`routes/openai.py:210`），一个路由可带多个加权目标——所以「压测某个模型部署」必须找到**只指向该模型的路由**。
+- **推理 API**：`/v1`（OpenAI 兼容；`/v1-openai` 为旧别名）。ModelDoctor 侧 Connection 存主机根地址，`/v1` 由调用方拼接。**请求体里的 `model` 按 ModelRoute 名解析**（`routes/openai.py:210`），一个路由可带多个加权目标——所以「压测某个模型部署」必须找到**只指向该模型的路由**。
 - **Model 关键字段**（`schemas/models.py`）：`id, name, categories, replicas, ready_replicas, cluster_id, backend, backend_version, backend_parameters, image_name, run_command, env, gpu_selector, gpu_type_selector, worker_selector, extended_kv_cache, placement_strategy, distributed_inference_across_workers, cpu_offloading` + 模型来源字段（huggingface/modelscope/local path）。
 
 ## 4. 数据模型（Prisma，新增 4 表 + Connection 1 字段）
@@ -141,7 +141,7 @@ model AutomationRun {
 1. `clusterId` 过滤（若源配置了）。
 2. upsert `DiscoveredModel`（按 `sourceId+externalId`）；新行 `status='new'`。
 3. **解析路由**（`routeOverride=false` 时）：取 `created_model_id == model.id` 且 `targets == 1` 的 ModelRoute，`routeName = effective_name ?? name`。找不到 → `status='unroutable'`，不建 Connection、不允许开启自动化；UI 允许用户从路由列表手动指定（置 `routeOverride=true`）。
-4. 有 `routeName` 且无 Connection → 创建 Connection：`baseUrl = <source.baseUrl>/v1`、`apiKey = source 的 key`、`model = routeName`、`category` 由 `categories` 映射（`llm→chat`、`embedding→embeddings`、`reranker→rerank`、`image→images`、`speech_to_text/text_to_speech→audio`，未知→`chat`）、`serverKind` 由 `backend` 映射（vllm/sglang/mindie/…，未知留空）、`tags=['gpustack', <cluster>]`。
+4. 有 `routeName` 且无 Connection → 创建 Connection：`baseUrl = <source.baseUrl>`（**主机根**，不带 `/v1`——本仓库约定 `Connection.baseUrl` 存根地址，调用方自行拼 `/v1`，见 `quality-gate/endpoint-caller.ts`、`discovery/probes/models.ts`；带 `/v1` 会让探针请求 `/v1/v1/...` 404）、`apiKey = source 的 key`、`model = routeName`、`category` 由 `categories` 映射（`llm→chat`、`embedding→embeddings`、`reranker→rerank`、`image→images`、`speech_to_text/text_to_speech→audio`，未知→`chat`）、`serverKind` 由 `backend` 映射（vllm/sglang/mindie/…，未知留空）、`tags=['gpustack', <cluster>]`。
 5. **部署指纹**：对下列字段规范化（key 排序、`backend_parameters` 保序、`env` 按 key 排序、null 与缺失等价）后 sha256：`backend, backend_version, backend_parameters, image_name, run_command, env, gpu_selector, gpu_type_selector, worker_selector, extended_kv_cache, placement_strategy, distributed_inference_across_workers, cpu_offloading, 模型来源字段`。**不含** `replicas / ready_replicas / description / meta / name`。`snapshot` = 上述字段 + 当时 running 实例的 `gpu_type / gpu_indexes 数量 / worker_name / api_detected_backend_version`（仅展示，不入指纹）。
 6. upsert `DeploymentRevision`（`discoveredModelId+fingerprint` 唯一）；更新 `currentRevisionId`。
 7. `ready_replicas >= 1` 且当前 revision `readyAt` 为空 → 置 `readyAt = now()`（条件更新 `WHERE ready_at IS NULL`，返回是否由本次置位）。**由本次置位且 `automationEnabled`** → 入队 `trigger='revision'`。

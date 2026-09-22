@@ -1764,7 +1764,7 @@ describe("SourceSyncService.reconcile", () => {
     const dm = await prisma.discoveredModel.findFirstOrThrow({ where: { sourceId } });
     expect(dm).toMatchObject({ externalId: "7", name: "qwen", status: "new", routeName: "qwen" });
     expect(connections.create).toHaveBeenCalledWith(userId, expect.objectContaining({
-      baseUrl: "http://gs/v1", model: "qwen", category: "chat", serverKind: "vllm", tokenizerHfId: "Qwen/Qwen3-8B", apiKey: "k",
+      baseUrl: "http://gs", model: "qwen", category: "chat", serverKind: "vllm", tokenizerHfId: "Qwen/Qwen3-8B", apiKey: "k",
     }));
     expect(dm.connectionId).not.toBeNull();
     expect(dm.currentRevisionId).not.toBeNull();
@@ -1985,7 +1985,7 @@ export class SourceSyncService {
     if (routeName && !connectionId) {
       const conn = await this.connections.create(src.userId, {
         name: `gpustack/${m.name}`,
-        baseUrl: `${src.baseUrl}/v1`,
+        baseUrl: src.baseUrl,
         apiKey: src.apiKey,
         model: routeName,
         customHeaders: "",
@@ -3642,7 +3642,7 @@ describe("deployment gate e2e", () => {
     expect(list.body[0].currentRevision).toMatchObject({ backend: "vLLM", backendVersion: "0.10.1" });
 
     const conn = await request(ctx.app.getHttpServer()).get(`/api/connections/${list.body[0].connectionId}`).set(auth()).expect(200);
-    expect(conn.body).toMatchObject({ baseUrl: `${fakeUrl}/v1`, model: "qwen" });
+    expect(conn.body).toMatchObject({ baseUrl: fakeUrl, model: "qwen" });
   });
 
   it("parameter change creates a new revision with diff", async () => {
