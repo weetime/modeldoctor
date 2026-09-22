@@ -87,4 +87,29 @@ describe("GpustackClient", () => {
       }),
     ).rejects.toBeInstanceOf(GpustackError);
   });
+
+  it("watchModels resolves (does not reject) when the caller aborts mid-stream, after delivering prior events", async () => {
+    const enc = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(enc.encode('{"type":"UPDATED","data":{"id":1}}\n\n'));
+        // deliberately never enqueue again or close — simulates a still-open watch connection
+      },
+    });
+    fetchMock.mockResolvedValueOnce(
+      new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+    const onEvent = vi.fn();
+    const controller = new AbortController();
+    const promise = client.watchModels({
+      signal: controller.signal,
+      onEvent,
+      heartbeatTimeoutMs: 10_000,
+    });
+    // give the first event a chance to be delivered before the caller aborts
+    await vi.waitFor(() => expect(onEvent).toHaveBeenCalledTimes(1));
+    controller.abort();
+    await expect(promise).resolves.toBeUndefined();
+    expect(onEvent).toHaveBeenCalledTimes(1);
+  });
 });
