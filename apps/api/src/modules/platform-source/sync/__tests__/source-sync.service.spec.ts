@@ -290,6 +290,125 @@ describe("SourceSyncService.reconcile", () => {
     expect(r.models).toBe(0);
   });
 
+  // --- Critical 1: a Connection name collision must not silently kill the source ---
+
+  it("colliding connection name is disambiguated instead of aborting the whole reconcile", async () => {
+    // Exactly the delete-and-re-add path: the previous source's Connection
+    // survives (DiscoveredModel -> Connection is SetNull, not Cascade), so
+    // the name `gpustack/qwen` is already taken for this user.
+    await prisma.connection.create({
+      data: {
+        userId,
+        name: "gpustack/qwen",
+        baseUrl: "http://old",
+        apiKeyCipher: "",
+        model: "qwen",
+        category: "chat",
+      },
+    });
+
+    const r = await svc().reconcile(sourceId);
+
+    expect(r).toMatchObject({ models: 1, failed: 0, revisionsCreated: 1 });
+    const dm = await prisma.discoveredModel.findFirstOrThrow({ where: { sourceId } });
+    expect(dm.status).toBe("new");
+    expect(dm.connectionId).not.toBeNull();
+    const conn = await prisma.connection.findUniqueOrThrow({ where: { id: dm.connectionId! } });
+    expect(conn.name).not.toBe("gpustack/qwen");
+    expect(conn.name).toContain("gpustack/qwen");
+    // …and the source still looks healthy, because nothing actually failed.
+    const s = await prisma.platformSource.findUniqueOrThrow({ where: { id: sourceId } });
+    expect(s.lastSyncError).toBeNull();
+  });
+
+  it("a model that throws is isolated: the rest of the source syncs and lastSyncError is set", async () => {
+    routes = [
+      { id: 1, name: "qwen", created_model_id: 7, targets: 1 },
+      { id: 2, name: "other", created_model_id: 8, targets: 1 },
+    ];
+    models = [qwen(), other()];
+    // First model's connection creation blows up in a way retrying can't fix.
+    connections.create.mockRejectedValueOnce(new Error("boom"));
+
+    const r = await svc().reconcile(sourceId);
+
+    expect(r.failed).toBe(1);
+    // The healthy model still got fully processed.
+    const ok = await prisma.discoveredModel.findFirstOrThrow({
+      where: { sourceId, externalId: "8" },
+    });
+    expect(ok.connectionId).not.toBeNull();
+    expect(ok.currentRevisionId).not.toBeNull();
+    // The broken one was NOT mistaken for "vanished from GPUStack".
+    expect(r.removed).toBe(0);
+    expect(
+      (await prisma.discoveredModel.findFirstOrThrow({ where: { sourceId, externalId: "7" } }))
+        .status,
+    ).not.toBe("removed");
+    // …and the UI is no longer green.
+    const s = await prisma.platformSource.findUniqueOrThrow({ where: { id: sourceId } });
+    expect(s.lastSyncError).toMatch(/1 model\(s\) failed to sync: qwen: boom/);
+  });
+
+  it("a non-client (DB) failure records lastSyncError too", async () => {
+    await svc().reconcile(sourceId);
+    await prisma.platformSource.update({
+      where: { id: sourceId },
+      data: { lastSyncError: null },
+    });
+    const s = svc();
+    // markRemoved's connection disable is the non-client failure here.
+    models = [other()];
+    routes = [{ id: 2, name: "other", created_model_id: 8, targets: 1 }];
+    connections.update.mockRejectedValueOnce(new Error("db down"));
+    await expect(s.reconcile(sourceId)).rejects.toThrow("db down");
+    const src = await prisma.platformSource.findUniqueOrThrow({ where: { id: sourceId } });
+    expect(src.lastSyncError).toContain("db down");
+  });
+
+  // --- Important 2: a removed model's in-flight run goes through the runner ---
+
+  it("markRemoved cancels the in-flight run through the runner, not a raw updateMany", async () => {
+    routes = [
+      { id: 1, name: "qwen", created_model_id: 7, targets: 1 },
+      { id: 2, name: "other", created_model_id: 8, targets: 1 },
+    ];
+    models = [qwen(), other()];
+    const s = svc();
+    const cancelRuns = vi.fn(async (discoveredModelId: string, reason: string) => {
+      await prisma.automationRun.updateMany({
+        where: { discoveredModelId, status: { in: ["pending", "running"] } },
+        data: { status: "cancelled", finishedAt: new Date(), summary: { steps: [], reason } },
+      });
+    });
+    s.setCancelRunsListener(cancelRuns);
+    await s.reconcile(sourceId);
+
+    const dm = await prisma.discoveredModel.findFirstOrThrow({
+      where: { sourceId, externalId: "7" },
+    });
+    const run = await prisma.automationRun.create({
+      data: {
+        discoveredModelId: dm.id,
+        sourceId,
+        revisionId: dm.currentRevisionId!,
+        trigger: "manual",
+        triggerKey: `manual:${Date.now()}`,
+        status: "running",
+        benchmarkId: "bench-1",
+      },
+    });
+
+    models = [other()];
+    expect((await s.reconcile(sourceId)).removed).toBe(1);
+
+    // The cancellation went through the listener (which is the only path that
+    // also cancels the child Benchmark / EvaluationRun), with the reason.
+    expect(cancelRuns).toHaveBeenCalledWith(dm.id, "model removed from GPUStack");
+    const after = await prisma.automationRun.findUniqueOrThrow({ where: { id: run.id } });
+    expect(after.status).toBe("cancelled");
+  });
+
   it("routeOverride keeps user route even when auto-resolve differs", async () => {
     await svc().reconcile(sourceId);
     await prisma.discoveredModel.updateMany({
