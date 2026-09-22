@@ -21,6 +21,7 @@ import { ReportPreviewPage } from "@/features/benchmarks/compare/ReportPreviewPa
 import { SavedComparesListPage } from "@/features/benchmarks/compare/SavedComparesListPage";
 import { ConnectionsPage } from "@/features/connections/ConnectionsPage";
 import { DeploymentGatePage } from "@/features/deployment-gate/DeploymentGatePage";
+import { ModelDetailPage } from "@/features/deployment-gate/ModelDetailPage";
 import { SourcesPage } from "@/features/deployment-gate/SourcesPage";
 import { DeploymentRecipesPage } from "@/features/deployment-recipes";
 import { DevChartsPage } from "@/features/dev-charts";
@@ -125,6 +126,7 @@ export const routes: RouteObject[] = [
           { path: "quality-gate/runs/:id", element: <RunReportPage /> },
           { path: "deployment-gate", element: <DeploymentGatePage /> },
           { path: "deployment-gate/sources", element: <SourcesPage /> },
+          { path: "deployment-gate/models/:id", element: <ModelDetailPage /> },
           { path: "diagnostics", element: <DiagnosticsPage /> },
           { path: "debug", element: <RequestDebugPage /> },
           { path: "alerts", element: <AlertsPage /> },
