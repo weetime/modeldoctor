@@ -175,7 +175,12 @@ export class SourceSyncService {
     if (routeName && !connectionId) {
       const conn = await this.connections.create(src.userId, {
         name: `gpustack/${m.name}`,
-        baseUrl: `${src.baseUrl}/v1`,
+        // Connection.baseUrl is the host root — every existing caller
+        // (quality-gate/endpoint-caller.ts, connection/discovery/probes/*)
+        // appends its own API path (e.g. `/v1/chat/completions`). GPUStack
+        // serves its OpenAI-compatible API at `/v1` from that root, so a
+        // bare host here (no `/v1` suffix) is what those callers expect.
+        baseUrl: src.baseUrl,
         apiKey: src.apiKey,
         model: routeName,
         customHeaders: "",

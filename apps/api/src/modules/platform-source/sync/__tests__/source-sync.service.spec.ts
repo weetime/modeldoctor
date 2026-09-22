@@ -126,7 +126,7 @@ beforeEach(async () => {
 });
 
 describe("SourceSyncService.reconcile", () => {
-  it("discovers model, creates connection against /v1 and first revision", async () => {
+  it("discovers model, creates connection against the source's host root and first revision", async () => {
     const r = await svc().reconcile(sourceId);
     expect(r).toMatchObject({ models: 1, revisionsCreated: 1, readyRevisions: [], removed: 0 });
     const dm = await prisma.discoveredModel.findFirstOrThrow({ where: { sourceId } });
@@ -134,7 +134,7 @@ describe("SourceSyncService.reconcile", () => {
     expect(connections.create).toHaveBeenCalledWith(
       userId,
       expect.objectContaining({
-        baseUrl: "http://gs/v1",
+        baseUrl: "http://gs",
         model: "qwen",
         category: "chat",
         serverKind: "vllm",
