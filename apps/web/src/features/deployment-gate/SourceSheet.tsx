@@ -78,27 +78,31 @@ export function SourceSheet({ open, onOpenChange, existing }: Props) {
 
   async function onSubmit(v: FormValues) {
     const clusterId = v.clusterId.trim() || null;
-    if (existing) {
-      await update.mutateAsync({
-        id: existing.id,
-        body: {
+    try {
+      if (existing) {
+        await update.mutateAsync({
+          id: existing.id,
+          body: {
+            name: v.name,
+            baseUrl: v.baseUrl,
+            clusterId,
+            enabled: v.enabled,
+            ...(v.apiKey ? { apiKey: v.apiKey } : {}),
+          },
+        });
+      } else {
+        await create.mutateAsync({
+          kind: "gpustack",
           name: v.name,
           baseUrl: v.baseUrl,
+          apiKey: v.apiKey,
           clusterId,
-          enabled: v.enabled,
-          ...(v.apiKey ? { apiKey: v.apiKey } : {}),
-        },
-      });
-    } else {
-      await create.mutateAsync({
-        kind: "gpustack",
-        name: v.name,
-        baseUrl: v.baseUrl,
-        apiKey: v.apiKey,
-        clusterId,
-      });
+        });
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error((e as Error).message || tCommon("errors.unknown"));
     }
-    onOpenChange(false);
   }
 
   const pending = create.isPending || update.isPending;
