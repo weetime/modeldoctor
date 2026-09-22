@@ -148,7 +148,15 @@ export function ModelDetailPage() {
           </h2>
           <RevisionTimeline
             revisions={revisions.data ?? []}
-            onCancelRun={(rid) => cancel.mutate(rid)}
+            onCancelRun={async (rid) => {
+              try {
+                await cancel.mutateAsync(rid);
+              } catch (e) {
+                toast.error(
+                  t("detail.cancelFailed", { error: e instanceof Error ? e.message : String(e) }),
+                );
+              }
+            }}
           />
         </section>
       </div>

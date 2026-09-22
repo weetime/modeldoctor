@@ -93,6 +93,7 @@
     "initialRevision": "初始版本",
     "noRunsForRevision": "该版本没有自动化运行",
     "cancelRun": "取消",
+    "cancelFailed": "取消失败：{{error}}",
     "steps": {
       "diagnostics": "诊断",
       "quality_gate": "质量门禁",

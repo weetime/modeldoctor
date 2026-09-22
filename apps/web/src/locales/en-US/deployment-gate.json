@@ -98,6 +98,7 @@
     "initialRevision": "Initial revision",
     "noRunsForRevision": "No automation runs for this revision",
     "cancelRun": "Cancel",
+    "cancelFailed": "Cancel failed: {{error}}",
     "steps": {
       "diagnostics": "Diagnostics",
       "quality_gate": "Quality gate",
