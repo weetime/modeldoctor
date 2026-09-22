@@ -45,8 +45,8 @@ function ModelRow({ model }: { model: DiscoveredModelPublic }) {
     try {
       await run.mutateAsync();
       toast.success(t("models.runQueued"));
-    } catch {
-      toast.error(t("models.runFailed"));
+    } catch (e) {
+      toast.error(t("models.runFailed", { error: e instanceof Error ? e.message : String(e) }));
       nav(`/deployment-gate/models/${model.id}`);
     }
   }

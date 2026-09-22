@@ -60,7 +60,7 @@
     },
     "runNow": "立即运行",
     "runQueued": "已加入队列",
-    "runFailed": "运行失败，请先在详情页完成自动化配置",
+    "runFailed": "运行失败：{{error}}",
     "noRun": "—",
     "enableNeedsConfig": "请先在详情页完成自动化配置"
   },

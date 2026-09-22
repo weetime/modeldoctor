@@ -65,7 +65,7 @@
     },
     "runNow": "Run now",
     "runQueued": "Queued",
-    "runFailed": "Run failed — finish the automation config on the detail page first",
+    "runFailed": "Run failed: {{error}}",
     "noRun": "—",
     "enableNeedsConfig": "Finish the automation config on the detail page first"
   },
