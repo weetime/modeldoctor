@@ -28,7 +28,7 @@ function isNonEmptyString(v: unknown): v is string {
  *   alert.explained     — `[ModelDoctor] alert <alertName> severity=<sev> connection=<name|id>`
  *   benchmark.*         — `[ModelDoctor] <eventType> <name|runId> [status=<s>] [connection=<id>]`
  *   diagnostics.failed  — same fallback as benchmark.*
- *   automation.*        — `[Deployment gate] <modelName> — <verdict> (trigger: <trigger>)`
+ *   automation.*        — `[ModelDoctor] <eventType> <modelName|discoveredModelId> [verdict=<v>] [trigger=<t>]`
  *
  * The fallback for unknown eventTypes mirrors the benchmark shape (name +
  * status + connection), since most workflow events follow that pattern.
@@ -43,10 +43,18 @@ export function formatText(body: DeliveryPayload): string {
   }
 
   if (ev === "automation.passed" || ev === "automation.failed" || ev === "automation.regressed") {
-    const modelName = isNonEmptyString(p.modelName) ? p.modelName : "(unknown model)";
-    const verdict = isNonEmptyString(p.verdict) ? p.verdict : "unknown";
-    const trigger = isNonEmptyString(p.trigger) ? p.trigger : "unknown";
-    return `[Deployment gate] ${modelName} — ${verdict} (trigger: ${trigger})`;
+    // Keeps the `[ModelDoctor]` prefix (see doc comment above) so DingTalk /
+    // Feishu bots configured with "ModelDoctor" as their security keyword
+    // still accept the message — DingTalk rejects non-matching content with
+    // errcode 310000 ("keywords not in content").
+    const name = isNonEmptyString(p.modelName)
+      ? p.modelName
+      : isNonEmptyString(p.discoveredModelId)
+        ? p.discoveredModelId
+        : "(unknown model)";
+    const verdict = isNonEmptyString(p.verdict) ? ` verdict=${p.verdict}` : "";
+    const trigger = isNonEmptyString(p.trigger) ? ` trigger=${p.trigger}` : "";
+    return `[ModelDoctor] ${ev} ${name}${verdict}${trigger}`;
   }
 
   if (ev === "alert.explained") {
