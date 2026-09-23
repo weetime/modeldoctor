@@ -228,6 +228,29 @@ jobs:
           kubectl -n modeldoctor-benchmarks get secret md-benchmark-storage \
             -o jsonpath='{.metadata.name}{"\n"}'
 
+      - name: 断言:必须活过 uninstall 的三个 Secret 都带 resource-policy=keep
+        run: |
+          set -euo pipefail
+          # PVC(Postgres/MinIO 数据)与 benchmarks 命名空间按设计会活过 helm uninstall,
+          # 承载"打开这些数据"的密钥/密码的三个 Secret 必须跟着一起活下来,否则
+          # "uninstall 后重装到同一命名空间"会:重新生成 CONNECTION_API_KEY_ENCRYPTION_KEY
+          # (幸存卷里所有已加密的第三方连接 API Key 永久无法解密),并重新生成内置 Postgres
+          # 密码(幸存的 PGDATA 只认初始化时那一个,wait-for-db 会一路重试到超时)。
+          # 这个断言防的就是有人"顺手"摘掉这三条注解——注解没了不会有任何红灯,
+          # 只会在客户第一次卸载重装时炸。
+          fail=0
+          for s in md-modeldoctor-secrets md-modeldoctor-postgres md-modeldoctor-minio; do
+            policy="$(kubectl -n modeldoctor get secret "$s" \
+              -o jsonpath='{.metadata.annotations.helm\.sh/resource-policy}')"
+            if [ "$policy" != "keep" ]; then
+              echo "::error::Secret $s 缺少 helm.sh/resource-policy=keep(实际值: '${policy}') —— uninstall 后重装会丢失密钥/密码" >&2
+              fail=1
+            else
+              echo "OK — $s 带 resource-policy=keep"
+            fi
+          done
+          exit $fail
+
       - name: 断言:helm upgrade 可重入,五个 keepOrGenerate 字段都不变
         run: |
           set -euo pipefail

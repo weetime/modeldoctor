@@ -311,10 +311,103 @@ helm rollback md <REVISION> --namespace modeldoctor
   它是幂等的(`prisma migrate deploy` 只应用未应用过的迁移;`seed.ts` 对内置数据做
   upsert),正常情况下秒级完成,不需要额外操作。
 
-> 下面「初始管理员」「备份」「排障」三节里的示例命令,均假设 release 名为 `md`、
-> 未设置 `nameOverride`/`fullnameOverride`(资源名前缀因而是 `md-modeldoctor`)。如果你的
-> 部署改过这些,先用 `kubectl get pods,secrets -n <namespace>` 确认实际资源名再替换命令里
-> 的名字。
+> 下面「卸载」「初始管理员」「备份」「排障」几节里的示例命令,均假设 release 名为 `md`、
+> 命名空间为 `modeldoctor`、未设置 `nameOverride`/`fullnameOverride`(资源名前缀因而是
+> `md-modeldoctor`)。如果你的部署改过这些,先用 `kubectl get pods,secrets -n <namespace>`
+> 确认实际资源名再替换命令里的名字。
+
+## 卸载
+
+```bash
+helm uninstall md --namespace modeldoctor
+```
+
+**`helm uninstall` 不是"清空环境"。** 这个 chart 有意让所有承载数据和身份的对象活过卸载,
+所以卸载之后重装默认是"接着原来的数据继续用",不是从零开始。想彻底清空必须额外手工删除。
+
+### 卸载后仍然留在集群里的东西
+
+| 对象 | 为什么留 |
+|---|---|
+| `md-modeldoctor-postgres-0` / `md-modeldoctor-minio-0` 的 PVC | StatefulSet 的 `volumeClaimTemplates` 建出来的 PVC,Kubernetes 本身就不会随 StatefulSet 删除而删除——这是 K8s 的行为,不是 chart 的选择。数据库和对象存储的全部数据都在里面 |
+| Secret `md-modeldoctor-secrets` | 带 `helm.sh/resource-policy: keep`。里面的 `CONNECTION_API_KEY_ENCRYPTION_KEY` 是解开库内全部第三方连接 API Key / LLM judge 密钥的唯一钥匙——它和上面幸存的 Postgres 卷是一对,拆散就再也配不回来 |
+| Secret `md-modeldoctor-postgres` | 带 `keep`。Postgres 镜像只在初始化空 `PGDATA` 时用 `POSTGRES_PASSWORD`,幸存的卷已经初始化过,密码必须跟着卷一起留存 |
+| Secret `md-modeldoctor-minio` | 带 `keep`。MinIO root 凭据虽然每次启动都从环境变量读、换掉也能起,但备份脚本/`mc alias`/外部监控可能已经固化了这份凭据 |
+| 命名空间 `modeldoctor-benchmarks` | 带 `keep`。里面可能还留着压测运行历史(Job/Pod/日志)供事后排查 |
+| Job `md-modeldoctor-bucket-init` 及其 Pod | 这是个 `post-install,post-upgrade` hook,hook 资源不被 release 对象跟踪,`helm uninstall` 不会清理它(它的 `hook-delete-policy: before-hook-creation` 只在下一次 hook 创建前生效)。留着无害,是建桶那一步的日志留档 |
+
+**会被删掉的:** Deployment、Service、Ingress、StatefulSet(PVC 不删)、ServiceAccount、
+Role/RoleBinding,以及 benchmarks 命名空间里的 Secret `md-benchmark-storage`。
+`md-benchmark-storage` 不需要 `keep`——它的内容完全由上面那三个带 `keep` 的 Secret 推导出来
+(S3 凭据来自 `md-modeldoctor-minio`),重装时会被原样重建出同一份值。
+
+### 重装到幸存的数据上(最常见的路径)
+
+```bash
+# release 名和命名空间必须与上次完全一致
+helm install md deploy/charts/modeldoctor --namespace modeldoctor -f <你上次用的 values 文件>
+```
+
+三个带 `keep` 的 Secret 上残留着 Helm 写的 `meta.helm.sh/release-name` /
+`meta.helm.sh/release-namespace` 注解,所以同名同命名空间的重装会直接认领它们,密钥和密码
+原封不动,应用连上的还是原来那套数据。
+
+**换 release 名或换命名空间重装,等于把数据和密钥拆散——务必先读完这段。** 三个带 `keep` 的
+Secret 名字里含 release 名(`<release>-modeldoctor-secrets` 等),换名字就不会命中它们,
+chart 会生成一套全新密钥;而幸存的 PVC 还在原地,里面是用旧密钥加密的数据。默认配置
+(`benchmarks.createNamespace=true` 且 `benchmarks.namespace` 与 release 命名空间不同)下
+这一步会被 benchmarks 命名空间挡住,报一个明确的错:
+
+```
+Error: INSTALLATION FAILED: rendered manifests contain a resource that already exists.
+Unable to continue with install: Namespace "modeldoctor-benchmarks" ... invalid ownership
+metadata; annotation validation error: key "meta.helm.sh/release-name" must equal "md2":
+current value is "md"
+```
+
+这个命名空间名字不含 release 名、而且带 `keep`,所以它是这条路径上唯一会响亮拦住你的对象。
+**但别把它当成安全网**:单命名空间模式(`benchmarks.namespace` = release 命名空间)或
+`benchmarks.createNamespace=false` 时没有这个 Namespace 对象,换名重装会静默成功,而库里
+所有加密字段从此无法解密。要换 release 名/命名空间,正确做法是先按下面「彻底清除」把旧对象
+删干净再装;如果是必须保留数据的迁移,则按「恢复」一节把旧的
+`auth.connectionApiKeyEncryptionKey`(以及内置 Postgres 密码 `database.postgres.password`)
+显式传进新 release。
+
+### 彻底清除(确认数据不再需要)
+
+> **不可逆。** 执行前确认已经按「备份」一节导出过数据库和对象存储,或者确实不需要它们。
+
+```bash
+NS=modeldoctor
+RELEASE=md
+
+helm uninstall "$RELEASE" --namespace "$NS"
+
+# 1. 三个带 keep 的 Secret(不删的话重装会沿用旧密钥/旧密码)
+kubectl -n "$NS" delete secret \
+  "${RELEASE}-modeldoctor-secrets" \
+  "${RELEASE}-modeldoctor-postgres" \
+  "${RELEASE}-modeldoctor-minio" --ignore-not-found
+
+# 2. Postgres / MinIO 的数据卷(数据在这里)
+kubectl -n "$NS" delete pvc -l app.kubernetes.io/instance="$RELEASE"
+# 上面这条按 label 删。如果 PVC 上没有你期望的 label(改过 fullnameOverride 等),
+# 先 `kubectl -n "$NS" get pvc` 看一眼实际名字再按名字删。
+
+# 3. 建桶 hook 留下的 Job/Pod(hook 资源不受 release 跟踪,uninstall 不会清理)
+kubectl -n "$NS" delete job "${RELEASE}-modeldoctor-bucket-init" --ignore-not-found
+
+# 4. 压测命名空间(连同里面的历史 Job/Pod/日志)
+kubectl delete namespace modeldoctor-benchmarks --ignore-not-found
+
+# 5. 如果这个命名空间是专门为 ModelDoctor 建的,最后连它一起删
+#    (这一步做了的话,上面第 1~3 步可以省掉——删命名空间会级联清掉里面所有对象)
+kubectl delete namespace "$NS" --ignore-not-found
+```
+
+做完这几步,下一次 `helm install` 才是真正的全新安装。可以这样确认:装完之后
+`kubectl -n <ns> get secret <release>-modeldoctor-secrets -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}'`
+的值应该与清除前记录的那一份不同。
 
 ## 初始管理员
 
