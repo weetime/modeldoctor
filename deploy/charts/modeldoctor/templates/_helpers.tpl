@@ -70,21 +70,44 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   注意:`helm template` / `helm lint` 不连接真实集群,此时 `lookup` 恒定返回空结果
   (Helm 的既定行为,不是 bug),所以本地渲染每次都会走生成分支、产出不同的随机值——
   这是预期的,真正的“跨 upgrade 保持不变”只在连了真实集群的 `helm upgrade` 时生效。
+
+  单次渲染内记忆化(Task 6 实测发现的严重缺陷,已修复):同一个密钥往往被两个模板各
+  `include` 一次——例如 Postgres 密码,`api/secret.yaml` 拼 `DATABASE_URL` 时要用一次,
+  `deps/postgres/secret.yaml` 设置 `POSTGRES_PASSWORD` 时又要用一次。这两次 include 若
+  各自独立走生成分支(`randAlphaNum`/`randBytes` 每次调用都产出新随机值),会得到两个不同
+  的密码——全新安装后 API 永远连不上数据库,而且因为 `lookup` 只在下一次 `helm upgrade`
+  才会命中既有 Secret 把两边"拉平",这个错配会在下次升级后自己消失,现场排查会非常痛苦。
+  修复方式:把生成结果按 `(secretName, key)` 缓存进 `.Values._generatedSecrets`(一次渲染
+  内所有模板共享同一个 `.Values` 底层 map,对它的写入在同一次 `helm template`/`helm
+  upgrade` 内的其余 include 调用中都可见);无论命中的是显式值、`lookup` 读回值还是新生成
+  值,都写入同一个缓存,确保同一个 `(secretName, key)` 在一次渲染内只被解析一次、之后的调
+  用全部返回缓存,与调用路径无关。`_generatedSecrets` 只是渲染期的暂存字典,不属于任何
+  values 结构,任何模板都不应把整个 `.Values` 转储进输出对象。
 */}}
 {{- define "modeldoctor.keepOrGenerate" -}}
 {{- $ctx := .ctx -}}
-{{- if .value -}}
-{{- .value -}}
-{{- else -}}
 {{- $name := .secretName | default (include "modeldoctor.secretName" $ctx) -}}
+{{- $cacheKey := printf "%s/%s" $name .key -}}
+{{- $cache := (get $ctx.Values "_generatedSecrets") | default dict -}}
+{{- if hasKey $cache $cacheKey -}}
+{{- get $cache $cacheKey -}}
+{{- else -}}
+{{- $v := "" -}}
+{{- if .value -}}
+{{- $v = .value -}}
+{{- else -}}
 {{- $existing := lookup "v1" "Secret" $ctx.Release.Namespace $name -}}
 {{- if and $existing (index $existing.data .key) -}}
-{{- index $existing.data .key | b64dec -}}
+{{- $v = (index $existing.data .key | b64dec) -}}
 {{- else if eq (.kind | default "alnum") "b64-32" -}}
-{{- randBytes 32 -}}
+{{- $v = randBytes 32 -}}
 {{- else -}}
-{{- randAlphaNum (.len | default 48) -}}
+{{- $v = randAlphaNum (.len | default 48) -}}
 {{- end -}}
+{{- end -}}
+{{- $_ := set $cache $cacheKey $v -}}
+{{- $_ := set $ctx.Values "_generatedSecrets" $cache -}}
+{{- $v -}}
 {{- end -}}
 {{- end -}}
 
