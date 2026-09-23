@@ -98,12 +98,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- include "modeldoctor.keepOrGenerate" (dict "ctx" . "key" "rootPassword" "value" .Values.storage.minio.rootPassword "secretName" (include "modeldoctor.minio.fullname" .)) -}}
 {{- end -}}
 
+{{/*
+  仅适用于两种情形:内置 Postgres(database.bundled=true),或外接数据库且直接给了
+  database.external.url。第三种合法情形——外接数据库 + database.external.existingSecret
+  (没有 url)——不要调用这个 helper:那种情形下 DATABASE_URL 必须通过 secretKeyRef 直接从
+  既有 Secret 注入到容器(见 Task 4 的 deployment/secret 模板),这个 helper 拿不到 Secret
+  里的值,渲染期会直接 fail,而不是悄悄吐出空字符串——空字符串会被写进 chart 自己生成的
+  Secret,产生一个连接串为空的 DATABASE_URL,一路无声到 Pod 启动才被 zod 校验拦下,
+  CrashLoop 且报错信息与真实原因（模式选错）脱节。
+*/}}
 {{- define "modeldoctor.databaseUrl" -}}
 {{- if .Values.database.bundled -}}
 {{- $pw := include "modeldoctor.postgresPassword" . -}}
 {{- printf "postgresql://%s:%s@%s:5432/%s?schema=public" .Values.database.postgres.username $pw (include "modeldoctor.postgres.fullname" .) .Values.database.postgres.database -}}
-{{- else -}}
+{{- else if .Values.database.external.url -}}
 {{- .Values.database.external.url -}}
+{{- else -}}
+{{- fail "database.external.existingSecret 模式下不要调用 modeldoctor.databaseUrl:DATABASE_URL 必须通过 secretKeyRef 从既有 Secret 注入(见 Task 4 的 deployment/secret 模板),这个 helper 只处理内置 Postgres 或 database.external.url 两种情形。" -}}
 {{- end -}}
 {{- end -}}
 

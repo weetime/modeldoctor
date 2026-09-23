@@ -67,6 +67,8 @@ database:
   external:
     url: ""                   # postgresql://user:pass@host:5432/db?schema=public(bundled=false 时二选一)
     existingSecret: ""        # 或者提供一个已存在的 Secret,key 名见 existingSecretKey(bundled=false 时二选一)
+                               # 用 existingSecret 时,chart 以 secretKeyRef 把 DATABASE_URL 直接注入容器,
+                               # 不会把连接串写进 chart 自己生成的 Secret,也不经过 modeldoctor.databaseUrl。
     existingSecretKey: url
   postgres:
     image: postgres:16-alpine
