@@ -21,28 +21,45 @@ usage() {
 
 选项:
   --tag <tag>           必填,镜像 tag(通常是 git tag,如 v0.1.0)
-  --push                构建后推送(不加则只在本地构建 amd64 供验证)
+  --push                构建后推送(不加则只在本地构建宿主机架构镜像供验证)
   --platforms <list>    默认 linux/amd64,linux/arm64
   --registry <host>     默认 swr.cn-north-4.myhuaweicloud.com
   --project <org>       默认 modeldoctor
 环境变量 REGISTRY / PROJECT / IMAGE_NAME / PLATFORMS 同名可覆盖。
-推送前需先 docker login <registry>。
+前置条件: 推送前需先 docker login <registry>;`docker manifest` 依赖的
+experimental CLI 特性由脚本自动开启,无需手动配置。
 USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --tag) TAG="$2"; shift 2 ;;
+    --tag)
+      [[ $# -ge 2 ]] || { echo "错误: --tag 需要一个值" >&2; usage; exit 1; }
+      TAG="$2"; shift 2 ;;
     --push) PUSH=1; shift ;;
-    --platforms) PLATFORMS="$2"; shift 2 ;;
-    --registry) REGISTRY="$2"; shift 2 ;;
-    --project) PROJECT="$2"; shift 2 ;;
+    --platforms)
+      [[ $# -ge 2 ]] || { echo "错误: --platforms 需要一个值" >&2; usage; exit 1; }
+      PLATFORMS="$2"; shift 2 ;;
+    --registry)
+      [[ $# -ge 2 ]] || { echo "错误: --registry 需要一个值" >&2; usage; exit 1; }
+      REGISTRY="$2"; shift 2 ;;
+    --project)
+      [[ $# -ge 2 ]] || { echo "错误: --project 需要一个值" >&2; usage; exit 1; }
+      PROJECT="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数: $1" >&2; usage; exit 1 ;;
   esac
 done
 
 [[ -n "$TAG" ]] || { echo "错误: --tag 必填" >&2; usage; exit 1; }
+
+# `docker manifest` 命令历史上是 CLI 的 experimental 特性,需要
+# DOCKER_CLI_EXPERIMENTAL=enabled 或 ~/.docker/config.json 里的
+# "experimental": "enabled" 才能用。Docker Desktop 默认已开启,但 Task 11
+# 的 release workflow 跑在 GitHub Actions 的 vanilla Docker Engine 上,
+# 默认未开启。这里显式导出:已开启的环境里是无害的幂等设置,CI 里能省掉
+# 一次排障。
+export DOCKER_CLI_EXPERIMENTAL=enabled
 
 REPO="${REGISTRY}/${PROJECT}/${IMAGE_NAME}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
