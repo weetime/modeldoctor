@@ -3,6 +3,22 @@
   benchmarks.createNamespace=false(客户预先建好命名空间)或 benchmarks.namespace 与
   .Release.Namespace 相同(单命名空间模式)都不应该产出这个 Namespace,否则要么破坏客户
   自己对命名空间生命周期的管理,要么在同一个命名空间里重复声明一次 Namespace 对象。
+
+  这是一个普通(非 hook)模板,故意不加 helm.sh/hook 注解:
+    - 排序:Helm 对普通清单按 kind 做内置排序,Namespace 天然排在 Secret/Role/RoleBinding
+      之前,所以"命名空间先于其内部资源建立"这个 Step 1 的顺序要求已经被内置排序满足,
+      不需要额外的 hook 语义。
+    - 之前的版本给这里加过 `helm.sh/hook: pre-install,pre-upgrade` +
+      `helm.sh/hook-delete-policy: before-hook-creation`——这是一个严重的语义错误:
+      before-hook-creation 会在**每次** hook 触发前删除同名资源,包括普通的
+      `helm upgrade`(哪怕只是升级镜像 tag)。后果是每次 upgrade 都会把整个 benchmarks
+      命名空间删掉再重建,级联清空里面正在跑的压测 Job、历史 Pod(连带日志)和每次运行
+      各自的 Secret——这是不可接受的数据丢失。同时语义还反了:hook 资源不受 Helm 的
+      release 对象跟踪管理,`helm uninstall` 时反而不会被清理,变成孤儿命名空间。
+  加 `helm.sh/resource-policy: keep` 是为了显式表达相反的、真正想要的语义:`helm uninstall`
+  不应该顺手删掉这个命名空间——里面可能还留着压测运行历史(Job/Pod/日志)供事后排查,
+  不该随 release 卸载而消失。彻底清理需要运维在确认不再需要这些历史后自己执行
+  `kubectl delete ns <benchmarks.namespace>`。
 */ -}}
 {{- if and .Values.benchmarks.createNamespace (ne .Values.benchmarks.namespace .Release.Namespace) }}
 apiVersion: v1
@@ -11,12 +27,5 @@ metadata:
   name: {{ .Values.benchmarks.namespace }}
   labels: {{- include "modeldoctor.labels" . | nindent 4 }}
   annotations:
-    # Helm hook:确保这个命名空间先于同一次 install/upgrade 里落在它内部的其它资源
-    # (Role、RoleBinding、md-benchmark-storage Secret)建立——这些资源是普通(非 hook)
-    # 清单,如果命名空间还不存在,apply 会直接失败。hook-weight 取一个足够小的负数,
-    # 保证在其它 pre-install/pre-upgrade hook(如果未来引入)之前执行;
-    # before-hook-creation 让重复 install/upgrade 时先删再建,避免残留状态。
-    helm.sh/hook: pre-install,pre-upgrade
-    helm.sh/hook-weight: "-20"
-    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/resource-policy: keep
 {{- end }}
