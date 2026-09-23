@@ -49,9 +49,12 @@ jobs:
           # 注意: runner 镜像本身目前仍由人工执行
           # `./tools/build-runner-images.sh --push` 构建并推送 —— 这条 release 流水线
           # 只负责在离线清单里引用正确的 tag,不会替你构建/推送 runner 镜像。
-          RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/)"
+          # `|| true` 让 git 命令本身失败(而不仅仅是返回空)时也不会在 set -e 下
+          # 提前中止——统一交给下面的 -z 判断给出清晰的 ::error:: 提示,而不是让运维
+          # 看到一条裸的 git 报错。
+          RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/ 2>/dev/null || true)"
           if [[ -z "$RUNNER_TAG" ]]; then
-            echo "::error::无法从 apps/benchmark-runner/ 的提交历史推导 runner 镜像 tag(git log 返回空)——拒绝用应用版本号静默顶替,请检查 checkout 的 fetch-depth 或该子树是否存在提交历史"
+            echo "::error::无法从 apps/benchmark-runner/ 的提交历史推导 runner 镜像 tag(git log 返回空或执行失败)——拒绝用应用版本号静默顶替,请检查 checkout 的 fetch-depth 或该子树是否存在提交历史"
             exit 1
           fi
           echo "runner tag = ${RUNNER_TAG}(git log -1 --format=%h -- apps/benchmark-runner/)"
@@ -103,8 +106,16 @@ jobs:
           # __APP_TAG__ = 本次 release 的应用镜像 tag(即这个 git tag 本身)。
           # __RUNNER_TAG__ = runner 镜像 tag,来自上面 "Derive runner image tag" 步骤
           # 推导出的短 SHA(与 tools/build-runner-images.sh 的规则一致),不是应用版本号。
-          sed -e "s/__APP_TAG__/${GITHUB_REF_NAME}/g" -e "s/__RUNNER_TAG__/${RUNNER_TAG}/g" \
-            deploy/offline/images.txt > "dist/release/modeldoctor-offline-images-${GITHUB_REF_NAME}.txt"
+          MANIFEST_OUT="dist/release/modeldoctor-offline-images-${GITHUB_REF_NAME}.txt"
+          {
+            echo "# 本清单由 release 流水线自动生成,仅解析了 __APP_TAG__/__RUNNER_TAG__ 两个版本占位符。"
+            echo "# 仍保留的 __POSTGRES_IMAGE__/__MINIO_IMAGE__/__MC_IMAGE__/__CURL_IMAGE__ 占位符是有意为之,"
+            echo "# 不是清单损坏——这四个依赖镜像的具体版本由 deploy/offline/pull-and-save.sh 在实际打包时"
+            echo "# 通过 helm template 从 chart 的 values.yaml 解析(见 deploy/offline/README.md),直接跑"
+            echo "# 该脚本即可得到解析后的完整清单。"
+            echo "#"
+            sed -e "s/__APP_TAG__/${GITHUB_REF_NAME}/g" -e "s/__RUNNER_TAG__/${RUNNER_TAG}/g" deploy/offline/images.txt
+          } > "$MANIFEST_OUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -16,8 +16,11 @@ usage() {
      两类已知的良性来源:行内标注了 "sha256"(镜像 digest、依赖锁文件 hash、
      checksums 文件——这才是仓库里 64 位十六进制串的绝大多数合法来源),以及
      单一字符重复 64 次的占位值(如测试用例里的全 0 hash)
-  3. `docker login ... -p <字面量密码>` —— `-p` 后直接跟一个不是变量引用/占位符
-     (不以 $ 或 < 开头,如 $VAR、${{ secrets.X }}、<SWR_PASSWORD>)的明文口令
+  3. 登录类命令里的字面量密码参数 —— `-p`/`--password`/`--password=` 后直接跟
+     一个不是变量引用/占位符/掩码(不以 $、<、*、- 开头,如 $VAR、
+     ${{ secrets.X }}、<SWR_PASSWORD>、***)的明文口令。覆盖 `docker login`、
+     `helm registry login`、`crane auth login`、`skopeo login` 这类工具的
+     login 子命令,不局限于 `docker login`,也不局限于短选项 `-p`
   4. 云厂商 access key 前缀 —— AKIA(AWS)、LTAI(阿里云),后接 12 位以上
      大写字母/数字,总长 16 位以上
 
@@ -100,9 +103,37 @@ if [[ -n "$hex_raw" ]]; then
 fi
 report "64 位十六进制字符串" "$hex_matches"
 
-# 3. docker login 明文密码(-p 后不是 $ 开头的变量引用,也不是 < 开头的文档占位符)
-dockerlogin_matches="$(grep -rInE "${GREP_EXCLUDES[@]}" 'docker login[^$]*-p[[:space:]]+[^$<[:space:]-][^[:space:]]*' "${TARGETS[@]}" 2>/dev/null || true)"
-report "docker login 明文密码(-p 字面量,非 \$VAR/<占位符> 引用)" "$dockerlogin_matches"
+# 3. 登录类命令的字面量密码参数。先按"识别到的 login 命令 + 之后出现
+#    -p/--password(=)"筛出候选行(宽网),再逐行提取每个 -p/--password 出现处
+#    的值,过滤掉 $VAR、<占位符>、***掩码、或后面紧跟另一个 flag(以 - 开头,
+#    如 --password-stdin 那种不带字面量值的用法)的情况。
+LOGIN_CMD_ALT='(docker login|helm registry login|crane auth login|skopeo login)'
+DOCKERLOGIN_PATTERN="${LOGIN_CMD_ALT}"'[^$]*(-p|--password)(=|[[:space:]])'
+dockerlogin_raw="$(grep -rInE "${GREP_EXCLUDES[@]}" "$DOCKERLOGIN_PATTERN" "${TARGETS[@]}" 2>/dev/null || true)"
+dockerlogin_matches=""
+if [[ -n "$dockerlogin_raw" ]]; then
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    flag_hits="$(printf '%s' "$line" | grep -oE '(-p|--password)(=|[[:space:]]+)[^[:space:]]*' || true)"
+    [[ -z "$flag_hits" ]] && continue
+    is_literal=0
+    while IFS= read -r fh; do
+      [[ -z "$fh" ]] && continue
+      val="$(printf '%s' "$fh" | sed -E 's/^(-p|--password)(=|[[:space:]]+)//')"
+      val="${val#\"}"; val="${val%\"}"
+      val="${val#\'}"; val="${val%\'}"
+      first="${val:0:1}"
+      case "$first" in
+        '$'|'<'|'*'|'-'|'') continue ;;  # 变量引用 / 占位符 / 掩码 / 下一个 flag / 空值
+      esac
+      is_literal=1
+      break
+    done <<< "$flag_hits"
+    [[ "$is_literal" -eq 1 ]] && dockerlogin_matches+="${line}"$'\n'
+  done <<< "$dockerlogin_raw"
+  dockerlogin_matches="${dockerlogin_matches%$'\n'}"
+fi
+report "登录命令明文密码(-p/--password 字面量,非 \$VAR/<占位符>/*** 引用;覆盖 docker login/helm registry login/crane auth login/skopeo login)" "$dockerlogin_matches"
 
 # 4. 云厂商 access key 前缀(AKIA / LTAI + 12 位以上大写字母数字,总长 16+)
 cloudkey_matches="$(grep -rInE "${GREP_EXCLUDES[@]}" '\b(AKIA|LTAI)[A-Z0-9]{12,}\b' "${TARGETS[@]}" 2>/dev/null || true)"
