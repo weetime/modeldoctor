@@ -1,14 +1,25 @@
-# ModelDoctor 离线交付包
+# ModelDoctor 离线交付包 —— 打包侧说明
+
+> **这份文件是给打包工程师看的**(有网环境、手上有这个 git 仓库),所以命令都以仓库根目录
+> 为起点(`./deploy/offline/...`)。
+>
+> 现场工程师看的是另一份:`field-README.md`——`pull-and-save.sh` 会把它复制进交付目录、
+> 改名为 `README.md`。现场机器上没有这个仓库,那份文档里的命令一律相对交付目录书写
+> (`./load-and-push.sh`、`helm install ... ./modeldoctor-<版本>.tgz`)。
+> **改动交付流程时两份都要同步**,尤其是任何带路径的命令。
 
 给完全离网(air-gapped)的客户现场用的镜像交付流程:有网侧拉取镜像并打包,通过离线介质
 (U 盘/移动硬盘/内网文件传输)带到现场,现场侧再把镜像重打标签推送到客户自己的仓库。
 
 两个脚本对应两侧:
 
-- `pull-and-save.sh` —— 有网侧,产出一个 tar + chart tgz + values 示例的交付目录。
+- `pull-and-save.sh` —— 有网侧,产出自描述的交付目录(镜像 tar + chart tgz + values 示例
+  + `load-and-push.sh` + 现场侧 `README.md`)。
 - `load-and-push.sh` —— 现场侧,消费上面的 tar,推送到客户仓库并打印 values 覆盖片段。
+  它由 `pull-and-save.sh` 复制进交付目录,现场直接 `./load-and-push.sh` 运行。
 
-`images.txt` 是两者共享的镜像清单(仅 `pull-and-save.sh` 读取),按 tier 分两段。
+`images.txt` 是镜像清单(仅 `pull-and-save.sh` 读取,不进交付包),按 tier 分两段。
+`field-README.md` 是上面说的现场侧文档模板。
 
 ## 分层(tier)
 
@@ -62,25 +73,51 @@ Postgres StatefulSet / MinIO StatefulSet / 建桶 Job / helm-test Pod 各自的�
 
 ## 有网侧:拉取并打包
 
+### 两个 tag 参数怎么取(`--app-tag` 与 `--runner-tag` 规则不同,别填成同一个值)
+
+- **`--app-tag`** = 这次要交付的应用镜像 tag,就是 release 用的那个 git tag 原样(**带 `v`**),
+  例如 `v0.3.0`。`tools/build-app-image.sh --tag "$GITHUB_REF_NAME" --push` 推的就是它,
+  chart 的 `appVersion` 也是它。
+- **`--runner-tag`** = 压测 runner 镜像(`md-runner-*`)的 tag,它**不跟应用共用版本号**,
+  而是 `apps/benchmark-runner/` 子树最近一次提交的短 SHA——这是
+  `tools/build-runner-images.sh` 实际打出来的 tag,也是 `.github/workflows/release.yml`
+  的 "Derive runner image tag" 步骤推导的值。填一个应用版本号(`v0.3.0`)进去,
+  `docker pull` 会直接 404,因为仓库里根本不存在那个 tag。
+
+  在仓库根目录执行下面这条命令取值:
+
+  ```bash
+  git log -1 --format=%h -- apps/benchmark-runner/
+  ```
+
 ```bash
-# 先登录能拉到应用/runner 镜像的仓库(把占位符换成真实账号密码,不要把真实凭据写进任何
-# 提交到版本库的文件或聊天记录):
-docker login -u <SWR_USERNAME> -p <SWR_PASSWORD> swr.cn-north-4.myhuaweicloud.com
+# 先登录能拉到应用/runner 镜像的仓库。用 --password-stdin,不要用 -p <明文>:
+# 命令行参数会进 shell 历史和 ps 进程列表。(release 流水线用的也是 --password-stdin。)
+printf '%s' '<SWR_PASSWORD>' | \
+  docker login swr.cn-north-4.myhuaweicloud.com -u '<SWR_USERNAME>' --password-stdin
+
+RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/)"
 
 ./deploy/offline/pull-and-save.sh \
   --tier core \
   --app-tag v0.3.0 \
-  --runner-tag v0.3.0 \
+  --runner-tag "$RUNNER_TAG" \
   --out ./dist/offline
 ```
 
-产出目录内容:
+产出目录内容(这是一个**自描述**的目录——现场只需要这个目录,不需要仓库):
 
 - `modeldoctor-images-<tier>-<apptag>.tar` —— 该 tier 全部镜像的单个 `docker save` 归档。
 - `modeldoctor-<chart版本>.tgz` —— `helm package` 打出的 chart 包(`--app-version` 已设成
-  `--app-tag` 的值,`image.tag` 留空时会回退到这个 `appVersion`)。
-- `values.yaml` / `values-external.yaml` / `values-4pd.yaml` —— chart 自带的三份 values
-  示例,原样复制,现场按场景挑一份做起点。
+  `--app-tag` 的值,`image.tag` 留空时会回退到这个 `appVersion`)。**现场的 `helm install`
+  装的就是这个文件**,不是 `deploy/charts/modeldoctor` 那个仓库路径。
+- `load-and-push.sh` —— 从 `deploy/offline/` 复制进来的现场侧脚本,现场直接
+  `./load-and-push.sh` 运行。
+- `README.md` —— 从 `deploy/offline/field-README.md` 复制并改名而来的现场侧说明,里面的
+  命令全部相对交付目录书写。
+- `values.yaml` / `values-external.yaml` —— chart 自带的两份 values 示例,现场按场景挑一份
+  做起点。**`values-4pd.yaml` 是本团队自用集群的示例(含内网地址),有意不外发**;
+  脚本里这三份是逐个列出的白名单,不是 `values-*.yaml` 通配——将来新增内部示例默认不外发。
 - `manifest.txt` —— 每行一个镜像及其 digest(有网侧 `docker pull` 时拿到的
   `RepoDigests`,没有仓库关联信息时退化成本地 Image Id),是"这次打包时到底拉的是哪个
   内容"的留档记录,供审计/排查用。**注意**:`docker load` 之后本地镜像不带任何仓库关联,
@@ -90,21 +127,27 @@ docker login -u <SWR_USERNAME> -p <SWR_PASSWORD> swr.cn-north-4.myhuaweicloud.co
   校验:离线介质拷贝完先核对这个文件,逐行比对现场重新计算的结果。
 
 先用 `--dry-run` 确认清单再动手拉取(不产生任何文件、不发起任何网络请求以外的操作,只跑一次
-`helm template` 做依赖镜像解析):
+`helm template` 做依赖镜像解析;同时会列出将要生成的交付目录内容):
 
 ```bash
-./deploy/offline/pull-and-save.sh --tier full --app-tag v0.3.0 --runner-tag v0.3.0 --dry-run
+./deploy/offline/pull-and-save.sh --tier full --app-tag v0.3.0 \
+  --runner-tag "$(git log -1 --format=%h -- apps/benchmark-runner/)" --dry-run
 ```
 
 其余参数(`--out` 默认 `./dist/offline`、`--platform` 默认 `linux/amd64`)见 `--help`。
 
 ## 现场侧:导入并推送
 
-```bash
-# 先把有网侧的输出目录整体拷进现场机器,再登录客户自己的仓库:
-docker login -u <REGISTRY_USERNAME> -p <REGISTRY_PASSWORD> registry.customer.local:5000
+> 完整的现场步骤在交付目录自带的 `README.md` 里(源文件是本目录的 `field-README.md`)。
+> 这里只是给打包工程师一个概览,**不要**照抄下面的路径去现场执行——现场的工作目录是交付
+> 目录本身,脚本是 `./load-and-push.sh`,chart 是 `./modeldoctor-<版本>.tgz`。
 
-./deploy/offline/load-and-push.sh \
+```bash
+# 把有网侧的输出目录整体拷进现场机器,cd 进去,再登录客户自己的仓库:
+printf '%s' '<REGISTRY_PASSWORD>' | \
+  docker login registry.customer.local:5000 -u '<REGISTRY_USERNAME>' --password-stdin
+
+./load-and-push.sh \
   --archive ./modeldoctor-images-core-v0.3.0.tar \
   --registry registry.customer.local:5000 \
   --project modeldoctor
@@ -112,22 +155,24 @@ docker login -u <REGISTRY_USERNAME> -p <REGISTRY_PASSWORD> registry.customer.loc
 
 脚本会:
 
-1. 直接读 tar 自带的 `manifest.json`(docker save 的标准产物)得到镜像列表——现场只需要这一
-   个 tar 文件,不需要额外携带 `images.txt` 或 chart 源码。
+1. 直接读 tar 自带的 `manifest.json`(docker save 的标准产物)得到镜像列表——镜像清单这件事
+   上只需要这一个 tar,不需要额外携带 `images.txt` 或 chart 源码。
 2. `docker load` 之后,把每个镜像重打标签成 `<registry>/<project>/<原仓库最后一段>:<原tag>`
-   并推送(如 `swr.../md-runner-guidellm:v0.3.0` → `<registry>/modeldoctor/md-runner-guidellm:v0.3.0`)。
+   并推送(如 `swr.../md-runner-guidellm:<runner短SHA>` → `<registry>/modeldoctor/md-runner-guidellm:<runner短SHA>`)。
 3. 在 stdout 打印一段 `values-offline.yaml` 片段(`image.*`、`benchmarks.runnerImages.*`、
    `storage.minio.image` / `mcImage`、`database.postgres.image`、`test.image`),把它保存
    成文件后可以直接:
 
    ```bash
-   helm install modeldoctor deploy/charts/modeldoctor -f values-offline.yaml -f <前面复制来的场景 values>
+   helm install modeldoctor ./modeldoctor-<chart版本>.tgz \
+     --namespace modeldoctor --create-namespace \
+     -f values-offline.yaml -f <同目录里的 values.yaml 或 values-external.yaml>
    ```
 
 先用 `--dry-run` 看重打标签计划和 values 片段,不落地任何 docker 操作:
 
 ```bash
-./deploy/offline/load-and-push.sh --archive ./modeldoctor-images-core-v0.3.0.tar \
+./load-and-push.sh --archive ./modeldoctor-images-core-v0.3.0.tar \
   --registry registry.customer.local:5000 --project modeldoctor --dry-run
 ```
 
@@ -164,6 +209,9 @@ test:
 客户仓库内手动合成——这一步不在本交付包脚本覆盖范围内)。
 
 ## 校验清单(交接时对一遍)
+
+> 这份清单同时也在交付目录的 `README.md`(源文件 `field-README.md`)第 6 节里——改一处
+> 记得改另一处。
 
 - [ ] `checksums.sha256` 在现场重新计算一遍(`sha256sum -c checksums.sha256` 或逐行用
       `shasum -a 256` 比对),这是介质传输后唯一有效、任何情况下都能跑的完整性校验——

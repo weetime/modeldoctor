@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # 离线交付包 · 有网侧:按 tier 拉取 ModelDoctor 所需镜像、docker save 成单个 tar,
-# 连同 helm package 出的 chart tgz 与 values 示例一起放进输出目录,供离线介质
-# (U 盘/移动硬盘/内网文件传输)带到现场,配合 load-and-push.sh 使用。
+# 连同 helm package 出的 chart tgz、values 示例、现场侧脚本 load-and-push.sh 以及
+# 现场侧说明(field-README.md 复制成 README.md)一起放进输出目录,供离线介质
+# (U 盘/移动硬盘/内网文件传输)带到现场。
+#
+# 输出目录必须是自描述的:现场机器上没有这个 git 仓库,任何"跑
+# deploy/offline/load-and-push.sh"或"helm install deploy/charts/modeldoctor"的指引
+# 在那边都是不存在的路径。因此现场要用到的东西一律复制进 --out,现场文档里的命令
+# 也一律相对交付目录书写(./load-and-push.sh、./modeldoctor-<版本>.tgz)。
 #
 # 依赖镜像(Postgres / MinIO / mc / helm-test 用的 curl)不在 images.txt 里写死具体
 # tag —— chart 的 values.yaml(database.postgres.image / storage.minio.image /
@@ -126,6 +132,14 @@ esac
 
 [[ -f "$IMAGES_FILE" ]] || { echo "错误: 清单文件不存在: ${IMAGES_FILE}" >&2; exit 1; }
 [[ -d "$CHART_DIR" ]] || { echo "错误: chart 目录不存在: ${CHART_DIR}" >&2; exit 1; }
+# 交付目录里要复制的现场侧文件,缺一份就意味着现场拿到的包不自描述 —— 在拉几 GB 镜像
+# 之前就失败,而不是打完包才发现少东西。
+for required in "$SCRIPT_DIR/load-and-push.sh" "$SCRIPT_DIR/field-README.md"; do
+  [[ -f "$required" ]] || { echo "错误: 交付包必备文件不存在: ${required}" >&2; exit 1; }
+done
+for required_values in "$CHART_DIR/values.yaml" "$CHART_DIR/values-external.yaml"; do
+  [[ -f "$required_values" ]] || { echo "错误: 交付包必备 values 示例不存在: ${required_values}" >&2; exit 1; }
+done
 
 # ---- 1. 按 tier 过滤清单 ----------------------------------------------------
 FILTERED_IMAGES=()
@@ -228,7 +242,15 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo
   echo "==> [dry-run] 不会执行 docker pull / docker save / helm package,以上即最终镜像清单"
   echo "==> [dry-run] platform=${PLATFORM}  out=${OUT}"
-  echo "==> [dry-run] 将生成: ${OUT}/${TAR_NAME}、chart tgz、values.yaml + values-*.yaml、manifest.txt、checksums.sha256"
+  echo "==> [dry-run] 将生成的交付目录内容:"
+  echo "        ${OUT}/${TAR_NAME}"
+  echo "        ${OUT}/modeldoctor-<chart版本>.tgz      (helm package,--app-version=${APP_TAG:-<未提供>})"
+  echo "        ${OUT}/load-and-push.sh                 (现场侧脚本,从 ${SCRIPT_DIR} 复制)"
+  echo "        ${OUT}/README.md                        (现场侧说明,来自 ${SCRIPT_DIR}/field-README.md)"
+  echo "        ${OUT}/values.yaml"
+  echo "        ${OUT}/values-external.yaml             (内部示例 values-4pd.yaml 不外发)"
+  echo "        ${OUT}/manifest.txt"
+  echo "        ${OUT}/checksums.sha256"
   exit 0
 fi
 
@@ -247,11 +269,28 @@ docker save -o "$TAR_PATH" "${RESOLVED_IMAGES[@]}"
 
 echo "==> helm package chart -> ${OUT}"
 PACKAGE_ARGS=(--destination "$OUT")
+# --app-version 传的是带 v 的应用镜像 tag(如 v1.2.3),不是去掉 v 的 chart version。
+# appVersion 是 chart 在 image.tag 留空时的回退值,必须逐字符等于仓库里真实存在的
+# 镜像 tag —— 这与 .github/workflows/release.yml 里 Chart.yaml 的改写规则是同一个约定。
 [[ -n "$APP_TAG" ]] && PACKAGE_ARGS+=(--app-version "$APP_TAG")
 helm package "$CHART_DIR" "${PACKAGE_ARGS[@]}"
 
-echo "==> 复制 values 示例"
-cp "$CHART_DIR"/values.yaml "$CHART_DIR"/values-*.yaml "$OUT/"
+# 交付目录必须是自描述的:现场机器上没有这个仓库,任何"跑 deploy/offline/xxx.sh"或
+# "helm install deploy/charts/modeldoctor"的指引在那边都是死路径。所以现场要用到的
+# 脚本和文档都得躺在这个目录里。
+echo "==> 复制现场侧脚本 load-and-push.sh"
+cp "$SCRIPT_DIR/load-and-push.sh" "$OUT/"
+chmod +x "$OUT/load-and-push.sh"
+
+echo "==> 复制现场侧说明(field-README.md -> README.md)"
+cp "$SCRIPT_DIR/field-README.md" "$OUT/README.md"
+
+# 只发 values.yaml 与 values-external.yaml。values-4pd.yaml 是本团队自用集群的示例,
+# 里面是内网地址/集群内 Service 名等内部信息,不应该随交付包发给每一个客户。
+# 这里显式逐个列出而不是 values-*.yaml 通配 —— 将来新增内部示例时默认不外发,
+# 需要外发的必须主动加到这个列表里。
+echo "==> 复制 values 示例(values.yaml + values-external.yaml;内部示例 values-4pd.yaml 不外发)"
+cp "$CHART_DIR/values.yaml" "$CHART_DIR/values-external.yaml" "$OUT/"
 
 echo "==> 生成 manifest.txt(镜像列表 + digest)"
 MANIFEST_PATH="${OUT}/manifest.txt"
