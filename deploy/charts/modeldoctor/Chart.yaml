@@ -1,0 +1,15 @@
+apiVersion: v2
+name: modeldoctor
+description: ModelDoctor — 私有化部署的推理服务评测与可观测平台
+type: application
+# version / appVersion 由 release 流水线按 git tag 覆盖(.github/workflows/release.yml)
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.24.0-0"
+home: https://github.com/weetime/modeldoctor
+sources:
+  - https://github.com/weetime/modeldoctor
+maintainers:
+  - name: weetime
+annotations:
+  artifacthub.io/license: Apache-2.0
