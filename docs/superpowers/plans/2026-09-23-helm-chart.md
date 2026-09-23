@@ -579,6 +579,25 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 密码 helper（`modeldoctor.postgresPassword`、`modeldoctor.minioRootPassword`）同样走 `keepOrGenerate`，分别落在各自的 Secret 上。
 
+**`keepOrGenerate` 必须在单次渲染内记忆化（Task 6 实测发现的严重缺陷）。** 同一个密钥会被两个模板各 `include` 一次（例如 Postgres 密码：`api/secret.yaml` 拼 `DATABASE_URL` 时要用，`deps/postgres/secret.yaml` 设置 `POSTGRES_PASSWORD` 时也要用）。没有记忆化时两次调用各自 `randAlphaNum`，得到**两个不同的密码**——全新安装后 API 永远连不上数据库，且因为 `lookup` 在下一次 upgrade 才生效，症状会在升级后"自愈"，极难排查。
+
+实现方式：在 helper 内把生成结果按 `(secretName, key)` 缓存进 `.Values` 上的一个私有字典（同一次渲染共享同一个 `.Values` 对象），命中缓存直接返回：
+
+```yaml
+{{- $cacheKey := printf "%s/%s" $name .key -}}
+{{- $cache := (get $ctx.Values "_generatedSecrets") | default dict -}}
+{{- if hasKey $cache $cacheKey -}}
+{{- get $cache $cacheKey -}}
+{{- else -}}
+{{- $v := <生成逻辑> -}}
+{{- $_ := set $cache $cacheKey $v -}}
+{{- $_ := set $ctx.Values "_generatedSecrets" $cache -}}
+{{- $v -}}
+{{- end -}}
+```
+
+验证方法：渲染默认值后，把 API Secret 里 `DATABASE_URL` 的密码段与 Postgres Secret 的 `POSTGRES_PASSWORD` 逐字比对，必须相同；MinIO 的 root 密码同理（`S3_SECRET_KEY` vs MinIO Secret）。
+
 - [ ] **Step 5: 验证**
 
 Run: `helm lint deploy/charts/modeldoctor 2>&1 | tail -10`
