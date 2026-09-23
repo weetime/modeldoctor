@@ -137,7 +137,7 @@ helm test md --namespace modeldoctor
 | `fullnameOverride` | 覆盖资源名前缀(优先级高于 `nameOverride` + release 名的组合) | `""` |
 | `image.registry` | 应用镜像仓库地址 | `swr.cn-north-4.myhuaweicloud.com` |
 | `image.repository` | 应用镜像仓库路径 | `modeldoctor/modeldoctor` |
-| `image.tag` | 应用镜像 tag;留空则用 `Chart.appVersion`(由 release 流水线按 git tag 注入) | `""` |
+| `image.tag` | 应用镜像 tag;留空则用 `Chart.appVersion`。发布出来的 chart 里 `appVersion` 就是 git tag 原样(带 `v`,如 `v1.2.3`),与推送到仓库的应用镜像 tag 逐字符相同——所以**留空即可正常安装**,不需要手工对齐版本号。注意 chart 自己的 `version` 是去掉 `v` 的 SemVer(`1.2.3`,Helm 强制要求),`helm install --version` 用的是这一个 | `""` |
 | `image.pullPolicy` | 镜像拉取策略 | `IfNotPresent` |
 | `imagePullSecrets` | 私有仓库拉取凭据引用列表(引用集群里已存在的 Secret,不在这里写凭据) | `[]` |
 | `replicaCount` | API 副本数;**只能是 `1`**,填其它值会在渲染期直接失败 | `1` |

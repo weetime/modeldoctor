@@ -82,8 +82,22 @@ jobs:
         run: |
           set -euo pipefail
           CHART_FILE="deploy/charts/modeldoctor/Chart.yaml"
+          # 这两行的 "v" 归属不是笔误,必须一个带一个不带:
+          #
+          #   version:    ${TAG_VERSION}      —— 去掉前缀 v。Helm 要求 chart version 是合法
+          #               SemVer,`helm package`/`helm push` 都按它命名 tgz 与 OCI tag,
+          #               客户侧 `helm install --version 1.2.3` 用的也是这个值。
+          #   appVersion: ${GITHUB_REF_NAME}  —— 保留前缀 v。appVersion 是 _helpers.tpl:46
+          #               里 image.tag 留空时的回退值(`default .Chart.AppVersion
+          #               .Values.image.tag`),而上面 "Build and push app image" 推送的镜像
+          #               tag 就是 ${GITHUB_REF_NAME} 本身(带 v)。这里若跟着去掉 v,
+          #               chart 默认就会去拉一个从未被推送过的 <repo>:1.2.3,每一次
+          #               "不设置 image.tag 的全新安装" 都必然 ImagePullBackOff。
+          #
+          # 离线侧 deploy/offline/pull-and-save.sh 的 `helm package --app-version "$APP_TAG"`
+          # (APP_TAG 是带 v 的应用镜像 tag)本来就是这个约定,两条发布路径必须一致。
           sed -i -E "s/^version: .*/version: ${TAG_VERSION}/" "$CHART_FILE"
-          sed -i -E "s/^appVersion: .*/appVersion: \"${TAG_VERSION}\"/" "$CHART_FILE"
+          sed -i -E "s/^appVersion: .*/appVersion: \"${GITHUB_REF_NAME}\"/" "$CHART_FILE"
           echo "--- Chart.yaml after rewrite ---"
           cat "$CHART_FILE"
 
@@ -91,6 +105,28 @@ jobs:
         run: |
           mkdir -p dist/release
           helm package deploy/charts/modeldoctor --destination dist/release
+
+      - name: 断言:chart 默认镜像引用 == 本次推送的应用镜像
+        run: |
+          set -euo pipefail
+          # 反漂移护栏:把刚打好的 tgz 按"客户全新安装、不设置 image.tag"的方式渲染一遍,
+          # 取出 api Deployment 的 image 字段,必须逐字符等于上一步 build-app-image.sh
+          # 推送出去的引用。Chart.yaml 的 version/appVersion 改写规则一旦再次跑偏
+          # (比如有人"顺手"把 appVersion 也去掉 v),这里会当场判红,而不是等客户
+          # 在自己的集群里撞上 ImagePullBackOff。
+          EXPECTED="${SWR_REGISTRY}/${SWR_PROJECT}/modeldoctor:${GITHUB_REF_NAME}"
+          ACTUAL="$(helm template md "dist/release/modeldoctor-${TAG_VERSION}.tgz" \
+            --set ingress.enabled=false \
+            --show-only templates/api/deployment.yaml \
+            | grep -m1 -E '^[[:space:]]+image:' \
+            | sed -E 's/^[[:space:]]+image:[[:space:]]*//' | tr -d "\"'")"
+          echo "expected = ${EXPECTED}"
+          echo "actual   = ${ACTUAL}"
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "::error::chart 默认镜像引用(${ACTUAL})与本次推送的应用镜像(${EXPECTED})不一致 —— 不设置 image.tag 的全新安装会 ImagePullBackOff,拒绝发布"
+            exit 1
+          fi
+          echo "OK — chart 默认镜像引用与推送的应用镜像一致"
 
       - name: helm registry login (SWR OCI)
         run: |

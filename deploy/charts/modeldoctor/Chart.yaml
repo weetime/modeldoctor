@@ -2,7 +2,11 @@ apiVersion: v2
 name: modeldoctor
 description: ModelDoctor — 私有化部署的推理服务评测与可观测平台
 type: application
-# version / appVersion 由 release 流水线按 git tag 覆盖(.github/workflows/release.yml)
+# version / appVersion 由 release 流水线按 git tag 覆盖(.github/workflows/release.yml)。
+# 约定(两条发布路径一致,改动前先读 release.yml 的 "Rewrite Chart.yaml" 步骤):
+#   version    = 去掉前缀 v 的 SemVer(Helm 强制要求),如 tag v1.2.3 -> 1.2.3
+#   appVersion = git tag 原样(带 v),如 v1.2.3 —— 它是 image.tag 留空时的回退值,
+#                必须逐字符等于实际推送到仓库的应用镜像 tag,否则默认安装 ImagePullBackOff
 version: 0.1.0
 appVersion: "0.1.0"
 kubeVersion: ">=1.24.0-0"
