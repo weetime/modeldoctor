@@ -73,6 +73,12 @@ ENV PORT=3001
 # Migrations are NOT run here: the Helm chart runs them in a pre-install/pre-upgrade
 # Job (deploy/charts/modeldoctor/templates/jobs/migrate-seed.yaml) so a failed migration
 # fails the release visibly instead of crash-looping every replica.
-# Deploying without Helm? Run `pnpm -F @modeldoctor/api exec prisma migrate deploy`
-# (and `pnpm -F @modeldoctor/api db:seed`) before starting the container.
+#
+# Deploying without Helm? Run this inside the container before starting it:
+#   cd /app/apps/api \
+#     && node_modules/.bin/prisma migrate deploy \
+#     && node_modules/.bin/tsx prisma/seed.ts
+# Call the binaries directly: `pnpm ... exec` fails as the non-root `app` user because
+# Corepack tries to reinstall pnpm into a root-owned node_modules, and `prisma db seed`
+# forks a shell where node_modules/.bin is not on PATH.
 CMD ["node", "apps/api/dist/main.js"]
