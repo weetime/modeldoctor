@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# 离线交付包 · 有网侧:按 tier 拉取 ModelDoctor 所需镜像、docker save 成单个 tar,
+# 连同 helm package 出的 chart tgz 与 values 示例一起放进输出目录,供离线介质
+# (U 盘/移动硬盘/内网文件传输)带到现场,配合 load-and-push.sh 使用。
+#
+# 依赖镜像(Postgres / MinIO / mc / helm-test 用的 curl)不在 images.txt 里写死具体
+# tag —— chart 的 values.yaml(database.postgres.image / storage.minio.image /
+# storage.minio.mcImage)以及硬编码在 templates/tests/test-health.yaml 里的 curl
+# 镜像,才是这些版本的唯一权威来源。本脚本用 `helm template --show-only
+# <component 模板>` 精确渲染出每个依赖组件自己的 Pod/StatefulSet/Job 模板,
+# 从渲染结果里摘取 image 字段,而不是对 values.yaml 做字符串抓取或 yq 路径查询:
+# 这样即便某个字段的取值逻辑将来从字面量换成 helper 函数/coalesce 表达式,或者
+# curl 镜像(它压根不是 values.yaml 里的字段)发生改动,脚本拿到的都还是"chart
+# 实际会渲染出哪个镜像"这个唯一事实。若 chart 模板结构变化导致解析不出 image
+# 字段,脚本会直接报错退出,不会静默产出一个镜像缺失的坏 tar。
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CHART_DIR="$(cd "${SCRIPT_DIR}/../charts/modeldoctor" && pwd)"
+IMAGES_FILE="${SCRIPT_DIR}/images.txt"
+
+TIER="core"
+APP_TAG=""
+RUNNER_TAG=""
+OUT="./dist/offline"
+PLATFORM="linux/amd64"
+DRY_RUN=0
+HELM_VALUES_ARGS=()
+HELM_SET_ARGS=()
+
+# 依赖镜像解析结果,默认空——只有 images.txt 里出现对应占位符时才会被填充,
+# `set -u` 下必须先有默认值,否则未用到的占位符替换会在展开阶段就报 unbound variable。
+POSTGRES_IMAGE=""
+MINIO_IMAGE=""
+MC_IMAGE=""
+CURL_IMAGE=""
+
+usage() {
+  cat <<'USAGE'
+用法: deploy/offline/pull-and-save.sh [选项]
+
+按 tier 从 deploy/offline/images.txt 拉取镜像,docker save 成单个 tar,并把
+chart tgz + values 示例一起放进输出目录,生成 manifest.txt 与 checksums.sha256。
+
+选项:
+  --tier <core|full>     默认 core。full 是 core 的超集(全量交付包),不是增量。
+  --app-tag <tag>        必填(清单里 __APP_TAG__ 的替换值,应用镜像 tag)
+  --runner-tag <tag>     必填(清单里 __RUNNER_TAG__ 的替换值,压测 runner 镜像 tag)
+  --out <dir>            输出目录,默认 ./dist/offline
+  --platform <platform>  docker pull --platform,默认 linux/amd64
+                         (客户仓库不支持多架构 manifest list 时,这个默认值已经
+                         规避了该问题——见 deploy/offline/README.md)
+  --images <file>        覆盖默认清单文件,默认 deploy/offline/images.txt
+  --chart-dir <dir>      覆盖默认 chart 目录,默认 deploy/charts/modeldoctor
+  --values <file>        透传给内部 `helm template -f <file>`,可重复;用于验证
+                         依赖镜像解析是否随 values 覆盖联动(反漂移自检)
+  --set <key=val>        透传给内部 `helm template --set <key=val>`,可重复,用途同上
+  --dry-run              只打印将要拉取/生成的内容,不执行 docker/helm 任何有副作用的操作
+  -h, --help             显示此帮助
+
+前置条件: docker(需已 `docker login` 私有仓库拉取应用/runner 镜像)、helm。
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tier)
+      [[ $# -ge 2 ]] || { echo "错误: --tier 需要一个值" >&2; usage; exit 1; }
+      TIER="$2"; shift 2 ;;
+    --app-tag)
+      [[ $# -ge 2 ]] || { echo "错误: --app-tag 需要一个值" >&2; usage; exit 1; }
+      APP_TAG="$2"; shift 2 ;;
+    --runner-tag)
+      [[ $# -ge 2 ]] || { echo "错误: --runner-tag 需要一个值" >&2; usage; exit 1; }
+      RUNNER_TAG="$2"; shift 2 ;;
+    --out)
+      [[ $# -ge 2 ]] || { echo "错误: --out 需要一个值" >&2; usage; exit 1; }
+      OUT="$2"; shift 2 ;;
+    --platform)
+      [[ $# -ge 2 ]] || { echo "错误: --platform 需要一个值" >&2; usage; exit 1; }
+      PLATFORM="$2"; shift 2 ;;
+    --images)
+      [[ $# -ge 2 ]] || { echo "错误: --images 需要一个值" >&2; usage; exit 1; }
+      IMAGES_FILE="$2"; shift 2 ;;
+    --chart-dir)
+      [[ $# -ge 2 ]] || { echo "错误: --chart-dir 需要一个值" >&2; usage; exit 1; }
+      CHART_DIR="$2"; shift 2 ;;
+    --values)
+      [[ $# -ge 2 ]] || { echo "错误: --values 需要一个值" >&2; usage; exit 1; }
+      HELM_VALUES_ARGS+=(-f "$2"); shift 2 ;;
+    --set)
+      [[ $# -ge 2 ]] || { echo "错误: --set 需要一个值" >&2; usage; exit 1; }
+      HELM_SET_ARGS+=(--set "$2"); shift 2 ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "未知参数: $1" >&2; usage; exit 1 ;;
+  esac
+done
+
+case "$TIER" in
+  core|full) ;;
+  *) echo "错误: --tier 必须是 core 或 full,收到: ${TIER}" >&2; exit 1 ;;
+esac
+
+[[ -f "$IMAGES_FILE" ]] || { echo "错误: 清单文件不存在: ${IMAGES_FILE}" >&2; exit 1; }
+[[ -d "$CHART_DIR" ]] || { echo "错误: chart 目录不存在: ${CHART_DIR}" >&2; exit 1; }
+
+# ---- 1. 按 tier 过滤清单 ----------------------------------------------------
+FILTERED_IMAGES=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ -z "$line" || "$line" == \#* ]] && continue
+  line_tier="${line%% *}"
+  image_ref="${line#* }"
+  case "$TIER" in
+    core) [[ "$line_tier" == "core" ]] || continue ;;
+    full) [[ "$line_tier" == "core" || "$line_tier" == "full" ]] || continue ;;
+  esac
+  FILTERED_IMAGES+=("$image_ref")
+done < "$IMAGES_FILE"
+
+[[ ${#FILTERED_IMAGES[@]} -gt 0 ]] || { echo "错误: tier=${TIER} 在 ${IMAGES_FILE} 里没有匹配到任何镜像" >&2; exit 1; }
+
+# ---- 2. 探测清单实际用到哪些占位符,按需解析(测试用最小清单可以跳过 helm) ----
+NEED_APP_TAG=0; NEED_RUNNER_TAG=0
+NEED_POSTGRES=0; NEED_MINIO=0; NEED_MC=0; NEED_CURL=0
+for image_ref in "${FILTERED_IMAGES[@]}"; do
+  case "$image_ref" in *__APP_TAG__*) NEED_APP_TAG=1 ;; esac
+  case "$image_ref" in *__RUNNER_TAG__*) NEED_RUNNER_TAG=1 ;; esac
+  case "$image_ref" in *__POSTGRES_IMAGE__*) NEED_POSTGRES=1 ;; esac
+  case "$image_ref" in *__MINIO_IMAGE__*) NEED_MINIO=1 ;; esac
+  case "$image_ref" in *__MC_IMAGE__*) NEED_MC=1 ;; esac
+  case "$image_ref" in *__CURL_IMAGE__*) NEED_CURL=1 ;; esac
+done
+
+if [[ "$NEED_APP_TAG" -eq 1 && -z "$APP_TAG" ]]; then
+  echo "错误: 清单包含 __APP_TAG__ 占位符,必须提供 --app-tag" >&2; exit 1
+fi
+if [[ "$NEED_RUNNER_TAG" -eq 1 && -z "$RUNNER_TAG" ]]; then
+  echo "错误: 清单包含 __RUNNER_TAG__ 占位符,必须提供 --runner-tag" >&2; exit 1
+fi
+
+# 从 chart 渲染结果里精确摘取某个依赖组件的 image 字段。
+# $1 = 相对 chart 根的模板路径($2 = 报错信息里用的人类可读标签)。
+resolve_component_image() {
+  local tpl="$1" label="$2" rendered image
+  if ! rendered="$(helm template modeldoctor-offline "$CHART_DIR" \
+      "${HELM_VALUES_ARGS[@]+"${HELM_VALUES_ARGS[@]}"}" \
+      "${HELM_SET_ARGS[@]+"${HELM_SET_ARGS[@]}"}" \
+      --show-only "$tpl" 2>&1)"; then
+    echo "错误: helm template 渲染 ${label}(${tpl})失败,输出:" >&2
+    printf '%s\n' "$rendered" >&2
+    exit 1
+  fi
+  image="$(printf '%s\n' "$rendered" | grep -m1 -E '^[[:space:]]*image:' \
+    | sed -E 's/^[[:space:]]*image:[[:space:]]*//' | tr -d "\"'")"
+  if [[ -z "$image" ]]; then
+    echo "错误: 未能从 ${tpl} 解析出 ${label} 镜像——chart 模板可能已变化,请检查该文件" >&2
+    exit 1
+  fi
+  printf '%s' "$image"
+}
+
+if [[ "$NEED_POSTGRES" -eq 1 ]]; then
+  echo "==> 从 chart 解析 postgres 依赖镜像(templates/deps/postgres/statefulset.yaml)"
+  POSTGRES_IMAGE="$(resolve_component_image "templates/deps/postgres/statefulset.yaml" "postgres")"
+fi
+if [[ "$NEED_MINIO" -eq 1 ]]; then
+  echo "==> 从 chart 解析 minio 依赖镜像(templates/deps/minio/statefulset.yaml)"
+  MINIO_IMAGE="$(resolve_component_image "templates/deps/minio/statefulset.yaml" "minio")"
+fi
+if [[ "$NEED_MC" -eq 1 ]]; then
+  echo "==> 从 chart 解析 minio mc 依赖镜像(templates/jobs/bucket-init.yaml)"
+  MC_IMAGE="$(resolve_component_image "templates/jobs/bucket-init.yaml" "minio mc")"
+fi
+if [[ "$NEED_CURL" -eq 1 ]]; then
+  echo "==> 从 chart 解析 helm-test curl 镜像(templates/tests/test-health.yaml)"
+  CURL_IMAGE="$(resolve_component_image "templates/tests/test-health.yaml" "helm-test curl")"
+fi
+
+# ---- 3. 占位符替换,得到最终镜像清单 ----------------------------------------
+RESOLVED_IMAGES=()
+for image_ref in "${FILTERED_IMAGES[@]}"; do
+  image_ref="${image_ref//__APP_TAG__/$APP_TAG}"
+  image_ref="${image_ref//__RUNNER_TAG__/$RUNNER_TAG}"
+  image_ref="${image_ref//__POSTGRES_IMAGE__/$POSTGRES_IMAGE}"
+  image_ref="${image_ref//__MINIO_IMAGE__/$MINIO_IMAGE}"
+  image_ref="${image_ref//__MC_IMAGE__/$MC_IMAGE}"
+  image_ref="${image_ref//__CURL_IMAGE__/$CURL_IMAGE}"
+  RESOLVED_IMAGES+=("$image_ref")
+done
+
+echo "==> tier=${TIER} 解析出的镜像清单(共 ${#RESOLVED_IMAGES[@]} 个):"
+for image_ref in "${RESOLVED_IMAGES[@]}"; do
+  echo "    ${image_ref}"
+done
+
+TAR_NAME="modeldoctor-images-${TIER}-${APP_TAG:-notag}.tar"
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo
+  echo "==> [dry-run] 不会执行 docker pull / docker save / helm package,以上即最终镜像清单"
+  echo "==> [dry-run] platform=${PLATFORM}  out=${OUT}"
+  echo "==> [dry-run] 将生成: ${OUT}/${TAR_NAME}、chart tgz、values.yaml + values-*.yaml、manifest.txt、checksums.sha256"
+  exit 0
+fi
+
+# ---- 4. 真正拉取 + 打包 ------------------------------------------------------
+mkdir -p "$OUT"
+
+echo "==> 拉取镜像(--platform ${PLATFORM})"
+for image_ref in "${RESOLVED_IMAGES[@]}"; do
+  echo "==> docker pull --platform ${PLATFORM} ${image_ref}"
+  docker pull --platform "$PLATFORM" "$image_ref"
+done
+
+TAR_PATH="${OUT}/${TAR_NAME}"
+echo "==> docker save -o ${TAR_PATH}"
+docker save -o "$TAR_PATH" "${RESOLVED_IMAGES[@]}"
+
+echo "==> helm package chart -> ${OUT}"
+PACKAGE_ARGS=(--destination "$OUT")
+[[ -n "$APP_TAG" ]] && PACKAGE_ARGS+=(--app-version "$APP_TAG")
+helm package "$CHART_DIR" "${PACKAGE_ARGS[@]}"
+
+echo "==> 复制 values 示例"
+cp "$CHART_DIR"/values.yaml "$CHART_DIR"/values-*.yaml "$OUT/"
+
+echo "==> 生成 manifest.txt(镜像列表 + digest)"
+MANIFEST_PATH="${OUT}/manifest.txt"
+: > "$MANIFEST_PATH"
+for image_ref in "${RESOLVED_IMAGES[@]}"; do
+  digest="$(docker image inspect "$image_ref" \
+    --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{else}}{{.Id}}{{end}}' 2>/dev/null || echo unknown)"
+  printf '%s\t%s\n' "$image_ref" "$digest" >> "$MANIFEST_PATH"
+done
+
+echo "==> 生成 checksums.sha256"
+(
+  cd "$OUT"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum -- * > checksums.sha256.tmp
+  else
+    shasum -a 256 -- * > checksums.sha256.tmp
+  fi
+  mv checksums.sha256.tmp checksums.sha256
+)
+
+echo
+echo "==> 完成。输出目录内容:"
+ls -la "$OUT"
