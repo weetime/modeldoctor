@@ -39,6 +39,24 @@ jobs:
           echo "OK — tag ${TAG} matches package.json version ${PKG_VERSION}"
           echo "TAG_VERSION=${TAG_VERSION}" >> "$GITHUB_ENV"
 
+      - name: Derive runner image tag
+        run: |
+          set -euo pipefail
+          # runner 镜像(md-runner-*)不跟应用共用版本号 —— tools/build-runner-images.sh
+          # 把它们的 tag 定义成 "apps/benchmark-runner/ 子树最近一次提交的短 SHA"
+          # (见该脚本里的 `git log -1 --format=%h -- apps/benchmark-runner/`)。这两处
+          # 推导规则必须保持一致,否则离线清单里写的 runner 镜像地址在仓库里根本不存在。
+          # 注意: runner 镜像本身目前仍由人工执行
+          # `./tools/build-runner-images.sh --push` 构建并推送 —— 这条 release 流水线
+          # 只负责在离线清单里引用正确的 tag,不会替你构建/推送 runner 镜像。
+          RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/)"
+          if [[ -z "$RUNNER_TAG" ]]; then
+            echo "::error::无法从 apps/benchmark-runner/ 的提交历史推导 runner 镜像 tag(git log 返回空)——拒绝用应用版本号静默顶替,请检查 checkout 的 fetch-depth 或该子树是否存在提交历史"
+            exit 1
+          fi
+          echo "runner tag = ${RUNNER_TAG}(git log -1 --format=%h -- apps/benchmark-runner/)"
+          echo "RUNNER_TAG=${RUNNER_TAG}" >> "$GITHUB_ENV"
+
       - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v4
@@ -82,7 +100,10 @@ jobs:
       - name: Generate offline image manifest for this release
         run: |
           set -euo pipefail
-          sed -e "s/__APP_TAG__/${GITHUB_REF_NAME}/g" -e "s/__RUNNER_TAG__/${GITHUB_REF_NAME}/g" \
+          # __APP_TAG__ = 本次 release 的应用镜像 tag(即这个 git tag 本身)。
+          # __RUNNER_TAG__ = runner 镜像 tag,来自上面 "Derive runner image tag" 步骤
+          # 推导出的短 SHA(与 tools/build-runner-images.sh 的规则一致),不是应用版本号。
+          sed -e "s/__APP_TAG__/${GITHUB_REF_NAME}/g" -e "s/__RUNNER_TAG__/${RUNNER_TAG}/g" \
             deploy/offline/images.txt > "dist/release/modeldoctor-offline-images-${GITHUB_REF_NAME}.txt"
 
       - name: Create GitHub Release
