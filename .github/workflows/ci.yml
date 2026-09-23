@@ -249,8 +249,11 @@ jobs:
           echo "::group::modeldoctor 命名空间"
           kubectl -n modeldoctor get pods,jobs,statefulsets,pvc -o wide || true
           kubectl -n modeldoctor describe pods || true
-          kubectl -n modeldoctor logs job/md-modeldoctor-migrate --all-containers --tail=200 || true
           kubectl -n modeldoctor logs job/md-modeldoctor-bucket-init --all-containers --tail=200 || true
+          # migrate+seed 是 api Deployment 的 initContainer(不是独立 hook Job),单独取一次
+          # 日志——`--all-containers` 在 initContainer 卡住/未启动时不保证覆盖到它。
+          kubectl -n modeldoctor logs deploy/md-modeldoctor -c wait-for-db --tail=200 || true
+          kubectl -n modeldoctor logs deploy/md-modeldoctor -c migrate-seed --tail=200 || true
           kubectl -n modeldoctor logs deploy/md-modeldoctor --all-containers --tail=200 || true
           echo "::endgroup::"
           echo "::group::modeldoctor-benchmarks 命名空间"

@@ -1,3 +1,42 @@
+{{- /*
+  迁移 + seed 跑在 initContainer 里,不是一个 pre-install/pre-upgrade hook Job。
+
+  为什么不能是 hook:Helm hook 运行在 release 的常规资源图之外(严格早于/晚于所有非 hook
+  资源),而这个操作恰恰需要 release 自己的资源——chart 自己的 Secret(<fullname>-secrets
+  的 DATABASE_URL 等 key)和内置 Postgres StatefulSet 都必须已经存在。pre-install 时两者
+  都还没创建,全新安装会直接报 "secret not found"(该缺陷已由真实 kind 安装复现确认,
+  `helm lint`/`helm template` 测不出来——两者都不会真的创建对象、走 hook 生命周期)。
+  改成 post-install 又会死锁 `helm install --wait`:Deployment 在迁移完成前永远不会
+  Ready,而 `--wait` 恰恰要等所有资源(含这个 Deployment)Ready 之后才会去跑
+  post-install hook,形成循环等待。initContainer 没有这个矛盾:它跑在这个 Pod 自己
+  内部,Pod 被调度时它的依赖(Secret/ConfigMap/Postgres StatefulSet)已经存在于同一次
+  release 的资源图里;`prisma migrate deploy` 与 seed.ts 都是幂等操作(seed.ts 对内置
+  评测集/官方压测模板做 upsert),每次 Pod 启动都重新跑一遍没有副作用。
+
+  等待数据库就绪(initContainer wait-for-db):有限次数重试(60 次 × 5s = 最多等 300s),
+  超时显式 `exit 1`,不是永不退出的裸循环——bucket-init 的等待逻辑最初就是这个坑,已在
+  Task 7 里改成有限重试,这里复用同一段 house pattern。等待手段是
+  `prisma db execute --url "$DATABASE_URL" --stdin` 喂 `SELECT 1;`,数据库不可达时返回
+  非零退出码(P1001),可达时返回 0(见原迁移 Job 的验证记录)。
+
+  两个 initContainer 都直接调二进制,不经过 `pnpm exec`/`prisma db seed`:
+    - `node_modules/.bin/prisma migrate deploy`——以非 root 的 app 用户运行时,`pnpm exec`
+      会让 Corepack 尝试把 pnpm 重装进一个 root 拥有的 node_modules,因权限不足失败;
+    - `node_modules/.bin/tsx prisma/seed.ts`——不走 `prisma db seed` 包装,它 fork 出的
+      子 shell 里 `node_modules/.bin` 不在 PATH 上,会直接报 "tsx: command not found"。
+
+  失败排障方式因此也变了:失败的迁移不再是一个独立可 `kubectl logs job/...` 查看的 Job,
+  而是 Pod 卡在 `Init:Error`/`Init:CrashLoopBackOff`,用
+  `kubectl logs <pod> -c migrate-seed`(或 `-c wait-for-db`)查看——见 README「排障」一节。
+
+  DATABASE_URL 的来源分两种情形,与 api 容器完全一致(见下面 containers 段的同名注释):
+    - database.bundled=true,或 bundled=false 且提供了 database.external.url:chart 自己的
+      Secret(<fullname>-secrets)里已经有 DATABASE_URL,靠 envFrom secretRef 就能拿到。
+    - database.bundled=false 且提供了 database.external.existingSecret:chart 自己的
+      Secret 完全不写这个 key(见 templates/api/secret.yaml),必须用显式的
+      env[].valueFrom.secretKeyRef 直接指向那个既有 Secret——两个 initContainer 都要加
+      这层覆盖,因为两者都是通过进程环境变量 $DATABASE_URL 读取连接串的。
+*/ -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,6 +65,58 @@ spec:
       automountServiceAccountToken: true   # 代码用 loadFromDefault() 访问 apiserver
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-db
+          image: {{ include "modeldoctor.image" . }}
+          command:
+            - sh
+            - -c
+            - |
+              cd /app/apps/api   # prisma 按 cwd 找 prisma/schema.prisma
+              for i in $(seq 1 60); do
+                if echo 'SELECT 1;' | node_modules/.bin/prisma db execute --url "$DATABASE_URL" --stdin >/dev/null 2>&1; then exit 0; fi
+                echo "waiting for database... ($i/60)"; sleep 5
+              done
+              echo "数据库在 5 分钟内未就绪" >&2; exit 1
+          envFrom:
+            - secretRef: { name: {{ include "modeldoctor.secretName" . }} }
+          {{- if and (not .Values.database.bundled) .Values.database.external.existingSecret }}
+          env:
+            # database.external.existingSecret 模式:DATABASE_URL 不在 chart 自己的 Secret
+            # 里,必须从既有 Secret 直接注入——与下面 api 容器完全一致的处理方式。
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.external.existingSecret }}
+                  key: {{ .Values.database.external.existingSecretKey }}
+          {{- end }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+        - name: migrate-seed
+          image: {{ include "modeldoctor.image" . }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "==> prisma migrate deploy"
+              cd /app/apps/api   # prisma 按 cwd 找 prisma/schema.prisma
+              node_modules/.bin/prisma migrate deploy
+              echo "==> prisma db seed (幂等 upsert:内置评测集 + 官方压测模板)"
+              # 不走 `prisma db seed` 包装:它 fork 的子 shell 里 node_modules/.bin 不在 PATH 上。
+              node_modules/.bin/tsx prisma/seed.ts
+          envFrom:
+            - configMapRef: { name: {{ include "modeldoctor.fullname" . }}-config }
+            - secretRef: { name: {{ include "modeldoctor.secretName" . }} }
+          {{- if and (not .Values.database.bundled) .Values.database.external.existingSecret }}
+          env:
+            # 同上:existingSecret 模式下 migrate/seed 也要直接从既有 Secret 拿 DATABASE_URL。
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.external.existingSecret }}
+                  key: {{ .Values.database.external.existingSecretKey }}
+          {{- end }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
       containers:
         - name: api
           image: {{ include "modeldoctor.image" . }}

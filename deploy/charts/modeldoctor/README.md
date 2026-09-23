@@ -15,8 +15,15 @@ ModelDoctor 是**一个 Node 进程**:NestJS API 与内置的 React 单页应用
 默认与应用不同名,便于隔离资源与 RBAC 影响面),API 进程持有一个 ServiceAccount,通过
 `Role`/`RoleBinding` 被授权在该命名空间创建 Job、读日志、并用 Kubernetes Informer(`watch`)
 实时感知 Job/Pod 状态变化。数据库迁移与内置数据的初始化(evaluation profiles、官方压测
-模板)由一个 `pre-install,pre-upgrade` hook Job 执行;内置 MinIO 的建桶与生命周期规则由
-一个 `post-install,post-upgrade` hook Job 执行。
+模板)跑在 api Deployment 的两个 initContainer 里(`wait-for-db` + `migrate-seed`),不是
+一个独立的 hook Job——Helm hook 运行在 release 的常规资源图之外,而迁移偏偏需要 chart 自己
+的 Secret 和内置 Postgres 都已存在,`pre-install` 时两者都还没创建,`post-install` 又会跟
+`helm install --wait` 互相死锁(Deployment 在迁移完成前永远不 Ready,`--wait` 却要等它
+Ready 才会去跑 post-install hook);initContainer 跑在 Pod 自己内部,依赖已经就绪,且
+`prisma migrate deploy` 与 seed 都是幂等操作,每次 Pod 启动重跑一遍没有副作用。失败的迁移
+因此表现为 Pod 卡在 `Init:Error`/`Init:CrashLoopBackOff`,而不是一个独立失败的 Job——见下方
+「排障」一节。内置 MinIO 的建桶与生命周期规则仍由一个 `post-install,post-upgrade` hook Job
+执行(它不依赖应用 Deployment 是否 Ready,不受同样的死锁影响)。
 
 ## 前置条件
 
@@ -277,7 +284,7 @@ helm test md --namespace modeldoctor
 ## 升级与回滚
 
 ```bash
-# 升级(镜像 tag、任意 values 变更都走这条路径;pre-upgrade hook 会先跑 migrate+seed)
+# 升级(镜像 tag、任意 values 变更都走这条路径;新 Pod 起来前 initContainer 会先跑 migrate+seed)
 helm upgrade md deploy/charts/modeldoctor -f <你上次用的 values 文件> \
   --set image.tag=<新版本 tag>
 
@@ -300,9 +307,9 @@ helm rollback md <REVISION> --namespace modeldoctor
   引入了破坏性的 schema 变更,`helm rollback` 到旧版本代码之后,旧代码大概率无法正常读
   已经迁移过的新 schema。回滚前先确认目标版本与当前数据库 schema 兼容,拿不准就先做一次
   数据库备份(见下一节)。
-- 升级会重新跑 `migrate+seed` 这个 `pre-upgrade` hook Job——它是幂等的(`prisma migrate
-  deploy` 只应用未应用过的迁移;`seed.ts` 对内置数据做 upsert),正常情况下秒级完成,不需要
-  额外操作。
+- 升级会随着 api Pod 重建(`strategy: Recreate`)重新跑一次 `migrate-seed` initContainer——
+  它是幂等的(`prisma migrate deploy` 只应用未应用过的迁移;`seed.ts` 对内置数据做
+  upsert),正常情况下秒级完成,不需要额外操作。
 
 > 下面「初始管理员」「备份」「排障」三节里的示例命令,均假设 release 名为 `md`、
 > 未设置 `nameOverride`/`fullnameOverride`(资源名前缀因而是 `md-modeldoctor`)。如果你的
@@ -385,8 +392,8 @@ API Key 都会变成无法解密)。下面两步都要在传入那个密钥、�
 
 1. **数据库恢复(内置 Postgres)**
 
-   恢复前先把应用缩容到 0 副本(如果 release 已经装过),避免 migrate hook Job 或应用本身
-   同时写库,与手工恢复的数据打架:
+   恢复前先把应用缩容到 0 副本(如果 release 已经装过),避免 api Pod 的 `migrate-seed`
+   initContainer 或应用本身同时写库,与手工恢复的数据打架:
 
    ```bash
    kubectl -n <namespace> scale deployment/<release>-modeldoctor --replicas=0
@@ -402,8 +409,9 @@ API Key 都会变成无法解密)。下面两步都要在传入那个密钥、�
    ```
 
    如果是全新集群上的灾难恢复(Postgres StatefulSet 还不存在):先 `helm install` 一次让
-   chart 把 StatefulSet/PVC 建出来(不需要等应用真正可用,Pod 变成 Running 即可),执行上面
-   的恢复命令灌数据,再 `helm upgrade` 触发一次 migrate hook——它是幂等的(`prisma migrate
+   chart 把 StatefulSet/PVC 建出来(api Pod 可能会因为库是空的而卡在 `migrate-seed`
+   initContainer,这是预期的,不用等它 Ready),执行上面的恢复命令灌数据,再 `helm upgrade`
+   (或直接删除 api Pod 触发重建)重跑一次 `migrate-seed`——它是幂等的(`prisma migrate
    deploy` 只应用尚未应用过的迁移),不会破坏已经灌进去的数据。
 
    外接数据库:用你数据库自身的恢复流程(`pg_restore`/云厂商控制台的备份恢复等),恢复完成
@@ -434,16 +442,21 @@ API Key 都会变成无法解密)。下面两步都要在传入那个密钥、�
 
 ## 排障
 
-- **migrate Job 失败 / API 一直 CrashLoop 连不上库**:先看 migrate hook Job 的日志——它的
-  `hook-delete-policy` 是 `before-hook-creation`(不是 `hook-succeeded`),失败的 Job 会保留
-  到下一次 `install`/`upgrade` 之前,方便排查:
+- **api Pod 卡在 `Init:Error`/`Init:CrashLoopBackOff`,一直起不来**:迁移+seed 跑在这个 Pod
+  自己的两个 initContainer(`wait-for-db`、`migrate-seed`)里,不是一个独立的 Job——先看
+  Pod 状态确认卡在哪一个:
 
   ```bash
-  kubectl -n modeldoctor logs job/md-modeldoctor-migrate --all-containers
+  kubectl -n modeldoctor get pods -l app.kubernetes.io/name=modeldoctor
+  kubectl -n modeldoctor logs <pod> -c wait-for-db
+  kubectl -n modeldoctor logs <pod> -c migrate-seed
   ```
 
-  常见原因:数据库还没就绪(`wait-for-db` initContainer 最多重试 5 分钟后失败退出)、
-  `database.external.url`/`existingSecret` 配错、或者迁移本身有冲突。
+  常见原因:数据库还没就绪(`wait-for-db` 最多重试 5 分钟后失败退出,日志里能看到具体是
+  哪一步在重试)、`database.external.url`/`existingSecret` 配错、或者迁移本身有冲突。
+  部署策略是 `Recreate`(见「当前限制」),升级时旧 Pod 会先终止再起新 Pod——如果新 Pod 卡
+  在 `Init:`,服务会中断到问题解决为止,这也是为什么升级前建议先确认迁移不会失败(测试环境
+  先跑一遍)。
 
 - **压测 Job 起不来 / 一起就失败,报错和存储有关**:99% 是命名空间
   `benchmarks.namespace` 里缺一个名字精确为 `md-benchmark-storage` 的 Secret,或者这个

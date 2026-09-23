@@ -70,9 +70,11 @@ USER app
 EXPOSE 3001
 ENV PORT=3001
 
-# Migrations are NOT run here: the Helm chart runs them in a pre-install/pre-upgrade
-# Job (deploy/charts/modeldoctor/templates/jobs/migrate-seed.yaml) so a failed migration
-# fails the release visibly instead of crash-looping every replica.
+# Migrations are NOT run here: the Helm chart runs them as an initContainer on the api
+# Deployment (deploy/charts/modeldoctor/templates/api/deployment.yaml) — a Helm hook Job
+# was tried and rejected (pre-install runs before the chart's own Secret/Postgres exist;
+# post-install deadlocks against `helm install --wait`), so a failed migration surfaces
+# as the Pod stuck in `Init:...` instead of a failed hook Job.
 #
 # Deploying without Helm? Run this inside the container before starting it:
 #   cd /app/apps/api \
