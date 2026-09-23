@@ -7,10 +7,9 @@
 # manifest.json(docker save 产物的标准结构)里读 RepoTags,这样现场只需要这一个
 # tar 文件就是自描述的,不必额外携带 pull-and-save.sh 用的 images.txt 或 chart 源码。
 #
-# 注意: helm-test 用的 curl 镜像(curlimages/curl)会被 load + 重打标签 + 推送,
-# 但 chart 当前没有暴露覆盖它的 values 字段(image 地址硬编码在
-# templates/tests/test-health.yaml),所以下面打印的 values 片段里不会出现它——
-# 这不是本脚本的疏漏,是 chart 现状的已知限制,处理办法见 deploy/offline/README.md。
+# helm-test 用的 curl 镜像(curlimages/curl,对应 chart 的 values 字段 test.image)
+# 同样会被 load + 重打标签 + 推送,并出现在下面打印的 values 片段里——
+# 现场装完之后 `helm test` 拉的就是客户仓库里的那份副本,不用再单独处理。
 set -euo pipefail
 
 ARCHIVE=""
@@ -139,7 +138,6 @@ fi
 
 echo
 echo "==> 以下 values 覆盖片段可直接保存为文件,'helm install -f <file>' 使用"
-echo "==> (helm-test 用的 curl 镜像已重打标签/推送,但 chart 未暴露覆盖字段,不出现在片段里——见 README)"
 echo "---8<--- values-offline.yaml ---8<---"
 if [[ -n "$APP_TARGET" ]]; then
   cat <<EOF
@@ -166,5 +164,9 @@ if [[ -n "$POSTGRES_TARGET" ]]; then
   echo "database:"
   echo "  postgres:"
   echo "    image: ${POSTGRES_TARGET}"
+fi
+if [[ -n "$CURL_TARGET" ]]; then
+  echo "test:"
+  echo "  image: ${CURL_TARGET}"
 fi
 echo "---8<--------------------------------8<---"

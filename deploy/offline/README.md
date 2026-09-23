@@ -95,7 +95,8 @@ docker login -u <REGISTRY_USERNAME> -p <REGISTRY_PASSWORD> registry.customer.loc
 2. `docker load` 之后,把每个镜像重打标签成 `<registry>/<project>/<原仓库最后一段>:<原tag>`
    并推送(如 `swr.../md-runner-guidellm:v0.3.0` → `<registry>/modeldoctor/md-runner-guidellm:v0.3.0`)。
 3. 在 stdout 打印一段 `values-offline.yaml` 片段(`image.*`、`benchmarks.runnerImages.*`、
-   `storage.minio.image` / `mcImage`、`database.postgres.image`),把它保存成文件后可以直接:
+   `storage.minio.image` / `mcImage`、`database.postgres.image`、`test.image`),把它保存
+   成文件后可以直接:
 
    ```bash
    helm install modeldoctor deploy/charts/modeldoctor -f values-offline.yaml -f <前面复制来的场景 values>
@@ -108,24 +109,22 @@ docker login -u <REGISTRY_USERNAME> -p <REGISTRY_PASSWORD> registry.customer.loc
   --registry registry.customer.local:5000 --project modeldoctor --dry-run
 ```
 
-### 已知限制:helm-test 的 curl 镜像
+### helm-test 用的 curl 镜像
 
-`helm test` 用的 `curlimages/curl:8.11.1` 硬编码在
-`deploy/charts/modeldoctor/templates/tests/test-health.yaml` 里,chart 目前**没有暴露任何
-values 字段**可以把它改成客户仓库地址。因此 `load-and-push.sh` 依然会把这个镜像 load、
-重打标签、推送到客户仓库(保证它在客户仓库里有一份副本),但打印的 values 片段里**不会**
-出现它——写了也没有对应的字段能接住。
+`helm test`(`templates/tests/test-health.yaml`)用来打 `/api/health` 的
+`curlimages/curl:8.11.1` 走的是 chart 的 `test.image` 字段(默认值就是
+`curlimages/curl:8.11.1`),不是硬编码——离线包里它对应 `images.txt` 的
+`__CURL_IMAGE__` 占位符,`pull-and-save.sh` 会把它跟其它依赖一起拉取/打包,
+`load-and-push.sh` 也会把它重打标签、推送到客户仓库,并写进打印出来的 values 片段:
 
-如果现场集群完全连不到 `docker.io`,`helm test` 会因为拉不到
-`curlimages/curl:8.11.1` 这个精确引用而失败。两个可行的规避方式:
+```yaml
+test:
+  image: <registry>/<project>/curl:8.11.1
+```
 
-1. **推荐:** 在容器运行时(containerd/dockerd)配置一个 registry mirror,把发往
-   `docker.io`(或具体到 `docker.io/curlimages`)的请求透明重定向到客户自己的仓库——镜像
-   引用字符串不用改,`helm test` 照常拉 `curlimages/curl:8.11.1`,实际流量走的是客户仓库
-   里刚刚推送进去的那份副本。这是大多数私有化/离线 K8s 集群统一处理"第三方公共镜像不可达"
-   问题的标准做法,不是本 chart 特有的权宜之计。
-2. 临时跳过:安装时不跑 `helm test`(`helm install` 默认就不会自动跑 test,只有显式
-   `helm test <release>` 才会执行),验收改用别的方式确认 `/api/health` 可达。
+现场装完后 `helm test` 拉的就是这份客户仓库里的副本,不需要额外配置 registry mirror 或
+跳过测试——把 `load-and-push.sh` 打印的片段整段 `-f` 进 `helm install`/`helm upgrade` 即可,
+不用手改这一行;如果只想单独设置这一项,也可以直接 `--set test.image=<registry>/<project>/curl:8.11.1`。
 
 ## 客户仓库不支持 manifest list 时怎么办
 
@@ -148,6 +147,7 @@ values 字段**可以把它改成客户仓库地址。因此 `load-and-push.sh` 
 - [ ] `manifest.txt` 里每个镜像的 digest,与 `docker load` 后 `docker image inspect
       --format '{{.RepoDigests}}'` 得到的结果一致(证明介质传输过程中内容没有被篡改/损坏)。
 - [ ] `load-and-push.sh` 打印的 values 片段里,`image.tag` / `benchmarks.runnerImages.*` /
-      `storage.minio.image` 等字段确实指向 `<registry>/<project>/...`,不是残留的
-      `swr.cn-north-4.myhuaweicloud.com/...`。
-- [ ] 按上面「已知限制」处理好 curl 镜像的可达性,再执行 `helm test`。
+      `storage.minio.image` / `test.image` 等字段确实指向 `<registry>/<project>/...`,
+      不是残留的 `swr.cn-north-4.myhuaweicloud.com/...` 或 `curlimages/curl`。
+- [ ] 把该片段整段 `-f` 进 `helm install`/`helm upgrade` 后再执行 `helm test`,确认
+      `/api/health` 探测通过——这一步同时验证了 `test.image` 确实生效。
