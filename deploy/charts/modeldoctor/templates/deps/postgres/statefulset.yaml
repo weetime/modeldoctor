@@ -1,0 +1,117 @@
+{{- /*
+  仅在内置 Postgres 时渲染(database.bundled=true)。
+
+  PGDATA 必须指向挂载点下的一个子目录(/var/lib/postgresql/data/pgdata),不能直接是挂载
+  点本身(/var/lib/postgresql/data):PVC 首次挂载时,大多数 CSI 驱动的文件系统会在挂载点
+  下留一个 lost+found 目录,initdb 看到目标目录非空(哪怕只有 lost+found)就会拒绝初始化。
+  子目录本身是全新、空的,不受这个影响。
+
+  fsGroup: 999 —— 官方 postgres 镜像里 postgres 进程以 uid 999 运行,PVC 卷默认属主是
+  root,不设 fsGroup 会导致容器启动时写数据目录被拒绝。显式加 runAsUser: 999 /
+  runAsNonRoot: true 是把镜像本身已经隐含的这个事实写清楚,而不是依赖镜像默认行为。
+
+  database.postgres.persistence.enabled=false 时用 emptyDir 兜底(仅用于临时验证——
+  Pod 重建/滚动更新数据即丢失)。这个警告需要在 Task 9 的 NOTES.txt / 部署后自检里对运维
+  再次醒目提示一次,这里的模板本身无法在 `helm install` 输出之外发声。
+
+  密码来自 secret.yaml 渲染的 <fullname>-postgres Secret 的 password 字段(由
+  modeldoctor.postgresPassword 生成并跨 upgrade 保持不变),不直接内联 Values 里的值——
+  这样即便 database.postgres.password 后续在 values 里留空,StatefulSet 与
+  modeldoctor.databaseUrl 算出的密码也始终是同一个 Secret 里的同一份值。
+*/ -}}
+{{- if .Values.database.bundled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "modeldoctor.postgres.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ include "modeldoctor.postgres.fullname" . }}
+  replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels: {{- include "modeldoctor.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels: {{- include "modeldoctor.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      containers:
+        - name: postgres
+          image: {{ .Values.database.postgres.image }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.postgres.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.database.postgres.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "modeldoctor.postgres.fullname" . }}
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          startupProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.database.postgres.username }}
+                - -d
+                - {{ .Values.database.postgres.database }}
+            periodSeconds: 5
+            failureThreshold: 30   # 首次 initdb 最多给 150s
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.database.postgres.username }}
+                - -d
+                - {{ .Values.database.postgres.database }}
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.database.postgres.username }}
+                - -d
+                - {{ .Values.database.postgres.database }}
+            periodSeconds: 20
+            failureThreshold: 6
+          resources: {{- toYaml .Values.database.postgres.resources | nindent 12 }}
+      {{- if not .Values.database.postgres.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.database.postgres.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels: {{- include "modeldoctor.labels" . | nindent 10 }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.database.postgres.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.database.postgres.persistence.size }}
+  {{- end }}
+{{- end }}
