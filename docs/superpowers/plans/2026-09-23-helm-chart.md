@@ -64,7 +64,7 @@ deploy/offline/                       # T10
 - Modify: `tools/build-runner-images.sh`
 
 **Interfaces:**
-- Produces：生产镜像可执行 `pnpm -F @modeldoctor/api exec prisma migrate deploy` 与 `pnpm -F @modeldoctor/api db:seed`；镜像启动只做 `node apps/api/dist/main.js`；`tools/build-runner-images.sh` 支持 `REGISTRY` 环境变量覆盖。
+- Produces：生产镜像可执行 `apps/api/node_modules/.bin/prisma migrate deploy` 与 `node_modules/.bin/tsx prisma/seed.ts`；镜像启动只做 `node apps/api/dist/main.js`；`tools/build-runner-images.sh` 支持 `REGISTRY` 环境变量覆盖。
 
 - [ ] **Step 1: 把 tsx 挪到生产依赖**
 
@@ -81,8 +81,10 @@ Expected: `pnpm-lock.yaml` 更新，无报错。
 # Migrations are NOT run here: the Helm chart runs them in a pre-install/pre-upgrade
 # Job (deploy/charts/modeldoctor/templates/jobs/migrate-seed.yaml) so a failed migration
 # fails the release visibly instead of crash-looping every replica.
-# Deploying without Helm? Run `pnpm -F @modeldoctor/api exec prisma migrate deploy`
-# (and `pnpm -F @modeldoctor/api db:seed`) before starting the container.
+# Deploying without Helm? From inside the container run:
+#   cd /app/apps/api && node_modules/.bin/prisma migrate deploy && node_modules/.bin/tsx prisma/seed.ts
+# (Call the binaries directly — `pnpm exec` fails as the non-root `app` user because
+#  Corepack tries to reinstall pnpm into a root-owned node_modules.)
 CMD ["node", "apps/api/dist/main.js"]
 ```
 
@@ -112,8 +114,8 @@ REGISTRY="${REGISTRY:-swr.cn-north-4.myhuaweicloud.com/modeldoctor}"
 Run: `pnpm -F @modeldoctor/api exec tsx --version 2>&1 | tail -2 && docker build -t modeldoctor:plan-t1 . 2>&1 | tail -5`
 Expected: tsx 版本号打印成功；镜像构建成功。
 
-Run: `docker run --rm --entrypoint sh modeldoctor:plan-t1 -c "pnpm -F @modeldoctor/api exec prisma --version | head -3 && ls node_modules/.bin/tsx" 2>&1 | tail -6`
-Expected: prisma 版本打印；`node_modules/.bin/tsx` 存在（证明 seed 能在生产镜像里跑）。
+Run: `docker run --rm modeldoctor:plan-t1 sh -c "apps/api/node_modules/.bin/prisma --version | head -2 && apps/api/node_modules/.bin/tsx --version" 2>&1 | tail -5`
+Expected: prisma 与 tsx 版本都打印出来（证明迁移与 seed 都能在生产镜像里跑）。注意用直接二进制调用——`pnpm exec` 在非 root 下会因 Corepack 重装失败。
 
 - [ ] **Step 6: Commit**
 
@@ -919,9 +921,11 @@ spec:
             - sh
             - -c
             - |
-              # 等数据库可连:用 prisma 自身,避免额外引入 psql 镜像
+              # 等数据库可连。必须直接调二进制:以非 root 的 app 用户运行时
+              # `pnpm exec` 会让 Corepack 重装 pnpm 并因 node_modules 属 root 失败。
+              cd /app/apps/api
               for i in $(seq 1 60); do
-                if pnpm -F @modeldoctor/api exec prisma migrate status >/dev/null 2>&1; then exit 0; fi
+                if echo 'SELECT 1;' | node_modules/.bin/prisma db execute --url "$DATABASE_URL" --stdin >/dev/null 2>&1; then exit 0; fi
                 echo "waiting for database... ($i/60)"; sleep 5
               done
               echo "数据库在 5 分钟内未就绪" >&2; exit 1
@@ -936,16 +940,23 @@ spec:
             - |
               set -e
               echo "==> prisma migrate deploy"
-              pnpm -F @modeldoctor/api exec prisma migrate deploy
+              cd /app/apps/api   # prisma 按 cwd 找 prisma/schema.prisma
+              node_modules/.bin/prisma migrate deploy
               echo "==> prisma db seed (幂等 upsert:内置评测集 + 官方压测模板)"
-              pnpm -F @modeldoctor/api db:seed
+              # 不走 `prisma db seed` 包装:它 fork 的 shell 里 tsx 不在 PATH 上
+              node_modules/.bin/tsx prisma/seed.ts
           envFrom:
             - configMapRef: { name: {{ include "modeldoctor.fullname" . }}-config }
             - secretRef: { name: {{ include "modeldoctor.secretName" . }} }
           resources: {{- toYaml .Values.resources | nindent 12 }}
 ```
 
-注意：`prisma migrate status` 在「有未应用迁移」时返回非 0，所以它只能用来判断**能否连上库**——不行的话改用 `node -e` 直接连一次 `DATABASE_URL`（用 `pg` 不可用，镜像里没有），或退化为 `prisma db execute --stdin <<< "SELECT 1"`。实现时用 `prisma db execute --url "$DATABASE_URL" --stdin` 喂 `SELECT 1;` 最稳，验证时确认该子命令在 prisma 6 可用；若不可用，改用重试整个 `migrate deploy`（它本身幂等）并在报告里说明。
+**两条已验证的硬约束（Task 1 实测，违反必崩）：**
+
+1. 镜像以非 root 的 `app` 用户运行，容器内 `pnpm -F ... exec ...` 会让 Corepack 尝试重装 pnpm 并因 `node_modules` 属 root 而失败（`ERR_PNPM_PACKAGE_MANAGER_REMOVE_MODULES_DIR`）。**一律 `cd /app/apps/api` 后直接调 `node_modules/.bin/<bin>`。**
+2. `prisma db seed` 会 fork 一个 shell 执行 `tsx prisma/seed.ts`，而 `node_modules/.bin` 不在 PATH 上——所以直接 `node_modules/.bin/tsx prisma/seed.ts`。
+
+`prisma db execute --url ... --stdin` 若在 prisma 6 不可用，退化为直接重试 `migrate deploy`（其本身幂等），并在报告里说明。
 
 - [ ] **Step 2: 验证渲染**
 
