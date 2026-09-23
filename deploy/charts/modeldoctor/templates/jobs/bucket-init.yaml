@@ -1,0 +1,70 @@
+{{- /*
+  仅在内置 MinIO 时渲染(storage.bundled=true)——外接 S3(storage.bundled=false)时桶要么
+  已经存在、要么由运维自己的流程创建,chart 不对外部对象存储做任何建桶/生命周期操作。
+
+  这是一个 Helm hook Job,不是普通 Job:post-install,post-upgrade 意味着每次
+  `helm install` 和每次 `helm upgrade` 都会重新跑一次,必须是幂等的——
+    - `mc mb --ignore-existing`:桶已存在时不报错、直接跳过;
+    - `mc ilm rule add`:同一条生命周期规则重复添加时 mc 会报错(规则已存在),用
+      `|| echo ...` 吞掉这个失败分支而不是让整个 Job 失败,不影响 backoffLimit 计数。
+  `helm.sh/hook-delete-policy: before-hook-creation` 让本次 release 触发的新 Job 在创建前
+  删除上一次遗留的同名 Job(而不是 hook-succeeded 那种"跑完立刻删"),这样失败排查时还能
+  看到上一次的 Job 状态,直到下一次 install/upgrade 才清理。
+
+  这个 Job 渲染在 release 命名空间(与 MinIO StatefulSet/Service 同一个命名空间),不是
+  benchmarks.namespace,所以直接用 Service 短名字(modeldoctor.minio.fullname)即可解析,
+  不需要像 modeldoctor.storage.endpoint 那样拼 FQDN——FQDN 只有跨命名空间访问(压测 Job
+  从 benchmarks.namespace 访问 MinIO)时才是必需的。
+
+  `until mc alias set ...` 循环是等待 MinIO 就绪的第二道保险:StatefulSet 的 readiness
+  probe 已经会在 MinIO 未就绪前不把 Pod 加入 Service Endpoints,但 Service 尚未有
+  Endpoints 时 DNS 解析仍然成立、连接会被拒绝/超时,所以这里额外重试而不是假设
+  Service 一存在就能连通。
+
+  root 凭据来自 deps/minio/secret.yaml 渲染的同一个 Secret(<fullname>-minio 的
+  rootPassword 字段),与 StatefulSet 的 MINIO_ROOT_PASSWORD、api Secret 的
+  S3_SECRET_KEY、benchmarks 命名空间 md-benchmark-storage 的 S3_SECRET_KEY 四处
+  完全一致(均经由 modeldoctor.keepOrGenerate 的单次渲染内记忆化保证)。
+*/ -}}
+{{- if .Values.storage.bundled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-bucket-init
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bucket-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels: {{- include "modeldoctor.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bucket-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: {{ .Values.storage.minio.mcImage }}
+          env:
+            - name: MINIO_ROOT_USER
+              value: {{ .Values.storage.minio.rootUser | quote }}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "modeldoctor.minio.fullname" . }}
+                  key: rootPassword
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              until mc alias set md http://{{ include "modeldoctor.minio.fullname" . }}:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                echo "waiting for minio..."; sleep 3
+              done
+              mc mb --ignore-existing md/{{ .Values.storage.bucket }}
+              mc ilm rule add --expire-days {{ .Values.storage.retentionDays }} md/{{ .Values.storage.bucket }} || \
+                echo "生命周期规则已存在,跳过"
+{{- end }}
