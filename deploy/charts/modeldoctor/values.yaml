@@ -110,8 +110,10 @@ storage:
                                # S3_FORCE_PATH_STYLE / S3_ACCESS_KEY / S3_SECRET_KEY 六个明文 key
                                # 的 Secret,否则该命名空间里的压测 Job 会全部因认证失败而失败。
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    mcImage: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    # 用 quay.io:MinIO 官方镜像在 Docker Hub 上这些 tag 已不可匿名拉取
+    # (pull access denied),quay.io 正常。实测见 Task 7 报告。
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    mcImage: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
     rootUser: modeldoctor
     rootPassword: ""           # 留空自动生成并保持(同 auth 段的规则)
     persistence:
