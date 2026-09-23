@@ -5,14 +5,32 @@
 #
 # 依赖镜像(Postgres / MinIO / mc / helm-test 用的 curl)不在 images.txt 里写死具体
 # tag —— chart 的 values.yaml(database.postgres.image / storage.minio.image /
-# storage.minio.mcImage)以及硬编码在 templates/tests/test-health.yaml 里的 curl
-# 镜像,才是这些版本的唯一权威来源。本脚本用 `helm template --show-only
-# <component 模板>` 精确渲染出每个依赖组件自己的 Pod/StatefulSet/Job 模板,
-# 从渲染结果里摘取 image 字段,而不是对 values.yaml 做字符串抓取或 yq 路径查询:
-# 这样即便某个字段的取值逻辑将来从字面量换成 helper 函数/coalesce 表达式,或者
-# curl 镜像(它压根不是 values.yaml 里的字段)发生改动,脚本拿到的都还是"chart
-# 实际会渲染出哪个镜像"这个唯一事实。若 chart 模板结构变化导致解析不出 image
-# 字段,脚本会直接报错退出,不会静默产出一个镜像缺失的坏 tar。
+# storage.minio.mcImage / test.image)才是这些版本的唯一权威来源。本脚本用
+# `helm template --show-only <component 模板>` 精确渲染出每个依赖组件自己的
+# Pod/StatefulSet/Job 模板,从渲染结果里摘取 image 字段,而不是对 values.yaml
+# 做字符串抓取或 yq 路径查询:这样即便某个字段的取值逻辑将来从字面量换成 helper
+# 函数/coalesce 表达式发生改动,脚本拿到的都还是"chart 实际会渲染出哪个镜像"这个
+# 唯一事实。若 chart 模板结构变化导致解析不出 image 字段,脚本会直接报错退出,
+# 不会静默产出一个镜像缺失的坏 tar。
+#
+# 重要: 解析依赖镜像时,本脚本固定在打包机传入的 --values/--set 之后追加
+# `--set database.bundled=true --set storage.bundled=true`,不管操作者用什么
+# values 跑这个脚本。原因有两条:
+#   1. 离线包本来就该带上依赖镜像——目标集群完全可能启用内置 Postgres/MinIO,即使
+#      打包机本地用来验证配置的 values 文件是"外接数据库/外接存储"那一份(比如
+#      values-external.yaml)。
+#   2. 更根本的是:database.bundled=false / storage.bundled=false 时,chart 的
+#      _helpers.tpl 会在缺 database.external.url/storage.external.endpoint 等
+#      字段时主动 `fail`——而 `helm template --show-only <任意模板>` 依然会先
+#      渲染整个 chart 求值再过滤输出,任何模板的 `fail` 都会让整条命令以非零退出码
+#      中止,报错信息还完全跟目标依赖镜像无关。用一份"外接 DB + 外接存储"的真实
+#      values 文件跑 `--tier core` 会直接触发这个问题,而不是本脚本要处理的边界情况。
+#      固定 pin 住 bundled=true 让依赖解析这条只读渲染路径永远走"内置依赖"分支,
+#      绕开这些 fail——不影响 `helm package` 打包出的 chart tgz 本身(那是整份
+#      chart 原样打包,不带任何 --set)。
+# 这个 pin 只覆盖 database.bundled / storage.bundled 这两个字段本身,不会吃掉用户
+# 用 --values/--set 传的其它任何覆盖(比如下面反漂移自检用的
+# --set storage.minio.image=...)。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,9 +70,13 @@ chart tgz + values 示例一起放进输出目录,生成 manifest.txt 与 checks
                          规避了该问题——见 deploy/offline/README.md)
   --images <file>        覆盖默认清单文件,默认 deploy/offline/images.txt
   --chart-dir <dir>      覆盖默认 chart 目录,默认 deploy/charts/modeldoctor
-  --values <file>        透传给内部 `helm template -f <file>`,可重复;用于验证
-                         依赖镜像解析是否随 values 覆盖联动(反漂移自检)
+  --values <file>        透传给内部 `helm template -f <file>`,可重复;可以传打包机
+                         用来验证配置的场景 values(如 values-external.yaml)——依赖
+                         镜像解析固定按 database.bundled=true / storage.bundled=true
+                         处理,会忽略该文件里这两个字段的值(原因见 README),也可以
+                         用来做反漂移自检(改别的字段,确认解析结果联动)
   --set <key=val>        透传给内部 `helm template --set <key=val>`,可重复,用途同上
+                         (对 database.bundled/storage.bundled 同样不生效)
   --dry-run              只打印将要拉取/生成的内容,不执行 docker/helm 任何有副作用的操作
   -h, --help             显示此帮助
 
@@ -141,11 +163,17 @@ fi
 
 # 从 chart 渲染结果里精确摘取某个依赖组件的 image 字段。
 # $1 = 相对 chart 根的模板路径($2 = 报错信息里用的人类可读标签)。
+# 注意: database.bundled=true / storage.bundled=true 这两个 --set 固定放在用户
+# 传入的 --values/--set 之后——helm 后面的 --set/-f 覆盖前面的,这样不管操作者的
+# values 文件把 bundled 设成什么,依赖镜像解析永远走"内置依赖"分支(见文件头注释),
+# 同时不影响用户对其它字段(如 storage.minio.image)的覆盖。
 resolve_component_image() {
   local tpl="$1" label="$2" rendered image
   if ! rendered="$(helm template modeldoctor-offline "$CHART_DIR" \
       "${HELM_VALUES_ARGS[@]+"${HELM_VALUES_ARGS[@]}"}" \
       "${HELM_SET_ARGS[@]+"${HELM_SET_ARGS[@]}"}" \
+      --set database.bundled=true \
+      --set storage.bundled=true \
       --show-only "$tpl" 2>&1)"; then
     echo "错误: helm template 渲染 ${label}(${tpl})失败,输出:" >&2
     printf '%s\n' "$rendered" >&2
@@ -194,7 +222,7 @@ for image_ref in "${RESOLVED_IMAGES[@]}"; do
   echo "    ${image_ref}"
 done
 
-TAR_NAME="modeldoctor-images-${TIER}-${APP_TAG:-notag}.tar"
+TAR_NAME="modeldoctor-images-${TIER}${APP_TAG:+-${APP_TAG}}.tar"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo

@@ -42,6 +42,24 @@ Postgres StatefulSet / MinIO StatefulSet / 建桶 Job / helm-test Pod 各自的�
 `--runner-tag` 两个脚本参数在运行时替换,因为它们对应的是"这次要交付哪个版本"这个业务决策,
 不是 chart 的默认值。
 
+**有意为之的行为:依赖镜像解析永远按"内置依赖"处理。** `pull-and-save.sh` 内部渲染时固定
+追加 `--set database.bundled=true --set storage.bundled=true`,不管你用 `--values`/`--set`
+传的场景 values 里这两个字段是什么。两个原因:
+
+1. 离线包本来就该带上 Postgres/MinIO 镜像——现场目标集群完全可能启用内置依赖,即使你打包
+   时用来验证配置的 values 文件是"外接数据库/外接存储"那一份(比如 `values-external.yaml`,
+   `database.bundled: false` / `storage.bundled: false`)。
+2. 更根本的原因是:chart 在 `database.bundled=false` / `storage.bundled=false` 且没提供
+   对应外接字段(`database.external.url`、`storage.external.endpoint` 等)时,会主动
+   `fail` 掉整个渲染——而 `helm template --show-only <任意模板>` 依然要先对整份 chart
+   求值才能过滤输出,这个 `fail` 会让命令直接以非零退出码中止,报错信息还完全跟你要解析的
+   依赖镜像无关。用一份真实的"外接 DB + 外接存储"生产 values 跑 `--tier core` 会直接触发
+   这个问题。固定 pin 住 `bundled=true` 让这条只读的镜像解析路径永远绕开这些 `fail`。
+
+这个 pin 只覆盖 `database.bundled` / `storage.bundled` 这两个字段本身,`--values`/`--set`
+里对其它任何字段的覆盖(比如 `storage.minio.image`)照常生效——不会被一起吃掉。也不影响
+`helm package` 打出的 chart tgz 本身,那是整份 chart 原样打包,不带任何 `--set`。
+
 ## 有网侧:拉取并打包
 
 ```bash
@@ -63,9 +81,13 @@ docker login -u <SWR_USERNAME> -p <SWR_PASSWORD> swr.cn-north-4.myhuaweicloud.co
   `--app-tag` 的值,`image.tag` 留空时会回退到这个 `appVersion`)。
 - `values.yaml` / `values-external.yaml` / `values-4pd.yaml` —— chart 自带的三份 values
   示例,原样复制,现场按场景挑一份做起点。
-- `manifest.txt` —— 每行一个镜像及其 digest(`RepoDigests`,拉不到时退化成本地 Image Id),
-  用于核对现场收到的镜像跟有网侧拉取时是否为同一个内容。
-- `checksums.sha256` —— 整个输出目录(除自身外)的 sha256,离线介质传输后先核对这个文件。
+- `manifest.txt` —— 每行一个镜像及其 digest(有网侧 `docker pull` 时拿到的
+  `RepoDigests`,没有仓库关联信息时退化成本地 Image Id),是"这次打包时到底拉的是哪个
+  内容"的留档记录,供审计/排查用。**注意**:`docker load` 之后本地镜像不带任何仓库关联,
+  `docker image inspect --format '{{.RepoDigests}}'` 必然是空——这不是介质损坏,是
+  save/load 往返的正常行为,不能拿它去跟 manifest.txt 比对(见下面校验清单的说明)。
+- `checksums.sha256` —— 整个输出目录(除自身外)的 sha256,是介质传输后真正有效的完整性
+  校验:离线介质拷贝完先核对这个文件,逐行比对现场重新计算的结果。
 
 先用 `--dry-run` 确认清单再动手拉取(不产生任何文件、不发起任何网络请求以外的操作,只跑一次
 `helm template` 做依赖镜像解析):
@@ -143,9 +165,18 @@ test:
 
 ## 校验清单(交接时对一遍)
 
-- [ ] `checksums.sha256` 在现场重新计算一遍,和有网侧产出的文件逐行比对。
-- [ ] `manifest.txt` 里每个镜像的 digest,与 `docker load` 后 `docker image inspect
-      --format '{{.RepoDigests}}'` 得到的结果一致(证明介质传输过程中内容没有被篡改/损坏)。
+- [ ] `checksums.sha256` 在现场重新计算一遍(`sha256sum -c checksums.sha256` 或逐行用
+      `shasum -a 256` 比对),这是介质传输后唯一有效、任何情况下都能跑的完整性校验——
+      **不要**用 `docker load` 之后的 `docker image inspect --format '{{.RepoDigests}}'`
+      去跟 `manifest.txt` 比对:`RepoDigests` 是镜像与仓库的关联信息,`load` 出来的镜像
+      本地压根没有仓库关联,这个字段必然是空 `[]`,不管介质是否完好,拿它做校验只会
+      得到一个永远"失败"的假信号。
+- [ ] (可选,更强的身份校验)`load-and-push.sh` 推送完成后,对每个镜像跑
+      `docker image inspect <registry>/<project>/<name>:<tag> --format '{{.RepoDigests}}'`——
+      推送到仓库之后这个字段才会真正被填充,且内容寻址的 digest(`@sha256:...` 后半段)
+      在镜像内容不变的前提下应该和 `manifest.txt` 里记录的一致。这一步依赖客户仓库
+      按标准 Docker Registry v2 协议返回 manifest digest,不是所有仓库实现都完全一致,
+      跳过也不影响交付——`checksums.sha256` 已经是充分的完整性保证。
 - [ ] `load-and-push.sh` 打印的 values 片段里,`image.tag` / `benchmarks.runnerImages.*` /
       `storage.minio.image` / `test.image` 等字段确实指向 `<registry>/<project>/...`,
       不是残留的 `swr.cn-north-4.myhuaweicloud.com/...` 或 `curlimages/curl`。
