@@ -28,7 +28,9 @@ usage() {
   --dry-run          只打印将要重打标签/推送的计划与 values 片段,不执行 docker 任何操作
   -h, --help         显示此帮助
 
-前置条件: docker(推送前需先 `docker login -u <SWR_USERNAME> -p <SWR_PASSWORD> <registry>`,
+前置条件: docker(推送前需先登录目标仓库,用 --password-stdin,不要用 -p <明文>——
+命令行参数会进 shell 历史和 ps 进程列表:
+  printf '%s' '<PASSWORD>' | docker login <registry> -u '<USERNAME>' --password-stdin
 本脚本和文档都不会写任何真实凭据)。
 USAGE
 }
