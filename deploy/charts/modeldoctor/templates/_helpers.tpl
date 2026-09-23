@@ -142,10 +142,29 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   Secret,产生一个连接串为空的 DATABASE_URL,一路无声到 Pod 启动才被 zod 校验拦下,
   CrashLoop 且报错信息与真实原因（模式选错）脱节。
 */}}
+{{/*
+  DSN 的 userinfo 段(用户名:密码)必须做百分号转义后再拼进 URL。自动生成的密码是
+  randAlphaNum(纯字母数字)确实无需转义,但 database.postgres.username /
+  database.postgres.password 是用户可填字段——一个含 `@` `:` `/` `?` `#` 的密码会把
+  URL 的 authority 边界切错,得到一个语法上完全合法但指向错误主机/库的连接串,
+  应用侧只会看到一条莫名其妙的连接失败。
+
+  `urlquery` 是 text/template 的内置函数(不是 sprig),按 query 组件规则转义:
+  `@`->`%40`、`:`->`%3A`、`/`->`%2F`、字面 `+`->`%2B`,但空格 -> `+`。userinfo 段里
+  `+` 是合法字面量、不会被 URL 解析器还原成空格,所以要把 urlquery 产出的 `+` 再换成
+  `%20`——此时输出里剩下的 `+` 只可能来自空格(字面 `+` 已经变成 `%2B` 了),这个替换
+  是精确的,不会误伤。
+*/}}
+{{- define "modeldoctor.urlUserinfoEscape" -}}
+{{- urlquery . | replace "+" "%20" -}}
+{{- end -}}
+
 {{- define "modeldoctor.databaseUrl" -}}
 {{- if .Values.database.bundled -}}
 {{- $pw := include "modeldoctor.postgresPassword" . -}}
-{{- printf "postgresql://%s:%s@%s:5432/%s?schema=public" .Values.database.postgres.username $pw (include "modeldoctor.postgres.fullname" .) .Values.database.postgres.database -}}
+{{- $user := include "modeldoctor.urlUserinfoEscape" .Values.database.postgres.username -}}
+{{- $pwEsc := include "modeldoctor.urlUserinfoEscape" $pw -}}
+{{- printf "postgresql://%s:%s@%s:5432/%s?schema=public" $user $pwEsc (include "modeldoctor.postgres.fullname" .) .Values.database.postgres.database -}}
 {{- else if .Values.database.external.url -}}
 {{- .Values.database.external.url -}}
 {{- else -}}
@@ -218,6 +237,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* 渲染期硬约束;入口模板(configmap.yaml 等)调用一次,失败即中止整个 release */}}
 {{- define "modeldoctor.validate" -}}
+{{- /*
+  最低 Helm 版本硬断言。Chart.yaml 只有 kubeVersion 字段,没有"最低 helm 版本"字段,
+  所以下限只能在渲染期自己查。3.8.0 这个下限来自 keepOrGenerate 用的 `randBytes`——
+  它随 sprig v3.2.2 进入 Helm 3.8;更老的 helm 会在渲染 api/secret.yaml 时报
+  `function "randBytes" not defined`,报错完全指不到"helm 太旧"这个真实原因。
+  `.Capabilities.HelmVersion.Version` 形如 "v3.15.4",semverCompare 能直接吃带 v 的串。
+*/ -}}
+{{- if .Capabilities.HelmVersion.Version -}}
+{{- if semverCompare "<3.8.0" .Capabilities.HelmVersion.Version -}}
+{{- fail (printf "本 chart 需要 Helm >= 3.8.0(当前 %s):自动生成加密密钥用的 randBytes 随 sprig v3.2.2 才进入 Helm 3.8,更老的版本会报 `function \"randBytes\" not defined`。请升级 helm 后重试。" .Capabilities.HelmVersion.Version) -}}
+{{- end -}}
+{{- end -}}
 {{- if ne (int .Values.replicaCount) 1 -}}
 {{- fail "replicaCount 只能是 1:通知派发器、K8s watcher、SSE Hub 均无选主机制,多副本会重复发送通知并重复处理压测 Job。" -}}
 {{- end -}}
