@@ -36,21 +36,36 @@
       Secret 完全不写这个 key(见 templates/api/secret.yaml),必须用显式的
       env[].valueFrom.secretKeyRef 直接指向那个既有 Secret——两个 initContainer 都要加
       这层覆盖,因为两者都是通过进程环境变量 $DATABASE_URL 读取连接串的。
+
+  selector/pod 标签额外加一个 app.kubernetes.io/component: api——modeldoctor.selectorLabels
+  只有 name+instance 两个 key,postgres/minio 的 StatefulSet 与 Service 都已经在各自
+  selector 上叠加了 app.kubernetes.io/component 区分开(见 deps/postgres、deps/minio 下
+  同名注释),但这个 Deployment 之前漏了同样的处理——这不是"不同组件共用两个公共 label
+  也无妨"的设计取舍,而是遗漏:真实 kind 安装里实测复现,`kubectl exec/logs
+  deploy/<fullname>`(本 chart CI 的 seed 断言、失败诊断都用这个写法)在这两个 key 之外
+  没有第三个 key 可以排除同 release 里的其它 Pod 时,会不确定地解析到 minio/postgres/
+  test-health 的 Pod 而不是这个 Deployment 自己的 Pod——`kubectl exec` 是按当前存活的
+  匹配 Pod 列表取第一个,不是按控制器归属过滤。Service 层面这次没有实际串流量(下面
+  targetPort: http 在 postgres/minio/test 的容器上都找不到同名端口,不会被选进
+  Endpoints),但 selector 本身仍然是不干净的,一并按 postgres/minio 已有的模式修正。
 */ -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "modeldoctor.fullname" . }}
   labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate   # 单副本 + 避免两个 K8s Informer 并存
   selector:
     matchLabels: {{- include "modeldoctor.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
   template:
     metadata:
       labels: {{- include "modeldoctor.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/api/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
