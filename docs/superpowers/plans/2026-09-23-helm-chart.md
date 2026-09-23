@@ -730,7 +730,11 @@ git commit -m "feat(chart): API 工作负载模板(Deployment/Service/Ingress/Co
 
 - [ ] **Step 1: namespace.yaml**
 
-仅当 `benchmarks.createNamespace=true` 且 `benchmarks.namespace != .Release.Namespace` 时渲染。加 `helm.sh/hook: pre-install,pre-upgrade` + `hook-weight: -20` 与 `hook-delete-policy: before-hook-creation`，确保它先于同命名空间内的 Role/Secret 建立。
+仅当 `benchmarks.createNamespace=true` 且 `benchmarks.namespace != .Release.Namespace` 时渲染。
+
+**不要用 Helm hook。** 普通模板即可：Helm 的 kind sorter 本来就把 `Namespace` 排在 `Secret`/`Role`/`RoleBinding` 之前，顺序需求已经满足；而 `hook-delete-policy: before-hook-creation` 会在**每次 `helm upgrade`** 前删掉这个命名空间，级联干掉里面在跑的压测 Job、历史 Pod（日志就此丢失）和 per-run Secret——一条常规升级路径上的数据丢失。
+
+同时给它加 `helm.sh/resource-policy: keep`：命名空间由 chart 创建，但 `helm uninstall` 时不删除，避免卸载动作顺手清掉运行历史。卸载后如需彻底清理，由运维手动 `kubectl delete ns`，这一点写进 README。
 
 - [ ] **Step 2: storage-secret.yaml**
 
