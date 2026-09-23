@@ -118,6 +118,11 @@ RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/)"
 - `values.yaml` / `values-external.yaml` —— chart 自带的两份 values 示例,现场按场景挑一份
   做起点。**`values-4pd.yaml` 是本团队自用集群的示例(含内网地址),有意不外发**;
   脚本里这三份是逐个列出的白名单,不是 `values-*.yaml` 通配——将来新增内部示例默认不外发。
+  这个"不外发"是双重保证:上面这份散装文件白名单只管这里复制出来的三份 loose 文件;
+  `modeldoctor-<chart版本>.tgz` 本身(即上一条)是否也带着 `values-4pd.yaml` 是另一回事,
+  由 `deploy/charts/modeldoctor/.helmignore` 里的排除规则保证 `helm package` 不会把它打进
+  tgz——两处任一处失守都会让内网地址外泄,改动前都要重新跑一遍校验清单里的
+  `tar -tzf` 检查。
 - `manifest.txt` —— 每行一个镜像及其 digest(有网侧 `docker pull` 时拿到的
   `RepoDigests`,没有仓库关联信息时退化成本地 Image Id),是"这次打包时到底拉的是哪个
   内容"的留档记录,供审计/排查用。**注意**:`docker load` 之后本地镜像不带任何仓库关联,

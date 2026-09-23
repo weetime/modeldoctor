@@ -17,3 +17,6 @@
 .project
 .settings
 ci/
+# Internal example values (this team's own cluster) — never ship inside the
+# packaged chart; keep the file in the repo, just exclude it from `helm package`.
+values-4pd.yaml
