@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate   # 单副本 + 避免两个 K8s Informer 并存
+  selector:
+    matchLabels: {{- include "modeldoctor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "modeldoctor.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/api/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "modeldoctor.serviceAccountName" . }}
+      automountServiceAccountToken: true   # 代码用 loadFromDefault() 访问 apiserver
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api
+          image: {{ include "modeldoctor.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # 不设置 workingDir:镜像 WORKDIR /app 是正确值,静态资源(SPA)按进程 cwd 解析。
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "modeldoctor.fullname" . }}-config
+            - secretRef:
+                name: {{ include "modeldoctor.secretName" . }}
+            {{- with .Values.auth.existingSecret }}
+            # auth.existingSecret:JWT_ACCESS_SECRET / CONNECTION_API_KEY_ENCRYPTION_KEY /
+            # ALERTMANAGER_WEBHOOK_SECRET 改由这个既有 Secret 提供(需自带同名三个 key),
+            # chart 自己的 Secret 里对应字段被跳过(见 secret.yaml)。
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- if or (and (not .Values.database.bundled) .Values.database.external.existingSecret) (and (not .Values.storage.bundled) .Values.storage.external.existingSecret) }}
+          env:
+            {{- if and (not .Values.database.bundled) .Values.database.external.existingSecret }}
+            # database.external.existingSecret 模式:DATABASE_URL 直接从既有 Secret 注入,
+            # 不经过 modeldoctor.databaseUrl,也不写进 chart 自己的 Secret。
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.external.existingSecret }}
+                  key: {{ .Values.database.external.existingSecretKey }}
+            {{- end }}
+            {{- if and (not .Values.storage.bundled) .Values.storage.external.existingSecret }}
+            # storage.external.existingSecret 模式:S3 凭据直接从既有 Secret 注入(key 名固定
+            # 为 accessKey / secretKey,见 values.yaml 里 storage.external.existingSecret 的注释)。
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.external.existingSecret }}
+                  key: accessKey
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.external.existingSecret }}
+                  key: secretKey
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 3001
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60        # 冷启动最多 5 分钟
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: http   # 不用 /api/health:它带 500ms DB 超时,数据库抖动会误杀 Pod
+            periodSeconds: 20
+            failureThreshold: 6
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
