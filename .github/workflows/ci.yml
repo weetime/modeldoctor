@@ -105,3 +105,160 @@ jobs:
           tags: modeldoctor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # 与 lint-type-test 并行、彼此独立的 chart 作业:helm lint/template 静态渲染校验 +
+  # kind 里的真实 helm install/upgrade。static 渲染(lint/template)只能证明"YAML 合法、
+  # values 组合不会在渲染期 fail",证明不了三类只有真实安装才会暴露的缺陷——Namespace
+  # 的 delete-policy 把 benchmarks 命名空间在每次 upgrade 时清空、Secret 里的密码在同一次
+  # 渲染内被计算两次导致应用连不上自己的数据库、建桶 Job 在依赖不可达时永久挂起——这三个
+  # 缺陷在本 chart 的开发过程中都真实出现过,且都是 `helm lint`/`helm template` 测不出来的。
+  # 后半段(kind 安装)就是为了补上这个盲区。
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: helm lint(默认值 + 所有 ci/ values 组合)
+        run: |
+          set -euo pipefail
+          helm lint deploy/charts/modeldoctor
+          for f in deploy/charts/modeldoctor/ci/*.yaml; do
+            echo "== helm lint -f $f =="
+            helm lint deploy/charts/modeldoctor -f "$f"
+          done
+
+      - name: helm template 渲染校验(含反向断言:多副本必须渲染失败)
+        run: |
+          set -euo pipefail
+          for f in deploy/charts/modeldoctor/ci/*.yaml; do
+            echo "== helm template -f $f =="
+            helm template md deploy/charts/modeldoctor -f "$f" > /dev/null
+          done
+          # modeldoctor.validate 明确拒绝 replicaCount != 1(通知派发/K8s watcher/SSE Hub
+          # 均无选主机制);这里反向断言它必须失败——如果哪天这条护栏被误删,helm
+          # template 会意外成功,让下面这个 if 分支把作业判红,而不是静默放过。
+          if helm template md deploy/charts/modeldoctor --set replicaCount=2 >/tmp/replica2.out 2>&1; then
+            echo "::error::replicaCount=2 本应渲染失败,但成功了 —— modeldoctor.validate 的护栏可能被误删" >&2
+            cat /tmp/replica2.out
+            exit 1
+          fi
+          echo "OK — replicaCount=2 按预期渲染失败"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: 构建应用镜像并载入 kind
+        run: |
+          set -euo pipefail
+          # 用一个明确带 "." 的伪造 registry host(ci.local)而不是裸词仓库名——Docker 的
+          # 引用规范化规则里,不含 "." 的裸词仓库名(如单独一个 "modeldoctor")会被隐式
+          # 当作 "docker.io/library/<name>" 处理(已本地实测确认:crictl images 里能看到
+          # 这层隐式前缀)。如果这里的 image.registry/image.repository 拼出来的引用字符串
+          # 和 kind 实际载入的引用字符串不完全一致,pullPolicy: Never 时 kubelet 会找不到
+          # 本地镜像;用带 "." 的 host 可以避免这层隐式改写,渲染出的引用与载入的引用
+          # 保证逐字节一致。
+          docker buildx build --tag ci.local/modeldoctor:ci --load \
+            --cache-from type=gha --cache-to type=gha,mode=max .
+
+      - uses: helm/kind-action@v1
+        with:
+          version: v0.33.0
+
+      - name: kind load docker-image
+        run: |
+          set -euo pipefail
+          # helm/kind-action 默认集群名是 chart-testing(未显式传 cluster_name 时的默认值,
+          # 见该 action 的 action.yaml);这里不写死,直接用同一个默认值,避免和 action
+          # 实际创建的集群名不一致。
+          kind load docker-image ci.local/modeldoctor:ci --name chart-testing
+
+      - name: helm install(内置依赖 + 载入的本地镜像)+ helm test
+        run: |
+          set -euo pipefail
+          helm install md deploy/charts/modeldoctor \
+            --namespace modeldoctor --create-namespace \
+            --set image.registry=ci.local --set image.repository=modeldoctor --set image.tag=ci \
+            --set image.pullPolicy=Never \
+            --set ingress.enabled=false \
+            --set database.postgres.persistence.size=1Gi \
+            --set storage.minio.persistence.size=1Gi \
+            --wait --timeout 15m
+          helm test md --namespace modeldoctor --logs
+
+      - name: 断言:seed 真的跑过(官方压测模板存在)
+        run: |
+          set -euo pipefail
+          # @prisma/client 是 apps/api 的依赖,不是根 workspace 的直接依赖;pnpm 的
+          # 隔离式 node_modules 布局下它只挂在 apps/api/node_modules 下,从容器默认
+          # WORKDIR(/app)直接 require 会找不到模块。用 NODE_PATH 指向
+          # apps/api/node_modules,不需要额外 `cd`,也避免了 kubectl exec 参数里
+          # "sh -c 套 cd 套 node -e" 的多层引号转义。
+          kubectl -n modeldoctor exec deploy/md-modeldoctor -- \
+            env NODE_PATH=/app/apps/api/node_modules node -e "
+              const { PrismaClient } = require('@prisma/client');
+              const prisma = new PrismaClient();
+              prisma.benchmarkTemplate.count({ where: { isOfficial: true } })
+                .then((n) => {
+                  console.log('official benchmark templates:', n);
+                  process.exit(n > 0 ? 0 : 1);
+                })
+                .catch((err) => {
+                  console.error(err);
+                  process.exit(1);
+                })
+                .finally(() => prisma.\$disconnect());
+            "
+
+      - name: 断言:benchmarks 命名空间的 RBAC 与存储 Secret 到位
+        run: |
+          set -euo pipefail
+          # kubectl get 本身在对象不存在时非零退出,配合 set -e 会直接判红这一步,
+          # 不会出现"查不到就当没有问题"这种假阴性。
+          verbs="$(kubectl -n modeldoctor-benchmarks get role md-modeldoctor-benchmark-driver \
+            -o jsonpath='{.rules[?(@.resources[0]=="pods")].verbs[*]}')"
+          echo "pods 规则的 verbs: [$verbs]"
+          case " $verbs " in
+            *' watch '*) echo "OK — Role 含 pods:watch" ;;
+            *) echo "::error::Role md-modeldoctor-benchmark-driver 的 pods 规则缺少 watch verb" >&2; exit 1 ;;
+          esac
+          kubectl -n modeldoctor-benchmarks get secret md-benchmark-storage \
+            -o jsonpath='{.metadata.name}{"\n"}'
+
+      - name: 断言:helm upgrade 可重入,加密密钥不变
+        run: |
+          set -euo pipefail
+          before="$(kubectl -n modeldoctor get secret md-modeldoctor-secrets \
+            -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}')"
+          helm upgrade md deploy/charts/modeldoctor --namespace modeldoctor --reuse-values \
+            --wait --timeout 10m
+          after="$(kubectl -n modeldoctor get secret md-modeldoctor-secrets \
+            -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}')"
+          if [ "$before" != "$after" ]; then
+            echo "::error::CONNECTION_API_KEY_ENCRYPTION_KEY 在 helm upgrade 后发生了变化 —— 数据库里已加密存储的连接凭据会全部无法解密" >&2
+            exit 1
+          fi
+          echo "OK — CONNECTION_API_KEY_ENCRYPTION_KEY 在 upgrade 前后一致"
+
+      - name: 失败时导出诊断(pods/jobs/describe/logs/events)
+        if: failure()
+        run: |
+          echo "::group::modeldoctor 命名空间"
+          kubectl -n modeldoctor get pods,jobs,statefulsets,pvc -o wide || true
+          kubectl -n modeldoctor describe pods || true
+          kubectl -n modeldoctor logs job/md-modeldoctor-migrate --all-containers --tail=200 || true
+          kubectl -n modeldoctor logs job/md-modeldoctor-bucket-init --all-containers --tail=200 || true
+          kubectl -n modeldoctor logs deploy/md-modeldoctor --all-containers --tail=200 || true
+          echo "::endgroup::"
+          echo "::group::modeldoctor-benchmarks 命名空间"
+          kubectl -n modeldoctor-benchmarks get all,role,rolebinding,secrets -o wide || true
+          echo "::endgroup::"
+          echo "::group::events(按时间排序,全部命名空间)"
+          kubectl get events -A --sort-by=.lastTimestamp || true
+          echo "::endgroup::"
+          echo "::group::helm status"
+          helm status md --namespace modeldoctor || true
+          echo "::endgroup::"
