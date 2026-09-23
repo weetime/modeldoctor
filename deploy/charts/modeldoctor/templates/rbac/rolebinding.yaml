@@ -1,0 +1,21 @@
+{{- /*
+  RoleBinding 本身落在 benchmarks 命名空间(要跟它绑定的 Role 同命名空间),但它的
+  subject——真正拿到这份权限的身份——是 release 命名空间里那个 API Pod 用的
+  ServiceAccount(API 用 in-cluster config 以自己的 SA 身份去 benchmarks 命名空间创建/
+  监听 Job,而不是 benchmarks 命名空间里另建一个 SA)。ServiceAccount 的 subject 必须显式
+  带 namespace 字段,否则会被隐式解释成 benchmarks 命名空间自己的同名 SA(大概率不存在)。
+*/ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-benchmark-driver
+  namespace: {{ .Values.benchmarks.namespace }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "modeldoctor.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "modeldoctor.fullname" . }}-benchmark-driver
+  apiGroup: rbac.authorization.k8s.io

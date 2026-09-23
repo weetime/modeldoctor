@@ -1,0 +1,22 @@
+{{- /*
+  只有当运维选择让 chart 代管一个独立于 release 命名空间的压测命名空间时才渲染这个对象:
+  benchmarks.createNamespace=false(客户预先建好命名空间)或 benchmarks.namespace 与
+  .Release.Namespace 相同(单命名空间模式)都不应该产出这个 Namespace,否则要么破坏客户
+  自己对命名空间生命周期的管理,要么在同一个命名空间里重复声明一次 Namespace 对象。
+*/ -}}
+{{- if and .Values.benchmarks.createNamespace (ne .Values.benchmarks.namespace .Release.Namespace) }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.benchmarks.namespace }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+  annotations:
+    # Helm hook:确保这个命名空间先于同一次 install/upgrade 里落在它内部的其它资源
+    # (Role、RoleBinding、md-benchmark-storage Secret)建立——这些资源是普通(非 hook)
+    # 清单,如果命名空间还不存在,apply 会直接失败。hook-weight 取一个足够小的负数,
+    # 保证在其它 pre-install/pre-upgrade hook(如果未来引入)之前执行;
+    # before-hook-creation 让重复 install/upgrade 时先删再建,避免残留状态。
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+{{- end }}
