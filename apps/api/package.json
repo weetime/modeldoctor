@@ -61,6 +61,7 @@
     "prisma": "^6.19.3",
     "reflect-metadata": "^0.2",
     "rxjs": "^7",
+    "tsx": "^4.20.0",
     "zod": "^3.23"
   },
   "devDependencies": {
@@ -79,7 +80,6 @@
     "pino-pretty": "^11",
     "supertest": "^7",
     "testcontainers": "^11.14.0",
-    "tsx": "^4.20.0",
     "unplugin-swc": "^1",
     "vite-tsconfig-paths": "^5",
     "vitest": "^2"

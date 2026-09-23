@@ -70,5 +70,9 @@ USER app
 EXPOSE 3001
 ENV PORT=3001
 
-# Run migrations then start the API. Fail-fast on migration error.
-CMD ["sh", "-c", "pnpm -F @modeldoctor/api exec prisma migrate deploy && node apps/api/dist/main.js"]
+# Migrations are NOT run here: the Helm chart runs them in a pre-install/pre-upgrade
+# Job (deploy/charts/modeldoctor/templates/jobs/migrate-seed.yaml) so a failed migration
+# fails the release visibly instead of crash-looping every replica.
+# Deploying without Helm? Run `pnpm -F @modeldoctor/api exec prisma migrate deploy`
+# (and `pnpm -F @modeldoctor/api db:seed`) before starting the container.
+CMD ["node", "apps/api/dist/main.js"]
