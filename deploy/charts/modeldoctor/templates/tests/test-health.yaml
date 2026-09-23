@@ -5,8 +5,11 @@
     - 响应体必须真的含 "status":"ok"(@nestjs/terminus 的 HealthCheckResult 序列化形态)——
       不满足时 API 通常仍能返回 200 之外的状态码或者一个 error 字段不为空的 body,
       只 assert 状态码会漏掉“进程在跑但数据库探针失败”这类情况。
-  镜像固定用 curlimages/curl,不复用应用镜像——测试本身只需要 curl,不需要背上应用镜像的
-  体积和启动开销。
+  镜像用轻量 curl 镜像(`.Values.test.image`),不复用应用镜像——测试本身只需要 curl,
+  不需要背上应用镜像的体积和启动开销。这个镜像来自 Docker Hub 而不是应用/内置依赖自己的
+  仓库,离线/私有化现场把其它镜像都重打标签推到自有仓库后,如果不管这一个,`helm test`
+  会在拉镜像这一步就失败——所以做成 values 开关而不是硬编码,现场改成
+  `--set test.image=<your-registry>/.../curl:8.11.1` 即可。
 */ -}}
 apiVersion: v1
 kind: Pod
@@ -20,7 +23,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: curl
-      image: curlimages/curl:8.11.1
+      image: {{ .Values.test.image }}
       command: ["sh", "-c"]
       args:
         - |

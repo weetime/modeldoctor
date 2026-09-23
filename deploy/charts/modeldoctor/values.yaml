@@ -187,3 +187,12 @@ serviceAccount:
   create: true
   name: ""                     # 留空则使用 modeldoctor.fullname 生成的名字
   annotations: {}
+
+test:
+  # helm test(templates/tests/test-health.yaml)用来打 /api/health 的轻量 curl 镜像,
+  # 与应用镜像无关(见该模板注释:测试本身只需要 curl,不需要背上应用镜像的体积和启动
+  # 开销)。离线/私有化现场把所有镜像重打标签推到自有仓库后,这一个镜像也需要跟着改,
+  # 否则集群拉不到 curlimages/curl 会导致 helm test 失败——改成你仓库里的地址即可,
+  # 例如 <your-registry>/<project>/curl:8.11.1(离线交付包的 pull-and-save.sh 会把它纳入
+  # 清单一并打包)。
+  image: curlimages/curl:8.11.1

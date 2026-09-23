@@ -268,6 +268,12 @@ helm test md --namespace modeldoctor
 | `serviceAccount.name` | ServiceAccount 名;留空用 `modeldoctor.fullname` | `""` |
 | `serviceAccount.annotations` | ServiceAccount 注解 | `{}` |
 
+### helm test
+
+| Key | 说明 | 默认值 |
+|---|---|---|
+| `test.image` | `helm test` 断言 `/api/health` 用的轻量 curl 镜像,与应用镜像无关。离线/私有化现场把其它镜像都重打标签推到自有仓库后,这一个也需要跟着改,否则 `helm test` 会因为拉不到镜像而失败;改成 `<your-registry>/.../curl:8.11.1` 即可 | `curlimages/curl:8.11.1` |
+
 ## 升级与回滚
 
 ```bash
