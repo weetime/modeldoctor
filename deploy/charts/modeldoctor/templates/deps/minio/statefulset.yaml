@@ -15,6 +15,14 @@
   bucket-init Job(jobs/bucket-init.yaml)不依赖这个 readiness gate,它用应用层的
   `until mc alias set ...` 重试循环等待 MinIO 就绪,双重保险。
 
+  startupProbe(与 Postgres 那边对称,取值按 MinIO 的实际启动速度设定,而不是照抄
+  Postgres 的 150s):本地用 `docker run` 起一个全新、未格式化过的卷实测,MinIO 从
+  容器启动到 S3 API 可用只需要几秒(单节点单驱动,不需要等 initdb 那种耗时初始化),
+  9 秒左右即完成首次格式化并开始接受连接;`periodSeconds: 5, failureThreshold: 12`
+  给了 60s 预算,足够覆盖冷启动 + 一些调度/存储抖动的余量,同时不会像 Postgres 那样
+  留 150s 的大窗口掩盖真正的启动失败。startupProbe 未通过前,readiness/liveness 都不会
+  被 kubelet 调用(K8s 语义),不需要额外处理。
+
   密码来自 secret.yaml 渲染的 <fullname>-minio Secret 的 rootPassword 字段(由
   modeldoctor.minioRootPassword 生成并跨 upgrade 保持不变),不直接内联 Values 里的值——
   这样即便 storage.minio.rootPassword 后续在 values 里留空,StatefulSet、api Secret 的
@@ -72,6 +80,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+          startupProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            periodSeconds: 5
+            failureThreshold: 12   # 60s 冷启动预算,实测单节点 minio 首次格式化约 9s
           readinessProbe:
             httpGet:
               path: /minio/health/ready
