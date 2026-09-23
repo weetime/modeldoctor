@@ -35,7 +35,11 @@ Ready 才会去跑 post-install hook);initContainer 跑在 Pod 自己内部,依�
   部署,见下面场景 3 及 `ingress.enabled=false` 的说明)。
 - 能访问 `image.registry`(默认 `swr.cn-north-4.myhuaweicloud.com`)拉取应用镜像;若走私有
   仓库,准备好 `imagePullSecrets` 引用的 Secret 名字(chart 不生成这个 Secret,只引用)。
-- `helm` ≥ 3.8(chart 用到的 `lookup` / OCI registry 推送等特性需要较新版本)。
+- `helm` ≥ 3.8(chart 生成密钥用的 `randBytes` 随 sprig v3.2.2 才进入 Helm 3.8;`lookup` /
+  OCI registry 推送等特性同样需要较新版本)。**这是硬性前置条件,不是"会在装的时候给你一句
+  清晰报错"的运行时保护**——更老的 Helm 会在解析 chart 模板阶段就直接失败,报错是
+  `function "randBytes" not defined`,不会提到"请升级 Helm";看到这句报错就照这里升级
+  Helm,不用继续排查。
 
 ## 快速开始
 

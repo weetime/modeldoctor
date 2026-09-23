@@ -238,10 +238,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/* 渲染期硬约束;入口模板(configmap.yaml 等)调用一次,失败即中止整个 release */}}
 {{- define "modeldoctor.validate" -}}
 {{- /*
-  最低 Helm 版本硬断言。Chart.yaml 只有 kubeVersion 字段,没有"最低 helm 版本"字段,
-  所以下限只能在渲染期自己查。3.8.0 这个下限来自 keepOrGenerate 用的 `randBytes`——
-  它随 sprig v3.2.2 进入 Helm 3.8;更老的 helm 会在渲染 api/secret.yaml 时报
-  `function "randBytes" not defined`,报错完全指不到"helm 太旧"这个真实原因。
+  最低 Helm 版本断言——但在真正过旧的 Helm 上这段 fail() 实际上不会执行到,保留它只是
+  「在受支持版本上无害地留一份可读文档」,不要指望它能给出友好报错。
+  Chart.yaml 只有 kubeVersion 字段,没有"最低 helm 版本"字段,所以这里在渲染期自己查。
+  3.8.0 这个下限来自 keepOrGenerate 用的 `randBytes`(本文件内,见上方定义)——它随
+  sprig v3.2.2 才进入 Helm 3.8。但 Go template 在解析阶段(而不是执行阶段)就要解析出
+  同一份模板文件里用到的全部函数名,Helm 又是把一个 chart 的所有模板一次性解析成一棵
+  模板树——所以 Helm < 3.8 会在**解析 `_helpers.tpl` 这一步**就直接报
+  `function "randBytes" not defined` 并中止,根本轮不到执行期的 `modeldoctor.validate`、
+  更轮不到下面这个 `fail()`(已用一个 `{{- if false }}` 包裹的假函数名验证过这个结论,
+  行为一致)。也就是说:**这个 semverCompare 检查对真正过旧的 Helm 从未生效过**,老版本
+  用户看到的永远是那句指不到"Helm 太旧"这个真实原因的 `randBytes not defined`;它唯一能
+  兜底的场景是 `.Capabilities.HelmVersion.Version` 为空(某些极端沙箱/离线渲染环境)。
+  结论:Helm >= 3.8 是文档化的硬性前置条件(见 README「前置条件」),而不是一个会在过旧
+  Helm 上弹出清晰报错的运行时保护——过旧 Helm 请直接按 README 提示升级,不要等这里报错。
   `.Capabilities.HelmVersion.Version` 形如 "v3.15.4",semverCompare 能直接吃带 v 的串。
 */ -}}
 {{- if .Capabilities.HelmVersion.Version -}}
