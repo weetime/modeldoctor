@@ -1,0 +1,111 @@
+ModelDoctor 已部署 —— release "{{ .Release.Name }}",命名空间 "{{ .Release.Namespace }}"。
+
+════════════════════════════════════════════════════════════════════
+1) 访问地址
+════════════════════════════════════════════════════════════════════
+{{- if .Values.ingress.enabled }}
+  {{ ternary "https" "http" .Values.ingress.tls.enabled }}://{{ .Values.ingress.host }}{{ .Values.ingress.path }}
+
+  首次访问前请确认:
+    - Ingress Controller 已安装(chart 默认按 ingress.className=nginx 生成注解,换控制器需
+      自行调整 ingress.annotations);
+    - DNS/hosts 已把 {{ .Values.ingress.host }} 指向该 Ingress Controller 的入口地址。
+{{- else }}
+  ingress.enabled=false,chart 未创建 Ingress 对象。临时访问可用端口转发:
+
+    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "modeldoctor.fullname" . }} 8080:{{ .Values.service.port }}
+
+  然后浏览器打开 http://localhost:8080 。生产环境请自备 LoadBalancer/网关并把流量转发到
+  Service {{ include "modeldoctor.fullname" . }}:{{ .Values.service.port }}。
+{{- end }}
+
+════════════════════════════════════════════════════════════════════
+2) 首次登录
+════════════════════════════════════════════════════════════════════
+{{- if .Values.app.disableFirstUserAdmin }}
+  app.disableFirstUserAdmin=true:注册的用户一律是普通角色,不会自动成为管理员。
+  需要手动把某个用户提升为管理员,例如(内置 Postgres,把 <email> 换成实际邮箱):
+
+    kubectl -n {{ .Release.Namespace }} exec -it {{ include "modeldoctor.postgres.fullname" . }}-0 -- \
+      psql -U {{ .Values.database.postgres.username }} -d {{ .Values.database.postgres.database }} -c \
+      "UPDATE users SET roles = array_append(roles, 'admin') WHERE email = '<email>';"
+{{- else }}
+  首个注册到本实例的用户会自动获得管理员权限(app.disableFirstUserAdmin=false)。
+  之后注册的用户默认是普通角色,如需追加管理员,参见 README「初始管理员」一节。
+{{- end }}
+
+════════════════════════════════════════════════════════════════════
+3) 当前生效的依赖模式
+════════════════════════════════════════════════════════════════════
+  数据库:
+{{- if .Values.database.bundled }}
+    内置 Postgres(database.bundled=true),Service: {{ include "modeldoctor.postgres.fullname" . }}:5432
+{{- else if .Values.database.external.existingSecret }}
+    外接数据库(database.bundled=false),连接串来自既有 Secret "{{ .Values.database.external.existingSecret }}" 的 key "{{ .Values.database.external.existingSecretKey }}"
+{{- else }}
+    外接数据库(database.bundled=false),连接串由 database.external.url 提供
+{{- end }}
+
+  对象存储:
+{{- if .Values.storage.bundled }}
+    内置 MinIO(storage.bundled=true),Service: {{ include "modeldoctor.minio.fullname" . }}:9000,桶 "{{ .Values.storage.bucket }}"
+{{- else if .Values.storage.external.existingSecret }}
+    外接 S3 兼容存储(storage.bundled=false),端点 {{ .Values.storage.external.endpoint }},凭据来自既有 Secret "{{ .Values.storage.external.existingSecret }}",桶 "{{ .Values.storage.bucket }}"
+{{- else }}
+    外接 S3 兼容存储(storage.bundled=false),端点 {{ .Values.storage.external.endpoint }},桶 "{{ .Values.storage.bucket }}"
+{{- end }}
+
+════════════════════════════════════════════════════════════════════
+4) 压测工具
+════════════════════════════════════════════════════════════════════
+{{- $allTools := list "guidellm" "vegeta" "evalscope" "aiperf" "tau3" "vllm-omni-bench" }}
+{{- $enabled := .Values.benchmarks.enabledTools }}
+{{- $disabled := list }}
+{{- range $allTools }}
+{{- if not (has . $enabled) }}
+{{- $disabled = append $disabled . }}
+{{- end }}
+{{- end }}
+  已启用: {{ if $enabled }}{{ join ", " $enabled }}{{ else }}(无){{ end }}
+{{- if $disabled }}
+  未启用(runnerImages 里若无对应真实镜像,占位镜像也不会被使用,建这些工具的压测会在
+  创建时被拒绝,不是启动后失败): {{ join ", " $disabled }}
+{{- end }}
+
+{{- $warnings := list }}
+
+{{- if and (not .Values.storage.bundled) .Values.storage.external.existingSecret }}
+{{- $warnings = append $warnings (printf "  [存储] storage.bundled=false 且 storage.external.existingSecret=%q:\n         chart 不会在 benchmarks.namespace(%s)里生成 md-benchmark-storage 这个 Secret,\n         需要你自己在该命名空间创建一个名字精确为 md-benchmark-storage、包含下列 6 个\n         明文 key 的 Secret,否则该命名空间里的压测 Job 会全部失败(报错会指向存储\n         而不是指向“缺 Secret”):\n           S3_ENDPOINT / S3_BUCKET / S3_REGION / S3_FORCE_PATH_STYLE / S3_ACCESS_KEY / S3_SECRET_KEY" .Values.storage.external.existingSecret .Values.benchmarks.namespace) }}
+{{- end }}
+
+{{- $noPersist := list }}
+{{- if and .Values.database.bundled (not .Values.database.postgres.persistence.enabled) }}
+{{- $noPersist = append $noPersist "database.postgres.persistence.enabled=false(内置 Postgres)" }}
+{{- end }}
+{{- if and .Values.storage.bundled (not .Values.storage.minio.persistence.enabled) }}
+{{- $noPersist = append $noPersist "storage.minio.persistence.enabled=false(内置 MinIO)" }}
+{{- end }}
+{{- if $noPersist }}
+{{- $warnings = append $warnings (printf "  [持久化] %s:数据卷退化为 emptyDir,Pod 重建/滚动更新/节点漂移都会丢数据。\n         仅适合临时验证,生产环境务必打开 persistence.enabled 并配置 storageClass。" (join "、" $noPersist)) }}
+{{- end }}
+
+{{- if and (not .Values.ingress.enabled) (not .Values.app.baseUrl) }}
+{{- $warnings = append $warnings "  [通知深链] ingress.enabled=false 且 app.baseUrl 为空:通知(邮件/Webhook 等)里生成的\n         深链会没有可用的 host,链接无法点击跳转。请显式设置 app.baseUrl 为对外可访问的地址\n         (例如 http://<你的域名或IP>:<端口>),或改用 ingress.enabled=true。" }}
+{{- end }}
+
+{{- if and (not .Values.storage.bundled) .Values.storage.forcePathStyle }}
+{{- $warnings = append $warnings "  [存储路径风格] storage.bundled=false 但 storage.forcePathStyle 仍为默认的 true:\n         该选项只应对 MinIO 这类不支持虚拟主机风格域名的后端置 true;阿里云 OSS / AWS S3\n         等主流 S3 兼容服务通常要求 false,保持 true 会导致签名或域名解析错误、上传/下载\n         全部失败。请显式设置 storage.forcePathStyle=false(除非你的外接后端明确要求 path\n         style,例如另一套自建 MinIO/Ceph RGW)。" }}
+{{- end }}
+
+{{- if $warnings }}
+
+════════════════════════════════════════════════════════════════════
+⚠ 警告 —— 请在继续之前逐条确认
+════════════════════════════════════════════════════════════════════
+{{- range $warnings }}
+{{ . }}
+{{- end }}
+{{- end }}
+
+────────────────────────────────────────────────────────────────────
+更多内容(升级/回滚、备份、排障、当前限制)见 chart 的 README.md。

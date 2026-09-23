@@ -1,0 +1,45 @@
+# 场景:外接数据库 + 外接 S3 兼容对象存储(阿里云 OSS / AWS S3 等,非 MinIO)。
+#
+# 这份文件只覆盖与"全内置默认值"不同的字段;其余字段(resources、benchmarks.enabledTools、
+# app.jwt 等)沿用 values.yaml 的默认值。按 helm 的合并规则叠加使用:
+#
+#   helm install md deploy/charts/modeldoctor -f deploy/charts/modeldoctor/values-external.yaml \
+#     --set database.external.url=postgresql://<user>:<password>@<host>:5432/<db>?schema=public \
+#     --set storage.external.accessKey=<your-access-key> \
+#     --set storage.external.secretKey=<your-secret-key> \
+#     --set auth.jwtAccessSecret=<your-secret> \
+#     --set auth.connectionApiKeyEncryptionKey=<your-base64-32byte-key>
+#
+# 凭据不写在这份文件里(也不要写进任何提交到仓库的 values 文件),一律用 --set 或
+# --set-file 在安装/升级时传入,或者改用下面两个 existingSecret 字段指向你自己管理的
+# Secret(推荐生产环境这样做,chart 不会再生成/持有一份自己的副本)。
+
+database:
+  bundled: false
+  external:
+    # 二选一:直接给连接串,或者给一个已存在的 Secret(见下面 existingSecret 的注释)。
+    url: ""   # 例如:postgresql://modeldoctor:<password>@pg.example.com:5432/modeldoctor?schema=public
+    # existingSecret: "my-external-db-credentials"   # Secret 需自带 key: url(或改 existingSecretKey)
+    # existingSecretKey: url
+
+storage:
+  bundled: false
+  # 外接 S3 兼容存储时,forcePathStyle 通常必须是 false——阿里云 OSS / AWS S3 都用虚拟主机
+  # 风格域名(<bucket>.<endpoint>),继续用 MinIO 默认的 true(path-style)会导致签名或域名
+  # 解析错误。只有你外接的后端明确要求 path style(例如另一套自建 MinIO/Ceph RGW)才改回 true。
+  forcePathStyle: false
+  external:
+    endpoint: ""      # 例如:https://oss-cn-hangzhou.aliyuncs.com
+    accessKey: ""     # 用 --set 传入,或改用 existingSecret
+    secretKey: ""     # 用 --set 传入,或改用 existingSecret
+    # existingSecret: "my-external-s3-credentials"   # Secret 需同时含 accessKey / secretKey 两个 key
+    #
+    # 用 existingSecret 时的额外前提(见 README「排障」一节):chart 不会把这份凭据复制进
+    # benchmarks.namespace 里压测 Job 用的 md-benchmark-storage Secret——你需要自己在
+    # benchmarks.namespace 里也创建一份同名(md-benchmark-storage)、包含 S3_ENDPOINT /
+    # S3_BUCKET / S3_REGION / S3_FORCE_PATH_STYLE / S3_ACCESS_KEY / S3_SECRET_KEY 六个明文
+    # key 的 Secret,否则该命名空间里的压测 Job 会全部因认证失败而失败。
+
+ingress:
+  enabled: true
+  host: modeldoctor.example.com   # 替换成你的真实域名

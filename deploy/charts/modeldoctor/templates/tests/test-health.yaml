@@ -1,0 +1,31 @@
+{{- /*
+  helm test:通过 Service(而不是直接连 Pod)打 /api/health,顺带验证 Service selector 与
+  端口映射本身也是对的。断言两条,任何一条不满足就 fail(`set -e` + 显式 `test`/`grep -q`):
+    - HTTP 状态码必须是 200(不是 3xx/4xx/5xx,也不是探针那种“连上就算活”);
+    - 响应体必须真的含 "status":"ok"(@nestjs/terminus 的 HealthCheckResult 序列化形态)——
+      不满足时 API 通常仍能返回 200 之外的状态码或者一个 error 字段不为空的 body,
+      只 assert 状态码会漏掉“进程在跑但数据库探针失败”这类情况。
+  镜像固定用 curlimages/curl,不复用应用镜像——测试本身只需要 curl,不需要背上应用镜像的
+  体积和启动开销。
+*/ -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-test-health
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.11.1
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          code=$(curl -s -o /tmp/body -w '%{http_code}' http://{{ include "modeldoctor.fullname" . }}:{{ .Values.service.port }}/api/health)
+          echo "HTTP $code"; cat /tmp/body; echo
+          test "$code" = "200"
+          grep -q '"status":"ok"' /tmp/body
