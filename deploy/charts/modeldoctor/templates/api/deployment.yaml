@@ -39,8 +39,9 @@ spec:
                 name: {{ include "modeldoctor.secretName" . }}
             {{- with .Values.auth.existingSecret }}
             # auth.existingSecret:JWT_ACCESS_SECRET / CONNECTION_API_KEY_ENCRYPTION_KEY /
-            # ALERTMANAGER_WEBHOOK_SECRET 改由这个既有 Secret 提供(需自带同名三个 key),
-            # chart 自己的 Secret 里对应字段被跳过(见 secret.yaml)。
+            # ALERTMANAGER_WEBHOOK_SECRET 完全由用户这个既有 Secret 提供(key 名必须与这
+            # 三个环境变量名完全一致)——chart 自己的 Secret 里从来就不生成/不包含这三
+            # 个字段(见 secret.yaml),不是靠这里的 envFrom 顺序去覆盖前一个 secretRef。
             - secretRef:
                 name: {{ . }}
             {{- end }}

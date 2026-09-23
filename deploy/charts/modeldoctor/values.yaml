@@ -55,6 +55,9 @@ ingress:
 
 auth:
   existingSecret: ""          # 提供则完全使用该 Secret(需自带下面三个 key),chart 不再生成/管理密钥
+                               # key 名必须与容器环境变量名完全一致:JWT_ACCESS_SECRET、
+                               # CONNECTION_API_KEY_ENCRYPTION_KEY、ALERTMANAGER_WEBHOOK_SECRET——
+                               # 名字错了不会在渲染期报错,只会在容器启动时被 zod 校验拦下 CrashLoop。
   # 以下三项留空则首次安装时随机生成;升级时通过 `lookup` 读回已存在 Secret 里的值,
   # 保持不变——尤其是 connectionApiKeyEncryptionKey,一旦变化,数据库里已加密存储的
   # 第三方连接 API Key / LLM judge 密钥会全部无法解密(见 modeldoctor.keepOrGenerate)。
