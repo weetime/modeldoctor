@@ -34,6 +34,15 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v6
+
+      # 凭据形态扫描。放在 checkout 之后、装依赖之前:它只需要工作区的文本文件,
+      # 秒级完成,而且"仓库里出现了长得像凭据的东西"应该在跑完整套测试之前就把
+      # 作业判红。脚本命中即 exit 1(见 tools/check-no-secrets.sh 的退出码说明),
+      # 所以这里不需要额外的判定逻辑。命中不等于一定是真实凭据,但必须人工确认
+      # 后才能放行 —— 不要用 `|| true` 把它降级成警告。
+      - name: 凭据形态扫描(check-no-secrets)
+        run: ./tools/check-no-secrets.sh
+
       - uses: pnpm/action-setup@v6
         with:
           version: 10.5.2

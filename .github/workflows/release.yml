@@ -26,6 +26,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 凭据形态扫描,放在任何 login/build/push 之前。发布是不可逆的:镜像和 chart
+      # 一旦推进仓库,里面夹带的凭据就等于已经泄露,事后删 tag 也救不回来。所以这条
+      # 闸门必须在第一个对外动作之前,而不是和 CI 一样"顺便跑一次"就够了。
+      # 命中即 exit 1,不加 `|| true`。
+      - name: 凭据形态扫描(check-no-secrets)
+        run: ./tools/check-no-secrets.sh
+
       - name: Verify tag matches package.json version
         run: |
           set -euo pipefail
