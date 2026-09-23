@@ -228,20 +228,60 @@ jobs:
           kubectl -n modeldoctor-benchmarks get secret md-benchmark-storage \
             -o jsonpath='{.metadata.name}{"\n"}'
 
-      - name: 断言:helm upgrade 可重入,加密密钥不变
+      - name: 断言:helm upgrade 可重入,五个 keepOrGenerate 字段都不变
         run: |
           set -euo pipefail
-          before="$(kubectl -n modeldoctor get secret md-modeldoctor-secrets \
-            -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}')"
+          # 覆盖 modeldoctor.keepOrGenerate 的全部五个落点:应用 Secret 里的三个 auth
+          # 字段(JWT/加密密钥/webhook 密钥),以及 Postgres、MinIO 各自 Secret 里的
+          # 密码字段。三个 auth 字段过去曾经因为 call site 传了 values 侧的 camelCase
+          # 名字(而不是 Secret 里实际的字段名)而在每次 upgrade 时静默重新生成——这里
+          # 把五个字段放进同一张表统一断言,不要只挑 CONNECTION_API_KEY_ENCRYPTION_KEY
+          # 一个字段,否则同类缺陷可能在其余四个字段上重新出现却测不出来。
+          #
+          # 每一项是 "namespace|secret 名字|data 里的字段名"。
+          checks=(
+            "modeldoctor|md-modeldoctor-secrets|JWT_ACCESS_SECRET"
+            "modeldoctor|md-modeldoctor-secrets|CONNECTION_API_KEY_ENCRYPTION_KEY"
+            "modeldoctor|md-modeldoctor-secrets|ALERTMANAGER_WEBHOOK_SECRET"
+            "modeldoctor|md-modeldoctor-postgres|password"
+            "modeldoctor|md-modeldoctor-minio|rootPassword"
+          )
+
+          # 读取上面表里全部字段的当前值,写进以 $1(数组变量名)命名的数组。任何一个
+          # jsonpath 取到空字符串就直接判失败——空值可能是 Secret/字段名拼错、也可能是
+          # jsonpath 语法错误导致静默不匹配,这两种情况都不该被当成"取到了、值恰好相同"
+          # 蒙混过去。
+          capture() {
+            local -n _out="$1"
+            _out=()
+            local entry ns secret field val
+            for entry in "${checks[@]}"; do
+              IFS='|' read -r ns secret field <<<"$entry"
+              val="$(kubectl -n "$ns" get secret "$secret" -o jsonpath="{.data.${field}}")"
+              if [ -z "$val" ]; then
+                echo "::error::secret $ns/$secret 字段 $field 取到空值 —— Secret/字段名拼错或 jsonpath 没匹配到任何东西,这本身就是断言失败,不能当成\"值相同\"放过" >&2
+                exit 1
+              fi
+              _out+=("$val")
+            done
+          }
+
+          capture before
           helm upgrade md deploy/charts/modeldoctor --namespace modeldoctor --reuse-values \
             --wait --timeout 10m
-          after="$(kubectl -n modeldoctor get secret md-modeldoctor-secrets \
-            -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}')"
-          if [ "$before" != "$after" ]; then
-            echo "::error::CONNECTION_API_KEY_ENCRYPTION_KEY 在 helm upgrade 后发生了变化 —— 数据库里已加密存储的连接凭据会全部无法解密" >&2
-            exit 1
-          fi
-          echo "OK — CONNECTION_API_KEY_ENCRYPTION_KEY 在 upgrade 前后一致"
+          capture after
+
+          fail=0
+          for i in "${!checks[@]}"; do
+            IFS='|' read -r ns secret field <<<"${checks[$i]}"
+            if [ "${before[$i]}" != "${after[$i]}" ]; then
+              echo "::error::$ns/$secret 的字段 $field 在 helm upgrade 后发生了变化 —— 对应的已加密数据/已持久化凭据会失配" >&2
+              fail=1
+            else
+              echo "OK — $ns/$secret 的字段 $field 在 upgrade 前后一致"
+            fi
+          done
+          exit $fail
 
       - name: 失败时导出诊断(pods/jobs/describe/logs/events)
         if: failure()

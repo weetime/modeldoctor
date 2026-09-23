@@ -54,13 +54,25 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   则应用与已持久化的 StatefulSet 之间的凭据会失配。
 
   用法(落在应用 Secret 上,不传 secretName 时的默认行为):
-    include "modeldoctor.keepOrGenerate" (dict "ctx" . "key" "jwtAccessSecret" "value" .Values.auth.jwtAccessSecret "len" 48)
+    include "modeldoctor.keepOrGenerate" (dict "ctx" . "key" "JWT_ACCESS_SECRET" "value" .Values.auth.jwtAccessSecret "len" 48)
   用法(落在指定 Secret 上,例如 Postgres/MinIO 各自的 Secret):
     include "modeldoctor.keepOrGenerate" (dict "ctx" . "key" "password" "value" .Values.database.postgres.password "secretName" (include "modeldoctor.postgres.fullname" .))
 
+  【不变量,call site 必须遵守】`key` 必须是目标 Secret data 里**实际写入的字段名**
+  (即调用方 template 里 `data:` 下那一行冒号左边的名字,例如 `JWT_ACCESS_SECRET`、
+  `password`、`rootPassword`),不能是 values.yaml 里的 camelCase 字段名(例如
+  `jwtAccessSecret`)。`lookup` 是按 `index $existing.data .key` 精确取值的,传错
+  只有一个后果且不报错:`lookup` 永远查不到既有值,helper 每次都会悄悄落到"生成新值"
+  分支——这正是本文件曾经真实发生过的缺陷(auth 三个字段的 call site 一度传了
+  camelCase,导致 JWT/加密密钥/webhook 密钥每次 `helm upgrade` 都被重新生成,库内
+  已加密的第三方连接 API Key 全部无声变得无法解密)。新增/修改任何 call site 时,
+  先看一眼它写进哪个 Secret 模板的哪个字段,`key` 必须逐字符与那个字段名相同。
+
   参数:
     ctx        - 必填,顶层渲染上下文(.)
-    key        - 必填,Secret data 里的字段名(读回时用同一个 key)
+    key        - 必填,目标 Secret data 里的字段名,必须与写入该 Secret 时用的字段名
+                 逐字符一致(见上面的不变量说明);同时也是本 helper 内存缓存的一部分
+                 key(见下方"单次渲染内记忆化"),两个用途共用同一个值,不要分裂
     value      - 用户在 values.yaml 里显式提供的值;非空时直接透传,不生成也不 lookup
     secretName - 可选,要 lookup 的 Secret 名字;省略时默认为 modeldoctor.secretName(应用 Secret)
     kind       - 可选,"b64-32" 表示生成一个 base64 字符串、解码后正好 32 字节(randBytes 本身
