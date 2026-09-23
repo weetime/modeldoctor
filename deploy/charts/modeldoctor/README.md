@@ -369,6 +369,63 @@ ModelDoctor 的持久状态分两部分,都需要纳入备份计划:
      -o jsonpath='{.data.CONNECTION_API_KEY_ENCRYPTION_KEY}' | base64 -d
    ```
 
+## 恢复
+
+灾难恢复/迁移集群的顺序固定为:**先把数据库和对象存储的数据恢复回去,再安装/升级 chart 并
+传入与该数据库快照配套的 `auth.connectionApiKeyEncryptionKey`**(见上一节「备份」第 3 条——
+恢复到一个全新 release 时 `lookup` 读不到旧值,必须显式传入,否则库里所有第三方连接的
+API Key 都会变成无法解密)。下面两步都要在传入那个密钥、让应用真正对外提供服务**之前**
+完成。
+
+1. **数据库恢复(内置 Postgres)**
+
+   恢复前先把应用缩容到 0 副本(如果 release 已经装过),避免 migrate hook Job 或应用本身
+   同时写库,与手工恢复的数据打架:
+
+   ```bash
+   kubectl -n <namespace> scale deployment/<release>-modeldoctor --replicas=0
+   ```
+
+   把 dump 灌回内置 Postgres 的 Pod(Pod 名格式 `<release>-modeldoctor-postgres-0`,数据库名/
+   用户名取自 `database.postgres.database` / `database.postgres.username`,默认都是
+   `modeldoctor`):
+
+   ```bash
+   kubectl -n <namespace> exec -i <release>-modeldoctor-postgres-0 -- \
+     psql -U modeldoctor -d modeldoctor < <dump.sql>
+   ```
+
+   如果是全新集群上的灾难恢复(Postgres StatefulSet 还不存在):先 `helm install` 一次让
+   chart 把 StatefulSet/PVC 建出来(不需要等应用真正可用,Pod 变成 Running 即可),执行上面
+   的恢复命令灌数据,再 `helm upgrade` 触发一次 migrate hook——它是幂等的(`prisma migrate
+   deploy` 只应用尚未应用过的迁移),不会破坏已经灌进去的数据。
+
+   外接数据库:用你数据库自身的恢复流程(`pg_restore`/云厂商控制台的备份恢复等),恢复完成
+   后把 `database.external.url`/`existingSecret` 指向恢复后的实例即可,chart 侧不需要额外
+   操作。
+
+2. **对象存储恢复(内置 MinIO)**
+
+   桶不需要你手动创建——`bucket-init` 这个 `post-install` hook Job 会在 `helm install` 时
+   自动建好目标桶。桶就绪后,把备份内容反向 mirror 回去(方向与「备份」小节的命令相反:
+   源是你的备份目标,目的是新实例的桶):
+
+   ```bash
+   kubectl -n <namespace> port-forward svc/<release>-modeldoctor-minio 9000:9000 &
+   mc alias set md-dst http://localhost:9000 <rootUser> <rootPassword>
+   mc mirror s3-backup/modeldoctor-backup md-dst/modeldoctor
+   ```
+
+   外接 S3 兼容存储:用该云厂商自己的备份恢复/跨区域复制能力把数据写回目标桶。
+
+3. 两部分数据都恢复完成后,把应用副本改回 1(如果之前缩容过),并按上一节「备份」第 3 条
+   的做法传入 `auth.connectionApiKeyEncryptionKey`:
+
+   ```bash
+   kubectl -n <namespace> scale deployment/<release>-modeldoctor --replicas=1
+   # 或者:全新 release 场景直接把这个值带进 helm install(见「备份」第 3 条的示例命令)
+   ```
+
 ## 排障
 
 - **migrate Job 失败 / API 一直 CrashLoop 连不上库**:先看 migrate hook Job 的日志——它的
