@@ -376,8 +376,10 @@ storage:
     secretKey: ""
     existingSecret: ""        # 需含 accessKey / secretKey 两个 key
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    mcImage: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    # 用 quay.io:MinIO 官方镜像在 Docker Hub 上这些 tag 已不可匿名拉取
+    # (pull access denied),quay.io 正常。实测见 Task 7。
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    mcImage: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
     rootUser: modeldoctor
     rootPassword: ""          # 留空自动生成并保持
     persistence:
