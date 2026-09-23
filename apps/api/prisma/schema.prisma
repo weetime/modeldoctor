@@ -32,6 +32,7 @@ model User {
   evaluationRuns        EvaluationRun[]
   mcpServers            McpServer[]
   skills                Skill[]
+  platformSources       PlatformSource[]
 
   @@index([email])
   @@map("users")
@@ -118,6 +119,7 @@ model Connection {
   evaluationRunsAsEndpointB EvaluationRun[]        @relation("EvalEndpointB")
   alertEvents               AlertEvent[]
   subscribers               ConnectionSubscriber[]
+  discoveredModel           DiscoveredModel?
 
   @@unique([userId, name])
   @@index([userId])
@@ -670,4 +672,107 @@ model PrometheusDatasource {
   consumers Connection[]
 
   @@map("prometheus_datasources")
+}
+
+model PlatformSource {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  kind          String    @default("gpustack")
+  name          String
+  baseUrl       String    @map("base_url")
+  apiKeyCipher  String    @map("api_key_cipher")
+  clusterId     String?   @map("cluster_id")
+  enabled       Boolean   @default(true)
+  lastSyncAt    DateTime? @map("last_sync_at") @db.Timestamptz(3)
+  lastSyncError String?   @map("last_sync_error") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  models DiscoveredModel[]
+
+  @@index([userId])
+  @@map("platform_sources")
+}
+
+model DiscoveredModel {
+  id                   String    @id @default(cuid())
+  sourceId             String    @map("source_id")
+  externalId           String    @map("external_id")
+  name                 String
+  categories           String[]  @default([])
+  clusterId            String?   @map("cluster_id")
+  status               String    @default("new")
+  routeName            String?   @map("route_name")
+  routeOverride        Boolean   @default(false) @map("route_override")
+  connectionId         String?   @unique @map("connection_id")
+  currentRevisionId    String?   @map("current_revision_id")
+  automationEnabled    Boolean   @default(false) @map("automation_enabled")
+  steps                String[]  @default(["diagnostics", "quality_gate", "benchmark"])
+  evaluationId         String?   @map("evaluation_id")
+  gateConfig           Json?     @map("gate_config")
+  benchmarkTemplateId  String?   @map("benchmark_template_id")
+  schedule             String    @default("off")
+  nextScheduledAt      DateTime? @map("next_scheduled_at") @db.Timestamptz(3)
+  baselineId           String?   @map("baseline_id")
+  regressionThresholds Json?     @map("regression_thresholds")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  source     PlatformSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  connection Connection?          @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  revisions  DeploymentRevision[]
+  runs       AutomationRun[]
+
+  @@unique([sourceId, externalId])
+  @@index([automationEnabled, schedule, nextScheduledAt])
+  @@map("discovered_models")
+}
+
+model DeploymentRevision {
+  id                String    @id @default(cuid())
+  discoveredModelId String    @map("discovered_model_id")
+  fingerprint       String
+  snapshot          Json
+  firstSeenAt       DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  readyAt           DateTime? @map("ready_at") @db.Timestamptz(3)
+
+  model DiscoveredModel @relation(fields: [discoveredModelId], references: [id], onDelete: Cascade)
+  runs  AutomationRun[]
+
+  @@unique([discoveredModelId, fingerprint])
+  @@map("deployment_revisions")
+}
+
+model AutomationRun {
+  id                String    @id @default(cuid())
+  discoveredModelId String    @map("discovered_model_id")
+  sourceId          String    @map("source_id")
+  revisionId        String    @map("revision_id")
+  trigger           String
+  triggerKey        String    @unique @map("trigger_key")
+  status            String    @default("pending")
+  currentStep       String?   @map("current_step")
+  verdict           String?
+  diagnosticsRunId  String?   @map("diagnostics_run_id")
+  evaluationRunId   String?   @map("evaluation_run_id")
+  benchmarkId       String?   @map("benchmark_id")
+  summary           Json?
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz(3)
+  startedAt         DateTime? @map("started_at") @db.Timestamptz(3)
+  finishedAt        DateTime? @map("finished_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  model    DiscoveredModel    @relation(fields: [discoveredModelId], references: [id], onDelete: Cascade)
+  revision DeploymentRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@index([discoveredModelId, createdAt])
+  @@index([sourceId, status, createdAt])
+  // tick() scans `status: "running"` and promotePending() scans
+  // `status: "pending"` every 10s per replica; the composite above leads with
+  // source_id so neither predicate can use it. Leading with status serves
+  // both, and the trailing source_id also covers promotePending's
+  // DISTINCT ON (source_id).
+  @@index([status, sourceId])
+  @@map("automation_runs")
 }

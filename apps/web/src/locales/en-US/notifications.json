@@ -32,7 +32,10 @@
       "eventOptions": {
         "benchmark.completed": "Benchmark completed",
         "benchmark.failed": "Benchmark failed",
-        "diagnostics.failed": "Diagnostics failed"
+        "diagnostics.failed": "Diagnostics failed",
+        "automation.passed": "Deployment gate passed",
+        "automation.failed": "Deployment gate failed",
+        "automation.regressed": "Deployment gate regressed"
       },
       "applyToAll": "All connections",
       "applyToAllHint": "Notify this channel when any event fires for any connection (including ones added later)",
@@ -63,7 +66,10 @@
       "events": {
         "benchmark.completed": "Benchmark completed",
         "benchmark.failed": "Benchmark failed",
-        "diagnostics.failed": "Diagnostics failed"
+        "diagnostics.failed": "Diagnostics failed",
+        "automation.passed": "Deployment gate passed",
+        "automation.failed": "Deployment gate failed",
+        "automation.regressed": "Deployment gate regressed"
       }
     },
     "filter": {

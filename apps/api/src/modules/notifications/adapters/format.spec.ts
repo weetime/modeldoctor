@@ -99,6 +99,24 @@ describe("formatText — per-eventType shapes", () => {
     });
     expect(out).toBe("[ModelDoctor] diagnostics.failed endpoint-health status=failed");
   });
+
+  it("formats automation.regressed with model name and verdict, keeping the [ModelDoctor] keyword prefix", () => {
+    const text = formatText({
+      eventType: "automation.regressed",
+      payload: {
+        modelName: "qwen",
+        verdict: "regressed",
+        trigger: "revision",
+        automationRunId: "r1",
+      },
+    });
+    // Regression guard for the Feishu/DingTalk security-keyword invariant:
+    // bots configured with "ModelDoctor" as the custom keyword reject any
+    // message that doesn't start with it (DingTalk errcode 310000).
+    expect(text.startsWith("[ModelDoctor]")).toBe(true);
+    expect(text).toContain("qwen");
+    expect(text).toContain("regressed");
+  });
 });
 
 describe("formatDingtalkAlertMarkdown", () => {

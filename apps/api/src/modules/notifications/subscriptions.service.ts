@@ -5,7 +5,10 @@ export type EventType =
   | "benchmark.completed"
   | "benchmark.failed"
   | "diagnostics.failed"
-  | "alert.explained";
+  | "alert.explained"
+  | "automation.passed"
+  | "automation.failed"
+  | "automation.regressed";
 
 export interface CreateSubscriptionInput {
   channelId: string;

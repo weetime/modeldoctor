@@ -32,7 +32,10 @@
       "eventOptions": {
         "benchmark.completed": "Benchmark 完成",
         "benchmark.failed": "Benchmark 失败",
-        "diagnostics.failed": "诊断失败"
+        "diagnostics.failed": "诊断失败",
+        "automation.passed": "部署门禁通过",
+        "automation.failed": "部署门禁未通过",
+        "automation.regressed": "部署门禁性能退化"
       },
       "applyToAll": "全部连接",
       "applyToAllHint": "事件来自任何连接时都通知本通道（也含将来新建的连接）",
@@ -63,7 +66,10 @@
       "events": {
         "benchmark.completed": "Benchmark 完成",
         "benchmark.failed": "Benchmark 失败",
-        "diagnostics.failed": "诊断失败"
+        "diagnostics.failed": "诊断失败",
+        "automation.passed": "部署门禁通过",
+        "automation.failed": "部署门禁未通过",
+        "automation.regressed": "部署门禁性能退化"
       }
     },
     "filter": {

@@ -1,0 +1,147 @@
+{
+  "sources": {
+    "title": "GPUStack sources",
+    "subtitle": "Connect GPUStack to discover the model services deployed on it",
+    "add": "Add source",
+    "empty": {
+      "title": "No sources yet",
+      "body": "Add a GPUStack URL and API key; ModelDoctor will discover its model services automatically."
+    },
+    "col": {
+      "name": "Name",
+      "baseUrl": "URL",
+      "models": "Models",
+      "lastSync": "Last sync",
+      "status": "Status"
+    },
+    "status": {
+      "ok": "Healthy",
+      "error": "Sync failed",
+      "disabled": "Disabled",
+      "never": "Never synced"
+    },
+    "sync": "Sync now",
+    "synced": "Synced, {{count}} models found",
+    "deleteConfirm": "Deleting the source also deletes its discovered models and automation history (generated connections are kept).",
+    "delete": { "title": "Delete source \"{{name}}\"" },
+    "sheet": {
+      "createTitle": "Add GPUStack source",
+      "editTitle": "Edit source",
+      "name": "Name",
+      "baseUrl": "GPUStack URL",
+      "baseUrlHint": "e.g. http://gpustack.example.com — without /v1 or /v2",
+      "apiKey": "API key",
+      "apiKeyHint": "Prefer a key created by an admin; scope must include management and inference",
+      "apiKeyKeep": "Leave empty to keep the current key",
+      "clusterId": "Cluster ID (optional)",
+      "clusterIdHint": "Only discover models in this cluster; empty = all",
+      "enabled": "Enabled",
+      "test": "Test connection",
+      "testOk": "Connected, {{count}} models",
+      "testFail": "Connection failed: {{error}}"
+    }
+  },
+  "models": {
+    "title": "Deployment gate",
+    "subtitle": "Automatic acceptance after GPUStack deployment changes: diagnostics → quality gate → benchmark → baseline compare",
+    "empty": {
+      "title": "No models discovered yet",
+      "body": "Add a GPUStack source first.",
+      "action": "Add source"
+    },
+    "col": {
+      "name": "Model",
+      "source": "Source",
+      "status": "Status",
+      "revision": "Current revision",
+      "lastVerdict": "Last verdict",
+      "automation": "Automation"
+    },
+    "status": {
+      "new": "New",
+      "active": "Enabled",
+      "unroutable": "No dedicated route",
+      "removed": "Removed"
+    },
+    "runNow": "Run now",
+    "runQueued": "Queued",
+    "runFailed": "Run failed: {{error}}",
+    "noRun": "—",
+    "enableNeedsConfig": "Finish the automation config on the detail page first"
+  },
+  "verdict": {
+    "passed": "Passed",
+    "failed": "Failed",
+    "regressed": "Regressed",
+    "error": "Error",
+    "superseded": "Superseded",
+    "running": "Running",
+    "pending": "Queued"
+  },
+  "detail": {
+    "config": "Automation config",
+    "editConfig": "Edit config",
+    "route": "GPUStack route",
+    "routeAuto": "Auto-resolved",
+    "routeManual": "Manual",
+    "pickRoute": "Pick route",
+    "connection": "Connection",
+    "baseline": "Baseline",
+    "noBaseline": "Created automatically after the first successful benchmark",
+    "schedule": "Scheduled regression",
+    "nextRun": "Next run",
+    "timeline": "Deployment revisions",
+    "noRevisions": "No revisions yet",
+    "firstSeen": "First seen",
+    "ready": "Ready",
+    "notReady": "Not ready",
+    "initialRevision": "Initial revision",
+    "noRunsForRevision": "No automation runs for this revision",
+    "cancelRun": "Cancel",
+    "cancelFailed": "Cancel failed: {{error}}",
+    "steps": {
+      "diagnostics": "Diagnostics",
+      "quality_gate": "Quality gate",
+      "benchmark": "Benchmark",
+      "compare": "Baseline compare"
+    },
+    "outcome": { "ok": "OK", "failed": "Failed", "error": "Error", "skipped": "Skipped" },
+    "trigger": {
+      "enable": "On enable",
+      "revision": "Deployment change",
+      "schedule": "Scheduled",
+      "manual": "Manual"
+    },
+    "regression": {
+      "title": "Performance comparison",
+      "notCompared": "Not compared: {{reason}}",
+      "metric": {
+        "outputTokensPerSec": "Output throughput",
+        "ttft.p95": "TTFT p95",
+        "itl.p95": "ITL p95"
+      },
+      "baselineEstablished": "Baseline established"
+    },
+    "gateWarning": "Quality gate returned a warning (treated as pass)",
+    "links": {
+      "diagnostics": "Diagnostics",
+      "evaluation": "Quality gate report",
+      "benchmark": "Benchmark"
+    }
+  },
+  "automation": {
+    "title": "Automation config",
+    "enabled": "Enable automated testing",
+    "steps": "Steps",
+    "evaluation": "Quality gate evaluation",
+    "passRateMin": "Minimum pass rate",
+    "template": "Benchmark template",
+    "schedule": "Scheduled regression",
+    "scheduleOptions": { "off": "Off", "daily": "Daily", "weekly": "Weekly" },
+    "thresholds": "Regression thresholds (%)",
+    "tpsDrop": "Output throughput drops by more than",
+    "ttftRise": "TTFT p95 rises by more than",
+    "itlRise": "ITL p95 rises by more than",
+    "saved": "Saved"
+  }
+}

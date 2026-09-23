@@ -74,7 +74,7 @@ Restart Claude Code; the tools below show up under "modeldoctor".
 | `list_channels()` | List the caller's notification channels (email / webhook). |
 | `create_channel(name, type, target, ...)` | Create a new notification channel. |
 | `test_channel(channelId)` | Send a test notification to a channel. |
-| `subscribe(channelId, eventType, connectionId?)` | Subscribe a channel to a workflow event (`benchmark.completed` / `benchmark.failed` / `diagnostics.failed`), optionally connection-scoped. |
+| `subscribe(channelId, eventType, connectionId?)` | Subscribe a channel to a workflow event (`benchmark.completed` / `benchmark.failed` / `diagnostics.failed` / `automation.passed` / `automation.failed` / `automation.regressed`), optionally connection-scoped. |
 | `unsubscribe(subscriptionId)` | Remove an event-type subscription. |
 
 ### Alerts loop (Alertmanager → AI explanation → channel)

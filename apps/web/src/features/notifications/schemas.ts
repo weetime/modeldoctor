@@ -7,7 +7,16 @@ const baseShape = {
   connectionIds: z.array(z.string()).default([]),
   applyToAll: z.boolean().default(false),
   events: z
-    .array(z.enum(["benchmark.completed", "benchmark.failed", "diagnostics.failed"]))
+    .array(
+      z.enum([
+        "benchmark.completed",
+        "benchmark.failed",
+        "diagnostics.failed",
+        "automation.passed",
+        "automation.failed",
+        "automation.regressed",
+      ]),
+    )
     .default([]),
 };
 

@@ -24,6 +24,7 @@ export * from "./insights/index.js";
 export * from "./mcp-server.js";
 export * from "./modality.js";
 export * from "./notifications.js";
+export * from "./platform-source.js";
 export * from "./playground.js";
 export * from "./prometheus-datasource.js";
 export * from "./quality-gate/index.js";
