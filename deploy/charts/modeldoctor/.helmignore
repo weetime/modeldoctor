@@ -1,0 +1,22 @@
+# Patterns to ignore when building packages.
+.DS_Store
+.git/
+.gitignore
+.bzr/
+.hg/
+.hgignore
+.svn/
+*.tgz
+*.swp
+*.bak
+*.orig
+*~
+.vscode/
+.idea/
+*.tmproj
+.project
+.settings
+ci/
+# Internal example values (this team's own cluster) — never ship inside the
+# packaged chart; keep the file in the repo, just exclude it from `helm package`.
+values-4pd.yaml

@@ -2,6 +2,10 @@
 
 ## RBAC for the benchmark feature
 
+This hand-maintained manifest is superseded by the Helm chart
+(`deploy/charts/modeldoctor`), which templates the equivalent Role/RoleBinding
+(including `pods:watch`) for you. Use `rbac.yaml` only for non-Helm deploys.
+
 `rbac.yaml` declares the namespace `modeldoctor-benchmarks` (where benchmark
 Jobs and Secrets land), the ServiceAccount `modeldoctor-api` in namespace
 `modeldoctor`, a Role scoped to the benchmarks namespace, and a RoleBinding

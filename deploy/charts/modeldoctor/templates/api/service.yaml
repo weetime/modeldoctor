@@ -1,0 +1,23 @@
+{{- /*
+  selector 额外加一个 app.kubernetes.io/component: api,与 api/deployment.yaml、
+  deps/postgres|minio 下的 StatefulSet/Service 保持同一模式——modeldoctor.selectorLabels
+  只有 name+instance 两个 key,不加区分会和 postgres/minio 的 Pod 标签重叠(这次不会真的
+  路由错,下面 targetPort: http 在 postgres/minio 容器上找不到同名端口,不会被选进
+  Endpoints,但 selector 本身应保持干净、不依赖"恰好没有同名端口"这个隐含前提)。
+*/ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "modeldoctor.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api

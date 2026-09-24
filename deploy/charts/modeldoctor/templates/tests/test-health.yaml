@@ -1,0 +1,42 @@
+{{- /*
+  helm test:通过 Service(而不是直接连 Pod)打 /api/health,顺带验证 Service selector 与
+  端口映射本身也是对的。断言两条,任何一条不满足就 fail(`set -e` + 显式 `test`/`grep -q`):
+    - HTTP 状态码必须是 200(不是 3xx/4xx/5xx,也不是探针那种“连上就算活”);
+    - 响应体必须真的含 "status":"ok"(@nestjs/terminus 的 HealthCheckResult 序列化形态)——
+      不满足时 API 通常仍能返回 200 之外的状态码或者一个 error 字段不为空的 body,
+      只 assert 状态码会漏掉“进程在跑但数据库探针失败”这类情况。
+  镜像用轻量 curl 镜像(`.Values.test.image`),不复用应用镜像——测试本身只需要 curl,
+  不需要背上应用镜像的体积和启动开销。这个镜像来自 Docker Hub 而不是应用/内置依赖自己的
+  仓库,离线/私有化现场把其它镜像都重打标签推到自有仓库后,如果不管这一个,`helm test`
+  会在拉镜像这一步就失败——所以做成 values 开关而不是硬编码,现场改成
+  `--set test.image=<your-registry>/.../curl:8.11.1` 即可。
+
+  delete-policy 只保留 `before-hook-creation`,不加 `hook-succeeded`:后者会在测试 Pod
+  刚 Succeeded 时立刻删除它,而 `helm test --logs`(CI 与运维排障都在用)是先等测试完成
+  再单独发一次“取这个 Pod 的日志”的请求——两者之间必然有一段窗口,Pod 早已被删,
+  `--logs` 100% 报 `pods "...-test-health" not found`(实测复现,不是偶发)。只保留
+  `before-hook-creation` 换来的代价是旧的测试 Pod 会保留到下一次 `helm test`/`helm
+  upgrade`/`helm install` 触发同名 hook 时才被替换——一个几十 KB 的 Completed Pod,
+  可接受。
+*/ -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-test-health
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: {{ .Values.test.image }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          code=$(curl -s -o /tmp/body -w '%{http_code}' http://{{ include "modeldoctor.fullname" . }}:{{ .Values.service.port }}/api/health)
+          echo "HTTP $code"; cat /tmp/body; echo
+          test "$code" = "200"
+          grep -q '"status":"ok"' /tmp/body

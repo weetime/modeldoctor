@@ -1,0 +1,42 @@
+# 场景:部署到 4pd 集群,复用团队现有的共享 MinIO(而不是 chart 内置的那一份)。
+#
+# 数据库沿用 chart 内置 Postgres(database.bundled 默认 true,这份文件不覆盖),只有对象
+# 存储换成 4pd 集群里已经在跑的那套 MinIO —— 10.100.121.67:31871,桶 weetime,这是团队
+# 其它服务(包括本地开发环境)共用的同一个 MinIO 实例。
+#
+# 凭据不写在这份文件里。这份文件默认走 existingSecret 路径——只声明一个 Secret *名字*
+# (md-minio-creds),不是凭据本身;真正的 accessKey/secretKey 由你在目标命名空间里预先
+# 创建好那个 Secret 提供(chart 只读取,不生成也不校验其内容,渲染期只检查名字非空):
+#
+#   kubectl create secret generic md-minio-creds \
+#     --namespace <release-namespace> \
+#     --from-literal=accessKey=<your-access-key> \
+#     --from-literal=secretKey=<your-secret-key>
+#
+#   helm install md deploy/charts/modeldoctor -f deploy/charts/modeldoctor/values-4pd.yaml \
+#     --namespace <release-namespace> \
+#     --set auth.jwtAccessSecret=<your-secret> \
+#     --set auth.connectionApiKeyEncryptionKey=<your-base64-32byte-key>
+#
+# 不想用 existingSecret 也可以改用 --set storage.external.accessKey=<...> --set
+# storage.external.secretKey=<...>(会被 chart 存进自己的 Secret),但同样不要把值写进这份
+# 提交到仓库的文件——两种方式二选一,注释掉/删掉 existingSecret 这一行即可切换。
+#
+# 无论哪种方式,都别忘了 README「排障」一节里的额外前提:还需要在 benchmarks.namespace
+# (下面已设为 modeldoctor-benchmarks)里手动创建一份同名(md-benchmark-storage)的
+# Secret,chart 不会自动跨命名空间复制这份凭据。
+
+storage:
+  bundled: false
+  bucket: weetime
+  forcePathStyle: true   # 目标仍是 MinIO,保持 true(与 values.yaml 默认一致,这里显式写出便于对照)
+  external:
+    endpoint: http://10.100.121.67:31871
+    existingSecret: md-minio-creds   # 只是名字,不是凭据;实际内容由你在集群里预先创建(见上方注释)
+
+benchmarks:
+  namespace: modeldoctor-benchmarks   # 与默认值相同;显式写出以便和团队其它服务的命名空间约定对照
+
+ingress:
+  enabled: true
+  host: modeldoctor.4pd.local   # 替换成 4pd 集群里实际分配给本实例的域名

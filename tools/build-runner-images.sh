@@ -19,13 +19,16 @@
 # layers build under QEMU emulation on Apple Silicon — correct but slow. Multi-
 # arch manifests can't be `docker load`ed / k3d-imported, so --push implies
 # --no-import; use the plain (local, single-arch) path for the k3d dev loop.
+#
+# Set REGISTRY=... to push elsewhere, e.g.:
+#   REGISTRY=swr.cn-north-4.myhuaweicloud.com/modeldoctor ./tools/build-runner-images.sh --push
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-REGISTRY="ghcr.io/weetime"
+REGISTRY="${REGISTRY:-swr.cn-north-4.myhuaweicloud.com/modeldoctor}"
 PLATFORMS="linux/amd64,linux/arm64"
 
 # Compute content-addressed tag from the latest commit affecting the

@@ -1,0 +1,133 @@
+{{- /*
+  仅在内置 MinIO 时渲染(storage.bundled=true)——外接 S3(storage.bundled=false)时桶要么
+  已经存在、要么由运维自己的流程创建,chart 不对外部对象存储做任何建桶/生命周期操作。
+
+  这是一个 Helm hook Job,不是普通 Job:post-install,post-upgrade 意味着每次
+  `helm install` 和每次 `helm upgrade` 都会重新跑一次,必须是幂等的,而且必须真正
+  reconcile(把 storage.retentionDays 的当前值应用到桶上),不能只是"重跑不报错":
+    - `mc mb --ignore-existing`:桶已存在时不报错、直接跳过——天然幂等,不需要额外处理。
+    - 生命周期规则不能用"重复添加就报错、错误吞掉"这种假幂等(这是本文件的历史版本
+      踩过的坑,已被 code review 挡下):`mc ilm rule add` 每次调用都会用一个新的随机 ID
+      追加一条规则,不存在"加过就报错"的行为,`add` 也没有 `--id` 参数可以固定 ID
+      (已用本地 docker 跑 minio/mc:RELEASE.2025-04-16T18-13-26Z 实测确认,见 Step 5 的
+      验证记录)——`add || echo 跳过` 这种写法只会在每次 upgrade 上新增一条互相冲突的
+      过期规则,`storage.retentionDays` 改了也不会生效(第一条规则永远生效)。
+      正确做法是「先 `mc ilm rule ls --json` 探测桶上是否已有规则,再决定 add 还是
+      edit」:
+        - 桶上还没有任何生命周期规则(`ls --json` 返回 NoSuchLifecycleConfiguration)
+          → `mc ilm rule add --expire-days N`,MinIO 会分配一个随机 ID;
+        - 已经有规则(`ls --json` 返回 `Rules` 数组)→ 用纯 shell 参数展开从 JSON 里
+          取出第一条规则的 `"ID":"..."` 字段(mc 官方镜像基于 RHEL UBI-micro,镜像内
+          没有 jq/grep/sed/awk,只能用 `${var#...}`/`${var%%...}` 这类 POSIX 参数展开,
+          已实测确认可用),再 `mc ilm rule edit --id <该ID> --expire-days N` 原地改写
+          同一条规则,不产生新规则。
+      这套逻辑假设本 Job 是这个桶上生命周期规则的唯一管理者(只维护一条规则)——如果
+      运维在桶上手工加了别的规则,`ls --json` 里第一条不一定是本 Job 管理的规则,这是
+      当前设计的已知边界,超出这个 chart 的管理范围。
+    - 任何真正的错误(mc 本身报错、JSON 解析不出 ID)都 `exit 1` 让 Job 失败,不再用
+      裸的 `|| echo 跳过` 掩盖——这样 `helm upgrade` 能看到 hook 失败,而不是悄悄假成功。
+
+  `helm.sh/hook-delete-policy: before-hook-creation` 让本次 release 触发的新 Job 在创建前
+  删除上一次遗留的同名 Job(而不是 hook-succeeded 那种"跑完立刻删"),这样失败排查时还能
+  看到上一次的 Job 状态,直到下一次 install/upgrade 才清理。
+
+  这个 Job 渲染在 release 命名空间(与 MinIO StatefulSet/Service 同一个命名空间),不是
+  benchmarks.namespace,所以直接用 Service 短名字(modeldoctor.minio.fullname)即可解析,
+  不需要像 modeldoctor.storage.endpoint 那样拼 FQDN——FQDN 只有跨命名空间访问(压测 Job
+  从 benchmarks.namespace 访问 MinIO)时才是必需的。
+
+  等待 MinIO 就绪的重试改成了有限次数(60 次 × 3s = 最多等 180s),不再是裸的
+  `until ...; do sleep 3; done` 无限循环——旧版本里这个循环永远不会以非零状态退出,
+  `backoffLimit` 因此根本不会被触发,唯一能止住它的是 Helm 客户端自己的 `--timeout`
+  (release 会被判定失败,但底层 Job 容器还在裸奔,直到下一次 install 的
+  before-hook-creation 才会把它删掉)。超过重试上限后显式 `exit 1`,配合下面的
+  `activeDeadlineSeconds: 300`(180s 等待上限 + 120s 给建桶/reconcile 操作的余量)双重
+  兜底,MinIO 长期不可用时这个 Job 最多在 5 分钟内被判定失败,而不是无限期占用。
+
+  root 凭据来自 deps/minio/secret.yaml 渲染的同一个 Secret(<fullname>-minio 的
+  rootPassword 字段),与 StatefulSet 的 MINIO_ROOT_PASSWORD、api Secret 的
+  S3_SECRET_KEY、benchmarks 命名空间 md-benchmark-storage 的 S3_SECRET_KEY 四处
+  完全一致(均经由 modeldoctor.keepOrGenerate 的单次渲染内记忆化保证)。
+*/ -}}
+{{- if .Values.storage.bundled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-bucket-init
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bucket-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 6
+  # 180s(等待 minio 就绪的重试上限)+ 120s(mb / ilm rule ls+add|edit 的操作余量),
+  # 防止 MinIO 长期不可用时 Job 无限期占用命名空间——见上面的说明。
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels: {{- include "modeldoctor.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bucket-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: {{ .Values.storage.minio.mcImage }}
+          env:
+            - name: MINIO_ROOT_USER
+              value: {{ .Values.storage.minio.rootUser | quote }}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "modeldoctor.minio.fullname" . }}
+                  key: rootPassword
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              TARGET="md/{{ .Values.storage.bucket }}"
+              RETENTION_DAYS="{{ .Values.storage.retentionDays }}"
+
+              # 等待 MinIO 就绪:有限次数重试,超时显式失败(见上面 activeDeadlineSeconds
+              # 注释),不再是永不退出的裸 until 循环。
+              ATTEMPT=0
+              MAX_ATTEMPTS=60
+              until mc alias set md http://{{ include "modeldoctor.minio.fullname" . }}:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                ATTEMPT=$((ATTEMPT + 1))
+                if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                  echo "ERROR: minio 在 $((MAX_ATTEMPTS * 3))s 内未就绪,放弃重试" >&2
+                  exit 1
+                fi
+                echo "waiting for minio... ($ATTEMPT/$MAX_ATTEMPTS)"
+                sleep 3
+              done
+
+              mc mb --ignore-existing "$TARGET"
+
+              # reconcile 生命周期规则:探测是否已存在,存在则原地 edit,否则 add——
+              # 不能对 add 直接 `|| 跳过`,那样每次 upgrade 都会堆出一条新规则,且
+              # retentionDays 改了也不会生效。理由与实测记录见文件头部注释。
+              if RULES_JSON=$(mc ilm rule ls --json "$TARGET" 2>&1); then
+                RULE_ID="${RULES_JSON#*\"ID\":\"}"
+                RULE_ID="${RULE_ID%%\"*}"
+                if [ -z "$RULE_ID" ] || [ "$RULE_ID" = "$RULES_JSON" ]; then
+                  echo "ERROR: 无法从 mc ilm rule ls 输出解析规则 ID: $RULES_JSON" >&2
+                  exit 1
+                fi
+                echo "[bucket-init] 已存在生命周期规则 id=$RULE_ID,reconcile 为 expire-days=$RETENTION_DAYS"
+                mc ilm rule edit --id "$RULE_ID" --expire-days "$RETENTION_DAYS" "$TARGET"
+              else
+                case "$RULES_JSON" in
+                  *NoSuchLifecycleConfiguration*)
+                    echo "[bucket-init] 尚无生命周期规则,创建 expire-days=$RETENTION_DAYS"
+                    mc ilm rule add --expire-days "$RETENTION_DAYS" "$TARGET"
+                    ;;
+                  *)
+                    echo "ERROR: mc ilm rule ls 意外失败: $RULES_JSON" >&2
+                    exit 1
+                    ;;
+                esac
+              fi
+{{- end }}

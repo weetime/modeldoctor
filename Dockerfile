@@ -70,5 +70,17 @@ USER app
 EXPOSE 3001
 ENV PORT=3001
 
-# Run migrations then start the API. Fail-fast on migration error.
-CMD ["sh", "-c", "pnpm -F @modeldoctor/api exec prisma migrate deploy && node apps/api/dist/main.js"]
+# Migrations are NOT run here: the Helm chart runs them as an initContainer on the api
+# Deployment (deploy/charts/modeldoctor/templates/api/deployment.yaml) — a Helm hook Job
+# was tried and rejected (pre-install runs before the chart's own Secret/Postgres exist;
+# post-install deadlocks against `helm install --wait`), so a failed migration surfaces
+# as the Pod stuck in `Init:...` instead of a failed hook Job.
+#
+# Deploying without Helm? Run this inside the container before starting it:
+#   cd /app/apps/api \
+#     && node_modules/.bin/prisma migrate deploy \
+#     && node_modules/.bin/tsx prisma/seed.ts
+# Call the binaries directly: `pnpm ... exec` fails as the non-root `app` user because
+# Corepack tries to reinstall pnpm into a root-owned node_modules, and `prisma db seed`
+# forks a shell where node_modules/.bin is not on PATH.
+CMD ["node", "apps/api/dist/main.js"]

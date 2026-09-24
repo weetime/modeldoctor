@@ -1,0 +1,6 @@
+# CI 快照测试专用(Task 12,`.github/workflows/ci.yml` 的 `chart` 作业消费)。
+#
+# 场景:不创建 Ingress(ingress.enabled=false)——例如把域名/TLS 终止交给集群外的
+# 网关或 LoadBalancer,不需要 chart 渲染 Ingress 对象。其余字段沿用全内置默认值。
+ingress:
+  enabled: false

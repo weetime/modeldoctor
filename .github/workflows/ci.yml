@@ -34,6 +34,15 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v6
+
+      # 凭据形态扫描。放在 checkout 之后、装依赖之前:它只需要工作区的文本文件,
+      # 秒级完成,而且"仓库里出现了长得像凭据的东西"应该在跑完整套测试之前就把
+      # 作业判红。脚本命中即 exit 1(见 tools/check-no-secrets.sh 的退出码说明),
+      # 所以这里不需要额外的判定逻辑。命中不等于一定是真实凭据,但必须人工确认
+      # 后才能放行 —— 不要用 `|| true` 把它降级成警告。
+      - name: 凭据形态扫描(check-no-secrets)
+        run: ./tools/check-no-secrets.sh
+
       - uses: pnpm/action-setup@v6
         with:
           version: 10.5.2
@@ -105,3 +114,226 @@ jobs:
           tags: modeldoctor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # 与 lint-type-test 并行、彼此独立的 chart 作业:helm lint/template 静态渲染校验 +
+  # kind 里的真实 helm install/upgrade。static 渲染(lint/template)只能证明"YAML 合法、
+  # values 组合不会在渲染期 fail",证明不了三类只有真实安装才会暴露的缺陷——Namespace
+  # 的 delete-policy 把 benchmarks 命名空间在每次 upgrade 时清空、Secret 里的密码在同一次
+  # 渲染内被计算两次导致应用连不上自己的数据库、建桶 Job 在依赖不可达时永久挂起——这三个
+  # 缺陷在本 chart 的开发过程中都真实出现过,且都是 `helm lint`/`helm template` 测不出来的。
+  # 后半段(kind 安装)就是为了补上这个盲区。
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: helm lint(默认值 + 所有 ci/ values 组合)
+        run: |
+          set -euo pipefail
+          helm lint deploy/charts/modeldoctor
+          for f in deploy/charts/modeldoctor/ci/*.yaml; do
+            echo "== helm lint -f $f =="
+            helm lint deploy/charts/modeldoctor -f "$f"
+          done
+
+      - name: helm template 渲染校验(含反向断言:多副本必须渲染失败)
+        run: |
+          set -euo pipefail
+          for f in deploy/charts/modeldoctor/ci/*.yaml; do
+            echo "== helm template -f $f =="
+            helm template md deploy/charts/modeldoctor -f "$f" > /dev/null
+          done
+          # modeldoctor.validate 明确拒绝 replicaCount != 1(通知派发/K8s watcher/SSE Hub
+          # 均无选主机制);这里反向断言它必须失败——如果哪天这条护栏被误删,helm
+          # template 会意外成功,让下面这个 if 分支把作业判红,而不是静默放过。
+          if helm template md deploy/charts/modeldoctor --set replicaCount=2 >/tmp/replica2.out 2>&1; then
+            echo "::error::replicaCount=2 本应渲染失败,但成功了 —— modeldoctor.validate 的护栏可能被误删" >&2
+            cat /tmp/replica2.out
+            exit 1
+          fi
+          echo "OK — replicaCount=2 按预期渲染失败"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: 构建应用镜像并载入 kind
+        run: |
+          set -euo pipefail
+          # 用一个明确带 "." 的伪造 registry host(ci.local)而不是裸词仓库名——Docker 的
+          # 引用规范化规则里,不含 "." 的裸词仓库名(如单独一个 "modeldoctor")会被隐式
+          # 当作 "docker.io/library/<name>" 处理(已本地实测确认:crictl images 里能看到
+          # 这层隐式前缀)。如果这里的 image.registry/image.repository 拼出来的引用字符串
+          # 和 kind 实际载入的引用字符串不完全一致,pullPolicy: Never 时 kubelet 会找不到
+          # 本地镜像;用带 "." 的 host 可以避免这层隐式改写,渲染出的引用与载入的引用
+          # 保证逐字节一致。
+          docker buildx build --tag ci.local/modeldoctor:ci --load \
+            --cache-from type=gha --cache-to type=gha,mode=max .
+
+      - uses: helm/kind-action@v1
+        with:
+          version: v0.33.0
+
+      - name: kind load docker-image
+        run: |
+          set -euo pipefail
+          # helm/kind-action 默认集群名是 chart-testing(未显式传 cluster_name 时的默认值,
+          # 见该 action 的 action.yaml);这里不写死,直接用同一个默认值,避免和 action
+          # 实际创建的集群名不一致。
+          kind load docker-image ci.local/modeldoctor:ci --name chart-testing
+
+      - name: helm install(内置依赖 + 载入的本地镜像)+ helm test
+        run: |
+          set -euo pipefail
+          helm install md deploy/charts/modeldoctor \
+            --namespace modeldoctor --create-namespace \
+            --set image.registry=ci.local --set image.repository=modeldoctor --set image.tag=ci \
+            --set image.pullPolicy=Never \
+            --set ingress.enabled=false \
+            --set database.postgres.persistence.size=1Gi \
+            --set storage.minio.persistence.size=1Gi \
+            --wait --timeout 15m
+          helm test md --namespace modeldoctor --logs
+
+      - name: 断言:seed 真的跑过(官方压测模板存在)
+        run: |
+          set -euo pipefail
+          # @prisma/client 是 apps/api 的依赖,不是根 workspace 的直接依赖;pnpm 的
+          # 隔离式 node_modules 布局下它只挂在 apps/api/node_modules 下,从容器默认
+          # WORKDIR(/app)直接 require 会找不到模块。用 NODE_PATH 指向
+          # apps/api/node_modules,不需要额外 `cd`,也避免了 kubectl exec 参数里
+          # "sh -c 套 cd 套 node -e" 的多层引号转义。
+          kubectl -n modeldoctor exec deploy/md-modeldoctor -- \
+            env NODE_PATH=/app/apps/api/node_modules node -e "
+              const { PrismaClient } = require('@prisma/client');
+              const prisma = new PrismaClient();
+              prisma.benchmarkTemplate.count({ where: { isOfficial: true } })
+                .then((n) => {
+                  console.log('official benchmark templates:', n);
+                  process.exit(n > 0 ? 0 : 1);
+                })
+                .catch((err) => {
+                  console.error(err);
+                  process.exit(1);
+                })
+                .finally(() => prisma.\$disconnect());
+            "
+
+      - name: 断言:benchmarks 命名空间的 RBAC 与存储 Secret 到位
+        run: |
+          set -euo pipefail
+          # kubectl get 本身在对象不存在时非零退出,配合 set -e 会直接判红这一步,
+          # 不会出现"查不到就当没有问题"这种假阴性。
+          verbs="$(kubectl -n modeldoctor-benchmarks get role md-modeldoctor-benchmark-driver \
+            -o jsonpath='{.rules[?(@.resources[0]=="pods")].verbs[*]}')"
+          echo "pods 规则的 verbs: [$verbs]"
+          case " $verbs " in
+            *' watch '*) echo "OK — Role 含 pods:watch" ;;
+            *) echo "::error::Role md-modeldoctor-benchmark-driver 的 pods 规则缺少 watch verb" >&2; exit 1 ;;
+          esac
+          kubectl -n modeldoctor-benchmarks get secret md-benchmark-storage \
+            -o jsonpath='{.metadata.name}{"\n"}'
+
+      - name: 断言:必须活过 uninstall 的三个 Secret 都带 resource-policy=keep
+        run: |
+          set -euo pipefail
+          # PVC(Postgres/MinIO 数据)与 benchmarks 命名空间按设计会活过 helm uninstall,
+          # 承载"打开这些数据"的密钥/密码的三个 Secret 必须跟着一起活下来,否则
+          # "uninstall 后重装到同一命名空间"会:重新生成 CONNECTION_API_KEY_ENCRYPTION_KEY
+          # (幸存卷里所有已加密的第三方连接 API Key 永久无法解密),并重新生成内置 Postgres
+          # 密码(幸存的 PGDATA 只认初始化时那一个,wait-for-db 会一路重试到超时)。
+          # 这个断言防的就是有人"顺手"摘掉这三条注解——注解没了不会有任何红灯,
+          # 只会在客户第一次卸载重装时炸。
+          fail=0
+          for s in md-modeldoctor-secrets md-modeldoctor-postgres md-modeldoctor-minio; do
+            policy="$(kubectl -n modeldoctor get secret "$s" \
+              -o jsonpath='{.metadata.annotations.helm\.sh/resource-policy}')"
+            if [ "$policy" != "keep" ]; then
+              echo "::error::Secret $s 缺少 helm.sh/resource-policy=keep(实际值: '${policy}') —— uninstall 后重装会丢失密钥/密码" >&2
+              fail=1
+            else
+              echo "OK — $s 带 resource-policy=keep"
+            fi
+          done
+          exit $fail
+
+      - name: 断言:helm upgrade 可重入,五个 keepOrGenerate 字段都不变
+        run: |
+          set -euo pipefail
+          # 覆盖 modeldoctor.keepOrGenerate 的全部五个落点:应用 Secret 里的三个 auth
+          # 字段(JWT/加密密钥/webhook 密钥),以及 Postgres、MinIO 各自 Secret 里的
+          # 密码字段。三个 auth 字段过去曾经因为 call site 传了 values 侧的 camelCase
+          # 名字(而不是 Secret 里实际的字段名)而在每次 upgrade 时静默重新生成——这里
+          # 把五个字段放进同一张表统一断言,不要只挑 CONNECTION_API_KEY_ENCRYPTION_KEY
+          # 一个字段,否则同类缺陷可能在其余四个字段上重新出现却测不出来。
+          #
+          # 每一项是 "namespace|secret 名字|data 里的字段名"。
+          checks=(
+            "modeldoctor|md-modeldoctor-secrets|JWT_ACCESS_SECRET"
+            "modeldoctor|md-modeldoctor-secrets|CONNECTION_API_KEY_ENCRYPTION_KEY"
+            "modeldoctor|md-modeldoctor-secrets|ALERTMANAGER_WEBHOOK_SECRET"
+            "modeldoctor|md-modeldoctor-postgres|password"
+            "modeldoctor|md-modeldoctor-minio|rootPassword"
+          )
+
+          # 读取上面表里全部字段的当前值,写进以 $1(数组变量名)命名的数组。任何一个
+          # jsonpath 取到空字符串就直接判失败——空值可能是 Secret/字段名拼错、也可能是
+          # jsonpath 语法错误导致静默不匹配,这两种情况都不该被当成"取到了、值恰好相同"
+          # 蒙混过去。
+          capture() {
+            local -n _out="$1"
+            _out=()
+            local entry ns secret field val
+            for entry in "${checks[@]}"; do
+              IFS='|' read -r ns secret field <<<"$entry"
+              val="$(kubectl -n "$ns" get secret "$secret" -o jsonpath="{.data.${field}}")"
+              if [ -z "$val" ]; then
+                echo "::error::secret $ns/$secret 字段 $field 取到空值 —— Secret/字段名拼错或 jsonpath 没匹配到任何东西,这本身就是断言失败,不能当成\"值相同\"放过" >&2
+                exit 1
+              fi
+              _out+=("$val")
+            done
+          }
+
+          capture before
+          helm upgrade md deploy/charts/modeldoctor --namespace modeldoctor --reuse-values \
+            --wait --timeout 10m
+          capture after
+
+          fail=0
+          for i in "${!checks[@]}"; do
+            IFS='|' read -r ns secret field <<<"${checks[$i]}"
+            if [ "${before[$i]}" != "${after[$i]}" ]; then
+              echo "::error::$ns/$secret 的字段 $field 在 helm upgrade 后发生了变化 —— 对应的已加密数据/已持久化凭据会失配" >&2
+              fail=1
+            else
+              echo "OK — $ns/$secret 的字段 $field 在 upgrade 前后一致"
+            fi
+          done
+          exit $fail
+
+      - name: 失败时导出诊断(pods/jobs/describe/logs/events)
+        if: failure()
+        run: |
+          echo "::group::modeldoctor 命名空间"
+          kubectl -n modeldoctor get pods,jobs,statefulsets,pvc -o wide || true
+          kubectl -n modeldoctor describe pods || true
+          kubectl -n modeldoctor logs job/md-modeldoctor-bucket-init --all-containers --tail=200 || true
+          # migrate+seed 是 api Deployment 的 initContainer(不是独立 hook Job),单独取一次
+          # 日志——`--all-containers` 在 initContainer 卡住/未启动时不保证覆盖到它。
+          kubectl -n modeldoctor logs deploy/md-modeldoctor -c wait-for-db --tail=200 || true
+          kubectl -n modeldoctor logs deploy/md-modeldoctor -c migrate-seed --tail=200 || true
+          kubectl -n modeldoctor logs deploy/md-modeldoctor --all-containers --tail=200 || true
+          echo "::endgroup::"
+          echo "::group::modeldoctor-benchmarks 命名空间"
+          kubectl -n modeldoctor-benchmarks get all,role,rolebinding,secrets -o wide || true
+          echo "::endgroup::"
+          echo "::group::events(按时间排序,全部命名空间)"
+          kubectl get events -A --sort-by=.lastTimestamp || true
+          echo "::endgroup::"
+          echo "::group::helm status"
+          helm status md --namespace modeldoctor || true
+          echo "::endgroup::"

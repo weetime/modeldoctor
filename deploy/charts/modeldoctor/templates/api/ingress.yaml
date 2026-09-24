@@ -1,0 +1,37 @@
+{{/*
+  单 host 单 path,把 "/" 全部指向 API Service:UI 与 API 同源(同一个 Node 进程,
+  API 路由都在 /api 前缀下),不要为 /api 单独开一条 path 指向别的后端。
+*/}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      {{- if .Values.ingress.tls.secretName }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "modeldoctor.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

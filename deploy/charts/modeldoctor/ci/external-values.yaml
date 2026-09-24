@@ -1,0 +1,32 @@
+# CI 快照测试专用(Task 12,`.github/workflows/ci.yml` 的 `chart` 作业消费)。
+#
+# 场景:全外接(外接数据库 + 外接 S3 兼容对象存储),对应 README「场景 2」与仓库根目录
+# `values-external.yaml` 描述的组合,但这里必须能在没有任何 `--set` 的情况下独立
+# `helm lint`/`helm template` 通过——`values-external.yaml` 把 url/accessKey/secretKey
+# 都留空、指望调用方用 `--set` 补齐,直接拿它做静态渲染校验会在 `modeldoctor.validate`
+# 处 fail。
+#
+# 因此这里改用 existingSecret 路径——与 `values-4pd.yaml` 的约定一致,只声明 Secret
+# *名字*,不出现任何字面量凭据;chart 在 `helm template`/`helm lint` 这类纯渲染路径下
+# 从不校验 existingSecret 是否真的存在(那是 `secretKeyRef`,由 kubelet 在真正调度 Pod
+# 时才解析),足以覆盖 database.external.existingSecret / storage.external.existingSecret
+# 两条渲染分支,且不需要一个真实可达的外部数据库/对象存储。
+
+database:
+  bundled: false
+  external:
+    existingSecret: modeldoctor-ci-external-db
+    existingSecretKey: url
+
+storage:
+  bundled: false
+  # 外接 S3 兼容存储时通常必须是 false(虚拟主机风格域名),与 values-external.yaml 的
+  # 说明一致。
+  forcePathStyle: false
+  external:
+    endpoint: https://s3.ci.invalid
+    existingSecret: modeldoctor-ci-external-s3
+
+ingress:
+  enabled: true
+  host: modeldoctor.ci.invalid

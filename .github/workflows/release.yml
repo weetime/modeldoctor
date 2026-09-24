@@ -1,0 +1,169 @@
+name: release
+
+# 仅在打 v* tag 时触发,不监听 pull_request —— 这条流水线会推送镜像/chart 到
+# 生产仓库并创建 GitHub Release,不应该在 PR 上跑。
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SWR_REGISTRY: swr.cn-north-4.myhuaweicloud.com
+  SWR_PROJECT: modeldoctor
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # 凭据形态扫描,放在任何 login/build/push 之前。发布是不可逆的:镜像和 chart
+      # 一旦推进仓库,里面夹带的凭据就等于已经泄露,事后删 tag 也救不回来。所以这条
+      # 闸门必须在第一个对外动作之前,而不是和 CI 一样"顺便跑一次"就够了。
+      # 命中即 exit 1,不加 `|| true`。
+      - name: 凭据形态扫描(check-no-secrets)
+        run: ./tools/check-no-secrets.sh
+
+      - name: Verify tag matches package.json version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          TAG_VERSION="${TAG#v}"
+          PKG_VERSION="$(jq -r .version package.json)"
+          if [[ "$TAG_VERSION" != "$PKG_VERSION" ]]; then
+            echo "::error::tag ${TAG}(版本号 ${TAG_VERSION})与 package.json 的 version(${PKG_VERSION})不一致,拒绝发布 —— 避免镜像 tag 与代码版本脱节"
+            exit 1
+          fi
+          echo "OK — tag ${TAG} matches package.json version ${PKG_VERSION}"
+          echo "TAG_VERSION=${TAG_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Derive runner image tag
+        run: |
+          set -euo pipefail
+          # runner 镜像(md-runner-*)不跟应用共用版本号 —— tools/build-runner-images.sh
+          # 把它们的 tag 定义成 "apps/benchmark-runner/ 子树最近一次提交的短 SHA"
+          # (见该脚本里的 `git log -1 --format=%h -- apps/benchmark-runner/`)。这两处
+          # 推导规则必须保持一致,否则离线清单里写的 runner 镜像地址在仓库里根本不存在。
+          # 注意: runner 镜像本身目前仍由人工执行
+          # `./tools/build-runner-images.sh --push` 构建并推送 —— 这条 release 流水线
+          # 只负责在离线清单里引用正确的 tag,不会替你构建/推送 runner 镜像。
+          # `|| true` 让 git 命令本身失败(而不仅仅是返回空)时也不会在 set -e 下
+          # 提前中止——统一交给下面的 -z 判断给出清晰的 ::error:: 提示,而不是让运维
+          # 看到一条裸的 git 报错。
+          RUNNER_TAG="$(git log -1 --format=%h -- apps/benchmark-runner/ 2>/dev/null || true)"
+          if [[ -z "$RUNNER_TAG" ]]; then
+            echo "::error::无法从 apps/benchmark-runner/ 的提交历史推导 runner 镜像 tag(git log 返回空或执行失败)——拒绝用应用版本号静默顶替,请检查 checkout 的 fetch-depth 或该子树是否存在提交历史"
+            exit 1
+          fi
+          echo "runner tag = ${RUNNER_TAG}(git log -1 --format=%h -- apps/benchmark-runner/)"
+          echo "RUNNER_TAG=${RUNNER_TAG}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.SWR_REGISTRY }}
+          username: ${{ secrets.SWR_USERNAME }}
+          password: ${{ secrets.SWR_PASSWORD }}
+
+      - name: Build and push app image (multi-arch)
+        run: ./tools/build-app-image.sh --tag "${GITHUB_REF_NAME}" --push
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Rewrite Chart.yaml version/appVersion from tag
+        run: |
+          set -euo pipefail
+          CHART_FILE="deploy/charts/modeldoctor/Chart.yaml"
+          # 这两行的 "v" 归属不是笔误,必须一个带一个不带:
+          #
+          #   version:    ${TAG_VERSION}      —— 去掉前缀 v。Helm 要求 chart version 是合法
+          #               SemVer,`helm package`/`helm push` 都按它命名 tgz 与 OCI tag,
+          #               客户侧 `helm install --version 1.2.3` 用的也是这个值。
+          #   appVersion: ${GITHUB_REF_NAME}  —— 保留前缀 v。appVersion 是 _helpers.tpl:46
+          #               里 image.tag 留空时的回退值(`default .Chart.AppVersion
+          #               .Values.image.tag`),而上面 "Build and push app image" 推送的镜像
+          #               tag 就是 ${GITHUB_REF_NAME} 本身(带 v)。这里若跟着去掉 v,
+          #               chart 默认就会去拉一个从未被推送过的 <repo>:1.2.3,每一次
+          #               "不设置 image.tag 的全新安装" 都必然 ImagePullBackOff。
+          #
+          # 离线侧 deploy/offline/pull-and-save.sh 的 `helm package --app-version "$APP_TAG"`
+          # (APP_TAG 是带 v 的应用镜像 tag)本来就是这个约定,两条发布路径必须一致。
+          sed -i -E "s/^version: .*/version: ${TAG_VERSION}/" "$CHART_FILE"
+          sed -i -E "s/^appVersion: .*/appVersion: \"${GITHUB_REF_NAME}\"/" "$CHART_FILE"
+          echo "--- Chart.yaml after rewrite ---"
+          cat "$CHART_FILE"
+
+      - name: helm package
+        run: |
+          mkdir -p dist/release
+          helm package deploy/charts/modeldoctor --destination dist/release
+
+      - name: 断言:chart 默认镜像引用 == 本次推送的应用镜像
+        run: |
+          set -euo pipefail
+          # 反漂移护栏:把刚打好的 tgz 按"客户全新安装、不设置 image.tag"的方式渲染一遍,
+          # 取出 api Deployment 的 image 字段,必须逐字符等于上一步 build-app-image.sh
+          # 推送出去的引用。Chart.yaml 的 version/appVersion 改写规则一旦再次跑偏
+          # (比如有人"顺手"把 appVersion 也去掉 v),这里会当场判红,而不是等客户
+          # 在自己的集群里撞上 ImagePullBackOff。
+          EXPECTED="${SWR_REGISTRY}/${SWR_PROJECT}/modeldoctor:${GITHUB_REF_NAME}"
+          ACTUAL="$(helm template md "dist/release/modeldoctor-${TAG_VERSION}.tgz" \
+            --set ingress.enabled=false \
+            --show-only templates/api/deployment.yaml \
+            | grep -m1 -E '^[[:space:]]+image:' \
+            | sed -E 's/^[[:space:]]+image:[[:space:]]*//' | tr -d "\"'")"
+          echo "expected = ${EXPECTED}"
+          echo "actual   = ${ACTUAL}"
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "::error::chart 默认镜像引用(${ACTUAL})与本次推送的应用镜像(${EXPECTED})不一致 —— 不设置 image.tag 的全新安装会 ImagePullBackOff,拒绝发布"
+            exit 1
+          fi
+          echo "OK — chart 默认镜像引用与推送的应用镜像一致"
+
+      - name: helm registry login (SWR OCI)
+        run: |
+          echo "${{ secrets.SWR_PASSWORD }}" | helm registry login "${{ env.SWR_REGISTRY }}" \
+            --username "${{ secrets.SWR_USERNAME }}" --password-stdin
+
+      - name: helm push chart to SWR
+        run: helm push "dist/release/modeldoctor-${TAG_VERSION}.tgz" "oci://${{ env.SWR_REGISTRY }}/${{ env.SWR_PROJECT }}"
+
+      - name: Generate offline image manifest for this release
+        run: |
+          set -euo pipefail
+          # __APP_TAG__ = 本次 release 的应用镜像 tag(即这个 git tag 本身)。
+          # __RUNNER_TAG__ = runner 镜像 tag,来自上面 "Derive runner image tag" 步骤
+          # 推导出的短 SHA(与 tools/build-runner-images.sh 的规则一致),不是应用版本号。
+          MANIFEST_OUT="dist/release/modeldoctor-offline-images-${GITHUB_REF_NAME}.txt"
+          {
+            echo "# 本清单由 release 流水线自动生成,仅解析了 __APP_TAG__/__RUNNER_TAG__ 两个版本占位符。"
+            echo "# 仍保留的 __POSTGRES_IMAGE__/__MINIO_IMAGE__/__MC_IMAGE__/__CURL_IMAGE__ 占位符是有意为之,"
+            echo "# 不是清单损坏——这四个依赖镜像的具体版本由 deploy/offline/pull-and-save.sh 在实际打包时"
+            echo "# 通过 helm template 从 chart 的 values.yaml 解析(见 deploy/offline/README.md),直接跑"
+            echo "# 该脚本即可得到解析后的完整清单。"
+            echo "#"
+            sed -e "s/__APP_TAG__/${GITHUB_REF_NAME}/g" -e "s/__RUNNER_TAG__/${RUNNER_TAG}/g" deploy/offline/images.txt
+          } > "$MANIFEST_OUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/release/modeldoctor-${{ env.TAG_VERSION }}.tgz
+            dist/release/modeldoctor-offline-images-${{ github.ref_name }}.txt

@@ -1,0 +1,29 @@
+# ModelDoctor 离线镜像清单 —— 两段式(tier=core / tier=full),按行:
+#   <tier> <image-ref>
+# tier=full 在 pull-and-save.sh / load-and-push.sh 里是 core 的超集(全量交付包),
+# 不是"仅 full 独有的增量"——现场如果只领到 full 包,里面已经包含 core 的全部内容。
+#
+# __APP_TAG__ / __RUNNER_TAG__ 由 pull-and-save.sh 的 --app-tag / --runner-tag 参数替换。
+#
+# __POSTGRES_IMAGE__ / __MINIO_IMAGE__ / __MC_IMAGE__ / __CURL_IMAGE__ 这四个依赖镜像
+# 故意不写死具体 tag —— chart 的 deploy/charts/modeldoctor/values.yaml(database.postgres.image /
+# storage.minio.image / storage.minio.mcImage)以及硬编码在
+# deploy/charts/modeldoctor/templates/tests/test-health.yaml 里的 curl 镜像,才是这些依赖
+# 版本的唯一权威来源。pull-and-save.sh 在运行时用 `helm template --show-only <component>`
+# 精确渲染出每个依赖自己的模板并解析真实 image 值——写死副本会在 chart 升级依赖版本后悄悄
+# 漂移,离线包看着能用,实际拉的是上一个 release 的镜像。
+#
+# tier=core —— 最小可用:应用 + 内置依赖(Postgres/MinIO/mc/helm-test curl)+ 性能压测主路径
+core swr.cn-north-4.myhuaweicloud.com/modeldoctor/modeldoctor:__APP_TAG__
+core __POSTGRES_IMAGE__
+core __MINIO_IMAGE__
+core __MC_IMAGE__
+core __CURL_IMAGE__
+core swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-guidellm:__RUNNER_TAG__
+core swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-vegeta:__RUNNER_TAG__
+# tier=full —— 额外的评测/多模态工具,镜像体积很大(evalscope 基础镜像内置约 866MB 数据集,
+# aiperf 约 672MB),现场带宽/介质容量不足时可以只要 core
+full swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-evalscope:__RUNNER_TAG__
+full swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-aiperf:__RUNNER_TAG__
+full swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-tau3:__RUNNER_TAG__
+full swr.cn-north-4.myhuaweicloud.com/modeldoctor/md-runner-vllm-omni-bench:__RUNNER_TAG__

@@ -1,0 +1,29 @@
+{{- /*
+  Role 落在 benchmarks 命名空间(压测 Job 实际运行的地方),权限收紧到 API 真正需要的最小集合:
+    - jobs:      创建/查询/删除压测 Job 本身
+    - secrets:   压测 Job 会用到的每次运行独立的 Secret(create/get/patch/delete)
+    - pods:      watch 是硬性要求——K8S_WATCHER_MODE 默认 primary,API 用 Informer 感知 Job
+                 下属 Pod 的状态变化,漏了 watch 这个 verb 会导致 Informer 启动即崩溃、
+                 watcher 反复 crash-loop(旧的手写 RBAC 就踩过这个坑)
+    - pods/log:  拉取压测 Job 的日志用于诊断/展示
+  不额外授予命名空间内其它资源的权限。
+*/ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "modeldoctor.fullname" . }}-benchmark-driver
+  namespace: {{ .Values.benchmarks.namespace }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]

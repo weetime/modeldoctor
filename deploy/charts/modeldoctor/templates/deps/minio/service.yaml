@@ -1,0 +1,43 @@
+{{- /*
+  仅在内置 MinIO 时渲染。名字必须精确为 modeldoctor.minio.fullname——
+  modeldoctor.storage.endpoint 把这个名字拼进集群内 FQDN
+  (http://<name>.<release-namespace>.svc.cluster.local:9000);压测 Job 跑在另一个命名空间
+  (benchmarks.namespace),跨命名空间必须用 FQDN 才能解析,改名会让 API、压测 Job、这个
+  StatefulSet 三边全部连不上。
+
+  单实例、不需要给其它 Pod 做基于 DNS 的稳定身份发现,用普通 ClusterIP 即可(与 Postgres
+  的处理方式一致)——StatefulSet.spec.serviceName 只要求存在一个 selector 能选中其 Pod 的
+  Service,并不强制这个 Service 必须是 headless(clusterIP: None)。
+
+  selector 额外加一个 app.kubernetes.io/component: minio:modeldoctor.selectorLabels 只有
+  name+instance 两个 key,和 api / postgres 组件共用同一份 selectorLabels。如果这里不做
+  区分,会和其它组件的 label 选择器产生重叠——不会导致 Service 之间路由错(下面的
+  targetPort 在别的组件 Pod 上找不到同名容器端口,不会被选进 Endpoints),但
+  `kubectl get endpoints` 之类的排查会看到不该出现的 Pod,所以显式区分开。
+
+  暴露两个端口:9000 是 S3 API(modeldoctor.storage.endpoint 引用的端口,API 与压测 Job
+  都靠它读写对象存储),9001 是管理 Console,仅供运维 `kubectl port-forward` 本地排查用,
+  不挂 Ingress、不对外暴露。
+*/ -}}
+{{- if .Values.storage.bundled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "modeldoctor.minio.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+spec:
+  type: ClusterIP
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+      protocol: TCP
+    - name: console
+      port: 9001
+      targetPort: console
+      protocol: TCP
+  selector:
+    {{- include "modeldoctor.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+{{- end }}

@@ -1,0 +1,33 @@
+# CI 快照测试专用(Task 12,`.github/workflows/ci.yml` 的 `chart` 作业消费)。
+#
+# 场景:全内置(database.bundled / storage.bundled 均沿用默认的 true),但额外打开一批
+# 默认关闭的可选渲染分支——裸的 `helm lint deploy/charts/modeldoctor`(不带 -f)已经覆盖
+# 纯默认值,这份文件的目的是让 CI 至少覆盖到下面这些分支一次,而不是重复裸默认值:
+#   - ingress.tls.enabled=true(TLS 分支)
+#   - mcp.enabled=true(MCP 校验 + Secret 字段分支)
+#   - benchmarks.enabledTools 覆盖全部六个工具(modeldoctor.validate 的 toolImageKey 映射
+#     全枚举一遍,尤其是 "vllm-omni-bench" -> "vllmOmniBench" 这一条容易在 camelcase 上
+#     踩坑的映射)
+#
+# 这里的镜像地址、token 都是不可解析的占位值(*.invalid 是 RFC 2606 保留的"已知无效"域名),
+# 只用于 `helm lint`/`helm template` 的静态渲染校验,不代表任何真实凭据或真实可拉取的镜像。
+
+ingress:
+  tls:
+    enabled: true
+    secretName: modeldoctor-ci-tls
+
+mcp:
+  enabled: true
+  bearerToken: ci-placeholder-token
+  userId: ci-placeholder-user
+
+benchmarks:
+  enabledTools: [guidellm, vegeta, evalscope, aiperf, tau3, vllm-omni-bench]
+  runnerImages:
+    guidellm: example.invalid/modeldoctor/md-runner-guidellm:ci
+    vegeta: example.invalid/modeldoctor/md-runner-vegeta:ci
+    evalscope: example.invalid/modeldoctor/md-runner-evalscope:ci
+    aiperf: example.invalid/modeldoctor/md-runner-aiperf:ci
+    tau3: example.invalid/modeldoctor/md-runner-tau3:ci
+    vllmOmniBench: example.invalid/modeldoctor/md-runner-vllm-omni-bench:ci

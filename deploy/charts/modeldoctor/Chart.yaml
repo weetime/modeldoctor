@@ -1,0 +1,27 @@
+apiVersion: v2
+name: modeldoctor
+description: ModelDoctor — 私有化部署的推理服务评测与可观测平台
+type: application
+# version / appVersion 由 release 流水线按 git tag 覆盖(.github/workflows/release.yml)。
+# 约定(两条发布路径一致,改动前先读 release.yml 的 "Rewrite Chart.yaml" 步骤):
+#   version    = 去掉前缀 v 的 SemVer(Helm 强制要求),如 tag v1.2.3 -> 1.2.3
+#   appVersion = git tag 原样(带 v),如 v1.2.3 —— 它是 image.tag 留空时的回退值,
+#                必须逐字符等于实际推送到仓库的应用镜像 tag,否则默认安装 ImagePullBackOff
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.24.0-0"
+# Helm 本身没有"最低 helm 版本"这个 Chart.yaml 字段(只有 kubeVersion),所以下限写在
+# 两处:下面 annotations 里一条可读声明,以及 templates/_helpers.tpl 的
+# modeldoctor.validate 里一条 semverCompare 硬断言(渲染期直接 fail)。下限 3.8.0 来自
+# randBytes —— 它随 sprig v3.2.2 进入 Helm 3.8,更老的 helm 渲染本 chart 会报
+# `function "randBytes" not defined`,报错信息完全看不出真实原因是 helm 太旧。
+home: https://github.com/weetime/modeldoctor
+sources:
+  - https://github.com/weetime/modeldoctor
+maintainers:
+  - name: weetime
+annotations:
+  artifacthub.io/license: Apache-2.0
+  # 见上面 kubeVersion 后面的说明:Chart.yaml 没有 helm 版本字段,这里只是可读声明,
+  # 真正的护栏是 _helpers.tpl 里 modeldoctor.validate 的 semverCompare 断言。
+  modeldoctor.io/min-helm-version: "3.8.0"

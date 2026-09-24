@@ -1,0 +1,14 @@
+# CI 快照测试专用(Task 12,`.github/workflows/ci.yml` 的 `chart` 作业消费)。
+#
+# 场景:压测 Job 与应用同命名空间(对应 README「场景 3」),即 benchmarks.namespace 与
+# .Release.Namespace 相同——此时 chart 不应再渲染独立的 Namespace 对象(见
+# templates/benchmarks/namespace.yaml 的条件:`ne .Values.benchmarks.namespace
+# .Release.Namespace`),Role/RoleBinding/md-benchmark-storage 都落在应用自己的命名空间。
+#
+# `helm template`/`helm lint` 在不显式传 `--namespace`/`-n` 时,`.Release.Namespace`
+# 默认就是 "default"(Helm 的既定行为),所以这里把 benchmarks.namespace 显式设成
+# "default" 来命中同命名空间分支——ci.yml 里 `helm template`/`helm lint` 这两步都不带
+# `--namespace`,与这里的假设保持一致;真正 `helm install` 时命名空间由 `--namespace`
+# 显式指定,不依赖这个默认值。
+benchmarks:
+  namespace: default

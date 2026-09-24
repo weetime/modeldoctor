@@ -1,0 +1,34 @@
+{{- /*
+  仅在内置 Postgres 时渲染。名字必须精确为 modeldoctor.postgres.fullname——
+  modeldoctor.databaseUrl 把这个名字当作 DATABASE_URL 里的 host 直接拼接(同命名空间内
+  可解析的短域名),改名会让 API/StatefulSet 两边连不上。
+
+  单实例、不需要给其它 Pod 做基于 DNS 的稳定身份发现,用普通 ClusterIP 即可——
+  StatefulSet.spec.serviceName 只要求存在一个 selector 能选中其 Pod 的 Service,并不
+  强制这个 Service 必须是 headless(clusterIP: None)。
+
+  selector 额外加一个 app.kubernetes.io/component: postgres:modeldoctor.selectorLabels
+  只有 name+instance 两个 key,和 api 组件的 Deployment/Service 用的是同一份
+  selectorLabels。如果这里不做区分,这个 Service(以及 statefulset.yaml 里 Pod 的标签)
+  会和 api 组件的 label 选择器产生重叠——Service 之间不会因此互相路由错(下面
+  targetPort: postgres 在 api 的 Pod 上找不到同名容器端口,不会被选进 Endpoints),但
+  `kubectl get endpoints` 之类的排查会看到不该出现的 Pod,语义不干净,所以显式区分开。
+*/ -}}
+{{- if .Values.database.bundled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "modeldoctor.postgres.fullname" . }}
+  labels: {{- include "modeldoctor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+  selector:
+    {{- include "modeldoctor.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+{{- end }}
